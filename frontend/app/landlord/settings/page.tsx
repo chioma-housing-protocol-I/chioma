@@ -3,11 +3,8 @@
 import React, { useState } from 'react';
 import {
     User,
-    Mail,
-    Phone,
     Shield,
     Bell,
-    CreditCard,
     Globe,
     Moon,
     Sun,

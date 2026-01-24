@@ -5,8 +5,6 @@ import Image from 'next/image';
 import {
     Plus,
     Search,
-    Filter,
-    MoreVertical,
     MapPin,
     Users,
     DollarSign,

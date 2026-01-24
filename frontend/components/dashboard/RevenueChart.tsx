@@ -46,8 +46,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
     if (active && payload && payload.length) {
         const data = payload[0].payload;
         const value = payload[0].value;
-        // Calculate percentage change (mock)
-        const percentChange = Math.random() > 0.5 ? Math.random() * 15 : -Math.random() * 10;
+        // Calculate percentage change based on value (deterministic)
+        const percentChange = value ? ((value % 100) / 10) - 5 : 0;
         const isPositive = percentChange > 0;
 
         return (
@@ -172,8 +172,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
                             <button
                                 onClick={() => setChartType('area')}
                                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${chartType === 'area'
-                                        ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
-                                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                                    ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                                     }`}
                             >
                                 Area
@@ -181,8 +181,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
                             <button
                                 onClick={() => setChartType('line')}
                                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${chartType === 'line'
-                                        ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
-                                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                                    ? 'bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm'
+                                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                                     }`}
                             >
                                 Line

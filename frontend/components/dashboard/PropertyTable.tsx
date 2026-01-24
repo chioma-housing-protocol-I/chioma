@@ -12,8 +12,7 @@ import {
     MoreHorizontal,
     Eye,
     Edit,
-    Trash2,
-    ExternalLink
+    Trash2
 } from 'lucide-react';
 
 interface PropertyTableProps {
