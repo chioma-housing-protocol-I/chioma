@@ -5,6 +5,13 @@
   --foreground: #171717;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
 @theme inline {
   /* Background & Foreground */
   --color-background: var(--background);
@@ -19,10 +26,15 @@
 
   /* Neutral Colors */
   --color-neutral-900: #0F172A;
+  --color-neutral-800: #1E293B;
   --color-neutral-700: #334155;
+  --color-neutral-600: #475569;
   --color-neutral-500: #64748B;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-300: #CBD5E1;
   --color-neutral-200: #E2E8F0;
-  --color-neutral-100: #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-50: #F8FAFC;
 
   /* Typography */
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -52,6 +64,53 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+}
+
+/* Animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
 body {
