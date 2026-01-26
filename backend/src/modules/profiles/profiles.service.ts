@@ -102,9 +102,8 @@ export class ProfilesService {
   }
 
   async submitOnChainUpdate(signedXdr: string) {
-    const hash = await this.stellarProfileService.submitSignedTransaction(
-      signedXdr,
-    );
+    const hash =
+      await this.stellarProfileService.submitSignedTransaction(signedXdr);
 
     return { hash };
   }
@@ -140,9 +139,8 @@ export class ProfilesService {
       where: { accountId },
     });
 
-    const onChain = await this.stellarProfileService.getOnChainProfile(
-      accountId,
-    );
+    const onChain =
+      await this.stellarProfileService.getOnChainProfile(accountId);
 
     if (!profile && !onChain) {
       throw new NotFoundException('Profile not found');

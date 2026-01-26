@@ -52,7 +52,9 @@ export class StellarProfileService {
   }
 
   async getOnChainProfile(accountId: string) {
-    const response = await axios.get(`${this.horizonUrl}/accounts/${accountId}`);
+    const response = await axios.get(
+      `${this.horizonUrl}/accounts/${accountId}`,
+    );
     const dataValue = response.data?.data?.[this.dataKey];
 
     if (!dataValue) {

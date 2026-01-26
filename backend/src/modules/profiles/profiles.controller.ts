@@ -30,7 +30,10 @@ export class ProfilesController {
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update off-chain profile and prepare SEP-29 data' })
-  @ApiResponse({ status: 200, description: 'Profile prepared for on-chain update' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile prepared for on-chain update',
+  })
   async updateProfile(
     @CurrentUser() user: User,
     @Body() dto: UpdateProfileDto,

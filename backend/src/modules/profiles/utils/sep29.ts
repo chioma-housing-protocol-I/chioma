@@ -15,10 +15,7 @@ export function encodeProfileMapToScValXdr(profile: OnChainProfileMap): string {
       encodeScValSymbol('version'),
       encodeScValSymbol(profile.version),
     ),
-    encodeScMapEntry(
-      encodeScValSymbol('type'),
-      encodeScValU32(profile.type),
-    ),
+    encodeScMapEntry(encodeScValSymbol('type'), encodeScValU32(profile.type)),
     encodeScMapEntry(
       encodeScValSymbol('updated'),
       encodeScValU64(profile.updated),
@@ -32,7 +29,9 @@ export function encodeProfileMapToScValXdr(profile: OnChainProfileMap): string {
   return encodeScValMap(entries).toString('base64');
 }
 
-export function decodeProfileMapFromScValXdr(xdrBase64: string): OnChainProfileMap {
+export function decodeProfileMapFromScValXdr(
+  xdrBase64: string,
+): OnChainProfileMap {
   const buffer = Buffer.from(xdrBase64, 'base64');
   const { value, offset } = decodeScVal(buffer, 0);
 
@@ -113,10 +112,7 @@ function encodeScValU32(value: number): Buffer {
 }
 
 function encodeScValU64(value: number): Buffer {
-  return Buffer.concat([
-    writeU32(ScValType.U64),
-    writeU64(BigInt(value)),
-  ]);
+  return Buffer.concat([writeU32(ScValType.U64), writeU64(BigInt(value))]);
 }
 
 function encodeScValBytes(value: Uint8Array): Buffer {
@@ -136,7 +132,10 @@ function decodeScVal(buffer: Buffer, offset: number) {
 
   switch (type) {
     case ScValType.Symbol: {
-      const { value: symbol, offset: next } = readString(buffer, offsetAfterType);
+      const { value: symbol, offset: next } = readString(
+        buffer,
+        offsetAfterType,
+      );
       return { value: { type: ScValType.Symbol, symbol }, offset: next };
     }
     case ScValType.U32: {
@@ -148,14 +147,23 @@ function decodeScVal(buffer: Buffer, offset: number) {
       return { value: { type: ScValType.U64, u64 }, offset: next };
     }
     case ScValType.Bytes: {
-      const { value: bytes, offset: next } = readOpaque(buffer, offsetAfterType);
+      const { value: bytes, offset: next } = readOpaque(
+        buffer,
+        offsetAfterType,
+      );
       return { value: { type: ScValType.Bytes, bytes }, offset: next };
     }
     case ScValType.Map: {
-      const { value: entries, offset: next } = readArray(buffer, offsetAfterType);
+      const { value: entries, offset: next } = readArray(
+        buffer,
+        offsetAfterType,
+      );
       const map = entries.map((entry) => {
         const { value: key, offset: afterKey } = decodeScVal(entry, 0);
-        const { value: value, offset: afterValue } = decodeScVal(entry, afterKey);
+        const { value: value, offset: afterValue } = decodeScVal(
+          entry,
+          afterKey,
+        );
         if (afterValue !== entry.length) {
           throw new Error('Invalid SCMapEntry');
         }
