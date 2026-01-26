@@ -16,10 +16,14 @@ import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
+import { DisputesService } from '../disputes/disputes.service';
 
 @Controller('api/agreements')
 export class AgreementsController {
-  constructor(private readonly agreementsService: AgreementsService) {}
+  constructor(
+    private readonly agreementsService: AgreementsService,
+    private readonly disputesService: DisputesService,
+  ) {}
 
   /**
    * POST /api/agreements
@@ -93,5 +97,14 @@ export class AgreementsController {
   @Get(':id/payments')
   async getPayments(@Param('id') id: string) {
     return await this.agreementsService.getPayments(id);
+  }
+
+  /**
+   * GET /api/agreements/:id/disputes
+   * Get all disputes for an agreement
+   */
+  @Get(':id/disputes')
+  async getDisputes(@Param('id') id: string) {
+    return await this.disputesService.getDisputesByAgreement(id);
   }
 }

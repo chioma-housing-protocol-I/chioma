@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { RentContract } from '../../rent/entities/rent-contract.entity'; // Verifica esta ruta
+import { RentAgreement } from '../../rent/entities/rent-contract.entity';
 
 @Entity('users')
 export class User {
@@ -9,9 +9,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  // ESTO ES LO QUE FALTA:
-  @OneToMany(() => RentContract, (contract) => contract.user)
-  contracts: RentContract[];
+  @OneToMany(() => RentAgreement, (contract) => contract.user)
+  contracts: RentAgreement[];
 
   @CreateDateColumn()
   createdAt: Date;
