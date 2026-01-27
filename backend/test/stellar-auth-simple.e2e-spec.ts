@@ -7,7 +7,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthModule } from '../src/modules/auth/auth.module';
 import { UsersModule } from '../src/modules/users/users.module';
 import { User } from '../src/modules/users/entities/user.entity';
-import { Keypair, TransactionBuilder, Networks, Operation } from '@stellar/stellar-sdk';
+import {
+  Keypair,
+  TransactionBuilder,
+  Networks,
+  Operation,
+} from '@stellar/stellar-sdk';
 
 describe('Stellar Authentication E2E', () => {
   let app: INestApplication;
@@ -50,7 +55,7 @@ describe('Stellar Authentication E2E', () => {
     // Set environment variables for testing
     process.env.STELLAR_SERVER_SECRET_KEY = serverKeypair.secret();
     process.env.STELLAR_NETWORK = 'testnet';
-    
+
     await app.init();
     userRepository = moduleFixture.get(getRepositoryToken(User));
   });
@@ -76,9 +81,12 @@ describe('Stellar Authentication E2E', () => {
       expect(response.body).toHaveProperty('expiresAt');
       expect(typeof response.body.challenge).toBe('string');
       expect(typeof response.body.expiresAt).toBe('string');
-      
+
       // Verify challenge is a valid Stellar transaction
-      const transaction = TransactionBuilder.fromXDR(response.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        response.body.challenge,
+        Networks.TESTNET,
+      );
       expect(transaction).toBeDefined();
     });
 
@@ -128,9 +136,12 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       const challengeXdr = challengeResponse.body.challenge;
-      
+
       // Step 2: Sign challenge with client keypair
-      const transaction = TransactionBuilder.fromXDR(challengeXdr, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeXdr,
+        Networks.TESTNET,
+      );
       transaction.sign(clientKeypair);
       const signedChallengeXdr = transaction.toXDR();
 
@@ -153,7 +164,9 @@ describe('Stellar Authentication E2E', () => {
       expect(verifyResponse.body.user.emailVerified).toBe(true);
 
       // Verify user was created in database
-      const user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+      const user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user).toBeDefined();
       expect(user.authMethod).toBe('stellar');
     });
@@ -175,9 +188,12 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       // Step 2: Sign and verify
-      const transaction = TransactionBuilder.fromXDR(challengeResponse.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeResponse.body.challenge,
+        Networks.TESTNET,
+      );
       transaction.sign(clientKeypair);
-      
+
       const verifyResponse = await request(app.getHttpServer())
         .post('/auth/stellar/verify')
         .send({
@@ -189,8 +205,10 @@ describe('Stellar Authentication E2E', () => {
 
       // Verify auth method was updated
       expect(verifyResponse.body.user.authMethod).toBe('stellar');
-      
-      const user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+
+      const user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user.authMethod).toBe('stellar');
       expect(user.lastLoginAt).toBeDefined();
     });
@@ -226,16 +244,18 @@ describe('Stellar Authentication E2E', () => {
 
   describe('Database Integration', () => {
     it('should handle concurrent requests safely', async () => {
-      const concurrentRequests = Array(5).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/auth/stellar/challenge')
-          .send({ walletAddress: Keypair.random().publicKey() })
-      );
+      const concurrentRequests = Array(5)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer())
+            .post('/auth/stellar/challenge')
+            .send({ walletAddress: Keypair.random().publicKey() }),
+        );
 
       const responses = await Promise.all(concurrentRequests);
-      
+
       // All requests should either succeed or fail gracefully
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect([200, 400, 429]).toContain(response.status);
       });
     });
@@ -249,14 +269,18 @@ describe('Stellar Authentication E2E', () => {
       });
 
       // Verify user exists
-      let user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+      let user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user).toBeDefined();
 
       // Clean up should work in beforeEach
       await userRepository.delete({ walletAddress: validWalletAddress });
-      
+
       // Verify user is deleted
-      user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+      user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user).toBeNull();
     });
   });
@@ -271,7 +295,7 @@ describe('Stellar Authentication E2E', () => {
 
     it('should create and sign Stellar transactions', () => {
       const nonce = 'test-nonce-12345';
-      
+
       // Create a mock challenge transaction
       const account = {
         accountId: () => serverKeypair.publicKey(),
@@ -283,32 +307,34 @@ describe('Stellar Authentication E2E', () => {
         fee: '100',
         networkPassphrase: Networks.TESTNET,
       })
-        .addOperation(Operation.manageData({
-          name: `${validWalletAddress}_auth`,
-          value: nonce,
-          source: validWalletAddress,
-        }))
+        .addOperation(
+          Operation.manageData({
+            name: `${validWalletAddress}_auth`,
+            value: nonce,
+            source: validWalletAddress,
+          }),
+        )
         .setTimeout(300)
         .build();
 
       // Sign with server keypair
       transaction.sign(serverKeypair);
-      
+
       // Verify transaction is valid
       expect(transaction.toXDR()).toBeDefined();
       expect(transaction.toXDR().length).toBeGreaterThan(0);
-      
+
       // Verify signature
       const keypair = Keypair.fromPublicKey(serverKeypair.publicKey());
       const signatures = transaction.signatures;
-      const isValidSignature = signatures.some(sig => {
+      const isValidSignature = signatures.some((sig) => {
         try {
           return keypair.verify(transaction.hash(), sig.signature());
         } catch {
           return false;
         }
       });
-      
+
       expect(isValidSignature).toBe(true);
     });
   });
@@ -322,7 +348,7 @@ describe('Stellar Authentication E2E', () => {
         'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC', // Valid 56-character address
       ];
 
-      validAddresses.forEach(address => {
+      validAddresses.forEach((address) => {
         expect(address).toMatch(/^G[A-Z2-7]{55}$/);
       });
 
@@ -335,7 +361,7 @@ describe('Stellar Authentication E2E', () => {
         'GD5DJ3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q2Q', // Too long
       ];
 
-      invalidAddresses.forEach(address => {
+      invalidAddresses.forEach((address) => {
         expect(address).not.toMatch(/^G[A-Z2-7]{55}$/);
       });
     });
@@ -352,9 +378,10 @@ describe('Stellar Authentication E2E', () => {
         '../../../etc/passwd',
       ];
 
-      edgeCases.forEach(input => {
+      edgeCases.forEach((input) => {
         // These should all be rejected by validation
-        const isValid = typeof input === 'string' && !!input.match(/^G[A-Z2-7]{55}$/);
+        const isValid =
+          typeof input === 'string' && !!input.match(/^G[A-Z2-7]{55}$/);
         expect(isValid).toBe(false);
       });
     });
@@ -392,8 +419,9 @@ describe('Stellar Authentication E2E', () => {
     it('should validate Stellar network configuration', () => {
       const network = process.env.STELLAR_NETWORK;
       expect(['testnet', 'mainnet', 'public']).toContain(network);
-      
-      const expectedNetwork = network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+
+      const expectedNetwork =
+        network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
       expect(expectedNetwork).toBeDefined();
     });
   });

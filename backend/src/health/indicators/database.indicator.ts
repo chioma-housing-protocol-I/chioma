@@ -50,7 +50,7 @@ export class DatabaseHealthIndicator extends HealthIndicator {
       const result = this.getStatus(key, false, {
         status: 'down',
         responseTime,
-        error: error.message,
+        error: (error as Error).message,
         connection: 'failed',
       });
 

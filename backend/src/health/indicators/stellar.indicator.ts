@@ -43,12 +43,18 @@ export class StellarHealthIndicator extends HealthIndicator {
 
       const responseTime = Date.now() - startTime;
 
+      const responseData = response.data as
+        | {
+            horizon_version?: string;
+            core_version?: string;
+          }
+        | undefined;
       const result = this.getStatus(key, true, {
         status: 'up',
         responseTime,
         network: this.getStellarNetwork(currentUrl),
-        horizonVersion: response.data?.horizon_version || 'unknown',
-        coreVersion: response.data?.core_version || 'unknown',
+        horizonVersion: responseData?.horizon_version || 'unknown',
+        coreVersion: responseData?.core_version || 'unknown',
         url: currentUrl,
       });
 
@@ -67,7 +73,7 @@ export class StellarHealthIndicator extends HealthIndicator {
       const result = this.getStatus(key, false, {
         status: 'down',
         responseTime,
-        error: error.message,
+        error: (error as Error).message,
         url: currentUrl,
         network: this.getStellarNetwork(currentUrl),
       });
@@ -76,7 +82,10 @@ export class StellarHealthIndicator extends HealthIndicator {
     }
   }
 
-  async checkLedger(): Promise<any> {
+  async checkLedger(): Promise<{
+    latestLedger: number | null;
+    timestamp: string | null;
+  }> {
     try {
       const response = await firstValueFrom(
         this.httpService
@@ -84,9 +93,20 @@ export class StellarHealthIndicator extends HealthIndicator {
           .pipe(timeout(this.timeoutMs)),
       );
 
+      const responseData = response.data as
+        | {
+            _embedded?: {
+              records?: Array<{
+                sequence?: number;
+                closed_at?: string;
+              }>;
+            };
+          }
+        | undefined;
+
       return {
-        latestLedger: response.data?._embedded?.records?.[0]?.sequence || null,
-        timestamp: response.data?._embedded?.records?.[0]?.closed_at || null,
+        latestLedger: responseData?._embedded?.records?.[0]?.sequence || null,
+        timestamp: responseData?._embedded?.records?.[0]?.closed_at || null,
       };
     } catch (error) {
       this.logger.error('Failed to fetch latest ledger', error);

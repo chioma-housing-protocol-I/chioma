@@ -57,8 +57,10 @@ function maskIp(ip: string | undefined): string {
 
 function sanitizeHeaders(
   headers: Record<string, string | string[] | undefined>,
-): Record<string, string | string[] | undefined | '[REDACTED]'> {
-  const sanitized = { ...headers };
+): Record<string, string | string[] | undefined> {
+  const sanitized: Record<string, string | string[] | undefined> = {
+    ...headers,
+  };
   for (const key of Object.keys(sanitized)) {
     if (SENSITIVE_HEADERS.includes(key.toLowerCase())) {
       sanitized[key] = '[REDACTED]';
@@ -72,8 +74,13 @@ export function sanitizeBody(body: unknown, depth = 0): unknown {
   if (depth > 10) return '[MAX_DEPTH_EXCEEDED]';
   if (!body || typeof body !== 'object') return body;
 
+  // Handle arrays separately
+  if (Array.isArray(body)) {
+    return body.map((item: unknown) => sanitizeBody(item, depth + 1));
+  }
+
   // Use a Map to avoid prototype pollution and property injection
-  const result: Record<string, unknown> = Array.isArray(body) ? [] : {};
+  const result: Record<string, unknown> = {};
 
   const bodyRecord = body as Record<string, unknown>;
   // Get own property names safely

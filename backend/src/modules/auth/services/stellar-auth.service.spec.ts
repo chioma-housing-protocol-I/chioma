@@ -28,7 +28,8 @@ describe('StellarAuthService', () => {
     get: jest.fn(),
   };
 
-  const mockWalletAddress = 'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC';
+  const mockWalletAddress =
+    'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC';
 
   beforeEach(async () => {
     mockConfigService.get.mockImplementation((key: string) => {
@@ -73,38 +74,51 @@ describe('StellarAuthService', () => {
 
   describe('verifyStellarAddress', () => {
     it('should return true for valid Stellar address', () => {
-      const validAddress = 'GD5D2B2A2KHWGFP2GBM4D7J23G5Q2Y6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q2QAA';
+      const validAddress =
+        'GD5D2B2A2KHWGFP2GBM4D7J23G5Q2Y6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q2QAA';
       expect(service.verifyStellarAddress(validAddress)).toBe(true);
     });
 
     it('should return false for invalid Stellar address', () => {
       expect(service.verifyStellarAddress('invalid')).toBe(false);
       expect(service.verifyStellarAddress('')).toBe(false);
-      expect(service.verifyStellarAddress('GD5DJ3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q')).toBe(false); // Too short
+      expect(
+        service.verifyStellarAddress(
+          'GD5DJ3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q',
+        ),
+      ).toBe(false); // Too short
     });
   });
 
   describe('generateChallenge', () => {
-    it('should throw BadRequestException for invalid address', async () => {
-      await expect(service.generateChallenge('invalid')).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid address', () => {
+      expect(() => service.generateChallenge('invalid')).toThrow(
+        BadRequestException,
+      );
     });
 
     it('should generate challenge for valid address', async () => {
       // Mock the Stellar SDK methods to avoid actual network calls
       const { Keypair } = require('@stellar/stellar-sdk');
-      const mockKeypair = Keypair.fromSecret('SBYYY3IL3A2RFQCUINOZLGV3S4BCMCEB4TGMRL7G5KMT2Q4AOTEEUGDJ');
-      
+      const mockKeypair = Keypair.fromSecret(
+        'SBYYY3IL3A2RFQCUINOZLGV3S4BCMCEB4TGMRL7G5KMT2Q4AOTEEUGDJ',
+      );
+
       const mockAccount = {
         accountId: () => mockKeypair.publicKey(),
         sequenceNumber: () => '1',
         incrementSequenceNumber: () => {},
       };
-      
-      jest.spyOn(service as any, 'getServerKeypair').mockReturnValue(mockKeypair);
-      jest.spyOn(service as any, 'getServerAccount').mockResolvedValue(mockAccount);
-      
-      const result = await service.generateChallenge(mockWalletAddress);
-      
+
+      jest
+        .spyOn(service as any, 'getServerKeypair')
+        .mockReturnValue(mockKeypair);
+      jest
+        .spyOn(service as any, 'getServerAccount')
+        .mockReturnValue(mockAccount);
+
+      const result = service.generateChallenge(mockWalletAddress);
+
       expect(result).toHaveProperty('challenge');
       expect(result).toHaveProperty('expiresAt');
       expect(typeof result.challenge).toBe('string');
@@ -120,7 +134,9 @@ describe('StellarAuthService', () => {
         challenge: 'test-challenge',
       };
 
-      await expect(service.verifySignature(verifyDto)).rejects.toThrow(BadRequestException);
+      await expect(service.verifySignature(verifyDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create new user if not exists', async () => {
@@ -138,18 +154,23 @@ describe('StellarAuthService', () => {
       mockJwtService.sign.mockReturnValue('test-token');
 
       // Mock the challenge storage and verification
-      jest.spyOn(service as any, 'verifyChallengeSignature').mockResolvedValue(true);
-      
+      jest
+        .spyOn(service as any, 'verifyChallengeSignature')
+        .mockResolvedValue(true);
+
       // Manually store a challenge for testing
       const challengeXdr = 'mock-challenge-xdr';
-      const challengeId = require('crypto').createHash('sha256').update(challengeXdr).digest('hex');
+      const challengeId = require('crypto')
+        .createHash('sha256')
+        .update(challengeXdr)
+        .digest('hex');
       (service as any).challenges.set(challengeId, {
         walletAddress: mockWalletAddress,
         challenge: challengeXdr,
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
         nonce: 'test-nonce',
       });
-      
+
       const verifyDto = {
         walletAddress: mockWalletAddress,
         signature: 'test-signature',
@@ -186,11 +207,16 @@ describe('StellarAuthService', () => {
       });
       mockJwtService.sign.mockReturnValue('test-token');
 
-      jest.spyOn(service as any, 'verifyChallengeSignature').mockResolvedValue(true);
-      
+      jest
+        .spyOn(service as any, 'verifyChallengeSignature')
+        .mockResolvedValue(true);
+
       // Manually store a challenge for testing
       const challengeXdr = 'mock-challenge-xdr';
-      const challengeId = require('crypto').createHash('sha256').update(challengeXdr).digest('hex');
+      const challengeId = require('crypto')
+        .createHash('sha256')
+        .update(challengeXdr)
+        .digest('hex');
       (service as any).challenges.set(challengeId, {
         walletAddress: mockWalletAddress,
         challenge: challengeXdr,
@@ -210,7 +236,7 @@ describe('StellarAuthService', () => {
         expect.objectContaining({
           authMethod: AuthMethod.STELLAR,
           lastLoginAt: expect.any(Date),
-        })
+        }),
       );
       expect(result).toHaveProperty('user');
     });

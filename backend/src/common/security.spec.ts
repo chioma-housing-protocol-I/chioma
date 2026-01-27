@@ -101,7 +101,9 @@ describe('Security Features Test Suite', () => {
       });
 
       it('should handle nested/malformed tags', () => {
-        const result = pipe.transform(
+        // Use a pipe without XSS checking for this test to verify sanitization of malformed HTML
+        const noXssPipe = new SanitizationPipe({ checkXss: false });
+        const result = noXssPipe.transform(
           '<<script>script>alert(1)<</script>/script>',
           {
             type: 'body',
@@ -301,9 +303,16 @@ describe('Security Features Test Suite', () => {
     });
 
     it('should detect event handlers', () => {
-      const pattern = XSS_PATTERNS.find((p) => p.source.includes('on\\w+'));
+      // Find pattern that matches event handlers (onclick, onerror, etc.)
+      const pattern = XSS_PATTERNS.find((p) => 
+        p.source.includes('on') && p.source.includes('\\w+')
+      );
       expect(pattern).toBeDefined();
       expect(testXss(pattern!, 'onclick=alert(1)')).toBe(true);
+      // Reset regex lastIndex to avoid state issues between tests
+      if (pattern) {
+        pattern.lastIndex = 0;
+      }
       expect(testXss(pattern!, 'onerror=alert(1)')).toBe(true);
     });
   });

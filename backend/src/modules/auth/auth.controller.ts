@@ -7,8 +7,9 @@ import {
   UseGuards,
   Get,
   Query,
-  Request,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -59,37 +60,39 @@ export class AuthController {
   })
   async register(
     @Body() registerDto: RegisterDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<AuthResponseDto> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.authService.register(registerDto);
       const duration = Date.now() - startTime;
-      
+
       // Record successful registration metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.PASSWORD,
         success: true,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
       });
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       // Record failed registration metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.PASSWORD,
         success: false,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-        errorMessage: error.message,
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
+        errorMessage,
       });
-      
+
       throw error;
     }
   }
@@ -112,37 +115,39 @@ export class AuthController {
   })
   async login(
     @Body() loginDto: LoginDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<AuthResponseDto> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.authService.login(loginDto);
       const duration = Date.now() - startTime;
-      
+
       // Record successful login metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.PASSWORD,
         success: true,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
       });
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       // Record failed login metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.PASSWORD,
         success: false,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-        errorMessage: error.message,
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
+        errorMessage,
       });
-      
+
       throw error;
     }
   }

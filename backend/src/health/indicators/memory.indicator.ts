@@ -13,7 +13,7 @@ export class MemoryHealthIndicator extends HealthIndicator {
   private readonly warningThreshold = 512 * 1024 * 1024; // 512MB
   private readonly errorThreshold = 1024 * 1024 * 1024; // 1GB
 
-  async isHealthy(key: string): Promise<HealthIndicatorResult> {
+  isHealthy(key: string): Promise<HealthIndicatorResult> {
     const startTime = Date.now();
 
     try {
@@ -59,16 +59,18 @@ export class MemoryHealthIndicator extends HealthIndicator {
         this.logger.warn(
           `Memory usage warning: ${this.formatBytes(heapUsed)} used`,
         );
+        return Promise.resolve(result);
       } else if (status === 'down') {
         this.logger.error(
           `Memory usage critical: ${this.formatBytes(heapUsed)} used`,
         );
-        throw new HealthCheckError('Memory usage critical', result);
+        return Promise.reject(
+          new HealthCheckError('Memory usage critical', result),
+        );
       } else {
         this.logger.log(`Memory health check passed in ${responseTime}ms`);
+        return Promise.resolve(result);
       }
-
-      return result;
     } catch (error) {
       const responseTime = Date.now() - startTime;
 
@@ -77,10 +79,12 @@ export class MemoryHealthIndicator extends HealthIndicator {
       const result = this.getStatus(key, false, {
         status: 'down',
         responseTime,
-        error: error.message,
+        error: (error as Error).message,
       });
 
-      throw new HealthCheckError('Memory check failed', result);
+      return Promise.reject(
+        new HealthCheckError('Memory check failed', result),
+      );
     }
   }
 

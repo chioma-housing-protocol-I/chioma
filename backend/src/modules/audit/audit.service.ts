@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
-import { AuditLog, AuditAction, AuditStatus, AuditLevel } from './entities/audit-log.entity';
+import { Repository } from 'typeorm';
+import {
+  AuditLog,
+  AuditAction,
+  AuditStatus,
+  AuditLevel,
+} from './entities/audit-log.entity';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { User } from '../users/entities/user.entity';
 
@@ -9,15 +14,15 @@ export interface AuditLogData {
   action: AuditAction;
   entityType?: string;
   entityId?: string;
-  oldValues?: any;
-  newValues?: any;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   performedBy?: string;
   ipAddress?: string;
   userAgent?: string;
   status?: AuditStatus;
   level?: AuditLevel;
   errorMessage?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -47,7 +52,9 @@ export class AuditService {
       });
 
       await this.auditLogRepository.save(auditLog);
-      this.logger.debug(`Audit log created: ${auditLog.action} on ${auditLog.entity_type}:${auditLog.entity_id}`);
+      this.logger.debug(
+        `Audit log created: ${auditLog.action} on ${auditLog.entity_type}:${auditLog.entity_id}`,
+      );
     } catch (error) {
       this.logger.error('Failed to create audit log', error);
     }
@@ -58,9 +65,9 @@ export class AuditService {
     entityType: string,
     entityId: string,
     performedBy?: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: any,
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {
@@ -84,7 +91,7 @@ export class AuditService {
     entityId: string,
     errorMessage: string,
     performedBy?: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {
@@ -106,7 +113,7 @@ export class AuditService {
     user: User,
     ipAddress?: string,
     userAgent?: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
       action,
@@ -129,7 +136,8 @@ export class AuditService {
     limit: number;
     totalPages: number;
   }> {
-    const queryBuilder = this.auditLogRepository.createQueryBuilder('audit_log')
+    const queryBuilder = this.auditLogRepository
+      .createQueryBuilder('audit_log')
       .leftJoinAndSelect('audit_log.performed_by_user', 'user')
       .orderBy('audit_log.performed_at', 'DESC');
 

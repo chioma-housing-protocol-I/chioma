@@ -6,18 +6,18 @@ import {
   HttpStatus,
   ClassSerializerInterceptor,
   UseInterceptors,
-  Request,
+  Req,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Request } from 'express';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StellarAuthService } from '../services/stellar-auth.service';
 import { AuthMetricsService } from '../services/auth-metrics.service';
-import { StellarAuthChallengeDto, StellarAuthVerifyDto, StellarAuthResponseDto } from '../dto/stellar-auth.dto';
+import {
+  StellarAuthChallengeDto,
+  StellarAuthVerifyDto,
+  StellarAuthResponseDto,
+} from '../dto/stellar-auth.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { AuthMethod } from '../../users/entities/user.entity';
 
@@ -35,7 +35,8 @@ export class StellarAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Generate Stellar authentication challenge',
-    description: 'Generate a challenge transaction for the client to sign with their Stellar wallet',
+    description:
+      'Generate a challenge transaction for the client to sign with their Stellar wallet',
   })
   @ApiResponse({
     status: 200,
@@ -52,37 +53,41 @@ export class StellarAuthController {
   })
   async generateChallenge(
     @Body() challengeDto: StellarAuthChallengeDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<StellarAuthResponseDto> {
     const startTime = Date.now();
-    
+
     try {
-      const result = await this.stellarAuthService.generateChallenge(challengeDto.walletAddress);
+      const result = this.stellarAuthService.generateChallenge(
+        challengeDto.walletAddress,
+      );
       const duration = Date.now() - startTime;
-      
+
       // Record successful challenge generation metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.STELLAR,
         success: true,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
       });
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       // Record failed challenge generation metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.STELLAR,
         success: false,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-        errorMessage: error.message,
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
+        errorMessage,
       });
-      
+
       throw error;
     }
   }
@@ -92,7 +97,8 @@ export class StellarAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify Stellar signature and authenticate',
-    description: 'Verify the signed challenge and authenticate the user with their Stellar wallet',
+    description:
+      'Verify the signed challenge and authenticate the user with their Stellar wallet',
   })
   @ApiResponse({
     status: 200,
@@ -113,37 +119,39 @@ export class StellarAuthController {
   })
   async verifySignature(
     @Body() verifyDto: StellarAuthVerifyDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<AuthResponseDto> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.stellarAuthService.verifySignature(verifyDto);
       const duration = Date.now() - startTime;
-      
+
       // Record successful Stellar authentication metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.STELLAR,
         success: true,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
       });
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       // Record failed Stellar authentication metric
       await this.authMetricsService.recordAuthAttempt({
         authMethod: AuthMethod.STELLAR,
         success: false,
         duration,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-        errorMessage: error.message,
+        ipAddress: req.ip || undefined,
+        userAgent: req.get('User-Agent') || undefined,
+        errorMessage,
       });
-      
+
       throw error;
     }
   }

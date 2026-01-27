@@ -8,7 +8,7 @@ export class UpdateAgreementDto extends PartialType(CreateAgreementDto) {
   @ApiPropertyOptional({
     description: 'Agreement status',
     enum: AgreementStatus,
-    example: 'ACTIVE'
+    example: 'ACTIVE',
   })
   @IsOptional()
   @IsEnum(AgreementStatus)

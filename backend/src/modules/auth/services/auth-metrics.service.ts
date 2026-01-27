@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { AuthMethod } from '../../users/entities/user.entity';
 import { AuthMetric } from '../entities/auth-metric.entity';
 
@@ -97,17 +97,25 @@ export class AuthMetricsService {
     });
 
     const totalAttempts = metrics.length;
-    const successfulAttempts = metrics.filter(m => m.success).length;
+    const successfulAttempts = metrics.filter((m) => m.success).length;
     const failedAttempts = totalAttempts - successfulAttempts;
-    const successRate = totalAttempts > 0 ? (successfulAttempts / totalAttempts) * 100 : 0;
-    const averageDuration = totalAttempts > 0 
-      ? metrics.reduce((sum, m) => sum + m.duration, 0) / totalAttempts 
-      : 0;
+    const successRate =
+      totalAttempts > 0 ? (successfulAttempts / totalAttempts) * 100 : 0;
+    const averageDuration =
+      totalAttempts > 0
+        ? metrics.reduce((sum, m) => sum + m.duration, 0) / totalAttempts
+        : 0;
 
     // Method breakdown
     const methodBreakdown = {
-      [AuthMethod.PASSWORD]: this.calculateMethodStats(metrics, AuthMethod.PASSWORD),
-      [AuthMethod.STELLAR]: this.calculateMethodStats(metrics, AuthMethod.STELLAR),
+      [AuthMethod.PASSWORD]: this.calculateMethodStats(
+        metrics,
+        AuthMethod.PASSWORD,
+      ),
+      [AuthMethod.STELLAR]: this.calculateMethodStats(
+        metrics,
+        AuthMethod.STELLAR,
+      ),
     };
 
     // Daily trend
@@ -128,7 +136,9 @@ export class AuthMetricsService {
     };
   }
 
-  async getPerformanceMetrics(days: number = 30): Promise<PerformanceMetrics[]> {
+  async getPerformanceMetrics(
+    days: number = 30,
+  ): Promise<PerformanceMetrics[]> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
@@ -139,8 +149,12 @@ export class AuthMetricsService {
       },
     });
 
-    const passwordMetrics = metrics.filter(m => m.authMethod === AuthMethod.PASSWORD);
-    const stellarMetrics = metrics.filter(m => m.authMethod === AuthMethod.STELLAR);
+    const passwordMetrics = metrics.filter(
+      (m) => m.authMethod === AuthMethod.PASSWORD,
+    );
+    const stellarMetrics = metrics.filter(
+      (m) => m.authMethod === AuthMethod.STELLAR,
+    );
 
     return [
       this.calculatePerformanceMetrics(AuthMethod.PASSWORD, passwordMetrics),
@@ -148,12 +162,14 @@ export class AuthMetricsService {
     ];
   }
 
-  async getHourlyUsage(days: number = 7): Promise<Array<{
-    hour: string;
-    password: number;
-    stellar: number;
-    total: number;
-  }>> {
+  async getHourlyUsage(days: number = 7): Promise<
+    Array<{
+      hour: string;
+      password: number;
+      stellar: number;
+      total: number;
+    }>
+  > {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
@@ -166,7 +182,7 @@ export class AuthMetricsService {
     // Group by hour
     const hourlyData = new Map<string, { password: number; stellar: number }>();
 
-    metrics.forEach(metric => {
+    metrics.forEach((metric) => {
       const hour = metric.timestamp.toISOString().slice(0, 13); // YYYY-MM-DDTHH
       const current = hourlyData.get(hour) || { password: 0, stellar: 0 };
 
@@ -206,14 +222,15 @@ export class AuthMetricsService {
   }
 
   private calculateMethodStats(metrics: AuthMetric[], method: AuthMethod) {
-    const methodMetrics = metrics.filter(m => m.authMethod === method);
+    const methodMetrics = metrics.filter((m) => m.authMethod === method);
     const attempts = methodMetrics.length;
-    const successes = methodMetrics.filter(m => m.success).length;
+    const successes = methodMetrics.filter((m) => m.success).length;
     const failures = attempts - successes;
     const successRate = attempts > 0 ? (successes / attempts) * 100 : 0;
-    const averageDuration = attempts > 0 
-      ? methodMetrics.reduce((sum, m) => sum + m.duration, 0) / attempts 
-      : 0;
+    const averageDuration =
+      attempts > 0
+        ? methodMetrics.reduce((sum, m) => sum + m.duration, 0) / attempts
+        : 0;
 
     return {
       attempts,
@@ -225,7 +242,10 @@ export class AuthMetricsService {
   }
 
   private calculateDailyTrend(metrics: AuthMetric[], days: number) {
-    const dailyData = new Map<string, { attempts: number; successes: number; failures: number }>();
+    const dailyData = new Map<
+      string,
+      { attempts: number; successes: number; failures: number }
+    >();
 
     // Initialize all days
     for (let i = 0; i < days; i++) {
@@ -236,9 +256,13 @@ export class AuthMetricsService {
     }
 
     // Fill with actual data
-    metrics.forEach(metric => {
+    metrics.forEach((metric) => {
       const dateStr = metric.timestamp.toISOString().slice(0, 10);
-      const current = dailyData.get(dateStr) || { attempts: 0, successes: 0, failures: 0 };
+      const current = dailyData.get(dateStr) || {
+        attempts: 0,
+        successes: 0,
+        failures: 0,
+      };
 
       current.attempts++;
       if (metric.success) {
@@ -262,26 +286,33 @@ export class AuthMetricsService {
     const errorCounts = new Map<string, number>();
 
     metrics
-      .filter(m => !m.success && m.errorMessage)
-      .forEach(metric => {
+      .filter((m) => !m.success && m.errorMessage)
+      .forEach((metric) => {
         const error = metric.errorMessage!;
         errorCounts.set(error, (errorCounts.get(error) || 0) + 1);
       });
 
-    const totalErrors = Array.from(errorCounts.values()).reduce((sum, count) => sum + count, 0);
+    const totalErrors = Array.from(errorCounts.values()).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
 
     return Array.from(errorCounts.entries())
       .map(([error, count]) => ({
         error,
         count,
-        percentage: totalErrors > 0 ? Math.round((count / totalErrors) * 10000) / 100 : 0,
+        percentage:
+          totalErrors > 0 ? Math.round((count / totalErrors) * 10000) / 100 : 0,
       }))
       .sort((a, b) => b.count - a.count);
   }
 
-  private calculatePerformanceMetrics(method: AuthMethod, metrics: AuthMetric[]): PerformanceMetrics {
-    const durations = metrics.map(m => m.duration).sort((a, b) => a - b);
-    
+  private calculatePerformanceMetrics(
+    method: AuthMethod,
+    metrics: AuthMetric[],
+  ): PerformanceMetrics {
+    const durations = metrics.map((m) => m.duration).sort((a, b) => a - b);
+
     if (durations.length === 0) {
       return {
         method,

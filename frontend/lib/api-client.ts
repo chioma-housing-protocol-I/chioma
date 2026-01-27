@@ -20,7 +20,7 @@ export class ApiError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = "ApiError";
@@ -121,7 +121,7 @@ async function refreshAccessToken(): Promise<boolean> {
  * Request options type
  */
 interface RequestOptions extends Omit<RequestInit, "body"> {
-  body?: any;
+  body?: unknown;
   skipAuth?: boolean;
   timeout?: number;
 }
@@ -192,7 +192,7 @@ async function request<T>(
 
     // Parse response
     const contentType = response.headers.get("Content-Type");
-    let data: any;
+    let data: unknown;
 
     if (contentType?.includes("application/json")) {
       data = await response.json();
@@ -202,14 +202,18 @@ async function request<T>(
 
     // Handle errors
     if (!response.ok) {
+      const errorMessage =
+        (data && typeof data === "object" && "message" in data && typeof data.message === "string")
+          ? data.message
+          : "An error occurred";
       throw new ApiError(
         response.status,
-        data?.message || "An error occurred",
+        errorMessage,
         data
       );
     }
 
-    return data;
+    return data as T;
   } catch (error) {
     clearTimeout(timeoutId);
 
@@ -235,13 +239,13 @@ export const apiClient = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "GET" }),
 
-  post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "POST", body }),
 
-  put: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "PUT", body }),
 
-  patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  patch: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "PATCH", body }),
 
   delete: <T>(endpoint: string, options?: RequestOptions) =>
@@ -254,7 +258,7 @@ export const apiClient = {
 export const authApi = {
   login: async (email: string, password: string) => {
     const data = await apiClient.post<{
-      user: any;
+      user: Record<string, unknown>;
       accessToken: string;
       refreshToken: string;
     }>("/auth/login", { email, password }, { skipAuth: true });
@@ -270,7 +274,7 @@ export const authApi = {
     lastName: string;
   }) => {
     const data = await apiClient.post<{
-      user: any;
+      user: Record<string, unknown>;
       accessToken: string;
       refreshToken: string;
     }>("/auth/register", userData, { skipAuth: true });
@@ -300,9 +304,9 @@ export const authApi = {
   verifyEmail: (token: string) =>
     apiClient.get(`/auth/verify-email?token=${token}`, { skipAuth: true }),
 
-  getProfile: () => apiClient.get<any>("/users/me"),
+  getProfile: () => apiClient.get<Record<string, unknown>>("/users/me"),
 
-  updateProfile: (data: any) => apiClient.put("/users/me", data),
+  updateProfile: (data: Record<string, unknown>) => apiClient.put("/users/me", data),
 
   changePassword: (currentPassword: string, newPassword: string) =>
     apiClient.post("/users/me/password", { currentPassword, newPassword }),
@@ -322,29 +326,29 @@ export const agreementsApi = {
     const queryString = params
       ? "?" + new URLSearchParams(params).toString()
       : "";
-    return apiClient.get<any[]>(`/agreements${queryString}`);
+    return apiClient.get<Record<string, unknown>[]>(`/agreements${queryString}`);
   },
 
-  get: (id: string) => apiClient.get<any>(`/agreements/${id}`),
+  get: (id: string) => apiClient.get<Record<string, unknown>>(`/agreements/${id}`),
 
-  create: (data: any) => apiClient.post("/agreements", data),
+  create: (data: Record<string, unknown>) => apiClient.post("/agreements", data),
 
-  update: (id: string, data: any) => apiClient.put(`/agreements/${id}`, data),
+  update: (id: string, data: Record<string, unknown>) => apiClient.put(`/agreements/${id}`, data),
 
   terminate: (id: string, reason: string) =>
-    apiClient.delete(`/agreements/${id}`, { body: { reason } } as any),
+    apiClient.delete(`/agreements/${id}`, { body: { reason } } as RequestOptions),
 
-  recordPayment: (id: string, paymentData: any) =>
+  recordPayment: (id: string, paymentData: Record<string, unknown>) =>
     apiClient.post(`/agreements/${id}/pay`, paymentData),
 
-  getPayments: (id: string) => apiClient.get<any[]>(`/agreements/${id}/payments`),
+  getPayments: (id: string) => apiClient.get<Record<string, unknown>[]>(`/agreements/${id}/payments`),
 };
 
 /**
  * API Keys API methods
  */
 export const apiKeysApi = {
-  list: () => apiClient.get<any[]>("/api-keys"),
+  list: () => apiClient.get<Record<string, unknown>[]>("/api-keys"),
 
   create: (data: { name: string; description?: string; scopes?: string[] }) =>
     apiClient.post("/api-keys", data),

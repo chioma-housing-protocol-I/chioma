@@ -12,4 +12,5 @@ export interface AuditLogOptions {
   sensitive?: boolean;
 }
 
-export const AuditLog = (options: AuditLogOptions) => SetMetadata(AUDIT_LOG_KEY, options);
+export const AuditLog = (options: AuditLogOptions) =>
+  SetMetadata(AUDIT_LOG_KEY, options);

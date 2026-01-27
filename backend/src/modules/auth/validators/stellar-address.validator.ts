@@ -1,16 +1,16 @@
-import { 
-  registerDecorator, 
-  ValidationArguments, 
-  ValidationOptions, 
-  ValidatorConstraint, 
-  ValidatorConstraintInterface 
+import {
+  registerDecorator,
+  ValidationArguments,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 @ValidatorConstraint({ name: 'isStellarAddress', async: false })
 export class IsStellarAddressConstraint implements ValidatorConstraintInterface {
   validate(address: string) {
     if (!address) return false;
-    
+
     // Stellar addresses start with 'G' and are 56 characters long
     // They contain only base32 characters (A-Z and 2-7)
     const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
@@ -23,7 +23,7 @@ export class IsStellarAddressConstraint implements ValidatorConstraintInterface 
 }
 
 export function IsStellarAddress(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

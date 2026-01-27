@@ -236,7 +236,7 @@ export class PrivacyService {
   /**
    * Get consent preferences
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   getConsentPreferences(_userId: string): Promise<Record<string, unknown>> {
     // In a real implementation, these would be stored in a separate table
     return Promise.resolve({
@@ -307,7 +307,6 @@ export class PrivacyService {
    * Get privacy policy acknowledgment status
    */
   getPolicyAcknowledgmentStatus(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _userId: string,
   ): Promise<Record<string, unknown>> {
     // In a real implementation, check the policy acknowledgment table

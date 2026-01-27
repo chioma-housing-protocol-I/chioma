@@ -13,5 +13,4 @@ import { SecurityAuditService } from '../../common/services/security-audit.servi
   providers: [UsersService, PrivacyService, SecurityAuditService],
   exports: [UsersService, PrivacyService],
 })
-import { AuditModule } from '../audit/audit.module';
 export class UsersModule {}

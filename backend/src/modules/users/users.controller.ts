@@ -42,7 +42,7 @@ export class UsersController {
     description: 'User profile retrieved successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@CurrentUser() user: User) {
+  getProfile(@CurrentUser() user: User) {
     return user;
   }
 
@@ -109,7 +109,7 @@ export class UsersController {
     description: 'Activity history retrieved successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getUserActivity(@CurrentUser() user: User) {
-    return this.usersService.getUserActivity(user.id);
+  getUserActivity(@CurrentUser() user: User): Promise<unknown> {
+    return this.usersService.getUserActivity(user.id) as Promise<unknown>;
   }
 }

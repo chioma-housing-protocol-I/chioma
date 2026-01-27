@@ -12,8 +12,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class RecordPaymentDto {
   @ApiProperty({
     description: 'Payment amount in USD',
-    example: 1500.00,
-    minimum: 0.01
+    example: 1500.0,
+    minimum: 0.01,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -23,7 +23,7 @@ export class RecordPaymentDto {
   @ApiProperty({
     description: 'Payment date (ISO 8601 format)',
     example: '2024-01-26',
-    format: 'date'
+    format: 'date',
   })
   @IsNotEmpty()
   @IsDateString()
@@ -32,7 +32,7 @@ export class RecordPaymentDto {
   @ApiPropertyOptional({
     description: 'Payment method used',
     example: 'Stellar Transfer',
-    maxLength: 50
+    maxLength: 50,
   })
   @IsOptional()
   @IsString()
@@ -42,7 +42,7 @@ export class RecordPaymentDto {
   @ApiPropertyOptional({
     description: 'Transaction reference number or hash',
     example: 'stellar-tx-hash-123',
-    maxLength: 100
+    maxLength: 100,
   })
   @IsOptional()
   @IsString()
@@ -51,7 +51,7 @@ export class RecordPaymentDto {
 
   @ApiPropertyOptional({
     description: 'Additional notes about the payment',
-    example: 'January rent payment'
+    example: 'January rent payment',
   })
   @IsOptional()
   @IsString()

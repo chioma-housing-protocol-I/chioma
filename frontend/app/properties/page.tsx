@@ -4,6 +4,7 @@ import Footer from '@/components/Footer'
 import Navbar from '@/components/Properties-navbar'
 import { Heart, MapPin, Bed, Bath, Ruler, Search, Filter, Bell, Plus, Minus, Compass } from 'lucide-react'
 import { useState } from 'react'
+import Image from 'next/image'
 
 export default function PropertyListing() {
   const [, setSelectedFilter] = useState('Property Type')
@@ -189,10 +190,11 @@ export default function PropertyListing() {
                   >
                     {/* Image */}
                     <div className="relative h-60 sm:h-56 bg-gray-200 overflow-hidden">
-                      <img
+                      <Image
                         src={property.image || "/placeholder.svg"}
                         alt={property.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       {/* Verified Badge */}
                       {property.verified && (

@@ -16,7 +16,7 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction, AuditLevel, AuditStatus } from '../audit/entities/audit-log.entity';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 
 @Injectable()
@@ -38,7 +38,11 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
-  async create(createAgreementDto: CreateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async create(
+    createAgreementDto: CreateAgreementDto,
+
+    _performedBy?: string,
+  ): Promise<RentAgreement> {
     // Validate dates
     const startDate = new Date(createAgreementDto.startDate);
     const endDate = new Date(createAgreementDto.endDate);
@@ -157,16 +161,15 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async update(id: string, updateAgreementDto: UpdateAgreementDto, performedBy?: string, role?: any): Promise<RentAgreement> {
+  async update(
+    id: string,
+    updateAgreementDto: UpdateAgreementDto,
+
+    _performedBy?: string,
+
+    _role?: string,
+  ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
-    const oldValues = {
-      status: agreement.status,
-      monthlyRent: agreement.monthlyRent,
-      securityDeposit: agreement.securityDeposit,
-      startDate: agreement.startDate,
-      endDate: agreement.endDate,
-      termsAndConditions: agreement.termsAndConditions,
-    };
 
     // Validate dates if both are provided
     if (updateAgreementDto.startDate && updateAgreementDto.endDate) {
@@ -182,11 +185,11 @@ export class AgreementsService {
     Object.assign(agreement, updateAgreementDto);
 
     // Convert date strings to Date objects if provided
-    if ((updateAgreementDto as any).startDate) {
-      agreement.startDate = new Date((updateAgreementDto as any).startDate);
+    if (updateAgreementDto.startDate) {
+      agreement.startDate = new Date(updateAgreementDto.startDate);
     }
-    if ((updateAgreementDto as any).endDate) {
-      agreement.endDate = new Date((updateAgreementDto as any).endDate);
+    if (updateAgreementDto.endDate) {
+      agreement.endDate = new Date(updateAgreementDto.endDate);
     }
 
     const updatedAgreement = await this.agreementRepository.save(agreement);
@@ -201,14 +204,19 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async terminate(id: string, terminateDto: TerminateAgreementDto, performedBy?: string, role?: any): Promise<RentAgreement> {
+  async terminate(
+    id: string,
+    terminateDto: TerminateAgreementDto,
+
+    _performedBy?: string,
+
+    _role?: string,
+  ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
       throw new BadRequestException('Agreement is already terminated');
     }
-
-    const oldStatus = agreement.status;
     agreement.status = AgreementStatus.TERMINATED;
     agreement.terminationDate = new Date();
     agreement.terminationReason = terminateDto.terminationReason;
@@ -224,7 +232,11 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
-  async recordPayment(agreementId: string, recordPaymentDto: RecordPaymentDto, performedBy?: string): Promise<Payment> {
+  async recordPayment(
+    agreementId: string,
+    recordPaymentDto: RecordPaymentDto,
+    performedBy?: string,
+  ): Promise<Payment> {
     const agreement = await this.findOne(agreementId);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
@@ -233,8 +245,12 @@ export class AgreementsService {
       );
     }
 
+    // Store old values for audit logging
+
     const oldTotalPaid = agreement.totalPaid;
+
     const oldEscrowBalance = agreement.escrowBalance;
+
     const oldStatus = agreement.status;
 
     // Create payment
@@ -288,7 +304,10 @@ export class AgreementsService {
     });
 
     // Audit log for agreement update (financial change)
-    if (oldTotalPaid !== updatedAgreement.totalPaid || oldStatus !== updatedAgreement.status) {
+    if (
+      oldTotalPaid !== updatedAgreement.totalPaid ||
+      oldStatus !== updatedAgreement.status
+    ) {
       await this.auditService.log({
         action: AuditAction.UPDATE,
         entityType: 'RentAgreement',

@@ -11,7 +11,17 @@ import { AuditRetentionService } from './audit-retention.service';
 @Module({
   imports: [TypeOrmModule.forFeature([AuditLog]), ScheduleModule.forRoot()],
   controllers: [AuditController],
-  providers: [AuditService, AuditInterceptor, AuditLogInterceptor, AuditRetentionService],
-  exports: [AuditService, AuditInterceptor, AuditLogInterceptor, AuditRetentionService],
+  providers: [
+    AuditService,
+    AuditInterceptor,
+    AuditLogInterceptor,
+    AuditRetentionService,
+  ],
+  exports: [
+    AuditService,
+    AuditInterceptor,
+    AuditLogInterceptor,
+    AuditRetentionService,
+  ],
 })
 export class AuditModule {}

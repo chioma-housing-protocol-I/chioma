@@ -70,7 +70,7 @@ export class ApiKeyGuard implements CanActivate {
 
     // Attach API key info to request
     request.apiKey = validationResult.apiKey;
-    request.user = validationResult.apiKey!.user as {
+    request.user = validationResult.apiKey!.user as unknown as {
       id: string;
       [key: string]: unknown;
     };
@@ -144,7 +144,7 @@ export class JwtOrApiKeyGuard implements CanActivate {
         await this.apiKeyService.recordUsage(validationResult.apiKey!.id, ip);
 
         request.apiKey = validationResult.apiKey;
-        request.user = validationResult.apiKey!.user as {
+        request.user = validationResult.apiKey!.user as unknown as {
           id: string;
           [key: string]: unknown;
         };

@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsDateString, IsIn, IsUUID } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsDateString,
+  IsIn,
+  IsUUID,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class QueryAuditLogsDto {
@@ -23,7 +29,17 @@ export class QueryAuditLogsDto {
   entityId?: string;
 
   @IsOptional()
-  @IsIn(['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'PASSWORD_CHANGE', 'PERMISSION_CHANGE', 'DATA_ACCESS', 'CONFIG_CHANGE'])
+  @IsIn([
+    'CREATE',
+    'UPDATE',
+    'DELETE',
+    'LOGIN',
+    'LOGOUT',
+    'PASSWORD_CHANGE',
+    'PERMISSION_CHANGE',
+    'DATA_ACCESS',
+    'CONFIG_CHANGE',
+  ])
   action?: string;
 
   @IsOptional()
@@ -35,17 +51,32 @@ export class QueryAuditLogsDto {
   level?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value?.toLowerCase())
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value === 'string') {
+      return value.toLowerCase();
+    }
+    return value as string | undefined;
+  })
   @IsString()
   search?: string;
 
   @IsOptional()
   @Type(() => Number)
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+      return parseInt(String(value), 10);
+    }
+    return value as number | undefined;
+  })
   page?: number = 1;
 
   @IsOptional()
   @Type(() => Number)
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+      return parseInt(String(value), 10);
+    }
+    return value as number | undefined;
+  })
   limit?: number = 50;
 }

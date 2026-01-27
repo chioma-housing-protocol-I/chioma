@@ -1,10 +1,6 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
-import {
-  HealthCheckService,
-  HealthCheck,
-  HealthCheckResult,
-} from '@nestjs/terminus';
+import { HealthCheckService, HealthCheck } from '@nestjs/terminus';
 import { HealthService } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
@@ -38,7 +34,9 @@ export class HealthController {
       return res.status(status).json(enhancedResult);
     } catch (error) {
       // Handle partial failures with graceful degradation
-      const degradedResult = this.healthService.handlePartialFailure(error);
+      const degradedResult = this.healthService.handlePartialFailure(
+        error as Error & { causes?: Record<string, unknown> },
+      );
       const status = this.determineHttpStatus(degradedResult.status);
 
       return res.status(status).json(degradedResult);
@@ -64,7 +62,7 @@ export class HealthController {
       return res.status(status).json(detailedResult);
     } catch (error) {
       const degradedResult = this.healthService.handlePartialFailure(
-        error,
+        error as Error & { causes?: Record<string, unknown> },
         true,
       );
       const status = this.determineHttpStatus(degradedResult.status);

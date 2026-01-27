@@ -149,14 +149,19 @@ export class AuthService {
     const { refreshToken } = refreshTokenDto;
 
     try {
-      const payload = this.jwtService.verify(refreshToken, {
+      const rawPayload: unknown = this.jwtService.verify(refreshToken, {
         secret:
           this.configService.get<string>('JWT_REFRESH_SECRET') ||
           'your-refresh-secret-key',
       });
+      const payload = rawPayload as { type?: string; sub?: string };
 
       if (payload.type !== 'refresh') {
         throw new UnauthorizedException('Invalid token type');
+      }
+
+      if (!payload.sub) {
+        throw new UnauthorizedException('Invalid token payload');
       }
 
       const user = await this.userRepository.findOne({
@@ -184,7 +189,9 @@ export class AuthService {
 
       return tokens;
     } catch (error) {
-      this.logger.error(`Token refresh failed: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Token refresh failed: ${errorMessage}`);
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
@@ -261,7 +268,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
     // Update password history
-    const passwordHistory = await this.updatePasswordHistory(
+    const passwordHistory = this.updatePasswordHistory(
       user.passwordHistory,
       user.password,
     );
@@ -318,7 +325,7 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    const passwordHistory = await this.updatePasswordHistory(
+    const passwordHistory = this.updatePasswordHistory(
       user.passwordHistory,
       user.password,
     );
@@ -377,10 +384,10 @@ export class AuthService {
   /**
    * Update password history (keep last 5)
    */
-  private async updatePasswordHistory(
+  private updatePasswordHistory(
     currentHistory: string | null,
     currentPassword: string,
-  ): Promise<string> {
+  ): string {
     const history = currentHistory ? currentHistory.split(',') : [];
     history.unshift(currentPassword);
 
@@ -509,6 +516,7 @@ export class AuthService {
   }
 
   private sanitizeUser(user: User) {
+    // Destructure to exclude sensitive fields (ignoreRestSiblings allows unused vars in destructuring)
     const {
       password,
       refreshToken,

@@ -82,12 +82,15 @@ export class AuditController {
     description: 'Cleanup completed successfully',
   })
   async cleanupOldLogs(@Query('daysToKeep') daysToKeep?: number) {
-    const deletedCount = await this.auditRetentionService.cleanupOldLogs(daysToKeep);
+    const deletedCount =
+      await this.auditRetentionService.cleanupOldLogs(daysToKeep);
     return { message: `Deleted ${deletedCount} old audit logs` };
   }
 
   @Post('retention/run')
-  @ApiOperation({ summary: 'Manually trigger log retention cleanup (admin only)' })
+  @ApiOperation({
+    summary: 'Manually trigger log retention cleanup (admin only)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Retention cleanup completed successfully',

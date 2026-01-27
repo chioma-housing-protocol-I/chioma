@@ -2,7 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { ConfigModule } from '@nestjs/config';
-import { Keypair, TransactionBuilder, Networks, Operation } from '@stellar/stellar-sdk';
+import {
+  Keypair,
+  TransactionBuilder,
+  Networks,
+  Operation,
+} from '@stellar/stellar-sdk';
 
 describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
   let app: INestApplication;
@@ -35,7 +40,7 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
     // Set environment variables for testing
     process.env.STELLAR_SERVER_SECRET_KEY = serverKeypair.secret();
     process.env.STELLAR_NETWORK = 'testnet';
-    
+
     await app.init();
   });
 
@@ -53,7 +58,7 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
 
     it('should create and sign Stellar transactions according to SEP-0010', () => {
       const nonce = 'test-nonce-12345';
-      
+
       // Create a mock challenge transaction following SEP-0010
       const account = {
         accountId: () => serverKeypair.publicKey(),
@@ -65,38 +70,40 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
         fee: '100',
         networkPassphrase: Networks.TESTNET,
       })
-        .addOperation(Operation.manageData({
-          name: `${validWalletAddress}_auth`,
-          value: nonce,
-          source: validWalletAddress,
-        }))
+        .addOperation(
+          Operation.manageData({
+            name: `${validWalletAddress}_auth`,
+            value: nonce,
+            source: validWalletAddress,
+          }),
+        )
         .setTimeout(300) // 5 minutes timeout
         .build();
 
       // Sign with server keypair
       transaction.sign(serverKeypair);
-      
+
       // Verify transaction is valid
       expect(transaction.toXDR()).toBeDefined();
       expect(transaction.toXDR().length).toBeGreaterThan(0);
-      
+
       // Verify signature
       const keypair = Keypair.fromPublicKey(serverKeypair.publicKey());
       const signatures = transaction.signatures;
-      const isValidSignature = signatures.some(sig => {
+      const isValidSignature = signatures.some((sig) => {
         try {
           return keypair.verify(transaction.hash(), sig.signature());
         } catch {
           return false;
         }
       });
-      
+
       expect(isValidSignature).toBe(true);
     });
 
     it('should verify client signatures correctly', () => {
       const nonce = 'test-nonce-12345';
-      
+
       // Create a mock challenge transaction
       const account = {
         accountId: () => serverKeypair.publicKey(),
@@ -108,31 +115,33 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
         fee: '100',
         networkPassphrase: Networks.TESTNET,
       })
-        .addOperation(Operation.manageData({
-          name: `${validWalletAddress}_auth`,
-          value: nonce,
-          source: validWalletAddress,
-        }))
+        .addOperation(
+          Operation.manageData({
+            name: `${validWalletAddress}_auth`,
+            value: nonce,
+            source: validWalletAddress,
+          }),
+        )
         .setTimeout(300)
         .build();
 
       // Sign with server keypair first
       transaction.sign(serverKeypair);
-      
+
       // Then sign with client keypair
       transaction.sign(clientKeypair);
-      
+
       // Verify client signature
       const clientKeypairCheck = Keypair.fromPublicKey(validWalletAddress);
       const signatures = transaction.signatures;
-      const isValidClientSignature = signatures.some(sig => {
+      const isValidClientSignature = signatures.some((sig) => {
         try {
           return clientKeypairCheck.verify(transaction.hash(), sig.signature());
         } catch {
           return false;
         }
       });
-      
+
       expect(isValidClientSignature).toBe(true);
     });
   });
@@ -146,7 +155,7 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
         'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC', // Valid 56-character address
       ];
 
-      validAddresses.forEach(address => {
+      validAddresses.forEach((address) => {
         expect(address).toMatch(/^G[A-Z2-7]{55}$/);
       });
 
@@ -159,7 +168,7 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
         'GD5DJ3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q2Q', // Too long
       ];
 
-      invalidAddresses.forEach(address => {
+      invalidAddresses.forEach((address) => {
         expect(address).not.toMatch(/^G[A-Z2-7]{55}$/);
       });
     });
@@ -176,9 +185,10 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
         '../../../etc/passwd',
       ];
 
-      edgeCases.forEach(input => {
+      edgeCases.forEach((input) => {
         // These should all be rejected by validation
-        const isValid = typeof input === 'string' && !!input.match(/^G[A-Z2-7]{55}$/);
+        const isValid =
+          typeof input === 'string' && !!input.match(/^G[A-Z2-7]{55}$/);
         expect(isValid).toBe(false);
       });
     });
@@ -193,8 +203,9 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
     it('should validate Stellar network configuration', () => {
       const network = process.env.STELLAR_NETWORK;
       expect(['testnet', 'mainnet', 'public']).toContain(network);
-      
-      const expectedNetwork = network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+
+      const expectedNetwork =
+        network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
       expect(expectedNetwork).toBeDefined();
     });
   });

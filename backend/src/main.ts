@@ -56,7 +56,10 @@ async function bootstrap() {
 
   // Enhanced CORS configuration
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       const allowedOrigins = [
         frontendUrl,
         'http://localhost:3000',
@@ -65,7 +68,7 @@ async function bootstrap() {
       // Allow requests with no origin (mobile apps, Postman, etc.) in development
       if (
         !origin ||
-        allowedOrigins.includes(origin) ||
+        (origin && allowedOrigins.includes(origin)) ||
         process.env.NODE_ENV === 'development'
       ) {
         callback(null, true);
@@ -106,7 +109,14 @@ async function bootstrap() {
   );
 
   // Custom middleware
-  app.use(new LoggerMiddleware().use);
+  const loggerMiddleware = new LoggerMiddleware();
+  app.use((req: unknown, res: unknown, next: unknown) =>
+    loggerMiddleware.use(
+      req as Parameters<typeof loggerMiddleware.use>[0],
+      res as Parameters<typeof loggerMiddleware.use>[1],
+      next as Parameters<typeof loggerMiddleware.use>[2],
+    ),
+  );
 
   // Global interceptors
   app.useGlobalInterceptors(new LoggingInterceptor());
@@ -172,4 +182,4 @@ async function bootstrap() {
   console.log(`Application running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
-bootstrap();
+void bootstrap();

@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthMetricsService } from './services/auth-metrics.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -42,6 +44,12 @@ describe('AuthController', () => {
             logout: jest.fn(),
           },
         },
+        {
+          provide: AuthMetricsService,
+          useValue: {
+            recordAuthAttempt: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -61,7 +69,12 @@ describe('AuthController', () => {
 
       jest.spyOn(service, 'register').mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.register(registerDto);
+      const mockRequest = {
+        ip: '127.0.0.1',
+        get: jest.fn().mockReturnValue('test-user-agent'),
+      } as unknown as Request;
+
+      const result = await controller.register(registerDto, mockRequest);
 
       expect(result).toEqual(mockAuthResponse);
       expect(service.register).toHaveBeenCalledWith(registerDto);
@@ -77,7 +90,12 @@ describe('AuthController', () => {
 
       jest.spyOn(service, 'login').mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.login(loginDto);
+      const mockRequest = {
+        ip: '127.0.0.1',
+        get: jest.fn().mockReturnValue('test-user-agent'),
+      } as unknown as Request;
+
+      const result = await controller.login(loginDto, mockRequest);
 
       expect(result).toEqual(mockAuthResponse);
       expect(service.login).toHaveBeenCalledWith(loginDto);

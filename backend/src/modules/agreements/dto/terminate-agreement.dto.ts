@@ -4,7 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class TerminateAgreementDto {
   @ApiProperty({
     description: 'Reason for terminating the agreement',
-    example: 'Mutual agreement to end lease early'
+    example: 'Mutual agreement to end lease early',
   })
   @IsNotEmpty()
   @IsString()
@@ -12,7 +12,7 @@ export class TerminateAgreementDto {
 
   @ApiPropertyOptional({
     description: 'Additional notes about the termination',
-    example: 'Tenant found new job in different city'
+    example: 'Tenant found new job in different city',
   })
   @IsOptional()
   @IsString()

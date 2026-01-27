@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   House,
   Building2,
@@ -139,7 +140,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="p-4 border-t border-white/5 mx-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden relative shrink-0">
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="User" className="w-full h-full object-cover" />
+              <Image src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="User" fill className="object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium leading-none mb-1">Sarah Jenks</div>

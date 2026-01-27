@@ -13,8 +13,6 @@ import { User } from '../users/entities/user.entity';
 import { AuthMetric } from './entities/auth-metric.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
-import { MfaService } from './mfa/mfa.service';
-import { MfaController, MfaVerificationController } from './mfa/mfa.controller';
 
 @Module({
   imports: [
@@ -22,7 +20,7 @@ import { MfaController, MfaVerificationController } from './mfa/mfa.controller';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret:
           configService.get<string>('JWT_SECRET') ||
           'your-secret-key-change-in-production',
@@ -34,7 +32,13 @@ import { MfaController, MfaVerificationController } from './mfa/mfa.controller';
     }),
   ],
   controllers: [AuthController, StellarAuthController, AuthMetricsController],
-  providers: [AuthService, AuthMetricsService, StellarAuthService, JwtStrategy, RefreshTokenStrategy],
+  providers: [
+    AuthService,
+    AuthMetricsService,
+    StellarAuthService,
+    JwtStrategy,
+    RefreshTokenStrategy,
+  ],
   exports: [AuthService, AuthMetricsService, JwtModule, PassportModule],
 })
 export class AuthModule {}

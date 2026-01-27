@@ -8,9 +8,9 @@ export interface EnhancedHealthResult {
   timestamp: string;
   version: string;
   uptime: number;
-  services: Record<string, any>;
+  services: Record<string, unknown>;
   environment?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -22,7 +22,7 @@ export class HealthService {
     result: HealthCheckResult,
     includeDetails = false,
   ): EnhancedHealthResult {
-    const packageJson = this.getPackageJson();
+    const packageJson = this.getPackageJson() as { version?: string };
     const overallStatus = this.determineOverallStatus(result);
 
     const enhancedResult: EnhancedHealthResult = {
@@ -48,19 +48,21 @@ export class HealthService {
   }
 
   handlePartialFailure(
-    error: any,
+    error: Error & { causes?: Record<string, unknown> },
     includeDetails = false,
   ): EnhancedHealthResult {
     this.logger.error('Health check partial failure', error);
 
-    const packageJson = this.getPackageJson();
-    let services = {};
+    const packageJson = this.getPackageJson() as { version?: string };
+    let services: Record<string, unknown> = {};
     let status: 'ok' | 'error' | 'warning' = 'error';
 
     // Extract information from HealthCheckError if available
     if (error instanceof HealthCheckError && error.causes) {
-      services = this.formatServices(error.causes);
-      status = this.determineOverallStatusFromError(error.causes);
+      services = this.formatServices(error.causes as Record<string, unknown>);
+      status = this.determineOverallStatusFromError(
+        error.causes as Record<string, unknown>,
+      );
     }
 
     const result: EnhancedHealthResult = {
@@ -96,18 +98,26 @@ export class HealthService {
     // Check if any services are still healthy (partial failure)
     const services = Object.values(result.details || {});
     const hasHealthyServices = services.some(
-      (service: any) => service.status === 'up',
+      (service: unknown) =>
+        typeof service === 'object' &&
+        service !== null &&
+        'status' in service &&
+        (service as { status: string }).status === 'up',
     );
 
     return hasHealthyServices ? 'warning' : 'error';
   }
 
   private determineOverallStatusFromError(
-    causes: Record<string, any>,
+    causes: Record<string, unknown>,
   ): 'ok' | 'error' | 'warning' {
     const services = Object.values(causes || {});
     const healthyServices = services.filter(
-      (service: any) => service.status === 'up',
+      (service: unknown) =>
+        typeof service === 'object' &&
+        service !== null &&
+        'status' in service &&
+        (service as { status: string }).status === 'up',
     );
     const totalServices = services.length;
 
@@ -121,27 +131,28 @@ export class HealthService {
   }
 
   private formatServices(
-    details: Record<string, any> | undefined,
-  ): Record<string, any> {
+    details: Record<string, unknown> | undefined,
+  ): Record<string, unknown> {
     if (!details) {
       return {};
     }
 
-    const formatted: Record<string, any> = {};
+    const formatted: Record<string, unknown> = {};
 
     Object.entries(details).forEach(([key, value]) => {
       if (typeof value === 'object' && value !== null) {
+        const serviceValue = value as Record<string, unknown>;
         formatted[key] = {
           status:
-            value.status === 'up'
+            serviceValue.status === 'up'
               ? 'ok'
-              : value.status === 'down'
+              : serviceValue.status === 'down'
                 ? 'error'
-                : value.status === 'warning'
+                : serviceValue.status === 'warning'
                   ? 'warning'
                   : 'error',
-          responseTime: value.responseTime || null,
-          ...value,
+          responseTime: serviceValue.responseTime || null,
+          ...serviceValue,
         };
       } else {
         formatted[key] = value;
@@ -151,11 +162,11 @@ export class HealthService {
     return formatted;
   }
 
-  private getPackageJson(): any {
+  private getPackageJson(): { version?: string } {
     try {
       const packagePath = path.join(process.cwd(), 'package.json');
       const packageContent = fs.readFileSync(packagePath, 'utf8');
-      return JSON.parse(packageContent);
+      return JSON.parse(packageContent) as { version?: string };
     } catch (error) {
       this.logger.warn('Could not read package.json', error);
       return { version: '1.0.0' };

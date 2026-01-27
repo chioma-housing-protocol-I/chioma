@@ -70,7 +70,10 @@ export class PrivacyController {
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    const data = await this.privacyService.exportUserData(user.id);
+    const data = (await this.privacyService.exportUserData(user.id)) as Record<
+      string,
+      unknown
+    >;
 
     res.set({
       'Content-Type': 'application/json',
@@ -86,8 +89,13 @@ export class PrivacyController {
   @Get('data-summary')
   @ApiOperation({ summary: 'Get summary of stored personal data' })
   @ApiResponse({ status: 200, description: 'Data summary' })
-  async getDataSummary(@CurrentUser() user: AuthenticatedUser) {
-    return await this.privacyService.getDataSummary(user.id);
+  async getDataSummary(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<string, unknown>> {
+    return (await this.privacyService.getDataSummary(user.id)) as Record<
+      string,
+      unknown
+    >;
   }
 
   /**
@@ -102,12 +110,12 @@ export class PrivacyController {
   async requestDeletion(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DataDeletionRequestDto,
-  ) {
-    return await this.privacyService.requestDataDeletion(
+  ): Promise<Record<string, unknown>> {
+    return (await this.privacyService.requestDataDeletion(
       user.id,
       dto.password,
       dto.reason,
-    );
+    )) as Record<string, unknown>;
   }
 
   /**
@@ -116,8 +124,13 @@ export class PrivacyController {
   @Delete('confirm-deletion')
   @ApiOperation({ summary: 'Confirm and execute data deletion' })
   @ApiResponse({ status: 200, description: 'Data deleted' })
-  async confirmDeletion(@CurrentUser() user: AuthenticatedUser) {
-    return await this.privacyService.executeDataDeletion(user.id);
+  async confirmDeletion(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<string, unknown>> {
+    return (await this.privacyService.executeDataDeletion(user.id)) as Record<
+      string,
+      unknown
+    >;
   }
 
   /**
@@ -126,7 +139,9 @@ export class PrivacyController {
   @Get('consent')
   @ApiOperation({ summary: 'Get current consent preferences' })
   @ApiResponse({ status: 200, description: 'Consent preferences' })
-  async getConsent(@CurrentUser() user: AuthenticatedUser) {
+  async getConsent(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<string, unknown>> {
     return await this.privacyService.getConsentPreferences(user.id);
   }
 
@@ -140,7 +155,7 @@ export class PrivacyController {
   async updateConsent(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ConsentUpdateDto,
-  ) {
+  ): Promise<Record<string, unknown>> {
     return await this.privacyService.updateConsentPreferences(user.id, dto);
   }
 
@@ -156,7 +171,10 @@ export class PrivacyController {
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    const data = await this.privacyService.getPortableData(user.id);
+    const data = (await this.privacyService.getPortableData(user.id)) as Record<
+      string,
+      unknown
+    >;
 
     res.set({
       'Content-Type': 'application/json',
@@ -171,7 +189,9 @@ export class PrivacyController {
    */
   @Get('policy-status')
   @ApiOperation({ summary: 'Check privacy policy acknowledgment status' })
-  async getPolicyStatus(@CurrentUser() user: AuthenticatedUser) {
+  async getPolicyStatus(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<string, unknown>> {
     return await this.privacyService.getPolicyAcknowledgmentStatus(user.id);
   }
 
@@ -181,7 +201,9 @@ export class PrivacyController {
   @Post('acknowledge-policy')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Acknowledge privacy policy' })
-  async acknowledgePolicy(@CurrentUser() user: AuthenticatedUser) {
+  async acknowledgePolicy(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<string, unknown>> {
     return await this.privacyService.acknowledgePrivacyPolicy(user.id);
   }
 }

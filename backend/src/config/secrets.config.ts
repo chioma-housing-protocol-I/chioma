@@ -25,7 +25,6 @@ export class EnvSecretsProvider implements SecretsProvider {
     return Promise.resolve(this.configService.get<string>(key));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSecret(key: string, _value: string): Promise<void> {
     // Environment variables cannot be set at runtime
     // This is a no-op for the env provider

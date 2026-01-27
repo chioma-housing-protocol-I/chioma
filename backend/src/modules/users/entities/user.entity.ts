@@ -76,11 +76,11 @@ export class User {
   @Column({ name: 'wallet_address', nullable: true, unique: true })
   walletAddress: string | null;
 
-  @Column({ 
-    name: 'auth_method', 
-    type: 'enum', 
-    enum: AuthMethod, 
-    default: AuthMethod.PASSWORD 
+  @Column({
+    name: 'auth_method',
+    type: 'enum',
+    enum: AuthMethod,
+    default: AuthMethod.PASSWORD,
   })
   authMethod: AuthMethod;
 
