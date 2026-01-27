@@ -93,6 +93,40 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
+## Security
+
+This backend implements comprehensive security measures:
+
+- **Authentication**: JWT with refresh tokens, MFA (TOTP), account lockout
+- **Authorization**: Role-based access control (RBAC)
+- **Input Validation**: XSS prevention, SQL injection guards, request size limits
+- **API Security**: Rate limiting, API keys, request signing, CORS
+- **Data Protection**: AES-256-GCM encryption, bcrypt hashing, log sanitization
+- **Compliance**: GDPR/CCPA endpoints for data export and deletion
+
+### Security Environment Variables
+
+```env
+# Required
+JWT_SECRET=your-jwt-secret-min-32-chars
+
+# Optional (recommended for production)
+MFA_ENCRYPTION_KEY=your-32-character-encryption-key
+REQUEST_SIGNING_SECRET=your-signing-secret
+```
+
+### Running Security Tests
+
+```bash
+# Security-specific tests
+pnpm run test -- --testPathPattern=security
+
+# E2E security tests
+pnpm run test:e2e -- --testPathPattern=security
+```
+
+For full security documentation, see [SECURITY.md](../SECURITY.md).
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
