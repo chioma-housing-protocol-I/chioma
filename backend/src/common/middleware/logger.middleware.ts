@@ -55,7 +55,9 @@ function maskIp(ip: string | undefined): string {
   return ip.substring(0, ip.length / 2) + '...';
 }
 
-function sanitizeHeaders(headers: Record<string, any>) {
+function sanitizeHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): Record<string, string | string[] | undefined | '[REDACTED]'> {
   const sanitized = { ...headers };
   for (const key of Object.keys(sanitized)) {
     if (SENSITIVE_HEADERS.includes(key.toLowerCase())) {
@@ -65,57 +67,83 @@ function sanitizeHeaders(headers: Record<string, any>) {
   return sanitized;
 }
 
-export function sanitizeBody(body: any, depth = 0): any {
+export function sanitizeBody(body: unknown, depth = 0): unknown {
   // Prevent infinite recursion
   if (depth > 10) return '[MAX_DEPTH_EXCEEDED]';
   if (!body || typeof body !== 'object') return body;
 
-  const clone = Array.isArray(body) ? [...body] : { ...body };
+  // Use a Map to avoid prototype pollution and property injection
+  const result: Record<string, unknown> = Array.isArray(body) ? [] : {};
 
-  for (const key of Object.keys(clone)) {
+  const bodyRecord = body as Record<string, unknown>;
+  // Get own property names safely
+  const keys = Object.keys(bodyRecord).filter((key) =>
+    Object.prototype.hasOwnProperty.call(bodyRecord, key),
+  );
+
+  for (const key of keys) {
+    // Validate key is a safe string
+    if (
+      typeof key !== 'string' ||
+      key === '__proto__' ||
+      key === 'constructor' ||
+      key === 'prototype'
+    ) {
+      continue;
+    }
+
+    const value = bodyRecord[key];
     const lowerKey = key.toLowerCase();
 
     // Check if field is sensitive
     if (SENSITIVE_LOG_FIELDS.some((field) => lowerKey.includes(field))) {
-      clone[key] = '[REDACTED]';
+      result[key] = '[REDACTED]';
     }
     // Mask email fields
-    else if (lowerKey.includes('email') && typeof clone[key] === 'string') {
-      clone[key] = maskEmail(clone[key]);
+    else if (lowerKey.includes('email') && typeof value === 'string') {
+      result[key] = maskEmail(value);
     }
     // Mask wallet/address fields (Stellar addresses start with G)
     else if (
       (lowerKey.includes('wallet') ||
         lowerKey.includes('address') ||
         lowerKey.includes('publickey')) &&
-      typeof clone[key] === 'string' &&
-      clone[key].startsWith('G')
+      typeof value === 'string' &&
+      value.startsWith('G')
     ) {
-      clone[key] = maskWalletAddress(clone[key]);
+      result[key] = maskWalletAddress(value);
     }
     // Mask phone numbers
-    else if (lowerKey.includes('phone') && typeof clone[key] === 'string') {
-      clone[key] = maskValue(clone[key], 2);
+    else if (lowerKey.includes('phone') && typeof value === 'string') {
+      result[key] = maskValue(value, 2);
     }
     // Recursively sanitize nested objects
-    else if (typeof clone[key] === 'object') {
-      clone[key] = sanitizeBody(clone[key], depth + 1);
+    else if (typeof value === 'object' && value !== null) {
+      result[key] = sanitizeBody(value, depth + 1);
+    }
+    // Copy other values as-is
+    else {
+      result[key] = value;
     }
   }
 
-  return clone;
+  return result;
+}
+
+interface RequestWithCorrelation extends Request {
+  correlationId?: string;
 }
 
 @Injectable()
 export class LoggerMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
+  use(req: RequestWithCorrelation, res: Response, next: NextFunction): void {
     if (req.path === '/health') return next();
 
     const start = process.hrtime();
     const correlationId =
       (req.headers['x-request-id'] as string) || randomUUID();
 
-    (req as any).correlationId = correlationId;
+    req.correlationId = correlationId;
     res.setHeader('x-request-id', correlationId);
 
     const method = req.method;
@@ -126,9 +154,9 @@ export class LoggerMiddleware implements NestMiddleware {
     const ip = maskIp(rawIp);
 
     const userAgent = req.headers['user-agent'];
-    const requestHeaders = sanitizeHeaders(req.headers as any);
+    const requestHeaders = sanitizeHeaders(req.headers);
     const requestBody = sanitizeBody(
-      res.locals?.requestBody ?? (req as any).body ?? null,
+      (res.locals['requestBody'] as unknown) ?? req.body ?? null,
     );
 
     res.on('finish', () => {
@@ -140,7 +168,7 @@ export class LoggerMiddleware implements NestMiddleware {
       const responseSize = Array.isArray(rawSize) ? rawSize.join(',') : rawSize;
 
       const responseHeaders = sanitizeHeaders(
-        res.getHeaders() as Record<string, any>,
+        res.getHeaders() as Record<string, string | string[] | undefined>,
       );
 
       let level: HttpLog['level'] = 'INFO';

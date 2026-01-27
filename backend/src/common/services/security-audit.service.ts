@@ -124,7 +124,7 @@ export class SecurityAuditService {
 
     // Send alerts for critical events
     if (fullEvent.severity === SecurityEventSeverity.CRITICAL) {
-      await this.sendAlert(fullEvent);
+      this.sendAlert(fullEvent);
     }
   }
 
@@ -340,8 +340,12 @@ export class SecurityAuditService {
 
   // Private methods
 
-  private getSeverityForEventType(type: SecurityEventType): SecurityEventSeverity {
-    const severityMap: Partial<Record<SecurityEventType, SecurityEventSeverity>> = {
+  private getSeverityForEventType(
+    type: SecurityEventType,
+  ): SecurityEventSeverity {
+    const severityMap: Partial<
+      Record<SecurityEventType, SecurityEventSeverity>
+    > = {
       [SecurityEventType.SQL_INJECTION_ATTEMPT]: SecurityEventSeverity.CRITICAL,
       [SecurityEventType.XSS_ATTEMPT]: SecurityEventSeverity.HIGH,
       [SecurityEventType.BRUTE_FORCE_DETECTED]: SecurityEventSeverity.CRITICAL,
@@ -396,7 +400,10 @@ export class SecurityAuditService {
 
     if (existing) {
       // Check if within time window
-      if (now.getTime() - existing.firstAttempt.getTime() > this.FAILED_ATTEMPT_WINDOW) {
+      if (
+        now.getTime() - existing.firstAttempt.getTime() >
+        this.FAILED_ATTEMPT_WINDOW
+      ) {
         // Reset if outside window
         this.failedAttempts.set(ip, {
           count: 1,
@@ -431,7 +438,7 @@ export class SecurityAuditService {
     }
   }
 
-  private async sendAlert(event: SecurityEvent): Promise<void> {
+  private sendAlert(event: SecurityEvent): void {
     // In production, integrate with alerting systems:
     // - PagerDuty
     // - Slack

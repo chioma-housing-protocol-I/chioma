@@ -61,7 +61,7 @@ describe('SanitizationPipe', () => {
       const result = pipe.transform(nfdString, {
         type: 'body',
         metatype: String,
-      });
+      }) as string;
       // Should be normalized to NFC
       expect(result.normalize('NFC')).toBe(result);
     });
@@ -104,7 +104,10 @@ describe('SanitizationPipe', () => {
         },
       };
 
-      const result = pipe.transform(input, { type: 'body', metatype: Object });
+      const result = pipe.transform(input, {
+        type: 'body',
+        metatype: Object,
+      }) as { name: string; address: { city: string } };
 
       expect(result.name).toBe('John');
       expect(result.address.city).toBe('New York');
@@ -113,7 +116,10 @@ describe('SanitizationPipe', () => {
     it('should sanitize arrays', () => {
       const input = ['  item1  ', '  item2  '];
 
-      const result = pipe.transform(input, { type: 'body', metatype: Array });
+      const result = pipe.transform(input, {
+        type: 'body',
+        metatype: Array,
+      }) as string[];
 
       expect(result[0]).toBe('item1');
       expect(result[1]).toBe('item2');

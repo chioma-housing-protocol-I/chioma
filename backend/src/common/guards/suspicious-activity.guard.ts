@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SecurityAuditService } from '../services/security-audit.service';
 
 /**
@@ -29,12 +30,13 @@ export class SuspiciousActivityGuard implements CanActivate {
   private readonly MAX_REQUESTS_PER_MINUTE = 100;
   private readonly BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
   private readonly PATTERN_WINDOW_MS = 60 * 1000; // 1 minute
+
   private readonly SUSPICIOUS_PATTERNS = [
     /\/\.\./g, // Path traversal
     /admin|phpmyadmin|wp-admin/i, // Admin probing
     /<script/i, // XSS attempts in URL
     /union.*select/i, // SQL injection
-    /\x00/g, // Null byte injection
+    new RegExp(String.fromCharCode(0), 'g'), // Null byte injection (intentional security check)
   ];
 
   constructor(private readonly securityAuditService: SecurityAuditService) {
@@ -43,7 +45,7 @@ export class SuspiciousActivityGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const ip = this.getClientIp(request);
     const path = request.originalUrl || request.url;
     const method = request.method;
@@ -57,7 +59,7 @@ export class SuspiciousActivityGuard implements CanActivate {
 
     // Check for suspicious URL patterns
     if (this.hasSuspiciousPattern(path)) {
-      await this.blockIp(ip, 'Suspicious URL pattern detected');
+      this.blockIp(ip, 'Suspicious URL pattern detected');
       await this.securityAuditService.logSuspiciousActivity(
         'Suspicious URL pattern',
         { path, method },
@@ -70,15 +72,13 @@ export class SuspiciousActivityGuard implements CanActivate {
     this.trackRequest(ip, path, method);
 
     if (this.isRequestRateAnomalous(ip)) {
-      await this.blockIp(ip, 'Abnormal request rate');
+      this.blockIp(ip, 'Abnormal request rate');
       await this.securityAuditService.logSuspiciousActivity(
         'Abnormal request rate',
         { requestsPerMinute: this.getRequestCount(ip) },
         ip,
       );
-      throw new ForbiddenException(
-        'Too many requests. Please slow down.',
-      );
+      throw new ForbiddenException('Too many requests. Please slow down.');
     }
 
     // Check for scanning behavior
@@ -93,11 +93,15 @@ export class SuspiciousActivityGuard implements CanActivate {
     return true;
   }
 
-  private getClientIp(request: any): string {
+  private getClientIp(request: Request): string {
+    const forwarded = request.headers['x-forwarded-for'];
+    const forwardedIp =
+      typeof forwarded === 'string'
+        ? forwarded.split(',')[0]?.trim()
+        : undefined;
     return (
-      request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      request.headers['x-real-ip'] ||
-      request.connection?.remoteAddress ||
+      forwardedIp ||
+      (request.headers['x-real-ip'] as string) ||
       request.socket?.remoteAddress ||
       'unknown'
     );
@@ -117,7 +121,7 @@ export class SuspiciousActivityGuard implements CanActivate {
     return true;
   }
 
-  private async blockIp(ip: string, reason: string): Promise<void> {
+  private blockIp(ip: string, reason: string): void {
     const pattern = this.requestPatterns.get(ip) || {
       requests: [],
       blocked: false,
@@ -185,9 +189,7 @@ export class SuspiciousActivityGuard implements CanActivate {
     ];
 
     const matchCount = uniquePaths.filter((path) =>
-      scanningPatterns.some((pattern) =>
-        path.toLowerCase().includes(pattern),
-      ),
+      scanningPatterns.some((pattern) => path.toLowerCase().includes(pattern)),
     ).length;
 
     return matchCount >= 3;
@@ -200,7 +202,8 @@ export class SuspiciousActivityGuard implements CanActivate {
       // Remove entries with no recent requests and not blocked
       if (
         pattern.requests.length === 0 &&
-        (!pattern.blocked || (pattern.blockedUntil && now > pattern.blockedUntil))
+        (!pattern.blocked ||
+          (pattern.blockedUntil && now > pattern.blockedUntil))
       ) {
         this.requestPatterns.delete(ip);
       }
@@ -216,10 +219,13 @@ export class LightweightSuspiciousActivityGuard implements CanActivate {
   private readonly blockedIps = new Set<string>();
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    const ip =
-      request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      request.socket?.remoteAddress;
+    const request = context.switchToHttp().getRequest<Request>();
+    const forwarded = request.headers['x-forwarded-for'];
+    const forwardedIp =
+      typeof forwarded === 'string'
+        ? forwarded.split(',')[0]?.trim()
+        : undefined;
+    const ip = forwardedIp || request.socket?.remoteAddress || 'unknown';
 
     if (this.blockedIps.has(ip)) {
       throw new ForbiddenException('Access blocked');

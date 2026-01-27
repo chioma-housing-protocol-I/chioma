@@ -24,7 +24,7 @@ export class SanitizationPipe implements PipeTransform {
     };
   }
 
-  transform(value: any, metadata: ArgumentMetadata): any {
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
     if (metadata.type !== 'body' && metadata.type !== 'query') {
       return value;
     }
@@ -32,7 +32,7 @@ export class SanitizationPipe implements PipeTransform {
     return this.sanitize(value);
   }
 
-  private sanitize(value: any): any {
+  private sanitize(value: unknown): unknown {
     if (value === null || value === undefined) {
       return value;
     }
@@ -42,12 +42,14 @@ export class SanitizationPipe implements PipeTransform {
     }
 
     if (Array.isArray(value)) {
-      return value.map((item) => this.sanitize(item));
+      return value.map((item: unknown) => this.sanitize(item));
     }
 
     if (typeof value === 'object') {
-      const sanitized: Record<string, any> = {};
-      for (const [key, val] of Object.entries(value)) {
+      const sanitized: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
         sanitized[key] = this.sanitize(val);
       }
       return sanitized;
@@ -100,8 +102,20 @@ export class SanitizationPipe implements PipeTransform {
   }
 
   private stripHtmlTags(value: string): string {
-    // Remove HTML tags while preserving content
-    return value.replace(/<[^>]*>/g, '');
+    // Multi-pass sanitization to handle nested/malformed tags
+    let result = value;
+    let previousResult = '';
+
+    // Keep stripping until no more changes (handles nested tags like <<script>script>)
+    while (result !== previousResult) {
+      previousResult = result;
+      // Remove HTML tags while preserving content
+      result = result.replace(/<[^>]*>/g, '');
+      // Also remove any remaining angle brackets that could form tags
+      result = result.replace(/</g, '').replace(/>/g, '');
+    }
+
+    return result;
   }
 
   private encodeSpecialChars(value: string): string {
@@ -135,7 +149,7 @@ export interface SanitizationOptions {
  */
 @Injectable()
 export class LightSanitizationPipe implements PipeTransform {
-  transform(value: any, metadata: ArgumentMetadata): any {
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
     if (metadata.type !== 'body' && metadata.type !== 'query') {
       return value;
     }
@@ -143,7 +157,7 @@ export class LightSanitizationPipe implements PipeTransform {
     return this.sanitize(value);
   }
 
-  private sanitize(value: any): any {
+  private sanitize(value: unknown): unknown {
     if (value === null || value === undefined) {
       return value;
     }
@@ -153,12 +167,14 @@ export class LightSanitizationPipe implements PipeTransform {
     }
 
     if (Array.isArray(value)) {
-      return value.map((item) => this.sanitize(item));
+      return value.map((item: unknown) => this.sanitize(item));
     }
 
     if (typeof value === 'object') {
-      const sanitized: Record<string, any> = {};
-      for (const [key, val] of Object.entries(value)) {
+      const sanitized: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
         sanitized[key] = this.sanitize(val);
       }
       return sanitized;

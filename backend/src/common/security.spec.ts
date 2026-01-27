@@ -5,7 +5,10 @@
  * Run with: npm run test -- --testPathPattern=security.spec
  */
 
-import { SanitizationPipe, LightSanitizationPipe } from './pipes/sanitization.pipe';
+import {
+  SanitizationPipe,
+  LightSanitizationPipe,
+} from './pipes/sanitization.pipe';
 import { containsSqlInjection } from './guards/sql-injection.guard';
 import { sanitizeBody } from './middleware/logger.middleware';
 import {
@@ -86,11 +89,25 @@ describe('Security Features Test Suite', () => {
         expect(result).toBe('hello');
       });
 
-      it('should strip HTML tags', () => {
+      it('should strip HTML tags completely', () => {
         const result = pipe.transform('<b>bold</b> text', {
           type: 'body',
           metatype: String,
         });
+        expect(result).not.toContain('<');
+        expect(result).not.toContain('>');
+        expect(result).toContain('bold');
+        expect(result).toContain('text');
+      });
+
+      it('should handle nested/malformed tags', () => {
+        const result = pipe.transform(
+          '<<script>script>alert(1)<</script>/script>',
+          {
+            type: 'body',
+            metatype: String,
+          },
+        );
         expect(result).not.toContain('<');
         expect(result).not.toContain('>');
       });
@@ -109,14 +126,20 @@ describe('Security Features Test Suite', () => {
           name: '  John  ',
           address: { city: '  New York  ' },
         };
-        const result = pipe.transform(input, { type: 'body', metatype: Object });
+        const result = pipe.transform(input, {
+          type: 'body',
+          metatype: Object,
+        }) as { name: string; address: { city: string } };
         expect(result.name).toBe('John');
         expect(result.address.city).toBe('New York');
       });
 
       it('should sanitize arrays', () => {
         const input = ['  item1  ', '  item2  '];
-        const result = pipe.transform(input, { type: 'body', metatype: Array });
+        const result = pipe.transform(input, {
+          type: 'body',
+          metatype: Array,
+        }) as string[];
         expect(result[0]).toBe('item1');
         expect(result[1]).toBe('item2');
       });
@@ -133,7 +156,9 @@ describe('Security Features Test Suite', () => {
     });
 
     it('should detect UNION injection', () => {
-      expect(containsSqlInjection("1 UNION SELECT password FROM users")).toBe(true);
+      expect(containsSqlInjection('1 UNION SELECT password FROM users')).toBe(
+        true,
+      );
     });
 
     it('should detect OR 1=1 pattern', () => {
@@ -152,25 +177,34 @@ describe('Security Features Test Suite', () => {
 
   describe('Log Sanitization', () => {
     it('should redact passwords', () => {
-      const result = sanitizeBody({ password: 'secret123' });
+      const result = sanitizeBody({ password: 'secret123' }) as Record<
+        string,
+        unknown
+      >;
       expect(result.password).toBe('[REDACTED]');
     });
 
     it('should redact tokens', () => {
-      const result = sanitizeBody({ token: 'abc123', accessToken: 'xyz789' });
+      const result = sanitizeBody({
+        token: 'abc123',
+        accessToken: 'xyz789',
+      }) as Record<string, unknown>;
       expect(result.token).toBe('[REDACTED]');
       expect(result.accessToken).toBe('[REDACTED]');
     });
 
     it('should mask email addresses', () => {
-      const result = sanitizeBody({ email: 'test@example.com' });
+      const result = sanitizeBody({ email: 'test@example.com' }) as Record<
+        string,
+        unknown
+      >;
       expect(result.email).toBe('***@example.com');
     });
 
     it('should mask wallet addresses', () => {
       const result = sanitizeBody({
         walletAddress: 'GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      });
+      }) as Record<string, unknown>;
       expect(result.walletAddress).toMatch(/^GBXX\.\.\.XXXX$/);
     });
 
@@ -180,7 +214,7 @@ describe('Security Features Test Suite', () => {
           password: 'secret',
           email: 'test@example.com',
         },
-      });
+      }) as Record<string, Record<string, unknown>>;
       expect(result.user.password).toBe('[REDACTED]');
       expect(result.user.email).toBe('***@example.com');
     });

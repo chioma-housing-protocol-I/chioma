@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import * as crypto from 'crypto';
@@ -120,7 +115,6 @@ export class ApiKeyService {
    */
   private async checkRateLimit(apiKey: ApiKey): Promise<boolean> {
     const now = new Date();
-    const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
     // Reset counter if window has passed
     if (!apiKey.rateLimitResetAt || apiKey.rateLimitResetAt < now) {

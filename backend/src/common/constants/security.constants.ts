@@ -98,7 +98,7 @@ export const SQL_INJECTION_PATTERNS = [
   /(--)/, // SQL comment
   /(;)/, // Statement terminator
   /(\b(OR|AND)\b\s+\d+\s*=\s*\d+)/i, // OR 1=1 pattern
-  /(\'|\"|`)\s*(OR|AND)\s*(\'|\"|`)/i, // Quote-based injection
+  /(['"`])\s*(OR|AND)\s*(['"`])/i, // Quote-based injection
   /(\bSLEEP\s*\()/i, // Time-based injection
   /(\bBENCHMARK\s*\()/i, // MySQL benchmark
   /(\bWAITFOR\s+DELAY\b)/i, // SQL Server delay
@@ -106,7 +106,8 @@ export const SQL_INJECTION_PATTERNS = [
 
 // XSS patterns to detect
 export const XSS_PATTERNS = [
-  /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+  /<script\b/gi, // Match opening script tag
+  /<\/script\s*>/gi, // Match closing script tag with optional whitespace
   /javascript:/gi,
   /on\w+\s*=/gi, // onclick=, onerror=, etc.
   /<iframe/gi,
@@ -116,6 +117,8 @@ export const XSS_PATTERNS = [
   /<style/gi,
   /expression\s*\(/gi, // CSS expression
   /url\s*\(/gi, // CSS url()
+  /data:/gi, // data: URIs
+  /vbscript:/gi, // vbscript: URIs
 ];
 
 // File upload allowed extensions

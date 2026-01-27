@@ -7,7 +7,6 @@ import * as crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16; // 128 bits
-const AUTH_TAG_LENGTH = 16; // 128 bits
 const SALT_LENGTH = 32; // 256 bits
 
 /**
@@ -129,10 +128,7 @@ export function timingSafeEqual(a: string, b: string): boolean {
 /**
  * Mask sensitive data for display/logging
  */
-export function maskSensitiveData(
-  data: string,
-  showChars: number = 4,
-): string {
+export function maskSensitiveData(data: string, showChars: number = 4): string {
   if (data.length <= showChars * 2) {
     return '*'.repeat(data.length);
   }
@@ -204,7 +200,10 @@ export const EncryptedColumnTransformer = {
  * Use only when you need to search encrypted values
  * Less secure than standard encryption
  */
-export function encryptDeterministic(plaintext: string, secret?: string): string {
+export function encryptDeterministic(
+  plaintext: string,
+  secret?: string,
+): string {
   const encryptionSecret =
     secret ||
     process.env.ENCRYPTION_KEY ||

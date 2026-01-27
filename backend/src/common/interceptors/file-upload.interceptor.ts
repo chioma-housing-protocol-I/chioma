@@ -4,9 +4,9 @@ import {
   ExecutionContext,
   CallHandler,
   BadRequestException,
-  PayloadTooLargeException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
+import { Request } from 'express';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import {
@@ -14,6 +14,29 @@ import {
   ALLOWED_FILE_EXTENSIONS,
   ALLOWED_MIME_TYPES,
 } from '../constants/security.constants';
+
+/**
+ * Uploaded file interface (Multer-compatible)
+ */
+interface UploadedFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer?: Buffer;
+  destination?: string;
+  filename?: string;
+  path?: string;
+}
+
+/**
+ * Extended Request with file uploads
+ */
+interface RequestWithFiles extends Request {
+  file?: UploadedFile;
+  files?: UploadedFile[] | Record<string, UploadedFile[]>;
+}
 
 /**
  * File validation result
@@ -38,13 +61,15 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
     allowedExtensions?: string[];
     allowedMimeTypes?: string[];
   }) {
-    this.maxFileSize = options?.maxFileSize || REQUEST_SIZE_LIMITS.FILE_UPLOAD_LIMIT;
-    this.allowedExtensions = options?.allowedExtensions || ALLOWED_FILE_EXTENSIONS;
+    this.maxFileSize =
+      options?.maxFileSize || REQUEST_SIZE_LIMITS.FILE_UPLOAD_LIMIT;
+    this.allowedExtensions =
+      options?.allowedExtensions || ALLOWED_FILE_EXTENSIONS;
     this.allowedMimeTypes = options?.allowedMimeTypes || ALLOWED_MIME_TYPES;
   }
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<RequestWithFiles>();
     const files = this.extractFiles(request);
 
     if (files.length > 0) {
@@ -62,8 +87,8 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
   /**
    * Extract files from request (supports single and multiple file uploads)
    */
-  private extractFiles(request: any): any[] {
-    const files: any[] = [];
+  private extractFiles(request: RequestWithFiles): UploadedFile[] {
+    const files: UploadedFile[] = [];
 
     // Single file upload
     if (request.file) {
@@ -90,7 +115,7 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
   /**
    * Validate a single file
    */
-  private validateFile(file: any): FileValidationResult {
+  private validateFile(file: UploadedFile): FileValidationResult {
     // Check file size
     if (file.size > this.maxFileSize) {
       return {
@@ -138,7 +163,7 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
   /**
    * Validate file content matches expected type (magic number validation)
    */
-  private validateFileContent(file: any): FileValidationResult {
+  private validateFileContent(file: UploadedFile): FileValidationResult {
     const buffer = file.buffer;
     if (!buffer || buffer.length < 4) {
       return { valid: true }; // Cannot validate, allow
@@ -176,7 +201,11 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
    */
   private hasMaliciousFilename(filename: string): boolean {
     // Check for path traversal attempts
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    if (
+      filename.includes('..') ||
+      filename.includes('/') ||
+      filename.includes('\\')
+    ) {
       return true;
     }
 
@@ -193,7 +222,14 @@ export class SecureFileUploadInterceptor implements NestInterceptor {
     // Check for double extensions (potential bypass attempts)
     const parts = filename.split('.');
     if (parts.length > 2) {
-      const dangerousExtensions = ['.php', '.exe', '.sh', '.bat', '.cmd', '.js'];
+      const dangerousExtensions = [
+        '.php',
+        '.exe',
+        '.sh',
+        '.bat',
+        '.cmd',
+        '.js',
+      ];
       for (let i = 0; i < parts.length - 1; i++) {
         if (dangerousExtensions.includes(`.${parts[i].toLowerCase()}`)) {
           return true;
@@ -244,6 +280,11 @@ export function sanitizeFilename(filename: string): string {
 }
 
 /**
+ * Multer file filter callback type
+ */
+type FileFilterCallback = (error: Error | null, acceptFile: boolean) => void;
+
+/**
  * File upload configuration factory
  */
 export function createFileUploadConfig(options?: {
@@ -251,12 +292,23 @@ export function createFileUploadConfig(options?: {
   allowedExtensions?: string[];
   allowedMimeTypes?: string[];
   destination?: string;
-}) {
+}): {
+  limits: { fileSize: number };
+  fileFilter: (
+    req: Request,
+    file: UploadedFile,
+    callback: FileFilterCallback,
+  ) => void;
+} {
   return {
     limits: {
       fileSize: options?.maxFileSize || REQUEST_SIZE_LIMITS.FILE_UPLOAD_LIMIT,
     },
-    fileFilter: (req: any, file: any, callback: any) => {
+    fileFilter: (
+      _req: Request,
+      file: UploadedFile,
+      callback: FileFilterCallback,
+    ) => {
       const ext = path.extname(file.originalname).toLowerCase();
       const allowedExt = options?.allowedExtensions || ALLOWED_FILE_EXTENSIONS;
       const allowedMime = options?.allowedMimeTypes || ALLOWED_MIME_TYPES;

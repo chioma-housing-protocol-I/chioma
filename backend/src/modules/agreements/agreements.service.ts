@@ -157,7 +157,7 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async update(id: string, updateAgreementDto: UpdateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async update(id: string, updateAgreementDto: UpdateAgreementDto, performedBy?: string, role?: any): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
     const oldValues = {
       status: agreement.status,
@@ -201,7 +201,7 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async terminate(id: string, terminateDto: TerminateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async terminate(id: string, terminateDto: TerminateAgreementDto, performedBy?: string, role?: any): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
 
     if (agreement.status === AgreementStatus.TERMINATED) {

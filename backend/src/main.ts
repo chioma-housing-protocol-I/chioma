@@ -84,7 +84,11 @@ async function bootstrap() {
       'X-Signature',
       'X-Timestamp',
     ],
-    exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+    exposedHeaders: [
+      'X-Request-ID',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+    ],
     maxAge: 86400, // 24 hours
   });
 

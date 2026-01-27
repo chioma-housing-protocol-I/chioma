@@ -6,9 +6,18 @@ import {
   ForbiddenException,
   SetMetadata,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { ApiKeyService } from './api-key.service';
-import { ApiKeyScope } from './api-key.entity';
+import { ApiKey, ApiKeyScope } from './api-key.entity';
+
+/**
+ * Extended Request with API key and user
+ */
+interface ApiKeyRequest extends Request {
+  apiKey?: ApiKey;
+  user?: { id: string; [key: string]: unknown };
+}
 
 export const API_KEY_SCOPE_KEY = 'apiKeyScope';
 export const RequireApiKeyScope = (scope: ApiKeyScope) =>
@@ -26,7 +35,7 @@ export class ApiKeyGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<ApiKeyRequest>();
     const apiKey = this.extractApiKey(request);
 
     if (!apiKey) {
@@ -53,22 +62,26 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     // Record usage
-    const ip =
-      request.headers['x-forwarded-for']?.split(',')[0] ||
-      request.socket.remoteAddress;
+    const forwarded = request.headers['x-forwarded-for'];
+    const forwardedIp =
+      typeof forwarded === 'string' ? forwarded.split(',')[0] : undefined;
+    const ip = forwardedIp || request.socket?.remoteAddress || 'unknown';
     await this.apiKeyService.recordUsage(validationResult.apiKey!.id, ip);
 
     // Attach API key info to request
     request.apiKey = validationResult.apiKey;
-    request.user = validationResult.apiKey!.user;
+    request.user = validationResult.apiKey!.user as {
+      id: string;
+      [key: string]: unknown;
+    };
 
     return true;
   }
 
-  private extractApiKey(request: any): string | null {
+  private extractApiKey(request: ApiKeyRequest): string | null {
     // Check X-API-Key header
     const headerKey = request.headers['x-api-key'];
-    if (headerKey) {
+    if (typeof headerKey === 'string') {
       return headerKey;
     }
 
@@ -79,8 +92,9 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     // Check query parameter (less secure, but sometimes needed)
-    if (request.query?.api_key) {
-      return request.query.api_key;
+    const queryKey = request.query?.api_key;
+    if (typeof queryKey === 'string') {
+      return queryKey;
     }
 
     return null;
@@ -98,7 +112,7 @@ export class JwtOrApiKeyGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<ApiKeyRequest>();
 
     // Check if already authenticated via JWT
     if (request.user) {
@@ -123,13 +137,17 @@ export class JwtOrApiKeyGuard implements CanActivate {
           throw new ForbiddenException('Insufficient API key permissions');
         }
 
-        const ip =
-          request.headers['x-forwarded-for']?.split(',')[0] ||
-          request.socket.remoteAddress;
+        const forwarded = request.headers['x-forwarded-for'];
+        const forwardedIp =
+          typeof forwarded === 'string' ? forwarded.split(',')[0] : undefined;
+        const ip = forwardedIp || request.socket?.remoteAddress || 'unknown';
         await this.apiKeyService.recordUsage(validationResult.apiKey!.id, ip);
 
         request.apiKey = validationResult.apiKey;
-        request.user = validationResult.apiKey!.user;
+        request.user = validationResult.apiKey!.user as {
+          id: string;
+          [key: string]: unknown;
+        };
 
         return true;
       }
@@ -138,9 +156,9 @@ export class JwtOrApiKeyGuard implements CanActivate {
     throw new UnauthorizedException('Authentication required');
   }
 
-  private extractApiKey(request: any): string | null {
+  private extractApiKey(request: ApiKeyRequest): string | null {
     const headerKey = request.headers['x-api-key'];
-    if (headerKey) return headerKey;
+    if (typeof headerKey === 'string') return headerKey;
 
     const authHeader = request.headers.authorization;
     if (authHeader?.startsWith('ApiKey ')) return authHeader.substring(7);

@@ -21,23 +21,24 @@ export interface SecretsProvider {
 export class EnvSecretsProvider implements SecretsProvider {
   constructor(private configService: ConfigService) {}
 
-  async getSecret(key: string): Promise<string | undefined> {
-    return this.configService.get<string>(key);
+  getSecret(key: string): Promise<string | undefined> {
+    return Promise.resolve(this.configService.get<string>(key));
   }
 
-  async setSecret(key: string, value: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setSecret(key: string, _value: string): Promise<void> {
     // Environment variables cannot be set at runtime
     // This is a no-op for the env provider
-    console.warn(
-      `Cannot set secret ${key} at runtime with EnvSecretsProvider`,
-    );
+    console.warn(`Cannot set secret ${key} at runtime with EnvSecretsProvider`);
+    return Promise.resolve();
   }
 
-  async deleteSecret(key: string): Promise<void> {
+  deleteSecret(key: string): Promise<void> {
     // Environment variables cannot be deleted at runtime
     console.warn(
       `Cannot delete secret ${key} at runtime with EnvSecretsProvider`,
     );
+    return Promise.resolve();
   }
 }
 
@@ -48,7 +49,10 @@ export class EnvSecretsProvider implements SecretsProvider {
 export class AwsSecretsProvider implements SecretsProvider {
   private readonly secretsManager: any;
   private readonly secretPrefix: string;
-  private readonly cache = new Map<string, { value: string; expires: number }>();
+  private readonly cache = new Map<
+    string,
+    { value: string; expires: number }
+  >();
   private readonly cacheTtl = 300000; // 5 minutes
 
   constructor(options?: { region?: string; secretPrefix?: string }) {
@@ -58,11 +62,11 @@ export class AwsSecretsProvider implements SecretsProvider {
     this.secretPrefix = options?.secretPrefix || 'chioma/';
   }
 
-  async getSecret(key: string): Promise<string | undefined> {
+  getSecret(key: string): Promise<string | undefined> {
     // Check cache first
     const cached = this.cache.get(key);
     if (cached && cached.expires > Date.now()) {
-      return cached.value;
+      return Promise.resolve(cached.value);
     }
 
     // In a real implementation:
@@ -73,10 +77,10 @@ export class AwsSecretsProvider implements SecretsProvider {
     // return value;
 
     // Fallback to environment variable
-    return process.env[key];
+    return Promise.resolve(process.env[key]);
   }
 
-  async setSecret(key: string, value: string): Promise<void> {
+  setSecret(key: string, value: string): Promise<void> {
     // In a real implementation:
     // const command = new PutSecretValueCommand({
     //   SecretId: this.secretPrefix + key,
@@ -84,13 +88,15 @@ export class AwsSecretsProvider implements SecretsProvider {
     // });
     // await this.secretsManager.send(command);
     this.cache.set(key, { value, expires: Date.now() + this.cacheTtl });
+    return Promise.resolve();
   }
 
-  async deleteSecret(key: string): Promise<void> {
+  deleteSecret(key: string): Promise<void> {
     // In a real implementation:
     // const command = new DeleteSecretCommand({ SecretId: this.secretPrefix + key });
     // await this.secretsManager.send(command);
     this.cache.delete(key);
+    return Promise.resolve();
   }
 }
 
@@ -101,7 +107,10 @@ export class AwsSecretsProvider implements SecretsProvider {
 export class VaultSecretsProvider implements SecretsProvider {
   private readonly client: any;
   private readonly mountPath: string;
-  private readonly cache = new Map<string, { value: string; expires: number }>();
+  private readonly cache = new Map<
+    string,
+    { value: string; expires: number }
+  >();
   private readonly cacheTtl = 300000;
 
   constructor(options?: {
@@ -115,10 +124,10 @@ export class VaultSecretsProvider implements SecretsProvider {
     this.mountPath = options?.mountPath || 'secret/data/chioma';
   }
 
-  async getSecret(key: string): Promise<string | undefined> {
+  getSecret(key: string): Promise<string | undefined> {
     const cached = this.cache.get(key);
     if (cached && cached.expires > Date.now()) {
-      return cached.value;
+      return Promise.resolve(cached.value);
     }
 
     // In a real implementation:
@@ -127,19 +136,21 @@ export class VaultSecretsProvider implements SecretsProvider {
     // this.cache.set(key, { value, expires: Date.now() + this.cacheTtl });
     // return value;
 
-    return process.env[key];
+    return Promise.resolve(process.env[key]);
   }
 
-  async setSecret(key: string, value: string): Promise<void> {
+  setSecret(key: string, value: string): Promise<void> {
     // In a real implementation:
     // await this.client.write(`${this.mountPath}/${key}`, { data: { value } });
     this.cache.set(key, { value, expires: Date.now() + this.cacheTtl });
+    return Promise.resolve();
   }
 
-  async deleteSecret(key: string): Promise<void> {
+  deleteSecret(key: string): Promise<void> {
     // In a real implementation:
     // await this.client.delete(`${this.mountPath}/${key}`);
     this.cache.delete(key);
+    return Promise.resolve();
   }
 }
 
@@ -158,11 +169,11 @@ export class SecretsService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.initializeProvider();
+    this.initializeProvider();
     await this.validateRequiredSecrets();
   }
 
-  private async initializeProvider() {
+  private initializeProvider(): void {
     const secretsProvider = this.configService.get<string>('SECRETS_PROVIDER');
 
     switch (secretsProvider) {
@@ -190,11 +201,7 @@ export class SecretsService implements OnModuleInit {
   }
 
   private async validateRequiredSecrets() {
-    const requiredSecrets = [
-      'JWT_SECRET',
-      'JWT_REFRESH_SECRET',
-      'DB_PASSWORD',
-    ];
+    const requiredSecrets = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DB_PASSWORD'];
 
     const missingSecrets: string[] = [];
 

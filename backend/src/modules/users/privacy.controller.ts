@@ -22,6 +22,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrivacyService } from './privacy.service';
 import { IsString, IsBoolean, IsOptional } from 'class-validator';
 
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
 class ConsentUpdateDto {
   @IsBoolean()
   marketingEmails: boolean;
@@ -61,7 +67,7 @@ export class PrivacyController {
   @ApiOperation({ summary: 'Export all personal data (GDPR Right of Access)' })
   @ApiResponse({ status: 200, description: 'Personal data export' })
   async exportData(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const data = await this.privacyService.exportUserData(user.id);
@@ -80,7 +86,7 @@ export class PrivacyController {
   @Get('data-summary')
   @ApiOperation({ summary: 'Get summary of stored personal data' })
   @ApiResponse({ status: 200, description: 'Data summary' })
-  async getDataSummary(@CurrentUser() user: any) {
+  async getDataSummary(@CurrentUser() user: AuthenticatedUser) {
     return await this.privacyService.getDataSummary(user.id);
   }
 
@@ -89,10 +95,12 @@ export class PrivacyController {
    */
   @Post('delete-request')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request account and data deletion (GDPR Right to Erasure)' })
+  @ApiOperation({
+    summary: 'Request account and data deletion (GDPR Right to Erasure)',
+  })
   @ApiResponse({ status: 200, description: 'Deletion request created' })
   async requestDeletion(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DataDeletionRequestDto,
   ) {
     return await this.privacyService.requestDataDeletion(
@@ -108,7 +116,7 @@ export class PrivacyController {
   @Delete('confirm-deletion')
   @ApiOperation({ summary: 'Confirm and execute data deletion' })
   @ApiResponse({ status: 200, description: 'Data deleted' })
-  async confirmDeletion(@CurrentUser() user: any) {
+  async confirmDeletion(@CurrentUser() user: AuthenticatedUser) {
     return await this.privacyService.executeDataDeletion(user.id);
   }
 
@@ -118,7 +126,7 @@ export class PrivacyController {
   @Get('consent')
   @ApiOperation({ summary: 'Get current consent preferences' })
   @ApiResponse({ status: 200, description: 'Consent preferences' })
-  async getConsent(@CurrentUser() user: any) {
+  async getConsent(@CurrentUser() user: AuthenticatedUser) {
     return await this.privacyService.getConsentPreferences(user.id);
   }
 
@@ -130,7 +138,7 @@ export class PrivacyController {
   @ApiOperation({ summary: 'Update consent preferences' })
   @ApiResponse({ status: 200, description: 'Consent updated' })
   async updateConsent(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ConsentUpdateDto,
   ) {
     return await this.privacyService.updateConsentPreferences(user.id, dto);
@@ -140,10 +148,12 @@ export class PrivacyController {
    * Request data portability (GDPR Article 20)
    */
   @Get('portable-data')
-  @ApiOperation({ summary: 'Get data in portable format (GDPR Data Portability)' })
+  @ApiOperation({
+    summary: 'Get data in portable format (GDPR Data Portability)',
+  })
   @ApiResponse({ status: 200, description: 'Portable data export' })
   async getPortableData(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const data = await this.privacyService.getPortableData(user.id);
@@ -161,7 +171,7 @@ export class PrivacyController {
    */
   @Get('policy-status')
   @ApiOperation({ summary: 'Check privacy policy acknowledgment status' })
-  async getPolicyStatus(@CurrentUser() user: any) {
+  async getPolicyStatus(@CurrentUser() user: AuthenticatedUser) {
     return await this.privacyService.getPolicyAcknowledgmentStatus(user.id);
   }
 
@@ -171,7 +181,7 @@ export class PrivacyController {
   @Post('acknowledge-policy')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Acknowledge privacy policy' })
-  async acknowledgePolicy(@CurrentUser() user: any) {
+  async acknowledgePolicy(@CurrentUser() user: AuthenticatedUser) {
     return await this.privacyService.acknowledgePrivacyPolicy(user.id);
   }
 }

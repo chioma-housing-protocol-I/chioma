@@ -115,7 +115,8 @@ export class PrivacyService {
         'Communication preferences',
         'Activity logs',
       ],
-      retentionPeriod: 'Data retained until account deletion or 7 years for financial records',
+      retentionPeriod:
+        'Data retained until account deletion or 7 years for financial records',
       processingPurposes: [
         'Service provision',
         'Legal compliance',
@@ -235,27 +236,28 @@ export class PrivacyService {
   /**
    * Get consent preferences
    */
-  async getConsentPreferences(userId: string): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getConsentPreferences(_userId: string): Promise<Record<string, unknown>> {
     // In a real implementation, these would be stored in a separate table
-    return {
+    return Promise.resolve({
       marketingEmails: false,
       analyticsTracking: true,
       thirdPartySharing: false,
       lastUpdated: new Date().toISOString(),
-    };
+    });
   }
 
   /**
    * Update consent preferences
    */
-  async updateConsentPreferences(
+  updateConsentPreferences(
     userId: string,
     preferences: {
       marketingEmails: boolean;
       analyticsTracking: boolean;
       thirdPartySharing?: boolean;
     },
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     // In a real implementation, save to consent preferences table
     // await this.consentRepository.save({
     //   userId,
@@ -265,11 +267,11 @@ export class PrivacyService {
 
     this.logger.log(`Consent preferences updated for user: ${userId}`);
 
-    return {
+    return Promise.resolve({
       message: 'Consent preferences updated',
       preferences,
       updatedAt: new Date().toISOString(),
-    };
+    });
   }
 
   /**
@@ -304,20 +306,23 @@ export class PrivacyService {
   /**
    * Get privacy policy acknowledgment status
    */
-  async getPolicyAcknowledgmentStatus(userId: string): Promise<any> {
+  getPolicyAcknowledgmentStatus(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _userId: string,
+  ): Promise<Record<string, unknown>> {
     // In a real implementation, check the policy acknowledgment table
-    return {
+    return Promise.resolve({
       currentPolicyVersion: this.CURRENT_POLICY_VERSION,
       acknowledgedVersion: '1.0.0', // Would come from database
       isCurrentVersionAcknowledged: true,
       lastAcknowledgedAt: new Date().toISOString(),
-    };
+    });
   }
 
   /**
    * Acknowledge privacy policy
    */
-  async acknowledgePrivacyPolicy(userId: string): Promise<any> {
+  acknowledgePrivacyPolicy(userId: string): Promise<Record<string, unknown>> {
     // In a real implementation, save acknowledgment to database
     // await this.policyAcknowledgmentRepository.save({
     //   userId,
@@ -329,10 +334,10 @@ export class PrivacyService {
       `Privacy policy v${this.CURRENT_POLICY_VERSION} acknowledged by user: ${userId}`,
     );
 
-    return {
+    return Promise.resolve({
       message: 'Privacy policy acknowledged',
       policyVersion: this.CURRENT_POLICY_VERSION,
       acknowledgedAt: new Date().toISOString(),
-    };
+    });
   }
 }

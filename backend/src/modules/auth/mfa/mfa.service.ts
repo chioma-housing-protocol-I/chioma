@@ -43,7 +43,9 @@ export class MfaService {
     const secret = this.generateBase32Secret(20);
 
     // Generate backup codes
-    const backupCodes = this.generateBackupCodes(MFA_SETTINGS.BACKUP_CODES_COUNT);
+    const backupCodes = this.generateBackupCodes(
+      MFA_SETTINGS.BACKUP_CODES_COUNT,
+    );
 
     // Create otpauth URL for QR code
     const qrCodeUrl = this.generateOtpAuthUrl(user.email, secret);
@@ -91,7 +93,10 @@ export class MfaService {
   /**
    * Disable MFA for a user
    */
-  async disableMfa(userId: string, code: string): Promise<{ disabled: boolean }> {
+  async disableMfa(
+    userId: string,
+    code: string,
+  ): Promise<{ disabled: boolean }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user || !user.mfaEnabled) {
@@ -127,19 +132,30 @@ export class MfaService {
       return true; // MFA not enabled, skip verification
     }
 
-    // Check if it's a backup code
-    if (code.length === 8 && user.mfaBackupCodes) {
-      return this.verifyBackupCode(user, code);
+    // Validate code format (must be alphanumeric, 6-8 chars)
+    if (!/^[A-Za-z0-9]{6,8}$/.test(code)) {
+      this.logger.warn(`Invalid MFA code format for user: ${userId}`);
+      return false;
     }
 
     const secret = this.decryptSecret(user.mfaSecret);
-    const isValid = this.verifyTotp(secret, code);
 
-    if (!isValid) {
-      this.logger.warn(`Invalid MFA code for user: ${userId}`);
+    // Always try TOTP verification first
+    const isTotpValid = this.verifyTotp(secret, code);
+    if (isTotpValid) {
+      return true;
     }
 
-    return isValid;
+    // If TOTP fails and backup codes exist, try backup code verification
+    if (user.mfaBackupCodes) {
+      const isBackupValid = await this.verifyBackupCode(user, code);
+      if (isBackupValid) {
+        return true;
+      }
+    }
+
+    this.logger.warn(`Invalid MFA code for user: ${userId}`);
+    return false;
   }
 
   /**
@@ -174,7 +190,9 @@ export class MfaService {
       throw new UnauthorizedException('Invalid verification code');
     }
 
-    const backupCodes = this.generateBackupCodes(MFA_SETTINGS.BACKUP_CODES_COUNT);
+    const backupCodes = this.generateBackupCodes(
+      MFA_SETTINGS.BACKUP_CODES_COUNT,
+    );
 
     await this.userRepository.update(userId, {
       mfaBackupCodes: this.hashBackupCodes(backupCodes),

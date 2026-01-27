@@ -25,8 +25,7 @@ export class SecurityController {
       process.env.SECURITY_CONTACT_EMAIL || 'security@chioma.io';
     const policyUrl =
       process.env.SECURITY_POLICY_URL || 'https://chioma.io/security-policy';
-    const canonicalUrl =
-      process.env.APP_URL || 'https://chioma.io';
+    const canonicalUrl = process.env.APP_URL || 'https://chioma.io';
 
     return `# Chioma Security Policy
 # This file follows the security.txt specification (RFC 9116)
@@ -95,7 +94,11 @@ Sitemap: ${process.env.APP_URL || 'https://chioma.io'}/sitemap.xml
   @Get('api/security/headers')
   @ApiOperation({ summary: 'Check security headers configuration' })
   @ApiResponse({ status: 200, description: 'Security headers status' })
-  getSecurityHeaders(): Record<string, string | boolean> {
+  getSecurityHeaders(): {
+    message: string;
+    headers: Record<string, string | boolean>;
+    recommendations: string[];
+  } {
     return {
       message: 'Security headers are configured via Helmet.js',
       headers: {
@@ -114,6 +117,6 @@ Sitemap: ${process.env.APP_URL || 'https://chioma.io'}/sitemap.xml
         'Implement Subresource Integrity (SRI) for scripts',
         'Enable Certificate Transparency monitoring',
       ],
-    } as any;
+    };
   }
 }

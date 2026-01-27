@@ -30,6 +30,12 @@ import {
 } from 'class-validator';
 import { ApiKeyScope } from './api-key.entity';
 
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
 class CreateApiKeyRequestDto implements CreateApiKeyDto {
   @IsString()
   name: string;
@@ -72,7 +78,7 @@ export class ApiKeyController {
     description: 'API key created. The raw key is only shown once.',
   })
   async createApiKey(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateApiKeyRequestDto,
   ) {
     const result = await this.apiKeyService.createApiKey(user.id, dto);
@@ -98,7 +104,7 @@ export class ApiKeyController {
   @Get()
   @ApiOperation({ summary: 'List all API keys' })
   @ApiResponse({ status: 200, description: 'List of API keys' })
-  async listApiKeys(@CurrentUser() user: any) {
+  async listApiKeys(@CurrentUser() user: AuthenticatedUser) {
     const keys = await this.apiKeyService.listApiKeys(user.id);
     return keys.map((key) => ({
       id: key.id,
@@ -122,7 +128,10 @@ export class ApiKeyController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Revoke an API key' })
   @ApiResponse({ status: 200, description: 'API key revoked' })
-  async revokeApiKey(@CurrentUser() user: any, @Param('id') id: string) {
+  async revokeApiKey(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.apiKeyService.revokeApiKey(user.id, id);
     return { message: 'API key revoked successfully' };
   }
@@ -134,7 +143,10 @@ export class ApiKeyController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete an API key' })
   @ApiResponse({ status: 200, description: 'API key deleted' })
-  async deleteApiKey(@CurrentUser() user: any, @Param('id') id: string) {
+  async deleteApiKey(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     await this.apiKeyService.deleteApiKey(user.id, id);
     return { message: 'API key deleted successfully' };
   }

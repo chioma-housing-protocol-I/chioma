@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   BadRequestException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SQL_INJECTION_PATTERNS } from '../constants/security.constants';
 
 /**
@@ -13,7 +14,7 @@ import { SQL_INJECTION_PATTERNS } from '../constants/security.constants';
 @Injectable()
 export class SqlInjectionGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
 
     // Check query parameters
     if (request.query) {
@@ -27,13 +28,13 @@ export class SqlInjectionGuard implements CanActivate {
 
     // Check body (for additional protection)
     if (request.body) {
-      this.checkObject(request.body, 'request body');
+      this.checkObject(request.body as Record<string, unknown>, 'request body');
     }
 
     return true;
   }
 
-  private checkObject(obj: any, source: string): void {
+  private checkObject(obj: Record<string, unknown>, source: string): void {
     if (!obj || typeof obj !== 'object') {
       return;
     }
@@ -41,8 +42,8 @@ export class SqlInjectionGuard implements CanActivate {
     for (const [key, value] of Object.entries(obj)) {
       if (typeof value === 'string') {
         this.checkString(value, `${source} '${key}'`);
-      } else if (typeof value === 'object') {
-        this.checkObject(value, source);
+      } else if (typeof value === 'object' && value !== null) {
+        this.checkObject(value as Record<string, unknown>, source);
       }
     }
   }

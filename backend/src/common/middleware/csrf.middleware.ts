@@ -1,11 +1,14 @@
-import {
-  Injectable,
-  NestMiddleware,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware, ForbiddenException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as crypto from 'crypto';
 import { CSRF_SETTINGS } from '../constants/security.constants';
+
+/**
+ * Extended Request with cookies
+ */
+interface RequestWithCookies extends Request {
+  cookies: Record<string, string>;
+}
 
 /**
  * CSRF Protection Middleware
@@ -23,7 +26,7 @@ export class CsrfMiddleware implements NestMiddleware {
     '/api/docs',
   ];
 
-  use(req: Request, res: Response, next: NextFunction) {
+  use(req: RequestWithCookies, res: Response, next: NextFunction): void {
     // Skip CSRF check for exempt methods
     if (this.exemptMethods.includes(req.method)) {
       // Generate and set CSRF token for GET requests
@@ -38,7 +41,9 @@ export class CsrfMiddleware implements NestMiddleware {
 
     // Validate CSRF token for state-changing methods
     const tokenFromHeader = req.headers[CSRF_SETTINGS.HEADER_NAME] as string;
-    const tokenFromCookie = req.cookies?.[CSRF_SETTINGS.COOKIE_NAME];
+    const tokenFromCookie = req.cookies[CSRF_SETTINGS.COOKIE_NAME] as
+      | string
+      | undefined;
 
     if (!tokenFromHeader || !tokenFromCookie) {
       throw new ForbiddenException('CSRF token missing');
@@ -52,9 +57,9 @@ export class CsrfMiddleware implements NestMiddleware {
     next();
   }
 
-  private setCSRFToken(req: Request, res: Response): void {
+  private setCSRFToken(req: RequestWithCookies, res: Response): void {
     // Only set token if not already present
-    if (!req.cookies?.[CSRF_SETTINGS.COOKIE_NAME]) {
+    if (!req.cookies[CSRF_SETTINGS.COOKIE_NAME]) {
       const token = this.generateToken();
       res.cookie(CSRF_SETTINGS.COOKIE_NAME, token, {
         httpOnly: false, // Must be accessible by JavaScript
@@ -71,8 +76,7 @@ export class CsrfMiddleware implements NestMiddleware {
 
   private isExemptPath(path: string): boolean {
     return this.exemptPaths.some(
-      (exemptPath) =>
-        path === exemptPath || path.startsWith(exemptPath + '/'),
+      (exemptPath) => path === exemptPath || path.startsWith(exemptPath + '/'),
     );
   }
 

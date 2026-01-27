@@ -270,7 +270,7 @@ describe('Security E2E Tests', () => {
     });
 
     it('should reject unauthorized origins', async () => {
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .options('/api/health')
         .set('Origin', 'http://malicious-site.com');
 

@@ -29,6 +29,7 @@ import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Rent Agreements')
 @ApiBearerAuth('JWT-auth')
@@ -207,7 +208,12 @@ export class AgreementsController {
     @Body() updateAgreementDto: UpdateAgreementDto,
     @CurrentUser() user: any,
   ) {
-    return await this.agreementsService.update(id, updateAgreementDto, user.id, user.role);
+    return await this.agreementsService.update(
+      id,
+      updateAgreementDto,
+      user.id,
+      user.role,
+    );
   }
 
   @Delete(':id')
@@ -245,7 +251,12 @@ export class AgreementsController {
     @Body() terminateDto: TerminateAgreementDto,
     @CurrentUser() user: any,
   ) {
-    return await this.agreementsService.terminate(id, terminateDto, user.id, user.role);
+    return await this.agreementsService.terminate(
+      id,
+      terminateDto,
+      user.id,
+      user.role,
+    );
   }
 
   @Post(':id/pay')
@@ -288,7 +299,11 @@ export class AgreementsController {
     @Body() recordPaymentDto: RecordPaymentDto,
     @CurrentUser() user: any,
   ) {
-    return await this.agreementsService.recordPayment(id, recordPaymentDto, user.id);
+    return await this.agreementsService.recordPayment(
+      id,
+      recordPaymentDto,
+      user.id,
+    );
   }
 
   @Get(':id/payments')

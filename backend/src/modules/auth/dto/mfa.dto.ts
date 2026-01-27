@@ -77,7 +77,8 @@ export class MfaSetupResponseDto {
 
   @ApiProperty({
     description: 'URL for generating QR code',
-    example: 'otpauth://totp/Chioma:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Chioma',
+    example:
+      'otpauth://totp/Chioma:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Chioma',
   })
   qrCodeUrl: string;
 

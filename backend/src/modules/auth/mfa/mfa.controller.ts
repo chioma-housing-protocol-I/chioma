@@ -23,6 +23,12 @@ import {
   RegenerateBackupCodesDto,
 } from '../dto/mfa.dto';
 
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
 @ApiTags('MFA')
 @ApiBearerAuth('JWT-auth')
 @Controller('api/auth/mfa')
@@ -40,7 +46,7 @@ export class MfaController {
     status: 200,
     description: 'MFA secret and backup codes generated',
   })
-  async setupMfa(@CurrentUser() user: any) {
+  async setupMfa(@CurrentUser() user: AuthenticatedUser) {
     return await this.mfaService.generateSecret(user.id);
   }
 
@@ -53,7 +59,7 @@ export class MfaController {
   @ApiResponse({ status: 200, description: 'MFA enabled successfully' })
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
   async enableMfa(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() enableMfaDto: EnableMfaDto,
   ) {
     return await this.mfaService.enableMfa(user.id, enableMfaDto.code);
@@ -68,7 +74,7 @@ export class MfaController {
   @ApiResponse({ status: 200, description: 'MFA disabled successfully' })
   @ApiResponse({ status: 401, description: 'Invalid verification code' })
   async disableMfa(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() disableMfaDto: DisableMfaDto,
   ) {
     return await this.mfaService.disableMfa(user.id, disableMfaDto.code);
@@ -80,7 +86,7 @@ export class MfaController {
   @Get('status')
   @ApiOperation({ summary: 'Check MFA status' })
   @ApiResponse({ status: 200, description: 'MFA status' })
-  async getMfaStatus(@CurrentUser() user: any) {
+  async getMfaStatus(@CurrentUser() user: AuthenticatedUser) {
     const enabled = await this.mfaService.isMfaEnabled(user.id);
     return { mfaEnabled: enabled };
   }
@@ -94,10 +100,13 @@ export class MfaController {
   @ApiResponse({ status: 200, description: 'New backup codes generated' })
   @ApiResponse({ status: 401, description: 'Invalid verification code' })
   async regenerateBackupCodes(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() regenerateDto: RegenerateBackupCodesDto,
   ) {
-    return await this.mfaService.regenerateBackupCodes(user.id, regenerateDto.code);
+    return await this.mfaService.regenerateBackupCodes(
+      user.id,
+      regenerateDto.code,
+    );
   }
 }
 

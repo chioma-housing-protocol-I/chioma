@@ -3,10 +3,22 @@ import {
   NestMiddleware,
   ForbiddenException,
   BadRequestException,
+  CanActivate,
+  ExecutionContext,
+  SetMetadata,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Request, Response, NextFunction } from 'express';
 import * as crypto from 'crypto';
 import { REQUEST_SIGNING } from '../constants/security.constants';
+
+/**
+ * Extended Request with optional user and apiKey properties
+ */
+interface AuthenticatedRequest extends Request {
+  user?: { id: string; [key: string]: unknown };
+  apiKey?: { keyHash: string; [key: string]: unknown };
+}
 
 /**
  * Request Signing Middleware
@@ -15,7 +27,7 @@ import { REQUEST_SIGNING } from '../constants/security.constants';
  */
 @Injectable()
 export class RequestSigningMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
+  use(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
     const signature = req.headers[REQUEST_SIGNING.HEADER_NAME] as string;
     const timestamp = req.headers[REQUEST_SIGNING.TIMESTAMP_HEADER] as string;
 
@@ -89,19 +101,20 @@ export class RequestSigningMiddleware implements NestMiddleware {
    * Get the signing secret for the request
    * Can be user-specific or a global secret
    */
-  private getSigningSecret(req: Request): string | null {
+  private getSigningSecret(req: AuthenticatedRequest): string | null {
     // If user has an API key, use that for signing
-    if ((req as any).apiKey?.keyHash) {
-      return (req as any).apiKey.keyHash;
+    if (req.apiKey?.keyHash) {
+      return req.apiKey.keyHash;
     }
 
     // If authenticated user, could use a per-user signing key
-    if ((req as any).user?.id) {
+    if (req.user?.id) {
       // Use a combination of user ID and app secret
-      const userSecret = process.env.REQUEST_SIGNING_SECRET || process.env.JWT_SECRET;
+      const userSecret =
+        process.env.REQUEST_SIGNING_SECRET || process.env.JWT_SECRET;
       return crypto
         .createHash('sha256')
-        .update(`${(req as any).user.id}:${userSecret}`)
+        .update(`${req.user.id}:${userSecret}`)
         .digest('hex');
     }
 
@@ -157,17 +170,12 @@ export class RequestSigner {
 /**
  * Decorator to apply request signing validation to specific routes
  */
-import { SetMetadata } from '@nestjs/common';
-
 export const REQUIRE_SIGNATURE_KEY = 'requireSignature';
 export const RequireSignature = () => SetMetadata(REQUIRE_SIGNATURE_KEY, true);
 
 /**
  * Guard version of request signing (for use with @UseGuards)
  */
-import { CanActivate, ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-
 @Injectable()
 export class RequestSigningGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -182,9 +190,11 @@ export class RequestSigningGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const signature = request.headers[REQUEST_SIGNING.HEADER_NAME];
-    const timestamp = request.headers[REQUEST_SIGNING.TIMESTAMP_HEADER];
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const signature = request.headers[REQUEST_SIGNING.HEADER_NAME] as string;
+    const timestamp = request.headers[
+      REQUEST_SIGNING.TIMESTAMP_HEADER
+    ] as string;
 
     if (!signature || !timestamp) {
       throw new BadRequestException(
@@ -238,7 +248,7 @@ export class RequestSigningGuard implements CanActivate {
     return true;
   }
 
-  private getSigningSecret(request: any): string | null {
+  private getSigningSecret(request: AuthenticatedRequest): string | null {
     if (request.apiKey?.keyHash) {
       return request.apiKey.keyHash;
     }

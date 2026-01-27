@@ -7,11 +7,6 @@ import type { NextRequest } from "next/server";
 const protectedRoutes = ["/dashboard", "/agent", "/settings", "/profile"];
 
 /**
- * Public routes that don't require authentication
- */
-const publicRoutes = ["/", "/login", "/signup", "/forgot-password", "/properties"];
-
-/**
  * Auth routes - redirect to dashboard if already authenticated
  */
 const authRoutes = ["/login", "/signup"];
