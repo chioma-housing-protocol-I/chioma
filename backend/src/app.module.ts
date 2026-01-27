@@ -13,10 +13,14 @@ import { AppService } from './app.service';
 import { AgreementsModule } from './modules/agreements/agreements.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { ApiKeyModule } from './modules/api-keys/api-key.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { HealthModule } from './health/health.module';
+import { SecurityModule } from './security/security.module';
+import { SecretsModule } from './config/secrets.config';
 import { AppDataSource } from './database/data-source';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
+import { RATE_LIMIT_DEFAULTS } from './common/constants/security.constants';
 
 @Module({
   imports: [
@@ -25,8 +29,8 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 20,
+        ttl: RATE_LIMIT_DEFAULTS.GLOBAL_TTL,
+        limit: RATE_LIMIT_DEFAULTS.GLOBAL_LIMIT,
       },
     ]),
     TypeOrmModule.forRoot({
@@ -45,8 +49,11 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
     AgreementsModule,
     AuthModule,
     UsersModule,
+    ApiKeyModule,
     TypeOrmModule.forRoot(AppDataSource.options),
     HealthModule,
+    SecurityModule,
+    SecretsModule,
   ],
   controllers: [AppController],
   providers: [
