@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
   schedule:
     # Run weekly security scans
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'typescript']
+        language: ["javascript", "typescript"]
 
     steps:
       - name: Checkout code
@@ -72,11 +72,11 @@ jobs:
       - name: Setup Node.js for backend
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install backend dependencies
         working-directory: backend
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Run npm audit (backend)
         working-directory: backend
@@ -116,9 +116,9 @@ jobs:
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
-          project: 'chioma'
-          path: '.'
-          format: 'HTML'
+          project: "chioma"
+          path: "."
+          format: "HTML"
           args: >
             --enableExperimental
             --scan backend/package-lock.json
@@ -142,17 +142,17 @@ jobs:
       - name: Run Trivy vulnerability scanner (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'HIGH,CRITICAL'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "HIGH,CRITICAL"
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
   # Security headers check (for deployed environments)
   security-headers-check:
