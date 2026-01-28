@@ -419,7 +419,7 @@ fn test_has_agreement() {
     let agreement_id = String::from_str(&env, "AGR_HAS_TEST");
 
     // Agreement doesn't exist yet
-    assert_eq!(client.has_agreement(&agreement_id), false);
+    assert!(!client.has_agreement(&agreement_id));
 
     // Create agreement
     client.create_agreement(
@@ -435,7 +435,7 @@ fn test_has_agreement() {
     );
 
     // Agreement should exist now
-    assert_eq!(client.has_agreement(&agreement_id), true);
+    assert!(client.has_agreement(&agreement_id));
 }
 
 #[test]

@@ -121,8 +121,8 @@ jobs:
           format: "HTML"
           args: >
             --enableExperimental
-            --scan backend/package-lock.json
-            --scan frontend/package-lock.json
+            --scan backend/pnpm-lock.yaml
+            --scan frontend/pnpm-lock.yaml
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4

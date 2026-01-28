@@ -102,24 +102,7 @@ export class SanitizationPipe implements PipeTransform {
   }
 
   private stripHtmlTags(value: string): string {
-    // Multi-pass sanitization to handle nested/malformed tags and incomplete tags
-    let result = value;
-    let previousResult = '';
-
-    // Keep stripping until no more changes (handles nested tags like <<script>script>)
-    while (result !== previousResult) {
-      previousResult = result;
-      // First, remove complete HTML tags: <tag> or <tag attr="value">
-      result = result.replace(/<[^>]*>/g, '');
-      // Remove incomplete tags that start with < but don't have closing >
-      // This handles cases like <script, <img src=, etc.
-      result = result.replace(/<[^>]*$/g, ''); // Incomplete tag at end of string
-      result = result.replace(/<[^>\s]*\s/g, ''); // Incomplete tag followed by whitespace
-      // Remove any remaining standalone < or > characters that could form tags
-      result = result.replace(/</g, '').replace(/>/g, '');
-    }
-
-    return result;
+    return value.replace(/[<>]/g, '');
   }
 
   private encodeSpecialChars(value: string): string {
