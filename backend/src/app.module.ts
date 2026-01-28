@@ -11,13 +11,16 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AgreementsModule } from './modules/agreements/agreements.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
-import { ProfilesModule } from './modules/profiles/profiles.module';
+import { DisputesModule } from './modules/disputes/disputes.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { HealthModule } from './health/health.module';
+import { PaymentModule } from './modules/payments/payment.module';
 import { AppDataSource } from './database/data-source';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -44,11 +47,14 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
       logging: process.env.NODE_ENV === 'development',
     }),
     AgreementsModule,
+    AuditModule,
     AuthModule,
     UsersModule,
-    ProfilesModule,
+    DisputesModule,
     TypeOrmModule.forRoot(AppDataSource.options),
     HealthModule,
+    PaymentModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

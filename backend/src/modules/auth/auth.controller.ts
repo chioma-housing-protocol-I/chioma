@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { AuthMetricsService } from './services/auth-metrics.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -26,12 +27,15 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { User, AuthMethod } from '../users/entities/user.entity';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authMetricsService: AuthMetricsService,
+  ) {}
 
   @Post('register')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
@@ -53,8 +57,41 @@ export class AuthController {
     status: 409,
     description: 'Email already registered',
   })
-  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Request() req: any,
+  ): Promise<AuthResponseDto> {
+    const startTime = Date.now();
+    
+    try {
+      const result = await this.authService.register(registerDto);
+      const duration = Date.now() - startTime;
+      
+      // Record successful registration metric
+      await this.authMetricsService.recordAuthAttempt({
+        authMethod: AuthMethod.PASSWORD,
+        success: true,
+        duration,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+      
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      // Record failed registration metric
+      await this.authMetricsService.recordAuthAttempt({
+        authMethod: AuthMethod.PASSWORD,
+        success: false,
+        duration,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        errorMessage: error.message,
+      });
+      
+      throw error;
+    }
   }
 
   @Post('login')
@@ -73,8 +110,41 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials or account locked',
   })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Request() req: any,
+  ): Promise<AuthResponseDto> {
+    const startTime = Date.now();
+    
+    try {
+      const result = await this.authService.login(loginDto);
+      const duration = Date.now() - startTime;
+      
+      // Record successful login metric
+      await this.authMetricsService.recordAuthAttempt({
+        authMethod: AuthMethod.PASSWORD,
+        success: true,
+        duration,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+      
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      // Record failed login metric
+      await this.authMetricsService.recordAuthAttempt({
+        authMethod: AuthMethod.PASSWORD,
+        success: false,
+        duration,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        errorMessage: error.message,
+      });
+      
+      throw error;
+    }
   }
 
   @Post('refresh')

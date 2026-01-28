@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   House,
@@ -15,7 +16,6 @@ import {
   Plus,
   LogOut,
   Menu,
-  X,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -70,15 +70,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       {/* Sidebar Overlay */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
+          isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static top-0 left-0 bottom-0 w-64 bg-sidebar-bg text-sidebar-text z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col shrink-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed lg:static top-0 left-0 bottom-0 w-64 bg-sidebar-bg text-sidebar-text z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col shrink-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         {/* Logo */}
         <div className="h-24 flex items-center px-8">
@@ -103,18 +105,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
-                className={`relative flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group ${active
-                  ? "bg-sidebar-hover text-sidebar-text-active"
-                  : "hover:text-sidebar-text-active hover:bg-white/5"
-                  }`}
+                className={`relative flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                  active
+                    ? "bg-sidebar-hover text-sidebar-text-active"
+                    : "hover:text-sidebar-text-active hover:bg-white/5"
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     size={20}
-                    className={`transition-colors duration-200 ${active
-                      ? "text-brand-blue"
-                      : "text-neutral-500 group-hover:text-neutral-300"
-                      }`}
+                    className={`transition-colors duration-200 ${
+                      active
+                        ? "text-brand-blue"
+                        : "text-neutral-500 group-hover:text-neutral-300"
+                    }`}
                   />
                   <span>{item.name}</span>
                 </div>
@@ -140,17 +144,29 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="p-4 border-t border-white/5 mx-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden relative shrink-0">
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="User" className="w-full h-full object-cover" />
+              <Image
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
+                alt="User"
+                width={40}
+                height={40}
+              />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white text-sm font-medium leading-none mb-1">Sarah Jenks</div>
-              <div className="text-neutral-500 text-xs mb-3">Agent ID: #8839</div>
+              <div className="text-white text-sm font-medium leading-none mb-1">
+                Sarah Jenks
+              </div>
+              <div className="text-neutral-500 text-xs mb-3">
+                Agent ID: #8839
+              </div>
 
               <button
                 type="button"
                 className="flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-white transition-colors group mt-2"
               >
-                <LogOut size={14} className="group-hover:translate-x-1 transition-transform" />
+                <LogOut
+                  size={14}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
                 <span>Sign Out</span>
               </button>
             </div>
@@ -202,9 +218,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-8">
-          {children}
-        </main>
+        <main className="flex-1 p-8">{children}</main>
       </div>
     </div>
   );

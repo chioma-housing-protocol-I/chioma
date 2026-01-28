@@ -14,6 +14,11 @@ export enum UserRole {
   TENANT = 'tenant',
 }
 
+export enum AuthMethod {
+  PASSWORD = 'password',
+  STELLAR = 'stellar',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -67,6 +72,17 @@ export class User {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  @Column({ name: 'wallet_address', nullable: true, unique: true })
+  walletAddress: string | null;
+
+  @Column({ 
+    name: 'auth_method', 
+    type: 'enum', 
+    enum: AuthMethod, 
+    default: AuthMethod.PASSWORD 
+  })
+  authMethod: AuthMethod;
 
   @Exclude()
   @Column({ name: 'refresh_token', nullable: true })

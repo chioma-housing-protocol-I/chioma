@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
-import { User, UserRole } from './entities/user.entity';
+import { User, UserRole, AuthMethod } from './entities/user.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -31,6 +31,8 @@ describe('UsersService', () => {
     accountLockedUntil: null,
     lastLoginAt: new Date(),
     isActive: true,
+    walletAddress: null,
+    authMethod: AuthMethod.PASSWORD,
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),

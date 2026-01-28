@@ -15,6 +15,9 @@ import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction, AuditLevel, AuditStatus } from '../audit/entities/audit-log.entity';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
 
 @Injectable()
 export class AgreementsService {
@@ -23,12 +26,19 @@ export class AgreementsService {
     private readonly agreementRepository: Repository<RentAgreement>,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
    * Create a new rent agreement
    */
-  async create(createAgreementDto: CreateAgreementDto): Promise<RentAgreement> {
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  async create(createAgreementDto: CreateAgreementDto, performedBy?: string): Promise<RentAgreement> {
     // Validate dates
     const startDate = new Date(createAgreementDto.startDate);
     const endDate = new Date(createAgreementDto.endDate);
@@ -51,7 +61,9 @@ export class AgreementsService {
       totalPaid: 0,
     });
 
-    return await this.agreementRepository.save(agreement);
+    const savedAgreement = await this.agreementRepository.save(agreement);
+
+    return savedAgreement;
   }
 
   /**
@@ -138,11 +150,23 @@ export class AgreementsService {
   /**
    * Update an agreement
    */
-  async update(
-    id: string,
-    updateAgreementDto: UpdateAgreementDto,
-  ): Promise<RentAgreement> {
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
+  async update(id: string, updateAgreementDto: UpdateAgreementDto, performedBy?: string): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
+    const oldValues = {
+      status: agreement.status,
+      monthlyRent: agreement.monthlyRent,
+      securityDeposit: agreement.securityDeposit,
+      startDate: agreement.startDate,
+      endDate: agreement.endDate,
+      termsAndConditions: agreement.termsAndConditions,
+    };
 
     // Validate dates if both are provided
     if (updateAgreementDto.startDate && updateAgreementDto.endDate) {
@@ -158,43 +182,49 @@ export class AgreementsService {
     Object.assign(agreement, updateAgreementDto);
 
     // Convert date strings to Date objects if provided
-    if (updateAgreementDto.startDate) {
-      agreement.startDate = new Date(updateAgreementDto.startDate);
+    if ((updateAgreementDto as any).startDate) {
+      agreement.startDate = new Date((updateAgreementDto as any).startDate);
     }
-    if (updateAgreementDto.endDate) {
-      agreement.endDate = new Date(updateAgreementDto.endDate);
+    if ((updateAgreementDto as any).endDate) {
+      agreement.endDate = new Date((updateAgreementDto as any).endDate);
     }
 
-    return await this.agreementRepository.save(agreement);
+    const updatedAgreement = await this.agreementRepository.save(agreement);
+
+    return updatedAgreement;
   }
 
-  /**
-   * Terminate an agreement
-   */
-  async terminate(
-    id: string,
-    terminateDto: TerminateAgreementDto,
-  ): Promise<RentAgreement> {
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
+  async terminate(id: string, terminateDto: TerminateAgreementDto, performedBy?: string): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
       throw new BadRequestException('Agreement is already terminated');
     }
 
+    const oldStatus = agreement.status;
     agreement.status = AgreementStatus.TERMINATED;
     agreement.terminationDate = new Date();
     agreement.terminationReason = terminateDto.terminationReason;
 
-    return await this.agreementRepository.save(agreement);
+    const terminatedAgreement = await this.agreementRepository.save(agreement);
+
+    return terminatedAgreement;
   }
 
-  /**
-   * Record a payment for an agreement
-   */
-  async recordPayment(
-    agreementId: string,
-    recordPaymentDto: RecordPaymentDto,
-  ): Promise<Payment> {
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'Payment',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  async recordPayment(agreementId: string, recordPaymentDto: RecordPaymentDto, performedBy?: string): Promise<Payment> {
     const agreement = await this.findOne(agreementId);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
@@ -202,6 +232,10 @@ export class AgreementsService {
         'Cannot record payment for a terminated agreement',
       );
     }
+
+    const oldTotalPaid = agreement.totalPaid;
+    const oldEscrowBalance = agreement.escrowBalance;
+    const oldStatus = agreement.status;
 
     // Create payment
     const payment = this.paymentRepository.create({
@@ -231,7 +265,54 @@ export class AgreementsService {
       agreement.status = AgreementStatus.ACTIVE;
     }
 
-    await this.agreementRepository.save(agreement);
+    const updatedAgreement = await this.agreementRepository.save(agreement);
+
+    // Audit log for payment creation
+    await this.auditService.log({
+      action: AuditAction.CREATE,
+      entityType: 'Payment',
+      entityId: savedPayment.paymentId,
+      performedBy,
+      newValues: {
+        agreementId: savedPayment.agreementId,
+        amount: savedPayment.amount,
+        paymentDate: savedPayment.paymentDate,
+        paymentMethod: savedPayment.paymentMethod,
+        referenceNumber: savedPayment.referenceNumber,
+      },
+      level: AuditLevel.INFO,
+      metadata: {
+        agreementNumber: updatedAgreement.agreementNumber,
+        paymentReference: recordPaymentDto.referenceNumber,
+      },
+    });
+
+    // Audit log for agreement update (financial change)
+    if (oldTotalPaid !== updatedAgreement.totalPaid || oldStatus !== updatedAgreement.status) {
+      await this.auditService.log({
+        action: AuditAction.UPDATE,
+        entityType: 'RentAgreement',
+        entityId: agreementId,
+        performedBy,
+        oldValues: {
+          totalPaid: oldTotalPaid,
+          escrowBalance: oldEscrowBalance,
+          status: oldStatus,
+        },
+        newValues: {
+          totalPaid: updatedAgreement.totalPaid,
+          escrowBalance: updatedAgreement.escrowBalance,
+          status: updatedAgreement.status,
+          lastPaymentDate: updatedAgreement.lastPaymentDate,
+        },
+        level: AuditLevel.INFO,
+        metadata: {
+          agreementNumber: updatedAgreement.agreementNumber,
+          paymentAmount: recordPaymentDto.amount,
+          paymentReference: recordPaymentDto.referenceNumber,
+        },
+      });
+    }
 
     return savedPayment;
   }

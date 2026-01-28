@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { Download, Filter, MoreHorizontal } from "lucide-react";
+import { Download, Filter } from "lucide-react";
 import { format } from "date-fns";
 
 const PropertyPortfolio = () => {

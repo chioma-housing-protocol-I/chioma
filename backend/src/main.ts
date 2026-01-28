@@ -1,4 +1,5 @@
 import * as express from 'express';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -22,6 +23,14 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: ['health', 'health/detailed'],
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   app.use(express.json());
   app.use(new LoggerMiddleware().use);

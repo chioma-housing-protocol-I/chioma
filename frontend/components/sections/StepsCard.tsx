@@ -30,7 +30,7 @@ const steps = [
 
 export default function StepsCard() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-gray-50 to-white">
       <div className="max-w-6xl mx-auto">
         {/* Section Title */}
         <h2 className="text-4xl md:text-5xl font-bold text-center text-blue-600 mb-16">
@@ -49,7 +49,7 @@ export default function StepsCard() {
             }}
           />
 
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <div
               key={step.id}
               className="relative flex flex-col items-center text-center group"

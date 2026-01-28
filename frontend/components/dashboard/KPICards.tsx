@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { TrendingUp, Building2, Wallet, ArrowRight } from "lucide-react";
+import { Building2, Wallet, ArrowRight } from "lucide-react";
 
 const KPICards = () => {
   const kpiData = [
@@ -87,9 +87,8 @@ const KPICards = () => {
             {kpi.change && (
               <div className="flex items-center space-x-2 text-sm">
                 <span
-                  className={`font-semibold ${
-                    kpi.isPositive ? "text-brand-green" : "text-red-500"
-                  }`}
+                  className={`font-semibold ${kpi.isPositive ? "text-brand-green" : "text-red-500"
+                    }`}
                 >
                   {kpi.change}
                 </span>

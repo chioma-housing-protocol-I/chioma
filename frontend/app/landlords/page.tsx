@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import KPICards from "@/components/dashboard/KPICards";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import RecentActivity from "@/components/dashboard/RecentActivity";
@@ -9,7 +8,6 @@ import PropertyPortfolio from "@/components/dashboard/PropertyPortfolio";
 
 export default function DashboardPage() {
   return (
-    <DashboardLayout>
       <div className="space-y-8">
         {/* KPI Cards */}
         <KPICards />
@@ -30,6 +28,5 @@ export default function DashboardPage() {
         {/* Property Portfolio Table */}
         <PropertyPortfolio />
       </div>
-    </DashboardLayout>
   );
 }

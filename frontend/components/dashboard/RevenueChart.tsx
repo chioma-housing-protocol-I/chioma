@@ -13,7 +13,7 @@ import {
 import { ChevronDown } from "lucide-react";
 
 const RevenueChart = () => {
-  const [timeRange, setTimeRange] = useState("Last 6 Months");
+  const [timeRange] = useState("Last 6 Months");
 
   const revenueData = [
     { month: "Jan", revenue: 2.0 },
@@ -46,7 +46,7 @@ const RevenueChart = () => {
 
       {/* Chart */}
       <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={320}>
           <LineChart
             data={revenueData}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
