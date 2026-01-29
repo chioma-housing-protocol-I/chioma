@@ -30,9 +30,11 @@ export class MfaService {
     private userRepository: Repository<User>,
     private configService: ConfigService,
   ) {
-    this.encryptionKey =
-      this.configService.get<string>('SECURITY_ENCRYPTION_KEY') ||
-      'default-encryption-key-change-in-production-32-chars';
+    const key = this.configService.get<string>('SECURITY_ENCRYPTION_KEY');
+    if (!key) {
+      throw new Error('SECURITY_ENCRYPTION_KEY is required');
+    }
+    this.encryptionKey = key;
   }
 
   /**
@@ -97,9 +99,9 @@ export class MfaService {
     this.logger.log(`MFA secret generated for user: ${userId}`);
 
     return {
-      secret: secret.base32, // Return plain secret for initial setup
+      secret: secret.base32,
       qrCodeUrl,
-      backupCodes, // Return plain backup codes for initial setup
+      backupCodes,
     };
   }
 

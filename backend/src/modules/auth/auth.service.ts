@@ -158,8 +158,7 @@ export class AuthService {
           type: 'mfa_required',
         },
         {
-          secret:
-            this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+          secret: this.getJwtSecret(),
           expiresIn: '5m', // Short-lived token for MFA verification
         },
       );
@@ -204,8 +203,7 @@ export class AuthService {
         role: string;
         type: string;
       }>(mfaToken, {
-        secret:
-          this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+        secret: this.getJwtSecret(),
       });
 
       if (payload.type !== 'mfa_required') {
@@ -256,9 +254,7 @@ export class AuthService {
         role: string;
         type: string;
       }>(refreshToken, {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ||
-          'your-refresh-secret-key',
+        secret: this.getJwtRefreshSecret(),
       });
 
       if (payload.type !== 'refresh') {
@@ -335,12 +331,26 @@ export class AuthService {
     await this.userRepository.save(user);
     this.logger.log(`Password reset token generated for user: ${user.id}`);
 
-    console.log(`[DEV] Reset token for ${email}: ${resetToken}`);
-
     return {
       message:
         'If an account exists with this email, you will receive a password reset link',
     };
+  }
+
+  private getJwtSecret(): string {
+    const secret = this.configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is required');
+    }
+    return secret;
+  }
+
+  private getJwtRefreshSecret(): string {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secret) {
+      throw new Error('JWT_REFRESH_SECRET is required');
+    }
+    return secret;
   }
 
   async resetPassword(

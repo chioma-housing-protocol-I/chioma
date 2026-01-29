@@ -23,10 +23,13 @@ export class CsrfMiddleware implements NestMiddleware {
   constructor(private configService: ConfigService) {
     this.enabled =
       this.configService.get<string>('SECURITY_CSRF_ENABLED') === 'true';
-    this.secret =
+    const secret =
       this.configService.get<string>('SECURITY_SESSION_SECRET') ||
-      this.configService.get<string>('JWT_SECRET') ||
-      'default-csrf-secret-change-in-production';
+      this.configService.get<string>('JWT_SECRET');
+    if (this.enabled && !secret) {
+      throw new Error('SECURITY_SESSION_SECRET (or JWT_SECRET) is required when CSRF is enabled');
+    }
+    this.secret = secret ?? '';
   }
 
   use(req: Request, res: Response, next: NextFunction) {

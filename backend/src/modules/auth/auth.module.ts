@@ -23,14 +23,18 @@ import { PasswordPolicyService } from './services/password-policy.service';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('JWT_SECRET') ||
-          'your-secret-key-change-in-production',
-        signOptions: {
-          expiresIn: '15m',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET is required');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: '15m',
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
