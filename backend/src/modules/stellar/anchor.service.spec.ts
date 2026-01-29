@@ -21,8 +21,8 @@ describe('AnchorService', () => {
   const mockUser: User = {
     id: 'user-123',
     email: 'test@example.com',
-    stellarPublicKey: 'GA123...',
-  } as User;
+    walletAddress: 'GA123...',
+  } as unknown as User;
 
   const mockCurrency: SupportedCurrency = {
     id: 'currency-123',
@@ -125,7 +125,21 @@ describe('AnchorService', () => {
       expect(supportedCurrencyRepository.findOne).toHaveBeenCalledWith({
         where: { code: 'USD', type: 'fiat', isActive: true },
       });
-      expect(httpService.post).toHaveBeenCalled();
+      expect(httpService.post).toHaveBeenCalledWith(
+        'https://api.anchor.com/deposit',
+        {
+          amount: 100,
+          currency: 'USD',
+          payment_method: 'SEPA',
+          wallet_address: 'GA123...',
+        },
+        {
+          headers: {
+            Authorization: 'Bearer test-key',
+            'Content-Type': 'application/json',
+          },
+        },
+      );
       expect(anchorTransactionRepository.create).toHaveBeenCalled();
       expect(anchorTransactionRepository.save).toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -199,7 +213,21 @@ describe('AnchorService', () => {
       expect(supportedCurrencyRepository.findOne).toHaveBeenCalledWith({
         where: { code: 'USD', type: 'fiat', isActive: true },
       });
-      expect(httpService.post).toHaveBeenCalled();
+      expect(httpService.post).toHaveBeenCalledWith(
+        'https://api.anchor.com/withdraw',
+        {
+          amount: 100,
+          currency: 'USD',
+          destination: 'bank account details',
+          wallet_address: 'GA123...',
+        },
+        {
+          headers: {
+            Authorization: 'Bearer test-key',
+            'Content-Type': 'application/json',
+          },
+        },
+      );
       expect(anchorTransactionRepository.create).toHaveBeenCalled();
       expect(anchorTransactionRepository.save).toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -224,6 +252,14 @@ describe('AnchorService', () => {
         where: { id: 'tx-123' },
         relations: ['user'],
       });
+      expect(httpService.get).toHaveBeenCalledWith(
+        'https://api.anchor.com/transactions/anchor-123',
+        {
+          headers: {
+            Authorization: 'Bearer test-key',
+          },
+        },
+      );
     });
 
     it('should throw error for non-existent transaction', async () => {
