@@ -1,9 +1,7 @@
-#![cfg(test)]
-
 use super::*;
 use soroban_sdk::{
     testutils::{Address as _, Events, Ledger},
-    vec, Address, Bytes, Env, String,
+    vec, Address, Env, String,
 };
 
 #[test]
@@ -42,7 +40,7 @@ fn test_profile_crud_success() {
 
     let profile = client.get_profile(&account);
     assert_eq!(profile.version, String::from_str(&env, "1.0"));
-    assert_eq!(profile.r#type, 1u32);
+    assert_eq!(profile.account_type, 1u32);
     assert_eq!(profile.updated, expected_updated);
     assert_eq!(profile.data_hash, data_hash);
 
@@ -77,8 +75,8 @@ fn test_profile_invalid_data_hash() {
 
     let client = create_contract(&env);
     let account = Address::generate(&env);
-    let long_hash = vec![0u8; 129];
-    let data_hash = Bytes::from_slice(&env, long_hash.as_slice());
+    let long_hash = [0u8; 129];
+    let data_hash = Bytes::from_slice(&env, &long_hash);
 
     client.update_profile(&account, &2u32, &data_hash);
 }

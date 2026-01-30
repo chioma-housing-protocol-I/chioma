@@ -1,19 +1,13 @@
 #![no_std]
 #![allow(clippy::too_many_arguments)]
-use soroban_sdk::{contract, contractevent, contractimpl, vec, Address, Bytes, Env, String, Vec};
+use soroban_sdk::{contract, contractevent, contractimpl, token, vec, Address, Bytes, Env, Map, String, Vec};
 
 mod types;
-use types::{AgreementStatus, DataKey, Error, PaymentRecord, RentAgreement, UserProfile};
+use types::{AgreementStatus, DataKey, Error, PaymentRecord, PaymentSplit, RentAgreement, UserProfile};
 
 const SEP29_PROFILE_VERSION: &str = "1.0";
 const MAX_DATA_HASH_LEN: u32 = 128;
 const MIN_UPDATE_INTERVAL: u64 = 60;
-use soroban_sdk::{
-    contract, contractevent, contractimpl, token, vec, Address, Env, Map, String, Vec,
-};
-
-mod types;
-use types::{AgreementStatus, DataKey, Error, PaymentRecord, PaymentSplit, RentAgreement};
 
 pub mod escrow;
 
@@ -295,7 +289,7 @@ impl Contract {
 
         let profile = UserProfile {
             version: String::from_str(&env, SEP29_PROFILE_VERSION),
-            r#type: account_type,
+            account_type,
             updated: now,
             data_hash,
         };
@@ -471,6 +465,7 @@ impl Contract {
     }
 }
 mod payment;
+#[cfg(test)]
 mod test;
 
 // Only compile the payment tests during `cargo test`
