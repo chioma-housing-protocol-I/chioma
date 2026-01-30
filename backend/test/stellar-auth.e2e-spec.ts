@@ -50,7 +50,7 @@ describe('Stellar Authentication E2E', () => {
     // Set environment variables for testing
     process.env.STELLAR_SERVER_SECRET_KEY = serverKeypair.secret();
     process.env.STELLAR_NETWORK = 'testnet';
-    
+
     await app.init();
     userRepository = moduleFixture.get(getRepositoryToken(User));
   });
@@ -76,9 +76,12 @@ describe('Stellar Authentication E2E', () => {
       expect(response.body).toHaveProperty('expiresAt');
       expect(typeof response.body.challenge).toBe('string');
       expect(typeof response.body.expiresAt).toBe('string');
-      
+
       // Verify challenge is a valid Stellar transaction
-      const transaction = TransactionBuilder.fromXDR(response.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        response.body.challenge,
+        Networks.TESTNET,
+      );
       expect(transaction).toBeDefined();
     });
 
@@ -120,9 +123,12 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       const challengeXdr = challengeResponse.body.challenge;
-      
+
       // Step 2: Sign challenge with client keypair
-      const transaction = TransactionBuilder.fromXDR(challengeXdr, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeXdr,
+        Networks.TESTNET,
+      );
       transaction.sign(clientKeypair);
       const signedChallengeXdr = transaction.toXDR();
 
@@ -145,7 +151,9 @@ describe('Stellar Authentication E2E', () => {
       expect(verifyResponse.body.user.emailVerified).toBe(true);
 
       // Verify user was created in database
-      const user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+      const user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user).toBeDefined();
       expect(user.authMethod).toBe('stellar');
     });
@@ -167,9 +175,12 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       // Step 2: Sign and verify
-      const transaction = TransactionBuilder.fromXDR(challengeResponse.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeResponse.body.challenge,
+        Networks.TESTNET,
+      );
       transaction.sign(clientKeypair);
-      
+
       const verifyResponse = await request(app.getHttpServer())
         .post('/auth/stellar/verify')
         .send({
@@ -181,8 +192,10 @@ describe('Stellar Authentication E2E', () => {
 
       // Verify auth method was updated
       expect(verifyResponse.body.user.authMethod).toBe('stellar');
-      
-      const user = await userRepository.findOne({ where: { walletAddress: validWalletAddress } });
+
+      const user = await userRepository.findOne({
+        where: { walletAddress: validWalletAddress },
+      });
       expect(user.authMethod).toBe('stellar');
       expect(user.lastLoginAt).toBeDefined();
     });
@@ -195,12 +208,15 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       // Wait for challenge to expire (simulate time passing)
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Try to use expired challenge
-      const transaction = TransactionBuilder.fromXDR(challengeResponse.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeResponse.body.challenge,
+        Networks.TESTNET,
+      );
       transaction.sign(clientKeypair);
-      
+
       await request(app.getHttpServer())
         .post('/auth/stellar/verify')
         .send({
@@ -235,9 +251,12 @@ describe('Stellar Authentication E2E', () => {
         .expect(200);
 
       const wrongKeypair = Keypair.random();
-      const transaction = TransactionBuilder.fromXDR(challengeResponse.body.challenge, Networks.TESTNET);
+      const transaction = TransactionBuilder.fromXDR(
+        challengeResponse.body.challenge,
+        Networks.TESTNET,
+      );
       transaction.sign(wrongKeypair);
-      
+
       await request(app.getHttpServer())
         .post('/auth/stellar/verify')
         .send({
@@ -308,35 +327,44 @@ describe('Stellar Authentication E2E', () => {
   describe('Rate limiting', () => {
     it('should apply rate limiting to challenge endpoint', async () => {
       // Make multiple requests quickly to trigger rate limiting
-      const requests = Array(6).fill(null).map((_, index) =>
-        request(app.getHttpServer())
-          .post('/auth/stellar/challenge')
-          .send({ walletAddress: `${validWalletAddress}_${index}` }) // Use different addresses to avoid duplicate challenge errors
-      );
+      const requests = Array(6)
+        .fill(null)
+        .map(
+          (_, index) =>
+            request(app.getHttpServer())
+              .post('/auth/stellar/challenge')
+              .send({ walletAddress: `${validWalletAddress}_${index}` }), // Use different addresses to avoid duplicate challenge errors
+        );
 
       const responses = await Promise.all(requests);
-      
+
       // At least one should be rate limited (status 429)
-      const rateLimitedResponses = responses.filter(res => res.status === 429);
+      const rateLimitedResponses = responses.filter(
+        (res) => res.status === 429,
+      );
       expect(rateLimitedResponses.length).toBeGreaterThan(0);
     });
 
     it('should apply rate limiting to verify endpoint', async () => {
       // Make multiple requests quickly to trigger rate limiting
-      const requests = Array(11).fill(null).map((_, index) =>
-        request(app.getHttpServer())
-          .post('/auth/stellar/verify')
-          .send({
-            walletAddress: `${validWalletAddress}_${index}`,
-            signature: 'test-signature',
-            challenge: 'test-challenge',
-          })
-      );
+      const requests = Array(11)
+        .fill(null)
+        .map((_, index) =>
+          request(app.getHttpServer())
+            .post('/auth/stellar/verify')
+            .send({
+              walletAddress: `${validWalletAddress}_${index}`,
+              signature: 'test-signature',
+              challenge: 'test-challenge',
+            }),
+        );
 
       const responses = await Promise.all(requests);
-      
+
       // At least one should be rate limited
-      const rateLimitedResponses = responses.filter(res => res.status === 429);
+      const rateLimitedResponses = responses.filter(
+        (res) => res.status === 429,
+      );
       expect(rateLimitedResponses.length).toBeGreaterThan(0);
     });
   });
@@ -344,8 +372,10 @@ describe('Stellar Authentication E2E', () => {
   describe('Database Integration', () => {
     it('should properly clean up expired challenges', async () => {
       // Request multiple challenges for different wallets
-      const wallets = Array(3).fill(null).map(() => Keypair.random().publicKey());
-      
+      const wallets = Array(3)
+        .fill(null)
+        .map(() => Keypair.random().publicKey());
+
       for (const wallet of wallets) {
         await request(app.getHttpServer())
           .post('/auth/stellar/challenge')
@@ -354,30 +384,32 @@ describe('Stellar Authentication E2E', () => {
       }
 
       // Wait for cleanup interval (in real implementation, this would be handled by a cleanup job)
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Verify challenges are stored and can be used
       for (const wallet of wallets) {
         const challengeResponse = await request(app.getHttpServer())
           .post('/auth/stellar/challenge')
           .send({ walletAddress: wallet })
           .expect(400); // Should fail because challenge already exists
-        
+
         expect(challengeResponse.body.message).toContain('already requested');
       }
     });
 
     it('should handle concurrent requests safely', async () => {
-      const concurrentRequests = Array(10).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/auth/stellar/challenge')
-          .send({ walletAddress: Keypair.random().publicKey() })
-      );
+      const concurrentRequests = Array(10)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer())
+            .post('/auth/stellar/challenge')
+            .send({ walletAddress: Keypair.random().publicKey() }),
+        );
 
       const responses = await Promise.all(concurrentRequests);
-      
+
       // All requests should either succeed or fail gracefully
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect([200, 400, 429]).toContain(response.status);
       });
     });
@@ -399,19 +431,19 @@ describe('Stellar Authentication E2E', () => {
       // Temporarily unset environment variable
       const originalSecret = process.env.STELLAR_SERVER_SECRET_KEY;
       delete process.env.STELLAR_SERVER_SECRET_KEY;
-      
+
       await request(app.getHttpServer())
         .post('/auth/stellar/challenge')
         .send({ walletAddress: validWalletAddress })
         .expect(500);
-      
+
       // Restore environment variable
       process.env.STELLAR_SERVER_SECRET_KEY = originalSecret;
     });
 
     it('should handle very long wallet addresses', async () => {
       const longAddress = validWalletAddress + 'A'.repeat(100);
-      
+
       await request(app.getHttpServer())
         .post('/auth/stellar/challenge')
         .send({ walletAddress: longAddress })
@@ -420,7 +452,7 @@ describe('Stellar Authentication E2E', () => {
 
     it('should handle special characters in wallet addresses', async () => {
       const specialCharsAddress = validWalletAddress.replace(/[A-Z0-9]/g, 'a');
-      
+
       await request(app.getHttpServer())
         .post('/auth/stellar/challenge')
         .send({ walletAddress: specialCharsAddress })

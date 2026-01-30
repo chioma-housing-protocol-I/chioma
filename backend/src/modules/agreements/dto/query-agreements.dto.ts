@@ -7,7 +7,7 @@ export class QueryAgreementsDto {
   @ApiPropertyOptional({
     description: 'Filter by agreement status',
     enum: AgreementStatus,
-    example: 'ACTIVE'
+    example: 'ACTIVE',
   })
   @IsOptional()
   @IsEnum(AgreementStatus)
@@ -15,7 +15,7 @@ export class QueryAgreementsDto {
 
   @ApiPropertyOptional({
     description: 'Filter by landlord ID',
-    example: 'landlord-uuid-string'
+    example: 'landlord-uuid-string',
   })
   @IsOptional()
   @IsString()
@@ -23,7 +23,7 @@ export class QueryAgreementsDto {
 
   @ApiPropertyOptional({
     description: 'Filter by tenant ID',
-    example: 'tenant-uuid-string'
+    example: 'tenant-uuid-string',
   })
   @IsOptional()
   @IsString()
@@ -31,7 +31,7 @@ export class QueryAgreementsDto {
 
   @ApiPropertyOptional({
     description: 'Filter by agent ID',
-    example: 'agent-uuid-string'
+    example: 'agent-uuid-string',
   })
   @IsOptional()
   @IsString()
@@ -39,7 +39,7 @@ export class QueryAgreementsDto {
 
   @ApiPropertyOptional({
     description: 'Filter by property ID',
-    example: 'property-uuid-string'
+    example: 'property-uuid-string',
   })
   @IsOptional()
   @IsString()
@@ -50,7 +50,7 @@ export class QueryAgreementsDto {
     description: 'Page number for pagination',
     example: 1,
     minimum: 1,
-    default: 1
+    default: 1,
   })
   @IsOptional()
   @Type(() => Number)
@@ -63,7 +63,7 @@ export class QueryAgreementsDto {
     example: 10,
     minimum: 1,
     maximum: 100,
-    default: 10
+    default: 10,
   })
   @IsOptional()
   @Type(() => Number)
@@ -75,7 +75,7 @@ export class QueryAgreementsDto {
   @ApiPropertyOptional({
     description: 'Field to sort by',
     example: 'createdAt',
-    default: 'createdAt'
+    default: 'createdAt',
   })
   @IsOptional()
   @IsString()
@@ -85,7 +85,7 @@ export class QueryAgreementsDto {
     description: 'Sort order direction',
     enum: ['ASC', 'DESC'],
     example: 'DESC',
-    default: 'DESC'
+    default: 'DESC',
   })
   @IsOptional()
   @IsEnum(['ASC', 'DESC'])

@@ -1,6 +1,6 @@
 export class AuthResponseDto {
-  accessToken: string;
-  refreshToken: string;
+  accessToken: string | null;
+  refreshToken: string | null;
   user: {
     id: string;
     email: string;
@@ -8,6 +8,8 @@ export class AuthResponseDto {
     lastName: string | null;
     role: string;
   };
+  mfaRequired?: boolean;
+  mfaToken?: string;
 }
 
 export class MessageResponseDto {

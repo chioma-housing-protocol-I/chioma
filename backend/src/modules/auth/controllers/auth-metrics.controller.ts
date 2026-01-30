@@ -13,7 +13,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AuthMetricsService, AuthStats, PerformanceMetrics } from '../services/auth-metrics.service';
+import {
+  AuthMetricsService,
+  AuthStats,
+  PerformanceMetrics,
+} from '../services/auth-metrics.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
@@ -31,7 +35,8 @@ export class AuthMetricsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get authentication statistics',
-    description: 'Retrieve comprehensive authentication metrics including success rates, method breakdown, and trends',
+    description:
+      'Retrieve comprehensive authentication metrics including success rates, method breakdown, and trends',
   })
   @ApiQuery({
     name: 'days',
@@ -97,9 +102,7 @@ export class AuthMetricsController {
     status: 403,
     description: 'Forbidden - Admin role required',
   })
-  async getAuthStats(
-    @Query('days') days?: number,
-  ): Promise<AuthStats> {
+  async getAuthStats(@Query('days') days?: number): Promise<AuthStats> {
     const daysToAnalyze = Math.min(Math.max(days || 30, 1), 365);
     return this.authMetricsService.getAuthStats(daysToAnalyze);
   }
@@ -109,7 +112,8 @@ export class AuthMetricsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get authentication performance metrics',
-    description: 'Retrieve performance metrics including response time percentiles for each authentication method',
+    description:
+      'Retrieve performance metrics including response time percentiles for each authentication method',
   })
   @ApiQuery({
     name: 'days',
@@ -164,7 +168,8 @@ export class AuthMetricsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get hourly authentication usage',
-    description: 'Retrieve hourly breakdown of authentication attempts by method for the specified period',
+    description:
+      'Retrieve hourly breakdown of authentication attempts by method for the specified period',
   })
   @ApiQuery({
     name: 'days',
@@ -201,14 +206,14 @@ export class AuthMetricsController {
     status: 403,
     description: 'Forbidden - Admin role required',
   })
-  async getHourlyUsage(
-    @Query('days') days?: number,
-  ): Promise<Array<{
-    hour: string;
-    password: number;
-    stellar: number;
-    total: number;
-  }>> {
+  async getHourlyUsage(@Query('days') days?: number): Promise<
+    Array<{
+      hour: string;
+      password: number;
+      stellar: number;
+      total: number;
+    }>
+  > {
     const daysToAnalyze = Math.min(Math.max(days || 7, 1), 30);
     return this.authMetricsService.getHourlyUsage(daysToAnalyze);
   }
@@ -244,11 +249,14 @@ export class AuthMetricsController {
   })
   async getHealth() {
     const stats24h = await this.authMetricsService.getAuthStats(1);
-    const performance24h = await this.authMetricsService.getPerformanceMetrics(1);
-    
+    const performance24h =
+      await this.authMetricsService.getPerformanceMetrics(1);
+    void performance24h;
+
     const stellarAttempts = stats24h.methodBreakdown.stellar.attempts;
     const totalAttempts = stats24h.totalAttempts;
-    const stellarAdoption = totalAttempts > 0 ? (stellarAttempts / totalAttempts) * 100 : 0;
+    const stellarAdoption =
+      totalAttempts > 0 ? (stellarAttempts / totalAttempts) * 100 : 0;
 
     return {
       status: stats24h.successRate > 90 ? 'healthy' : 'degraded',

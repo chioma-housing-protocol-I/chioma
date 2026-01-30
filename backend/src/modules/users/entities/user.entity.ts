@@ -31,16 +31,16 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   password: string;
 
-  @Column({ name: 'first_name', type: 'varchar', nullable: true })
+  @Column({ name: 'first_name', nullable: true, type: 'varchar' })
   firstName: string | null;
 
-  @Column({ name: 'last_name', type: 'varchar', nullable: true })
+  @Column({ name: 'last_name', nullable: true, type: 'varchar' })
   lastName: string | null;
 
-  @Column({ name: 'phone_number', type: 'varchar', nullable: true })
+  @Column({ name: 'phone_number', nullable: true, type: 'varchar' })
   phoneNumber: string | null;
 
-  @Column({ name: 'avatar_url', type: 'varchar', nullable: true })
+  @Column({ name: 'avatar_url', nullable: true, type: 'varchar' })
   avatarUrl: string | null;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
@@ -50,24 +50,24 @@ export class User {
   emailVerified: boolean;
 
   @Exclude()
-  @Column({ name: 'verification_token', type: 'varchar', nullable: true })
+  @Column({ name: 'verification_token', nullable: true, type: 'varchar' })
   verificationToken: string | null;
 
   @Exclude()
-  @Column({ name: 'reset_token', type: 'varchar', nullable: true })
+  @Column({ name: 'reset_token', nullable: true, type: 'varchar' })
   resetToken: string | null;
 
   @Exclude()
-  @Column({ name: 'reset_token_expires', type: 'timestamp', nullable: true })
+  @Column({ name: 'reset_token_expires', nullable: true, type: 'timestamp' })
   resetTokenExpires: Date | null;
 
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts: number;
 
-  @Column({ name: 'account_locked_until', type: 'timestamp', nullable: true })
+  @Column({ name: 'account_locked_until', nullable: true, type: 'timestamp' })
   accountLockedUntil: Date | null;
 
-  @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'last_login_at', nullable: true, type: 'timestamp' })
   lastLoginAt: Date | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
@@ -75,9 +75,9 @@ export class User {
 
   @Column({
     name: 'wallet_address',
-    type: 'varchar',
     nullable: true,
     unique: true,
+    type: 'varchar',
   })
   walletAddress: string | null;
 
@@ -90,7 +90,7 @@ export class User {
   authMethod: AuthMethod;
 
   @Exclude()
-  @Column({ name: 'refresh_token', type: 'varchar', nullable: true })
+  @Column({ name: 'refresh_token', nullable: true, type: 'varchar' })
   refreshToken: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

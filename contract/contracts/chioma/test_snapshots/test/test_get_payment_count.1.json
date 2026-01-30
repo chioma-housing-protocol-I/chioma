@@ -63,6 +63,14 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "agent_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "agreement_id"
                       },
                       "val": {
@@ -79,7 +87,23 @@
                     },
                     {
                       "key": {
-                        "symbol": "payer"
+                        "symbol": "landlord_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "payment_number"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tenant"
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
@@ -87,18 +111,10 @@
                     },
                     {
                       "key": {
-                        "symbol": "payment_date"
+                        "symbol": "timestamp"
                       },
                       "val": {
                         "u64": "1000"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "payment_id"
-                      },
-                      "val": {
-                        "string": "PAY_001"
                       }
                     }
                   ]
@@ -149,6 +165,14 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "agent_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "agreement_id"
                       },
                       "val": {
@@ -165,7 +189,23 @@
                     },
                     {
                       "key": {
-                        "symbol": "payer"
+                        "symbol": "landlord_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "payment_number"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tenant"
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -173,18 +213,10 @@
                     },
                     {
                       "key": {
-                        "symbol": "payment_date"
+                        "symbol": "timestamp"
                       },
                       "val": {
                         "u64": "1000"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "payment_id"
-                      },
-                      "val": {
-                        "string": "PAY_002"
                       }
                     }
                   ]
@@ -235,6 +267,14 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "agent_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "agreement_id"
                       },
                       "val": {
@@ -251,7 +291,23 @@
                     },
                     {
                       "key": {
-                        "symbol": "payer"
+                        "symbol": "landlord_amount"
+                      },
+                      "val": {
+                        "i128": "0"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "payment_number"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tenant"
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
@@ -259,18 +315,10 @@
                     },
                     {
                       "key": {
-                        "symbol": "payment_date"
+                        "symbol": "timestamp"
                       },
                       "val": {
                         "u64": "1000"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "payment_id"
-                      },
-                      "val": {
-                        "string": "PAY_003"
                       }
                     }
                   ]

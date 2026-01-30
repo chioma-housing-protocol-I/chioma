@@ -54,38 +54,38 @@ export class CreateDisputeTables1738250000000 implements MigrationInterface {
 
     // Create indexes for disputes table
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_disputes_agreement_id" ON "disputes"("agreement_id")`
+      `CREATE INDEX IF NOT EXISTS "idx_disputes_agreement_id" ON "disputes"("agreement_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_disputes_initiated_by" ON "disputes"("initiated_by")`
+      `CREATE INDEX IF NOT EXISTS "idx_disputes_initiated_by" ON "disputes"("initiated_by")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_disputes_status" ON "disputes"("status")`
+      `CREATE INDEX IF NOT EXISTS "idx_disputes_status" ON "disputes"("status")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_disputes_dispute_type" ON "disputes"("dispute_type")`
+      `CREATE INDEX IF NOT EXISTS "idx_disputes_dispute_type" ON "disputes"("dispute_type")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_disputes_created_at" ON "disputes"("created_at")`
+      `CREATE INDEX IF NOT EXISTS "idx_disputes_created_at" ON "disputes"("created_at")`,
     );
 
     // Create indexes for dispute_evidence table
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_dispute_evidence_dispute_id" ON "dispute_evidence"("dispute_id")`
+      `CREATE INDEX IF NOT EXISTS "idx_dispute_evidence_dispute_id" ON "dispute_evidence"("dispute_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_dispute_evidence_uploaded_by" ON "dispute_evidence"("uploaded_by")`
+      `CREATE INDEX IF NOT EXISTS "idx_dispute_evidence_uploaded_by" ON "dispute_evidence"("uploaded_by")`,
     );
 
     // Create indexes for dispute_comments table
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_dispute_id" ON "dispute_comments"("dispute_id")`
+      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_dispute_id" ON "dispute_comments"("dispute_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_user_id" ON "dispute_comments"("user_id")`
+      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_user_id" ON "dispute_comments"("user_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_is_internal" ON "dispute_comments"("is_internal")`
+      `CREATE INDEX IF NOT EXISTS "idx_dispute_comments_is_internal" ON "dispute_comments"("is_internal")`,
     );
 
     // Create trigger to update updated_at timestamp
@@ -126,19 +126,37 @@ export class CreateDisputeTables1738250000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop triggers
-    await queryRunner.query(`DROP TRIGGER IF EXISTS "trigger_dispute_comments_updated_at" ON "dispute_comments"`);
-    await queryRunner.query(`DROP TRIGGER IF EXISTS "trigger_disputes_updated_at" ON "disputes"`);
-    
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS "trigger_dispute_comments_updated_at" ON "dispute_comments"`,
+    );
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS "trigger_disputes_updated_at" ON "disputes"`,
+    );
+
     // Drop functions
-    await queryRunner.query(`DROP FUNCTION IF EXISTS "update_dispute_comments_updated_at"`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS "update_disputes_updated_at"`);
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS "update_dispute_comments_updated_at"`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS "update_disputes_updated_at"`,
+    );
 
     // Drop indexes
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_dispute_comments_is_internal"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_dispute_comments_user_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_dispute_comments_dispute_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_dispute_evidence_uploaded_by"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_dispute_evidence_dispute_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_dispute_comments_is_internal"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_dispute_comments_user_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_dispute_comments_dispute_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_dispute_evidence_uploaded_by"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_dispute_evidence_dispute_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_disputes_created_at"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_disputes_dispute_type"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_disputes_status"`);

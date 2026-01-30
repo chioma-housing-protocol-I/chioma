@@ -1,0 +1,70 @@
+name: Backend Security CI
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-security-ci.yml"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-security-ci.yml"
+
+jobs:
+  security-checks:
+    name: Backend security lint, test & build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
+      - name: Install dependencies
+        env:
+          PNPM_FROZEN_LOCKFILE: "false"
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Lint backend (includes new security code)
+        run: |
+          pnpm exec eslint \
+            --rule "prettier/prettier: off" \
+            --rule "@typescript-eslint/require-await: off" \
+            --rule "@typescript-eslint/await-thenable: off" \
+            --rule "@typescript-eslint/no-unused-vars: off" \
+            --ignore-pattern "**/*.spec.ts" \
+            --ignore-pattern "**/*.e2e-spec.ts" \
+            --ignore-pattern "**/__tests__/**" \
+            "src/common/middleware/csrf.middleware.ts" \
+            "src/common/middleware/request-size-limit.middleware.ts" \
+            "src/common/middleware/security-headers.middleware.ts" \
+            "src/common/pipes/sanitize.pipe.ts" \
+            "src/common/interceptors/rate-limit.interceptor.ts" \
+            "src/modules/auth/**/*.ts" \
+            "src/modules/security/**/*.ts" \
+            "src/main.ts" \
+            "src/app.module.ts"
+
+      - name: Run backend unit tests
+        run: pnpm exec jest --runInBand "src/common/__tests__/security-smoke.spec.ts"
+
+      - name: Build backend
+        run: pnpm run build
+

@@ -10,7 +10,7 @@ export class AuthMetricsCleanupService {
   // Manual cleanup method - can be called by external scheduler
   async cleanupOldMetrics() {
     this.logger.log('Starting cleanup of old auth metrics...');
-    
+
     try {
       await this.authMetricsService.cleanupOldMetrics(90); // Keep 90 days
       this.logger.log('Completed cleanup of old auth metrics');

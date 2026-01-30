@@ -9,8 +9,15 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { AuditService } from '../audit.service';
-import { AuditAction, AuditLevel, AuditStatus } from '../entities/audit-log.entity';
-import { AUDIT_LOG_KEY, AuditLogOptions } from '../decorators/audit-log.decorator';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../entities/audit-log.entity';
+import {
+  AUDIT_LOG_KEY,
+  AuditLogOptions,
+} from '../decorators/audit-log.decorator';
 
 @Injectable()
 export class AuditLogInterceptor implements NestInterceptor {
@@ -22,7 +29,10 @@ export class AuditLogInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const auditOptions = this.reflector.get<AuditLogOptions>(AUDIT_LOG_KEY, context.getHandler());
+    const auditOptions = this.reflector.get<AuditLogOptions>(
+      AUDIT_LOG_KEY,
+      context.getHandler(),
+    );
 
     if (!auditOptions) {
       return next.handle();
@@ -37,36 +47,32 @@ export class AuditLogInterceptor implements NestInterceptor {
     const methodArgs = args.slice(1); // Skip ExecutionContext
 
     return next.handle().pipe(
-      tap(async (result) => {
-        try {
-          await this.logOperation(
-            auditOptions,
-            methodArgs,
-            result,
-            user,
-            ipAddress,
-            userAgent,
-            AuditStatus.SUCCESS,
-          );
-        } catch (error) {
+      tap((result) => {
+        this.logOperation(
+          auditOptions,
+          methodArgs,
+          result,
+          user,
+          ipAddress,
+          userAgent,
+          AuditStatus.SUCCESS,
+        ).catch((error) => {
           this.logger.error('Failed to log successful operation', error);
-        }
+        });
       }),
-      catchError(async (error) => {
-        try {
-          await this.logOperation(
-            auditOptions,
-            methodArgs,
-            null,
-            user,
-            ipAddress,
-            userAgent,
-            AuditStatus.FAILURE,
-            error.message,
-          );
-        } catch (logError) {
+      catchError((error) => {
+        this.logOperation(
+          auditOptions,
+          methodArgs,
+          null,
+          user,
+          ipAddress,
+          userAgent,
+          AuditStatus.FAILURE,
+          error.message,
+        ).catch((logError) => {
           this.logger.error('Failed to log failed operation', logError);
-        }
+        });
         throw error;
       }),
     );
@@ -83,10 +89,16 @@ export class AuditLogInterceptor implements NestInterceptor {
     errorMessage?: string,
   ): Promise<void> {
     const entityId = this.extractEntityId(methodArgs, result);
-    const oldValues = options.includeOldValues ? this.extractOldValues(methodArgs) : undefined;
-    const newValues = options.includeNewValues ? this.extractNewValues(methodArgs, result) : undefined;
+    const oldValues = options.includeOldValues
+      ? this.extractOldValues(methodArgs)
+      : undefined;
+    const newValues = options.includeNewValues
+      ? this.extractNewValues(methodArgs, result)
+      : undefined;
 
-    const level = options.level || (status === AuditStatus.FAILURE ? AuditLevel.ERROR : AuditLevel.INFO);
+    const level =
+      options.level ||
+      (status === AuditStatus.FAILURE ? AuditLevel.ERROR : AuditLevel.INFO);
 
     await this.auditService.log({
       action: options.action as AuditAction,
@@ -136,7 +148,12 @@ export class AuditLogInterceptor implements NestInterceptor {
     }
     // Look for update DTO in arguments
     for (const arg of args) {
-      if (arg && typeof arg === 'object' && !arg.id && Object.keys(arg).length > 0) {
+      if (
+        arg &&
+        typeof arg === 'object' &&
+        !arg.id &&
+        Object.keys(arg).length > 0
+      ) {
         return arg;
       }
     }
@@ -147,7 +164,15 @@ export class AuditLogInterceptor implements NestInterceptor {
     if (!data || typeof data !== 'object') return data;
 
     const sanitized = { ...data };
-    const sensitiveFields = ['password', 'token', 'secret', 'key', 'privateKey', 'ssn', 'creditCard'];
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'key',
+      'privateKey',
+      'ssn',
+      'creditCard',
+    ];
 
     for (const field of sensitiveFields) {
       if (sanitized[field]) {

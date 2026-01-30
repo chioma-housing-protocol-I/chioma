@@ -1,47 +1,76 @@
 import * as express from 'express';
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import helmet from 'helmet';
+import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  app.use(helmet());
+  // Parse CORS origins from environment variable
+  const corsOrigins = configService
+    .get<string>('CORS_ORIGINS')
+    ?.split(',')
+    .map((origin) => origin.trim()) || [
+    configService.get<string>('FRONTEND_URL') || 'http://localhost:3001',
+  ];
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true,
+    origin: corsOrigins,
+    credentials:
+      configService.get<string>('CORS_CREDENTIALS') === 'true' || true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Request-ID',
+      'X-XSRF-TOKEN',
+      'X-CSRF-Token',
+    ],
+    exposedHeaders: [
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+    ],
+    maxAge: 86400, // 24 hours for preflight cache
   });
 
   app.setGlobalPrefix('api', {
-    exclude: ['health', 'health/detailed'],
+    exclude: ['health', 'health/detailed', 'security.txt', '.well-known'],
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
+  // Configure request size limits
+  const jsonLimit =
+    configService.get<string>('REQUEST_SIZE_LIMIT_JSON') || '1mb';
+  const urlencodedLimit =
+    configService.get<string>('REQUEST_SIZE_LIMIT_URLENCODED') || '1mb';
+
+  app.use(express.json({ limit: jsonLimit }));
+  app.use(express.urlencoded({ extended: true, limit: urlencodedLimit }));
+
+  const loggerMiddleware = new LoggerMiddleware();
+  app.use(loggerMiddleware.use.bind(loggerMiddleware));
+
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new RateLimitInterceptor(),
   );
 
-  app.use(express.json());
-  app.use(new LoggerMiddleware().use);
-
-  app.useGlobalInterceptors(new LoggingInterceptor());
-
+  // Enhanced ValidationPipe configuration
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
+      transform: true,
+      skipMissingProperties: false,
+      disableErrorMessages: isProduction,
+      exceptionFactory: new ValidationPipe().createExceptionFactory(),
     }),
   );
 
@@ -69,6 +98,6 @@ async function bootstrap() {
 
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 5000);
 }
-bootstrap();
+void bootstrap();

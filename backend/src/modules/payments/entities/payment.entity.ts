@@ -39,7 +39,7 @@ export class Payment {
   @Column()
   userId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   agreementId: string | null; // Reference to agreement
 
   @Column('decimal', { precision: 12, scale: 2 })
@@ -63,13 +63,13 @@ export class Payment {
   @Column({ nullable: true })
   paymentMethodId: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   referenceNumber: string;
 
   @Column({ type: 'timestamp', nullable: true })
   processedAt: Date;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 100, nullable: true, type: 'varchar' })
   idempotencyKey: string | null;
 
   @Column('decimal', { precision: 12, scale: 2, default: 0.0 })

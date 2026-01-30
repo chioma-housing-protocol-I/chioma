@@ -5,8 +5,10 @@ import { AgreementsService } from './agreements.service';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 import { Payment } from '../rent/entities/payment.entity';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([RentAgreement, Payment])],
+  imports: [TypeOrmModule.forFeature([RentAgreement, Payment]), AuditModule],
   controllers: [AgreementsController],
   providers: [AgreementsService],
   exports: [AgreementsService],

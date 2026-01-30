@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../users/entities/user.entity';
 import { DISPUTE_PERMISSION_KEY } from '../decorators/dispute-permission.decorator';
@@ -35,23 +40,23 @@ export class DisputePermissionGuard implements CanActivate {
       case 'create_dispute':
         // Users can create disputes, admins can create any
         return user.role === UserRole.USER || user.role === UserRole.ADMIN;
-      
+
       case 'view_dispute':
         // All authenticated users can view disputes they're party to
         return user.role === UserRole.USER || user.role === UserRole.ADMIN;
-      
+
       case 'manage_dispute':
         // Only admins can manage disputes
         return user.role === UserRole.ADMIN;
-      
+
       case 'add_evidence':
         // Users can add evidence to disputes they're party to
         return user.role === UserRole.USER || user.role === UserRole.ADMIN;
-      
+
       case 'add_comment':
         // Users can add comments to disputes they're party to
         return user.role === UserRole.USER || user.role === UserRole.ADMIN;
-      
+
       default:
         return false;
     }

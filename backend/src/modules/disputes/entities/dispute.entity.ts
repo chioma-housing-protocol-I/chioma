@@ -88,10 +88,14 @@ export class Dispute {
   @JoinColumn({ name: 'resolved_by' })
   resolver: User;
 
-  @OneToMany(() => DisputeEvidence, (evidence: any) => evidence.dispute, { cascade: true })
+  @OneToMany(() => DisputeEvidence, (evidence: any) => evidence.dispute, {
+    cascade: true,
+  })
   evidence: DisputeEvidence[];
 
-  @OneToMany(() => DisputeComment, (comment: any) => comment.dispute, { cascade: true })
+  @OneToMany(() => DisputeComment, (comment: any) => comment.dispute, {
+    cascade: true,
+  })
   comments: DisputeComment[];
 
   @Column({ name: 'resolved_at', type: 'timestamp', nullable: true })

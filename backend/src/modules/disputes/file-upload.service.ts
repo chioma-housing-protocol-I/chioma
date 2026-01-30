@@ -33,7 +33,12 @@ export class FileUploadService {
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new Error('Invalid file type. Only images, PDFs, and documents are allowed.'), false);
+          cb(
+            new Error(
+              'Invalid file type. Only images, PDFs, and documents are allowed.',
+            ),
+            false,
+          );
         }
       },
       limits: {
@@ -68,7 +73,8 @@ export class FileUploadService {
     if (!allowedMimes.includes(file.mimetype)) {
       return {
         isValid: false,
-        error: 'Invalid file type. Only images, PDFs, and documents are allowed',
+        error:
+          'Invalid file type. Only images, PDFs, and documents are allowed',
       };
     }
 

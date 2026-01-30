@@ -11,28 +11,50 @@ import { StellarAuthService } from './services/stellar-auth.service';
 import { StellarAuthController } from './controllers/stellar-auth.controller';
 import { User } from '../users/entities/user.entity';
 import { AuthMetric } from './entities/auth-metric.entity';
+import { MfaDevice } from './entities/mfa-device.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { MfaService } from './services/mfa.service';
+import { PasswordPolicyService } from './services/password-policy.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, AuthMetric]),
+    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('JWT_SECRET') ||
-          'your-secret-key-change-in-production',
-        signOptions: {
-          expiresIn: '15m',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET is required');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: '15m',
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController, StellarAuthController, AuthMetricsController],
-  providers: [AuthService, AuthMetricsService, StellarAuthService, JwtStrategy, RefreshTokenStrategy],
-  exports: [AuthService, AuthMetricsService, JwtModule, PassportModule],
+  providers: [
+    AuthService,
+    AuthMetricsService,
+    StellarAuthService,
+    MfaService,
+    PasswordPolicyService,
+    JwtStrategy,
+    RefreshTokenStrategy,
+  ],
+  exports: [
+    AuthService,
+    AuthMetricsService,
+    MfaService,
+    PasswordPolicyService,
+    JwtModule,
+    PassportModule,
+  ],
 })
 export class AuthModule {}

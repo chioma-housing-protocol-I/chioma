@@ -16,7 +16,11 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction, AuditLevel, AuditStatus } from '../audit/entities/audit-log.entity';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../audit/entities/audit-log.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 
 @Injectable()
@@ -38,7 +42,10 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
-  async create(createAgreementDto: CreateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async create(
+    createAgreementDto: CreateAgreementDto,
+    performedBy?: string,
+  ): Promise<RentAgreement> {
     // Validate dates
     const startDate = new Date(createAgreementDto.startDate);
     const endDate = new Date(createAgreementDto.endDate);
@@ -157,7 +164,11 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async update(id: string, updateAgreementDto: UpdateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async update(
+    id: string,
+    updateAgreementDto: UpdateAgreementDto,
+    performedBy?: string,
+  ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
     const oldValues = {
       status: agreement.status,
@@ -201,7 +212,11 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
-  async terminate(id: string, terminateDto: TerminateAgreementDto, performedBy?: string): Promise<RentAgreement> {
+  async terminate(
+    id: string,
+    terminateDto: TerminateAgreementDto,
+    performedBy?: string,
+  ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
@@ -224,7 +239,11 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
-  async recordPayment(agreementId: string, recordPaymentDto: RecordPaymentDto, performedBy?: string): Promise<Payment> {
+  async recordPayment(
+    agreementId: string,
+    recordPaymentDto: RecordPaymentDto,
+    performedBy?: string,
+  ): Promise<Payment> {
     const agreement = await this.findOne(agreementId);
 
     if (agreement.status === AgreementStatus.TERMINATED) {
@@ -288,7 +307,10 @@ export class AgreementsService {
     });
 
     // Audit log for agreement update (financial change)
-    if (oldTotalPaid !== updatedAgreement.totalPaid || oldStatus !== updatedAgreement.status) {
+    if (
+      oldTotalPaid !== updatedAgreement.totalPaid ||
+      oldStatus !== updatedAgreement.status
+    ) {
       await this.auditService.log({
         action: AuditAction.UPDATE,
         entityType: 'RentAgreement',

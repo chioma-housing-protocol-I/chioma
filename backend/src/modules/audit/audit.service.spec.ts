@@ -32,7 +32,9 @@ describe('AuditService', () => {
     }).compile();
 
     service = module.get<AuditService>(AuditService);
-    auditLogRepository = module.get<Repository<AuditLog>>(getRepositoryToken(AuditLog));
+    auditLogRepository = module.get<Repository<AuditLog>>(
+      getRepositoryToken(AuditLog),
+    );
   });
 
   it('should be defined', () => {
@@ -85,7 +87,7 @@ describe('AuditService', () => {
         'user-123',
         'admin-456',
         { name: 'Old Name' },
-        { name: 'New Name' }
+        { name: 'New Name' },
       );
 
       expect(mockAuditLogRepository.create).toHaveBeenCalledWith(
@@ -98,7 +100,7 @@ describe('AuditService', () => {
           new_values: { name: 'New Name' },
           status: 'SUCCESS',
           level: 'INFO',
-        })
+        }),
       );
     });
   });
@@ -111,7 +113,10 @@ describe('AuditService', () => {
       ];
       const mockCount = 2;
 
-      mockAuditLogRepository.getManyAndCount.mockResolvedValue([mockLogs, mockCount]);
+      mockAuditLogRepository.getManyAndCount.mockResolvedValue([
+        mockLogs,
+        mockCount,
+      ]);
 
       const result = await service.query({ page: 1, limit: 10 });
 
@@ -134,7 +139,9 @@ describe('AuditService', () => {
         getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
       };
 
-      mockAuditLogRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockAuditLogRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
 
       await service.query({
         action: AuditAction.CREATE,
@@ -142,9 +149,18 @@ describe('AuditService', () => {
         performedBy: 'user-123',
       });
 
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('audit_log.action = :action', { action: AuditAction.CREATE });
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('audit_log.level = :level', { level: AuditLevel.SECURITY });
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('audit_log.performed_by = :performedBy', { performedBy: 'user-123' });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'audit_log.action = :action',
+        { action: AuditAction.CREATE },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'audit_log.level = :level',
+        { level: AuditLevel.SECURITY },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'audit_log.performed_by = :performedBy',
+        { performedBy: 'user-123' },
+      );
     });
   });
 

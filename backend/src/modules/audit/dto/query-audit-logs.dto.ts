@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsDateString, IsIn, IsUUID } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsDateString,
+  IsIn,
+  IsUUID,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class QueryAuditLogsDto {
@@ -23,7 +29,17 @@ export class QueryAuditLogsDto {
   entityId?: string;
 
   @IsOptional()
-  @IsIn(['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'PASSWORD_CHANGE', 'PERMISSION_CHANGE', 'DATA_ACCESS', 'CONFIG_CHANGE'])
+  @IsIn([
+    'CREATE',
+    'UPDATE',
+    'DELETE',
+    'LOGIN',
+    'LOGOUT',
+    'PASSWORD_CHANGE',
+    'PERMISSION_CHANGE',
+    'DATA_ACCESS',
+    'CONFIG_CHANGE',
+  ])
   action?: string;
 
   @IsOptional()

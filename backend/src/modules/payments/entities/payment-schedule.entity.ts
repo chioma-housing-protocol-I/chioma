@@ -37,13 +37,13 @@ export class PaymentSchedule {
   @Column()
   userId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   agreementId: string | null;
 
   @ManyToOne(() => PaymentMethod, { onDelete: 'SET NULL', nullable: true })
   paymentMethod: PaymentMethod | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'integer' })
   paymentMethodId: number | null;
 
   @Column('decimal', { precision: 12, scale: 2 })

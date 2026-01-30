@@ -58,14 +58,18 @@ export class AuditRetentionService {
   // Manual cleanup method for testing/admin purposes
   async cleanupOldLogs(daysToKeep: number = 90): Promise<number> {
     try {
-      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+      const cutoffDate = new Date(
+        Date.now() - daysToKeep * 24 * 60 * 60 * 1000,
+      );
 
       const result = await this.auditLogRepository.delete({
         performed_at: LessThan(cutoffDate),
         level: AuditLevel.INFO, // Only delete INFO logs manually
       });
 
-      this.logger.log(`Manually deleted ${result.affected} audit logs older than ${daysToKeep} days`);
+      this.logger.log(
+        `Manually deleted ${result.affected} audit logs older than ${daysToKeep} days`,
+      );
       return result.affected || 0;
     } catch (error) {
       this.logger.error('Failed to cleanup old audit logs', error);
@@ -90,7 +94,7 @@ export class AuditRetentionService {
       .getRawMany();
 
     const byLevel: Record<string, number> = {};
-    levelStats.forEach(stat => {
+    levelStats.forEach((stat) => {
       byLevel[stat.level] = parseInt(stat.count);
     });
 

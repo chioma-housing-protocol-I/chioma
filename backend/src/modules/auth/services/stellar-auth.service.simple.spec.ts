@@ -13,7 +13,8 @@ describe('StellarAuthService', () => {
   let userRepository: Repository<User>;
   let jwtService: JwtService;
 
-  const mockWalletAddress = 'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC';
+  const mockWalletAddress =
+    'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC';
 
   const mockUserRepository = {
     findOne: jest.fn(),
@@ -40,7 +41,7 @@ describe('StellarAuthService', () => {
           return 'test-secret-key';
       }
     });
-    
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StellarAuthService,
@@ -92,19 +93,25 @@ describe('StellarAuthService', () => {
     it('should generate challenge for valid address', async () => {
       // Mock the Stellar SDK methods to avoid actual key generation
       const { Keypair } = require('@stellar/stellar-sdk');
-      const mockKeypair = Keypair.fromSecret('SBYYY3IL3A2RFQCUINOZLGV3S4BCMCEB4TGMRL7G5KMT2Q4AOTEEUGDJ');
+      const mockKeypair = Keypair.fromSecret(
+        'SBYYY3IL3A2RFQCUINOZLGV3S4BCMCEB4TGMRL7G5KMT2Q4AOTEEUGDJ',
+      );
 
       const mockAccount = {
         accountId: () => mockKeypair.publicKey(),
         sequenceNumber: () => '1',
         incrementSequenceNumber: () => {},
       };
-      
-      jest.spyOn(service as any, 'getServerKeypair').mockReturnValue(mockKeypair);
-      jest.spyOn(service as any, 'getServerAccount').mockResolvedValue(mockAccount);
+
+      jest
+        .spyOn(service as any, 'getServerKeypair')
+        .mockReturnValue(mockKeypair);
+      jest
+        .spyOn(service as any, 'getServerAccount')
+        .mockReturnValue(mockAccount);
 
       const result = await service.generateChallenge(mockWalletAddress);
-      
+
       expect(result).toHaveProperty('challenge');
       expect(result).toHaveProperty('expiresAt');
       expect(typeof result.challenge).toBe('string');

@@ -36,18 +36,33 @@ export class PaymentGatewayService {
     });
   }
 
-  async chargePayment(request: GatewayChargeRequest): Promise<GatewayChargeResponse> {
-    const { paymentMethod, amount, currency, userEmail, decryptedMetadata } = request;
+  async chargePayment(
+    request: GatewayChargeRequest,
+  ): Promise<GatewayChargeResponse> {
+    const { paymentMethod, amount, currency, userEmail, decryptedMetadata } =
+      request;
     this.logger.log(
       `Charging payment method ${paymentMethod.id} for ${amount} ${currency}`,
     );
 
     if (this.gateway === 'paystack') {
-      return this.chargePaystack(paymentMethod, userEmail, amount, currency, decryptedMetadata);
+      return this.chargePaystack(
+        paymentMethod,
+        userEmail,
+        amount,
+        currency,
+        decryptedMetadata,
+      );
     }
 
     if (this.gateway === 'flutterwave') {
-      return this.chargeFlutterwave(paymentMethod, userEmail, amount, currency, decryptedMetadata);
+      return this.chargeFlutterwave(
+        paymentMethod,
+        userEmail,
+        amount,
+        currency,
+        decryptedMetadata,
+      );
     }
 
     return { success: true, chargeId: `charge_${Date.now()}` };
@@ -117,7 +132,10 @@ export class PaymentGatewayService {
     );
 
     if (!response.data?.status) {
-      return { success: false, error: response.data?.message || 'Paystack error' };
+      return {
+        success: false,
+        error: response.data?.message || 'Paystack error',
+      };
     }
 
     return {
@@ -201,7 +219,10 @@ export class PaymentGatewayService {
     );
 
     if (!response.data?.status) {
-      return { success: false, error: response.data?.message || 'Paystack error' };
+      return {
+        success: false,
+        error: response.data?.message || 'Paystack error',
+      };
     }
 
     return {

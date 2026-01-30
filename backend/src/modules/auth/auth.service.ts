@@ -12,12 +12,18 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { User } from '../users/entities/user.entity';
+import {
+  MfaDevice,
+  MfaDeviceStatus,
+  MfaDeviceType,
+} from './entities/mfa-device.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
+import { PasswordPolicyService } from './services/password-policy.service';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -31,12 +37,18 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(MfaDevice)
+    private mfaDeviceRepository: Repository<MfaDevice>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private passwordPolicyService: PasswordPolicyService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
+
+    // Validate password against policy
+    await this.passwordPolicyService.validatePassword(password);
 
     const existingUser = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
@@ -126,6 +138,41 @@ export class AuthService {
     user.lastLoginAt = new Date();
 
     await this.userRepository.save(user);
+
+    // Check if MFA is enabled
+    const mfaDevice = await this.mfaDeviceRepository.findOne({
+      where: {
+        userId: user.id,
+        type: MfaDeviceType.TOTP,
+        status: MfaDeviceStatus.ACTIVE,
+      },
+    });
+
+    if (mfaDevice) {
+      // Generate temporary token for MFA verification
+      const tempToken = this.jwtService.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+          type: 'mfa_required',
+        },
+        {
+          secret: this.getJwtSecret(),
+          expiresIn: '5m', // Short-lived token for MFA verification
+        },
+      );
+
+      this.logger.log(`MFA required for user: ${user.id}`);
+      return {
+        user: this.sanitizeUser(user),
+        accessToken: null,
+        refreshToken: null,
+        mfaRequired: true,
+        mfaToken: tempToken,
+      } as AuthResponseDto & { mfaRequired: true; mfaToken: string };
+    }
+
     this.logger.log(`User logged in successfully: ${user.id}`);
 
     const { accessToken, refreshToken } = this.generateTokens(
@@ -140,7 +187,59 @@ export class AuthService {
       user: this.sanitizeUser(user),
       accessToken,
       refreshToken,
+      mfaRequired: false,
     };
+  }
+
+  /**
+   * Complete login after MFA verification
+   */
+  async completeMfaLogin(mfaToken: string): Promise<AuthResponseDto> {
+    try {
+      // Verify temporary MFA token
+      const payload = this.jwtService.verify<{
+        sub: string;
+        email: string;
+        role: string;
+        type: string;
+      }>(mfaToken, {
+        secret: this.getJwtSecret(),
+      });
+
+      if (payload.type !== 'mfa_required') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Generate final tokens
+      const { accessToken, refreshToken } = this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+      );
+
+      await this.updateRefreshToken(user.id, refreshToken);
+
+      this.logger.log(`MFA login completed for user: ${user.id}`);
+
+      return {
+        user: this.sanitizeUser(user),
+        accessToken,
+        refreshToken,
+      };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Invalid or expired MFA token';
+      this.logger.error(`MFA login failed: ${message}`);
+      throw new UnauthorizedException('Invalid or expired MFA token');
+    }
   }
 
   async refreshToken(
@@ -149,10 +248,13 @@ export class AuthService {
     const { refreshToken } = refreshTokenDto;
 
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ||
-          'your-refresh-secret-key',
+      const payload = this.jwtService.verify<{
+        sub: string;
+        email: string;
+        role: string;
+        type: string;
+      }>(refreshToken, {
+        secret: this.getJwtRefreshSecret(),
       });
 
       if (payload.type !== 'refresh') {
@@ -177,14 +279,21 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
+      // Token rotation: generate new tokens and invalidate old refresh token
       const tokens = this.generateTokens(user.id, user.email, user.role);
+
+      // Invalidate old refresh token before setting new one (token rotation)
       await this.updateRefreshToken(user.id, tokens.refreshToken);
 
-      this.logger.log(`Token refreshed for user: ${user.id}`);
+      this.logger.log(`Token refreshed and rotated for user: ${user.id}`);
 
       return tokens;
-    } catch (error) {
-      this.logger.error(`Token refresh failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Invalid or expired refresh token';
+      this.logger.error(`Token refresh failed: ${message}`);
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
@@ -222,12 +331,26 @@ export class AuthService {
     await this.userRepository.save(user);
     this.logger.log(`Password reset token generated for user: ${user.id}`);
 
-    console.log(`[DEV] Reset token for ${email}: ${resetToken}`);
-
     return {
       message:
         'If an account exists with this email, you will receive a password reset link',
     };
+  }
+
+  private getJwtSecret(): string {
+    const secret = this.configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is required');
+    }
+    return secret;
+  }
+
+  private getJwtRefreshSecret(): string {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secret) {
+      throw new Error('JWT_REFRESH_SECRET is required');
+    }
+    return secret;
   }
 
   async resetPassword(
@@ -250,6 +373,9 @@ export class AuthService {
       this.logger.warn(`Expired password reset token for user: ${user.id}`);
       throw new BadRequestException('Reset token has expired');
     }
+
+    // Validate new password against policy
+    await this.passwordPolicyService.validatePassword(newPassword, user.id);
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
@@ -375,14 +501,15 @@ export class AuthService {
   }
 
   private sanitizeUser(user: User) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
-      password,
-      refreshToken,
-      resetToken,
-      verificationToken,
+      password: _password,
+      refreshToken: _refreshToken,
+      resetToken: _resetToken,
+      verificationToken: _verificationToken,
       ...sanitized
     } = user;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return sanitized;
   }
 }

@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { 
+import {
   TransactionBuilder,
   Networks,
   Keypair,
@@ -18,7 +18,7 @@ import {
   Operation,
 } from '@stellar/stellar-sdk';
 import { User, AuthMethod } from '../../users/entities/user.entity';
-import { StellarAuthChallengeDto, StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
+import { StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 
 const CHALLENGE_EXPIRY_MINUTES = 5;
@@ -44,7 +44,9 @@ export class StellarAuthService {
     private configService: ConfigService,
   ) {}
 
-  async generateChallenge(walletAddress: string): Promise<{ challenge: string; expiresAt: string }> {
+  async generateChallenge(
+    walletAddress: string,
+  ): Promise<{ challenge: string; expiresAt: string }> {
     if (!this.verifyStellarAddress(walletAddress)) {
       throw new BadRequestException('Invalid Stellar address format');
     }
@@ -53,28 +55,33 @@ export class StellarAuthService {
     this.cleanupExpiredChallenges();
 
     // Check for existing challenge for this wallet
-    const existingChallenge = Array.from(this.challenges.values())
-      .find(challenge => challenge.walletAddress === walletAddress);
-    
+    const existingChallenge = Array.from(this.challenges.values()).find(
+      (challenge) => challenge.walletAddress === walletAddress,
+    );
+
     if (existingChallenge) {
       this.logger.warn(`Challenge already exists for wallet: ${walletAddress}`);
-      throw new BadRequestException('Challenge already requested. Please wait for the current challenge to expire.');
+      throw new BadRequestException(
+        'Challenge already requested. Please wait for the current challenge to expire.',
+      );
     }
 
     const nonce = crypto.randomBytes(CHALLENGE_NONCE_LENGTH).toString('hex');
     const serverKeypair = this.getServerKeypair();
-    
+
     // Create challenge transaction according to SEP-0010
-    const account = await this.getServerAccount();
+    const account = this.getServerAccount();
     const transaction = new TransactionBuilder(account, {
       fee: '100',
       networkPassphrase: this.getNetworkPassphrase(),
     })
-      .addOperation(Operation.manageData({
-        name: `${walletAddress}_auth`,
-        value: nonce,
-        source: walletAddress,
-      }))
+      .addOperation(
+        Operation.manageData({
+          name: `${walletAddress}_auth`,
+          value: nonce,
+          source: walletAddress,
+        }),
+      )
       .addMemo(Memo.text('Auth Challenge'))
       .setTimeout(300) // 5 minutes timeout
       .build();
@@ -82,10 +89,15 @@ export class StellarAuthService {
     transaction.sign(serverKeypair);
     const challengeXdr = transaction.toXDR();
 
-    const expiresAt = new Date(Date.now() + CHALLENGE_EXPIRY_MINUTES * 60 * 1000);
-    
+    const expiresAt = new Date(
+      Date.now() + CHALLENGE_EXPIRY_MINUTES * 60 * 1000,
+    );
+
     // Store challenge
-    const challengeId = crypto.createHash('sha256').update(challengeXdr).digest('hex');
+    const challengeId = crypto
+      .createHash('sha256')
+      .update(challengeXdr)
+      .digest('hex');
     this.challenges.set(challengeId, {
       walletAddress,
       challenge: challengeXdr,
@@ -101,7 +113,9 @@ export class StellarAuthService {
     };
   }
 
-  async verifySignature(verifyDto: StellarAuthVerifyDto): Promise<AuthResponseDto> {
+  async verifySignature(
+    verifyDto: StellarAuthVerifyDto,
+  ): Promise<AuthResponseDto> {
     const { walletAddress, signature, challenge } = verifyDto;
 
     if (!this.verifyStellarAddress(walletAddress)) {
@@ -109,7 +123,10 @@ export class StellarAuthService {
     }
 
     // Find stored challenge
-    const challengeId = crypto.createHash('sha256').update(challenge).digest('hex');
+    const challengeId = crypto
+      .createHash('sha256')
+      .update(challenge)
+      .digest('hex');
     const storedChallenge = this.challenges.get(challengeId);
 
     if (!storedChallenge) {
@@ -124,12 +141,16 @@ export class StellarAuthService {
     }
 
     if (storedChallenge.walletAddress !== walletAddress) {
-      this.logger.warn(`Wallet address mismatch for challenge: ${walletAddress}`);
-      throw new UnauthorizedException('Wallet address does not match challenge');
+      this.logger.warn(
+        `Wallet address mismatch for challenge: ${walletAddress}`,
+      );
+      throw new UnauthorizedException(
+        'Wallet address does not match challenge',
+      );
     }
 
     // Verify the signature
-    const isValidSignature = await this.verifyChallengeSignature(
+    const isValidSignature = this.verifyChallengeSignature(
       challenge,
       signature,
       walletAddress,
@@ -187,7 +208,7 @@ export class StellarAuthService {
 
   verifyStellarAddress(address: string): boolean {
     if (!address) return false;
-    
+
     // Stellar addresses start with 'G' and are 56 characters long
     // They contain only base32 characters (A-Z and 2-7)
     const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
@@ -204,17 +225,21 @@ export class StellarAuthService {
   }
 
   private getServerKeypair(): Keypair {
-    const secretKey = this.configService.get<string>('STELLAR_SERVER_SECRET_KEY');
+    const secretKey = this.configService.get<string>(
+      'STELLAR_SERVER_SECRET_KEY',
+    );
     if (!secretKey) {
-      throw new Error('STELLAR_SERVER_SECRET_KEY environment variable is not set');
+      throw new Error(
+        'STELLAR_SERVER_SECRET_KEY environment variable is not set',
+      );
     }
     return Keypair.fromSecret(secretKey);
   }
 
-  private async getServerAccount() {
+  private getServerAccount() {
     const serverKeypair = this.getServerKeypair();
     const serverPublicKey = serverKeypair.publicKey();
-    
+
     // Create a proper Account object for the Stellar SDK
     return {
       accountId: () => serverPublicKey,
@@ -224,32 +249,40 @@ export class StellarAuthService {
   }
 
   private getNetworkPassphrase(): string {
-    const network = this.configService.get<string>('STELLAR_NETWORK', 'testnet');
+    const network = this.configService.get<string>(
+      'STELLAR_NETWORK',
+      'testnet',
+    );
     return network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
   }
 
-  private async verifyChallengeSignature(
+  private verifyChallengeSignature(
     challengeXdr: string,
     signature: string,
     walletAddress: string,
-  ): Promise<boolean> {
+  ): boolean {
     try {
-      const transaction = TransactionBuilder.fromXDR(challengeXdr, this.getNetworkPassphrase());
-      
+      const transaction = TransactionBuilder.fromXDR(
+        challengeXdr,
+        this.getNetworkPassphrase(),
+      );
+      void signature;
+
       // Verify the signature using the correct Stellar SDK API
       const keypair = Keypair.fromPublicKey(walletAddress);
-      
+
       // Check if the transaction is signed by the expected keypair
       const signatures = transaction.signatures;
-      return signatures.some(sig => {
+      return signatures.some((sig) => {
         try {
           return keypair.verify(transaction.hash(), sig.signature());
         } catch {
           return false;
         }
       });
-    } catch (error) {
-      this.logger.error(`Signature verification failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Signature verification failed: ${message}`);
       return false;
     }
   }
@@ -302,14 +335,15 @@ export class StellarAuthService {
   }
 
   private sanitizeUser(user: User) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
-      password,
-      refreshToken,
-      resetToken,
-      verificationToken,
+      password: _password,
+      refreshToken: _refreshToken,
+      resetToken: _resetToken,
+      verificationToken: _verificationToken,
       ...sanitized
     } = user;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return sanitized;
   }
 }

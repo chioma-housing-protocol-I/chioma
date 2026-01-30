@@ -4,6 +4,8 @@ import {
   BadRequestException,
   UnauthorizedException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -106,6 +108,10 @@ export class UsersService {
         'New password must be different from current password',
       );
     }
+
+    // Validate new password against policy (if PasswordPolicyService is available)
+    // Note: This creates a circular dependency, so we'll validate in the controller
+    // or use a shared validation utility
 
     const hashedPassword = await bcrypt.hash(
       changePasswordDto.newPassword,

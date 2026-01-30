@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { AuditLog, AuditAction, AuditStatus, AuditLevel } from './entities/audit-log.entity';
+import {
+  AuditLog,
+  AuditAction,
+  AuditStatus,
+  AuditLevel,
+} from './entities/audit-log.entity';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { User } from '../users/entities/user.entity';
 
@@ -47,7 +52,9 @@ export class AuditService {
       });
 
       await this.auditLogRepository.save(auditLog);
-      this.logger.debug(`Audit log created: ${auditLog.action} on ${auditLog.entity_type}:${auditLog.entity_id}`);
+      this.logger.debug(
+        `Audit log created: ${auditLog.action} on ${auditLog.entity_type}:${auditLog.entity_id}`,
+      );
     } catch (error) {
       this.logger.error('Failed to create audit log', error);
     }
@@ -129,7 +136,8 @@ export class AuditService {
     limit: number;
     totalPages: number;
   }> {
-    const queryBuilder = this.auditLogRepository.createQueryBuilder('audit_log')
+    const queryBuilder = this.auditLogRepository
+      .createQueryBuilder('audit_log')
       .leftJoinAndSelect('audit_log.performed_by_user', 'user')
       .orderBy('audit_log.performed_at', 'DESC');
 

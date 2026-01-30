@@ -33,7 +33,10 @@ export class DisputesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createDispute(@Body() createDisputeDto: CreateDisputeDto, @Request() req) {
+  async createDispute(
+    @Body() createDisputeDto: CreateDisputeDto,
+    @Request() req,
+  ) {
     return this.disputesService.createDispute(createDisputeDto, req.user.id);
   }
 
@@ -53,8 +56,16 @@ export class DisputesController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() updateDisputeDto: UpdateDisputeDto, @Request() req) {
-    return this.disputesService.update(parseInt(id), updateDisputeDto, req.user.id);
+  async update(
+    @Param('id') id: string,
+    @Body() updateDisputeDto: UpdateDisputeDto,
+    @Request() req,
+  ) {
+    return this.disputesService.update(
+      parseInt(id),
+      updateDisputeDto,
+      req.user.id,
+    );
   }
 
   @Post(':disputeId/evidence')
@@ -74,7 +85,11 @@ export class DisputesController {
     @Body() addCommentDto: AddCommentDto,
     @Request() req,
   ) {
-    return this.disputesService.addComment(disputeId, addCommentDto, req.user.id);
+    return this.disputesService.addComment(
+      disputeId,
+      addCommentDto,
+      req.user.id,
+    );
   }
 
   @Post(':disputeId/resolve')
@@ -85,11 +100,18 @@ export class DisputesController {
     @Body() resolveDisputeDto: ResolveDisputeDto,
     @Request() req,
   ) {
-    return this.disputesService.resolveDispute(disputeId, resolveDisputeDto, req.user.id);
+    return this.disputesService.resolveDispute(
+      disputeId,
+      resolveDisputeDto,
+      req.user.id,
+    );
   }
 
   @Get('agreement/:agreementId/disputes')
-  async getAgreementDisputes(@Param('agreementId') agreementId: string, @Request() req) {
+  async getAgreementDisputes(
+    @Param('agreementId') agreementId: string,
+    @Request() req,
+  ) {
     return this.disputesService.getAgreementDisputes(agreementId, req.user.id);
   }
 }

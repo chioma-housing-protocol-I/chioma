@@ -147,6 +147,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "payment_count"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "security_deposit"
                       },
                       "val": {
@@ -179,6 +187,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "total_rent_paid"
+                      },
+                      "val": {
+                        "i128": "0"
                       }
                     }
                   ]

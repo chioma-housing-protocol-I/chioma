@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { User, UserRole } from '../users/entities/user.entity';
+import { MfaDevice } from './entities/mfa-device.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -15,6 +16,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { PasswordPolicyService } from './services/password-policy.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -77,12 +79,22 @@ describe('AuthService', () => {
           useValue: mockUserRepository,
         },
         {
+          provide: getRepositoryToken(MfaDevice),
+          useValue: { findOne: jest.fn(), save: jest.fn() },
+        },
+        {
           provide: JwtService,
           useValue: mockJwtService,
         },
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            validatePassword: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

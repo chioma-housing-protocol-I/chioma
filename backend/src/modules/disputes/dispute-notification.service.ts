@@ -8,7 +8,12 @@ export interface DisputeNotificationData {
   agreement: RentAgreement;
   initiator: User;
   recipient?: User;
-  action: 'created' | 'evidence_added' | 'comment_added' | 'status_updated' | 'resolved';
+  action:
+    | 'created'
+    | 'evidence_added'
+    | 'comment_added'
+    | 'status_updated'
+    | 'resolved';
   additionalData?: any;
 }
 
@@ -19,11 +24,12 @@ export class DisputeNotificationService {
    */
   async notifyDisputeCreated(data: DisputeNotificationData): Promise<void> {
     const { dispute, agreement, initiator } = data;
-    
+
     // Notify the other party (landlord or tenant)
-    const otherPartyId = agreement.landlordId === initiator.id 
-      ? agreement.tenantId 
-      : agreement.landlordId;
+    const otherPartyId =
+      agreement.landlordId === initiator.id
+        ? agreement.tenantId
+        : agreement.landlordId;
 
     await this.sendNotification({
       userId: otherPartyId,
@@ -39,7 +45,11 @@ export class DisputeNotificationService {
     });
 
     // Notify admins
-    await this.notifyAdmins(dispute, 'NEW_DISPUTE', 'New Dispute Requires Review');
+    await this.notifyAdmins(
+      dispute,
+      'NEW_DISPUTE',
+      'New Dispute Requires Review',
+    );
   }
 
   /**
@@ -47,11 +57,12 @@ export class DisputeNotificationService {
    */
   async notifyEvidenceAdded(data: DisputeNotificationData): Promise<void> {
     const { dispute, agreement, initiator } = data;
-    
+
     // Notify the other party
-    const otherPartyId = agreement.landlordId === initiator.id 
-      ? agreement.tenantId 
-      : agreement.landlordId;
+    const otherPartyId =
+      agreement.landlordId === initiator.id
+        ? agreement.tenantId
+        : agreement.landlordId;
 
     await this.sendNotification({
       userId: otherPartyId,
@@ -75,12 +86,17 @@ export class DisputeNotificationService {
 
     if (isInternal) {
       // Internal comments only go to admins
-      await this.notifyAdmins(dispute, 'INTERNAL_COMMENT', 'New Internal Comment');
+      await this.notifyAdmins(
+        dispute,
+        'INTERNAL_COMMENT',
+        'New Internal Comment',
+      );
     } else {
       // Public comments notify all parties
-      const otherPartyId = agreement.landlordId === initiator.id 
-        ? agreement.tenantId 
-        : agreement.landlordId;
+      const otherPartyId =
+        agreement.landlordId === initiator.id
+          ? agreement.tenantId
+          : agreement.landlordId;
 
       await this.sendNotification({
         userId: otherPartyId,
@@ -101,9 +117,11 @@ export class DisputeNotificationService {
    */
   async notifyStatusUpdated(data: DisputeNotificationData): Promise<void> {
     const { dispute, agreement, initiator } = data;
-    
+
     // Notify all parties
-    const parties = [agreement.landlordId, agreement.tenantId].filter(id => id !== initiator.id);
+    const parties = [agreement.landlordId, agreement.tenantId].filter(
+      (id) => id !== initiator.id,
+    );
 
     for (const partyId of parties) {
       await this.sendNotification({
@@ -122,7 +140,11 @@ export class DisputeNotificationService {
 
     // Notify admins if status requires attention
     if (dispute.status === DisputeStatus.UNDER_REVIEW) {
-      await this.notifyAdmins(dispute, 'DISPUTE_UNDER_REVIEW', 'Dispute Under Review');
+      await this.notifyAdmins(
+        dispute,
+        'DISPUTE_UNDER_REVIEW',
+        'Dispute Under Review',
+      );
     }
   }
 
@@ -131,7 +153,7 @@ export class DisputeNotificationService {
    */
   async notifyDisputeResolved(data: DisputeNotificationData): Promise<void> {
     const { dispute, agreement, initiator } = data;
-    
+
     // Notify all parties
     const parties = [agreement.landlordId, agreement.tenantId];
 
@@ -154,13 +176,17 @@ export class DisputeNotificationService {
   /**
    * Notify all admins about a dispute
    */
-  private async notifyAdmins(dispute: Dispute, type: string, title: string): Promise<void> {
+  private async notifyAdmins(
+    dispute: Dispute,
+    type: string,
+    title: string,
+  ): Promise<void> {
     // This would typically query for all admin users and send notifications
     // For now, we'll implement a placeholder that could be connected to
     // the actual notification system
-    
+
     console.log(`Admin notification: ${title} - Dispute ${dispute.disputeId}`);
-    
+
     // Example implementation:
     // const admins = await this.userRepository.find({ where: { role: UserRole.ADMIN } });
     // for (const admin of admins) {
@@ -186,7 +212,7 @@ export class DisputeNotificationService {
   }): Promise<void> {
     // This would integrate with the actual notification service
     // For now, we'll log it
-    
+
     console.log(`Notification sent to user ${notification.userId}:`, {
       type: notification.type,
       title: notification.title,

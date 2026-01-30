@@ -14,7 +14,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateAgreementDto {
   @ApiProperty({
     description: 'Property ID for the rental agreement',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsNotEmpty()
   @IsString()
@@ -22,7 +22,7 @@ export class CreateAgreementDto {
 
   @ApiProperty({
     description: 'Landlord user ID',
-    example: 'landlord-uuid-string'
+    example: 'landlord-uuid-string',
   })
   @IsNotEmpty()
   @IsString()
@@ -30,7 +30,7 @@ export class CreateAgreementDto {
 
   @ApiProperty({
     description: 'Tenant user ID',
-    example: 'tenant-uuid-string'
+    example: 'tenant-uuid-string',
   })
   @IsNotEmpty()
   @IsString()
@@ -38,7 +38,7 @@ export class CreateAgreementDto {
 
   @ApiPropertyOptional({
     description: 'Agent user ID (optional)',
-    example: 'agent-uuid-string'
+    example: 'agent-uuid-string',
   })
   @IsOptional()
   @IsString()
@@ -50,7 +50,7 @@ export class CreateAgreementDto {
     example: 'GD5DJ3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q',
     minLength: 56,
     maxLength: 56,
-    pattern: '^G[A-Z0-9]{55}$'
+    pattern: '^G[A-Z0-9]{55}$',
   })
   @IsNotEmpty()
   @IsString()
@@ -66,7 +66,7 @@ export class CreateAgreementDto {
     example: 'GD7J3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q',
     minLength: 56,
     maxLength: 56,
-    pattern: '^G[A-Z0-9]{55}$'
+    pattern: '^G[A-Z0-9]{55}$',
   })
   @IsNotEmpty()
   @IsString()
@@ -82,7 +82,7 @@ export class CreateAgreementDto {
     example: 'GD8J3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q',
     minLength: 56,
     maxLength: 56,
-    pattern: '^G[A-Z0-9]{55}$'
+    pattern: '^G[A-Z0-9]{55}$',
   })
   @IsOptional()
   @IsString()
@@ -98,7 +98,7 @@ export class CreateAgreementDto {
     example: 'GD9J3B6A2KHWGFPJGBM4D7J23G5QJY6XQFQKXQ2Q2Q2Q2Q2Q2Q2Q',
     minLength: 56,
     maxLength: 56,
-    pattern: '^G[A-Z0-9]{55}$'
+    pattern: '^G[A-Z0-9]{55}$',
   })
   @IsOptional()
   @IsString()
@@ -112,8 +112,8 @@ export class CreateAgreementDto {
   // Financial Terms
   @ApiProperty({
     description: 'Monthly rent amount in USD',
-    example: 1500.00,
-    minimum: 0
+    example: 1500.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
@@ -121,8 +121,8 @@ export class CreateAgreementDto {
 
   @ApiProperty({
     description: 'Security deposit amount in USD',
-    example: 3000.00,
-    minimum: 0
+    example: 3000.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
@@ -132,7 +132,7 @@ export class CreateAgreementDto {
     description: 'Agent commission rate as percentage (0-100)',
     example: 5.0,
     minimum: 0,
-    maximum: 100
+    maximum: 100,
   })
   @IsOptional()
   @IsNumber()
@@ -144,7 +144,7 @@ export class CreateAgreementDto {
   @ApiProperty({
     description: 'Lease start date (ISO 8601 format)',
     example: '2024-02-01',
-    format: 'date'
+    format: 'date',
   })
   @IsNotEmpty()
   @IsDateString()
@@ -153,7 +153,7 @@ export class CreateAgreementDto {
   @ApiProperty({
     description: 'Lease end date (ISO 8601 format)',
     example: '2025-01-31',
-    format: 'date'
+    format: 'date',
   })
   @IsNotEmpty()
   @IsDateString()
@@ -162,7 +162,7 @@ export class CreateAgreementDto {
   // Terms and Conditions
   @ApiPropertyOptional({
     description: 'Additional terms and conditions for the lease',
-    example: 'No smoking policy. Pets allowed with additional deposit.'
+    example: 'No smoking policy. Pets allowed with additional deposit.',
   })
   @IsOptional()
   @IsString()
