@@ -47,36 +47,32 @@ export class AuditLogInterceptor implements NestInterceptor {
     const methodArgs = args.slice(1); // Skip ExecutionContext
 
     return next.handle().pipe(
-      tap(async (result) => {
-        try {
-          await this.logOperation(
-            auditOptions,
-            methodArgs,
-            result,
-            user,
-            ipAddress,
-            userAgent,
-            AuditStatus.SUCCESS,
-          );
-        } catch (error) {
+      tap((result) => {
+        this.logOperation(
+          auditOptions,
+          methodArgs,
+          result,
+          user,
+          ipAddress,
+          userAgent,
+          AuditStatus.SUCCESS,
+        ).catch((error) => {
           this.logger.error('Failed to log successful operation', error);
-        }
+        });
       }),
-      catchError(async (error) => {
-        try {
-          await this.logOperation(
-            auditOptions,
-            methodArgs,
-            null,
-            user,
-            ipAddress,
-            userAgent,
-            AuditStatus.FAILURE,
-            error.message,
-          );
-        } catch (logError) {
+      catchError((error) => {
+        this.logOperation(
+          auditOptions,
+          methodArgs,
+          null,
+          user,
+          ipAddress,
+          userAgent,
+          AuditStatus.FAILURE,
+          error.message,
+        ).catch((logError) => {
           this.logger.error('Failed to log failed operation', logError);
-        }
+        });
         throw error;
       }),
     );

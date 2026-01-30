@@ -8,11 +8,7 @@ import {
   UseInterceptors,
   Request,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StellarAuthService } from '../services/stellar-auth.service';
 import { AuthMetricsService } from '../services/auth-metrics.service';

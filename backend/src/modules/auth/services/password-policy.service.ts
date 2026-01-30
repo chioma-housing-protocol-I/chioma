@@ -139,10 +139,7 @@ export class PasswordPolicyService {
   /**
    * Check password history (prevent reuse of last 5 passwords)
    */
-  private checkPasswordHistory(
-    _newPassword: string,
-    _userId: string,
-  ): void {
+  private checkPasswordHistory(_newPassword: string, _userId: string): void {
     void _newPassword;
     void _userId;
     // Note: This requires a password_history table to be implemented

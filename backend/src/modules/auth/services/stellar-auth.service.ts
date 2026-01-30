@@ -18,9 +18,7 @@ import {
   Operation,
 } from '@stellar/stellar-sdk';
 import { User, AuthMethod } from '../../users/entities/user.entity';
-import {
-  StellarAuthVerifyDto,
-} from '../dto/stellar-auth.dto';
+import { StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 
 const CHALLENGE_EXPIRY_MINUTES = 5;
@@ -72,7 +70,7 @@ export class StellarAuthService {
     const serverKeypair = this.getServerKeypair();
 
     // Create challenge transaction according to SEP-0010
-    const account = await this.getServerAccount();
+    const account = this.getServerAccount();
     const transaction = new TransactionBuilder(account, {
       fee: '100',
       networkPassphrase: this.getNetworkPassphrase(),

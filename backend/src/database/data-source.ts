@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import * as dotenv from 'dotenv';

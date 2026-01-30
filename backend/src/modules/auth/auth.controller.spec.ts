@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthMetricsService } from './services/auth-metrics.service';
+import { MfaService } from './services/mfa.service';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -41,6 +44,7 @@ describe('AuthController', () => {
             forgotPassword: jest.fn(),
             resetPassword: jest.fn(),
             logout: jest.fn(),
+            completeMfaLogin: jest.fn(),
           },
         },
         {
@@ -48,6 +52,21 @@ describe('AuthController', () => {
           useValue: {
             recordAuthAttempt: jest.fn(),
           },
+        },
+        {
+          provide: MfaService,
+          useValue: {
+            verifyTotpToken: jest.fn(),
+            verifyBackupCode: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn() },
+        },
+        {
+          provide: JwtService,
+          useValue: { sign: jest.fn(), verify: jest.fn() },
         },
       ],
     }).compile();
@@ -68,12 +87,13 @@ describe('AuthController', () => {
 
       jest.spyOn(service, 'register').mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.register(registerDto, {
-        get: jest.fn(),
-        ip: '127.0.0.1',
-      } as any);
+      const mockReq = { get: jest.fn(), ip: '127.0.0.1' } as any;
+      const mockRes = { cookie: jest.fn(), clearCookie: jest.fn() } as any;
+      const result = await controller.register(registerDto, mockReq, mockRes);
 
-      expect(result).toEqual(mockAuthResponse);
+      const expected = { ...mockAuthResponse } as any;
+      delete expected.refreshToken;
+      expect(result).toEqual(expected);
       expect(service.register).toHaveBeenCalledWith(registerDto);
     });
   });
@@ -87,12 +107,13 @@ describe('AuthController', () => {
 
       jest.spyOn(service, 'login').mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.login(loginDto, {
-        get: jest.fn(),
-        ip: '127.0.0.1',
-      } as any);
+      const mockReq = { get: jest.fn(), ip: '127.0.0.1' } as any;
+      const mockRes = { cookie: jest.fn(), clearCookie: jest.fn() } as any;
+      const result = await controller.login(loginDto, mockReq, mockRes);
 
-      expect(result).toEqual(mockAuthResponse);
+      const expected = { ...mockAuthResponse } as any;
+      delete expected.refreshToken;
+      expect(result).toEqual(expected);
       expect(service.login).toHaveBeenCalledWith(loginDto);
     });
   });
@@ -112,9 +133,16 @@ describe('AuthController', () => {
         .spyOn(service, 'refreshToken')
         .mockResolvedValue(mockRefreshResponse);
 
-      const result = await controller.refreshTokens(refreshTokenDto);
+      const mockReq = { cookies: {}, ip: '127.0.0.1', get: jest.fn() } as any;
+      const mockRes = { cookie: jest.fn(), clearCookie: jest.fn() } as any;
 
-      expect(result).toEqual(mockRefreshResponse);
+      const result = await controller.refreshTokens(
+        refreshTokenDto,
+        mockReq,
+        mockRes,
+      );
+
+      expect(result).toEqual({ accessToken: mockRefreshResponse.accessToken });
       expect(service.refreshToken).toHaveBeenCalledWith(refreshTokenDto);
     });
   });
@@ -162,7 +190,8 @@ describe('AuthController', () => {
 
       jest.spyOn(service, 'logout').mockResolvedValue(mockMessageResponse);
 
-      const result = await controller.logout(mockUser);
+      const mockRes = { cookie: jest.fn(), clearCookie: jest.fn() } as any;
+      const result = await controller.logout(mockUser, mockRes);
 
       expect(result).toEqual(mockMessageResponse);
       expect(service.logout).toHaveBeenCalledWith('test-user-id');

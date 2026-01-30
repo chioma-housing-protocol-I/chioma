@@ -13,6 +13,15 @@ pub struct AgreementCreatedEvent {
     pub agreement_id: String,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgreementSigned {
+    pub agreement_id: String,
+    pub landlord: Address,
+    pub tenant: Address,
+    pub signed_at: u64,
+}
+
 #[contract]
 pub struct Contract;
 
@@ -75,6 +84,7 @@ impl Contract {
             status: AgreementStatus::Draft,
             total_rent_paid: 0,
             payment_count: 0,
+            signed_at: None,
         };
 
         // Store agreement
@@ -95,6 +105,59 @@ impl Contract {
 
         // Emit event
         AgreementCreatedEvent { agreement_id }.publish(&env);
+
+        Ok(())
+    }
+
+    /// Allows a tenant to sign and accept a rental agreement.
+    /// Transitions the agreement from Pending to Active state.
+    ///
+    /// Authorization:
+    /// - Tenant MUST authorize the signing
+    pub fn sign_agreement(env: Env, tenant: Address, agreement_id: String) -> Result<(), Error> {
+        // Tenant MUST authorize signing
+        tenant.require_auth();
+
+        // Retrieve the agreement
+        let mut agreement: RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        // Validate caller is the intended tenant
+        if agreement.tenant != tenant {
+            return Err(Error::NotTenant);
+        }
+
+        // Validate agreement is in Pending status
+        if agreement.status != AgreementStatus::Pending {
+            return Err(Error::InvalidState);
+        }
+
+        // Validate agreement has not expired
+        let current_time = env.ledger().timestamp();
+        if current_time > agreement.end_date {
+            return Err(Error::Expired);
+        }
+
+        // Update agreement status and record signing time
+        agreement.status = AgreementStatus::Active;
+        agreement.signed_at = Some(current_time);
+
+        // Save updated agreement
+        env.storage()
+            .persistent()
+            .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+
+        // Emit AgreementSigned event
+        AgreementSigned {
+            agreement_id,
+            landlord: agreement.landlord.clone(),
+            tenant: tenant.clone(),
+            signed_at: current_time,
+        }
+        .publish(&env);
 
         Ok(())
     }

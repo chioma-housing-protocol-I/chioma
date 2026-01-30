@@ -27,6 +27,7 @@ pub struct RentAgreement {
     pub status: AgreementStatus,
     pub total_rent_paid: i128,
     pub payment_count: u32,
+    pub signed_at: Option<u64>,
 }
 
 #[contracterror]
@@ -40,6 +41,10 @@ pub enum Error {
     AgreementNotActive = 10,
     PaymentNotFound = 11,
     PaymentFailed = 12,
+    AgreementNotFound = 13,
+    NotTenant = 14,
+    InvalidState = 15,
+    Expired = 16,
 }
 
 #[contracttype]

@@ -70,7 +70,7 @@ describe('LoggerMiddleware', () => {
     const logCall = (console.log as jest.Mock).mock.calls[0][0];
     const parsed = JSON.parse(logCall);
 
-    expect(parsed.level).toBe('ERROR'); 
+    expect(parsed.level).toBe('ERROR');
     expect(parsed.statusCode).toBe(500);
   });
 

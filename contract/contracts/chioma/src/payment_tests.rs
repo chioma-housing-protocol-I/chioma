@@ -27,6 +27,7 @@ fn create_test_agreement(
         security_deposit: 0,
         start_date: 0,
         end_date: 0,
+        signed_at: None,
     }
 }
 

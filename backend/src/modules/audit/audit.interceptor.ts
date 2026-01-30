@@ -31,48 +31,44 @@ export class AuditInterceptor implements NestInterceptor {
     const startTime = Date.now();
 
     return next.handle().pipe(
-      tap(async (data) => {
+      tap((data) => {
         const duration = Date.now() - startTime;
 
         // Log successful operations
         if (this.shouldLogRequest(method, url)) {
-          try {
-            await this.logRequest(
-              method,
-              url,
-              user,
-              ipAddress,
-              userAgent,
-              AuditStatus.SUCCESS,
-              response.statusCode,
-              duration,
-              data,
-            );
-          } catch (error) {
-            this.logger.error('Failed to log successful request', error);
-          }
-        }
-      }),
-      catchError(async (error) => {
-        const duration = Date.now() - startTime;
-
-        // Log failed operations
-        try {
-          await this.logRequest(
+          this.logRequest(
             method,
             url,
             user,
             ipAddress,
             userAgent,
-            AuditStatus.FAILURE,
-            error.status || 500,
+            AuditStatus.SUCCESS,
+            response.statusCode,
             duration,
-            null,
-            error.message,
-          );
-        } catch (logError) {
-          this.logger.error('Failed to log failed request', logError);
+            data,
+          ).catch((error) => {
+            this.logger.error('Failed to log successful request', error);
+          });
         }
+      }),
+      catchError((error) => {
+        const duration = Date.now() - startTime;
+
+        // Log failed operations
+        this.logRequest(
+          method,
+          url,
+          user,
+          ipAddress,
+          userAgent,
+          AuditStatus.FAILURE,
+          error.status || 500,
+          duration,
+          null,
+          error.message,
+        ).catch((logError) => {
+          this.logger.error('Failed to log failed request', logError);
+        });
 
         throw error;
       }),

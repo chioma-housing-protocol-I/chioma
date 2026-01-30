@@ -14,10 +14,12 @@ import { AgreementsModule } from './modules/agreements/agreements.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { StellarModule } from './modules/stellar/stellar.module';
 import { DisputesModule } from './modules/disputes/disputes.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { HealthModule } from './health/health.module';
 import { PaymentModule } from './modules/payments/payment.module';
+import { ProfileModule } from './modules/profile/profile.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AppDataSource } from './database/data-source';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
@@ -65,11 +67,12 @@ import { CsrfMiddleware } from './common/middleware/csrf.middleware';
     AuditModule,
     AuthModule,
     UsersModule,
+    StellarModule,
     DisputesModule,
-    TypeOrmModule.forRoot(AppDataSource.options),
     HealthModule,
     PaymentModule,
     NotificationsModule,
+    ProfileModule,
     SecurityModule,
   ],
   controllers: [AppController],

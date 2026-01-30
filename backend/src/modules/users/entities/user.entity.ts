@@ -73,7 +73,12 @@ export class User {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ name: 'wallet_address', nullable: true, unique: true, type: 'varchar' })
+  @Column({
+    name: 'wallet_address',
+    nullable: true,
+    unique: true,
+    type: 'varchar',
+  })
   walletAddress: string | null;
 
   @Column({

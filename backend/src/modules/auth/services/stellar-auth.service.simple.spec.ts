@@ -108,7 +108,7 @@ describe('StellarAuthService', () => {
         .mockReturnValue(mockKeypair);
       jest
         .spyOn(service as any, 'getServerAccount')
-        .mockResolvedValue(mockAccount);
+        .mockReturnValue(mockAccount);
 
       const result = await service.generateChallenge(mockWalletAddress);
 

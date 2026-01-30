@@ -2,8 +2,8 @@
 
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Events},
-    vec, Address, Bytes, Env, String,
+    testutils::{Address as _, Events, Ledger},
+    vec, Address, Env, String,
 };
 
 #[test]
@@ -427,4 +427,211 @@ fn test_get_total_paid() {
 
     let total_nonexistent = client.get_total_paid(&String::from_str(&env, "NONEXISTENT"));
     assert_eq!(total_nonexistent, 0);
+}
+
+// Helper function to create a test agreement in Pending status
+fn create_pending_agreement(
+    env: &Env,
+    client: &ContractClient,
+    agreement_id: &str,
+    tenant: &Address,
+    landlord: &Address,
+) {
+    // First create the agreement
+    client.create_agreement(
+        &String::from_str(env, agreement_id),
+        landlord,
+        tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &1000000, // far future end_date to avoid expiration
+        &0,
+    );
+
+    // Update status to Pending manually
+    let mut agreement = client
+        .get_agreement(&String::from_str(env, agreement_id))
+        .unwrap();
+    agreement.status = types::AgreementStatus::Pending;
+
+    env.as_contract(&client.address, || {
+        env.storage().persistent().set(
+            &types::DataKey::Agreement(String::from_str(env, agreement_id)),
+            &agreement,
+        );
+    });
+}
+
+#[test]
+fn test_sign_agreement_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SIGN_001";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    // Tenant signs the agreement
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+
+    // Verify agreement is now Active
+    let agreement = client
+        .get_agreement(&String::from_str(&env, agreement_id))
+        .unwrap();
+    assert_eq!(agreement.status, types::AgreementStatus::Active);
+    assert!(agreement.signed_at.is_some());
+    assert_eq!(agreement.tenant, tenant);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #13)")]
+fn test_sign_agreement_not_found() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+
+    // Try to sign non-existent agreement
+    client.sign_agreement(&tenant, &String::from_str(&env, "NONEXISTENT"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #14)")]
+fn test_sign_agreement_not_tenant() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let impostor = Address::generate(&env);
+
+    let agreement_id = "SIGN_002";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    // Try to sign with wrong tenant
+    client.sign_agreement(&impostor, &String::from_str(&env, agreement_id));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #15)")]
+fn test_sign_agreement_invalid_state() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SIGN_003";
+
+    // Create agreement in Draft status (not Pending)
+    client.create_agreement(
+        &String::from_str(&env, agreement_id),
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &1000000,
+        &0,
+    );
+
+    // Try to sign agreement in Draft state
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #16)")]
+fn test_sign_agreement_expired() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SIGN_004";
+
+    // Create agreement with end_date
+    client.create_agreement(
+        &String::from_str(&env, agreement_id),
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &200, // end_date = 200
+        &0,
+    );
+
+    // Update status to Pending
+    let mut agreement = client
+        .get_agreement(&String::from_str(&env, agreement_id))
+        .unwrap();
+    agreement.status = types::AgreementStatus::Pending;
+
+    env.as_contract(&client.address, || {
+        env.storage().persistent().set(
+            &types::DataKey::Agreement(String::from_str(&env, agreement_id)),
+            &agreement,
+        );
+    });
+
+    // Set ledger timestamp to after end_date to simulate expiration
+    env.ledger().with_mut(|li| li.timestamp = 300);
+
+    // Try to sign expired agreement
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #15)")]
+fn test_sign_agreement_already_signed() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SIGN_005";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    // First signing should succeed
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+
+    // Try to sign again (should fail with InvalidState)
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+}
+
+#[test]
+fn test_sign_agreement_event_emission() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SIGN_006";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    // Clear previous events
+    let events_before = env.events().all().len();
+
+    // Sign the agreement
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+
+    // Verify new event was emitted
+    let events_after = env.events().all();
+    assert!(events_after.len() > events_before);
 }

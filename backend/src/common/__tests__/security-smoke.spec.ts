@@ -39,4 +39,3 @@ describe('Security smoke tests (no env required)', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
-
