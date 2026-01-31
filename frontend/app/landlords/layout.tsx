@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pageTitleMap: Record<string, string> = {
     "/landlords": "Dashboard Overview",
     "/landlords/properties": "Properties",
+    "/landlords/properties/add": "Add New Property",
     "/landlords/tenants": "Tenants",
     "/landlords/financials": "Financials",
     "/landlords/maintenance": "Maintenance",

@@ -11,18 +11,18 @@
   --color-foreground: var(--foreground);
 
   /* Brand Colors */
-  --color-brand-blue: #2563EB;
-  --color-brand-blue-dark: #1E40AF;
+  --color-brand-blue: #2563eb;
+  --color-brand-blue-dark: #1e40af;
   --color-brand-accent: #3b82f6;
-  --color-brand-green: #10B981;
-  --color-brand-orange: #F97316;
+  --color-brand-green: #10b981;
+  --color-brand-orange: #f97316;
 
   /* Neutral Colors */
-  --color-neutral-900: #0F172A;
+  --color-neutral-900: #0f172a;
   --color-neutral-700: #334155;
-  --color-neutral-500: #64748B;
-  --color-neutral-200: #E2E8F0;
-  --color-neutral-100: #F8FAFC;
+  --color-neutral-500: #64748b;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-100: #f8fafc;
 
   /* Typography */
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -51,6 +51,21 @@
     background: rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 }
 

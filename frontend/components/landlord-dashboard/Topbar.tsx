@@ -57,10 +57,13 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
             <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-red-600 rounded-full" />
           </button>
 
-          <button className="flex items-center gap-2 bg-[#1e40af] text-white text-sm md:text-base font-bold py-2 px-3 md:px-5 rounded-lg hover:bg-blue-700">
+          <Link
+            href="/landlords/properties/add"
+            className="flex items-center gap-2 bg-[#1e40af] text-white text-sm md:text-base font-bold py-2 px-3 md:px-5 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <FaPlus />
             <span className="hidden md:inline">Add Property</span>
-          </button>
+          </Link>
         </div>
       </header>
 
