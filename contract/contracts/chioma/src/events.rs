@@ -1,5 +1,5 @@
-use soroban_sdk::{contractevent, Address, Env, String};
 use crate::Config;
+use soroban_sdk::{contractevent, Address, Env, String};
 
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,8 +25,12 @@ pub struct ContractInitialized {
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConfigUpdated {
-    pub old_config: Config,
-    pub new_config: Config,
+    pub old_fee_bps: u32,
+    pub new_fee_bps: u32,
+    pub old_fee_collector: Address,
+    pub new_fee_collector: Address,
+    pub old_paused: bool,
+    pub new_paused: bool,
 }
 
 pub(crate) fn contract_initialized(env: &Env, admin: Address) {
@@ -35,8 +39,12 @@ pub(crate) fn contract_initialized(env: &Env, admin: Address) {
 
 pub(crate) fn config_updated(env: &Env, old_config: Config, new_config: Config) {
     ConfigUpdated {
-        old_config,
-        new_config,
+        old_fee_bps: old_config.fee_bps,
+        new_fee_bps: new_config.fee_bps,
+        old_fee_collector: old_config.fee_collector,
+        new_fee_collector: new_config.fee_collector,
+        old_paused: old_config.paused,
+        new_paused: new_config.paused,
     }
     .publish(env);
 }

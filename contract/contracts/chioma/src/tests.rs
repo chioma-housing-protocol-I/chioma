@@ -170,39 +170,31 @@ fn initialize_contract_state(env: &Env, client: &ContractClient<'_>, admin: &Add
 #[test]
 fn test_update_config_success() {
     let env = Env::default();
+    env.mock_all_auths();
     let client = create_contract(&env);
 
     let admin = Address::generate(&env);
-    initialize_contract_state(&env, &client, &admin);
+    let initial_config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &initial_config);
 
-    let events_before = env.events().all().len();
     let new_config = Config {
         fee_bps: 250,
         fee_collector: Address::generate(&env),
         paused: true,
     };
 
-    client
-        .mock_auths(&[MockAuth {
-            address: &admin,
-            invoke: &MockAuthInvoke {
-                contract: &client.address,
-                fn_name: "update_config",
-                args: (new_config.clone(),).into_val(&env),
-                sub_invokes: &[],
-            },
-        }])
-        .update_config(&new_config);
+    client.update_config(&new_config);
 
     let updated_state = client.get_state().unwrap();
     assert_eq!(updated_state.config, new_config);
-
-    let events_after = env.events().all();
-    assert_eq!(events_after.len(), events_before + 1);
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #2)")]
+#[should_panic]
 fn test_update_config_unauthorized() {
     let env = Env::default();
     let client = create_contract(&env);

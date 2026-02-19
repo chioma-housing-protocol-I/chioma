@@ -73,14 +73,10 @@ impl Contract {
     ///
     /// # Errors
     /// * `InvalidState` - If contract state is missing
-    /// * `InvalidAdmin` - If caller is not the configured admin
     /// * `InvalidConfig` - If configuration values are invalid
     pub fn update_config(env: Env, new_config: Config) -> Result<(), RentalError> {
         let mut state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
 
-        if env.invoker() != state.admin {
-            return Err(RentalError::InvalidAdmin);
-        }
         state.admin.require_auth();
 
         if new_config.fee_bps > 10_000 {
