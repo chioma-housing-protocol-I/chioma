@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { NAV_LINKS } from '@/constants/navigation';
+import { NAV_LINKS } from '@/constants/navigation'; // constants/navigation.ts
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
