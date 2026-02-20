@@ -7,6 +7,9 @@ use crate::storage::DataKey;
 use crate::types::{AgreementStatus, PaymentSplit, RentAgreement};
 
 /// Validate agreement parameters
+///
+/// Ensures monthly_rent is strictly positive (i128 > 0) to prevent logical errors
+/// in payment calculations and splits.
 pub fn validate_agreement_params(
     monthly_rent: &i128,
     security_deposit: &i128,

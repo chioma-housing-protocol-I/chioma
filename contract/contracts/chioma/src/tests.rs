@@ -346,6 +346,33 @@ fn test_negative_rent_rejected() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_zero_monthly_rent_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "ZERO_RENT");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &0,
+        &1000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+}
+
+#[test]
 #[should_panic(expected = "Error(Contract, #6)")]
 fn test_invalid_dates_rejected() {
     let env = Env::default();
