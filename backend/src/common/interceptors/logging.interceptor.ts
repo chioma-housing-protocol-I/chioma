@@ -4,7 +4,8 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
+import * as Sentry from '@sentry/nestjs';
 import { sanitizeBody } from '../middleware/logger.middleware';
 
 @Injectable()
@@ -18,6 +19,30 @@ export class LoggingInterceptor implements NestInterceptor {
     // Store on res.locals (safe across lifecycle)
     res.locals.requestBody = body;
 
-    return next.handle();
+    // Enrich Sentry scope with request context for better error attribution
+    Sentry.getCurrentScope().setContext('request', {
+      method: req.method,
+      url: req.url,
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    });
+
+    if (req.user?.id) {
+      Sentry.setUser({ id: req.user.id, email: req.user.email });
+    }
+
+    return next.handle().pipe(
+      tap({
+        error: (error: Error) => {
+          // Errors are captured by Sentry's global error handler already,
+          // but we add extra breadcrumb context here.
+          Sentry.addBreadcrumb({
+            category: 'http',
+            message: `${req.method} ${req.url} - Error: ${error.message}`,
+            level: 'error',
+          });
+        },
+      }),
+    );
   }
 }

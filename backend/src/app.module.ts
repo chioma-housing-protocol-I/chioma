@@ -27,11 +27,28 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => ({
+        store: await redisStore({
+          socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
+          password: process.env.REDIS_PASSWORD || undefined,
+          ttl: 600, // Default TTL in seconds
+        }),
+      }),
     }),
     ThrottlerModule.forRoot([
       {

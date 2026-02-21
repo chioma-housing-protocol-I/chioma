@@ -6,10 +6,19 @@ import {
   IsArray,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PropertyType, ListingStatus } from '../entities/property.entity';
+
+/** Trims a string and strips ASCII / unicode control characters. */
+function sanitizeString(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  // \p{Cc} = Unicode "Control" category (covers NUL, BEL, DEL, etc.)
+  // The 'u' flag is required for Unicode property escapes.
+  return value.trim().replace(/\p{Cc}/gu, '');
+}
 
 export class QueryPropertyDto {
   // Filters
@@ -94,25 +103,34 @@ export class QueryPropertyDto {
   @ApiPropertyOptional({
     description: 'Filter by city',
     example: 'New York',
+    maxLength: 100,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(100)
   city?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by state',
     example: 'NY',
+    maxLength: 100,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(100)
   state?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by country',
     example: 'USA',
+    maxLength: 100,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(100)
   country?: string;
 
   @ApiPropertyOptional({
@@ -126,22 +144,29 @@ export class QueryPropertyDto {
   )
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(100, { each: true })
   amenities?: string[];
 
   @ApiPropertyOptional({
     description: 'Filter by owner ID',
     example: 'uuid-string',
+    maxLength: 36,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(36)
   ownerId?: string;
 
   @ApiPropertyOptional({
     description: 'Search keyword for title and description',
     example: 'modern apartment',
+    maxLength: 200,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(200)
   search?: string;
 
   // Pagination
@@ -176,9 +201,12 @@ export class QueryPropertyDto {
     description: 'Field to sort by',
     example: 'createdAt',
     default: 'createdAt',
+    maxLength: 50,
   })
   @IsOptional()
+  @Transform(({ value }) => sanitizeString(value))
   @IsString()
+  @MaxLength(50)
   sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional({

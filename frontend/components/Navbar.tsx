@@ -11,11 +11,21 @@ const Navbar = () => {
   const pathname = usePathname();
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsScrolled(window.scrollY > 20);
+      }, 100);
     };
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const navLinks = [
