@@ -37,7 +37,7 @@ impl Contract {
     /// * `AlreadyInitialized` - If the contract has already been initialized
     /// * `InvalidConfig` - If the configuration parameters are invalid
     pub fn initialize(env: Env, admin: Address, config: Config) -> Result<(), RentalError> {
-        if env.storage().instance().has(&DataKey::State) {
+        if env.storage().persistent().has(&DataKey::Initialized) {
             return Err(RentalError::AlreadyInitialized);
         }
 
@@ -46,6 +46,11 @@ impl Contract {
         if config.fee_bps > 10_000 {
             return Err(RentalError::InvalidConfig);
         }
+
+        env.storage().persistent().set(&DataKey::Initialized, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&DataKey::Initialized, 500000, 500000);
 
         let state = ContractState {
             admin: admin.clone(),
