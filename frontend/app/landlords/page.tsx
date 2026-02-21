@@ -15,7 +15,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Overview</h1>
           <p className="text-neutral-500 mt-1">
-            Here's what's happening with your properties today.
+            Here&apos;s what&apos;s happening with your properties today.
           </p>
         </div>
       </div>

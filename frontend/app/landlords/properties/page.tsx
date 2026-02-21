@@ -45,7 +45,7 @@ export default function PropertiesPage() {
           tenants: 1,
         }
       ];
-      setProperties(mockData as any);
+      setProperties(mockData as unknown as never[]);
       setIsLoading(false);
     };
 
