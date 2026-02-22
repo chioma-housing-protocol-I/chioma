@@ -73,6 +73,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: '1' },
+        withDeleted: false,
       });
     });
 

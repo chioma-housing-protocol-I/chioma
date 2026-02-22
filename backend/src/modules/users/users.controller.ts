@@ -5,6 +5,7 @@ import {
   Post,
   Delete,
   Body,
+  Param,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -23,9 +24,12 @@ import {
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-user.dto';
+import { UserRestoreDto } from './dto/user-restore.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from './entities/user.entity';
+import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { User, UserRole } from './entities/user.entity';
 
 @ApiTags('Users')
 @Controller('users')
@@ -33,7 +37,7 @@ import { User } from './entities/user.entity';
 @ApiBearerAuth('JWT-auth')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
@@ -111,5 +115,26 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUserActivity(@CurrentUser() user: User) {
     return this.usersService.getUserActivity(user.id);
+  }
+
+  @Public()
+  @Post('restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restore soft-deleted user account' })
+  @ApiResponse({ status: 200, description: 'Account restored successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or account not deleted' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async restoreAccount(@Body() userRestoreDto: UserRestoreDto) {
+    return this.usersService.restoreAccount(userRestoreDto);
+  }
+
+  @Delete(':id/permanent')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Permanently delete user account (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Account permanently deleted' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async hardDeleteAccount(@Param('id') id: string) {
+    return this.usersService.hardDeleteAccount(id);
   }
 }

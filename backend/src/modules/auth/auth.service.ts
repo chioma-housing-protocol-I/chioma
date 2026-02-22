@@ -42,7 +42,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private passwordPolicyService: PasswordPolicyService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
@@ -52,9 +52,15 @@ export class AuthService {
 
     const existingUser = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
+      withDeleted: true,
     });
 
     if (existingUser) {
+      if (existingUser.deletedAt) {
+        throw new ConflictException(
+          'This email is associated with a deleted account. Please restore your account to continue.',
+        );
+      }
       this.logger.warn(`Registration attempt for existing email: ${email}`);
       throw new ConflictException('Email already registered');
     }

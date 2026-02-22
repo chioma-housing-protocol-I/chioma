@@ -17,6 +17,7 @@ import {
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-user.dto';
+import { UserRestoreDto } from './dto/user-restore.dto';
 
 const SALT_ROUNDS = 12;
 
@@ -27,10 +28,13 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
-  async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+  async findById(id: string, includeDeleted = false): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      withDeleted: includeDeleted,
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -146,9 +150,55 @@ export class UsersService {
 
     await this.userRepository.softDelete(userId);
 
-    this.logger.log(`Account deleted for user: ${user.email}`);
+    this.logger.log(`Account soft-deleted for user: ${user.email}`);
 
     return { message: 'Account deleted successfully' };
+  }
+
+  async restoreAccount(
+    userRestoreDto: UserRestoreDto,
+  ): Promise<{ message: string }> {
+    const { email, password } = userRestoreDto;
+
+    // Find the user including soft-deleted ones
+    const user = await this.userRepository.findOne({
+      where: { email: email.toLowerCase() },
+      withDeleted: true,
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.deletedAt) {
+      throw new BadRequestException('Account is not deleted');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Restore the account
+    await this.userRepository.restore(user.id);
+    await this.userRepository.update(user.id, {
+      isActive: true,
+    });
+
+    this.logger.log(`Account restored for user: ${user.email}`);
+
+    return { message: 'Account restored successfully. You can now log in.' };
+  }
+
+  async hardDeleteAccount(userId: string): Promise<{ message: string }> {
+    const user = await this.findById(userId, true);
+
+    await this.userRepository.delete(userId);
+
+    this.logger.log(`Account permanently deleted for user: ${user.email}`);
+
+    return { message: 'Account permanently deleted' };
   }
 
   async getUserActivity(userId: string): Promise<any> {
