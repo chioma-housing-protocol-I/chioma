@@ -1,0 +1,26 @@
+# Rust
+target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+*.profraw
+
+# Build artifacts
+*.wasm
+*.wasm.gz
+
+# Environment
+.env
+.env.local
