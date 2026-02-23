@@ -8,6 +8,8 @@ Our goal is to modernize rental transactions—especially in emerging markets—
 
 ---
 
+Telegram: https://t.me/chiomagroup
+
 ## Figma
 https://www.figma.com/design/2iA2B5gmRupQtzjYv3LSx4/Chioma?node-id=0-1&t=KEwTSTGKUDT0ievI-1
 

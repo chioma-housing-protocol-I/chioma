@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   House,
   Building2,
@@ -16,7 +16,7 @@ import {
   Plus,
   LogOut,
   Menu,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,41 +28,41 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const navItems = [
     {
-      name: "Dashboard",
-      href: "/agent",
+      name: 'Dashboard',
+      href: '/agent',
       icon: House,
     },
     {
-      name: "Properties",
-      href: "/dashboard/properties",
+      name: 'Properties',
+      href: '/dashboard/properties',
       icon: Building2,
     },
     {
-      name: "My Wallet",
-      href: "/dashboard/wallet",
+      name: 'My Wallet',
+      href: '/dashboard/wallet',
       icon: Wallet,
     },
     {
-      name: "Messages",
-      href: "/dashboard/messages",
+      name: 'Messages',
+      href: '/dashboard/messages',
       icon: MessageSquare,
-      badge: "3",
-      badgeColor: "bg-blue-600",
+      badge: '3',
+      badgeColor: 'bg-blue-600',
     },
     {
-      name: "Contracts",
-      href: "/dashboard/contracts",
+      name: 'Contracts',
+      href: '/dashboard/contracts',
       icon: FileText,
     },
     {
-      name: "Analytics",
-      href: "/dashboard/analytics",
+      name: 'Analytics',
+      href: '/dashboard/analytics',
       icon: PieChart,
     },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/agent") return pathname === "/agent";
+    if (href === '/agent') return pathname === '/agent';
     return pathname.startsWith(href);
   };
 
@@ -71,7 +71,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar Overlay */}
       <div
         className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
-          isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsSidebarOpen(false)}
       />
@@ -79,7 +79,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={`fixed lg:static top-0 left-0 bottom-0 w-64 bg-sidebar-bg text-sidebar-text z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col shrink-0 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Logo */}
@@ -107,8 +107,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 onClick={() => setIsSidebarOpen(false)}
                 className={`relative flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group ${
                   active
-                    ? "bg-sidebar-hover text-sidebar-text-active"
-                    : "hover:text-sidebar-text-active hover:bg-white/5"
+                    ? 'bg-sidebar-hover text-sidebar-text-active'
+                    : 'hover:text-sidebar-text-active hover:bg-white/5'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -116,8 +116,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     size={20}
                     className={`transition-colors duration-200 ${
                       active
-                        ? "text-brand-blue"
-                        : "text-neutral-500 group-hover:text-neutral-300"
+                        ? 'text-brand-blue'
+                        : 'text-neutral-500 group-hover:text-neutral-300'
                     }`}
                   />
                   <span>{item.name}</span>
@@ -146,7 +146,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden relative shrink-0">
               <Image
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-                alt="User"
+                alt="Sarah Jenks profile avatar"
                 width={40}
                 height={40}
               />

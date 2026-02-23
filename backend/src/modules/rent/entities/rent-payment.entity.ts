@@ -12,15 +12,15 @@ export class RentPayment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @Column({ default: 'pending' })
+  @Column({ type: 'varchar', default: 'pending' })
   status: string;
 
   @ManyToOne(() => RentAgreement, (agreement) => agreement.payments)
   agreement: RentAgreement;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp' })
   paidAt: Date;
 }

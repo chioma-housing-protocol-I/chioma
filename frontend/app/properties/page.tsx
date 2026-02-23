@@ -1,14 +1,36 @@
-'use client'
+'use client';
 
-import Image from "next/image";
-import Footer from '@/components/Footer'
-import Navbar from '@/components/Properties-navbar'
-import { Heart, MapPin, Bed, Bath, Ruler, Search, Filter, Bell, Plus, Minus, Compass } from 'lucide-react'
-import { useState } from 'react'
+import Image from 'next/image';
+import Footer from '@/components/Footer';
+import Navbar from '@/components/Properties-navbar';
+import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
+import {
+  Heart,
+  MapPin,
+  Bed,
+  Bath,
+  Ruler,
+  Search,
+  Filter,
+  Bell,
+  Plus,
+  Minus,
+  Compass,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function PropertyListing() {
-  const [, setSelectedFilter] = useState('Property Type')
-  const [searchAsIMove, setSearchAsIMove] = useState(true)
+  const [, setSelectedFilter] = useState('Property Type');
+  const [searchAsIMove, setSearchAsIMove] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading data
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const properties = [
     {
@@ -20,7 +42,8 @@ export default function PropertyListing() {
       baths: 2,
       sqft: 1200,
       manager: 'Sarah Okafor',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
       verified: true,
     },
     {
@@ -32,7 +55,8 @@ export default function PropertyListing() {
       baths: 3,
       sqft: 1850,
       manager: 'David Ibrahim',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
       verified: true,
     },
     {
@@ -44,7 +68,8 @@ export default function PropertyListing() {
       baths: 1,
       sqft: 600,
       manager: 'Chioma N.',
-      image: 'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=500&h=400&fit=crop',
       verified: false,
     },
     {
@@ -56,7 +81,8 @@ export default function PropertyListing() {
       baths: 5,
       sqft: 3200,
       manager: 'James Obi',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
       verified: true,
     },
     {
@@ -68,7 +94,8 @@ export default function PropertyListing() {
       baths: 1,
       sqft: 500,
       manager: 'Emmanuel K.',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
       verified: false,
     },
     {
@@ -80,10 +107,11 @@ export default function PropertyListing() {
       baths: 3,
       sqft: 2100,
       manager: 'Grace A.',
-      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=400&fit=crop',
+      image:
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=400&fit=crop',
       verified: true,
     },
-  ]
+  ];
 
   const priceMarkers = [
     { price: '₦1,500,000', top: '20%', left: '60%' },
@@ -92,7 +120,7 @@ export default function PropertyListing() {
     { price: '₦3,800,000', top: '50%', left: '65%' },
     { price: '₦15,000,000', top: '65%', left: '55%' },
     { price: '₦800,000', top: '80%', left: '50%' },
-  ]
+  ];
 
   return (
     <>
@@ -151,27 +179,46 @@ export default function PropertyListing() {
             <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {/* Heading */}
               <div className="mb-6">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">342 Stays in Lagos</h1>
-                <p className="text-gray-600 text-sm sm:text-base">Check verified listings with smart lease support</p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+                  342 Stays in Lagos
+                </h1>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Check verified listings with smart lease support
+                </p>
               </div>
 
               {/* Verified Badge */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 mb-8 flex gap-3 sm:gap-4">
                 <div className="shrink-0">
-                  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="w-6 h-6 text-green-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-green-900 mb-1 text-sm sm:text-base">Verified Blockchain Listings</h3>
-                  <p className="text-green-700 text-xs sm:text-sm">All properties with the verified badge have been vetted and are ready for instant smart contract leasing.</p>
+                  <h3 className="font-semibold text-green-900 mb-1 text-sm sm:text-base">
+                    Verified Blockchain Listings
+                  </h3>
+                  <p className="text-green-700 text-xs sm:text-sm">
+                    All properties with the verified badge have been vetted and
+                    are ready for instant smart contract leasing.
+                  </p>
                 </div>
               </div>
 
               {/* Sort */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-600 text-sm sm:text-base">Sort by:</span>
+                  <span className="text-gray-600 text-sm sm:text-base">
+                    Sort by:
+                  </span>
                   <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:text-base bg-white text-gray-900 cursor-pointer hover:border-gray-400">
                     <option>Recommended</option>
                     <option>Price: Low to High</option>
@@ -183,81 +230,107 @@ export default function PropertyListing() {
 
               {/* Property Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-4 mb-8">
-                {properties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
-                  >
-                    {/* Image */}
-                    <div className="relative h-60 sm:h-56 bg-gray-200 overflow-hidden">
-                      <Image
-                        src={property.image || "/placeholder.svg"}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                        width={40}
-                        height={40}
-                      />
-                      {/* Verified Badge */}
-                      {property.verified && (
-                        <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-xs sm:text-sm font-medium">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Verified
-                        </div>
-                      )}
-                      {/* Wishlist Heart */}
-                      <button className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 transition shadow">
-                        <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                      </button>
-                      {/* Lease Badge */}
-                      <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-xs sm:text-sm font-medium">
-                        Smart Lease Ready
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 sm:p-5">
-                      {/* Price */}
-                      <p className="text-blue-600 font-bold text-lg sm:text-xl mb-2">
-                        {property.price} <span className="text-gray-500 font-normal text-sm">/yr</span>
-                      </p>
-
-                      {/* Title */}
-                      <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">{property.title}</h3>
-
-                      {/* Location */}
-                      <div className="flex gap-2 text-gray-600 mb-4 text-xs sm:text-sm">
-                        <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                        <p>{property.location}</p>
-                      </div>
-
-                      {/* Features */}
-                      <div className="flex gap-4 sm:gap-6 mb-4 pb-4 border-b border-gray-200 text-gray-700 text-xs sm:text-sm">
-                        <div className="flex items-center gap-1">
-                          <Bed className="w-4 h-4" />
-                          <span>{property.beds} Beds</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Bath className="w-4 h-4" />
-                          <span>{property.baths} Baths</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Ruler className="w-4 h-4" />
-                          <span>{property.sqft} sqft</span>
+                {isLoading ? (
+                  // Show skeleton loaders while loading
+                  <>
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <PropertyCardSkeleton key={index} />
+                    ))}
+                  </>
+                ) : (
+                  // Show actual property cards when loaded
+                  properties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
+                    >
+                      {/* Image */}
+                      <div className="relative h-60 sm:h-56 bg-gray-200 overflow-hidden">
+                        <Image
+                          src={property.image || '/placeholder.svg'}
+                          alt={property.title}
+                          className="w-full h-full object-cover"
+                          width={40}
+                          height={40}
+                        />
+                        {/* Verified Badge */}
+                        {property.verified && (
+                          <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-xs sm:text-sm font-medium">
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Verified
+                          </div>
+                        )}
+                        {/* Wishlist Heart */}
+                        <button className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 transition shadow">
+                          <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                        </button>
+                        {/* Lease Badge */}
+                        <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-xs sm:text-sm font-medium">
+                          Smart Lease Ready
                         </div>
                       </div>
 
-                      {/* Manager */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-linear-to-r from-pink-400 to-orange-400" />
-                        <p className="text-xs sm:text-sm text-gray-700">
-                          Managed by <span className="font-semibold">{property.manager}</span>
+                      {/* Content */}
+                      <div className="p-4 sm:p-5">
+                        {/* Price */}
+                        <p className="text-blue-600 font-bold text-lg sm:text-xl mb-2">
+                          {property.price}{' '}
+                          <span className="text-gray-500 font-normal text-sm">
+                            /yr
+                          </span>
                         </p>
+
+                        {/* Title */}
+                        <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">
+                          {property.title}
+                        </h3>
+
+                        {/* Location */}
+                        <div className="flex gap-2 text-gray-600 mb-4 text-xs sm:text-sm">
+                          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                          <p>{property.location}</p>
+                        </div>
+
+                        {/* Features */}
+                        <div className="flex gap-4 sm:gap-6 mb-4 pb-4 border-b border-gray-200 text-gray-700 text-xs sm:text-sm">
+                          <div className="flex items-center gap-1">
+                            <Bed className="w-4 h-4" />
+                            <span>{property.beds} Beds</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Bath className="w-4 h-4" />
+                            <span>{property.baths} Baths</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Ruler className="w-4 h-4" />
+                            <span>{property.sqft} sqft</span>
+                          </div>
+                        </div>
+
+                        {/* Manager */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-linear-to-r from-pink-400 to-orange-400" />
+                          <p className="text-xs sm:text-sm text-gray-700">
+                            Managed by{' '}
+                            <span className="font-semibold">
+                              {property.manager}
+                            </span>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Load More Button */}
@@ -326,6 +399,5 @@ export default function PropertyListing() {
 
       <Footer />
     </>
-
-  )
+  );
 }

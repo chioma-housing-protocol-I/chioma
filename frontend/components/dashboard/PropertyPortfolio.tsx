@@ -1,66 +1,66 @@
-"use client";
+'use client';
 
-import React from "react";
-import Image from "next/image";
-import { Download, Filter } from "lucide-react";
-import { format } from "date-fns";
+import React from 'react';
+import Image from 'next/image';
+import { Download, Filter } from 'lucide-react';
+import { format } from 'date-fns';
 
 const PropertyPortfolio = () => {
   const properties = [
     {
       id: 1,
-      name: "101 Adeola Odeku St",
-      address: "Victoria Island, Lagos",
+      name: '101 Adeola Odeku St',
+      address: 'Victoria Island, Lagos',
       image:
-        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&fit=crop",
-      status: "occupied",
+        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&fit=crop',
+      status: 'occupied',
       tenant: {
-        name: "Sarah Okafor",
+        name: 'Sarah Okafor',
         avatar:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
       },
       contractValue: 2.5,
-      currency: "₦",
-      period: "yr",
-      leaseEnds: new Date("2024-11-30"),
+      currency: '₦',
+      period: 'yr',
+      leaseEnds: new Date('2024-11-30'),
     },
     {
       id: 2,
-      name: "Block 4, Admiralty Way",
-      address: "Lekki Phase 1, Lagos",
+      name: 'Block 4, Admiralty Way',
+      address: 'Lekki Phase 1, Lagos',
       image:
-        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop",
-      status: "vacant",
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop',
+      status: 'vacant',
       contractValue: 3.8,
-      currency: "₦",
-      period: "yr",
+      currency: '₦',
+      period: 'yr',
     },
     {
       id: 3,
-      name: "Glover Road, Ikoyi",
-      address: "Ikoyi, Lagos",
+      name: 'Glover Road, Ikoyi',
+      address: 'Ikoyi, Lagos',
       image:
-        "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop",
-      status: "maintenance",
+        'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop',
+      status: 'maintenance',
       contractValue: 1.8,
-      currency: "₦",
-      period: "yr",
+      currency: '₦',
+      period: 'yr',
     },
   ];
 
   const getStatusBadge = (status: string) => {
     const badges = {
       occupied: {
-        text: "Occupied",
-        color: "bg-green-100 text-brand-green",
+        text: 'Occupied',
+        color: 'bg-green-100 text-brand-green',
       },
       vacant: {
-        text: "Vacant",
-        color: "bg-orange-100 text-orange-600",
+        text: 'Vacant',
+        color: 'bg-orange-100 text-orange-600',
       },
       maintenance: {
-        text: "Maintenance",
-        color: "bg-yellow-100 text-yellow-700",
+        text: 'Maintenance',
+        color: 'bg-yellow-100 text-yellow-700',
       },
     };
 
@@ -68,14 +68,14 @@ const PropertyPortfolio = () => {
   };
 
   const getActionButton = (status: string) => {
-    if (status === "occupied") {
+    if (status === 'occupied') {
       return (
         <button className="px-4 py-2 bg-brand-blue text-white text-sm font-semibold rounded-lg hover:bg-brand-blue-dark transition-colors">
           Manage
         </button>
       );
     }
-    if (status === "vacant") {
+    if (status === 'vacant') {
       return (
         <button className="px-4 py-2 bg-brand-blue text-white text-sm font-semibold rounded-lg hover:bg-brand-blue-dark transition-colors">
           List Now
@@ -150,6 +150,7 @@ const PropertyPortfolio = () => {
                           src={property.image}
                           alt={property.name}
                           fill
+                          sizes="64px"
                           className="object-cover"
                         />
                       </div>
@@ -182,6 +183,7 @@ const PropertyPortfolio = () => {
                             src={property.tenant.avatar}
                             alt={property.tenant.name}
                             fill
+                            sizes="32px"
                             className="object-cover"
                           />
                         </div>
@@ -206,7 +208,7 @@ const PropertyPortfolio = () => {
                   <td className="py-4 px-4">
                     {property.leaseEnds ? (
                       <span className="text-sm text-neutral-700">
-                        {format(property.leaseEnds, "MMM yyyy")}
+                        {format(property.leaseEnds, 'MMM yyyy')}
                       </span>
                     ) : (
                       <span className="text-sm text-neutral-400">--</span>
@@ -241,6 +243,7 @@ const PropertyPortfolio = () => {
                     src={property.image}
                     alt={property.name}
                     fill
+                    sizes="80px"
                     className="object-cover"
                   />
                 </div>
@@ -262,7 +265,9 @@ const PropertyPortfolio = () => {
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-100">
                 <div>
-                  <p className="text-xs text-neutral-500 mb-1">Contract Value</p>
+                  <p className="text-xs text-neutral-500 mb-1">
+                    Contract Value
+                  </p>
                   <p className="font-semibold text-neutral-900">
                     {property.currency}
                     {property.contractValue}M / {property.period}
@@ -272,7 +277,7 @@ const PropertyPortfolio = () => {
                   <div>
                     <p className="text-xs text-neutral-500 mb-1">Lease Ends</p>
                     <p className="font-semibold text-neutral-900">
-                      {format(property.leaseEnds, "MMM yyyy")}
+                      {format(property.leaseEnds, 'MMM yyyy')}
                     </p>
                   </div>
                 )}
@@ -286,6 +291,7 @@ const PropertyPortfolio = () => {
                       src={property.tenant.avatar}
                       alt={property.tenant.name}
                       fill
+                      sizes="32px"
                       className="object-cover"
                     />
                   </div>

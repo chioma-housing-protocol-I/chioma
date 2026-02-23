@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthMetricsService } from './services/auth-metrics.service';
@@ -37,6 +38,7 @@ import { PasswordPolicyService } from './services/password-policy.service';
       },
       inject: [ConfigService],
     }),
+    NotificationsModule,
   ],
   controllers: [AuthController, StellarAuthController, AuthMetricsController],
   providers: [

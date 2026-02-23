@@ -1,3 +1,15 @@
+import * as Sentry from '@sentry/nestjs';
+
+// Initialize Sentry BEFORE loading any other module
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT || 'development',
+  // Performance Monitoring: capture 100% of transactions in dev, tune for prod
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+  // Disable Sentry if no DSN is configured (e.g. local dev without credentials)
+  enabled: !!process.env.SENTRY_DSN,
+});
+
 import * as express from 'express';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';

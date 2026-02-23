@@ -17,6 +17,12 @@ import {
   MfaDeviceType,
   MfaDeviceStatus,
 } from '../entities/mfa-device.entity';
+import {
+  AuthSuccessResponseDto,
+  MfaRequiredResponseDto,
+} from '../dto/auth-response.dto';
+import { AuthService } from '../auth.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class MfaService {
@@ -29,6 +35,7 @@ export class MfaService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private configService: ConfigService,
+    private jwtService: JwtService,
   ) {
     const key = this.configService.get<string>('SECURITY_ENCRYPTION_KEY');
     if (!key) {
@@ -289,5 +296,102 @@ export class MfaService {
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
+  }
+
+  /**
+   * Verify MFA token during login flow
+   *
+   * @param mfaToken
+   * @param authService
+   * @returns
+   */
+  async verifyMfaToken(
+    mfaToken: string,
+    authService: AuthService,
+  ): Promise<AuthSuccessResponseDto> {
+    try {
+      // Verify temporary MFA token
+      const payload = this.jwtService.verify<{
+        sub: string;
+        email: string;
+        role: string;
+        type: string;
+      }>(mfaToken, {
+        secret: authService.getJwtSecret(),
+      });
+
+      if (payload.type !== 'mfa_required') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Generate final tokens
+      const { accessToken, refreshToken } = authService.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+      );
+
+      await authService.updateRefreshToken(user.id, refreshToken);
+
+      this.logger.log(`MFA login completed for user: ${user.id}`);
+
+      return {
+        user: authService.sanitizeUser(user),
+        accessToken,
+        refreshToken,
+        mfaRequired: false,
+      };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Invalid or expired MFA token';
+      this.logger.error(`MFA login failed: ${message}`);
+      throw new UnauthorizedException('Invalid or expired MFA token');
+    }
+  }
+  async generateMfaToken(
+    user: User,
+    authService: AuthService,
+  ): Promise<MfaRequiredResponseDto> {
+    // Generate temporary token for MFA verification
+    const tempToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        type: 'mfa_required',
+      },
+      {
+        secret: authService.getJwtSecret(),
+        expiresIn: '5m', // Short-lived token for MFA verification
+      },
+    );
+
+    this.logger.log(`MFA required for user: ${user.id}`);
+    const mfaResponse: MfaRequiredResponseDto = {
+      user: authService.sanitizeUser(user),
+      mfaRequired: true,
+      mfaToken: tempToken,
+    };
+
+    return mfaResponse;
+  }
+
+  async checkMfaRequired(userId: string) {
+    // Check if MFA is enabled
+    return await this.mfaDeviceRepository.findOne({
+      where: {
+        userId,
+        type: MfaDeviceType.TOTP,
+        status: MfaDeviceStatus.ACTIVE,
+      },
+    });
   }
 }

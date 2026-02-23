@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -9,23 +9,23 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from "recharts";
-import { ChevronDown } from "lucide-react";
+} from 'recharts';
+import { ChevronDown } from 'lucide-react';
 
 const RevenueChart = () => {
-  const [timeRange] = useState("Last 6 Months");
+  const [timeRange] = useState('Last 6 Months');
 
   const revenueData = [
-    { month: "Jan", revenue: 2.0 },
-    { month: "Feb", revenue: 2.5 },
-    { month: "Mar", revenue: 3.0 },
-    { month: "Apr", revenue: 3.2 },
-    { month: "May", revenue: 4.0 },
-    { month: "Jun", revenue: 5.0 },
+    { month: 'Jan', revenue: 2.0 },
+    { month: 'Feb', revenue: 2.5 },
+    { month: 'Mar', revenue: 3.0 },
+    { month: 'Apr', revenue: 3.2 },
+    { month: 'May', revenue: 4.0 },
+    { month: 'Jun', revenue: 5.0 },
   ];
 
   const formatValue = (value: number | undefined) => {
-    if (value === undefined) return "₦0M";
+    if (value === undefined) return '₦0M';
     return `₦${value}M`;
   };
 
@@ -65,29 +65,29 @@ const RevenueChart = () => {
             <XAxis
               dataKey="month"
               stroke="#9CA3AF"
-              style={{ fontSize: "12px" }}
+              style={{ fontSize: '12px' }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
               stroke="#9CA3AF"
-              style={{ fontSize: "12px" }}
+              style={{ fontSize: '12px' }}
               tickLine={false}
               axisLine={false}
               tickFormatter={formatValue}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#fff",
-                border: "1px solid #E5E7EB",
-                borderRadius: "8px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                backgroundColor: '#fff',
+                border: '1px solid #E5E7EB',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
               formatter={(value: number | undefined) => {
-                if (value === undefined) return ["₦0M", "Revenue"];
-                return [formatValue(value), "Revenue"];
+                if (value === undefined) return ['₦0M', 'Revenue'];
+                return [formatValue(value), 'Revenue'];
               }}
-              labelStyle={{ fontWeight: 600, color: "#111827" }}
+              labelStyle={{ fontWeight: 600, color: '#111827' }}
             />
             <Line
               type="monotone"
@@ -95,15 +95,15 @@ const RevenueChart = () => {
               stroke="#2563EB"
               strokeWidth={3}
               dot={{
-                fill: "#2563EB",
+                fill: '#2563EB',
                 strokeWidth: 2,
                 r: 4,
-                stroke: "#fff",
+                stroke: '#fff',
               }}
               activeDot={{
                 r: 6,
-                fill: "#2563EB",
-                stroke: "#fff",
+                fill: '#2563EB',
+                stroke: '#fff',
                 strokeWidth: 2,
               }}
               fill="url(#colorRevenue)"

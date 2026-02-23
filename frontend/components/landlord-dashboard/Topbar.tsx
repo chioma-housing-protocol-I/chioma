@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { FaSearch, FaBell, FaPlus, FaBars, FaTimes } from "react-icons/fa";
-import Link from "next/link";
-import { navItems } from "./Sidebar";
-import Image from "next/image";
-import { FaArrowRightFromBracket } from "react-icons/fa6";
-import { usePathname } from "next/navigation";
+import { useState } from 'react';
+import { FaSearch, FaBell, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import Link from 'next/link';
+import { navItems } from './Sidebar';
+import Image from 'next/image';
+import { FaArrowRightFromBracket } from 'react-icons/fa6';
+import { usePathname } from 'next/navigation';
 
 export default function Topbar({ pageTitle }: { pageTitle: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,23 +57,26 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
             <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-red-600 rounded-full" />
           </button>
 
-          <button className="flex items-center gap-2 bg-[#1e40af] text-white text-sm md:text-base font-bold py-2 px-3 md:px-5 rounded-lg hover:bg-blue-700">
+          <Link
+            href="/landlords/properties/add"
+            className="flex items-center gap-2 bg-[#1e40af] text-white text-sm md:text-base font-bold py-2 px-3 md:px-5 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <FaPlus />
             <span className="hidden md:inline">Add Property</span>
-          </button>
+          </Link>
         </div>
       </header>
 
       {/* ================= Mobile Search Overlay ================= */}
       <div
         className={`fixed inset-0 z-50 transition
-          ${searchOpen ? "visible pointer-events-auto" : "invisible pointer-events-none"}
+          ${searchOpen ? 'visible pointer-events-auto' : 'invisible pointer-events-none'}
         `}
       >
         {/* overlay */}
         <div
           className={`absolute inset-0 bg-black/40 transition-opacity
-            ${searchOpen ? "opacity-100" : "opacity-0"}
+            ${searchOpen ? 'opacity-100' : 'opacity-0'}
           `}
           onClick={() => setSearchOpen(false)}
         />
@@ -81,7 +84,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         {/* panel */}
         <div
           className={`relative bg-white p-4 shadow-md transform transition-transform
-            ${searchOpen ? "translate-y-0" : "-translate-y-full"}
+            ${searchOpen ? 'translate-y-0' : '-translate-y-full'}
           `}
         >
           <div className="flex items-center gap-3">
@@ -102,13 +105,13 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
       {/* ================= Mobile Drawer ================= */}
       <div
         className={`fixed inset-0 z-50 transition
-          ${mobileOpen ? "visible pointer-events-auto" : "invisible pointer-events-none"}
+          ${mobileOpen ? 'visible pointer-events-auto' : 'invisible pointer-events-none'}
         `}
       >
         {/* overlay */}
         <div
           className={`absolute inset-0 bg-black/40 transition-opacity
-            ${mobileOpen ? "opacity-100" : "opacity-0"}
+            ${mobileOpen ? 'opacity-100' : 'opacity-0'}
           `}
           onClick={() => setMobileOpen(false)}
         />
@@ -117,7 +120,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         <aside
           className={`relative flex flex-col justify-between h-full bg-white shadow-lg
             transform transition-transform duration-300
-            ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+            ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
             w-52 sm:w-64
           `}
         >
@@ -132,7 +135,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
             <nav className="p-2">
               {navItems.map((item) => {
                 const isActive =
-                  item.href === "/landlords"
+                  item.href === '/landlords'
                     ? pathname === item.href
                     : pathname.startsWith(item.href);
 
@@ -142,10 +145,9 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded transition
-                      ${
-                        isActive
-                          ? "bg-blue-100/70 text-[#1e40af] font-semibold"
-                          : "hover:bg-gray-100 text-gray-700"
+                      ${isActive
+                        ? 'bg-blue-100/70 text-[#1e40af] font-semibold'
+                        : 'hover:bg-gray-100 text-gray-700'
                       }
                     `}
                   >
@@ -164,6 +166,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
                 alt="User Avatar"
                 width={100}
                 height={100}
+                sizes="40px"
                 className="rounded-full"
               />
             </div>

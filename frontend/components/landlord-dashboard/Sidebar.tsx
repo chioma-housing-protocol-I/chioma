@@ -1,27 +1,27 @@
-import SidebarItem from "./SidebarItem";
-import Image from "next/image";
-import { FaBuilding, FaChartPie } from "react-icons/fa";
-import { FaScrewdriverWrench, FaArrowRightFromBracket } from "react-icons/fa6";
-import { HiSquares2X2, HiUsers } from "react-icons/hi2";
-import { IoDocumentTextSharp } from "react-icons/io5";
-import { IoMdSettings } from "react-icons/io";
+import SidebarItem from './SidebarItem';
+import Image from 'next/image';
+import { FaBuilding, FaChartPie } from 'react-icons/fa';
+import { FaScrewdriverWrench, FaArrowRightFromBracket } from 'react-icons/fa6';
+import { HiSquares2X2, HiUsers } from 'react-icons/hi2';
+import { IoDocumentTextSharp } from 'react-icons/io5';
+import { IoMdSettings } from 'react-icons/io';
 
 export const navItems = [
-  { icon: HiSquares2X2, label: "Dashboard", href: "/landlords" },
-  { icon: FaBuilding, label: "Properties", href: "/landlords/properties" },
-  { icon: HiUsers, label: "Tenants", href: "/landlords/tenants" },
-  { icon: FaChartPie, label: "Financials", href: "/landlords/financials" },
+  { icon: HiSquares2X2, label: 'Dashboard', href: '/landlords' },
+  { icon: FaBuilding, label: 'Properties', href: '/landlords/properties' },
+  { icon: HiUsers, label: 'Tenants', href: '/landlords/tenants' },
+  { icon: FaChartPie, label: 'Financials', href: '/landlords/financials' },
   {
     icon: FaScrewdriverWrench,
-    label: "Maintenance",
-    href: "/landlords/maintenance",
+    label: 'Maintenance',
+    href: '/landlords/maintenance',
   },
   {
     icon: IoDocumentTextSharp,
-    label: "Documents",
-    href: "/landlords/documents",
+    label: 'Documents',
+    href: '/landlords/documents',
   },
-  { icon: IoMdSettings, label: "Settings", href: "/landlords/settings" },
+  { icon: IoMdSettings, label: 'Settings', href: '/landlords/settings' },
 ];
 
 export default function Sidebar() {
@@ -54,6 +54,7 @@ export default function Sidebar() {
               alt="User Avatar"
               width={100}
               height={100}
+              sizes="40px"
               className="rounded-full"
             />
           </div>

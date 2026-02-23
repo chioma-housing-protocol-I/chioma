@@ -14,8 +14,8 @@ on:
       - "contract/**"
 
 jobs:
-  contract-ci:
-    name: Smart Contract Checks
+  contract-lint:
+    name: Contract lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,34 +25,47 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          override: true
           components: rustfmt, clippy
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            contract/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('contract/**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Install Soroban CLI
-        run: cargo install soroban-cli --locked || echo "Soroban CLI already installed"
+          working-directory: contract
 
       - name: Cargo format check
         run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  contract-tests:
+    name: Contract tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contract
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          working-directory: contract
+
+      - name: Install Soroban CLI
+        run: cargo install soroban-cli --locked || echo "Soroban CLI already installed"
 
       - name: Cargo build
         run: cargo build --locked
 
       - name: Cargo test
         run: cargo test --locked
-
-      - name: Cargo clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Building2,
@@ -17,7 +17,7 @@ import {
   X,
   Plus,
   LogOut,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -29,45 +29,45 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const navItems = [
     {
-      name: "Dashboard",
-      href: "/dashboard",
+      name: 'Dashboard',
+      href: '/dashboard',
       icon: LayoutDashboard,
     },
     {
-      name: "Properties",
-      href: "/dashboard/properties",
+      name: 'Properties',
+      href: '/dashboard/properties',
       icon: Building2,
-      badge: "●",
+      badge: '●',
     },
     {
-      name: "Tenants",
-      href: "/dashboard/tenants",
+      name: 'Tenants',
+      href: '/dashboard/tenants',
       icon: Users,
     },
     {
-      name: "Financials",
-      href: "/dashboard/financials",
+      name: 'Financials',
+      href: '/dashboard/financials',
       icon: Wallet,
     },
     {
-      name: "Maintenance",
-      href: "/dashboard/maintenance",
+      name: 'Maintenance',
+      href: '/dashboard/maintenance',
       icon: Wrench,
     },
     {
-      name: "Documents",
-      href: "/dashboard/documents",
+      name: 'Documents',
+      href: '/dashboard/documents',
       icon: FileText,
     },
     {
-      name: "Settings",
-      href: "/dashboard/settings",
+      name: 'Settings',
+      href: '/dashboard/settings',
       icon: Settings,
     },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
 
@@ -76,7 +76,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 bottom-0 w-64 bg-white border-r border-neutral-200 z-40 transition-transform duration-300 lg:translate-x-0 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Logo */}
@@ -102,8 +102,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 onClick={() => setIsSidebarOpen(false)}
                 className={`flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   active
-                    ? "bg-brand-blue text-white"
-                    : "text-neutral-700 hover:bg-neutral-100"
+                    ? 'bg-brand-blue text-white'
+                    : 'text-neutral-700 hover:bg-neutral-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">

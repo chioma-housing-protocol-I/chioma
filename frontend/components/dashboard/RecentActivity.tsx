@@ -1,63 +1,62 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Wrench, FileCheck, CreditCard, ChevronRight } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-
+import React from 'react';
+import { Wrench, FileCheck, CreditCard, ChevronRight } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 const RecentActivity = () => {
-  const MOCK_NOW = new Date("2025-01-24T12:00:00");
+  const MOCK_NOW = new Date('2025-01-24T12:00:00');
 
   const activities = [
     {
       id: 1,
-      type: "maintenance",
-      title: "Maintenance Request - Unit 12",
-      description: "Leak reported in master bathroom",
+      type: 'maintenance',
+      title: 'Maintenance Request - Unit 12',
+      description: 'Leak reported in master bathroom',
       timestamp: new Date(MOCK_NOW.getTime() - 2 * 60 * 60 * 1000),
-      status: "pending",
+      status: 'pending',
       icon: Wrench,
-      iconBg: "bg-orange-100",
-      iconColor: "text-orange-600",
+      iconBg: 'bg-orange-100',
+      iconColor: 'text-orange-600',
     },
     {
       id: 2,
-      type: "lease",
-      title: "Lease Signed - Apt 12",
-      description: "New tenant: Michael Johnson",
+      type: 'lease',
+      title: 'Lease Signed - Apt 12',
+      description: 'New tenant: Michael Johnson',
       timestamp: new Date(MOCK_NOW.getTime() - 5 * 60 * 60 * 1000),
-      status: "completed",
+      status: 'completed',
       icon: FileCheck,
-      iconBg: "bg-green-100",
-      iconColor: "text-brand-green",
-      avatar: "/avatars/michael.jpg",
+      iconBg: 'bg-green-100',
+      iconColor: 'text-brand-green',
+      avatar: '/avatars/michael.jpg',
     },
     {
       id: 3,
-      type: "payment",
-      title: "Rent Payment - Unit 101",
-      description: "Received ₦2.5M via Stellar",
+      type: 'payment',
+      title: 'Rent Payment - Unit 101',
+      description: 'Received ₦2.5M via Stellar',
       timestamp: new Date(MOCK_NOW.getTime() - 24 * 60 * 60 * 1000),
-      status: "received",
+      status: 'received',
       icon: CreditCard,
-      iconBg: "bg-blue-100",
-      iconColor: "text-brand-blue",
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-brand-blue',
     },
   ];
 
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: {
-        text: "Pending",
-        color: "bg-orange-100 text-orange-600",
+        text: 'Pending',
+        color: 'bg-orange-100 text-orange-600',
       },
       completed: {
-        text: "Completed",
-        color: "bg-green-100 text-brand-green",
+        text: 'Completed',
+        color: 'bg-green-100 text-brand-green',
       },
       received: {
-        text: "Received",
-        color: "bg-blue-100 text-brand-blue",
+        text: 'Received',
+        color: 'bg-blue-100 text-brand-blue',
       },
     };
 

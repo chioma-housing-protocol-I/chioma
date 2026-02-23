@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 /**
  * Hero Component
@@ -12,7 +12,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
  */
 const Hero = () => {
   return (
-    <section className="relative pt-28 pb-20 md:pt-44 md:pb-32 overflow-hidden">
+    <section className="relative pt-10 pb-16 md:pt-12 md:pb-24 overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Content Column */}
@@ -73,6 +73,7 @@ const Hero = () => {
                 src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069"
                 alt="Modern Office showing collaboration"
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 priority
               />

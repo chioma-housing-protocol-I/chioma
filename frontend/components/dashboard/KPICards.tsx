@@ -1,50 +1,50 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Building2, Wallet, ArrowRight } from "lucide-react";
+import React from 'react';
+import { Building2, Wallet, ArrowRight } from 'lucide-react';
 
 const KPICards = () => {
   const kpiData = [
     {
-      label: "Total Revenue",
-      sublabel: "(YTD)",
-      value: "₦45.2M",
-      change: "+12%",
-      changeLabel: "vs last month",
+      label: 'Total Revenue',
+      sublabel: '(YTD)',
+      value: '₦45.2M',
+      change: '+12%',
+      changeLabel: 'vs last month',
       isPositive: true,
       icon: Wallet,
-      iconBg: "bg-blue-100",
-      iconColor: "text-brand-blue",
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-brand-blue',
     },
     {
-      label: "Occupancy Rate",
-      value: "92%",
-      target: "Target: 95%",
+      label: 'Occupancy Rate',
+      value: '92%',
+      target: 'Target: 95%',
       progress: 92,
       icon: Building2,
-      iconBg: "bg-green-100",
-      iconColor: "text-brand-green",
+      iconBg: 'bg-green-100',
+      iconColor: 'text-brand-green',
       showProgress: true,
     },
     {
-      label: "Properties Owned",
-      value: "12",
-      sublabel: "2 Vacant",
+      label: 'Properties Owned',
+      value: '12',
+      sublabel: '2 Vacant',
       icon: Building2,
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-600",
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
       badge: {
-        text: "2 Vacant",
-        color: "bg-orange-100 text-orange-600",
+        text: '2 Vacant',
+        color: 'bg-orange-100 text-orange-600',
       },
     },
     {
-      label: "Stellar Wallet",
-      value: "45,200 XLM",
-      action: "Withdraw Funds",
+      label: 'Stellar Wallet',
+      value: '45,200 XLM',
+      action: 'Withdraw Funds',
       icon: Wallet,
-      iconBg: "bg-indigo-100",
-      iconColor: "text-indigo-600",
+      iconBg: 'bg-indigo-100',
+      iconColor: 'text-indigo-600',
       showAction: true,
     },
   ];
@@ -87,8 +87,9 @@ const KPICards = () => {
             {kpi.change && (
               <div className="flex items-center space-x-2 text-sm">
                 <span
-                  className={`font-semibold ${kpi.isPositive ? "text-brand-green" : "text-red-500"
-                    }`}
+                  className={`font-semibold ${
+                    kpi.isPositive ? 'text-brand-green' : 'text-red-500'
+                  }`}
                 >
                   {kpi.change}
                 </span>

@@ -12,21 +12,21 @@ export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   title: string;
 
-  @Column('text')
+  @Column({ type: 'text' })
   message: string;
 
-  @Column({ default: false })
-  isRead: boolean; // Se guardará como is_read en la DB
+  @Column({ type: 'boolean', default: false })
+  isRead: boolean;
 
-  @Column({ nullable: true })
-  type: string; // Ej: 'PAYMENT_RECEIVED', 'CONTRACT_SIGNED'
+  @Column({ type: 'varchar', nullable: true })
+  type: string;
 
   @ManyToOne(() => User)
   user: User;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 }

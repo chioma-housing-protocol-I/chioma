@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,26 +14,26 @@ const Navbar = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const navLinks = [
-    { name: "Find a Home", href: "/properties" },
-    { name: "For Landlords", href: "/landlords" },
-    { name: "For Agents", href: "/agents" },
-    { name: "Resources", href: "/resources" },
+    { name: 'Find a Home', href: '/properties' },
+    { name: 'For Landlords', href: '/landlords' },
+    { name: 'For Agents', href: '/agents' },
+    { name: 'Resources', href: '/resources' },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
+    if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
   return (
     <nav
       className={`top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
-        isScrolled ? "glass py-3" : "bg-transparent py-6"
+        isScrolled ? 'glass py-3' : 'bg-transparent py-6'
       }`}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
@@ -56,8 +56,8 @@ const Navbar = () => {
                 className={`relative text-sm font-medium transition-colors
                   ${
                     active
-                      ? "text-black border-b-2 border-white pb-1"
-                      : "text-black hover:text-blue-900"
+                      ? 'text-black border-b-2 border-white pb-1'
+                      : 'text-black hover:text-blue-900'
                   }
                 `}
               >
@@ -108,8 +108,8 @@ const Navbar = () => {
                   className={`text-lg font-medium w-fit
                     ${
                       active
-                        ? "text-white border-b-2 border-white pb-1"
-                        : "text-white"
+                        ? 'text-white border-b-2 border-white pb-1'
+                        : 'text-white'
                     }
                   `}
                 >

@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 
@@ -24,11 +25,11 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   email: string;
 
   @Exclude()
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   password: string;
 
   @Column({ name: 'first_name', nullable: true, type: 'varchar' })
@@ -46,7 +47,7 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
-  @Column({ name: 'email_verified', default: false })
+  @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified: boolean;
 
   @Exclude()
@@ -61,7 +62,7 @@ export class User {
   @Column({ name: 'reset_token_expires', nullable: true, type: 'timestamp' })
   resetTokenExpires: Date | null;
 
-  @Column({ name: 'failed_login_attempts', default: 0 })
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts: number;
 
   @Column({ name: 'account_locked_until', nullable: true, type: 'timestamp' })
@@ -70,7 +71,7 @@ export class User {
   @Column({ name: 'last_login_at', nullable: true, type: 'timestamp' })
   lastLoginAt: Date | null;
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
   @Column({
@@ -98,4 +99,7 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt?: Date | null;
 }

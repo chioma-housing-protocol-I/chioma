@@ -127,6 +127,10 @@ impl PaymentContract {
             return Err(Error::NotTenant);
         }
 
+        if payment_amount <= 0 {
+            return Err(Error::InvalidPaymentAmount);
+        }
+
         if payment_amount != agreement.monthly_rent {
             return Err(Error::InvalidPaymentAmount);
         }

@@ -59,6 +59,11 @@ pub fn pay_rent_with_agent(
         return Err(PaymentError::AgreementNotActive);
     }
 
+    // Validate amount is strictly positive to prevent logical errors
+    if amount <= 0 {
+        return Err(PaymentError::InvalidAmount);
+    }
+
     // Validate amount matches monthly rent exactly
     if amount != agreement.monthly_rent {
         return Err(PaymentError::InvalidAmount);
