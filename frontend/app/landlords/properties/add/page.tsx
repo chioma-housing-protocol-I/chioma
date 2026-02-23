@@ -1,618 +1,357 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft, Upload, CheckCircle2, ChevronRight } from 'lucide-react';
 import {
-  Upload,
-  X,
-  Check,
-  AlertCircle,
-  Home,
-  DollarSign,
-  Image as ImageIcon,
-} from 'lucide-react';
-import Image from 'next/image';
+  propertyBasicDetailsSchema,
+  propertyAmenitiesSchema,
+  propertyMediaSchema,
+  type PropertyBasicDetails,
+  type PropertyAmenities,
+  type PropertyMedia,
+} from '@/lib/validation/property';
 
-interface FormData {
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  propertyType: string;
-  bedrooms: string;
-  bathrooms: string;
-  squareFeet: string;
-  rentAmount: string;
-  currency: string;
-  paymentPeriod: string;
-  description: string;
-  amenities: string[];
-}
-
-interface Notification {
-  type: 'success' | 'error';
-  message: string;
-}
+const STEPS = [
+  { id: 1, title: 'Basic Details', schema: propertyBasicDetailsSchema },
+  { id: 2, title: 'Amenities & Rules', schema: propertyAmenitiesSchema },
+  { id: 3, title: 'Media & Uploads', schema: propertyMediaSchema },
+];
 
 export default function AddPropertyPage() {
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    address: '',
-    city: '',
-    state: '',
-    propertyType: '',
-    bedrooms: '',
-    bathrooms: '',
-    squareFeet: '',
-    rentAmount: '',
-    currency: '₦',
-    paymentPeriod: 'monthly',
-    description: '',
-    amenities: [],
-  });
-
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
-    {},
-  );
-  const [notification, setNotification] = useState<Notification | null>(null);
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const propertyTypes = [
-    'Apartment',
-    'House',
-    'Duplex',
-    'Penthouse',
-    'Commercial',
-    'Office Space',
-    'Land',
-  ];
+  // Form setup for each step
+  const basicDetailsForm = useForm<PropertyBasicDetails>({
+    resolver: zodResolver(propertyBasicDetailsSchema),
+    defaultValues: {
+      title: '',
+      rent: undefined,
+      address: '',
+    },
+  });
 
-  const availableAmenities = [
-    'Parking',
-    'Swimming Pool',
-    'Gym',
-    '24/7 Security',
-    'Generator',
-    'Air Conditioning',
-    'Balcony',
-    'Garden',
-    'Elevator',
-    'WiFi',
-  ];
+  const amenitiesForm = useForm<PropertyAmenities>({
+    resolver: zodResolver(propertyAmenitiesSchema),
+    defaultValues: {
+      amenities: [],
+    },
+  });
 
-  const currencies = ['₦', '$', '€', '£'];
+  const mediaForm = useForm<PropertyMedia>({
+    resolver: zodResolver(propertyMediaSchema),
+    defaultValues: {
+      images: [],
+    },
+  });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
-    if (errors[name as keyof FormData]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+  const getCurrentForm = () => {
+    switch (currentStep) {
+      case 1:
+        return basicDetailsForm;
+      case 2:
+        return amenitiesForm;
+      case 3:
+        return mediaForm;
+      default:
+        return basicDetailsForm;
     }
   };
 
-  const handleAmenityToggle = (amenity: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter((a) => a !== amenity)
-        : [...prev.amenities, amenity],
-    }));
-  };
+  const handleNext = async () => {
+    const currentForm = getCurrentForm();
+    const isValid = await currentForm.trigger();
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const validFiles = files.filter((file) => {
-      const isValid = file.type.startsWith('image/');
-      const isUnder5MB = file.size <= 5 * 1024 * 1024;
-      return isValid && isUnder5MB;
-    });
-
-    if (validFiles.length !== files.length) {
-      showNotification(
-        'error',
-        'Some files were skipped. Only images under 5MB are allowed.',
-      );
+    if (isValid && currentStep < 3) {
+      setCurrentStep(currentStep + 1);
     }
-
-    setImages((prev) => [...prev, ...validFiles]);
-
-    // Create previews
-    validFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  const handleBack = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
+  const handleSubmit = async () => {
+    // Validate all forms before submission
+    const basicValid = await basicDetailsForm.trigger();
+    const amenitiesValid = await amenitiesForm.trigger();
+    const mediaValid = await mediaForm.trigger();
 
-    if (!formData.name.trim()) newErrors.name = 'Property name is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.state.trim()) newErrors.state = 'State is required';
-    if (!formData.propertyType)
-      newErrors.propertyType = 'Property type is required';
-    if (!formData.bedrooms || parseInt(formData.bedrooms) < 0)
-      newErrors.bedrooms = 'Valid number of bedrooms is required';
-    if (!formData.bathrooms || parseInt(formData.bathrooms) < 0)
-      newErrors.bathrooms = 'Valid number of bathrooms is required';
-    if (!formData.squareFeet || parseInt(formData.squareFeet) <= 0)
-      newErrors.squareFeet = 'Valid square footage is required';
-    if (!formData.rentAmount || parseFloat(formData.rentAmount) <= 0)
-      newErrors.rentAmount = 'Valid rent amount is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const showNotification = (type: 'success' | 'error', message: string) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      showNotification('error', 'Please fix the errors in the form');
-      return;
-    }
-
-    if (images.length === 0) {
-      showNotification('error', 'Please upload at least one property image');
+    if (!basicValid || !amenitiesValid || !mediaValid) {
       return;
     }
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form Data:', formData);
-      console.log('Images:', images);
-      showNotification('success', 'Property added successfully!');
-      setIsSubmitting(false);
+    // Collect all form data
+    const basicData = basicDetailsForm.getValues();
+    const amenitiesData = amenitiesForm.getValues();
+    const mediaData = mediaForm.getValues();
 
-      // Reset form
-      setFormData({
-        name: '',
-        address: '',
-        city: '',
-        state: '',
-        propertyType: '',
-        bedrooms: '',
-        bathrooms: '',
-        squareFeet: '',
-        rentAmount: '',
-        currency: '₦',
-        paymentPeriod: 'monthly',
-        description: '',
-        amenities: [],
-      });
-      setImages([]);
-      setImagePreviews([]);
-    }, 1500);
+    const formData = {
+      ...basicData,
+      ...amenitiesData,
+      ...mediaData,
+    };
+
+    // Simulate API call and IPFS upload
+    console.log('Submitting property data:', formData);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    setIsSubmitting(false);
+    router.push('/landlords/properties');
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Notification Toast */}
-      {notification && (
-        <div
-          className={`fixed top-6 right-6 z-50 flex items-center space-x-3 px-6 py-4 rounded-xl shadow-lg border animate-slide-in ${
-            notification.type === 'success'
-              ? 'bg-green-50 border-brand-green text-brand-green'
-              : 'bg-red-50 border-red-500 text-red-600'
-          }`}
-        >
-          {notification.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span className="font-semibold">{notification.message}</span>
-        </div>
-      )}
-
+    <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-          Add New Property
-        </h1>
-        <p className="text-neutral-500">
-          Fill in the details to list your property
-        </p>
+      <div className="flex items-center space-x-4">
+        <Link
+          href="/landlords/properties"
+          className="p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 rounded-full transition-colors"
+        >
+          <ArrowLeft size={24} />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+            Add New Property
+          </h1>
+          <p className="text-neutral-500 mt-1">
+            List a new property to manage and automate smart contracts.
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Property Information */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2.5 rounded-lg bg-blue-100">
-              <Home className="text-brand-blue" size={20} />
-            </div>
-            <h2 className="text-xl font-bold text-neutral-900">
-              Property Information
-            </h2>
-          </div>
+      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
+        {/* Stepper Header */}
+        <div className="bg-neutral-50/50 border-b border-neutral-200 px-8 py-6">
+          <div className="flex items-center justify-between relative">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-neutral-200 z-0"></div>
+            {STEPS.map((step) => {
+              const isActive = step.id === currentStep;
+              const isCompleted = step.id < currentStep;
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Property Name */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Property Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="e.g., Luxury Apartment at Victoria Island"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.name ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Address */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Street Address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                placeholder="e.g., 101 Adeola Odeku Street"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.address ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.address && (
-                <p className="text-red-500 text-sm mt-1">{errors.address}</p>
-              )}
-            </div>
-
-            {/* City */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                placeholder="e.g., Lagos"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.city ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.city && (
-                <p className="text-red-500 text-sm mt-1">{errors.city}</p>
-              )}
-            </div>
-
-            {/* State */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                State <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                placeholder="e.g., Lagos State"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.state ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.state && (
-                <p className="text-red-500 text-sm mt-1">{errors.state}</p>
-              )}
-            </div>
-
-            {/* Property Type */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Property Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="propertyType"
-                value={formData.propertyType}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.propertyType ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              >
-                <option value="">Select type</option>
-                {propertyTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              {errors.propertyType && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.propertyType}
-                </p>
-              )}
-            </div>
-
-            {/* Square Feet */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Square Feet <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="squareFeet"
-                value={formData.squareFeet}
-                onChange={handleInputChange}
-                placeholder="e.g., 1200"
-                min="0"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.squareFeet ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.squareFeet && (
-                <p className="text-red-500 text-sm mt-1">{errors.squareFeet}</p>
-              )}
-            </div>
-
-            {/* Bedrooms */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Bedrooms <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="bedrooms"
-                value={formData.bedrooms}
-                onChange={handleInputChange}
-                placeholder="e.g., 3"
-                min="0"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.bedrooms ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.bedrooms && (
-                <p className="text-red-500 text-sm mt-1">{errors.bedrooms}</p>
-              )}
-            </div>
-
-            {/* Bathrooms */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Bathrooms <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="bathrooms"
-                value={formData.bathrooms}
-                onChange={handleInputChange}
-                placeholder="e.g., 2"
-                min="0"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.bathrooms ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.bathrooms && (
-                <p className="text-red-500 text-sm mt-1">{errors.bathrooms}</p>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Describe your property..."
-                rows={4}
-                className="w-full px-4 py-3 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all resize-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Financial Details */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2.5 rounded-lg bg-green-100">
-              <DollarSign className="text-brand-green" size={20} />
-            </div>
-            <h2 className="text-xl font-bold text-neutral-900">
-              Financial Details
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Rent Amount */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Rent Amount <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="rentAmount"
-                value={formData.rentAmount}
-                onChange={handleInputChange}
-                placeholder="e.g., 2500000"
-                min="0"
-                step="0.01"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.rentAmount ? 'border-red-500' : 'border-neutral-200'
-                } focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all`}
-              />
-              {errors.rentAmount && (
-                <p className="text-red-500 text-sm mt-1">{errors.rentAmount}</p>
-              )}
-            </div>
-
-            {/* Currency */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Currency
-              </label>
-              <select
-                name="currency"
-                value={formData.currency}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all"
-              >
-                {currencies.map((curr) => (
-                  <option key={curr} value={curr}>
-                    {curr}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Payment Period */}
-            <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                Payment Period
-              </label>
-              <select
-                name="paymentPeriod"
-                value={formData.paymentPeriod}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all"
-              >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Amenities */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
-          <h2 className="text-xl font-bold text-neutral-900 mb-4">Amenities</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {availableAmenities.map((amenity) => (
-              <button
-                key={amenity}
-                type="button"
-                onClick={() => handleAmenityToggle(amenity)}
-                className={`px-4 py-3 rounded-lg border-2 text-sm font-semibold transition-all ${
-                  formData.amenities.includes(amenity)
-                    ? 'border-brand-blue bg-blue-50 text-brand-blue'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300'
-                }`}
-              >
-                {amenity}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Image Upload */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2.5 rounded-lg bg-purple-100">
-              <ImageIcon className="text-purple-600" size={20} />
-            </div>
-            <h2 className="text-xl font-bold text-neutral-900">
-              Property Images
-            </h2>
-          </div>
-
-          {/* Upload Area */}
-          <div className="mb-6">
-            <label className="block">
-              <div className="border-2 border-dashed border-neutral-300 rounded-xl p-8 text-center hover:border-brand-blue hover:bg-blue-50 transition-all cursor-pointer">
-                <Upload className="mx-auto text-neutral-400 mb-3" size={40} />
-                <p className="text-neutral-700 font-semibold mb-1">
-                  Click to upload or drag and drop
-                </p>
-                <p className="text-sm text-neutral-500">
-                  PNG, JPG, WEBP up to 5MB each
-                </p>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {/* Image Previews */}
-          {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group">
-                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-neutral-200">
-                    <Image
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+              return (
+                <div
+                  key={step.id}
+                  className="relative z-10 flex flex-col items-center"
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${
+                      isActive
+                        ? 'bg-brand-blue text-white ring-4 ring-brand-blue/20'
+                        : isCompleted
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white text-neutral-400 border-2 border-neutral-200'
+                    }`}
                   >
-                    <X size={16} />
-                  </button>
+                    {isCompleted ? <CheckCircle2 size={20} /> : step.id}
+                  </div>
+                  <span
+                    className={`mt-3 text-sm font-semibold ${
+                      isActive ? 'text-brand-blue' : 'text-neutral-500'
+                    }`}
+                  >
+                    {step.title}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex items-center justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => window.history.back()}
-            className="px-6 py-3 bg-neutral-100 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-8 py-3 bg-brand-blue text-white font-semibold rounded-lg hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Adding Property...</span>
-              </>
-            ) : (
-              <span>Add Property</span>
+        {/* Form Content */}
+        <div className="p-8">
+          <div className="min-h-[300px]">
+            {currentStep === 1 && (
+              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-neutral-900">
+                      Property Title
+                    </label>
+                    <input
+                      {...basicDetailsForm.register('title')}
+                      type="text"
+                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+                      placeholder="e.g. Sunset View Apartments"
+                    />
+                    {basicDetailsForm.formState.errors.title && (
+                      <p className="text-sm text-red-600">
+                        {basicDetailsForm.formState.errors.title.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-neutral-900">
+                      Monthly Rent (USDC)
+                    </label>
+                    <input
+                      {...basicDetailsForm.register('rent', {
+                        valueAsNumber: true,
+                      })}
+                      type="number"
+                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+                      placeholder="e.g. 2400"
+                    />
+                    {basicDetailsForm.formState.errors.rent && (
+                      <p className="text-sm text-red-600">
+                        {basicDetailsForm.formState.errors.rent.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-neutral-900">
+                    Full Address
+                  </label>
+                  <textarea
+                    {...basicDetailsForm.register('address')}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all resize-none"
+                    placeholder="Enter the complete address..."
+                  />
+                  {basicDetailsForm.formState.errors.address && (
+                    <p className="text-sm text-red-600">
+                      {basicDetailsForm.formState.errors.address.message}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
+
+            {currentStep === 2 && (
+              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-neutral-900">
+                    Included Amenities
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {[
+                      'WiFi',
+                      'Parking',
+                      'Pool',
+                      'Gym',
+                      'Laundry',
+                      'Furnished',
+                    ].map((amenity) => (
+                      <label
+                        key={amenity}
+                        className="flex items-center space-x-3 p-4 border border-neutral-200 rounded-xl cursor-pointer hover:bg-neutral-50 transition-colors"
+                      >
+                        <input
+                          {...amenitiesForm.register('amenities')}
+                          type="checkbox"
+                          value={amenity}
+                          className="w-5 h-5 rounded border-neutral-300 text-brand-blue focus:ring-brand-blue"
+                        />
+                        <span className="text-neutral-700 font-medium">
+                          {amenity}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {amenitiesForm.formState.errors.amenities && (
+                    <p className="text-sm text-red-600">
+                      {amenitiesForm.formState.errors.amenities.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 3 && (
+              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-neutral-900">
+                    Property Images
+                  </label>
+                  <p className="text-xs text-neutral-500 mb-4">
+                    Images will be uploaded to IPFS (Pinata) for immutable
+                    storage.
+                  </p>
+
+                  <input
+                    {...mediaForm.register('images')}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="border-2 border-dashed border-neutral-300 rounded-2xl p-12 text-center hover:bg-neutral-50 hover:border-brand-blue/50 transition-colors cursor-pointer group block"
+                  >
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                      <Upload className="text-brand-blue" size={32} />
+                    </div>
+                    <h4 className="text-lg font-bold text-neutral-900 mb-1">
+                      Click to upload or drag & drop
+                    </h4>
+                    <p className="text-neutral-500">
+                      SVG, PNG, JPG or GIF (max. 5MB each, up to 10 images)
+                    </p>
+                  </label>
+                  {mediaForm.formState.errors.images && (
+                    <p className="text-sm text-red-600">
+                      {mediaForm.formState.errors.images.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-neutral-100">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={currentStep === 1 || isSubmitting}
+              className={`px-6 py-3 font-semibold rounded-lg transition-colors ${
+                currentStep === 1
+                  ? 'text-neutral-300 cursor-not-allowed'
+                  : 'text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              Back
+            </button>
+
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center space-x-2 px-6 py-3 bg-white border border-blue-500 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                <span>Continue</span>
+                <ChevronRight size={20} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex items-center justify-center space-x-2 px-8 py-3 bg-brand-blue text-white font-semibold rounded-lg hover:bg-brand-blue-dark transition-all shadow-xl shadow-brand-blue/20 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 size={20} />
+                    <span>Publish Data to IPFS</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

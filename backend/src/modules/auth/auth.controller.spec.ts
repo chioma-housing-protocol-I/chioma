@@ -25,6 +25,7 @@ describe('AuthController', () => {
       lastName: 'User',
       role: UserRole.TENANT,
     },
+    mfaRequired: false as const,
   };
 
   const mockMessageResponse = {
@@ -113,6 +114,7 @@ describe('AuthController', () => {
 
       const expected = { ...mockAuthResponse } as any;
       delete expected.refreshToken;
+      delete expected.mfaRequired; // controller strips mfaRequired from the login response body
       expect(result).toEqual(expected);
       expect(service.login).toHaveBeenCalledWith(loginDto);
     });

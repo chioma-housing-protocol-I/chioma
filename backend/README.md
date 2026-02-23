@@ -50,6 +50,34 @@ docker-compose up -d
 pnpm run migration:run
 ```
 
+## Seed initial admin user
+
+```bash
+# Create admin with defaults
+pnpm run seed:admin
+
+# Create admin with custom credentials
+pnpm run seed:admin -- --email admin@example.com --password SecurePass123!
+
+# Force update existing admin (recommended for production automation)
+pnpm run seed:admin:prod
+```
+
+Admin seed defaults can be configured with environment variables:
+
+```dotenv
+ADMIN_DEFAULT_EMAIL=admin@chioma.local
+ADMIN_DEFAULT_FIRST_NAME=System
+ADMIN_DEFAULT_LAST_NAME=Administrator
+ADMIN_AUTO_GENERATE_PASSWORD=true
+```
+
+Docker deployment integration example:
+
+```dockerfile
+RUN pnpm run seed:admin:prod
+```
+
 ## Run tests
 
 ```bash

@@ -1,25 +1,8 @@
 use super::*;
 use soroban_sdk::{
     testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke},
-    vec, Address, Env, IntoVal, String,
+    Address, Env, IntoVal, String,
 };
-
-#[test]
-fn test_hello() {
-    let env = Env::default();
-    let contract_id = env.register(Contract, ());
-    let client = ContractClient::new(&env, &contract_id);
-
-    let words = client.hello(&String::from_str(&env, "Dev"));
-    assert_eq!(
-        words,
-        vec![
-            &env,
-            String::from_str(&env, "Hello"),
-            String::from_str(&env, "Dev"),
-        ]
-    );
-}
 
 #[test]
 fn test_successful_initialization() {
@@ -278,8 +261,10 @@ fn test_create_agreement_success() {
 
     let events = env.events().all();
     assert_eq!(events.len(), 1);
+    // Event structure: (contract_id, topics, data)
+    // Topics now include: ["agr_created", tenant, landlord]
     let event = events.last().unwrap();
-    assert_eq!(event.1.len(), 1);
+    assert_eq!(event.1.len(), 3); // 3 topics: event name + tenant + landlord
 }
 
 #[test]
@@ -354,6 +339,33 @@ fn test_negative_rent_rejected() {
         &tenant,
         &None,
         &-100,
+        &1000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_zero_monthly_rent_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "ZERO_RENT");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &0,
         &1000,
         &100,
         &200,
@@ -747,4 +759,148 @@ fn test_get_agreement_count() {
     );
 
     assert_eq!(client.get_agreement_count(), 2);
+}
+
+use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn test_fuzz_create_agreement_parameters(
+        monthly_rent in -10000i128..10000i128,
+        security_deposit in -10000i128..10000i128,
+        start_date in 0u64..10000u64,
+        end_date in 0u64..10000u64,
+        agent_commission_rate in 0u32..200u32
+    ) {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let client = create_contract(&env);
+        let tenant = Address::generate(&env);
+        let landlord = Address::generate(&env);
+        let payment_token = Address::generate(&env);
+        let agreement_id = String::from_str(&env, "FUZZ_AGREEMENT");
+
+        // Disable panic catching since we expect some combinations to fail
+        let result = client.try_create_agreement(
+            &agreement_id,
+            &landlord,
+            &tenant,
+            &None,
+            &monthly_rent,
+            &security_deposit,
+            &start_date,
+            &end_date,
+            &agent_commission_rate,
+            &payment_token,
+        );
+
+        let is_valid_rent = monthly_rent > 0;
+        let is_valid_deposit = security_deposit >= 0;
+        let is_valid_dates = start_date < end_date;
+        let is_valid_commission = agent_commission_rate <= 100;
+
+        let should_succeed = is_valid_rent && is_valid_deposit && is_valid_dates && is_valid_commission;
+
+        if should_succeed {
+            prop_assert!(result.is_ok());
+        } else {
+            prop_assert!(result.is_err());
+        }
+    }
+}
+
+#[test]
+fn test_contract_paused_operations() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let fee_collector = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let payment_token = Address::generate(&env);
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: fee_collector.clone(),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    // Pause contract
+    let paused_config = Config {
+        fee_bps: 100,
+        fee_collector: fee_collector.clone(),
+        paused: true,
+    };
+    client.update_config(&paused_config);
+
+    // Verify state is paused
+    let state = client.get_state().unwrap();
+    assert!(state.config.paused);
+
+    // Try create agreement (should fail with ContractPaused = 17)
+    let res = client.try_create_agreement(
+        &String::from_str(&env, "agreement-paused"),
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &500,
+        &100,
+        &200,
+        &10,
+        &payment_token,
+    );
+    assert_eq!(res, Err(Ok(RentalError::ContractPaused)));
+
+    // Unpause
+    let unpaused_config = Config {
+        fee_bps: 100,
+        fee_collector: fee_collector.clone(),
+        paused: false,
+    };
+    client.update_config(&unpaused_config);
+
+    // Create agreement
+    let agreement_id_str = "agreement-active";
+    let agreement_id = String::from_str(&env, agreement_id_str);
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &500,
+        &100,
+        &200,
+        &10,
+        &payment_token,
+    );
+
+    // Manually set to Pending (as create_agreement sets it to Draft)
+    let mut agreement = client.get_agreement(&agreement_id).unwrap();
+    agreement.status = AgreementStatus::Pending;
+
+    // We need to use env.as_contract to write to storage
+    env.as_contract(&client.address, || {
+        env.storage().persistent().set(
+            &storage::DataKey::Agreement(agreement_id.clone()),
+            &agreement,
+        );
+    });
+
+    // Pause again
+    client.update_config(&paused_config);
+
+    // Try sign agreement (should fail)
+    let res_sign = client.try_sign_agreement(&tenant, &agreement_id);
+    assert_eq!(res_sign, Err(Ok(RentalError::ContractPaused)));
+
+    // Unpause and verify success
+    client.update_config(&unpaused_config);
+    let res_sign_success = client.try_sign_agreement(&tenant, &agreement_id);
+    assert!(res_sign_success.is_ok());
 }

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Properties-navbar';
+import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
 import {
   Heart,
   MapPin,
@@ -16,11 +17,20 @@ import {
   Minus,
   Compass,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PropertyListing() {
   const [, setSelectedFilter] = useState('Property Type');
   const [searchAsIMove, setSearchAsIMove] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading data
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const properties = [
     {
@@ -220,97 +230,107 @@ export default function PropertyListing() {
 
               {/* Property Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-4 mb-8">
-                {properties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
-                  >
-                    {/* Image */}
-                    <div className="relative h-60 sm:h-56 bg-gray-200 overflow-hidden">
-                      <Image
-                        src={property.image || '/placeholder.svg'}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                        width={40}
-                        height={40}
-                      />
-                      {/* Verified Badge */}
-                      {property.verified && (
-                        <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-xs sm:text-sm font-medium">
-                          <svg
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          Verified
-                        </div>
-                      )}
-                      {/* Wishlist Heart */}
-                      <button className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 transition shadow">
-                        <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                      </button>
-                      {/* Lease Badge */}
-                      <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-xs sm:text-sm font-medium">
-                        Smart Lease Ready
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 sm:p-5">
-                      {/* Price */}
-                      <p className="text-blue-600 font-bold text-lg sm:text-xl mb-2">
-                        {property.price}{' '}
-                        <span className="text-gray-500 font-normal text-sm">
-                          /yr
-                        </span>
-                      </p>
-
-                      {/* Title */}
-                      <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">
-                        {property.title}
-                      </h3>
-
-                      {/* Location */}
-                      <div className="flex gap-2 text-gray-600 mb-4 text-xs sm:text-sm">
-                        <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                        <p>{property.location}</p>
-                      </div>
-
-                      {/* Features */}
-                      <div className="flex gap-4 sm:gap-6 mb-4 pb-4 border-b border-gray-200 text-gray-700 text-xs sm:text-sm">
-                        <div className="flex items-center gap-1">
-                          <Bed className="w-4 h-4" />
-                          <span>{property.beds} Beds</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Bath className="w-4 h-4" />
-                          <span>{property.baths} Baths</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Ruler className="w-4 h-4" />
-                          <span>{property.sqft} sqft</span>
+                {isLoading ? (
+                  // Show skeleton loaders while loading
+                  <>
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <PropertyCardSkeleton key={index} />
+                    ))}
+                  </>
+                ) : (
+                  // Show actual property cards when loaded
+                  properties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow bg-white"
+                    >
+                      {/* Image */}
+                      <div className="relative h-60 sm:h-56 bg-gray-200 overflow-hidden">
+                        <Image
+                          src={property.image || '/placeholder.svg'}
+                          alt={property.title}
+                          className="w-full h-full object-cover"
+                          width={40}
+                          height={40}
+                        />
+                        {/* Verified Badge */}
+                        {property.verified && (
+                          <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-xs sm:text-sm font-medium">
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Verified
+                          </div>
+                        )}
+                        {/* Wishlist Heart */}
+                        <button className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 transition shadow">
+                          <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                        </button>
+                        {/* Lease Badge */}
+                        <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-xs sm:text-sm font-medium">
+                          Smart Lease Ready
                         </div>
                       </div>
 
-                      {/* Manager */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-linear-to-r from-pink-400 to-orange-400" />
-                        <p className="text-xs sm:text-sm text-gray-700">
-                          Managed by{' '}
-                          <span className="font-semibold">
-                            {property.manager}
+                      {/* Content */}
+                      <div className="p-4 sm:p-5">
+                        {/* Price */}
+                        <p className="text-blue-600 font-bold text-lg sm:text-xl mb-2">
+                          {property.price}{' '}
+                          <span className="text-gray-500 font-normal text-sm">
+                            /yr
                           </span>
                         </p>
+
+                        {/* Title */}
+                        <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">
+                          {property.title}
+                        </h3>
+
+                        {/* Location */}
+                        <div className="flex gap-2 text-gray-600 mb-4 text-xs sm:text-sm">
+                          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                          <p>{property.location}</p>
+                        </div>
+
+                        {/* Features */}
+                        <div className="flex gap-4 sm:gap-6 mb-4 pb-4 border-b border-gray-200 text-gray-700 text-xs sm:text-sm">
+                          <div className="flex items-center gap-1">
+                            <Bed className="w-4 h-4" />
+                            <span>{property.beds} Beds</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Bath className="w-4 h-4" />
+                            <span>{property.baths} Baths</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Ruler className="w-4 h-4" />
+                            <span>{property.sqft} sqft</span>
+                          </div>
+                        </div>
+
+                        {/* Manager */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-linear-to-r from-pink-400 to-orange-400" />
+                          <p className="text-xs sm:text-sm text-gray-700">
+                            Managed by{' '}
+                            <span className="font-semibold">
+                              {property.manager}
+                            </span>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Load More Button */}

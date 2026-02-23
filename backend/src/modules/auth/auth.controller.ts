@@ -27,6 +27,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User, AuthMethod } from '../users/entities/user.entity';
@@ -67,10 +68,12 @@ export class AuthController {
   @ApiResponse({
     status: 400,
     description: 'Invalid input or password does not meet requirements',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 409,
     description: 'Email already registered',
+    type: ErrorResponseDto,
   })
   async register(
     @Body() registerDto: RegisterDto,
@@ -135,6 +138,7 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid credentials or account locked',
+    type: ErrorResponseDto,
   })
   async login(
     @Body() loginDto: LoginDto,
@@ -158,7 +162,7 @@ export class AuthController {
       ) {
         return {
           mfaRequired: true,
-          mfaToken: result.mfaToken as string,
+          mfaToken: result.mfaToken,
           user: result.user,
         };
       }
@@ -219,6 +223,7 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid MFA code or token',
+    type: ErrorResponseDto,
   })
   async completeMfaLogin(
     @Body() completeMfaLoginDto: CompleteMfaLoginDto,
@@ -296,6 +301,7 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid or expired refresh token',
+    type: ErrorResponseDto,
   })
   async refreshTokens(
     @Body() refreshTokenDto: RefreshTokenDto,
@@ -341,6 +347,7 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
+    type: ErrorResponseDto,
   })
   async logout(
     @CurrentUser() user: User,
@@ -415,6 +422,7 @@ export class AuthController {
   @ApiResponse({
     status: 400,
     description: 'Invalid or expired reset token',
+    type: ErrorResponseDto,
   })
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
@@ -436,6 +444,7 @@ export class AuthController {
   @ApiResponse({
     status: 400,
     description: 'Invalid or expired verification token',
+    type: ErrorResponseDto,
   })
   async verifyEmail(
     @Query() verifyEmailDto: VerifyEmailDto,
@@ -459,6 +468,7 @@ export class AuthController {
   @ApiResponse({
     status: 400,
     description: 'MFA already enabled',
+    type: ErrorResponseDto,
   })
   async enableMfa(
     @CurrentUser() user: User,
@@ -483,6 +493,7 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid MFA token',
+    type: ErrorResponseDto,
   })
   async verifyMfa(
     @CurrentUser() user: User,
@@ -541,6 +552,11 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Backup codes regenerated successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: ErrorResponseDto,
   })
   async regenerateBackupCodes(@CurrentUser() user: User) {
     const codes = await this.mfaService.regenerateBackupCodes(user.id);

@@ -6,4 +6,5 @@ pub enum DataKey {
     Agreement(String),
     AgreementCount,
     State,
+    Initialized,
 }

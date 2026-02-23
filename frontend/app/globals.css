@@ -67,6 +67,21 @@
       opacity: 1;
     }
   }
+
+  .animate-auth-enter {
+    animation: authSlideIn 0.7s ease-out both;
+  }
+
+  @keyframes authSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(2rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 body {

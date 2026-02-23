@@ -26,17 +26,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
+<<<<<<< issue-134-add-404-page
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: "10"
+=======
+>>>>>>> main
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -46,7 +54,11 @@ jobs:
 
       - name: Check Prettier formatting
         run: |
+<<<<<<< issue-134-add-404-page
           if pnpm list prettier --depth=0 > /dev/null 2>&1; then
+=======
+          if pnpm list prettier --depth=0 | grep -q "prettier"; then
+>>>>>>> main
             pnpm exec prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
           else
             echo "Prettier not installed, skipping formatting check"
@@ -64,24 +76,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
+<<<<<<< issue-134-add-404-page
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: "10"
+=======
+>>>>>>> main
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run unit tests
         run: |
+<<<<<<< issue-134-add-404-page
           if pnpm list jest --depth=0 > /dev/null 2>&1; then
+=======
+          if pnpm list jest --depth=0 | grep -q "jest"; then
+>>>>>>> main
             pnpm test -- --coverage
           else
             echo "Jest not installed, skipping unit tests"
@@ -89,7 +113,11 @@ jobs:
 
       - name: Run E2E tests
         run: |
+<<<<<<< issue-134-add-404-page
           if pnpm list cypress --depth=0 > /dev/null 2>&1; then
+=======
+          if pnpm list cypress --depth=0 | grep -q "cypress"; then
+>>>>>>> main
             pnpm run test:e2e
           else
             echo "Cypress not installed, skipping E2E tests"
@@ -107,17 +135,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
+<<<<<<< issue-134-add-404-page
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: "10"
+=======
+>>>>>>> main
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

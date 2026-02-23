@@ -3,8 +3,12 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { Property, ListingStatus } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
@@ -26,7 +30,25 @@ export class PropertiesService {
     private readonly amenityRepository: Repository<PropertyAmenity>,
     @InjectRepository(RentalUnit)
     private readonly rentalUnitRepository: Repository<RentalUnit>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
+
+  private async clearPropertiesCache(): Promise<void> {
+    const store = (this.cacheManager as any).store;
+    if (store.keys) {
+      const keys = await store.keys('properties:list:*');
+      for (const key of keys) {
+        await this.cacheManager.del(key);
+      }
+    }
+  }
+
+  private generateCacheKey(query: QueryPropertyDto): string {
+    const queryStr = JSON.stringify(query);
+    const hash = crypto.createHash('md5').update(queryStr).digest('hex');
+    return `properties:list:${hash}`;
+  }
 
   async create(
     createPropertyDto: CreatePropertyDto,
@@ -73,6 +95,7 @@ export class PropertiesService {
       await this.rentalUnitRepository.save(propertyUnits);
     }
 
+    await this.clearPropertiesCache();
     return this.findOne(savedProperty.id);
   }
 
@@ -89,6 +112,25 @@ export class PropertiesService {
       sortOrder = 'DESC',
       ...filters
     } = query;
+
+    // Caching logic
+    const isPublicListing =
+      filters.status === ListingStatus.PUBLISHED && !filters.ownerId;
+    let cacheKey: string | null = null;
+
+    if (isPublicListing) {
+      cacheKey = this.generateCacheKey(query);
+      const cachedData = await this.cacheManager.get<{
+        data: Property[];
+        total: number;
+        page: number;
+        limit: number;
+      }>(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+    }
 
     const queryBuilder = this.propertyRepository
       .createQueryBuilder('property')
@@ -143,19 +185,19 @@ export class PropertiesService {
     }
 
     if (filters.city) {
-      queryBuilder.andWhere('LOWER(property.city) = LOWER(:city)', {
+      queryBuilder.andWhere('property.city ILIKE :city', {
         city: filters.city,
       });
     }
 
     if (filters.state) {
-      queryBuilder.andWhere('LOWER(property.state) = LOWER(:state)', {
+      queryBuilder.andWhere('property.state ILIKE :state', {
         state: filters.state,
       });
     }
 
     if (filters.country) {
-      queryBuilder.andWhere('LOWER(property.country) = LOWER(:country)', {
+      queryBuilder.andWhere('property.country ILIKE :country', {
         country: filters.country,
       });
     }
@@ -168,15 +210,21 @@ export class PropertiesService {
 
     if (filters.search) {
       queryBuilder.andWhere(
-        '(LOWER(property.title) LIKE LOWER(:search) OR LOWER(property.description) LIKE LOWER(:search))',
+        '(property.title ILIKE :search OR property.description ILIKE :search)',
         { search: `%${filters.search}%` },
       );
     }
 
     if (filters.amenities && filters.amenities.length > 0) {
+      const amenityParams = Object.fromEntries(
+        filters.amenities.map((a, i) => [`amenity${i}`, a]),
+      );
+      const amenityConditions = filters.amenities
+        .map((_, i) => `pa.name ILIKE :amenity${i}`)
+        .join(' OR ');
       queryBuilder.andWhere(
-        'EXISTS (SELECT 1 FROM property_amenities pa WHERE pa.property_id = property.id AND LOWER(pa.name) IN (:...amenities))',
-        { amenities: filters.amenities.map((a) => a.toLowerCase()) },
+        `EXISTS (SELECT 1 FROM property_amenities pa WHERE pa.property_id = property.id AND (${amenityConditions}))`,
+        amenityParams,
       );
     }
 
@@ -194,17 +242,20 @@ export class PropertiesService {
       : 'createdAt';
     queryBuilder.orderBy(`property.${actualSortBy}`, sortOrder);
 
-    const skip = (page - 1) * limit;
-    queryBuilder.skip(skip).take(limit);
-
     const [data, total] = await queryBuilder.getManyAndCount();
 
-    return {
+    const result = {
       data,
       total,
       page,
       limit,
     };
+
+    if (isPublicListing && cacheKey) {
+      await this.cacheManager.set(cacheKey, result, 900); // 15 minutes
+    }
+
+    return result;
   }
 
   async findOne(id: string): Promise<Property> {
@@ -283,6 +334,7 @@ export class PropertiesService {
       }
     }
 
+    await this.clearPropertiesCache();
     return this.findOne(id);
   }
 
@@ -290,6 +342,7 @@ export class PropertiesService {
     const property = await this.findOne(id);
     this.verifyOwnership(property, user);
     await this.propertyRepository.remove(property);
+    await this.clearPropertiesCache();
   }
 
   async publish(id: string, user: User): Promise<Property> {
@@ -317,21 +370,27 @@ export class PropertiesService {
     }
 
     property.status = ListingStatus.PUBLISHED;
-    return await this.propertyRepository.save(property);
+    const saved = await this.propertyRepository.save(property);
+    await this.clearPropertiesCache();
+    return saved;
   }
 
   async archive(id: string, user: User): Promise<Property> {
     const property = await this.findOne(id);
     this.verifyOwnership(property, user);
     property.status = ListingStatus.ARCHIVED;
-    return await this.propertyRepository.save(property);
+    const saved = await this.propertyRepository.save(property);
+    await this.clearPropertiesCache();
+    return saved;
   }
 
   async markAsRented(id: string, user: User): Promise<Property> {
     const property = await this.findOne(id);
     this.verifyOwnership(property, user);
     property.status = ListingStatus.RENTED;
-    return await this.propertyRepository.save(property);
+    const saved = await this.propertyRepository.save(property);
+    await this.clearPropertiesCache();
+    return saved;
   }
 
   private verifyOwnership(property: Property, user: User): void {

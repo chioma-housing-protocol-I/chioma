@@ -16,4 +16,5 @@ pub enum RentalError {
     NotTenant = 14,
     InvalidState = 15,
     Expired = 16,
+    ContractPaused = 17,
 }
