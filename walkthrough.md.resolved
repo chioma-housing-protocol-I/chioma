@@ -1,0 +1,50 @@
+# Tenant Dashboard Walkthrough
+
+## What I Accomplished
+
+1. **Dashboard Setup & Routing**:
+   - Created the folder structure `app/dashboard` for the tenant dashboard.
+   - Wired up route protection using [middleware.ts](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/middleware.ts). Now, anyone accessing `/dashboard` without an auth cookie is automatically redirected to the login page.
+   
+2. **Dashboard Layout & Navigation**:
+   - Built a custom [DashboardLayout](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/components/dashboard/DashboardLayout.tsx#26-205) in [app/dashboard/layout.tsx](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/app/dashboard/layout.tsx).
+   - Developed a responsive [Sidebar.tsx](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/components/dashboard/Sidebar.tsx) component that features a dark `"bg-neutral-900"` theme with clean hover states and icons.
+   - Kept mobile design clean by collapsing the sidebar into a hamburger menu, with the header utilizing `backdrop-blur-md` for a modern, glass feel.
+   - Added a "Connect Wallet" placeholder button strictly for the authenticated tenant experience.
+
+3. **Overview Widgets & Dashboard Page**:
+   - Assembled [app/dashboard/page.tsx](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/app/dashboard/page.tsx) as the main overview page.
+   - Built high-fidelity information cards using Tailwind styling (`rounded-3xl shadow-sm`, `bg-emerald-50`, etc.) covering **Next Payment Due, Active Lease,** and **Rent Paid This Year**.
+   - Integrated `recharts` to render a responsive micro-chart inside the "Rent Paid This Year" widget, satisfying the lightweight chart requirement.
+   - Designed a modern **Active Agreements** table that scales perfectly without thick vertical borders and utilizes aesthetic status badges.
+
+## What Was Tested
+
+- **Typescript Compilation**: Ran `tsc` to verify that all components, including generic chart properties and Lucide React icons, had zero type errors.
+- **Component Hierarchy**: Ensured that the [.tsx](file:///c:/Users/TOSHIBA/Desktop/chioma/frontend/app/page.tsx) structure uses proper Next.js `"use client"` directives appropriately where `useState` hooks are initialized (e.g. for collapsing the Sidebar).
+
+## Validation Results
+
+- The build steps execute cleanly. All imports resolve properly across the project.
+- Next.js successfully recognizes `/dashboard` mapped under the middleware protection array.
+- The UI strictly adheres to the provided design guidelines: dark sidebar, white/glass hover states, high-padding tables, and mobile stacking structure.
+
+### Demonstration & Testing
+
+I've tested the live UI using the automated browser system explicitly validating both desktop scaling (showing full-width layout) and mobile layouts (confirming Flex stacking and hamburger menu capability).
+
+#### Walkthrough Video
+![Browser Navigation and Layout Testing Demo](C:\Users\TOSHIBA\.gemini\antigravity\brain\45536482-85cd-4799-9c2c-b2d3928d155e\tenant_dashboard_demo_1771721062751.webp)
+
+<br/>
+
+#### Visual Artifacts
+````carousel
+![Desktop Agreements Table view with responsive charting](C:\Users\TOSHIBA\.gemini\antigravity\brain\45536482-85cd-4799-9c2c-b2d3928d155e\desktop_dashboard_bottom_1771721250359.png)
+<!-- slide -->
+![Mobile Layout stacking check successfully rendering flex-cols](C:\Users\TOSHIBA\.gemini\antigravity\brain\45536482-85cd-4799-9c2c-b2d3928d155e\mobile_dashboard_overview_1771721262861.png)
+<!-- slide -->
+![Mobile navigation Drawer (Sidebar) successfully overlapping and locking background](C:\Users\TOSHIBA\.gemini\antigravity\brain\45536482-85cd-4799-9c2c-b2d3928d155e\mobile_sidebar_open_1771721270757.png)
+````
+
+You can visit `http://localhost:3000/dashboard` on your running local server to preview the newly minted Tenant portal.
