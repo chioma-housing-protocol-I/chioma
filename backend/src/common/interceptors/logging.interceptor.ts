@@ -83,8 +83,7 @@ export class LoggingInterceptor implements NestInterceptor {
         },
         error: (error: unknown) => {
           const duration = Date.now() - startTime;
-          const statusCode =
-            (error as { status?: number })?.status ?? 500;
+          const statusCode = (error as { status?: number })?.status ?? 500;
           const message =
             error instanceof Error ? error.message : String(error);
           const stack = error instanceof Error ? error.stack : undefined;
