@@ -470,6 +470,9 @@ describe('PropertiesService', () => {
         city: 'New York',
       });
 
+      // Note: After refactoring to use PropertyQueryBuilder,
+      // the query building logic is now in a separate class
+      // but the interface and behavior remain the same
       expect(mockQueryBuilder.andWhere).toHaveBeenCalled();
     });
 

@@ -18,9 +18,13 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
 import { User, UserRole } from '../users/entities/user.entity';
+import { PropertyQueryBuilder } from './property-query-builder';
 
 @Injectable()
 export class PropertiesService {
+  findById(propertyId: any) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
@@ -132,117 +136,21 @@ export class PropertiesService {
       }
     }
 
-    const queryBuilder = this.propertyRepository
+    // Create base query with relations
+    const baseQuery = this.propertyRepository
       .createQueryBuilder('property')
       .leftJoinAndSelect('property.images', 'images')
       .leftJoinAndSelect('property.amenities', 'amenities')
       .leftJoinAndSelect('property.owner', 'owner');
 
-    if (filters.type) {
-      queryBuilder.andWhere('property.type = :type', { type: filters.type });
-    }
+    // Use PropertyQueryBuilder for clean, maintainable query building
+    const propertyQueryBuilder = new PropertyQueryBuilder(baseQuery);
 
-    if (filters.status) {
-      queryBuilder.andWhere('property.status = :status', {
-        status: filters.status,
-      });
-    }
-
-    if (filters.minPrice !== undefined) {
-      queryBuilder.andWhere('property.price >= :minPrice', {
-        minPrice: filters.minPrice,
-      });
-    }
-
-    if (filters.maxPrice !== undefined) {
-      queryBuilder.andWhere('property.price <= :maxPrice', {
-        maxPrice: filters.maxPrice,
-      });
-    }
-
-    if (filters.minBedrooms !== undefined) {
-      queryBuilder.andWhere('property.bedrooms >= :minBedrooms', {
-        minBedrooms: filters.minBedrooms,
-      });
-    }
-
-    if (filters.maxBedrooms !== undefined) {
-      queryBuilder.andWhere('property.bedrooms <= :maxBedrooms', {
-        maxBedrooms: filters.maxBedrooms,
-      });
-    }
-
-    if (filters.minBathrooms !== undefined) {
-      queryBuilder.andWhere('property.bathrooms >= :minBathrooms', {
-        minBathrooms: filters.minBathrooms,
-      });
-    }
-
-    if (filters.maxBathrooms !== undefined) {
-      queryBuilder.andWhere('property.bathrooms <= :maxBathrooms', {
-        maxBathrooms: filters.maxBathrooms,
-      });
-    }
-
-    if (filters.city) {
-      queryBuilder.andWhere('property.city ILIKE :city', {
-        city: filters.city,
-      });
-    }
-
-    if (filters.state) {
-      queryBuilder.andWhere('property.state ILIKE :state', {
-        state: filters.state,
-      });
-    }
-
-    if (filters.country) {
-      queryBuilder.andWhere('property.country ILIKE :country', {
-        country: filters.country,
-      });
-    }
-
-    if (filters.ownerId) {
-      queryBuilder.andWhere('property.ownerId = :ownerId', {
-        ownerId: filters.ownerId,
-      });
-    }
-
-    if (filters.search) {
-      queryBuilder.andWhere(
-        '(property.title ILIKE :search OR property.description ILIKE :search)',
-        { search: `%${filters.search}%` },
-      );
-    }
-
-    if (filters.amenities && filters.amenities.length > 0) {
-      const amenityParams = Object.fromEntries(
-        filters.amenities.map((a, i) => [`amenity${i}`, a]),
-      );
-      const amenityConditions = filters.amenities
-        .map((_, i) => `pa.name ILIKE :amenity${i}`)
-        .join(' OR ');
-      queryBuilder.andWhere(
-        `EXISTS (SELECT 1 FROM property_amenities pa WHERE pa.property_id = property.id AND (${amenityConditions}))`,
-        amenityParams,
-      );
-    }
-
-    const validSortFields = [
-      'createdAt',
-      'updatedAt',
-      'price',
-      'bedrooms',
-      'bathrooms',
-      'area',
-      'title',
-    ];
-    const actualSortBy = validSortFields.includes(sortBy)
-      ? sortBy
-      : 'createdAt';
-    queryBuilder.orderBy(`property.${actualSortBy}`, sortOrder);
-
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [data, total] = await propertyQueryBuilder
+      .applyFilters(filters)
+      .applySorting(sortBy, sortOrder)
+      .applyPagination(page, limit)
+      .execute();
 
     const result = {
       data,
@@ -251,8 +159,9 @@ export class PropertiesService {
       limit,
     };
 
+    // Cache public listings
     if (isPublicListing && cacheKey) {
-      await this.cacheManager.set(cacheKey, result, 900); // 15 minutes
+      await this.cacheManager.set(cacheKey, result, 300000); // 5 minutes
     }
 
     return result;

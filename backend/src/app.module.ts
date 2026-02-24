@@ -118,6 +118,8 @@ import { StorageModule } from './modules/storage/storage.module';
     ProfileModule,
     SecurityModule,
     StorageModule,
+    // Maintenance module
+    require('./modules/maintenance/maintenance.module').MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [

@@ -146,7 +146,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden relative shrink-0">
               <Image
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-                alt="User"
+                alt="Sarah Jenks profile avatar"
                 width={40}
                 height={40}
               />

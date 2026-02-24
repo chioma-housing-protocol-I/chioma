@@ -13,11 +13,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../notifications/email.service';
 import { User } from '../users/entities/user.entity';
-import {
-  MfaDevice,
-  MfaDeviceStatus,
-  MfaDeviceType,
-} from './entities/mfa-device.entity';
+import { MfaDevice } from './entities/mfa-device.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -26,10 +22,10 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   AuthSuccessResponseDto,
   MfaRequiredResponseDto,
-  AuthResponseDto,
   MessageResponseDto,
 } from './dto/auth-response.dto';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { MfaService } from './services/mfa.service';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -43,12 +39,11 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(MfaDevice)
-    private mfaDeviceRepository: Repository<MfaDevice>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private passwordPolicyService: PasswordPolicyService,
     private emailService: EmailService,
+    private mfaService: MfaService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
@@ -163,37 +158,10 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // Check if MFA is enabled
-    const mfaDevice = await this.mfaDeviceRepository.findOne({
-      where: {
-        userId: user.id,
-        type: MfaDeviceType.TOTP,
-        status: MfaDeviceStatus.ACTIVE,
-      },
-    });
+    const mfaCheck = await this.mfaService.checkMfaRequired(user.id);
 
-    if (mfaDevice) {
-      // Generate temporary token for MFA verification
-      const tempToken = this.jwtService.sign(
-        {
-          sub: user.id,
-          email: user.email,
-          role: user.role,
-          type: 'mfa_required',
-        },
-        {
-          secret: this.getJwtSecret(),
-          expiresIn: '5m', // Short-lived token for MFA verification
-        },
-      );
-
-      this.logger.log(`MFA required for user: ${user.id}`);
-      const mfaResponse: MfaRequiredResponseDto = {
-        user: this.sanitizeUser(user),
-        mfaRequired: true,
-        mfaToken: tempToken,
-      };
-      return mfaResponse;
+    if (mfaCheck) {
+      return await this.mfaService.generateMfaToken(user, this);
     }
 
     this.logger.log(`User logged in successfully: ${user.id}`);
@@ -218,52 +186,7 @@ export class AuthService {
    * Complete login after MFA verification
    */
   async completeMfaLogin(mfaToken: string): Promise<AuthSuccessResponseDto> {
-    try {
-      // Verify temporary MFA token
-      const payload = this.jwtService.verify<{
-        sub: string;
-        email: string;
-        role: string;
-        type: string;
-      }>(mfaToken, {
-        secret: this.getJwtSecret(),
-      });
-
-      if (payload.type !== 'mfa_required') {
-        throw new UnauthorizedException('Invalid token type');
-      }
-
-      const user = await this.userRepository.findOne({
-        where: { id: payload.sub },
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      // Generate final tokens
-      const { accessToken, refreshToken } = this.generateTokens(
-        user.id,
-        user.email,
-        user.role,
-      );
-
-      await this.updateRefreshToken(user.id, refreshToken);
-
-      this.logger.log(`MFA login completed for user: ${user.id}`);
-
-      return {
-        user: this.sanitizeUser(user),
-        accessToken,
-        refreshToken,
-        mfaRequired: false,
-      };
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Invalid or expired MFA token';
-      this.logger.error(`MFA login failed: ${message}`);
-      throw new UnauthorizedException('Invalid or expired MFA token');
-    }
+    return this.mfaService.verifyMfaToken(mfaToken, this);
   }
 
   async refreshToken(
@@ -371,7 +294,7 @@ export class AuthService {
     };
   }
 
-  private getJwtSecret(): string {
+  public getJwtSecret(): string {
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
       throw new Error('JWT_SECRET environment variable is required');
@@ -487,7 +410,7 @@ export class AuthService {
     await this.userRepository.save(user);
   }
 
-  private generateTokens(
+  public generateTokens(
     userId: string,
     email: string,
     role: string,
@@ -521,7 +444,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async updateRefreshToken(
+  public async updateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
@@ -531,7 +454,7 @@ export class AuthService {
     });
   }
 
-  private sanitizeUser(user: User) {
+  public sanitizeUser(user: User) {
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       password: _password,
