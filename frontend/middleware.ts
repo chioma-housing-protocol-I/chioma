@@ -27,5 +27,5 @@ export function middleware(request: NextRequest) {
  * Public pages (/, /properties, /login, /signup, etc.) are NOT affected.
  */
 export const config = {
-  matcher: ['/landlords/:path*', '/agents/:path*'],
+  matcher: ['/landlords/:path*', '/agents/:path*', '/dashboard/:path*'],
 };

@@ -1,91 +1,122 @@
 //! Tests for the Escrow contract.
 
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, BytesN, Env};
+use soroban_sdk::token::Client as TokenClient;
+use soroban_sdk::token::StellarAssetClient as TokenAdminClient;
+use soroban_sdk::{Address, Env};
 
-use crate::access::AccessControl;
-use crate::types::{Escrow, EscrowStatus};
+use crate::escrow_impl::{EscrowContract, EscrowContractClient};
+use crate::types::EscrowStatus;
 
-fn create_test_escrow(env: &Env) -> (Escrow, Address, Address, Address) {
+fn setup_test(env: &Env) -> (EscrowContractClient<'_>, Address, Address, Address, Address) {
+    let contract_id = env.register(EscrowContract, ());
+    let client = EscrowContractClient::new(env, &contract_id);
+
     let depositor = Address::generate(env);
     let beneficiary = Address::generate(env);
     let arbiter = Address::generate(env);
-    let token = Address::generate(env);
 
-    let escrow = Escrow {
-        id: BytesN::<32>::from_array(env, &[1u8; 32]),
-        depositor: depositor.clone(),
-        beneficiary: beneficiary.clone(),
-        arbiter: arbiter.clone(),
-        amount: 1000,
-        token,
-        status: EscrowStatus::Funded,
-        created_at: 0,
-        dispute_reason: None,
-    };
+    let token_admin = Address::generate(env);
+    let token_address = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
 
-    (escrow, depositor, beneficiary, arbiter)
+    (client, depositor, beneficiary, arbiter, token_address)
 }
 
 #[test]
-fn test_escrow_status_ordering() {
-    assert!(EscrowStatus::Pending < EscrowStatus::Funded);
-    assert!(EscrowStatus::Funded < EscrowStatus::Released);
-}
-
-#[test]
-fn test_is_depositor() {
+fn test_escrow_lifecycle() {
     let env = Env::default();
-    let (escrow, depositor, _, _) = create_test_escrow(&env);
-    assert!(AccessControl::is_depositor(&escrow, &depositor).is_ok());
+    env.mock_all_auths();
 
-    let other = Address::generate(&env);
-    assert!(AccessControl::is_depositor(&escrow, &other).is_err());
+    let (client, depositor, beneficiary, arbiter, token_address) = setup_test(&env);
+    let amount = 1000i128;
+
+    // 1. Create Escrow
+    let escrow_id = client.create(&depositor, &beneficiary, &arbiter, &amount, &token_address);
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.status, EscrowStatus::Pending);
+    assert_eq!(escrow.amount, amount);
+
+    // 2. Fund Escrow
+    // Mint tokens to depositor
+    let token_admin = TokenAdminClient::new(&env, &token_address);
+    token_admin.mint(&depositor, &amount);
+
+    // Check initial balances
+    let token_client = TokenClient::new(&env, &token_address);
+    assert_eq!(token_client.balance(&depositor), amount);
+    assert_eq!(token_client.balance(&client.address), 0);
+
+    client.fund_escrow(&escrow_id, &depositor);
+
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.status, EscrowStatus::Funded);
+
+    // Check balances after funding
+    assert_eq!(token_client.balance(&depositor), 0);
+    assert_eq!(token_client.balance(&client.address), amount);
+
+    // 3. Approve Release (2-of-3)
+    // First approval by depositor
+    client.approve_release(&escrow_id, &depositor, &beneficiary);
+    assert_eq!(client.get_approval_count(&escrow_id, &beneficiary), 1);
+
+    // Second approval by arbiter
+    client.approve_release(&escrow_id, &arbiter, &beneficiary);
+
+    // Final state check
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.status, EscrowStatus::Released);
+
+    // Check final balances
+    assert_eq!(token_client.balance(&beneficiary), amount);
+    assert_eq!(token_client.balance(&client.address), 0);
 }
 
 #[test]
-fn test_is_beneficiary() {
+fn test_dispute_resolution() {
     let env = Env::default();
-    let (escrow, _, beneficiary, _) = create_test_escrow(&env);
-    assert!(AccessControl::is_beneficiary(&escrow, &beneficiary).is_ok());
+    env.mock_all_auths();
 
-    let other = Address::generate(&env);
-    assert!(AccessControl::is_beneficiary(&escrow, &other).is_err());
+    let (client, depositor, beneficiary, arbiter, token_address) = setup_test(&env);
+    let amount = 1000i128;
+
+    let escrow_id = client.create(&depositor, &beneficiary, &arbiter, &amount, &token_address);
+
+    let token_admin = TokenAdminClient::new(&env, &token_address);
+    token_admin.mint(&depositor, &amount);
+    client.fund_escrow(&escrow_id, &depositor);
+
+    // Initiate dispute
+    let reason = soroban_sdk::String::from_str(&env, "Service not delivered");
+    client.initiate_dispute(&escrow_id, &beneficiary, &reason);
+
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.status, EscrowStatus::Disputed);
+    assert_eq!(escrow.dispute_reason, Some(reason));
+
+    // Resolve dispute by arbiter (refund to depositor)
+    client.resolve_dispute(&escrow_id, &arbiter, &depositor);
+
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.status, EscrowStatus::Released); // resolve_dispute currently sets status to Released regardless of target
+
+    let token_client = TokenClient::new(&env, &token_address);
+    assert_eq!(token_client.balance(&depositor), amount);
+    assert_eq!(token_client.balance(&client.address), 0);
 }
 
 #[test]
-fn test_is_arbiter() {
+fn test_unauthorized_funding() {
     let env = Env::default();
-    let (escrow, _, _, arbiter) = create_test_escrow(&env);
-    assert!(AccessControl::is_arbiter(&escrow, &arbiter).is_ok());
+    let (client, depositor, beneficiary, arbiter, token_address) = setup_test(&env);
+    let amount = 1000i128;
 
-    let other = Address::generate(&env);
-    assert!(AccessControl::is_arbiter(&escrow, &other).is_err());
-}
+    let escrow_id = client.create(&depositor, &beneficiary, &arbiter, &amount, &token_address);
 
-#[test]
-fn test_is_party() {
-    let env = Env::default();
-    let (escrow, depositor, beneficiary, arbiter) = create_test_escrow(&env);
-
-    assert!(AccessControl::is_party(&escrow, &depositor).is_ok());
-    assert!(AccessControl::is_party(&escrow, &beneficiary).is_ok());
-    assert!(AccessControl::is_party(&escrow, &arbiter).is_ok());
-
-    let other = Address::generate(&env);
-    assert!(AccessControl::is_party(&escrow, &other).is_err());
-}
-
-#[test]
-fn test_is_primary_party() {
-    let env = Env::default();
-    let (escrow, depositor, beneficiary, arbiter) = create_test_escrow(&env);
-
-    assert!(AccessControl::is_primary_party(&escrow, &depositor).is_ok());
-    assert!(AccessControl::is_primary_party(&escrow, &beneficiary).is_ok());
-    // Arbiter is NOT a primary party
-    assert!(AccessControl::is_primary_party(&escrow, &arbiter).is_err());
-
-    let other = Address::generate(&env);
-    assert!(AccessControl::is_primary_party(&escrow, &other).is_err());
+    // Try to fund from beneficiary (should fail since only depositor can fund)
+    // We expect an error, but AccessControl check happens before require_auth
+    let result = client.try_fund_escrow(&escrow_id, &beneficiary);
+    assert!(result.is_err());
 }

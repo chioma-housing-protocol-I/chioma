@@ -1,6 +1,8 @@
 //! Core escrow lifecycle logic: creation, funding, approvals, and release.
 //! Implements checks-effects-interactions pattern for reentrancy safety.
-use soroban_sdk::{Address, BytesN, Env, Vec};
+use soroban_sdk::{contract, contractimpl, token, Address, BytesN, Env, Vec};
+
+use crate::dispute::DisputeHandler;
 
 use crate::access::AccessControl;
 use crate::errors::EscrowError;
@@ -8,8 +10,10 @@ use crate::storage::EscrowStorage;
 use crate::types::{Escrow, EscrowStatus, ReleaseApproval};
 
 /// Core escrow contract implementation.
+#[contract]
 pub struct EscrowContract;
 
+#[contractimpl]
 impl EscrowContract {
     /// Create a new escrow.
     ///
@@ -26,7 +30,7 @@ impl EscrowContract {
     /// - Token transfer from depositor (not yet implemented in this version)
     ///   would happen after state update
     pub fn create(
-        env: &Env,
+        env: Env,
         depositor: Address,
         beneficiary: Address,
         arbiter: Address,
@@ -45,7 +49,7 @@ impl EscrowContract {
 
         // Generate escrow ID - use a deterministic hash
         // In production, use a proper hash function
-        let escrow_id = BytesN::<32>::from_array(env, &[0u8; 32]);
+        let escrow_id = BytesN::<32>::from_array(&env, &[0u8; 32]);
 
         // EFFECTS: Create and save escrow
         let escrow = Escrow {
@@ -60,8 +64,8 @@ impl EscrowContract {
             dispute_reason: None,
         };
 
-        EscrowStorage::save(env, &escrow);
-        EscrowStorage::increment_count(env);
+        EscrowStorage::save(&env, &escrow);
+        EscrowStorage::increment_count(&env);
 
         Ok(escrow_id)
     }
@@ -80,27 +84,31 @@ impl EscrowContract {
     /// INTERACTIONS:
     /// - Token transfer would happen after state update (not yet in this version)
     pub fn fund_escrow(
-        env: &Env,
-        escrow_id: &BytesN<32>,
-        caller: &Address,
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
-        let mut escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         // Verify caller is depositor
-        AccessControl::is_depositor(&escrow, caller)?;
+        AccessControl::is_depositor(&escrow, &caller)?;
 
         // Verify escrow is in Pending state
         if escrow.status != EscrowStatus::Pending {
             return Err(EscrowError::InvalidState);
         }
 
+        // Authorize the deposit
+        caller.require_auth();
+
         // EFFECTS: Update status
         escrow.status = EscrowStatus::Funded;
-        EscrowStorage::save(env, &escrow);
+        EscrowStorage::save(&env, &escrow);
 
-        // INTERACTIONS: Token transfer would happen here
-        // transfer_from_token(&env, &escrow.token, &caller, &escrow_contract_id, escrow.amount)?;
+        // INTERACTIONS: Token transfer from depositor to escrow contract
+        let token_client = token::Client::new(&env, &escrow.token);
+        token_client.transfer(&caller, env.current_contract_address(), &escrow.amount);
 
         Ok(())
     }
@@ -122,21 +130,24 @@ impl EscrowContract {
     /// INTERACTIONS:
     /// - Token transfer after all state updates
     pub fn approve_release(
-        env: &Env,
-        escrow_id: &BytesN<32>,
-        caller: &Address,
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
         release_to: Address,
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
-        let escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         // Verify caller is a valid party
-        AccessControl::is_party(&escrow, caller)?;
+        AccessControl::is_party(&escrow, &caller)?;
 
         // Verify escrow is in Funded state
         if escrow.status != EscrowStatus::Funded {
             return Err(EscrowError::InvalidState);
         }
+
+        // Authorize the approval
+        caller.require_auth();
 
         // Verify release target is valid (must be beneficiary or depositor)
         if release_to != escrow.beneficiary && release_to != escrow.depositor {
@@ -144,11 +155,11 @@ impl EscrowContract {
         }
 
         // Get existing approvals
-        let approvals = EscrowStorage::get_approvals(env, escrow_id);
+        let approvals = EscrowStorage::get_approvals(&env, &escrow_id);
 
         // Check for duplicate approval from same signer to same target
         for approval in &approvals {
-            if approval.signer == *caller && approval.release_to == release_to {
+            if approval.signer == caller && approval.release_to == release_to {
                 return Err(EscrowError::AlreadySigned);
             }
         }
@@ -159,10 +170,10 @@ impl EscrowContract {
             release_to: release_to.clone(),
             timestamp: env.ledger().timestamp(),
         };
-        EscrowStorage::add_approval(env, escrow_id, new_approval);
+        EscrowStorage::add_approval(&env, &escrow_id, new_approval);
 
         // Count unique signers approving this release target
-        let mut unique_signers: Vec<Address> = Vec::new(env);
+        let mut unique_signers: Vec<Address> = Vec::new(&env);
         for approval in &approvals {
             if approval.release_to == release_to {
                 let mut found = false;
@@ -181,7 +192,7 @@ impl EscrowContract {
         // Add current caller to unique signers count (since we just added their approval)
         let mut caller_already_counted = false;
         for signer in &unique_signers {
-            if signer == *caller {
+            if signer == caller {
                 caller_already_counted = true;
                 break;
             }
@@ -193,40 +204,61 @@ impl EscrowContract {
         // If 2 or more unique signers approve, execute release
         if unique_signers.len() >= 2 {
             let mut escrow_to_update =
-                EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+                EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
             // Determine final status based on release target
             escrow_to_update.status = EscrowStatus::Released;
-            EscrowStorage::save(env, &escrow_to_update);
+            EscrowStorage::save(&env, &escrow_to_update);
 
             // Clear approvals after execution
-            EscrowStorage::clear_approvals(env, escrow_id);
+            EscrowStorage::clear_approvals(&env, &escrow_id);
 
-            // INTERACTIONS: Token transfer would happen here
-            // transfer_to_token(&env, &escrow.token, &escrow_contract_id, &release_to, escrow.amount)?;
+            // INTERACTIONS: Token transfer from escrow contract to release target
+            let token_client = token::Client::new(&env, &escrow.token);
+            token_client.transfer(&env.current_contract_address(), &release_to, &escrow.amount);
         }
 
         Ok(())
     }
 
+    /// Set up a dispute on an escrow.
+    pub fn initiate_dispute(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+        reason: soroban_sdk::String,
+    ) -> Result<(), EscrowError> {
+        DisputeHandler::initiate_dispute(env, escrow_id, caller, reason)
+    }
+
+    /// Resolve a dispute by releasing funds to a target.
+    pub fn resolve_dispute(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+        release_to: Address,
+    ) -> Result<(), EscrowError> {
+        DisputeHandler::resolve_dispute(env, escrow_id, caller, release_to)
+    }
+
     /// Get details of an escrow.
     /// Read-only view function.
-    pub fn get_escrow(env: &Env, escrow_id: &BytesN<32>) -> Result<Escrow, EscrowError> {
-        EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)
+    pub fn get_escrow(env: Env, escrow_id: BytesN<32>) -> Result<Escrow, EscrowError> {
+        EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)
     }
 
     /// Get approval count for a specific release target.
     /// Returns number of unique signers approving release to a specific address.
     pub fn get_approval_count(
-        env: &Env,
-        escrow_id: &BytesN<32>,
-        release_to: &Address,
+        env: Env,
+        escrow_id: BytesN<32>,
+        release_to: Address,
     ) -> Result<u32, EscrowError> {
-        let approvals = EscrowStorage::get_approvals(env, escrow_id);
+        let approvals = EscrowStorage::get_approvals(&env, &escrow_id);
 
-        let mut unique_signers: Vec<Address> = Vec::new(env);
+        let mut unique_signers: Vec<Address> = Vec::new(&env);
         for approval in &approvals {
-            if approval.release_to == *release_to {
+            if approval.release_to == release_to {
                 let mut found = false;
                 for signer in &unique_signers {
                     if signer == approval.signer {
