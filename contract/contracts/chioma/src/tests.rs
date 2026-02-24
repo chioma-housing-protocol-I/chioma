@@ -1047,5 +1047,3 @@ fn test_full_agreement_flow() {
     assert_eq!(active_agreement.status, AgreementStatus::Active);
     assert!(active_agreement.signed_at.is_some());
 }
-
-
