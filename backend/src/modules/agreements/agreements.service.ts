@@ -23,6 +23,8 @@ import {
 } from '../audit/entities/audit-log.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
+import { ChiomaContractService } from '../stellar/services/chioma-contract.service';
+import { BlockchainSyncService } from './blockchain-sync.service';
 
 @Injectable()
 export class AgreementsService {
@@ -33,6 +35,8 @@ export class AgreementsService {
     private readonly paymentRepository: Repository<Payment>,
     private readonly auditService: AuditService,
     private readonly reviewPromptService: ReviewPromptService,
+    private readonly chiomaContract: ChiomaContractService,
+    private readonly blockchainSync: BlockchainSyncService,
   ) {}
 
   /**
@@ -71,6 +75,33 @@ export class AgreementsService {
     });
 
     const savedAgreement = await this.agreementRepository.save(agreement);
+
+    // Create on-chain agreement
+    try {
+      const txHash = await this.chiomaContract.createAgreement({
+        agreementId: agreementNumber,
+        landlord: createAgreementDto.landlordStellarPubKey,
+        tenant: createAgreementDto.tenantStellarPubKey,
+        agent: createAgreementDto.agentStellarPubKey,
+        monthlyRent: createAgreementDto.monthlyRent.toString(),
+        securityDeposit: createAgreementDto.securityDeposit.toString(),
+        startDate: Math.floor(startDate.getTime() / 1000),
+        endDate: Math.floor(endDate.getTime() / 1000),
+        agentCommissionRate: createAgreementDto.agentCommissionRate || 0,
+        paymentToken: 'NATIVE',
+      });
+
+      savedAgreement.transactionHash = txHash;
+      savedAgreement.blockchainAgreementId = agreementNumber;
+      savedAgreement.blockchainSyncedAt = new Date();
+      await this.agreementRepository.save(savedAgreement);
+    } catch (error) {
+      // Rollback database if blockchain fails
+      await this.agreementRepository.remove(savedAgreement);
+      throw new BadRequestException(
+        `Failed to create on-chain agreement: ${error.message}`,
+      );
+    }
 
     return savedAgreement;
   }

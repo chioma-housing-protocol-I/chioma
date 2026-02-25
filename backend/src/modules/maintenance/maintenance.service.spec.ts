@@ -24,7 +24,7 @@ describe('MaintenanceService', () => {
     const { StorageService } = require('../storage/storage.service');
     const {
       NotificationsService,
-      } = require('../notifications/notifications.service');
+    } = require('../notifications/notifications.service');
     const { PropertiesService } = require('../properties/properties.service');
     const { UsersService } = require('../users/users.service');
 
