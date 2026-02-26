@@ -7,7 +7,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 export default function TenantsPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [tenants, setTenants] = useState([]);
+  const [tenants] = useState([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

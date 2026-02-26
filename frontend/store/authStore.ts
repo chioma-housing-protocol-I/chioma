@@ -150,7 +150,6 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
    */
   login: async (
     email: string,
-    password: string,
   ): Promise<{ success: boolean; error?: string }> => {
     // --- REAL AUTHENTICATION LOGIC (Commented out for development) ---
     /*

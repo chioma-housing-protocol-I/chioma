@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthHydrator } from '@/store/AuthHydrator';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -98,6 +99,10 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthHydrator />
         {children}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{ className: 'font-medium' }}
+        />
       </body>
     </html>
   );

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@stellar/freighter-api": "^6.0.1",
     "@types/leaflet": "^1.9.21",
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
@@ -22,6 +23,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
+    "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.7.0",
