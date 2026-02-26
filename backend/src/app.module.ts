@@ -195,7 +195,8 @@ export class AppModule implements NestModule {
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');
-Rate limit headers middleware (applied to all routes)
+
+    // Rate limit headers middleware (applied to all routes)
     consumer.apply(RateLimitHeadersMiddleware).forRoutes('*');
 
     // 
