@@ -41,9 +41,11 @@ import {
 } from './dto/enable-mfa.dto';
 import { CompleteMfaLoginDto } from './dto/complete-mfa-login.dto';
 import { Request, Response } from 'express';
+import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
 
 @ApiTags('Authentication')
 @Controller('auth')
+@RateLimitCategory(EndpointCategory.AUTH)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,

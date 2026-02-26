@@ -37,6 +37,8 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { SearchModule } from './modules/search/search.module';
 import { JobQueueService } from './common/services/job-queue.service';
+import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
+import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 
 @Module({
   imports: [
@@ -129,6 +131,7 @@ import { JobQueueService } from './common/services/job-queue.service';
     FeedbackModule,
     DeveloperModule,
     SearchModule,
+    RateLimitingModule,
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module
@@ -182,7 +185,10 @@ export class AppModule implements NestModule {
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');
+Rate limit headers middleware (applied to all routes)
+    consumer.apply(RateLimitHeadersMiddleware).forRoutes('*');
 
+    // 
     // Auth rate limiting (applied to specific auth routes)
     consumer
       .apply(AuthRateLimitMiddleware)
