@@ -39,6 +39,7 @@ import { SearchModule } from './modules/search/search.module';
 import { JobQueueService } from './common/services/job-queue.service';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
+import { MLModule } from './modules/ml/ml.module';
 
 @Module({
   imports: [
@@ -132,6 +133,7 @@ import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/r
     DeveloperModule,
     SearchModule,
     RateLimitingModule,
+    MLModule,
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module
