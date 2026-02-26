@@ -8,7 +8,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 
 describe('API Contract (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -23,12 +23,12 @@ describe('API Contract (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   describe('Health contract', () => {
     it('GET /health returns 200/503 with status, timestamp, services', async () => {
-      const res = await request(app.getHttpServer()).get('/health');
+      const res = await request(app!.getHttpServer()).get('/health');
       expect([200, 503]).toContain(res.status);
       expect(res.body).toHaveProperty('status');
       expect(res.body.status).toMatch(/^(ok|warning|error)$/);
@@ -40,7 +40,7 @@ describe('API Contract (e2e)', () => {
     });
 
     it('GET /health/detailed returns enhanced health with details', async () => {
-      const res = await request(app.getHttpServer()).get('/health/detailed');
+      const res = await request(app!.getHttpServer()).get('/health/detailed');
       expect([200, 503]).toContain(res.status);
       expect(res.body).toHaveProperty('details');
       expect(res.body.details).toHaveProperty('nodeVersion');
@@ -50,7 +50,7 @@ describe('API Contract (e2e)', () => {
 
   describe('Security contract', () => {
     it('GET /security.txt returns text/plain with Contact and Policy', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/security.txt')
         .expect(200);
       expect(res.headers['content-type']).toMatch(/text\/plain/);
@@ -61,7 +61,7 @@ describe('API Contract (e2e)', () => {
 
   describe('Auth contract (unauthenticated)', () => {
     it('POST /api/auth/login with invalid body returns 400', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .post('/api/auth/login')
         .send({})
         .expect((r) => expect([400, 401]).toContain(r.status));
@@ -69,7 +69,7 @@ describe('API Contract (e2e)', () => {
     });
 
     it('POST /api/auth/register with invalid body returns 400', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .post('/api/auth/register')
         .send({})
         .expect(400);
@@ -79,11 +79,11 @@ describe('API Contract (e2e)', () => {
 
   describe('Protected endpoints require auth', () => {
     it('GET /api/users/me without token returns 401', async () => {
-      await request(app.getHttpServer()).get('/api/users/me').expect(401);
+      await request(app!.getHttpServer()).get('/api/users/me').expect(401);
     });
 
     it('GET /api/agreements without token returns 401', async () => {
-      await request(app.getHttpServer()).get('/api/agreements').expect(401);
+      await request(app!.getHttpServer()).get('/api/agreements').expect(401);
     });
   });
 });

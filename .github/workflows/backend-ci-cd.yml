@@ -152,4 +152,18 @@ jobs:
         continue-on-error: true
 
       - name: Run API and integration E2E tests
-        run: cd backend && pnpm run test:e2e -- --testPathPattern="api-docs|api-contract|integration|performance"
+        run: cd backend && pnpm run test:e2e -- --testPathPattern="test/(api-docs|api-contract|(?<!-)integration|performance)\\.e2e-spec"
+        env:
+          NODE_ENV: test
+          JWT_SECRET: "e2e-test-dummy-secret-not-for-production"
+          SECURITY_ENCRYPTION_KEY: "e2e-test-dummy-32-byte-key-not-for-prod!!"
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: chioma
+          CHIOMA_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          ESCROW_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          DISPUTE_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          RENT_OBLIGATION_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"

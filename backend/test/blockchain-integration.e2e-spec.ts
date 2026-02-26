@@ -2,13 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AgreementsModule } from '../src/modules/agreements/agreements.module';
 import { AgreementsService } from '../src/modules/agreements/agreements.service';
 import { ChiomaContractService } from '../src/modules/stellar/services/chioma-contract.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
 
 describe('Blockchain Integration (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
   let agreementsService: AgreementsService;
   let chiomaContract: ChiomaContractService;
 
@@ -19,6 +20,7 @@ describe('Blockchain Integration (e2e)', () => {
           isGlobal: true,
           envFilePath: '.env.test',
         }),
+        CacheModule.register({ isGlobal: true, ttl: 600 }),
         TypeOrmModule.forRoot({
           type: 'sqlite',
           database: ':memory:',
@@ -39,7 +41,7 @@ describe('Blockchain Integration (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   describe('Agreement Lifecycle', () => {
