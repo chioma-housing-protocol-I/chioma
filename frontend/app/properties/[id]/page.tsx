@@ -186,11 +186,11 @@ export default async function PropertyDetailsPage({
 
           {/* Header section with title, location, gallery */}
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
               {property.title}
             </h1>
-            <div className="flex items-center text-gray-600 mb-8 text-lg font-medium">
-              <MapPin className="w-5 h-5 mr-2 text-brand-blue" />
+            <div className="flex items-start sm:items-center text-gray-600 mb-6 sm:mb-8 text-base sm:text-lg font-medium gap-2">
+              <MapPin className="w-5 h-5 shrink-0 text-brand-blue mt-0.5 sm:mt-0" />
               <span>{property.location}</span>
             </div>
 
@@ -277,7 +277,7 @@ export default async function PropertyDetailsPage({
 
             {/* Right Column (Sticky CTA - roughly 33%) */}
             <div className="lg:col-span-4 sticky top-24 lg:top-32 w-full">
-              <div className="glass shadow-2xl rounded-3xl p-6 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
+              <div className="glass shadow-2xl rounded-3xl p-5 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
                 {/* Price */}
                 <div className="mb-8 pb-6 border-b border-gray-100">
                   <span className="block text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">

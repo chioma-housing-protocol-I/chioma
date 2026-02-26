@@ -13,27 +13,27 @@ export default function TenantDashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-neutral-50 font-sans text-neutral-900 flex flex-col lg:flex-row">
       {/* Sidebar Component */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content Area */}
       <div className="flex-1 lg:ml-64 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-neutral-200">
           <div className="h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
             {/* Left Section - Mobile Toggle & Title */}
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors"
+                className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 -ml-2 text-neutral-600 hover:bg-neutral-100 rounded-xl transition-colors"
                 aria-label="Open sidebar"
               >
                 <Menu size={24} />
               </button>
 
               <div className="hidden sm:block">
-                <h1 className="text-xl font-semibold tracking-tight">
+                <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
                   Tenant Portal
                 </h1>
               </div>
@@ -50,10 +50,10 @@ export default function TenantDashboardLayout({
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-700 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-100 border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-neutral-200 transition-all"
                 />
               </div>
-              <button className="md:hidden p-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors">
+              <button className="md:hidden p-2 text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors">
                 <Search size={20} />
               </button>
 
@@ -61,17 +61,17 @@ export default function TenantDashboardLayout({
               <NotificationBell
                 viewAllHref="/dashboard/notifications"
                 size={20}
-                className="text-neutral-600 dark:text-neutral-300"
+                className="text-neutral-600"
               />
 
               {/* Connect Wallet Placeholder */}
-              <button className="hidden sm:flex items-center justify-center space-x-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-full text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors shadow-sm">
+              <button className="hidden sm:flex items-center justify-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-800 transition-colors shadow-sm">
                 <Wallet size={16} />
                 <span>Connect Wallet</span>
               </button>
 
               {/* User Profile Avatar */}
-              <button className="flex items-center justify-center w-10 h-10 bg-brand-blue/10 dark:bg-brand-blue/20 text-brand-blue rounded-full hover:ring-2 hover:ring-brand-blue/50 transition-all">
+              <button className="flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-full hover:ring-2 hover:ring-blue-100 transition-all border border-blue-100">
                 <User size={18} />
               </button>
             </div>

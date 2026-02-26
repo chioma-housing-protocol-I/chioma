@@ -104,6 +104,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   @apply antialiased;
+  overflow-x: hidden;
 }
 
 /* Leaflet Popup Styling */

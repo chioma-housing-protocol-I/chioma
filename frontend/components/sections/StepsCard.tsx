@@ -54,9 +54,9 @@ export default function StepsCard() {
               key={step.id}
               className="relative flex flex-col items-center text-center group"
             >
-              {/* Icon Circle */}
+              {/* Icon Circle - smaller on mobile for better fit */}
               <div
-                className={`relative z-10 w-32 h-32 rounded-full ${step.iconBg} flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 bg-white border-4 border-gray-100`}
+                className={`relative z-10 w-24 h-24 md:w-32 md:h-32 rounded-full ${step.iconBg} flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 bg-white border-4 border-gray-100`}
               >
                 <div className={step.iconColor}>{step.icon}</div>
               </div>

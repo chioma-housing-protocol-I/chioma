@@ -171,10 +171,10 @@ export default function PropertyListing() {
   return (
     <>
       <Navbar theme="light" />
-      <div className="">
+      <div className="overflow-x-hidden">
         {/* Header/Search Bar */}
-        <header className=" top-0 bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <div className="flex flex-col gap-4 md:gap-0">
               {/* Search Input */}
               <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-3 w-full md:w-80">
@@ -203,12 +203,12 @@ export default function PropertyListing() {
                 <button className="px-4 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-50 transition hidden sm:inline-block">
                   Amenities
                 </button>
-                <div className="flex items-center gap-2 ml-auto">
-                  {/* View Toggle */}
-                  <div className="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 ml-auto shrink-0">
+                  {/* View Toggle - touch-friendly on mobile */}
+                  <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`px-3 py-2 text-sm transition ${
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-sm transition ${
                         viewMode === 'list'
                           ? 'bg-blue-600 text-white'
                           : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -219,7 +219,7 @@ export default function PropertyListing() {
                     </button>
                     <button
                       onClick={() => setViewMode('split')}
-                      className={`px-3 py-2 text-sm transition ${
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-sm transition ${
                         viewMode === 'split'
                           ? 'bg-blue-600 text-white'
                           : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -233,7 +233,7 @@ export default function PropertyListing() {
                     </button>
                     <button
                       onClick={() => setViewMode('map')}
-                      className={`px-3 py-2 text-sm transition ${
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-sm transition ${
                         viewMode === 'map'
                           ? 'bg-blue-600 text-white'
                           : 'bg-white text-gray-700 hover:bg-gray-50'

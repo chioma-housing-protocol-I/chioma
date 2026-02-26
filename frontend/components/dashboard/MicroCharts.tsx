@@ -40,8 +40,7 @@ export function MicroCharts() {
             {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.value > 0 ? '#3b82f6' : '#e5e7eb'} // brand-blue or neutral-200
-                className={`${entry.value > 0 ? 'dark:fill-blue-500' : 'dark:fill-neutral-700'}`}
+                fill={entry.value > 0 ? '#2563eb' : '#e2e8f0'} // brand-blue or neutral-200
               />
             ))}
           </Bar>
