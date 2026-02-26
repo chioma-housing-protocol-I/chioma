@@ -92,7 +92,8 @@ describe('Rate Limiting E2E', () => {
         promises.push(
           request(app.getHttpServer())
             .get('/health')
-            .set('X-Test-Identifier', identifier),
+            .set('X-Test-Identifier', identifier)
+            .then((res) => res),
         );
       }
 
