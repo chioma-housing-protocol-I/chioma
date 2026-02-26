@@ -152,7 +152,7 @@ jobs:
         continue-on-error: true
 
       - name: Run API and integration E2E tests
-        run: cd backend && pnpm run test:e2e -- --testPathPattern="test/(api-docs|api-contract|(?<!-)integration|performance)\\.e2e-spec"
+        run: cd backend && pnpm run test:e2e -- --testPathPattern="(api-docs|api-contract|(?<!-)integration|performance)\\.e2e-spec"
         env:
           NODE_ENV: test
           JWT_SECRET: "e2e-test-dummy-secret-not-for-production"
