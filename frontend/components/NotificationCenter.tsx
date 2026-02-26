@@ -30,8 +30,9 @@ export default function NotificationCenter() {
       const filters = filter === 'unread' ? { isRead: false } : undefined;
       const data = await notificationService.getNotifications(filters);
       setNotifications(data);
-    } catch (error) {
-      console.error('Failed to load notifications:', error);
+    } catch {
+      // Silently fail - notifications are not critical
+      setNotifications([]);
     } finally {
       setIsLoading(false);
     }
@@ -41,8 +42,9 @@ export default function NotificationCenter() {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
-    } catch (error) {
-      console.error('Failed to load unread count:', error);
+    } catch {
+      // Silently fail - unread count is not critical
+      setUnreadCount(0);
     }
   };
 
@@ -55,8 +57,8 @@ export default function NotificationCenter() {
         )
       );
       setUnreadCount((prev: number) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to mark as read:', error);
+    } catch {
+      // Silently fail - mark as read is not critical
     }
   };
 
@@ -67,8 +69,8 @@ export default function NotificationCenter() {
         prev.map((n: Notification) => ({ ...n, isRead: true }))
       );
       setUnreadCount(0);
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
+    } catch {
+      // Silently fail - mark all as read is not critical
     }
   };
 
@@ -78,8 +80,8 @@ export default function NotificationCenter() {
       setNotifications((prev: Notification[]) =>
         prev.filter((n: Notification) => n.id !== notificationId)
       );
-    } catch (error) {
-      console.error('Failed to delete notification:', error);
+    } catch {
+      // Silently fail - delete is not critical
     }
   };
 
