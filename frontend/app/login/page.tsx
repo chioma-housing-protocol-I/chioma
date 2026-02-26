@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import FormInput from '@/components/auth/FormInput';
+import WalletConnectButton from '@/components/auth/WalletConnectButton';
 
 const loginSchema = z.object({
   email: z.email('Please enter a valid email address'),
@@ -141,7 +142,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-white/60 text-sm mt-6">
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/20"></div>
+            <span className="text-sm font-medium text-white/50 tracking-wider">
+              OR
+            </span>
+            <div className="h-px flex-1 bg-white/20"></div>
+          </div>
+
+          <WalletConnectButton className="mb-6" />
+
+          <p className="text-center text-white/60 text-sm mt-2">
             Don&apos;t have an account?{' '}
             <Link
               href="/signup"

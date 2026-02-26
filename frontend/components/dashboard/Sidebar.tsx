@@ -9,6 +9,7 @@ import {
   Wallet,
   Settings,
   LogOut,
+  BellRing,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -31,6 +32,11 @@ const navItems = [
     name: 'Payments',
     href: '/dashboard/payments',
     icon: Wallet,
+  },
+  {
+    name: 'Notifications',
+    href: '/dashboard/notifications',
+    icon: BellRing,
   },
   {
     name: 'Settings',

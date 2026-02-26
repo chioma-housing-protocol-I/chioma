@@ -18,6 +18,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     '/landlords/maintenance': 'Maintenance',
     '/landlords/documents': 'Documents',
     '/landlords/settings': 'Settings',
+    '/landlords/notifications': 'Notifications',
   };
 
   const pageTitle = pageTitleMap[pathname] ?? 'Dashboard';

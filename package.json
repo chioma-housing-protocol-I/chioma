@@ -4,10 +4,12 @@
     "prepare": "husky install"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
     "eslint": "^10.0.1",
     "husky": "^8.0.3",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.2.1"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

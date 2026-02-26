@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FaSearch, FaBell, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import { NotificationBell } from '@/components/notifications';
 import Link from 'next/link';
 import { navItems } from './Sidebar';
 import Image from 'next/image';
@@ -52,10 +53,11 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
             <FaSearch className="text-gray-500" size={18} />
           </button>
 
-          <button className="relative">
-            <FaBell className="text-gray-500" size={20} />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-red-600 rounded-full" />
-          </button>
+          <NotificationBell
+            viewAllHref="/landlords/notifications"
+            size={20}
+            className="text-gray-500"
+          />
 
           <Link
             href="/landlords/properties/add"

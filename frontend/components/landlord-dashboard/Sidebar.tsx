@@ -4,7 +4,7 @@ import { FaBuilding, FaChartPie } from 'react-icons/fa';
 import { FaScrewdriverWrench, FaArrowRightFromBracket } from 'react-icons/fa6';
 import { HiSquares2X2, HiUsers } from 'react-icons/hi2';
 import { IoDocumentTextSharp } from 'react-icons/io5';
-import { IoMdSettings } from 'react-icons/io';
+import { IoMdSettings, IoMdNotifications } from 'react-icons/io';
 
 export const navItems = [
   { icon: HiSquares2X2, label: 'Dashboard', href: '/landlords' },
@@ -20,6 +20,11 @@ export const navItems = [
     icon: IoDocumentTextSharp,
     label: 'Documents',
     href: '/landlords/documents',
+  },
+  {
+    icon: IoMdNotifications,
+    label: 'Notifications',
+    href: '/landlords/notifications',
   },
   { icon: IoMdSettings, label: 'Settings', href: '/landlords/settings' },
 ];

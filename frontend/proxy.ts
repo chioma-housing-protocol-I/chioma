@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * This is the first layer of protection. The ProtectedRoute
  * component provides the second (client-side) layer.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const authToken = request.cookies.get('chioma_auth_token')?.value;
 
   if (!authToken) {

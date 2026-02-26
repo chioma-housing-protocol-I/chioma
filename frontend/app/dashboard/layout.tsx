@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, Wallet, Bell, Search, User } from 'lucide-react';
+import { Menu, Wallet, Search, User } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 
 export default function TenantDashboardLayout({
@@ -57,10 +58,11 @@ export default function TenantDashboardLayout({
               </button>
 
               {/* Notifications */}
-              <button className="relative p-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors">
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-white dark:border-neutral-900 rounded-full"></span>
-              </button>
+              <NotificationBell
+                viewAllHref="/dashboard/notifications"
+                size={20}
+                className="text-neutral-600 dark:text-neutral-300"
+              />
 
               {/* Connect Wallet Placeholder */}
               <button className="hidden sm:flex items-center justify-center space-x-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-full text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors shadow-sm">
