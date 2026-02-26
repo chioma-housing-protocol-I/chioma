@@ -1,0 +1,62 @@
+{
+  "common": {
+    "welcome": "Bienvenido",
+    "hello": "Hola, {{name}}",
+    "goodbye": "Adiós",
+    "yes": "Sí",
+    "no": "No",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia"
+  },
+  "errors": {
+    "notFound": "Recurso no encontrado",
+    "unauthorized": "Acceso no autorizado",
+    "forbidden": "Acceso prohibido",
+    "badRequest": "Solicitud incorrecta",
+    "internalError": "Error interno del servidor",
+    "validationFailed": "Validación fallida",
+    "networkError": "Error de red"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "register": "Registrarse",
+    "forgotPassword": "Olvidé mi contraseña",
+    "resetPassword": "Restablecer contraseña",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "rememberMe": "Recuérdame"
+  },
+  "rental": {
+    "property": "Propiedad",
+    "rent": "Alquiler",
+    "tenant": "Inquilino",
+    "landlord": "Propietario",
+    "agreement": "Acuerdo",
+    "lease": "Contrato de arrendamiento",
+    "deposit": "Depósito",
+    "maintenance": "Mantenimiento",
+    "payment": "Pago",
+    "dueDate": "Fecha de vencimiento",
+    "status": "Estado"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalidEmail": "Dirección de correo electrónico no válida",
+    "invalidPhone": "Número de teléfono no válido",
+    "minLength": "La longitud mínima es de {{min}} caracteres",
+    "maxLength": "La longitud máxima es de {{max}} caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden"
+  }
+}

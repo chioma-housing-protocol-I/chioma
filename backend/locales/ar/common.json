@@ -1,0 +1,62 @@
+{
+  "common": {
+    "welcome": "مرحبا",
+    "hello": "مرحبا {{name}}",
+    "goodbye": "وداعا",
+    "yes": "نعم",
+    "no": "لا",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجاح",
+    "warning": "تحذير"
+  },
+  "errors": {
+    "notFound": "المورد غير موجود",
+    "unauthorized": "وصول غير مصرح",
+    "forbidden": "وصول محظور",
+    "badRequest": "طلب غير صحيح",
+    "internalError": "خطأ داخلي في الخادم",
+    "validationFailed": "فشل التحقق",
+    "networkError": "خطأ في الشبكة"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "register": "تسجيل",
+    "forgotPassword": "نسيت كلمة المرور",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "rememberMe": "تذكرني"
+  },
+  "rental": {
+    "property": "عقار",
+    "rent": "إيجار",
+    "tenant": "مستأجر",
+    "landlord": "مالك",
+    "agreement": "اتفاقية",
+    "lease": "عقد إيجار",
+    "deposit": "وديعة",
+    "maintenance": "صيانة",
+    "payment": "دفع",
+    "dueDate": "تاريخ الاستحقاق",
+    "status": "الحالة"
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "invalidEmail": "عنوان البريد الإلكتروني غير صالح",
+    "invalidPhone": "رقم الهاتف غير صالح",
+    "minLength": "الحد الأدنى للطول هو {{min}} حرفًا",
+    "maxLength": "الحد الأقصى للطول هو {{max}} حرفًا",
+    "passwordMismatch": "كلمات المرور غير متطابقة"
+  }
+}

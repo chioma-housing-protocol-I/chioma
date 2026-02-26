@@ -40,6 +40,9 @@ import { JobQueueService } from './common/services/job-queue.service';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { MLModule } from './modules/ml/ml.module';
+import { TechnicalDebtModule } from './modules/technical-debt/technical-debt.module';
+import { I18nModule } from './modules/i18n/i18n.module';
+import { LocalizationMiddleware } from './modules/i18n/middleware/localization.middleware';
 
 @Module({
   imports: [
@@ -134,6 +137,8 @@ import { MLModule } from './modules/ml/ml.module';
     SearchModule,
     RateLimitingModule,
     MLModule,
+    TechnicalDebtModule,
+    I18nModule,
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module
@@ -179,6 +184,9 @@ export class AppModule implements NestModule {
   }
 
   configure(consumer: MiddlewareConsumer) {
+    // Localization middleware (applied to all routes)
+    consumer.apply(LocalizationMiddleware).forRoutes('*');
+
     // Security headers middleware (applied to all routes)
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
 

@@ -1,0 +1,62 @@
+{
+  "common": {
+    "welcome": "Bienvenue",
+    "hello": "Bonjour, {{name}}",
+    "goodbye": "Au revoir",
+    "yes": "Oui",
+    "no": "Non",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "warning": "Avertissement"
+  },
+  "errors": {
+    "notFound": "Ressource non trouvée",
+    "unauthorized": "Accès non autorisé",
+    "forbidden": "Accès interdit",
+    "badRequest": "Mauvaise requête",
+    "internalError": "Erreur interne du serveur",
+    "validationFailed": "Échec de la validation",
+    "networkError": "Erreur réseau"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "register": "S'inscrire",
+    "forgotPassword": "Mot de passe oublié",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "rememberMe": "Se souvenir de moi"
+  },
+  "rental": {
+    "property": "Propriété",
+    "rent": "Loyer",
+    "tenant": "Locataire",
+    "landlord": "Propriétaire",
+    "agreement": "Accord",
+    "lease": "Bail",
+    "deposit": "Dépôt",
+    "maintenance": "Entretien",
+    "payment": "Paiement",
+    "dueDate": "Date d'échéance",
+    "status": "Statut"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "Adresse e-mail invalide",
+    "invalidPhone": "Numéro de téléphone invalide",
+    "minLength": "La longueur minimale est de {{min}} caractères",
+    "maxLength": "La longueur maximale est de {{max}} caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
+  }
+}

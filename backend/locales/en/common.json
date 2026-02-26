@@ -1,0 +1,62 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "hello": "Hello, {{name}}",
+    "goodbye": "Goodbye",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning"
+  },
+  "errors": {
+    "notFound": "Resource not found",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden",
+    "badRequest": "Bad request",
+    "internalError": "Internal server error",
+    "validationFailed": "Validation failed",
+    "networkError": "Network error"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "forgotPassword": "Forgot Password",
+    "resetPassword": "Reset Password",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "rememberMe": "Remember Me"
+  },
+  "rental": {
+    "property": "Property",
+    "rent": "Rent",
+    "tenant": "Tenant",
+    "landlord": "Landlord",
+    "agreement": "Agreement",
+    "lease": "Lease",
+    "deposit": "Deposit",
+    "maintenance": "Maintenance",
+    "payment": "Payment",
+    "dueDate": "Due Date",
+    "status": "Status"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidPhone": "Invalid phone number",
+    "minLength": "Minimum length is {{min}} characters",
+    "maxLength": "Maximum length is {{max}} characters",
+    "passwordMismatch": "Passwords do not match"
+  }
+}
