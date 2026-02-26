@@ -131,7 +131,7 @@ jobs:
           DB_PASSWORD: postgres
           DB_NAME: chioma
           JWT_SECRET: "openapi-generate-dummy-secret-not-for-production"
-          SECURITY_ENCRYPTION_KEY: "openapi-generate-dummy-32-byte-key-not-for-prod!!"
+          SECURITY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CHIOMA_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
           ESCROW_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
           DISPUTE_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
@@ -156,7 +156,7 @@ jobs:
         env:
           NODE_ENV: test
           JWT_SECRET: "e2e-test-dummy-secret-not-for-production"
-          SECURITY_ENCRYPTION_KEY: "e2e-test-dummy-32-byte-key-not-for-prod!!"
+          SECURITY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           DB_TYPE: postgres
           DB_HOST: localhost
           DB_PORT: "5432"
