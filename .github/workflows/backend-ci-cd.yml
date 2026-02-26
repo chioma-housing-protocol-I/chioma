@@ -68,3 +68,60 @@ jobs:
           files: ./backend/coverage/coverage-final.json
           flags: unittests
           fail_ci_if_error: false
+
+  # ============================================================================
+  # API Quality Gates: OpenAPI spec, docs & contract tests
+  # ============================================================================
+  api-quality:
+    runs-on: ubuntu-latest
+    name: API Docs & Contract
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'backend/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: cd backend && pnpm install --frozen-lockfile
+
+      - name: Generate OpenAPI spec
+        run: cd backend && pnpm run openapi:generate
+        env:
+          OPENAPI_OUTPUT: openapi.json
+          NODE_ENV: test
+          RATE_LIMIT_TTL: "60000"
+          RATE_LIMIT_MAX: "100"
+          RATE_LIMIT_AUTH_TTL: "60000"
+          RATE_LIMIT_AUTH_MAX: "5"
+          RATE_LIMIT_STRICT_TTL: "60000"
+          RATE_LIMIT_STRICT_MAX: "10"
+          DB_TYPE: sqlite
+          DB_DATABASE: ":memory:"
+
+      - name: Verify OpenAPI spec exists and is valid JSON
+        run: |
+          cd backend && node -e "const s=require('./openapi.json'); if(!s.openapi||!s.paths) throw new Error('Invalid OpenAPI'); console.log('OpenAPI', s.info?.version, 'paths:', Object.keys(s.paths).length);"
+
+      - name: Upload OpenAPI spec artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: backend/openapi.json
+
+      - name: Generate SDKs (TypeScript, Python)
+        run: cd backend && pnpm run sdk:generate
+        continue-on-error: true
+
+      - name: Run API and integration E2E tests
+        run: cd backend && pnpm run test:e2e -- --testPathPattern="api-docs|api-contract|integration|performance"
