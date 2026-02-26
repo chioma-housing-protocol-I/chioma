@@ -86,7 +86,7 @@ describe('Rate Limiting E2E', () => {
   describe('Abuse Detection', () => {
     it('should detect rapid fire requests', async () => {
       const identifier = `test-${Date.now()}`;
-      const promises = [];
+      const promises: Promise<any>[] = [];
 
       for (let i = 0; i < 100; i++) {
         promises.push(
