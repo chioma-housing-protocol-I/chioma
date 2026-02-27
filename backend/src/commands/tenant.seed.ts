@@ -154,9 +154,7 @@ function getSeedConfig(options: SeedTenantOptions): SeedTenantConfig {
     firstName:
       options.firstName ?? process.env.TENANT_DEFAULT_FIRST_NAME ?? 'Demo',
     lastName:
-      options.lastName ??
-      process.env.TENANT_DEFAULT_LAST_NAME ??
-      'Tenant',
+      options.lastName ?? process.env.TENANT_DEFAULT_LAST_NAME ?? 'Tenant',
     force: options.force,
     autoGeneratePassword,
   };

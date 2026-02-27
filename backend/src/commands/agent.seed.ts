@@ -154,9 +154,7 @@ function getSeedConfig(options: SeedAgentOptions): SeedAgentConfig {
     firstName:
       options.firstName ?? process.env.AGENT_DEFAULT_FIRST_NAME ?? 'Demo',
     lastName:
-      options.lastName ??
-      process.env.AGENT_DEFAULT_LAST_NAME ??
-      'Agent',
+      options.lastName ?? process.env.AGENT_DEFAULT_LAST_NAME ?? 'Agent',
     force: options.force,
     autoGeneratePassword,
   };

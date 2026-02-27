@@ -7,7 +7,6 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -35,7 +34,8 @@
     "seed:agent:prod": "NODE_ENV=production ts-node src/commands/index.ts agent --force",
     "seed:tenant": "ts-node src/commands/index.ts tenant",
     "seed:tenant:prod": "NODE_ENV=production ts-node src/commands/index.ts tenant --force",
-    "seed:all": "pnpm run seed:admin && pnpm run seed:agent && pnpm run seed:tenant"
+    "seed:all": "pnpm run seed:admin && pnpm run seed:agent && pnpm run seed:tenant",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.995.0",
