@@ -14,6 +14,11 @@ on:
       - "backend/**"
       - ".github/workflows/backend-security-ci.yml"
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   security-checks:
     name: Backend security lint, test & build
@@ -80,8 +85,9 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'trivy-backend'
 
