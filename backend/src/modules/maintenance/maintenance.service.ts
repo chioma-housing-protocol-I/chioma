@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -39,6 +41,7 @@ export class MaintenanceService {
     private readonly notificationsService: NotificationsService,
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => ReviewPromptService))
     private readonly reviewPromptService: ReviewPromptService,
   ) {}
 

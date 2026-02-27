@@ -26,9 +26,10 @@ export interface PaymentSplit {
 export class ChiomaContractService {
   private readonly logger = new Logger(ChiomaContractService.name);
   private readonly server: SorobanRpc.Server;
-  private readonly contract: Contract;
+  private readonly contract?: Contract;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
+  private readonly isConfigured: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const rpcUrl =
@@ -44,7 +45,16 @@ export class ChiomaContractService {
     );
 
     this.server = new SorobanRpc.Server(rpcUrl);
-    this.contract = new Contract(contractId);
+    
+    // Only create contract if contractId is provided
+    if (contractId) {
+      this.contract = new Contract(contractId);
+      this.isConfigured = true;
+    } else {
+      this.logger.warn('CHIOMA_CONTRACT_ID not set - on-chain features will be disabled');
+      this.isConfigured = false;
+    }
+    
     this.networkPassphrase =
       network === 'mainnet'
         ? StellarSdk.Networks.PUBLIC
@@ -57,6 +67,9 @@ export class ChiomaContractService {
 
   async createAgreement(params: CreateAgreementParams): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       if (!this.adminKeypair) {
         throw new Error('Admin keypair not configured');
       }
@@ -111,6 +124,9 @@ export class ChiomaContractService {
     tenantKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(tenant);
 
       const operation = this.contract.call(
@@ -147,6 +163,9 @@ export class ChiomaContractService {
     landlordKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(landlord);
 
       const operation = this.contract.call(
@@ -183,6 +202,9 @@ export class ChiomaContractService {
     callerKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(caller);
 
       const operation = this.contract.call(
@@ -215,6 +237,9 @@ export class ChiomaContractService {
 
   async getAgreement(agreementId: string): Promise<any> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       if (!this.adminKeypair) {
         throw new Error('Admin keypair not configured');
       }
@@ -254,6 +279,9 @@ export class ChiomaContractService {
 
   async hasAgreement(agreementId: string): Promise<boolean> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return false;
+      }
       if (!this.adminKeypair) {
         return false;
       }
@@ -293,6 +321,9 @@ export class ChiomaContractService {
 
   async getAgreementCount(): Promise<number> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return 0;
+      }
       if (!this.adminKeypair) {
         return 0;
       }
@@ -332,6 +363,9 @@ export class ChiomaContractService {
     month: number,
   ): Promise<PaymentSplit> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       if (!this.adminKeypair) {
         throw new Error('Admin keypair not configured');
       }

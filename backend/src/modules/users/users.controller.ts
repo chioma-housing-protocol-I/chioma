@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
-  UpdateProfileDto,
+  UpdateUserProfileDto,
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-user.dto';
@@ -57,7 +57,7 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateProfile(
     @CurrentUser() user: User,
-    @Body() updateProfileDto: UpdateProfileDto,
+    @Body() updateProfileDto: UpdateUserProfileDto,
   ) {
     return this.usersService.updateProfile(user.id, updateProfileDto);
   }

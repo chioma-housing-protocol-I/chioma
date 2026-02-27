@@ -27,9 +27,10 @@ export interface EscrowData {
 export class EscrowContractService {
   private readonly logger = new Logger(EscrowContractService.name);
   private readonly server: SorobanRpc.Server;
-  private readonly contract: Contract;
+  private readonly contract?: Contract;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
+  private readonly isConfigured: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const rpcUrl =
@@ -45,7 +46,16 @@ export class EscrowContractService {
     );
 
     this.server = new SorobanRpc.Server(rpcUrl);
-    this.contract = new Contract(contractId);
+    
+    // Only create contract if contractId is provided
+    if (contractId) {
+      this.contract = new Contract(contractId);
+      this.isConfigured = true;
+    } else {
+      this.logger.warn('ESCROW_CONTRACT_ID not set - escrow features will be disabled');
+      this.isConfigured = false;
+    }
+    
     this.networkPassphrase =
       network === 'mainnet'
         ? StellarSdk.Networks.PUBLIC
@@ -58,6 +68,9 @@ export class EscrowContractService {
 
   async createEscrow(params: CreateEscrowParams): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       if (!this.adminKeypair) {
         throw new Error('Admin keypair not configured');
       }
@@ -103,6 +116,9 @@ export class EscrowContractService {
     callerKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(caller);
 
       const operation = this.contract.call(
@@ -137,6 +153,9 @@ export class EscrowContractService {
     callerKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(caller);
 
       const operation = this.contract.call(
@@ -175,6 +194,9 @@ export class EscrowContractService {
     callerKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(caller);
 
       const operation = this.contract.call(
@@ -213,6 +235,9 @@ export class EscrowContractService {
     arbiterKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const account = await this.server.getAccount(arbiter);
 
       const operation = this.contract.call(
@@ -246,6 +271,9 @@ export class EscrowContractService {
 
   async getEscrow(escrowId: string): Promise<EscrowData | null> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return null;
+      }
       if (!this.adminKeypair) {
         return null;
       }

@@ -18,7 +18,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
@@ -42,7 +42,7 @@ export class PaymentController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async recordPayment(
-    @Body() dto: RecordPaymentDto,
+    @Body() dto: CreatePaymentRecordDto,
     @Request() req: { user?: { id: string } },
   ) {
     return this.paymentService.recordPayment(dto, req.user?.id || '');

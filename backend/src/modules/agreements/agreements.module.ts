@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AgreementsController } from './agreements.controller';
 import { AgreementNftController } from './agreement-nft.controller';
@@ -25,7 +25,7 @@ import { StellarModule } from '../stellar/stellar.module';
       RentObligationNft,
     ]),
     AuditModule,
-    ReviewsModule,
+    forwardRef(() => ReviewsModule),
     StellarModule,
   ],
   controllers: [AgreementsController, AgreementNftController],

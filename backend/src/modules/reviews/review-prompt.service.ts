@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { ReviewsService } from '../reviews/reviews.service';
 import { MaintenanceService } from '../maintenance/maintenance.service';
 import { AgreementsService } from '../agreements/agreements.service';
@@ -8,7 +8,9 @@ import { ReviewContext } from '../reviews/review.entity';
 export class ReviewPromptService {
   constructor(
     private readonly reviewsService: ReviewsService,
+    @Inject(forwardRef(() => MaintenanceService))
     private readonly maintenanceService: MaintenanceService,
+    @Inject(forwardRef(() => AgreementsService))
     private readonly agreementsService: AgreementsService,
   ) {}
 

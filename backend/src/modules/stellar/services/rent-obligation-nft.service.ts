@@ -24,9 +24,10 @@ export interface RentObligationData {
 export class RentObligationNftService {
   private readonly logger = new Logger(RentObligationNftService.name);
   private readonly server: SorobanRpc.Server;
-  private readonly contract: Contract;
+  private readonly contract?: Contract;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
+  private readonly isConfigured: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const rpcUrl =
@@ -43,7 +44,16 @@ export class RentObligationNftService {
     );
 
     this.server = new SorobanRpc.Server(rpcUrl);
-    this.contract = new Contract(contractId);
+    
+    // Only create contract if contractId is provided
+    if (contractId) {
+      this.contract = new Contract(contractId);
+      this.isConfigured = true;
+    } else {
+      this.logger.warn('RENT_OBLIGATION_CONTRACT_ID not set - NFT features will be disabled');
+      this.isConfigured = false;
+    }
+    
     this.networkPassphrase =
       network === 'mainnet'
         ? StellarSdk.Networks.PUBLIC
@@ -58,6 +68,9 @@ export class RentObligationNftService {
     params: MintObligationParams,
   ): Promise<{ txHash: string; obligationId: string }> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const landlordAddress = new Address(params.landlordAddress);
       const agreementIdScVal = xdr.ScVal.scvString(params.agreementId);
       const landlordScVal = landlordAddress.toScVal();
@@ -91,6 +104,9 @@ export class RentObligationNftService {
     params: TransferObligationParams,
   ): Promise<{ txHash: string }> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
       const fromAddress = new Address(params.fromAddress);
       const toAddress = new Address(params.toAddress);
       const agreementIdScVal = xdr.ScVal.scvString(params.agreementId);
@@ -119,6 +135,9 @@ export class RentObligationNftService {
 
   async getObligationOwner(agreementId: string): Promise<string | null> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return null;
+      }
       const agreementIdScVal = xdr.ScVal.scvString(agreementId);
       const result = this.contract.call(
         'get_obligation_owner',
@@ -163,6 +182,9 @@ export class RentObligationNftService {
 
   async getObligation(agreementId: string): Promise<RentObligationData | null> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return null;
+      }
       const agreementIdScVal = xdr.ScVal.scvString(agreementId);
       const result = this.contract.call('get_obligation', agreementIdScVal);
 
@@ -197,6 +219,9 @@ export class RentObligationNftService {
 
   async hasObligation(agreementId: string): Promise<boolean> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return false;
+      }
       const agreementIdScVal = xdr.ScVal.scvString(agreementId);
       const result = this.contract.call('has_obligation', agreementIdScVal);
 
@@ -229,6 +254,9 @@ export class RentObligationNftService {
 
   async getObligationCount(): Promise<number> {
     try {
+      if (!this.isConfigured || !this.contract) {
+        return 0;
+      }
       const result = this.contract.call('get_obligation_count');
 
       const simulated = await this.server.simulateTransaction(
@@ -263,6 +291,9 @@ export class RentObligationNftService {
     params: xdr.ScVal[],
     sourceAddress: string,
   ): Promise<StellarSdk.Transaction> {
+    if (!this.contract) {
+      throw new Error('Contract not configured');
+    }
     const operation = this.contract.call(method, ...params);
 
     const account = await this.server.getAccount(sourceAddress);

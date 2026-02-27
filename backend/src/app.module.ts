@@ -195,6 +195,6 @@ export class AppModule implements NestModule {
       );
 
     // Real-time threat detection (applied to all API routes)
-    consumer.apply(ThreatDetectionMiddleware).forRoutes('api/*');
+    consumer.apply(ThreatDetectionMiddleware).forRoutes('api/*path');
   }
 }

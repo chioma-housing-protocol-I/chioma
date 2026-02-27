@@ -17,7 +17,7 @@ import {
   PaymentInterval,
   PaymentScheduleStatus,
 } from './entities/payment-schedule.entity';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { PaymentGatewayService } from './payment-gateway.service';
@@ -52,7 +52,7 @@ export class PaymentService {
     private readonly usersService: UsersService,
   ) {}
 
-  async recordPayment(dto: RecordPaymentDto, userId: string): Promise<Payment> {
+  async recordPayment(dto: CreatePaymentRecordDto, userId: string): Promise<Payment> {
     this.ensureUserId(userId);
 
     const idempotencyKey = this.getIdempotencyKey(dto);
@@ -614,7 +614,7 @@ export class PaymentService {
     return next;
   }
 
-  private getIdempotencyKey(dto: RecordPaymentDto): string | null {
+  private getIdempotencyKey(dto: CreatePaymentRecordDto): string | null {
     const key = (dto as { idempotencyKey?: unknown }).idempotencyKey;
     return typeof key === 'string' ? key : null;
   }

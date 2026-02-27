@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -38,6 +40,7 @@ export class AgreementsService {
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     private readonly auditService: AuditService,
+    @Inject(forwardRef(() => ReviewPromptService))
     private readonly reviewPromptService: ReviewPromptService,
     private readonly chiomaContract: ChiomaContractService,
     private readonly blockchainSync: BlockchainSyncService,
