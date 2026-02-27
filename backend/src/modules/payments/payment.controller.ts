@@ -32,7 +32,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments')
+@Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -90,7 +90,7 @@ export class PaymentController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/payment-methods')
+@Controller('payment-methods')
 export class PaymentMethodController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -140,7 +140,7 @@ export class PaymentMethodController {
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/agreements')
+@Controller('agreements')
 export class AgreementPaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -162,7 +162,7 @@ export class AgreementPaymentController {
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments/schedules')
+@Controller('payments/schedules')
 export class PaymentScheduleController {
   constructor(private readonly paymentService: PaymentService) {}
 

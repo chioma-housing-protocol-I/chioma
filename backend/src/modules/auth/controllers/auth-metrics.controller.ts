@@ -26,7 +26,7 @@ import { UserRole } from '../../users/entities/user.entity';
 @ApiTags('Authentication Metrics')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('api/auth/metrics')
+@Controller('auth/metrics')
 export class AuthMetricsController {
   constructor(private readonly authMetricsService: AuthMetricsService) {}
 

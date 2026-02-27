@@ -30,7 +30,7 @@ import { StellarTransaction } from '../entities/stellar-transaction.entity';
 import { StellarEscrow } from '../entities/stellar-escrow.entity';
 
 @ApiTags('Stellar')
-@Controller('api/stellar')
+@Controller('stellar')
 export class StellarController {
   constructor(private readonly stellarService: StellarService) {}
 

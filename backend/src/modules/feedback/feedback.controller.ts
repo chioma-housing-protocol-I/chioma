@@ -4,7 +4,7 @@ import { FeedbackService } from './feedback.service';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 
 @ApiTags('Community & Support')
-@Controller('api/feedback')
+@Controller('feedback')
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 

@@ -21,7 +21,7 @@ import { ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Developer Portal')
 @ApiBearerAuth('JWT-auth')
-@Controller('api/developer')
+@Controller('developer')
 @UseGuards(JwtAuthGuard)
 export class DeveloperController {
   constructor(private readonly developerService: DeveloperService) {}
