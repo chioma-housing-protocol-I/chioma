@@ -45,16 +45,18 @@ export class ChiomaContractService {
     );
 
     this.server = new SorobanRpc.Server(rpcUrl);
-    
+
     // Only create contract if contractId is provided
     if (contractId) {
       this.contract = new Contract(contractId);
       this.isConfigured = true;
     } else {
-      this.logger.warn('CHIOMA_CONTRACT_ID not set - on-chain features will be disabled');
+      this.logger.warn(
+        'CHIOMA_CONTRACT_ID not set - on-chain features will be disabled',
+      );
       this.isConfigured = false;
     }
-    
+
     this.networkPassphrase =
       network === 'mainnet'
         ? StellarSdk.Networks.PUBLIC

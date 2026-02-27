@@ -46,16 +46,18 @@ export class EscrowContractService {
     );
 
     this.server = new SorobanRpc.Server(rpcUrl);
-    
+
     // Only create contract if contractId is provided
     if (contractId) {
       this.contract = new Contract(contractId);
       this.isConfigured = true;
     } else {
-      this.logger.warn('ESCROW_CONTRACT_ID not set - escrow features will be disabled');
+      this.logger.warn(
+        'ESCROW_CONTRACT_ID not set - escrow features will be disabled',
+      );
       this.isConfigured = false;
     }
-    
+
     this.networkPassphrase =
       network === 'mainnet'
         ? StellarSdk.Networks.PUBLIC

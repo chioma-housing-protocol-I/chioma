@@ -22,7 +22,7 @@ import { PropertyQueryBuilder } from './property-query-builder';
 
 @Injectable()
 export class PropertiesService {
-  findById(propertyId: any) {
+  findById(_propertyId: any) {
     throw new Error('Method not implemented.');
   }
   constructor(
