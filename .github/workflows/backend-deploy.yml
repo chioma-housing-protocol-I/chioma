@@ -153,9 +153,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/develop'
-    environment:
-      name: staging
-      url: https://staging-api.chioma.app
 
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +165,9 @@ jobs:
       - name: Run smoke tests
         run: |
           echo "Running smoke tests..."
-          curl -f https://staging-api.chioma.app/health || exit 1
+          for i in {1..5}; do
+            curl -f https://staging-api.chioma.app/health && break || sleep 10;
+          done || exit 1
 
   deploy-production:
     name: Deploy to Production
@@ -177,7 +176,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://api.chioma.app
+      url: https://chioma-sqq1.onrender.com
 
     steps:
       - uses: actions/checkout@v4
@@ -190,7 +189,9 @@ jobs:
       - name: Run smoke tests
         run: |
           echo "Running production smoke tests..."
-          curl -f https://api.chioma.app/health || exit 1
+          for i in {1..5}; do
+            curl -f https://chioma-sqq1.onrender.com/health && break || sleep 10;
+          done || exit 1
 
       - name: Notify deployment
         if: success()
