@@ -10,6 +10,7 @@ import {
   ListingStatus,
 } from './entities/property.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
+import { KycStatus } from '../kyc/kyc.entity';
 
 describe('PropertiesController', () => {
   let controller: PropertiesController;
@@ -36,6 +37,7 @@ describe('PropertiesController', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    kycStatus: KycStatus.PENDING,
   };
 
   const mockProperty: Property = {

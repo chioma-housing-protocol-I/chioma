@@ -1,6 +1,6 @@
 //! Dispute resolution and admin override for the Escrow contract.
 //! Allows either party to freeze funds and requires admin to resolve.
-use soroban_sdk::{Address, BytesN, Env, String};
+use soroban_sdk::{token, Address, BytesN, Env, String};
 
 use crate::access::AccessControl;
 use crate::errors::EscrowError;
@@ -25,21 +25,24 @@ impl DisputeHandler {
     /// - Store dispute reason
     /// - Clear existing approvals (freeze funds)
     pub fn initiate_dispute(
-        env: &Env,
-        escrow_id: &BytesN<32>,
-        caller: &Address,
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
         reason: String,
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
-        let mut escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         // Verify caller is a primary party (depositor or beneficiary)
-        AccessControl::is_primary_party(&escrow, caller)?;
+        AccessControl::is_primary_party(&escrow, &caller)?;
 
         // Verify escrow is in Funded state
         if escrow.status != EscrowStatus::Funded {
             return Err(EscrowError::InvalidState);
         }
+
+        // Authorize the dispute initiation
+        caller.require_auth();
 
         // Verify reason is not empty
         if reason.is_empty() {
@@ -49,10 +52,10 @@ impl DisputeHandler {
         // EFFECTS: Update status and store reason
         escrow.status = EscrowStatus::Disputed;
         escrow.dispute_reason = Some(reason);
-        EscrowStorage::save(env, &escrow);
+        EscrowStorage::save(&env, &escrow);
 
         // Freeze funds by clearing all approvals
-        EscrowStorage::clear_approvals(env, escrow_id);
+        EscrowStorage::clear_approvals(&env, &escrow_id);
 
         Ok(())
     }
@@ -74,21 +77,24 @@ impl DisputeHandler {
     /// INTERACTIONS:
     /// - Token transfer would happen after state update
     pub fn resolve_dispute(
-        env: &Env,
-        escrow_id: &BytesN<32>,
-        caller: &Address,
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
         release_to: Address,
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
-        let mut escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         // Verify caller is arbiter
-        AccessControl::is_arbiter(&escrow, caller)?;
+        AccessControl::is_arbiter(&escrow, &caller)?;
 
         // Verify escrow is in Disputed state
         if escrow.status != EscrowStatus::Disputed {
             return Err(EscrowError::InvalidState);
         }
+
+        // Authorize the dispute resolution
+        caller.require_auth();
 
         // Verify release target is valid
         if release_to != escrow.beneficiary && release_to != escrow.depositor {
@@ -98,13 +104,14 @@ impl DisputeHandler {
         // EFFECTS: Update status and clear dispute
         escrow.status = EscrowStatus::Released;
         escrow.dispute_reason = None;
-        EscrowStorage::save(env, &escrow);
+        EscrowStorage::save(&env, &escrow);
 
         // Clear approvals
-        EscrowStorage::clear_approvals(env, escrow_id);
+        EscrowStorage::clear_approvals(&env, &escrow_id);
 
-        // INTERACTIONS: Token transfer would happen here
-        // transfer_to_token(&env, &escrow.token, &escrow_contract_id, &release_to, escrow.amount)?;
+        // INTERACTIONS: Token transfer from escrow contract to release target
+        let token_client = token::Client::new(&env, &escrow.token);
+        token_client.transfer(&env.current_contract_address(), &release_to, &escrow.amount);
 
         Ok(())
     }
@@ -112,17 +119,17 @@ impl DisputeHandler {
     /// Get dispute information for an escrow.
     /// Returns the dispute reason if escrow is disputed, None otherwise.
     pub fn get_dispute_info(
-        env: &Env,
-        escrow_id: &BytesN<32>,
+        env: Env,
+        escrow_id: BytesN<32>,
     ) -> Result<Option<String>, EscrowError> {
-        let escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         Ok(escrow.dispute_reason)
     }
 
     /// Check if an escrow is currently disputed.
-    pub fn is_disputed(env: &Env, escrow_id: &BytesN<32>) -> Result<bool, EscrowError> {
-        let escrow = EscrowStorage::get(env, escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+    pub fn is_disputed(env: Env, escrow_id: BytesN<32>) -> Result<bool, EscrowError> {
+        let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
         Ok(escrow.status == EscrowStatus::Disputed)
     }
 }

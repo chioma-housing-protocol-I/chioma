@@ -105,6 +105,7 @@ const RecentListings = () => {
                       src={item.image}
                       alt={item.title}
                       fill
+                      sizes="48px"
                       className="object-cover"
                     />
                   </div>

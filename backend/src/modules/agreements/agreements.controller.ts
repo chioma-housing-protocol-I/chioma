@@ -33,7 +33,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Rent Agreements')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/agreements')
+@Controller('agreements')
 @UseInterceptors(AuditLogInterceptor)
 export class AgreementsController {
   constructor(private readonly agreementsService: AgreementsService) {}

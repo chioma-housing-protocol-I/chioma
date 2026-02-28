@@ -65,4 +65,8 @@ pub enum DataKey {
     DisputeInfo(BytesN<32>),
     /// Counter for total escrows created
     EscrowCount,
+    /// Per-target approval count: DataKey::ApprovalCount(escrow_id, release_to) => u32
+    ApprovalCount(BytesN<32>, Address),
+    /// Per-signer-per-target flag: DataKey::SignerApproved(escrow_id, signer, release_to) => bool
+    SignerApproved(BytesN<32>, Address, Address),
 }

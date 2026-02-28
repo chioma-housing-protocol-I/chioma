@@ -8,15 +8,23 @@ interface SidebarItemProps {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
   href: string;
+  isActive?: boolean;
 }
 
-export default function SidebarItem({ icon, label, href }: SidebarItemProps) {
+export default function SidebarItem({
+  icon,
+  label,
+  href,
+  isActive: overrideIsActive,
+}: SidebarItemProps) {
   const pathname = usePathname();
 
-  const isActive =
-    href === '/landlords'
-      ? pathname === href
-      : pathname === `/landlords/${label.toLowerCase()}`;
+  const activeState =
+    overrideIsActive !== undefined
+      ? overrideIsActive
+      : href === '/landlords'
+        ? pathname === href
+        : pathname === `/landlords/${label.toLowerCase()}`;
 
   const IconComponent = icon;
 
@@ -25,8 +33,8 @@ export default function SidebarItem({ icon, label, href }: SidebarItemProps) {
       href={href}
       className={`flex gap-3 items-center px-6 py-3 cursor-pointer transition-colors
         ${
-          isActive
-            ? 'bg-blue-100/70 font-bold text-[#1e40af] lg:border-l-4 lg:border-[#1e40af]'
+          activeState
+            ? 'bg-blue-100/70 font-bold text-brand-blue-dark lg:border-l-4 lg:border-brand-blue-dark'
             : 'hover:bg-gray-100 text-gray-500'
         }
         md:flex-col gap-3 md:py-4 lg:flex-row lg:items-center lg:px-6

@@ -14,9 +14,11 @@ import { AssetType } from './stellar-transaction.entity';
 
 export enum EscrowStatus {
   PENDING = 'PENDING',
+  FUNDED = 'FUNDED',
   ACTIVE = 'ACTIVE',
   RELEASED = 'RELEASED',
   REFUNDED = 'REFUNDED',
+  DISPUTED = 'DISPUTED',
   EXPIRED = 'EXPIRED',
   CANCELLED = 'CANCELLED',
 }
@@ -116,6 +118,54 @@ export class StellarEscrow {
 
   @Column({ name: 'rent_agreement_id', type: 'uuid', nullable: true })
   rentAgreementId: string | null;
+
+  // Blockchain integration fields
+  @Column({
+    name: 'blockchain_escrow_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  blockchainEscrowId: string | null;
+
+  @Column({
+    name: 'on_chain_status',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  onChainStatus: string | null;
+
+  @Column({
+    name: 'escrow_contract_address',
+    type: 'varchar',
+    length: 56,
+    nullable: true,
+  })
+  escrowContractAddress: string | null;
+
+  @Column({
+    name: 'arbiter_address',
+    type: 'varchar',
+    length: 56,
+    nullable: true,
+  })
+  arbiterAddress: string | null;
+
+  @Column({ name: 'dispute_id', type: 'uuid', nullable: true })
+  disputeId: string | null;
+
+  @Column({ name: 'dispute_reason', type: 'text', nullable: true })
+  disputeReason: string | null;
+
+  @Column({ name: 'blockchain_synced_at', type: 'timestamp', nullable: true })
+  blockchainSyncedAt: Date | null;
+
+  @Column({ name: 'approval_count', type: 'int', default: 0 })
+  approvalCount: number;
+
+  @Column({ name: 'escrow_metadata', type: 'jsonb', nullable: true })
+  escrowMetadata: any;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

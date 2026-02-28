@@ -43,6 +43,7 @@ async function bootstrap() {
       'X-Request-ID',
       'X-XSRF-TOKEN',
       'X-CSRF-Token',
+      'X-API-Key',
     ],
     exposedHeaders: [
       'X-RateLimit-Limit',
@@ -53,7 +54,13 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api', {
-    exclude: ['health', 'health/detailed', 'security.txt', '.well-known'],
+    exclude: [
+      'health',
+      'health/detailed',
+      'security.txt',
+      '.well-known',
+      'developer-portal',
+    ],
   });
 
   // Configure request size limits
@@ -93,22 +100,62 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Chioma API')
-    .setDescription('Stellar blockchain-based rental payment platform API')
+    .setDescription(
+      'REST API for Chioma — a Stellar blockchain-based rental payment platform. ' +
+        'Supports landlords, agents, and tenants with JWT and Stellar (SEP-0010) authentication, ' +
+        'rent agreements, payments, escrow, disputes, and KYC.',
+    )
     .setVersion('1.0')
+    .setContact('Chioma', 'https://chioma.app', 'support@chioma.app')
+    .setLicense('Open Source', 'https://github.com/chioma/chioma')
+    .addServer(
+      configService.get<string>('API_BASE_URL') || 'http://localhost:5000',
+      'Default',
+    )
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Enter JWT token',
+        description: 'JWT access token from /auth/login or /auth/register',
       },
       'JWT-auth',
     )
+    .addTag(
+      'Authentication',
+      'Register, login, MFA, password reset, Stellar auth',
+    )
+    .addTag('Users', 'Current user profile and settings')
+    .addTag('Rent Agreements', 'Create and manage rental agreements')
+    .addTag('Properties', 'Property listings and search')
+    .addTag('Payments', 'Payments, payment methods, schedules')
+    .addTag('Stellar', 'Stellar accounts, payments, escrow')
+    .addTag('Anchor', 'Fiat deposit/withdraw via Stellar anchors')
+    .addTag('Disputes', 'Dispute creation and resolution')
+    .addTag('Audit Logs', 'Audit and compliance logs')
+    .addTag('Security', 'security.txt and security policy')
+    .addTag('Health', 'Service health checks')
+    .addTag('Storage', 'File upload/download URLs')
+    .addTag('Reviews', 'Property and user reviews')
+    .addTag('KYC', 'Identity verification')
+    .addTag('Maintenance', 'Maintenance requests')
+    .addTag('System', 'Root and misc endpoints')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey}_${methodKey}`,
+  });
 
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+    },
+    customSiteTitle: 'Chioma API Docs',
+  });
 
   await app.listen(process.env.PORT ?? 5000);
 }

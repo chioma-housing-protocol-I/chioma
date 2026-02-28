@@ -5,7 +5,6 @@ import { BadRequestException } from '@nestjs/common';
 import { AnchorService } from '../services/anchor.service';
 import {
   AnchorTransaction,
-  AnchorTransactionType,
   AnchorTransactionStatus,
 } from '../../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../../transactions/entities/supported-currency.entity';
@@ -13,8 +12,8 @@ import { PaymentMethodType } from '../dto/deposit-request.dto';
 
 describe('AnchorService', () => {
   let service: AnchorService;
-  let anchorTransactionRepo: any;
-  let supportedCurrencyRepo: any;
+  let _anchorTransactionRepo: any;
+  let _supportedCurrencyRepo: any;
 
   const mockAnchorTransactionRepo = {
     create: jest.fn(),
@@ -57,8 +56,8 @@ describe('AnchorService', () => {
     }).compile();
 
     service = module.get<AnchorService>(AnchorService);
-    anchorTransactionRepo = module.get(getRepositoryToken(AnchorTransaction));
-    supportedCurrencyRepo = module.get(getRepositoryToken(SupportedCurrency));
+    _anchorTransactionRepo = module.get(getRepositoryToken(AnchorTransaction));
+    _supportedCurrencyRepo = module.get(getRepositoryToken(SupportedCurrency));
   });
 
   afterEach(() => {

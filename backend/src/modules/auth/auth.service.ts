@@ -9,21 +9,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { EmailService } from '../notifications/email.service';
 import { User } from '../users/entities/user.entity';
-import {
-  MfaDevice,
-  MfaDeviceStatus,
-  MfaDeviceType,
-} from './entities/mfa-device.entity';
+import { MfaDevice } from './entities/mfa-device.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
+import {
+  AuthSuccessResponseDto,
+  MfaRequiredResponseDto,
+  MessageResponseDto,
+} from './dto/auth-response.dto';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { MfaService } from './services/mfa.service';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -37,14 +39,14 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(MfaDevice)
-    private mfaDeviceRepository: Repository<MfaDevice>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private passwordPolicyService: PasswordPolicyService,
+    private emailService: EmailService,
+    private mfaService: MfaService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+  async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
 
     // Validate password against policy
@@ -52,9 +54,15 @@ export class AuthService {
 
     const existingUser = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
+      withDeleted: true,
     });
 
     if (existingUser) {
+      if (existingUser.deletedAt) {
+        throw new ConflictException(
+          'This email is associated with a deleted account. Please restore your account to continue.',
+        );
+      }
       this.logger.warn(`Registration attempt for existing email: ${email}`);
       throw new ConflictException('Email already registered');
     }
@@ -77,6 +85,16 @@ export class AuthService {
     const savedUser = await this.userRepository.save(user);
     this.logger.log(`User registered successfully: ${savedUser.id}`);
 
+    // Send verification email asynchronously
+    this.emailService
+      .sendVerificationEmail(savedUser.email, verificationToken)
+      .catch((error) =>
+        this.logger.error(
+          `Failed to send verification email for ${savedUser.email}`,
+          error,
+        ),
+      );
+
     const { accessToken, refreshToken } = this.generateTokens(
       savedUser.id,
       savedUser.email,
@@ -89,10 +107,13 @@ export class AuthService {
       user: this.sanitizeUser(savedUser),
       accessToken,
       refreshToken,
+      mfaRequired: false,
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({
@@ -106,7 +127,7 @@ export class AuthService {
 
     if (!user.isActive) {
       this.logger.warn(`Login attempt for inactive account: ${email}`);
-      throw new UnauthorizedException('Account has been deactivated');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.accountLockedUntil) {
@@ -116,9 +137,7 @@ export class AuthService {
           (user.accountLockedUntil.getTime() - now.getTime()) / (1000 * 60),
         );
         this.logger.warn(`Login attempt for locked account: ${email}`);
-        throw new UnauthorizedException(
-          `Account is locked. Try again in ${minutesRemaining} minutes`,
-        );
+        throw new UnauthorizedException('Invalid email or password');
       } else {
         user.accountLockedUntil = null;
         user.failedLoginAttempts = 0;
@@ -139,38 +158,10 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // Check if MFA is enabled
-    const mfaDevice = await this.mfaDeviceRepository.findOne({
-      where: {
-        userId: user.id,
-        type: MfaDeviceType.TOTP,
-        status: MfaDeviceStatus.ACTIVE,
-      },
-    });
+    const mfaCheck = await this.mfaService.checkMfaRequired(user.id);
 
-    if (mfaDevice) {
-      // Generate temporary token for MFA verification
-      const tempToken = this.jwtService.sign(
-        {
-          sub: user.id,
-          email: user.email,
-          role: user.role,
-          type: 'mfa_required',
-        },
-        {
-          secret: this.getJwtSecret(),
-          expiresIn: '5m', // Short-lived token for MFA verification
-        },
-      );
-
-      this.logger.log(`MFA required for user: ${user.id}`);
-      return {
-        user: this.sanitizeUser(user),
-        accessToken: null,
-        refreshToken: null,
-        mfaRequired: true,
-        mfaToken: tempToken,
-      } as AuthResponseDto & { mfaRequired: true; mfaToken: string };
+    if (mfaCheck) {
+      return await this.mfaService.generateMfaToken(user, this);
     }
 
     this.logger.log(`User logged in successfully: ${user.id}`);
@@ -194,52 +185,8 @@ export class AuthService {
   /**
    * Complete login after MFA verification
    */
-  async completeMfaLogin(mfaToken: string): Promise<AuthResponseDto> {
-    try {
-      // Verify temporary MFA token
-      const payload = this.jwtService.verify<{
-        sub: string;
-        email: string;
-        role: string;
-        type: string;
-      }>(mfaToken, {
-        secret: this.getJwtSecret(),
-      });
-
-      if (payload.type !== 'mfa_required') {
-        throw new UnauthorizedException('Invalid token type');
-      }
-
-      const user = await this.userRepository.findOne({
-        where: { id: payload.sub },
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      // Generate final tokens
-      const { accessToken, refreshToken } = this.generateTokens(
-        user.id,
-        user.email,
-        user.role,
-      );
-
-      await this.updateRefreshToken(user.id, refreshToken);
-
-      this.logger.log(`MFA login completed for user: ${user.id}`);
-
-      return {
-        user: this.sanitizeUser(user),
-        accessToken,
-        refreshToken,
-      };
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Invalid or expired MFA token';
-      this.logger.error(`MFA login failed: ${message}`);
-      throw new UnauthorizedException('Invalid or expired MFA token');
-    }
+  async completeMfaLogin(mfaToken: string): Promise<AuthSuccessResponseDto> {
+    return this.mfaService.verifyMfaToken(mfaToken, this);
   }
 
   async refreshToken(
@@ -331,16 +278,26 @@ export class AuthService {
     await this.userRepository.save(user);
     this.logger.log(`Password reset token generated for user: ${user.id}`);
 
+    // Send password reset email asynchronously
+    this.emailService
+      .sendPasswordResetEmail(user.email, resetToken)
+      .catch((error) =>
+        this.logger.error(
+          `Failed to send password reset email for ${user.email}`,
+          error,
+        ),
+      );
+
     return {
       message:
         'If an account exists with this email, you will receive a password reset link',
     };
   }
 
-  private getJwtSecret(): string {
+  public getJwtSecret(): string {
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
-      throw new Error('JWT_SECRET is required');
+      throw new Error('JWT_SECRET environment variable is required');
     }
     return secret;
   }
@@ -348,7 +305,7 @@ export class AuthService {
   private getJwtRefreshSecret(): string {
     const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!secret) {
-      throw new Error('JWT_REFRESH_SECRET is required');
+      throw new Error('JWT_REFRESH_SECRET environment variable is required');
     }
     return secret;
   }
@@ -453,7 +410,7 @@ export class AuthService {
     await this.userRepository.save(user);
   }
 
-  private generateTokens(
+  public generateTokens(
     userId: string,
     email: string,
     role: string,
@@ -466,8 +423,7 @@ export class AuthService {
         type: 'access',
       },
       {
-        secret:
-          this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+        secret: this.getJwtSecret(),
         expiresIn: '15m',
       },
     );
@@ -480,9 +436,7 @@ export class AuthService {
         type: 'refresh',
       },
       {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ||
-          'your-refresh-secret-key',
+        secret: this.getJwtRefreshSecret(),
         expiresIn: '7d',
       },
     );
@@ -490,7 +444,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async updateRefreshToken(
+  public async updateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
@@ -500,7 +454,7 @@ export class AuthService {
     });
   }
 
-  private sanitizeUser(user: User) {
+  public sanitizeUser(user: User) {
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       password: _password,

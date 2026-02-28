@@ -1,3 +1,4 @@
+````markdown
 # Contributing to Chioma
 
 Thank you for your interest in contributing to Chioma! We welcome contributions from the community to help make rental payments transparent, low-cost, and programmable.
@@ -117,3 +118,35 @@ Located in `contract/`.
 5.  Wait for review and address any feedback.
 
 Thank you for contributing to Chioma!
+
+## Local pipeline checks
+
+You can run the same checks that our CI/CD uses locally before opening a pull request. Each sub-project includes a `check-all.sh` helper that runs formatting, linting, building, and tests.
+
+- Frontend: Run the script from the repository root or the `frontend` folder:
+
+  - File: [frontend/check-all.sh](frontend/check-all.sh)
+
+  ```bash
+  ./frontend/check-all.sh
+  ```
+
+- Backend: Run the script from the repository root or the `backend` folder:
+
+  - File: [backend/check-all.sh](backend/check-all.sh)
+
+  ```bash
+  ./backend/check-all.sh
+  ```
+
+- Contracts: Run the script from the repository root or the `contract` folder:
+
+  - File: [contract/check-all.sh](contract/check-all.sh)
+
+  ```bash
+  ./contract/check-all.sh
+  ```
+
+Each script exits immediately on error (`set -e`) so any failing step will stop the run and return a non-zero exit code. Use these scripts to validate your changes locally and reduce CI iteration.
+
+````

@@ -50,6 +50,7 @@ const NewLeads = () => {
                 src={lead.avatar}
                 alt={lead.name}
                 fill
+                sizes="36px"
                 className="object-cover"
               />
             </div>

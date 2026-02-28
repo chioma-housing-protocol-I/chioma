@@ -50,6 +50,34 @@ docker-compose up -d
 pnpm run migration:run
 ```
 
+## Seed initial admin user
+
+```bash
+# Create admin with defaults
+pnpm run seed:admin
+
+# Create admin with custom credentials
+pnpm run seed:admin -- --email admin@example.com --password SecurePass123!
+
+# Force update existing admin (recommended for production automation)
+pnpm run seed:admin:prod
+```
+
+Admin seed defaults can be configured with environment variables:
+
+```dotenv
+ADMIN_DEFAULT_EMAIL=admin@chioma.local
+ADMIN_DEFAULT_FIRST_NAME=System
+ADMIN_DEFAULT_LAST_NAME=Administrator
+ADMIN_AUTO_GENERATE_PASSWORD=true
+```
+
+Docker deployment integration example:
+
+```dockerfile
+RUN pnpm run seed:admin:prod
+```
+
 ## Run tests
 
 ```bash
@@ -62,6 +90,62 @@ $ pnpm run test:e2e
 # test coverage
 $ pnpm run test:cov
 ```
+
+### Backend Pipeline Checks
+
+The backend also includes a comprehensive Makefile for CI/CD validation.
+
+#### Backend Quick Start
+
+```bash
+cd ../backend
+
+# Run full CI pipeline (matches GitHub Actions)
+make ci
+
+# Run all backend workflows (CI + security)
+make all
+
+# Get help with all available commands
+make help
+```
+
+#### Key Backend Commands
+
+```bash
+# Main pipeline commands
+make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
+make security-ci     # Security pipeline: install, security-lint, security-test, build
+make all             # Run all CI/CD pipelines
+
+# Individual checks
+make lint            # Run ESLint
+make format-check    # Check Prettier formatting
+make typecheck       # TypeScript type checking
+make test            # Run unit tests
+make test-cov        # Run tests with coverage
+make test-e2e        # Run E2E tests (requires PostgreSQL)
+make build           # Build the application
+
+# Pre-commit workflow
+make pre-commit      # Run format-check, lint, typecheck, test
+```
+
+### Before Creating a PR
+
+Run these commands to ensure your PR will pass all pipeline checks:
+
+```bash
+# Frontend checks
+cd frontend
+make check
+
+# Backend checks (if you changed backend code)
+cd ../backend  
+make ci
+```
+
+Makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
 
 ## Deployment
 

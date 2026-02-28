@@ -4,14 +4,17 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { KycStatus } from '../../kyc/kyc.entity';
 
 export enum UserRole {
   USER = 'user',
   ADMIN = 'admin',
   LANDLORD = 'landlord',
   TENANT = 'tenant',
+  AGENT = 'agent',
 }
 
 export enum AuthMethod {
@@ -48,6 +51,15 @@ export class User {
 
   @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified: boolean;
+
+  // ✅ Moved inside the class
+  @Column({
+    name: 'kyc_status',
+    type: 'enum',
+    enum: KycStatus,
+    default: KycStatus.PENDING,
+  })
+  kycStatus: KycStatus;
 
   @Exclude()
   @Column({ name: 'verification_token', nullable: true, type: 'varchar' })
@@ -98,4 +110,7 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt?: Date | null;
 }

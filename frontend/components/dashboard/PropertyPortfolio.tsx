@@ -150,6 +150,7 @@ const PropertyPortfolio = () => {
                           src={property.image}
                           alt={property.name}
                           fill
+                          sizes="64px"
                           className="object-cover"
                         />
                       </div>
@@ -182,6 +183,7 @@ const PropertyPortfolio = () => {
                             src={property.tenant.avatar}
                             alt={property.tenant.name}
                             fill
+                            sizes="32px"
                             className="object-cover"
                           />
                         </div>
@@ -241,6 +243,7 @@ const PropertyPortfolio = () => {
                     src={property.image}
                     alt={property.name}
                     fill
+                    sizes="80px"
                     className="object-cover"
                   />
                 </div>
@@ -288,6 +291,7 @@ const PropertyPortfolio = () => {
                       src={property.tenant.avatar}
                       alt={property.tenant.name}
                       fill
+                      sizes="32px"
                       className="object-cover"
                     />
                   </div>

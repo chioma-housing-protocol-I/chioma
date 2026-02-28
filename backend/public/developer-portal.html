@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chioma Developer Portal</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.5rem; }
+    a { color: #0066cc; }
+    code { background: #f0f0f0; padding: 0.2em 0.4em; border-radius: 4px; }
+    .card { border: 1px solid #eee; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    ul { padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Chioma Developer Portal</h1>
+  <p>Build on the Chioma API with API keys or JWT authentication.</p>
+
+  <div class="card">
+    <h2>Get started</h2>
+    <ol>
+      <li><strong>Sign in</strong> with your Chioma account (use the main app or <a href="/api/docs" id="swagger-link">Swagger UI</a>).</li>
+      <li><strong>Create an API key</strong> via <a href="/api/docs#/Developer%20Portal/DeveloperController_createKey">POST /api/developer/api-keys</a> (authenticated with JWT). Store the returned <code>key</code> securely; it is shown only once.</li>
+      <li>Call the API with <code>X-API-Key: your_key</code> or <code>Authorization: Bearer &lt;jwt&gt;</code>.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Resources</h2>
+    <ul>
+      <li><a href="/api/docs">Interactive API docs (Swagger)</a></li>
+      <li><a href="/api/docs-json">OpenAPI 3.0 spec (JSON)</a></li>
+      <li><a href="https://github.com/chioma/chioma">GitHub</a></li>
+      <li>Feedback: <a href="/api/docs#/Community%20%26%20Support/FeedbackController_submit">POST /api/feedback</a></li>
+    </ul>
+  </div>
+
+  <script>
+    document.getElementById('swagger-link').href = window.location.origin + '/api/docs';
+  </script>
+</body>
+</html>

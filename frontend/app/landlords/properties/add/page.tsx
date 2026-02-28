@@ -3,12 +3,22 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Upload, CheckCircle2, ChevronRight } from 'lucide-react';
+import {
+  propertyBasicDetailsSchema,
+  propertyAmenitiesSchema,
+  propertyMediaSchema,
+  type PropertyBasicDetails,
+  type PropertyAmenities,
+  type PropertyMedia,
+} from '@/lib/validation/property';
 
 const STEPS = [
-  { id: 1, title: 'Basic Details' },
-  { id: 2, title: 'Amenities & Rules' },
-  { id: 3, title: 'Media & Uploads' },
+  { id: 1, title: 'Basic Details', schema: propertyBasicDetailsSchema },
+  { id: 2, title: 'Amenities & Rules', schema: propertyAmenitiesSchema },
+  { id: 3, title: 'Media & Uploads', schema: propertyMediaSchema },
 ];
 
 export default function AddPropertyPage() {
@@ -16,19 +26,83 @@ export default function AddPropertyPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+  // Form setup for each step
+  const basicDetailsForm = useForm<PropertyBasicDetails>({
+    resolver: zodResolver(propertyBasicDetailsSchema),
+    defaultValues: {
+      title: '',
+      rent: undefined,
+      address: '',
+    },
+  });
+
+  const amenitiesForm = useForm<PropertyAmenities>({
+    resolver: zodResolver(propertyAmenitiesSchema),
+    defaultValues: {
+      amenities: [],
+    },
+  });
+
+  const mediaForm = useForm<PropertyMedia>({
+    resolver: zodResolver(propertyMediaSchema),
+    defaultValues: {
+      images: [],
+    },
+  });
+
+  const getCurrentForm = () => {
+    switch (currentStep) {
+      case 1:
+        return basicDetailsForm;
+      case 2:
+        return amenitiesForm;
+      case 3:
+        return mediaForm;
+      default:
+        return basicDetailsForm;
+    }
+  };
+
+  const handleNext = async () => {
+    const currentForm = getCurrentForm();
+    const isValid = await currentForm.trigger();
+
+    if (isValid && currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const handleBack = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    // Validate all forms before submission
+    const basicValid = await basicDetailsForm.trigger();
+    const amenitiesValid = await amenitiesForm.trigger();
+    const mediaValid = await mediaForm.trigger();
+
+    if (!basicValid || !amenitiesValid || !mediaValid) {
+      return;
+    }
+
     setIsSubmitting(true);
+
+    // Collect all form data
+    const basicData = basicDetailsForm.getValues();
+    const amenitiesData = amenitiesForm.getValues();
+    const mediaData = mediaForm.getValues();
+
+    const formData = {
+      ...basicData,
+      ...amenitiesData,
+      ...mediaData,
+    };
+
     // Simulate API call and IPFS upload
+    console.log('Submitting property data:', formData);
     await new Promise((resolve) => setTimeout(resolve, 2000));
+
     setIsSubmitting(false);
     router.push('/landlords/properties');
   };
@@ -39,7 +113,7 @@ export default function AddPropertyPage() {
       <div className="flex items-center space-x-4">
         <Link
           href="/landlords/properties"
-          className="p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 rounded-full transition-colors"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 rounded-full transition-colors"
         >
           <ArrowLeft size={24} />
         </Link>
@@ -55,7 +129,7 @@ export default function AddPropertyPage() {
 
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
         {/* Stepper Header */}
-        <div className="bg-neutral-50/50 border-b border-neutral-200 px-8 py-6">
+        <div className="bg-neutral-50/50 border-b border-neutral-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between relative">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-neutral-200 z-0"></div>
             {STEPS.map((step) => {
@@ -92,7 +166,7 @@ export default function AddPropertyPage() {
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="min-h-[300px]">
             {currentStep === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -102,22 +176,34 @@ export default function AddPropertyPage() {
                       Property Title
                     </label>
                     <input
+                      {...basicDetailsForm.register('title')}
                       type="text"
                       className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
                       placeholder="e.g. Sunset View Apartments"
-                      required
                     />
+                    {basicDetailsForm.formState.errors.title && (
+                      <p className="text-sm text-red-600">
+                        {basicDetailsForm.formState.errors.title.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-neutral-900">
                       Monthly Rent (USDC)
                     </label>
                     <input
+                      {...basicDetailsForm.register('rent', {
+                        valueAsNumber: true,
+                      })}
                       type="number"
                       className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
                       placeholder="e.g. 2400"
-                      required
                     />
+                    {basicDetailsForm.formState.errors.rent && (
+                      <p className="text-sm text-red-600">
+                        {basicDetailsForm.formState.errors.rent.message}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -125,11 +211,16 @@ export default function AddPropertyPage() {
                     Full Address
                   </label>
                   <textarea
+                    {...basicDetailsForm.register('address')}
                     rows={3}
                     className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all resize-none"
                     placeholder="Enter the complete address..."
-                    required
-                  ></textarea>
+                  />
+                  {basicDetailsForm.formState.errors.address && (
+                    <p className="text-sm text-red-600">
+                      {basicDetailsForm.formState.errors.address.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -154,7 +245,9 @@ export default function AddPropertyPage() {
                         className="flex items-center space-x-3 p-4 border border-neutral-200 rounded-xl cursor-pointer hover:bg-neutral-50 transition-colors"
                       >
                         <input
+                          {...amenitiesForm.register('amenities')}
                           type="checkbox"
+                          value={amenity}
                           className="w-5 h-5 rounded border-neutral-300 text-brand-blue focus:ring-brand-blue"
                         />
                         <span className="text-neutral-700 font-medium">
@@ -163,6 +256,11 @@ export default function AddPropertyPage() {
                       </label>
                     ))}
                   </div>
+                  {amenitiesForm.formState.errors.amenities && (
+                    <p className="text-sm text-red-600">
+                      {amenitiesForm.formState.errors.amenities.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -178,7 +276,18 @@ export default function AddPropertyPage() {
                     storage.
                   </p>
 
-                  <div className="border-2 border-dashed border-neutral-300 rounded-2xl p-12 text-center hover:bg-neutral-50 hover:border-brand-blue/50 transition-colors cursor-pointer group">
+                  <input
+                    {...mediaForm.register('images')}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="border-2 border-dashed border-neutral-300 rounded-2xl p-12 text-center hover:bg-neutral-50 hover:border-brand-blue/50 transition-colors cursor-pointer group block"
+                  >
                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                       <Upload className="text-brand-blue" size={32} />
                     </div>
@@ -186,9 +295,14 @@ export default function AddPropertyPage() {
                       Click to upload or drag & drop
                     </h4>
                     <p className="text-neutral-500">
-                      SVG, PNG, JPG or GIF (max. 5MB)
+                      SVG, PNG, JPG or GIF (max. 5MB each, up to 10 images)
                     </p>
-                  </div>
+                  </label>
+                  {mediaForm.formState.errors.images && (
+                    <p className="text-sm text-red-600">
+                      {mediaForm.formState.errors.images.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -220,7 +334,8 @@ export default function AddPropertyPage() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="flex items-center justify-center space-x-2 px-8 py-3 bg-brand-blue text-white font-semibold rounded-lg hover:bg-brand-blue-dark transition-all shadow-xl shadow-brand-blue/20 disabled:opacity-70 disabled:cursor-not-allowed"
               >
@@ -235,7 +350,7 @@ export default function AddPropertyPage() {
               </button>
             )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

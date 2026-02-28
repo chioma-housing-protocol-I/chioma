@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { StellarService } from '../services/stellar.service';
 import {
   CreateAccountDto,
@@ -28,7 +29,8 @@ import { StellarAccount } from '../entities/stellar-account.entity';
 import { StellarTransaction } from '../entities/stellar-transaction.entity';
 import { StellarEscrow } from '../entities/stellar-escrow.entity';
 
-@Controller('api/stellar')
+@ApiTags('Stellar')
+@Controller('stellar')
 export class StellarController {
   constructor(private readonly stellarService: StellarService) {}
 
@@ -39,6 +41,13 @@ export class StellarController {
    */
   @Post('accounts')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a managed Stellar account' })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created',
+    type: AccountResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   async createAccount(
     @Body() dto: CreateAccountDto,
   ): Promise<AccountResponseDto> {
@@ -50,6 +59,10 @@ export class StellarController {
    * Get account info by ID
    */
   @Get('accounts/:id')
+  @ApiOperation({ summary: 'Get account by ID' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, type: AccountResponseDto })
+  @ApiResponse({ status: 404, description: 'Account not found' })
   async getAccountById(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<AccountResponseDto> {
@@ -84,6 +97,8 @@ export class StellarController {
    */
   @Post('accounts/fund')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Fund account via Friendbot (testnet only)' })
+  @ApiResponse({ status: 200, description: 'Account funded' })
   async fundAccount(
     @Body() dto: FundAccountDto,
   ): Promise<{ success: boolean; message: string }> {
@@ -133,6 +148,12 @@ export class StellarController {
    */
   @Post('payments')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Send a Stellar payment' })
+  @ApiResponse({ status: 201, type: PaymentResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation or insufficient balance',
+  })
   async sendPayment(
     @Body() dto: CreatePaymentDto,
   ): Promise<PaymentResponseDto> {
@@ -189,6 +210,9 @@ export class StellarController {
    */
   @Post('escrow')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create an escrow' })
+  @ApiResponse({ status: 201, type: EscrowResponseDto })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   async createEscrow(@Body() dto: CreateEscrowDto): Promise<EscrowResponseDto> {
     const escrow = await this.stellarService.createEscrow(dto);
     return this.mapEscrowToResponse(escrow);

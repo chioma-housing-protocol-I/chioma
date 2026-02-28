@@ -12,7 +12,7 @@ import { Twitter, Linkedin, Instagram } from 'lucide-react';
 const Mainfooter = () => {
   return (
     <footer className="bg-slate-950 text-white py-16 md:py-20">
-      <div className="container mx-auto px-6">
+      <div className="container mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16">
           {/* Company Info Column */}
           <div className="space-y-6">

@@ -1,7 +1,5 @@
-import React from 'react';
+import { SettingsPageClient } from '@/components/settings/SettingsPageClient';
 
-function page() {
-  return <div>Settings page</div>;
+export default function LandlordSettingsPage() {
+  return <SettingsPageClient embedded requireAuthGuard={false} />;
 }
-
-export default page;

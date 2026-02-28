@@ -1,0 +1,191 @@
+name: Backend Tests
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  # ============================================================================
+  # UNIT TESTS: Run Jest unit tests with coverage
+  # ============================================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'backend/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm run test --ci --forceExit
+
+      - name: Generate coverage report
+        run: pnpm run test:cov --ci --forceExit
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage/coverage-final.json
+          flags: unit
+          fail_ci_if_error: false
+
+  # ============================================================================
+  # E2E TESTS: Run end-to-end tests against a real PostgreSQL instance
+  # ============================================================================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD || 'test_password_123' }}
+          POSTGRES_DB: chioma_db_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+
+      # ── Database ─────────────────────────────────────────────────────────────
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'test_password_123' }}
+      DB_NAME: chioma_db_test
+
+      # ── Auth (GitHub Secrets) ─────────────────────────────────────────────
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-key-for-testing-only' }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'test-jwt-refresh-secret-key-for-testing-only' }}
+      JWT_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+
+      # ── Stellar / Soroban (GitHub Secrets) ───────────────────────────────
+      STELLAR_NETWORK: testnet
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      CHIOMA_CONTRACT_ID: ${{ secrets.CHIOMA_CONTRACT_ID || 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM' }}
+      SERVER_STELLAR_SECRET: ${{ secrets.SERVER_STELLAR_SECRET || 'SBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB' }}
+      STELLAR_SERVER_SECRET_KEY: ${{ secrets.STELLAR_SERVER_SECRET_KEY || 'SBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB' }}
+
+      # ── Payments (GitHub Secrets) ─────────────────────────────────────────
+      PAYMENT_METADATA_SECRET: ${{ secrets.PAYMENT_METADATA_SECRET || 'test-payment-metadata-secret' }}
+      PAYMENT_GATEWAY: mock
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY || 'sk_test_mock' }}
+      FLUTTERWAVE_SECRET_KEY: ${{ secrets.FLUTTERWAVE_SECRET_KEY || 'FLWSECK_TEST-mock' }}
+      PAYMENT_GATEWAY_TIMEOUT_MS: 10000
+
+      # ── Email (GitHub Secrets) ────────────────────────────────────────────
+      EMAIL_SERVICE: gmail
+      EMAIL_USER: ${{ secrets.EMAIL_USER || 'test@example.com' }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD || 'test_password' }}
+      EMAIL_FROM: noreply@chioma.app
+      FRONTEND_URL: http://localhost:3001
+      PASSWORD_RESET_URL: http://localhost:3001/reset-password
+
+      # ── IPFS / Pinata (GitHub Secrets) ───────────────────────────────────
+      PINATA_JWT: ${{ secrets.PINATA_JWT || 'test_pinata_jwt' }}
+      PINATA_GATEWAY: gateway.pinata.cloud
+
+      # ── Anchor (GitHub Secrets) ───────────────────────────────────────────
+      ANCHOR_API_URL: https://api.anchor-provider.com
+      ANCHOR_API_KEY: ${{ secrets.ANCHOR_API_KEY || 'test_anchor_key' }}
+      ANCHOR_USDC_ASSET: USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN
+      SUPPORTED_FIAT_CURRENCIES: USD,EUR,GBP,NGN
+
+      # ── Redis (GitHub Secrets) ────────────────────────────────────────────
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || '' }}
+
+      # ── Logging & Health (non-sensitive) ──────────────────────────────────
+      LOG_LEVEL: warn
+      LOG_FORMAT: simple
+      LOG_SLOW_REQUEST_THRESHOLD: 500
+      LOG_SKIP_PATHS: /health
+      HEALTH_CHECK_TIMEOUT: 5000
+      MEMORY_WARNING_THRESHOLD: 536870912
+      MEMORY_ERROR_THRESHOLD: 1073741824
+
+      # ── Sentry (GitHub Secrets) ───────────────────────────────────────────
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN || '' }}
+      SENTRY_ENVIRONMENT: test
+
+      # ── Encryption ────────────────────────────────────────────────────────
+      ENCRYPTION_KEY: test-encryption-key-for-testing-purposes-only
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'backend/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for PostgreSQL
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD || 'test_password_123' }}
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+      - name: Run database migrations
+        run: pnpm run migration:run
+
+      - name: Run E2E tests
+        run: pnpm run test:e2e --forceExit

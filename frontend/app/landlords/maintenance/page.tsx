@@ -1,7 +1,5 @@
-import React from 'react';
+import MaintenanceFlow from '@/components/maintenance/MaintenanceFlow';
 
-function page() {
-  return <div>Maintenance page</div>;
+export default function LandlordMaintenancePage() {
+  return <MaintenanceFlow defaultRole="landlord" />;
 }
-
-export default page;

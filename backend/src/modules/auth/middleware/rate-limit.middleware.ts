@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 
 interface RateLimitStore {
@@ -20,8 +21,19 @@ interface RateLimitStore {
 @Injectable()
 export class AuthRateLimitMiddleware implements NestMiddleware {
   private readonly store: RateLimitStore = {};
-  private readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-  private readonly MAX_REQUESTS = 5; // Max 5 attempts per window
+  private readonly windowMs: number;
+  private readonly maxRequests: number;
+
+  constructor(private readonly configService: ConfigService) {
+    this.windowMs = this.parsePositiveInt(
+      this.configService.get<string>('AUTH_RATE_LIMIT_WINDOW_MS'),
+      15 * 60 * 1000,
+    );
+    this.maxRequests = this.parsePositiveInt(
+      this.configService.get<string>('AUTH_RATE_LIMIT_MAX_REQUESTS'),
+      5,
+    );
+  }
 
   use(req: Request, res: Response, next: NextFunction) {
     const key = this.getClientIp(req);
@@ -30,7 +42,7 @@ export class AuthRateLimitMiddleware implements NestMiddleware {
     if (!this.store[key]) {
       this.store[key] = {
         count: 1,
-        resetTime: now + this.WINDOW_MS,
+        resetTime: now + this.windowMs,
       };
       return next();
     }
@@ -40,12 +52,12 @@ export class AuthRateLimitMiddleware implements NestMiddleware {
     // Reset if window has passed
     if (now > record.resetTime) {
       record.count = 1;
-      record.resetTime = now + this.WINDOW_MS;
+      record.resetTime = now + this.windowMs;
       return next();
     }
 
     // Check if limit exceeded
-    if (record.count >= this.MAX_REQUESTS) {
+    if (record.count >= this.maxRequests) {
       const retryAfter = Math.ceil((record.resetTime - now) / 1000);
       res.setHeader('Retry-After', retryAfter);
       throw new HttpException(
@@ -64,5 +76,21 @@ export class AuthRateLimitMiddleware implements NestMiddleware {
       return forwarded.split(',')[0].trim();
     }
     return req.ip || 'unknown';
+  }
+
+  private parsePositiveInt(
+    value: string | undefined,
+    fallback: number,
+  ): number {
+    if (!value) {
+      return fallback;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return fallback;
+    }
+
+    return parsed;
   }
 }

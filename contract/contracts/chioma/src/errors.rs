@@ -14,6 +14,8 @@ pub enum RentalError {
     AgreementNotActive = 10,
     AgreementNotFound = 13,
     NotTenant = 14,
+    Unauthorized = 18,
     InvalidState = 15,
     Expired = 16,
+    ContractPaused = 17,
 }

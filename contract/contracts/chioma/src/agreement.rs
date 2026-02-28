@@ -14,6 +14,7 @@ const TTL_BUMP: u32 = 500000;
 /// Ensures monthly_rent is strictly positive (i128 > 0) to prevent logical errors
 /// in payment calculations and splits.
 pub fn validate_agreement_params(
+    env: &Env,
     monthly_rent: &i128,
     security_deposit: &i128,
     start_date: &u64,
@@ -25,6 +26,12 @@ pub fn validate_agreement_params(
     }
 
     if *start_date >= *end_date {
+        return Err(RentalError::InvalidDate);
+    }
+
+    let now = env.ledger().timestamp();
+    let grace_period: u64 = 86400; // 1 day in seconds
+    if *start_date < now.saturating_sub(grace_period) {
         return Err(RentalError::InvalidDate);
     }
 
@@ -55,6 +62,7 @@ pub fn create_agreement(
 
     // Validate inputs
     validate_agreement_params(
+        env,
         &monthly_rent,
         &security_deposit,
         &start_date,
@@ -180,6 +188,84 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
         agreement.landlord.clone(),
         current_time,
     );
+
+    Ok(())
+}
+
+/// Submit a draft agreement for tenant signature (Draft → Pending)
+pub fn submit_agreement(
+    env: &Env,
+    landlord: Address,
+    agreement_id: String,
+) -> Result<(), RentalError> {
+    landlord.require_auth();
+
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if agreement.landlord != landlord {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if agreement.status != AgreementStatus::Draft {
+        return Err(RentalError::InvalidState);
+    }
+
+    agreement.status = AgreementStatus::Pending;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+    env.storage().persistent().extend_ttl(
+        &DataKey::Agreement(agreement_id.clone()),
+        TTL_THRESHOLD,
+        TTL_BUMP,
+    );
+
+    events::agreement_submitted(env, agreement_id, landlord, agreement.tenant.clone());
+
+    Ok(())
+}
+
+/// Cancel an agreement while in Draft or Pending state
+pub fn cancel_agreement(
+    env: &Env,
+    caller: Address,
+    agreement_id: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only landlord can cancel
+    if agreement.landlord != caller {
+        return Err(RentalError::Unauthorized);
+    }
+
+    // Only in Draft or Pending states
+    if agreement.status != AgreementStatus::Draft && agreement.status != AgreementStatus::Pending {
+        return Err(RentalError::InvalidState);
+    }
+
+    agreement.status = AgreementStatus::Cancelled;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+    env.storage().persistent().extend_ttl(
+        &DataKey::Agreement(agreement_id.clone()),
+        TTL_THRESHOLD,
+        TTL_BUMP,
+    );
+
+    events::agreement_cancelled(env, agreement_id, caller, agreement.tenant.clone());
 
     Ok(())
 }

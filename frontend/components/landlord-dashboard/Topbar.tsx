@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FaSearch, FaBell, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import { NotificationBell } from '@/components/notifications';
 import Link from 'next/link';
 import { navItems } from './Sidebar';
 import Image from 'next/image';
@@ -20,11 +21,11 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         {/* Left */}
         <div className="flex items-center gap-3 md:gap-4">
           <button
-            className="md:hidden"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg active:bg-gray-100 -ml-1"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
-            <FaBars />
+            <FaBars className="text-lg" />
           </button>
 
           <h1 className="text-base md:text-2xl font-bold text-[#1e40af]">
@@ -45,17 +46,18 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         {/* Right */}
         <div className="flex items-center gap-4 md:gap-6">
           <button
-            className="md:hidden"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg active:bg-gray-100"
             onClick={() => setSearchOpen(true)}
             aria-label="Open search"
           >
             <FaSearch className="text-gray-500" size={18} />
           </button>
 
-          <button className="relative">
-            <FaBell className="text-gray-500" size={20} />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-red-600 rounded-full" />
-          </button>
+          <NotificationBell
+            viewAllHref="/landlords/notifications"
+            size={20}
+            className="text-gray-500"
+          />
 
           <Link
             href="/landlords/properties/add"
@@ -167,6 +169,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
                 alt="User Avatar"
                 width={100}
                 height={100}
+                sizes="40px"
                 className="rounded-full"
               />
             </div>
