@@ -16,7 +16,6 @@ See [LEAFLET_SETUP.md](./LEAFLET_SETUP.md) for more details.
 ### Running the Development Server
 
 First, run the development server:
-
 ```bash
 npm run dev
 # or
@@ -40,7 +39,6 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 The frontend includes a Makefile to run all CI/CD pipeline checks locally before creating a PR. This ensures your code will pass the GitHub Actions pipeline.
 
 #### Quick Start
-
 ```bash
 # Run all frontend pipeline checks (recommended before PR)
 make check
@@ -53,7 +51,6 @@ make help
 ```
 
 #### Available Frontend Commands
-
 ```bash
 # Main pipeline commands
 make check          # Run all checks: lint, format, test, build
@@ -79,109 +76,54 @@ The Makefile mirrors the GitHub Actions workflow in `.github/workflows/frontend-
 2. **Testing** - Unit tests (Jest) and E2E tests (Cypress) if installed
 3. **Build** - Production build verification
 
-   ### Backend Pipeline Checks
+### Backend Pipeline Checks
 
-   The backend also includes a comprehensive Makefile for CI/CD validation.
+The backend also includes a comprehensive Makefile for CI/CD validation.
 
-   #### Backend Quick Start
+#### Backend Quick Start
+```bash
+cd ../backend
 
-   ```bash
-   cd ../backend
+# Run full CI pipeline (matches GitHub Actions)
+make ci
 
-   # Run full CI pipeline (matches GitHub Actions)
-   make ci
+# Run all backend workflows (CI + security)
+make all
 
-   # Run all backend workflows (CI + security)
-   make all
+# Get help with all available commands
+make help
+```
 
-   # Get help with all available commands
-   make help
-   ```
+#### Key Backend Commands
+```bash
+# Main pipeline commands
+make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
+make security-ci     # Security pipeline: install, security-lint, security-test, build
+make all             # Run all CI/CD pipelines
 
-   #### Key Backend Commands
+# Individual checks
+make lint            # Run ESLint
+make format-check    # Check Prettier formatting
+make typecheck       # TypeScript type checking
+make test            # Run unit tests
+make test-cov        # Run tests with coverage
+make test-e2e        # Run E2E tests (requires PostgreSQL)
+make build           # Build the application
 
-   ```bash
-   # Main pipeline commands
-   make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
-   make security-ci     # Security pipeline: install, security-lint, security-test, build
-   make all             # Run all CI/CD pipelines
+# Pre-commit workflow
+make pre-commit      # Run format-check, lint, typecheck, test
+```
 
-   # Individual checks
-   make lint            # Run ESLint
-   make format-check    # Check Prettier formatting
-   make typecheck       # TypeScript type checking
-   make test            # Run unit tests
-   make test-cov        # Run tests with coverage
-   make test-e2e        # Run E2E tests (requires PostgreSQL)
-   make build           # Build the application
+### Before Creating a PR
 
-   # Pre-commit workflow
-   make pre-commit      # Run format-check, lint, typecheck, test
-   ```
+Run these commands to ensure your PR will pass all pipeline checks:
+```bash
+# Frontend checks
+cd frontend
+make check
+```
 
-   ### Before Creating a PR
-
-   Run these commands to ensure your PR will pass all pipeline checks:
-
-   ```bash
-   # Frontend checks
-   cd frontend
-   make check
-
-   The makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
-   ```
-
-   ### Backend Pipeline Checks
-
-   The backend also includes a comprehensive Makefile for CI/CD validation.
-
-   #### Backend Quick Start
-
-   ```bash
-   cd ../backend
-
-   # Run full CI pipeline (matches GitHub Actions)
-   make ci
-
-   # Run all backend workflows (CI + security)
-   make all
-
-   # Get help with all available commands
-   make help
-   ```
-
-   #### Key Backend Commands
-
-   ```bash
-   # Main pipeline commands
-   make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
-   make security-ci     # Security pipeline: install, security-lint, security-test, build
-   make all             # Run all CI/CD pipelines
-
-   # Individual checks
-   make lint            # Run ESLint
-   make format-check    # Check Prettier formatting
-   make typecheck       # TypeScript type checking
-   make test            # Run unit tests
-   make test-cov        # Run tests with coverage
-   make test-e2e        # Run E2E tests (requires PostgreSQL)
-   make build           # Build the application
-
-   # Pre-commit workflow
-   make pre-commit      # Run format-check, lint, typecheck, test
-   ```
-
-   ### Before Creating a PR
-
-   Run these commands to ensure your PR will pass all pipeline checks:
-
-   ```bash
-   # Frontend checks
-   cd frontend
-   make check
-
-   The makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
-   ```
+The makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
 
 ## Learn More
 
