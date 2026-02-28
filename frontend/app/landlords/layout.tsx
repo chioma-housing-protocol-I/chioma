@@ -18,6 +18,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     '/landlords/maintenance': 'Maintenance',
     '/landlords/documents': 'Documents',
     '/landlords/settings': 'Settings',
+    '/landlords/notifications': 'Notifications',
   };
 
   const pageTitle = pageTitleMap[pathname] ?? 'Dashboard';
@@ -28,7 +29,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar />
         <div className="flex-1 flex flex-col">
           <Topbar pageTitle={pageTitle} />
-          <main className="p-6 overflow-auto flex-1">{children}</main>
+          <main className="p-4 sm:p-6 overflow-auto flex-1">{children}</main>
         </div>
       </div>
     </ProtectedRoute>

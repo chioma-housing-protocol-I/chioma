@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, Map, String};
+use soroban_sdk::{contracttype, Address, Env, Map, String};
 
 use crate::errors::DisputeError;
 use crate::events;
@@ -113,7 +113,7 @@ pub fn raise_dispute(
     // Cross-contract call to get agreement from chioma contract
     let agreement: Option<RentAgreement> = env.invoke_contract(
         &state.chioma_contract,
-        &symbol_short!("get_agr"),
+        &soroban_sdk::symbol_short!("get_agr"),
         soroban_sdk::vec![env, agreement_id.clone().into()],
     );
 

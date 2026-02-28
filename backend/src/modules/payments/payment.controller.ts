@@ -10,8 +10,15 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
@@ -22,20 +29,29 @@ import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+@ApiTags('Payments')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments')
+@Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Record a payment' })
+  @ApiResponse({ status: 201, description: 'Payment recorded' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async recordPayment(
-    @Body() dto: RecordPaymentDto,
+    @Body() dto: CreatePaymentRecordDto,
     @Request() req: { user?: { id: string } },
   ) {
     return this.paymentService.recordPayment(dto, req.user?.id || '');
   }
 
   @Get()
+  @ApiOperation({ summary: 'List payments with filters' })
+  @ApiResponse({ status: 200, description: 'Paginated payments' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async listPayments(
     @Query() filters: PaymentFiltersDto,
     @Request() req: { user?: { id: string } },
@@ -44,6 +60,10 @@ export class PaymentController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get payment by ID' })
+  @ApiParam({ name: 'id' })
+  @ApiResponse({ status: 200, description: 'Payment details' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   async getPayment(
     @Param('id') id: string,
     @Request() req: { user?: { id: string } },
@@ -70,7 +90,7 @@ export class PaymentController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/payment-methods')
+@Controller('payment-methods')
 export class PaymentMethodController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -117,12 +137,17 @@ export class PaymentMethodController {
 }
 
 // Separate controller for agreement-specific endpoints
+@ApiTags('Payments')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/agreements')
+@Controller('agreements')
 export class AgreementPaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Get(':id/payments')
+  @ApiOperation({ summary: 'List payments for an agreement' })
+  @ApiParam({ name: 'id', description: 'Agreement ID' })
+  @ApiResponse({ status: 200, description: 'Payments for agreement' })
   async getPaymentsForAgreement(
     @Param('id') agreementId: string,
     @Request() req: { user?: { id: string } },
@@ -134,12 +159,16 @@ export class AgreementPaymentController {
   }
 }
 
+@ApiTags('Payments')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments/schedules')
+@Controller('payments/schedules')
 export class PaymentScheduleController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create payment schedule' })
+  @ApiResponse({ status: 201, description: 'Schedule created' })
   async createSchedule(
     @Body() dto: CreatePaymentScheduleDto,
     @Request() req: { user?: { id: string } },

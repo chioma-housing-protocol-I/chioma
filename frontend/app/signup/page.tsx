@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, Lock, User, UserCheck } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import FormInput from '@/components/auth/FormInput';
+import WalletConnectButton from '@/components/auth/WalletConnectButton';
 
 const signupSchema = z.object({
   firstName: z
@@ -34,7 +35,7 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
@@ -42,7 +43,7 @@ export default function SignupPage() {
     defaultValues: { role: 'TENANT' },
   });
 
-  const selectedRole = watch('role');
+  const selectedRole = useWatch({ control, name: 'role' });
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -81,7 +82,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="min-h-screen bg-brand-gradient flex items-center justify-center px-4 py-12">
+    <main className="min-h-screen bg-brand-gradient flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md animate-auth-enter">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -97,7 +98,7 @@ export default function SignupPage() {
         </div>
 
         {/* Glass Form Card */}
-        <div className="glass rounded-4xl border border-white/20 shadow-2xl p-8">
+        <div className="glass rounded-4xl border border-white/20 shadow-2xl p-6 sm:p-8">
           {serverError && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-400/30">
               <p className="text-sm text-red-200">{serverError}</p>
@@ -134,8 +135,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Name Fields - stack on very small screens */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label
                   htmlFor="firstName"
@@ -225,7 +226,17 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <p className="text-center text-white/60 text-sm mt-6">
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/20"></div>
+            <span className="text-sm font-medium text-white/50 tracking-wider">
+              OR
+            </span>
+            <div className="h-px flex-1 bg-white/20"></div>
+          </div>
+
+          <WalletConnectButton className="mb-6" />
+
+          <p className="text-center text-white/60 text-sm mt-2">
             Already have an account?{' '}
             <Link
               href="/login"

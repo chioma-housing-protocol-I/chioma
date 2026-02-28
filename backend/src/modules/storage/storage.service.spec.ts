@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { StorageService } from './storage.service';
-import { FileMetadataRepository } from './file-metadata.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileMetadata } from './file-metadata.entity';
+import { ImageProcessingService } from './image-processing.service';
 
 jest.mock('@aws-sdk/client-s3', () => {
   const Actual = jest.requireActual('@aws-sdk/client-s3');
@@ -18,6 +18,12 @@ jest.mock('@aws-sdk/client-s3', () => {
 const mockRepo = () => ({
   save: jest.fn(),
   findOne: jest.fn(),
+  delete: jest.fn(),
+});
+
+const mockImageProcessing = () => ({
+  processImage: jest.fn(),
+  getImageMetadata: jest.fn(),
 });
 
 describe('StorageService', () => {
@@ -29,13 +35,17 @@ describe('StorageService', () => {
       providers: [
         StorageService,
         {
-          provide: getRepositoryToken(FileMetadataRepository),
+          provide: getRepositoryToken(FileMetadata),
           useFactory: mockRepo,
+        },
+        {
+          provide: ImageProcessingService,
+          useFactory: mockImageProcessing,
         },
       ],
     }).compile();
     service = module.get<StorageService>(StorageService);
-    repo = module.get(getRepositoryToken(FileMetadataRepository));
+    repo = module.get(getRepositoryToken(FileMetadata));
   });
 
   it('should throw on invalid file type', async () => {
@@ -57,7 +67,7 @@ describe('StorageService', () => {
         'image/png',
         'owner',
         'file.png',
-        20 * 1024 * 1024,
+        60 * 1024 * 1024,
       ),
     ).rejects.toThrow('File too large');
   });

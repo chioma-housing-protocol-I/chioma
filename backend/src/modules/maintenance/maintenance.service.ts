@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +16,7 @@ import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PropertiesService } from '../properties/properties.service';
 import { UsersService } from '../users/users.service';
+import { ReviewPromptService } from '../reviews/review-prompt.service';
 
 export interface CreateMaintenanceDto {
   propertyId: string;
@@ -38,6 +41,8 @@ export class MaintenanceService {
     private readonly notificationsService: NotificationsService,
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => ReviewPromptService))
+    private readonly reviewPromptService: ReviewPromptService,
   ) {}
 
   async create(dto: CreateMaintenanceDto): Promise<MaintenanceRequest> {
@@ -103,6 +108,11 @@ export class MaintenanceService {
       `Your maintenance request status is now ${status}.`,
       'maintenance',
     );
+
+    // Trigger review prompt if closed
+    if (status === MaintenanceStatus.CLOSED) {
+      await this.reviewPromptService.promptForMaintenanceReview(id);
+    }
 
     return saved;
   }

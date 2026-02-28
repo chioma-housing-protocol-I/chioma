@@ -68,6 +68,21 @@
     }
   }
 
+  .animate-dropdown {
+    animation: dropDown 0.2s ease-out;
+  }
+
+  @keyframes dropDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .animate-auth-enter {
     animation: authSlideIn 0.7s ease-out both;
   }
@@ -89,4 +104,23 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   @apply antialiased;
+  overflow-x: hidden;
+}
+
+/* Leaflet Popup Styling */
+.property-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 1rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.property-popup .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+
+.property-popup .leaflet-popup-tip {
+  background: white;
 }

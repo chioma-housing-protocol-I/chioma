@@ -11,13 +11,14 @@ import {
   Wrench,
   FileText,
   Settings,
-  Bell,
   Search,
   Menu,
   X,
   Plus,
   LogOut,
+  BellRing,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -58,6 +59,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       name: 'Documents',
       href: '/dashboard/documents',
       icon: FileText,
+    },
+    {
+      name: 'Notifications',
+      href: '/dashboard/notifications',
+      icon: BellRing,
     },
     {
       name: 'Settings',
@@ -141,7 +147,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className="lg:ml-64">
         {/* Top Navigation Bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-neutral-200">
-          <div className="h-20 px-6 flex items-center justify-between">
+          <div className="h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between">
             {/* Left Section - Mobile Menu + Title */}
             <div className="flex items-center space-x-4">
               {/* Mobile Menu Toggle */}
@@ -174,10 +180,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </div>
 
               {/* Notifications */}
-              <button className="relative p-2.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Bell size={22} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
+              <NotificationBell
+                viewAllHref="/dashboard/notifications"
+                size={22}
+                className="text-neutral-600 hover:text-neutral-100"
+              />
 
               {/* Add Property Button */}
               <button className="flex items-center space-x-2 bg-brand-blue text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-blue-dark transition-colors shadow-lg shadow-brand-blue/20">
@@ -189,7 +196,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile Overlay */}

@@ -1,10 +1,17 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import ImageGallery from '@/components/properties/ImageGallery';
-import AmenitiesList, { Amenity } from '@/components/properties/AmenitiesList';
 import { MapPin, User, ShieldCheck } from 'lucide-react';
-import Navbar from '@/components/Properties-navbar';
+import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import AmenitiesList, {
+  type Amenity,
+} from '@/components/properties/AmenitiesList';
+import { ReviewList } from '@/components/reviews/ReviewList';
+import type { Review } from '@/components/reviews/ReviewCard';
+import type { RatingStats } from '@/components/reviews/RatingSummary';
+import { ReviewFormData } from '@/components/reviews/ReviewForm';
 
 interface PropertyData {
   id: string;
@@ -24,6 +31,8 @@ interface PropertyData {
     total: number;
     available: number;
   };
+  reviews: Review[];
+  ratingStats: RatingStats;
 }
 
 // Mock function for API call
@@ -64,6 +73,49 @@ async function getProperty(id: string): Promise<PropertyData | null> {
         total: 10,
         available: 2,
       },
+      reviews: [
+        {
+          id: '1',
+          rating: 5,
+          comment:
+            'Absolutely stunning property! The location is perfect, and the amenities are top-notch. The landlord was very responsive and made the move-in process seamless. Highly recommend!',
+          createdAt: new Date(
+            Date.now() - 1000 * 60 * 60 * 24 * 3,
+          ).toISOString(), // 3 days ago
+          author: {
+            id: 'u1',
+            name: 'Michael T.',
+            isVerified: true,
+            role: 'TENANT',
+          },
+        },
+        {
+          id: '2',
+          rating: 4,
+          comment:
+            'Great apartment with beautiful views. Slightly pricey, but the 24/7 power and security make it worth it.',
+          createdAt: new Date(
+            Date.now() - 1000 * 60 * 60 * 24 * 15,
+          ).toISOString(), // 15 days ago
+          author: {
+            id: 'u2',
+            name: 'Jane Doe',
+            isVerified: false,
+            role: 'TENANT',
+          },
+        },
+      ],
+      ratingStats: {
+        average: 4.5,
+        total: 2,
+        distribution: {
+          5: 1,
+          4: 1,
+          3: 0,
+          2: 0,
+          1: 0,
+        },
+      },
     };
   } else if (id === '2') {
     return {
@@ -91,6 +143,159 @@ async function getProperty(id: string): Promise<PropertyData | null> {
         total: 4,
         available: 0,
       },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '3') {
+    return {
+      id: '3',
+      title: 'Serviced Studio Flat',
+      description:
+        'A cozy and efficiently designed studio apartment perfect for individuals. Located in the prestigious Ikoyi area with easy access to business districts and entertainment centers. Fully serviced with weekly cleaning and maintenance.',
+      price: '₦1,500,000',
+      location: 'Glover Road, Ikoyi, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Air Conditioning' },
+        { name: 'Housekeeping Service' },
+        { name: '24/7 Security' },
+        { name: 'Kitchenette' },
+        { name: 'Laundry Service' },
+      ],
+      owner: {
+        name: 'Chioma N.',
+      },
+      rentalUnits: {
+        total: 8,
+        available: 3,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '4') {
+    return {
+      id: '4',
+      title: 'Exquisite 4-Bed Duplex',
+      description:
+        'A magnificent duplex offering luxury living at its finest. Situated in the exclusive Banana Island, this property features spacious rooms, modern amenities, and unparalleled security. Perfect for families seeking the ultimate living experience.',
+      price: '₦15,000,000',
+      location: 'Banana Island, Ikoyi',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Central Air Conditioning' },
+        { name: 'Swimming Pool' },
+        { name: '24/7 Security' },
+        { name: 'Gourmet Kitchen' },
+        { name: 'Backup Power' },
+        { name: 'Multiple Parking Spaces' },
+        { name: 'Garden' },
+        { name: 'Home Theater' },
+      ],
+      owner: {
+        name: 'James Obi',
+      },
+      rentalUnits: {
+        total: 2,
+        available: 1,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '5') {
+    return {
+      id: '5',
+      title: 'Cozy 1-Bed Apartment',
+      description:
+        'A comfortable and affordable one-bedroom apartment in the heart of Yaba. Close to major universities and tech hubs, making it ideal for students and young professionals. The area offers vibrant nightlife and easy access to public transportation.',
+      price: '₦800,000',
+      location: 'Yaba, Mainland, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'WiFi' },
+        { name: 'Air Conditioning' },
+        { name: 'Security' },
+        { name: 'Kitchen' },
+        { name: 'Parking' },
+      ],
+      owner: {
+        name: 'Emmanuel K.',
+      },
+      rentalUnits: {
+        total: 12,
+        available: 4,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '6') {
+    return {
+      id: '6',
+      title: 'Penthouse with Sea View',
+      description:
+        'An exclusive penthouse offering breathtaking sea views and luxury living. Located in the prestigious Eko Atlantic City, this property features modern architecture, high-end finishes, and access to private beaches. Perfect for those who desire the ultimate coastal living experience.',
+      price: '₦8,500,000',
+      location: 'Eko Atlantic City, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Central Air Conditioning' },
+        { name: 'Infinity Pool' },
+        { name: '24/7 Concierge' },
+        { name: 'Smart Home System' },
+        { name: 'Backup Power' },
+        { name: 'Private Elevator' },
+        { name: 'Rooftop Terrace' },
+        { name: 'Beach Access' },
+      ],
+      owner: {
+        name: 'Grace A.',
+      },
+      rentalUnits: {
+        total: 3,
+        available: 1,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
     };
   }
 
@@ -100,9 +305,10 @@ async function getProperty(id: string): Promise<PropertyData | null> {
 export default async function PropertyDetailsPage({
   params,
 }: {
-  params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
-  const property = await getProperty(params.id);
+  const { id } = await params;
+  const property = await getProperty(id);
 
   if (!property) {
     notFound();
@@ -110,18 +316,29 @@ export default async function PropertyDetailsPage({
 
   const isRented = property.status === 'RENTED';
 
+  const handleReviewSubmit = async (data: ReviewFormData) => {
+    'use server';
+    // This is a placeholder since it simulates server action for the form.
+    // Real implementation would call API.
+    console.log('Submitted review:', data);
+    await new Promise((res) => setTimeout(res, 1000));
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar theme="light" />
       <main className="min-h-screen bg-white pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+          {/* Breadcrumbs */}
+          <Breadcrumbs className="mb-8" />
+
           {/* Header section with title, location, gallery */}
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
               {property.title}
             </h1>
-            <div className="flex items-center text-gray-600 mb-8 text-lg font-medium">
-              <MapPin className="w-5 h-5 mr-2 text-brand-blue" />
+            <div className="flex items-start sm:items-center text-gray-600 mb-6 sm:mb-8 text-base sm:text-lg font-medium gap-2">
+              <MapPin className="w-5 h-5 shrink-0 text-brand-blue mt-0.5 sm:mt-0" />
               <span>{property.location}</span>
             </div>
 
@@ -208,7 +425,7 @@ export default async function PropertyDetailsPage({
 
             {/* Right Column (Sticky CTA - roughly 33%) */}
             <div className="lg:col-span-4 sticky top-24 lg:top-32 w-full">
-              <div className="glass shadow-2xl rounded-3xl p-6 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
+              <div className="glass shadow-2xl rounded-3xl p-5 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
                 {/* Price */}
                 <div className="mb-8 pb-6 border-b border-gray-100">
                   <span className="block text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">
@@ -257,6 +474,23 @@ export default async function PropertyDetailsPage({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Reviews Section at the bottom */}
+          <div className="mt-20 pt-10 border-t border-gray-100">
+            <ReviewList
+              reviews={property.reviews}
+              stats={property.ratingStats}
+              title="Tenant Reviews"
+              subtitle="See what past and current tenants say about this property"
+              onSubmitReview={async (data) => {
+                // In a real client component, this would call an API route.
+                // Since this is a server component handling client clicks via server actions is tricky inline.
+                // We will just simulate a delay for UI purposes here.
+                'use server';
+                await new Promise((res) => setTimeout(res, 800));
+              }}
+            />
           </div>
         </div>
       </main>

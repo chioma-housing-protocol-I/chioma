@@ -13,7 +13,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 const Hero = () => {
   return (
     <section className="relative pt-10 pb-16 md:pt-12 md:pb-24 overflow-hidden">
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Content Column */}
           <div className="flex flex-col space-y-8 max-w-2xl">
@@ -82,8 +82,8 @@ const Hero = () => {
               <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent"></div>
             </div>
 
-            {/* Floating Status Card: Payment Success */}
-            <div className="absolute bottom-6 -left-6 md:bottom-14 md:-left-12 bg-white rounded-2xl p-6 shadow-2xl border border-blue-100 flex items-start space-x-4 max-w-70 md:max-w-xs animate-in slide-in-from-bottom-8 duration-1000">
+            {/* Floating Status Card: Payment Success - constrained on mobile */}
+            <div className="absolute bottom-4 left-4 right-4 md:bottom-14 md:left-auto md:right-auto md:-left-12 bg-white rounded-2xl p-4 md:p-6 shadow-2xl border border-blue-100 flex items-start space-x-4 max-w-[calc(100%-2rem)] md:max-w-xs animate-in slide-in-from-bottom-8 duration-1000">
               <div className="bg-emerald-100 p-3 rounded-full text-emerald-600 shrink-0">
                 <CheckCircle2 size={32} />
               </div>

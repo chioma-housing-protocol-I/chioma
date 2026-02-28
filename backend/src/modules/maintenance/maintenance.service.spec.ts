@@ -1,15 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaintenanceService } from './maintenance.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  MaintenanceRequest,
-  MaintenanceStatus,
-} from './maintenance-request.entity';
+import { MaintenanceRequest } from './maintenance-request.entity';
 import { Repository } from 'typeorm';
+import { ReviewPromptService } from '../reviews/review-prompt.service';
 
 describe('MaintenanceService', () => {
   let service: MaintenanceService;
-  let repo: Repository<MaintenanceRequest>;
+  let _repo: Repository<MaintenanceRequest>;
 
   const mockStorageService = {};
   const mockNotificationsService = { notify: jest.fn() };
@@ -17,6 +15,7 @@ describe('MaintenanceService', () => {
     findOne: jest.fn().mockResolvedValue({ title: 'Test Property' }),
   };
   const mockUsersService = { findById: jest.fn().mockResolvedValue({}) };
+  const mockReviewPromptService = { promptForMaintenanceReview: jest.fn() };
 
   beforeEach(async () => {
     const { StorageService } = require('../storage/storage.service');
@@ -37,10 +36,11 @@ describe('MaintenanceService', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: PropertiesService, useValue: mockPropertiesService },
         { provide: UsersService, useValue: mockUsersService },
+        { provide: ReviewPromptService, useValue: mockReviewPromptService },
       ],
     }).compile();
     service = module.get<MaintenanceService>(MaintenanceService);
-    repo = module.get<Repository<MaintenanceRequest>>(
+    _repo = module.get<Repository<MaintenanceRequest>>(
       getRepositoryToken(MaintenanceRequest),
     );
   });

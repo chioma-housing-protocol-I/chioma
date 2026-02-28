@@ -12,7 +12,7 @@ import { MaintenancePropertyOption, SubmitMaintenanceInput } from './types';
 interface MaintenanceRequestFormProps {
   properties?: MaintenancePropertyOption[];
   isSubmitting: boolean;
-  onSubmit: (input: SubmitMaintenanceInput) => Promise<void>;
+  onSubmit: (input: SubmitMaintenanceInput) => Promise<boolean>;
 }
 
 export default function MaintenanceRequestForm({
@@ -40,7 +40,7 @@ export default function MaintenanceRequestForm({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    await onSubmit({
+    const success = await onSubmit({
       propertyId,
       category,
       description,
@@ -48,9 +48,11 @@ export default function MaintenanceRequestForm({
       files,
     });
 
-    setDescription('');
-    setPriority(PRIORITY_LEVELS[2]);
-    setFiles([]);
+    if (success) {
+      setDescription('');
+      setPriority(PRIORITY_LEVELS[2]);
+      setFiles([]);
+    }
   };
 
   return (

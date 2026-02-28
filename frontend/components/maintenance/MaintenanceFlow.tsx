@@ -186,7 +186,9 @@ export default function MaintenanceFlow({
     return () => clearInterval(timer);
   }, [loadRequests]);
 
-  const handleSubmitRequest = async (input: SubmitMaintenanceInput) => {
+  const handleSubmitRequest = async (
+    input: SubmitMaintenanceInput,
+  ): Promise<boolean> => {
     setIsSubmitting(true);
 
     try {
@@ -206,13 +208,30 @@ export default function MaintenanceFlow({
         throw new Error('Failed to submit maintenance request.');
       const created = mapIncomingRequest(await response.json());
       setRequests((current) => [created, ...current]);
+      seenIdsRef.current = new Set([...seenIdsRef.current, created.id]);
       setError(null);
+      return true;
     } catch {
       setError('Unable to submit maintenance request. Please try again.');
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const stream = new EventSource('/api/maintenance/stream');
+    stream.onmessage = () => {
+      loadRequests(true);
+    };
+    stream.onerror = () => {
+      stream.close();
+    };
+
+    return () => stream.close();
+  }, [loadRequests]);
 
   const handleUpdateRequest = async (
     id: string,

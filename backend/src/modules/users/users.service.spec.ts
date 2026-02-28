@@ -13,7 +13,7 @@ import { KycStatus } from '../kyc/kyc.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let userRepository: Repository<User>;
+  let _userRepository: Repository<User>;
 
   const mockUser: User = {
     id: '1',
@@ -59,7 +59,7 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
   afterEach(() => {

@@ -1,10 +1,11 @@
 import SidebarItem from './SidebarItem';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { FaBuilding, FaChartPie } from 'react-icons/fa';
 import { FaScrewdriverWrench, FaArrowRightFromBracket } from 'react-icons/fa6';
 import { HiSquares2X2, HiUsers } from 'react-icons/hi2';
 import { IoDocumentTextSharp } from 'react-icons/io5';
-import { IoMdSettings } from 'react-icons/io';
+import { IoMdSettings, IoMdNotifications } from 'react-icons/io';
 
 export const navItems = [
   { icon: HiSquares2X2, label: 'Dashboard', href: '/landlords' },
@@ -21,10 +22,17 @@ export const navItems = [
     label: 'Documents',
     href: '/landlords/documents',
   },
+  {
+    icon: IoMdNotifications,
+    label: 'Notifications',
+    href: '/landlords/notifications',
+  },
   { icon: IoMdSettings, label: 'Settings', href: '/landlords/settings' },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     // Desktop: full width (unchanged) on lg and up
     // Tablet (md): collapsed icon-only sidebar
@@ -36,14 +44,23 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1">
-        {navItems.map((item) => (
-          <SidebarItem
-            key={item.href}
-            icon={item.icon}
-            label={item.label}
-            href={item.href}
-          />
-        ))}
+        {navItems.map((item) => {
+          // Check if it's the root landlord path, require exact match
+          const isActive =
+            item.href === '/landlords'
+              ? pathname === '/landlords'
+              : pathname.startsWith(item.href);
+
+          return (
+            <SidebarItem
+              key={item.href}
+              icon={item.icon}
+              label={item.label}
+              href={item.href}
+              isActive={isActive}
+            />
+          );
+        })}
       </nav>
 
       <div className="hidden lg:block">
