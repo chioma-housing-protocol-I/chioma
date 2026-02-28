@@ -1,21 +1,24 @@
 // @ts-check
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 export default tseslint.config(
   {
     ignores: [
-      'eslint.config.js',
       'eslint.config.mjs',
       'node_modules/',
       'dist/',
       'build/',
       '.next/',
       'coverage/',
-      '**/*.js',
-      '**/*.json',
+      '*.js',
+      '*.json',
     ],
   },
   eslint.configs.recommended,
@@ -30,7 +33,7 @@ export default tseslint.config(
       sourceType: 'commonjs',
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
   },

@@ -2,13 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Payment } from './payment.entity';
 
 export enum AgreementStatus {

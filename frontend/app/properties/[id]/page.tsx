@@ -150,6 +150,153 @@ async function getProperty(id: string): Promise<PropertyData | null> {
         distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
       },
     };
+  } else if (id === '3') {
+    return {
+      id: '3',
+      title: 'Serviced Studio Flat',
+      description:
+        'A cozy and efficiently designed studio apartment perfect for individuals. Located in the prestigious Ikoyi area with easy access to business districts and entertainment centers. Fully serviced with weekly cleaning and maintenance.',
+      price: '₦1,500,000',
+      location: 'Glover Road, Ikoyi, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Air Conditioning' },
+        { name: 'Housekeeping Service' },
+        { name: '24/7 Security' },
+        { name: 'Kitchenette' },
+        { name: 'Laundry Service' },
+      ],
+      owner: {
+        name: 'Chioma N.',
+      },
+      rentalUnits: {
+        total: 8,
+        available: 3,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '4') {
+    return {
+      id: '4',
+      title: 'Exquisite 4-Bed Duplex',
+      description:
+        'A magnificent duplex offering luxury living at its finest. Situated in the exclusive Banana Island, this property features spacious rooms, modern amenities, and unparalleled security. Perfect for families seeking the ultimate living experience.',
+      price: '₦15,000,000',
+      location: 'Banana Island, Ikoyi',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Central Air Conditioning' },
+        { name: 'Swimming Pool' },
+        { name: '24/7 Security' },
+        { name: 'Gourmet Kitchen' },
+        { name: 'Backup Power' },
+        { name: 'Multiple Parking Spaces' },
+        { name: 'Garden' },
+        { name: 'Home Theater' },
+      ],
+      owner: {
+        name: 'James Obi',
+      },
+      rentalUnits: {
+        total: 2,
+        available: 1,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '5') {
+    return {
+      id: '5',
+      title: 'Cozy 1-Bed Apartment',
+      description:
+        'A comfortable and affordable one-bedroom apartment in the heart of Yaba. Close to major universities and tech hubs, making it ideal for students and young professionals. The area offers vibrant nightlife and easy access to public transportation.',
+      price: '₦800,000',
+      location: 'Yaba, Mainland, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'WiFi' },
+        { name: 'Air Conditioning' },
+        { name: 'Security' },
+        { name: 'Kitchen' },
+        { name: 'Parking' },
+      ],
+      owner: {
+        name: 'Emmanuel K.',
+      },
+      rentalUnits: {
+        total: 12,
+        available: 4,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
+  } else if (id === '6') {
+    return {
+      id: '6',
+      title: 'Penthouse with Sea View',
+      description:
+        'An exclusive penthouse offering breathtaking sea views and luxury living. Located in the prestigious Eko Atlantic City, this property features modern architecture, high-end finishes, and access to private beaches. Perfect for those who desire the ultimate coastal living experience.',
+      price: '₦8,500,000',
+      location: 'Eko Atlantic City, Lagos',
+      status: 'AVAILABLE',
+      images: [
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=1200&h=800&fit=crop',
+      ],
+      amenities: [
+        { name: 'High-Speed WiFi' },
+        { name: 'Central Air Conditioning' },
+        { name: 'Infinity Pool' },
+        { name: '24/7 Concierge' },
+        { name: 'Smart Home System' },
+        { name: 'Backup Power' },
+        { name: 'Private Elevator' },
+        { name: 'Rooftop Terrace' },
+        { name: 'Beach Access' },
+      ],
+      owner: {
+        name: 'Grace A.',
+      },
+      rentalUnits: {
+        total: 3,
+        available: 1,
+      },
+      reviews: [],
+      ratingStats: {
+        average: 0,
+        total: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      },
+    };
   }
 
   return null;
@@ -158,9 +305,10 @@ async function getProperty(id: string): Promise<PropertyData | null> {
 export default async function PropertyDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const property = await getProperty(params.id);
+  const { id } = await params;
+  const property = await getProperty(id);
 
   if (!property) {
     notFound();
@@ -186,11 +334,11 @@ export default async function PropertyDetailsPage({
 
           {/* Header section with title, location, gallery */}
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-sans text-gray-900 mb-4 tracking-tight">
               {property.title}
             </h1>
-            <div className="flex items-center text-gray-600 mb-8 text-lg font-medium">
-              <MapPin className="w-5 h-5 mr-2 text-brand-blue" />
+            <div className="flex items-start sm:items-center text-gray-600 mb-6 sm:mb-8 text-base sm:text-lg font-medium gap-2">
+              <MapPin className="w-5 h-5 shrink-0 text-brand-blue mt-0.5 sm:mt-0" />
               <span>{property.location}</span>
             </div>
 
@@ -277,7 +425,7 @@ export default async function PropertyDetailsPage({
 
             {/* Right Column (Sticky CTA - roughly 33%) */}
             <div className="lg:col-span-4 sticky top-24 lg:top-32 w-full">
-              <div className="glass shadow-2xl rounded-3xl p-6 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
+              <div className="glass shadow-2xl rounded-3xl p-5 sm:p-8 bg-white/90 backdrop-blur-xl border border-white/50">
                 {/* Price */}
                 <div className="mb-8 pb-6 border-b border-gray-100">
                   <span className="block text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">

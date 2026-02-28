@@ -147,7 +147,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className="lg:ml-64">
         {/* Top Navigation Bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-neutral-200">
-          <div className="h-20 px-6 flex items-center justify-between">
+          <div className="h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between">
             {/* Left Section - Mobile Menu + Title */}
             <div className="flex items-center space-x-4">
               {/* Mobile Menu Toggle */}
@@ -196,7 +196,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile Overlay */}

@@ -22,14 +22,13 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { MaintenanceService } from './maintenance.service';
-import { MaintenanceStatus } from './maintenance-request.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateMaintenanceRequestDto, UpdateMaintenanceStatusDto } from './dto';
 import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Maintenance')
 @ApiBearerAuth()
-@Controller('api/maintenance')
+@Controller('maintenance')
 export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 

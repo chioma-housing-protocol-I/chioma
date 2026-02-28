@@ -66,7 +66,10 @@ export class Payment {
   @Column({ nullable: true, type: 'varchar' })
   referenceNumber: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
   processedAt: Date;
 
   @Column({ length: 100, nullable: true, type: 'varchar' })

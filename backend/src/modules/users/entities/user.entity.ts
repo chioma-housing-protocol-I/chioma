@@ -14,6 +14,7 @@ export enum UserRole {
   ADMIN = 'admin',
   LANDLORD = 'landlord',
   TENANT = 'tenant',
+  AGENT = 'agent',
 }
 
 export enum AuthMethod {

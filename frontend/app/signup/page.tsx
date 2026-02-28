@@ -82,7 +82,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="min-h-screen bg-brand-gradient flex items-center justify-center px-4 py-12">
+    <main className="min-h-screen bg-brand-gradient flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md animate-auth-enter">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -98,7 +98,7 @@ export default function SignupPage() {
         </div>
 
         {/* Glass Form Card */}
-        <div className="glass rounded-4xl border border-white/20 shadow-2xl p-8">
+        <div className="glass rounded-4xl border border-white/20 shadow-2xl p-6 sm:p-8">
           {serverError && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-400/30">
               <p className="text-sm text-red-200">{serverError}</p>
@@ -135,8 +135,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Name Fields - stack on very small screens */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label
                   htmlFor="firstName"

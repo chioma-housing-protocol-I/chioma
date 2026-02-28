@@ -5,7 +5,7 @@ import { Review } from './review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 
 @ApiTags('Reviews')
-@Controller('api/reviews')
+@Controller('reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 

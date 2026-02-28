@@ -7,12 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { User } from './entities/user.entity';
 import { KycStatus } from '../kyc/kyc.entity'; // ✅ moved here with the other imports
 import {
-  UpdateProfileDto,
+  UpdateUserProfileDto,
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-user.dto';
@@ -46,7 +46,7 @@ export class UsersService {
 
   async updateProfile(
     userId: string,
-    updateProfileDto: UpdateProfileDto,
+    updateProfileDto: UpdateUserProfileDto,
   ): Promise<User> {
     const user = await this.findById(userId);
     Object.assign(user, updateProfileDto);

@@ -4,15 +4,18 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
+import { NAV_LINKS } from '@/constants/navigation';
 
 interface NavbarProps {
-  theme?: 'dark' | 'light';
+  theme?: 'light' | 'dark';
 }
 
 const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+
+  const isLight = theme === 'light';
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -21,73 +24,55 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         setIsScrolled(window.scrollY > 20);
-      }, 50);
+      }, 100);
     };
 
     window.addEventListener('scroll', handleScroll);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(timeoutId);
     };
   }, []);
 
-  const navLinks = [
-    { name: 'Find a Home', href: '/properties' },
-    { name: 'For Landlords', href: '/landlords' },
-    { name: 'For Agents', href: '/agent' },
-    { name: 'Dashboard', href: '/dashboard' },
-  ];
-
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
-  const isLightMode = theme === 'light' || isScrolled;
-  const navClasses = `top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
-    isScrolled
-      ? 'bg-white/90 backdrop-blur-md border-b border-gray-100 py-3 shadow-xs'
-      : theme === 'light'
-        ? 'bg-white py-6 border-b border-gray-100'
-        : 'bg-transparent py-6'
-  }`;
-
-  const textColorClass = isLightMode ? 'text-gray-900' : 'text-white';
-  const logoColorClass = isLightMode ? 'text-brand-blue' : 'text-white';
-  const linkColorClass = isLightMode
-    ? 'text-gray-600 hover:text-brand-blue'
-    : 'text-white/80 hover:text-white';
-  const activeLinkColorClass = isLightMode
-    ? 'text-brand-blue border-b-2 border-brand-blue'
-    : 'text-white border-b-2 border-white';
-  const mobileBgClass = isLightMode
-    ? 'bg-white border-gray-100 shadow-xl'
-    : 'glass-dark border-white/10';
-
   return (
-    <nav className={navClasses}>
-      <div className="container mx-auto px-6 flex items-center justify-between">
+    <nav
+      className={`top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
+        isScrolled ? 'glass py-3' : 'bg-transparent py-6'
+      }`}
+    >
+      <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <span
-            className={`text-2xl font-black tracking-tight transition-colors ${logoColorClass}`}
+            className={`text-2xl font-bold tracking-tight ${
+              isLight ? 'text-blue-900' : 'text-white'
+            }`}
           >
             Chioma
           </span>
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-8 lg:space-x-10">
-          {navLinks.map((link) => {
+        <div className="hidden md:flex items-center space-x-10">
+          {NAV_LINKS.map((link) => {
             const active = isActive(link.href);
 
             return (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`relative text-sm font-bold transition-all
-                  ${active ? activeLinkColorClass : linkColorClass}
-                  pb-1
+                className={`relative text-sm font-medium transition-colors
+                  ${
+                    active
+                      ? `${isLight ? 'text-black border-b-2 border-black' : 'text-white border-b-2 border-white'} pb-1`
+                      : `${isLight ? 'text-black hover:text-blue-900' : 'text-white/80 hover:text-white'}`
+                  }
                 `}
               >
                 {link.name}
@@ -100,79 +85,82 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         <div className="hidden md:flex items-center space-x-6">
           <Link
             href="/login"
-            className={`text-sm font-bold transition-colors ${isLightMode ? 'text-brand-blue hover:text-blue-800' : 'text-white hover:text-white/80'}`}
+            className={`${
+              isLight
+                ? 'text-blue-600 hover:text-blue-800'
+                : 'text-white hover:text-white/80'
+            } text-sm font-semibold transition-colors`}
           >
             Log In
           </Link>
           <Link
             href="/signup"
-            className="bg-brand-blue hover:bg-blue-800 text-white px-7 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-brand-blue/20 hover:shadow-lg hover:shadow-brand-blue/40 hover:-translate-y-0.5 active:translate-y-0"
+            className="bg-blue-800 hover:bg-brand-blue text-white px-7 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-brand-blue/20"
           >
             Sign Up
           </Link>
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button - min 44px touch target */}
         <button
-          className={`md:hidden p-2 rounded-lg transition-colors ${textColorClass} hover:bg-black/5`}
+          className={`md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg active:bg-white/10 ${
+            isLight ? 'text-blue-900' : 'text-white'
+          }`}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
-          aria-expanded={isMobileMenuOpen}
         >
-          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
       {/* Mobile Navigation Drawer */}
-      <div
-        className={`md:hidden absolute top-full left-0 right-0 border-t transition-all duration-300 origin-top overflow-hidden ${mobileBgClass} ${isMobileMenuOpen ? 'max-h-[500px] opacity-100 visible' : 'max-h-0 opacity-0 invisible'}`}
-      >
-        <div className="flex flex-col p-6 space-y-2">
-          {navLinks.map((link) => {
-            const active = isActive(link.href);
+      {isMobileMenuOpen && (
+        <div
+          className={`md:hidden absolute top-full left-0 right-0 border-t border-white/10 animate-in fade-in slide-in-from-top-4 duration-300 ${
+            isLight ? 'bg-white/95 backdrop-blur-md' : 'glass-dark'
+          }`}
+        >
+          <div className="flex flex-col p-6 space-y-4">
+            {NAV_LINKS.map((link) => {
+              const active = isActive(link.href);
 
-            return (
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`text-lg font-medium w-fit
+                    ${
+                      active
+                        ? `${isLight ? 'text-blue-900 border-b-2 border-blue-900' : 'text-white border-b-2 border-white'} pb-1`
+                        : `${isLight ? 'text-blue-900' : 'text-white'}`
+                    }
+                  `}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+
+            <div className="pt-4 flex flex-col space-y-4 border-t border-white/10">
               <Link
-                key={link.name}
-                href={link.href}
+                href="/login"
+                className={`text-lg font-medium ${isLight ? 'text-blue-900' : 'text-white'}`}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`text-lg font-bold py-3 px-4 rounded-xl transition-colors
-                  ${
-                    active
-                      ? isLightMode
-                        ? 'bg-blue-50 text-brand-blue'
-                        : 'bg-white/10 text-white'
-                      : isLightMode
-                        ? 'text-gray-700 hover:bg-gray-50'
-                        : 'text-white/90 hover:bg-white/5'
-                  }
-                `}
               >
-                {link.name}
+                Log In
               </Link>
-            );
-          })}
-
-          <div
-            className={`pt-6 mt-4 flex flex-col space-y-4 border-t ${isLightMode ? 'border-gray-100' : 'border-white/10'}`}
-          >
-            <Link
-              href="/login"
-              className={`text-lg font-bold py-3 px-4 text-center rounded-xl transition-colors ${isLightMode ? 'bg-gray-50 text-gray-900 hover:bg-gray-100' : 'bg-white/5 text-white hover:bg-white/10'}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-brand-blue hover:bg-blue-800 text-white py-3 px-4 rounded-xl text-center font-bold shadow-lg transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Sign Up
-            </Link>
+              <Link
+                href="/signup"
+                className="bg-brand-blue text-white px-6 py-3 rounded-lg text-center font-semibold shadow-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign Up
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 };

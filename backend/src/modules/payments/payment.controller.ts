@@ -18,7 +18,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
@@ -32,7 +32,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments')
+@Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -42,7 +42,7 @@ export class PaymentController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async recordPayment(
-    @Body() dto: RecordPaymentDto,
+    @Body() dto: CreatePaymentRecordDto,
     @Request() req: { user?: { id: string } },
   ) {
     return this.paymentService.recordPayment(dto, req.user?.id || '');
@@ -90,7 +90,7 @@ export class PaymentController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/payment-methods')
+@Controller('payment-methods')
 export class PaymentMethodController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -140,7 +140,7 @@ export class PaymentMethodController {
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/agreements')
+@Controller('agreements')
 export class AgreementPaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -162,7 +162,7 @@ export class AgreementPaymentController {
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
-@Controller('api/payments/schedules')
+@Controller('payments/schedules')
 export class PaymentScheduleController {
   constructor(private readonly paymentService: PaymentService) {}
 

@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Anchor')
 @ApiBearerAuth('JWT-auth')
-@Controller('api/v1/anchor')
+@Controller('v1/anchor')
 @UseGuards(JwtAuthGuard)
 export class AnchorController {
   constructor(private readonly anchorService: AnchorService) {}

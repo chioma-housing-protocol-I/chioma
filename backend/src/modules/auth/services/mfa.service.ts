@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import * as crypto from 'crypto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../../users/entities/user.entity';
 import {

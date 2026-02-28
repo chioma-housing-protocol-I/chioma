@@ -50,7 +50,7 @@ export class PaymentService {
     }
   }
 
-  private async executePayment(paymentData: any) {
+  private async executePayment(_paymentData: any) {
     // Payment execution logic
     return { success: true };
   }
@@ -65,14 +65,17 @@ export class NftService {
     private readonly logger: StructuredLoggerService,
   ) {}
 
-  async mintNft(agreementId: string, landlordAddress: string) {
+  async mintNft(_agreementId: string, _landlordAddress: string) {
     const startTime = Date.now();
 
     try {
-      this.logger.log('Minting NFT', { agreementId, landlordAddress });
+      this.logger.log('Minting NFT', {
+        agreementId: _agreementId,
+        landlordAddress: _landlordAddress,
+      });
 
       // Mint NFT logic
-      const result = await this.executeMint(agreementId, landlordAddress);
+      const result = await this.executeMint(_agreementId, _landlordAddress);
 
       // Record metrics
       this.metricsService.recordNftMint('rent_obligation');
@@ -82,7 +85,7 @@ export class NftService {
       this.metricsService.recordBlockchainDuration('nft_mint', duration);
 
       this.logger.log('NFT minted successfully', {
-        agreementId,
+        agreementId: _agreementId,
         txHash: result.txHash,
         duration,
       });
@@ -92,7 +95,7 @@ export class NftService {
       this.metricsService.recordBlockchainFailure('nft_mint', error.message);
 
       this.logger.error('NFT minting failed', error.stack, {
-        agreementId,
+        agreementId: _agreementId,
         error: error.message,
       });
 

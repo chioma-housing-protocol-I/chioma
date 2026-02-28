@@ -31,7 +31,7 @@ import { User, UserRole } from '../users/entities/user.entity';
 import { ListingStatus } from './entities/property.entity';
 
 @ApiTags('Properties')
-@Controller('api/properties')
+@Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 

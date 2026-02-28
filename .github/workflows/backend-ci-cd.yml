@@ -47,6 +47,9 @@ jobs:
       - name: Install dependencies
         run: cd backend && pnpm install --frozen-lockfile
 
+      - name: Run pnpm audit (high severity)
+        run: cd backend && pnpm audit --audit-level=high
+
       - name: Run ESLint
         run: cd backend && pnpm run lint
 
@@ -68,3 +71,107 @@ jobs:
           files: ./backend/coverage/coverage-final.json
           flags: unittests
           fail_ci_if_error: false
+
+  # ============================================================================
+  # API Quality Gates: OpenAPI spec, docs & contract tests
+  # Optional: fails only if openapi:generate / sdk:generate scripts are added
+  # ============================================================================
+  api-quality:
+    runs-on: ubuntu-latest
+    name: API Docs & Contract
+    needs: test
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: chioma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'backend/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: cd backend && pnpm install --frozen-lockfile
+
+      - name: Generate OpenAPI spec
+        run: cd backend && pnpm run openapi:generate 2>&1
+        env:
+          OPENAPI_GENERATE: "true"
+          OPENAPI_OUTPUT: openapi.json
+          NODE_ENV: test
+          NODE_OPTIONS: "--unhandled-rejections=strict"
+          RATE_LIMIT_TTL: "60000"
+          RATE_LIMIT_MAX: "100"
+          RATE_LIMIT_AUTH_TTL: "60000"
+          RATE_LIMIT_AUTH_MAX: "5"
+          RATE_LIMIT_STRICT_TTL: "60000"
+          RATE_LIMIT_STRICT_MAX: "10"
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: chioma
+          JWT_SECRET: "openapi-generate-dummy-secret-not-for-production"
+          SECURITY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CHIOMA_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          ESCROW_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          DISPUTE_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          RENT_OBLIGATION_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+
+      - name: Verify OpenAPI spec exists and is valid JSON
+        run: |
+          cd backend && node -e "const s=require('./openapi.json'); if(!s.openapi||!s.paths) throw new Error('Invalid OpenAPI'); console.log('OpenAPI', s.info?.version, 'paths:', Object.keys(s.paths).length);"
+
+      - name: Upload OpenAPI spec artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: backend/openapi.json
+
+      - name: Generate SDKs (TypeScript, Python)
+        run: cd backend && pnpm run sdk:generate
+        continue-on-error: true
+
+      - name: Run API and integration E2E tests
+        run: >
+          cd backend && pnpm run test:e2e --
+          test/api-docs.e2e-spec.ts
+          test/api-contract.e2e-spec.ts
+          test/integration.e2e-spec.ts
+          test/performance.e2e-spec.ts
+        env:
+          NODE_ENV: test
+          JWT_SECRET: "e2e-test-dummy-secret-not-for-production"
+          SECURITY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: chioma
+          CHIOMA_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          ESCROW_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          DISPUTE_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"
+          RENT_OBLIGATION_CONTRACT_ID: "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE"

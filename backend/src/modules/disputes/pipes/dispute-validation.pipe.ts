@@ -1,4 +1,4 @@
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { DisputeStatus, DisputeType } from '../entities/dispute.entity';
 
 export class DisputeValidationPipe extends ValidationPipe {

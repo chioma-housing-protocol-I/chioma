@@ -5,7 +5,7 @@ import { KycStatus } from '../kyc.entity';
 @Injectable()
 export class MockKycProvider {
   async submitKyc(
-    kycData: Record<string, any>,
+    _kycData: Record<string, any>,
   ): Promise<{ providerReference: string; status: KycStatus }> {
     // Simulate provider reference and always return PENDING
     return {

@@ -1,8 +1,21 @@
 /**
  * Generate static OpenAPI 3.0 JSON spec from the NestJS app.
- * Usage: npx ts-node -r tsconfig-paths/register scripts/generate-openapi.ts
+ * Usage: OPENAPI_GENERATE=true npx ts-node -r tsconfig-paths/register scripts/generate-openapi.ts
  * Output: openapi.json (or path from OPENAPI_OUTPUT env)
  */
+// Ensure global crypto for Node 18 (TypeORM uses crypto.randomUUID())
+if (typeof globalThis.crypto === 'undefined') {
+  (globalThis as any).crypto = require('crypto');
+}
+// Log unhandled errors so CI shows the real failure
+function logAndExit(label: string, err: unknown) {
+  const e = err instanceof Error ? err : new Error(String(err));
+  console.error(`[openapi:generate] ${label}:`, e.message);
+  if (e.stack) console.error(e.stack);
+  process.exit(1);
+}
+process.on('unhandledRejection', (reason) => logAndExit('Unhandled Rejection', reason));
+process.on('uncaughtException', (err) => logAndExit('Uncaught Exception', err));
 import { NestFactory } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -11,7 +24,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 async function generate() {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  // abortOnError: false so bootstrap errors are thrown instead of process.exit(1)
+  let app;
+  try {
+    app = await NestFactory.create(AppModule, {
+      logger: false,
+      abortOnError: false,
+    });
+  } catch (err) {
+    logAndExit('NestFactory.create failed', err);
+  }
+  if (!app) process.exit(1);
   app.setGlobalPrefix('api', {
     exclude: ['health', 'health/detailed', 'security.txt', '.well-known'],
   });
@@ -67,7 +90,8 @@ async function generate() {
   console.log('OpenAPI spec written to', outputPath);
 }
 
-generate().catch((err) => {
-  console.error(err);
+generate().catch((err: Error) => {
+  console.error('OpenAPI generation failed:', err?.message ?? err);
+  if (err?.stack) console.error(err.stack);
   process.exit(1);
 });
