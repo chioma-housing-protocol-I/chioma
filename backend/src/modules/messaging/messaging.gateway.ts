@@ -24,11 +24,11 @@ export class MessagingGateway
 
   constructor(private readonly messagingService: MessagingService) {}
 
-  async handleConnection(socket: Socket) {
+  async handleConnection(_socket: Socket) {
     // Authorization logic can be added here
   }
 
-  async handleDisconnect(socket: Socket) {
+  async handleDisconnect(_socket: Socket) {
     // Handle disconnect logic
   }
 
@@ -36,7 +36,7 @@ export class MessagingGateway
   @SubscribeMessage('message:send')
   async handleMessageSend(
     @MessageBody() data: any,
-    @ConnectedSocket() socket: Socket,
+    @ConnectedSocket() _socket: Socket,
   ) {
     const message = await this.messagingService.saveMessage(data);
     this.server.to(data.chatGroupId).emit('message:receive', message);

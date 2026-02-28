@@ -36,8 +36,10 @@ describe('API Documentation (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-  });
+    if (app) {
+      await app.close();
+    }
+  }, 30000);
 
   describe('Interactive API docs portal', () => {
     it('GET /api/docs returns Swagger UI HTML', async () => {

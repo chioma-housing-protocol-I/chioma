@@ -10,7 +10,7 @@ import { SubmitKycDto, KycWebhookDto, KycStatusResponseDto } from './kyc.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('KYC')
-@Controller('api/kyc')
+@Controller('kyc')
 export class KycController {
   constructor(private readonly kycService: KycService) {}
 

@@ -650,16 +650,16 @@ export class StellarService {
       );
 
       // Build asset
-      let asset: StellarSdk.Asset;
+      let _asset: StellarSdk.Asset;
       if (escrow.assetType === AssetType.NATIVE) {
-        asset = StellarSdk.Asset.native();
+        _asset = StellarSdk.Asset.native();
       } else {
         if (!escrow.assetCode || !escrow.assetIssuer) {
           throw new BadRequestException(
             'Asset code and issuer required for non-native assets',
           );
         }
-        asset = new StellarSdk.Asset(escrow.assetCode, escrow.assetIssuer);
+        _asset = new StellarSdk.Asset(escrow.assetCode, escrow.assetIssuer);
       }
 
       // Calculate amount to send (leave minimum for account deletion)

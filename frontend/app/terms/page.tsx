@@ -9,9 +9,9 @@ export default function TermsPage() {
   return (
     <>
       <div className="min-h-screen bg-brand-gradient selection:bg-white/30 selection:text-white pb-40">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Header */}
-          <div className="text-center mb-12 border-b-4 border-white pt-20">
+          <div className="text-center mb-8 sm:mb-12 border-b-4 border-white pt-12 sm:pt-20">
             <h1 className="text-3xl sm:text-5xl font-bold text-white mb-4">
               Terms and Conditions
             </h1>

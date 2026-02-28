@@ -32,8 +32,7 @@ import { ListingStatus } from './entities/property.entity';
 import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
 
 @ApiTags('Properties')
-@RateLimitCategory(EndpointCategory.PROPERTY)
-@Controller('api/properties')
+@Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 

@@ -23,8 +23,10 @@ describe('API Contract (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-  });
+    if (app) {
+      await app.close();
+    }
+  }, 30000);
 
   describe('Health contract', () => {
     it('GET /health returns 200/503 with status, timestamp, services', async () => {

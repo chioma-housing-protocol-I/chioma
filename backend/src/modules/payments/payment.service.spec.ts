@@ -13,7 +13,7 @@ import { PaymentGatewayService } from './payment-gateway.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { PaymentStatus } from './entities/payment.entity';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
@@ -124,7 +124,7 @@ describe('PaymentService', () => {
         amount: 100,
         paymentMethodId: '1',
         idempotencyKey: 'idem_1',
-      } as RecordPaymentDto & { idempotencyKey: string };
+      } as CreatePaymentRecordDto & { idempotencyKey: string };
 
       const result = await service.recordPayment(dto, 'user_1');
 
@@ -157,7 +157,7 @@ describe('PaymentService', () => {
         currency: 'NGN',
       });
 
-      const dto: RecordPaymentDto = {
+      const dto: CreatePaymentRecordDto = {
         agreementId: 'agreement_1',
         amount: 100,
         paymentMethodId: '1',
@@ -194,7 +194,7 @@ describe('PaymentService', () => {
         id: 'pay_failed',
       });
 
-      const dto: RecordPaymentDto = {
+      const dto: CreatePaymentRecordDto = {
         agreementId: 'agreement_1',
         amount: 100,
         paymentMethodId: '1',

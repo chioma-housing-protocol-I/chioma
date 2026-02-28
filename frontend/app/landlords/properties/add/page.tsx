@@ -113,7 +113,7 @@ export default function AddPropertyPage() {
       <div className="flex items-center space-x-4">
         <Link
           href="/landlords/properties"
-          className="p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 rounded-full transition-colors"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 rounded-full transition-colors"
         >
           <ArrowLeft size={24} />
         </Link>
@@ -129,7 +129,7 @@ export default function AddPropertyPage() {
 
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
         {/* Stepper Header */}
-        <div className="bg-neutral-50/50 border-b border-neutral-200 px-8 py-6">
+        <div className="bg-neutral-50/50 border-b border-neutral-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between relative">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-neutral-200 z-0"></div>
             {STEPS.map((step) => {
@@ -166,7 +166,7 @@ export default function AddPropertyPage() {
         </div>
 
         {/* Form Content */}
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="min-h-[300px]">
             {currentStep === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">

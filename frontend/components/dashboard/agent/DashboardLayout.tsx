@@ -35,29 +35,29 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     },
     {
       name: 'Properties',
-      href: '/dashboard/properties',
+      href: '/agents/properties',
       icon: Building2,
     },
     {
       name: 'My Wallet',
-      href: '/dashboard/wallet',
+      href: '/agents/wallet',
       icon: Wallet,
     },
     {
       name: 'Messages',
-      href: '/dashboard/messages',
+      href: '/agents/messages',
       icon: MessageSquare,
       badge: '3',
       badgeColor: 'bg-blue-600',
     },
     {
       name: 'Contracts',
-      href: '/dashboard/contracts',
+      href: '/agents/contracts',
       icon: FileText,
     },
     {
       name: 'Analytics',
-      href: '/dashboard/analytics',
+      href: '/agents/analytics',
       icon: PieChart,
     },
     {
@@ -89,7 +89,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         }`}
       >
         {/* Logo */}
-        <div className="h-24 flex items-center px-8">
+        <div className="h-20 sm:h-24 flex items-center px-4 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center text-white font-bold text-lg">
               C
@@ -183,7 +183,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Header */}
-        <header className="sticky top-0 z-30 h-20 px-8 flex items-center justify-between bg-white border-b border-neutral-100">
+        <header className="sticky top-0 z-30 h-16 sm:h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between bg-white border-b border-neutral-100">
           <div className="flex items-center gap-4 lg:hidden">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -225,7 +225,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-8">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

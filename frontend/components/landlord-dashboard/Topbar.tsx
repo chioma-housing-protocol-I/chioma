@@ -21,11 +21,11 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         {/* Left */}
         <div className="flex items-center gap-3 md:gap-4">
           <button
-            className="md:hidden"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg active:bg-gray-100 -ml-1"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
-            <FaBars />
+            <FaBars className="text-lg" />
           </button>
 
           <h1 className="text-base md:text-2xl font-bold text-[#1e40af]">
@@ -46,7 +46,7 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         {/* Right */}
         <div className="flex items-center gap-4 md:gap-6">
           <button
-            className="md:hidden"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg active:bg-gray-100"
             onClick={() => setSearchOpen(true)}
             aria-label="Open search"
           >

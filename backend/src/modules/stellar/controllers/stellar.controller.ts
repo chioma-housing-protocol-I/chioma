@@ -9,13 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { StellarService } from '../services/stellar.service';
 import {
   CreateAccountDto,
@@ -36,7 +30,7 @@ import { StellarTransaction } from '../entities/stellar-transaction.entity';
 import { StellarEscrow } from '../entities/stellar-escrow.entity';
 
 @ApiTags('Stellar')
-@Controller('api/stellar')
+@Controller('stellar')
 export class StellarController {
   constructor(private readonly stellarService: StellarService) {}
 

@@ -28,6 +28,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
+import { ThreatDetectionMiddleware } from './common/middleware/threat-detection.middleware';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { SentryModule } from '@sentry/nestjs/setup';
@@ -198,5 +199,8 @@ export class AppModule implements NestModule {
         'auth/forgot-password',
         'auth/reset-password',
       );
+
+    // Real-time threat detection (applied to all API routes)
+    consumer.apply(ThreatDetectionMiddleware).forRoutes('api/*path');
   }
 }

@@ -10,7 +10,7 @@ import { EscrowStatus } from '../entities/stellar-escrow.entity';
 
 describe('StellarController', () => {
   let controller: StellarController;
-  let stellarService: StellarService;
+  let _stellarService: StellarService;
 
   const mockStellarService = {
     createAccount: jest.fn(),
@@ -43,7 +43,7 @@ describe('StellarController', () => {
     }).compile();
 
     controller = module.get<StellarController>(StellarController);
-    stellarService = module.get<StellarService>(StellarService);
+    _stellarService = module.get<StellarService>(StellarService);
   });
 
   afterEach(() => {
