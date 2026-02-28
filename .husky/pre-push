@@ -1,3 +1,3 @@
 #!/bin/sh
-# Git LFS hook removed - install 'git-lfs' and restore this hook if you need LFS.
+# Git LFS hook removed - install 'git-lfs' and restore if you need LFS.
 exit 0
