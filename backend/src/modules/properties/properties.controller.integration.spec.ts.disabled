@@ -7,7 +7,11 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { PropertiesModule } from './properties.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
-import { Property, PropertyType, ListingStatus } from './entities/property.entity';
+import {
+  Property,
+  PropertyType,
+  ListingStatus,
+} from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
 import { PropertyAmenity } from './entities/property-amenity.entity';
 import { RentalUnit } from './entities/rental-unit.entity';
@@ -29,7 +33,13 @@ describe('PropertiesController Integration', () => {
           username: process.env.DB_USERNAME || 'postgres',
           password: process.env.DB_PASSWORD || 'password',
           database: process.env.DB_NAME || 'chioma_test',
-          entities: [Property, PropertyImage, PropertyAmenity, RentalUnit, User],
+          entities: [
+            Property,
+            PropertyImage,
+            PropertyAmenity,
+            RentalUnit,
+            User,
+          ],
           synchronize: true,
           dropSchema: true,
         }),
@@ -41,26 +51,56 @@ describe('PropertiesController Integration', () => {
     }).compile();
 
     app = module.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
-    const res = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: 'landlord@test.com',
-        password: 'Pass123!',
-        firstName: 'Test',
-        lastName: 'User',
-        role: UserRole.LANDLORD,
-      });
+    const res = await request(app.getHttpServer()).post('/auth/register').send({
+      email: 'landlord@test.com',
+      password: 'Pass123!',
+      firstName: 'Test',
+      lastName: 'User',
+      role: UserRole.LANDLORD,
+    });
     token = res.body.accessToken;
     userId = res.body.user.id;
 
     // Create test properties
     for (const data of [
-      { title: 'Apt 1', type: PropertyType.APARTMENT, price: 1500, bedrooms: 2, bathrooms: 1, city: 'NYC', state: 'NY', country: 'USA', amenities: [{ name: 'Gym' }] },
-      { title: 'House 1', type: PropertyType.HOUSE, price: 3000, bedrooms: 3, bathrooms: 2, city: 'LA', state: 'CA', country: 'USA', amenities: [{ name: 'Pool' }] },
-      { title: 'Apt 2', type: PropertyType.APARTMENT, price: 800, bedrooms: 1, bathrooms: 1, city: 'NYC', state: 'NY', country: 'USA', amenities: [] },
+      {
+        title: 'Apt 1',
+        type: PropertyType.APARTMENT,
+        price: 1500,
+        bedrooms: 2,
+        bathrooms: 1,
+        city: 'NYC',
+        state: 'NY',
+        country: 'USA',
+        amenities: [{ name: 'Gym' }],
+      },
+      {
+        title: 'House 1',
+        type: PropertyType.HOUSE,
+        price: 3000,
+        bedrooms: 3,
+        bathrooms: 2,
+        city: 'LA',
+        state: 'CA',
+        country: 'USA',
+        amenities: [{ name: 'Pool' }],
+      },
+      {
+        title: 'Apt 2',
+        type: PropertyType.APARTMENT,
+        price: 800,
+        bedrooms: 1,
+        bathrooms: 1,
+        city: 'NYC',
+        state: 'NY',
+        country: 'USA',
+        amenities: [],
+      },
     ]) {
       const prop = await request(app.getHttpServer())
         .post('/api/properties')
@@ -82,7 +122,9 @@ describe('PropertiesController Integration', () => {
         .get('/api/properties')
         .query({ type: PropertyType.APARTMENT });
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => p.type === PropertyType.APARTMENT)).toBe(true);
+      expect(
+        res.body.data.every((p: Property) => p.type === PropertyType.APARTMENT),
+      ).toBe(true);
     });
 
     it('filters by price range', async () => {
@@ -90,7 +132,11 @@ describe('PropertiesController Integration', () => {
         .get('/api/properties')
         .query({ minPrice: 1000, maxPrice: 2000 });
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => p.price >= 1000 && p.price <= 2000)).toBe(true);
+      expect(
+        res.body.data.every(
+          (p: Property) => p.price >= 1000 && p.price <= 2000,
+        ),
+      ).toBe(true);
     });
 
     it('filters by bedrooms', async () => {
@@ -106,7 +152,11 @@ describe('PropertiesController Integration', () => {
         .get('/api/properties')
         .query({ city: 'NYC', state: 'NY' });
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => p.city === 'NYC' && p.state === 'NY')).toBe(true);
+      expect(
+        res.body.data.every(
+          (p: Property) => p.city === 'NYC' && p.state === 'NY',
+        ),
+      ).toBe(true);
     });
 
     it('combines multiple filters', async () => {
@@ -114,9 +164,14 @@ describe('PropertiesController Integration', () => {
         .get('/api/properties')
         .query({ type: PropertyType.APARTMENT, minPrice: 1000, city: 'NYC' });
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => 
-        p.type === PropertyType.APARTMENT && p.price >= 1000 && p.city === 'NYC'
-      )).toBe(true);
+      expect(
+        res.body.data.every(
+          (p: Property) =>
+            p.type === PropertyType.APARTMENT &&
+            p.price >= 1000 &&
+            p.city === 'NYC',
+        ),
+      ).toBe(true);
     });
 
     it('searches by keyword', async () => {
@@ -181,15 +236,19 @@ describe('PropertiesController Integration', () => {
 
   describe('Authorization', () => {
     it('shows only published to public', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/api/properties');
+      const res = await request(app.getHttpServer()).get('/api/properties');
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => p.status === ListingStatus.PUBLISHED)).toBe(true);
+      expect(
+        res.body.data.every(
+          (p: Property) => p.status === ListingStatus.PUBLISHED,
+        ),
+      ).toBe(true);
     });
 
     it('requires auth for my-properties', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/api/properties/my-properties');
+      const res = await request(app.getHttpServer()).get(
+        '/api/properties/my-properties',
+      );
       expect(res.status).toBe(401);
     });
 
@@ -198,7 +257,9 @@ describe('PropertiesController Integration', () => {
         .get('/api/properties/my-properties')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
-      expect(res.body.data.every((p: Property) => p.ownerId === userId)).toBe(true);
+      expect(res.body.data.every((p: Property) => p.ownerId === userId)).toBe(
+        true,
+      );
     });
   });
 });
