@@ -39,7 +39,7 @@ describe('RateLimitService', () => {
 
   describe('consumePoints', () => {
     it('should allow request when under limit', async () => {
-      mockCacheManager.get.mockResolvedValue(50);
+      mockCacheManager.get.mockResolvedValue(0);
 
       const result = await service.consumePoints(
         'user:123',
@@ -49,7 +49,7 @@ describe('RateLimitService', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.remainingPoints).toBe(49);
+      expect(result.remainingPoints).toBe(99);
       expect(result.isBlocked).toBe(false);
     });
 
@@ -105,7 +105,9 @@ describe('RateLimitService', () => {
 
       expect(freeResult.success).toBe(true);
       expect(premiumResult.success).toBe(true);
-      expect(premiumResult.remainingPoints).toBeGreaterThan(freeResult.remainingPoints);
+      expect(premiumResult.remainingPoints).toBeGreaterThan(
+        freeResult.remainingPoints,
+      );
     });
 
     it('should return blocked when identifier is blocked', async () => {

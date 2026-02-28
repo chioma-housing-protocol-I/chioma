@@ -39,10 +39,10 @@ export class RateLimitGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const skip = this.reflector.getAllAndOverride<boolean>(RATE_LIMIT_SKIP_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const skip = this.reflector.getAllAndOverride<boolean>(
+      RATE_LIMIT_SKIP_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (skip) {
       return true;
@@ -52,28 +52,36 @@ export class RateLimitGuard implements CanActivate {
     const startTime = Date.now();
 
     try {
-      const category = this.reflector.getAllAndOverride<EndpointCategory>(
-        RATE_LIMIT_CATEGORY_KEY,
-        [context.getHandler(), context.getClass()],
-      ) || EndpointCategory.PUBLIC;
+      const category =
+        this.reflector.getAllAndOverride<EndpointCategory>(
+          RATE_LIMIT_CATEGORY_KEY,
+          [context.getHandler(), context.getClass()],
+        ) || EndpointCategory.PUBLIC;
 
-      const points = this.reflector.getAllAndOverride<number>(
-        RATE_LIMIT_POINTS_KEY,
-        [context.getHandler(), context.getClass()],
-      ) || 1;
+      const points =
+        this.reflector.getAllAndOverride<number>(RATE_LIMIT_POINTS_KEY, [
+          context.getHandler(),
+          context.getClass(),
+        ]) || 1;
 
       const identifier = this.getIdentifier(request);
       const ipAddress = this.getClientIp(request);
       const tier = this.getUserTier(request);
 
-      const isWhitelisted = await this.rateLimitService.isWhitelisted(identifier);
+      const isWhitelisted =
+        await this.rateLimitService.isWhitelisted(identifier);
       if (isWhitelisted) {
         return true;
       }
 
-      const isAbuseBlocked = await this.abuseDetectionService.isBlocked(identifier);
+      const isAbuseBlocked =
+        await this.abuseDetectionService.isBlocked(identifier);
       if (isAbuseBlocked) {
-        await this.analyticsService.recordRequest(identifier, true, Date.now() - startTime);
+        await this.analyticsService.recordRequest(
+          identifier,
+          true,
+          Date.now() - startTime,
+        );
         throw new HttpException(
           'Access temporarily blocked due to suspicious activity',
           HttpStatus.TOO_MANY_REQUESTS,
@@ -90,9 +98,13 @@ export class RateLimitGuard implements CanActivate {
 
       if (abuseResult.isAbuser) {
         await this.analyticsService.recordAbuseDetection(identifier);
-        await this.analyticsService.recordRequest(identifier, true, Date.now() - startTime);
-        
-        const retryAfter = abuseResult.blockUntil 
+        await this.analyticsService.recordRequest(
+          identifier,
+          true,
+          Date.now() - startTime,
+        );
+
+        const retryAfter = abuseResult.blockUntil
           ? Math.ceil((abuseResult.blockUntil.getTime() - Date.now()) / 1000)
           : 3600;
 
@@ -117,8 +129,12 @@ export class RateLimitGuard implements CanActivate {
       this.setRateLimitHeaders(request, result, category);
 
       if (!result.success) {
-        await this.analyticsService.recordRequest(identifier, true, Date.now() - startTime);
-        
+        await this.analyticsService.recordRequest(
+          identifier,
+          true,
+          Date.now() - startTime,
+        );
+
         const retryAfter = Math.ceil(result.msBeforeNext / 1000);
         throw new HttpException(
           {
@@ -131,7 +147,11 @@ export class RateLimitGuard implements CanActivate {
         );
       }
 
-      await this.analyticsService.recordRequest(identifier, false, Date.now() - startTime);
+      await this.analyticsService.recordRequest(
+        identifier,
+        false,
+        Date.now() - startTime,
+      );
       return true;
     } catch (error) {
       if (error instanceof HttpException) {
@@ -174,7 +194,11 @@ export class RateLimitGuard implements CanActivate {
     }
   }
 
-  private setRateLimitHeaders(request: any, result: any, category: EndpointCategory): void {
+  private setRateLimitHeaders(
+    request: any,
+    result: any,
+    category: EndpointCategory,
+  ): void {
     request.rateLimitInfo = {
       limit: result.remainingPoints + (result.success ? 1 : 0),
       remaining: result.remainingPoints,

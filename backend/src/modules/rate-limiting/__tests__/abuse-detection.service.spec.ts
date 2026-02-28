@@ -44,7 +44,11 @@ describe('AbuseDetectionService', () => {
         ipAddresses: ['192.168.1.1'],
       });
 
-      const result = await service.detectAbuse('user:123', '192.168.1.1', '/api/users');
+      const result = await service.detectAbuse(
+        'user:123',
+        '192.168.1.1',
+        '/api/users',
+      );
 
       expect(result.isAbuser).toBe(false);
       expect(result.abuseScore).toBeLessThan(100);
@@ -60,7 +64,11 @@ describe('AbuseDetectionService', () => {
         ipAddresses: ['192.168.1.1'],
       });
 
-      const result = await service.detectAbuse('user:123', '192.168.1.1', '/api/auth');
+      const result = await service.detectAbuse(
+        'user:123',
+        '192.168.1.1',
+        '/api/auth',
+      );
 
       expect(result.isAbuser).toBe(true);
       expect(result.abuseScore).toBeGreaterThanOrEqual(100);
@@ -78,7 +86,11 @@ describe('AbuseDetectionService', () => {
         ipAddresses: manyIps,
       });
 
-      const result = await service.detectAbuse('user:123', '192.168.1.25', '/api/users');
+      const result = await service.detectAbuse(
+        'user:123',
+        '192.168.1.25',
+        '/api/users',
+      );
 
       expect(result.abuseScore).toBeGreaterThan(50);
     });
@@ -93,8 +105,16 @@ describe('AbuseDetectionService', () => {
         ipAddresses: ['192.168.1.1'],
       });
 
-      const adminResult = await service.detectAbuse('user:123', '192.168.1.1', '/api/admin/users');
-      const normalResult = await service.detectAbuse('user:456', '192.168.1.2', '/api/users');
+      const adminResult = await service.detectAbuse(
+        'user:123',
+        '192.168.1.1',
+        '/api/admin/users',
+      );
+      const normalResult = await service.detectAbuse(
+        'user:456',
+        '192.168.1.2',
+        '/api/users',
+      );
 
       expect(adminResult.abuseScore).toBeGreaterThan(normalResult.abuseScore);
     });

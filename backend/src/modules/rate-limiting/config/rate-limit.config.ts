@@ -1,4 +1,8 @@
-import { EndpointCategory, TierLimits, UserTier } from '../types/rate-limit.types';
+import {
+  EndpointCategory,
+  TierLimits,
+  UserTier,
+} from '../types/rate-limit.types';
 
 export const RATE_LIMIT_CONFIG: Record<UserTier, TierLimits> = {
   [UserTier.FREE]: {

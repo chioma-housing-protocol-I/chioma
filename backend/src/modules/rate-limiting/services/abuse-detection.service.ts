@@ -28,10 +28,17 @@ export class AbuseDetectionService {
     const abuseScore = this.calculateAbuseScore(record, ipAddress, requestPath);
 
     if (abuseScore >= ABUSE_DETECTION_CONFIG.abuseScoreLimit) {
-      const blockUntil = new Date(Date.now() + ABUSE_DETECTION_CONFIG.blockDuration * 1000);
-      await this.blockIdentifier(identifier, ABUSE_DETECTION_CONFIG.blockDuration);
-      
-      this.logger.warn(`Abuse detected for identifier: ${identifier}, score: ${abuseScore}`);
+      const blockUntil = new Date(
+        Date.now() + ABUSE_DETECTION_CONFIG.blockDuration * 1000,
+      );
+      await this.blockIdentifier(
+        identifier,
+        ABUSE_DETECTION_CONFIG.blockDuration,
+      );
+
+      this.logger.warn(
+        `Abuse detected for identifier: ${identifier}, score: ${abuseScore}`,
+      );
 
       return {
         isAbuser: true,
@@ -65,8 +72,13 @@ export class AbuseDetectionService {
     const record = await this.getAbuseRecord(identifier);
     record.failedAuthAttempts++;
 
-    if (record.failedAuthAttempts >= ABUSE_DETECTION_CONFIG.suspiciousPatterns.repeatedFailedAuth) {
-      record.violations.push(`Excessive failed auth attempts: ${record.failedAuthAttempts}`);
+    if (
+      record.failedAuthAttempts >=
+      ABUSE_DETECTION_CONFIG.suspiciousPatterns.repeatedFailedAuth
+    ) {
+      record.violations.push(
+        `Excessive failed auth attempts: ${record.failedAuthAttempts}`,
+      );
     }
 
     await this.saveAbuseRecord(identifier, record);
@@ -95,14 +107,19 @@ export class AbuseDetectionService {
     return this.calculateAbuseScore(record, '', '');
   }
 
-  private calculateAbuseScore(record: AbuseRecord, ipAddress: string, requestPath: string): number {
+  private calculateAbuseScore(
+    record: AbuseRecord,
+    ipAddress: string,
+    requestPath: string,
+  ): number {
     let score = 0;
 
     const now = Date.now();
     const timeWindow = ABUSE_DETECTION_CONFIG.rapidFireWindow * 1000;
 
     if (record.lastSeen && now - record.lastSeen < timeWindow) {
-      const requestRate = record.requestCount / ((now - record.firstSeen) / 1000);
+      const requestRate =
+        record.requestCount / ((now - record.firstSeen) / 1000);
       if (requestRate > ABUSE_DETECTION_CONFIG.rapidFireThreshold) {
         score += 30;
       }
@@ -112,29 +129,35 @@ export class AbuseDetectionService {
 
     score += Math.min(record.violations.length * 10, 30);
 
-    if (record.ipAddresses.size > ABUSE_DETECTION_CONFIG.suspiciousPatterns.rapidIpSwitching) {
+    if (
+      record.ipAddresses.size >
+      ABUSE_DETECTION_CONFIG.suspiciousPatterns.rapidIpSwitching
+    ) {
       score += 60;
     }
 
     const adminPaths = ['/admin', '/api/admin', '/users/admin'];
-    if (adminPaths.some(path => requestPath.includes(path))) {
+    if (adminPaths.some((path) => requestPath.includes(path))) {
       score += 15;
     }
 
     return Math.min(score, 100);
   }
 
-  private async blockIdentifier(identifier: string, durationSeconds: number): Promise<void> {
+  private async blockIdentifier(
+    identifier: string,
+    durationSeconds: number,
+  ): Promise<void> {
     const key = `abuse:block:${identifier}`;
     await this.cacheManager.set(key, true, durationSeconds * 1000);
-    
+
     await this.recordViolation(identifier, 'Blocked due to abuse detection');
   }
 
   private async getAbuseRecord(identifier: string): Promise<AbuseRecord> {
     const key = `abuse:record:${identifier}`;
     const cached = await this.cacheManager.get<any>(key);
-    
+
     if (cached) {
       return {
         ...cached,
@@ -152,7 +175,10 @@ export class AbuseDetectionService {
     };
   }
 
-  private async saveAbuseRecord(identifier: string, record: AbuseRecord): Promise<void> {
+  private async saveAbuseRecord(
+    identifier: string,
+    record: AbuseRecord,
+  ): Promise<void> {
     const key = `abuse:record:${identifier}`;
     const toSave = {
       ...record,

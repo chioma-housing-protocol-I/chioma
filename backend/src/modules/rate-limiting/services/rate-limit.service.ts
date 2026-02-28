@@ -42,7 +42,11 @@ export class RateLimitService {
 
       if (consumed > config.points) {
         if (config.blockDuration) {
-          await this.cacheManager.set(blockKey, true, config.blockDuration * 1000);
+          await this.cacheManager.set(
+            blockKey,
+            true,
+            config.blockDuration * 1000,
+          );
         }
 
         await this.recordViolation(identifier, category);
@@ -74,7 +78,10 @@ export class RateLimitService {
     }
   }
 
-  async resetLimit(identifier: string, category: EndpointCategory): Promise<void> {
+  async resetLimit(
+    identifier: string,
+    category: EndpointCategory,
+  ): Promise<void> {
     const key = this.buildKey(identifier, category);
     const blockKey = this.buildBlockKey(identifier, category);
     await this.cacheManager.del(key);
@@ -92,13 +99,19 @@ export class RateLimitService {
     return config.points - (current || 0);
   }
 
-  async isBlocked(identifier: string, category: EndpointCategory): Promise<boolean> {
+  async isBlocked(
+    identifier: string,
+    category: EndpointCategory,
+  ): Promise<boolean> {
     const blockKey = this.buildBlockKey(identifier, category);
     const blocked = await this.cacheManager.get<boolean>(blockKey);
     return !!blocked;
   }
 
-  async whitelistIdentifier(identifier: string, durationSeconds: number = 3600): Promise<void> {
+  async whitelistIdentifier(
+    identifier: string,
+    durationSeconds: number = 3600,
+  ): Promise<void> {
     const key = `rate_limit:whitelist:${identifier}`;
     await this.cacheManager.set(key, true, durationSeconds * 1000);
     this.logger.log(`Whitelisted identifier: ${identifier}`);
@@ -110,7 +123,10 @@ export class RateLimitService {
     return !!whitelisted;
   }
 
-  private getConfig(tier: UserTier, category: EndpointCategory): RateLimitConfig {
+  private getConfig(
+    tier: UserTier,
+    category: EndpointCategory,
+  ): RateLimitConfig {
     return RATE_LIMIT_CONFIG[tier][category];
   }
 
@@ -122,9 +138,12 @@ export class RateLimitService {
     return `rate_limit:block:${category}:${identifier}`;
   }
 
-  private async recordViolation(identifier: string, category: EndpointCategory): Promise<void> {
+  private async recordViolation(
+    identifier: string,
+    category: EndpointCategory,
+  ): Promise<void> {
     const key = `rate_limit:violations:${identifier}`;
-    const violations = await this.cacheManager.get<any[]>(key) || [];
+    const violations = (await this.cacheManager.get<any[]>(key)) || [];
     violations.push({
       category,
       timestamp: Date.now(),

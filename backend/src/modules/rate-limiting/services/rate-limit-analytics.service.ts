@@ -21,7 +21,11 @@ export class RateLimitAnalyticsService {
 
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
-  async recordRequest(identifier: string, blocked: boolean, responseTime: number): Promise<void> {
+  async recordRequest(
+    identifier: string,
+    blocked: boolean,
+    responseTime: number,
+  ): Promise<void> {
     this.currentSnapshot.totalRequests++;
     if (blocked) {
       this.currentSnapshot.blockedRequests++;
@@ -42,7 +46,9 @@ export class RateLimitAnalyticsService {
       blockedRequests: snapshot.blockedRequests,
       uniqueUsers: snapshot.uniqueIdentifiers.size,
       abuseDetections: snapshot.abuseDetections,
-      averageResponseTime: this.calculateAverageResponseTime(snapshot.responseTimes),
+      averageResponseTime: this.calculateAverageResponseTime(
+        snapshot.responseTimes,
+      ),
     };
   }
 
@@ -51,7 +57,11 @@ export class RateLimitAnalyticsService {
     const endTime = Date.now();
     const startTime = endTime - hours * 3600 * 1000;
 
-    for (let time = startTime; time < endTime; time += ANALYTICS_CONFIG.aggregationInterval * 1000) {
+    for (
+      let time = startTime;
+      time < endTime;
+      time += ANALYTICS_CONFIG.aggregationInterval * 1000
+    ) {
       const key = `metrics:snapshot:${Math.floor(time / 1000)}`;
       const snapshot = await this.cacheManager.get<any>(key);
       if (snapshot) {
@@ -117,17 +127,24 @@ export class RateLimitAnalyticsService {
   }
 
   private async checkThresholds(metrics: RateLimitMetrics): Promise<void> {
-    const blockedPercentage = metrics.totalRequests > 0 
-      ? (metrics.blockedRequests / metrics.totalRequests) * 100 
-      : 0;
+    const blockedPercentage =
+      metrics.totalRequests > 0
+        ? (metrics.blockedRequests / metrics.totalRequests) * 100
+        : 0;
 
-    if (blockedPercentage > ANALYTICS_CONFIG.alertThresholds.blockedRequestsPercentage) {
+    if (
+      blockedPercentage >
+      ANALYTICS_CONFIG.alertThresholds.blockedRequestsPercentage
+    ) {
       this.logger.warn(
         `High blocked request rate: ${blockedPercentage.toFixed(2)}% (${metrics.blockedRequests}/${metrics.totalRequests})`,
       );
     }
 
-    if (metrics.abuseDetections > ANALYTICS_CONFIG.alertThresholds.abuseDetectionsPerHour / 12) {
+    if (
+      metrics.abuseDetections >
+      ANALYTICS_CONFIG.alertThresholds.abuseDetectionsPerHour / 12
+    ) {
       this.logger.warn(
         `High abuse detection rate: ${metrics.abuseDetections} in 5 minutes`,
       );

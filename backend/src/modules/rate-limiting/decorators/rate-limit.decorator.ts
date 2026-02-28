@@ -11,5 +11,4 @@ export const RateLimitCategory = (category: EndpointCategory) =>
 export const RateLimitPoints = (points: number) =>
   SetMetadata(RATE_LIMIT_POINTS_KEY, points);
 
-export const SkipRateLimit = () =>
-  SetMetadata(RATE_LIMIT_SKIP_KEY, true);
+export const SkipRateLimit = () => SetMetadata(RATE_LIMIT_SKIP_KEY, true);

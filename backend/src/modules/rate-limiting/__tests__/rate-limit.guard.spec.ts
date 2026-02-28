@@ -252,7 +252,9 @@ describe('RateLimitGuard', () => {
         .mockReturnValueOnce(EndpointCategory.PUBLIC)
         .mockReturnValueOnce(1);
 
-      rateLimitService.isWhitelisted.mockRejectedValue(new Error('Redis error'));
+      rateLimitService.isWhitelisted.mockRejectedValue(
+        new Error('Redis error'),
+      );
 
       const context = createMockExecutionContext();
       const result = await guard.canActivate(context);
