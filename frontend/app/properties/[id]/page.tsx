@@ -11,7 +11,6 @@ import AmenitiesList, {
 import { ReviewList } from '@/components/reviews/ReviewList';
 import type { Review } from '@/components/reviews/ReviewCard';
 import type { RatingStats } from '@/components/reviews/RatingSummary';
-import { ReviewFormData } from '@/components/reviews/ReviewForm';
 
 interface PropertyData {
   id: string;
@@ -316,14 +315,6 @@ export default async function PropertyDetailsPage({
 
   const isRented = property.status === 'RENTED';
 
-  const handleReviewSubmit = async (data: ReviewFormData) => {
-    'use server';
-    // This is a placeholder since it simulates server action for the form.
-    // Real implementation would call API.
-    console.log('Submitted review:', data);
-    await new Promise((res) => setTimeout(res, 1000));
-  };
-
   return (
     <>
       <Navbar theme="light" />
@@ -483,7 +474,7 @@ export default async function PropertyDetailsPage({
               stats={property.ratingStats}
               title="Tenant Reviews"
               subtitle="See what past and current tenants say about this property"
-              onSubmitReview={async (data) => {
+              onSubmitReview={async () => {
                 // In a real client component, this would call an API route.
                 // Since this is a server component handling client clicks via server actions is tricky inline.
                 // We will just simulate a delay for UI purposes here.

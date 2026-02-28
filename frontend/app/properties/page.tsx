@@ -1,24 +1,12 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
 import SearchFilters from '@/components/properties/SearchFilters';
-import {
-  Heart,
-  MapPin,
-  Bed,
-  Bath,
-  Ruler,
-  Filter,
-  Bell,
-  List,
-  Map,
-} from 'lucide-react';
+import { Filter, Bell, List, Map } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const PropertyMapView = dynamic(
@@ -253,9 +241,7 @@ export default function PropertyListing() {
         {/* Main Content */}
         <div
           className={`flex gap-0 ${
-            viewMode === 'split'
-              ? 'flex-col lg:flex-row'
-              : 'flex-col'
+            viewMode === 'split' ? 'flex-col lg:flex-row' : 'flex-col'
           }`}
         >
           {/* Listings Panel */}

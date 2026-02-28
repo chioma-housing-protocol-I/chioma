@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { StarRatingInput } from './StarRatingInput';
@@ -32,7 +32,7 @@ export function ReviewForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
     reset,
   } = useForm<ReviewFormData>({
@@ -43,7 +43,8 @@ export function ReviewForm({
     },
   });
 
-  const ratingValue = watch('rating');
+  const ratingValue = useWatch({ control, name: 'rating' });
+  const commentValue = useWatch({ control, name: 'comment' });
 
   const handleFormSubmit = async (data: ReviewFormData) => {
     try {
@@ -109,7 +110,7 @@ export function ReviewForm({
             </span>
           )}
           <span className="text-xs font-medium text-gray-400">
-            {watch('comment').length}/500
+            {commentValue.length}/500
           </span>
         </div>
       </div>

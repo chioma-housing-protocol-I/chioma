@@ -16,6 +16,7 @@ See [LEAFLET_SETUP.md](./LEAFLET_SETUP.md) for more details.
 ### Running the Development Server
 
 First, run the development server:
+
 ```bash
 npm run dev
 # or
@@ -39,6 +40,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 The frontend includes a Makefile to run all CI/CD pipeline checks locally before creating a PR. This ensures your code will pass the GitHub Actions pipeline.
 
 #### Quick Start
+
 ```bash
 # Run all frontend pipeline checks (recommended before PR)
 make check
@@ -51,6 +53,7 @@ make help
 ```
 
 #### Available Frontend Commands
+
 ```bash
 # Main pipeline commands
 make check          # Run all checks: lint, format, test, build
@@ -81,6 +84,7 @@ The Makefile mirrors the GitHub Actions workflow in `.github/workflows/frontend-
 The backend also includes a comprehensive Makefile for CI/CD validation.
 
 #### Backend Quick Start
+
 ```bash
 cd ../backend
 
@@ -95,6 +99,7 @@ make help
 ```
 
 #### Key Backend Commands
+
 ```bash
 # Main pipeline commands
 make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
@@ -117,6 +122,7 @@ make pre-commit      # Run format-check, lint, typecheck, test
 ### Before Creating a PR
 
 Run these commands to ensure your PR will pass all pipeline checks:
+
 ```bash
 # Frontend checks
 cd frontend

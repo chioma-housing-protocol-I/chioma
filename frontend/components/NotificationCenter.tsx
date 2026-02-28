@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, X, Check, Trash2, CheckCheck } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Bell, X, Check, CheckCheck } from 'lucide-react';
 import { notificationService } from '@/lib/services/notification.service';
 import type { Notification } from '@/types/notification';
 
@@ -12,19 +12,7 @@ export default function NotificationCenter() {
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  useEffect(() => {
-    loadNotifications();
-    loadUnreadCount();
-
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(() => {
-      loadUnreadCount();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [filter]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
       const filters = filter === 'unread' ? { isRead: false } : undefined;
@@ -36,7 +24,7 @@ export default function NotificationCenter() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
 
   const loadUnreadCount = async () => {
     try {
@@ -47,6 +35,18 @@ export default function NotificationCenter() {
       setUnreadCount(0);
     }
   };
+
+  useEffect(() => {
+    loadNotifications();
+    loadUnreadCount();
+
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(() => {
+      loadUnreadCount();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -265,4 +265,3 @@ export default function NotificationCenter() {
     </div>
   );
 }
-
