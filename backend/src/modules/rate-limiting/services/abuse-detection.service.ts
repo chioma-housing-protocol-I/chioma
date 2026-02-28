@@ -108,12 +108,12 @@ export class AbuseDetectionService {
       }
     }
 
-    score += Math.min(record.failedAuthAttempts * 5, 40);
+    score += Math.min(record.failedAuthAttempts * 7, 90);
 
     score += Math.min(record.violations.length * 10, 30);
 
     if (record.ipAddresses.size > ABUSE_DETECTION_CONFIG.suspiciousPatterns.rapidIpSwitching) {
-      score += 20;
+      score += 60;
     }
 
     const adminPaths = ['/admin', '/api/admin', '/users/admin'];

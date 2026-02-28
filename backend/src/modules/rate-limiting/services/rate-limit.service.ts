@@ -134,7 +134,7 @@ export class RateLimitService {
 
   private async getTTL(key: string): Promise<number> {
     try {
-      const store = this.cacheManager.store as any;
+      const store = this.cacheManager.stores as any;
       if (store.ttl) {
         return await store.ttl(key);
       }
