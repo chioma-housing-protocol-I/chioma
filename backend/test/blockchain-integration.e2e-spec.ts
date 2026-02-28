@@ -9,9 +9,8 @@ import { ChiomaContractService } from '../src/modules/stellar/services/chioma-co
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { getTestDatabaseConfig } from './test-helpers';
 
-describe.skip('Blockchain Integration (e2e)', () => {
-  // Skipped: Requires PostgreSQL database and full module dependencies
-  let app: INestApplication;
+describe('Blockchain Integration (e2e)', () => {
+  let app: INestApplication | undefined;
   let _agreementsService: AgreementsService;
   let _chiomaContract: ChiomaContractService;
 

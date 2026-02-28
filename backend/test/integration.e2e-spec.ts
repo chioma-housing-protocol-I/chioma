@@ -9,7 +9,7 @@ import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 describe('Integration (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -60,7 +60,7 @@ describe('Integration (e2e)', () => {
 
   describe('Feedback (community)', () => {
     it('POST /api/feedback accepts valid submission', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .post('/api/feedback')
         .send({
           message: 'Integration test feedback message with enough length.',
@@ -72,7 +72,7 @@ describe('Integration (e2e)', () => {
     });
 
     it('POST /api/feedback rejects short message', async () => {
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post('/api/feedback')
         .send({ message: 'short' })
         .expect(400);
@@ -81,7 +81,7 @@ describe('Integration (e2e)', () => {
 
   describe('Developer portal', () => {
     it('GET /developer-portal returns HTML', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/developer-portal')
         .expect(200);
       expect(res.headers['content-type']).toMatch(/text\/html/);
@@ -91,9 +91,8 @@ describe('Integration (e2e)', () => {
   });
 
   describe('Public API surface', () => {
-    it.skip('GET /api/properties returns 200 with pagination shape', async () => {
-      // Skipped: requires database schema to be set up
-      const res = await request(app.getHttpServer())
+    it('GET /api/properties returns 200 with pagination shape', async () => {
+      const res = await request(app!.getHttpServer())
         .get('/api/properties')
         .expect(200);
       expect(res.body).toHaveProperty('data');
@@ -102,7 +101,7 @@ describe('Integration (e2e)', () => {
     });
 
     it('GET /api/docs-json returns OpenAPI spec', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/docs-json')
         .expect(200);
       expect(res.body.paths).toBeDefined();

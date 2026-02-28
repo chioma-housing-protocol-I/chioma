@@ -143,7 +143,8 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey}_${methodKey}`,
   });
 
   SwaggerModule.setup('api/docs', app, document, {

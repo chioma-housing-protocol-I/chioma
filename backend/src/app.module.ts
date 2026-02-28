@@ -19,7 +19,6 @@ import { StellarModule } from './modules/stellar/stellar.module';
 import { DisputesModule } from './modules/disputes/disputes.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { HealthModule } from './health/health.module';
 import { PaymentModule } from './modules/payments/payment.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { SecurityModule } from './modules/security/security.module';
@@ -87,13 +86,15 @@ import { JobQueueService } from './common/services/job-queue.service';
       inject: [],
       useFactory: () => {
         const isTest = process.env.NODE_ENV === 'test';
+        const openapiGenerate = process.env.OPENAPI_GENERATE === 'true';
         if (isTest && process.env.DB_TYPE === 'sqlite') {
           return {
             type: 'sqlite',
             database: ':memory:',
             namingStrategy: new SnakeNamingStrategy(),
             entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
-            synchronize: true, // Auto-create schema for in-memory DB
+            // Skip schema sync when only generating OpenAPI (faster, fewer failure points)
+            synchronize: !openapiGenerate,
             logging: false,
           };
         }
@@ -120,7 +121,10 @@ import { JobQueueService } from './common/services/job-queue.service';
     StellarModule,
     DisputesModule,
     MonitoringModule,
-    HealthModule,
+    // Load HealthModule only when not generating OpenAPI (avoids loading broken @nestjs/terminus in script)
+    ...(process.env.OPENAPI_GENERATE !== 'true'
+      ? [require('./health/health.module').HealthModule]
+      : []),
     PaymentModule,
     NotificationsModule,
     ProfileModule,

@@ -105,7 +105,6 @@ jobs:
 
       - name: Run npm audit
         run: pnpm audit --audit-level=high
-        continue-on-error: true
 
   build-and-push:
     name: Build & Push Docker Image

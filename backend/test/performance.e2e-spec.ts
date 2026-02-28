@@ -11,7 +11,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 const MAX_MS = 5000; // 5s for in-process e2e (CI can be slow)
 
 describe('Performance gates (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -55,7 +55,7 @@ describe('Performance gates (e2e)', () => {
 
   it('GET /health responds within threshold', async () => {
     const start = Date.now();
-    await request(app.getHttpServer())
+    await request(app!.getHttpServer())
       .get('/health')
       .expect((res) => {
         expect([200, 503]).toContain(res.status);
@@ -66,7 +66,7 @@ describe('Performance gates (e2e)', () => {
 
   it('GET /api/docs-json responds within threshold', async () => {
     const start = Date.now();
-    await request(app.getHttpServer()).get('/api/docs-json').expect(200);
+    await request(app!.getHttpServer()).get('/api/docs-json').expect(200);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(MAX_MS);
   }, 30000);

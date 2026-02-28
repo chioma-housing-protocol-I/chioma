@@ -4,14 +4,14 @@ import { Review } from './review.entity';
 import { ReviewsService } from './reviews.service';
 import { ReviewsController } from './reviews.controller';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
-import { MaintenanceModule } from '../maintenance/maintenance.module';
 import { AgreementsModule } from '../agreements/agreements.module';
+import { MaintenanceModule } from '../maintenance/maintenance.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Review]),
-    forwardRef(() => MaintenanceModule),
     forwardRef(() => AgreementsModule),
+    forwardRef(() => MaintenanceModule),
   ],
   providers: [ReviewsService, ReviewPromptService],
   controllers: [ReviewsController],

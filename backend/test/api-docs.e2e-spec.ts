@@ -9,7 +9,7 @@ import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 describe('API Documentation (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -43,7 +43,7 @@ describe('API Documentation (e2e)', () => {
 
   describe('Interactive API docs portal', () => {
     it('GET /api/docs returns Swagger UI HTML', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/docs')
         .expect(200);
       expect(res.text).toContain('swagger');
@@ -51,7 +51,7 @@ describe('API Documentation (e2e)', () => {
     });
 
     it('GET /api/docs-json returns valid OpenAPI 3.0 spec', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/docs-json')
         .expect(200);
       const spec = res.body;
@@ -65,7 +65,7 @@ describe('API Documentation (e2e)', () => {
 
   describe('OpenAPI spec completeness', () => {
     it('spec has required top-level fields', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/docs-json')
         .expect(200);
       const spec = res.body;
@@ -76,7 +76,7 @@ describe('API Documentation (e2e)', () => {
     });
 
     it('spec documents security scheme JWT-auth', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/docs-json')
         .expect(200);
       const components = res.body.components || {};
