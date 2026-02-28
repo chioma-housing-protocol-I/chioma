@@ -45,7 +45,7 @@ const MOCK_LEASES: Lease[] = [
 ];
 
 export default function LandlordDocumentsPage() {
-  const [leases, setLeases] = useState<Lease[]>(MOCK_LEASES);
+  const [leases] = useState<Lease[]>(MOCK_LEASES);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
