@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '@/constants/navigation';
+import ChiomaLogo from '@/components/ChiomaLogo';
 
 interface NavbarProps {
   theme?: 'light' | 'dark';
@@ -40,6 +41,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     return pathname.startsWith(href);
   };
 
+  // On light theme use the dark logo (Logo 02); on dark theme use Logo 01 (blue+orange)
+  const logoVariant = isLight ? 'light' : 'dark';
+
   return (
     <nav
       className={`top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
@@ -52,21 +56,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     >
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span
-            className={`text-2xl font-bold tracking-tight transition-colors ${
-              isScrolled
-                ? isLight
-                  ? 'text-slate-900'
-                  : 'text-white'
-                : isLight
-                  ? 'text-blue-900'
-                  : 'text-white'
-            }`}
-          >
-            Chioma
-          </span>
-        </Link>
+        <ChiomaLogo variant={logoVariant} height={36} />
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-10">
@@ -127,7 +117,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
           </Link>
         </div>
 
-        {/* Mobile Menu Button - min 44px touch target */}
+        {/* Mobile Menu Button */}
         <button
           className={`md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg active:bg-white/10 transition-colors ${
             isScrolled

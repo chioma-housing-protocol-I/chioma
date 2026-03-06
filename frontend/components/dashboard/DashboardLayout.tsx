@@ -19,6 +19,7 @@ import {
   BellRing,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
+import ChiomaLogo from '@/components/ChiomaLogo';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -29,47 +30,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const pathname = usePathname();
 
   const navItems = [
-    {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      name: 'Properties',
-      href: '/dashboard/properties',
-      icon: Building2,
-      badge: '●',
-    },
-    {
-      name: 'Tenants',
-      href: '/dashboard/tenants',
-      icon: Users,
-    },
-    {
-      name: 'Financials',
-      href: '/dashboard/financials',
-      icon: Wallet,
-    },
-    {
-      name: 'Maintenance',
-      href: '/dashboard/maintenance',
-      icon: Wrench,
-    },
-    {
-      name: 'Documents',
-      href: '/dashboard/documents',
-      icon: FileText,
-    },
-    {
-      name: 'Notifications',
-      href: '/dashboard/notifications',
-      icon: BellRing,
-    },
-    {
-      name: 'Settings',
-      href: '/dashboard/settings',
-      icon: Settings,
-    },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Properties', href: '/dashboard/properties', icon: Building2, badge: '●' },
+    { name: 'Tenants', href: '/dashboard/tenants', icon: Users },
+    { name: 'Financials', href: '/dashboard/financials', icon: Wallet },
+    { name: 'Maintenance', href: '/dashboard/maintenance', icon: Wrench },
+    { name: 'Documents', href: '/dashboard/documents', icon: FileText },
+    { name: 'Notifications', href: '/dashboard/notifications', icon: BellRing },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
   const isActive = (href: string) => {
@@ -87,12 +55,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       >
         {/* Logo */}
         <div className="h-20 flex items-center px-6 border-b border-neutral-200">
-          <Link
-            href="/"
-            className="flex items-center space-x-2 text-brand-blue"
-          >
-            <span className="text-2xl font-bold">Chioma</span>
-          </Link>
+          {/* Light sidebar → use dark logo (Logo 02) */}
+          <ChiomaLogo variant="light" height={32} />
         </div>
 
         {/* Navigation */}
@@ -124,16 +88,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           })}
         </nav>
 
-        {/* User Profile - Bottom of Sidebar */}
+        {/* User Profile */}
         <div className="p-4 border-t border-neutral-200">
           <div className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-neutral-100 cursor-pointer transition-colors">
             <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
               JO
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-neutral-900 truncate">
-                James Obi
-              </div>
+              <div className="text-sm font-semibold text-neutral-900 truncate">James Obi</div>
               <div className="text-xs text-neutral-500">Premium Plan</div>
             </div>
             <button className="text-neutral-400 hover:text-neutral-600">
@@ -148,25 +110,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         {/* Top Navigation Bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-neutral-200">
           <div className="h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between">
-            {/* Left Section - Mobile Menu + Title */}
             <div className="flex items-center space-x-4">
-              {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="lg:hidden p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
               >
                 {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
-
-              {/* Page Title */}
               <h1 className="text-2xl md:text-3xl font-bold text-brand-blue">
                 Dashboard Overview
               </h1>
             </div>
 
-            {/* Right Section - Search + Actions */}
             <div className="flex items-center space-x-4">
-              {/* Search Bar */}
               <div className="hidden md:flex relative w-64 lg:w-80">
                 <Search
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
@@ -178,15 +134,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   className="w-full pl-12 pr-4 py-2.5 bg-neutral-100 border border-transparent rounded-lg text-sm focus:outline-none focus:bg-white focus:border-brand-blue transition-colors"
                 />
               </div>
-
-              {/* Notifications */}
               <NotificationBell
                 viewAllHref="/dashboard/notifications"
                 size={22}
                 className="text-neutral-600 hover:text-neutral-100"
               />
-
-              {/* Add Property Button */}
               <button className="flex items-center space-x-2 bg-brand-blue text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-blue-dark transition-colors shadow-lg shadow-brand-blue/20">
                 <Plus size={18} />
                 <span className="hidden sm:inline">Add Property</span>
@@ -195,7 +147,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
