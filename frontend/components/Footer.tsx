@@ -11,9 +11,7 @@ export default function Footer() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8 sm:mb-12">
             {/* Brand Section */}
             <div className="lg:col-span-1 sm:col-span-2">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">
-                Chioma
-              </h3>
+             <ChiomaLogo variant="dark" height={40} linked={false} />
               <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
                 Reimagining rentals with blockchain security. Transparent, fast,
                 and trusted.

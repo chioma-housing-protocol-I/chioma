@@ -39,9 +39,7 @@ export const Sidebar = ({ isOpen, onClose, navItems }: SidebarProps) => {
         {/* Logo */}
         <div className="h-20 flex items-center px-6 border-b border-neutral-100">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-blue-900 tracking-tight">
-              Chioma
-            </span>
+            <ChiomaLogo variant="light" height={32} />
           </Link>
         </div>
 
