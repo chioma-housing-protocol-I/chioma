@@ -6,11 +6,15 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { StellarAccount } from './entities/stellar-account.entity';
 import { StellarTransaction } from './entities/stellar-transaction.entity';
 import { StellarEscrow } from './entities/stellar-escrow.entity';
+import { Arbiter } from './entities/arbiter.entity';
+import { DisputeVote } from './entities/dispute-vote.entity';
+import { DisputeEvent } from './entities/dispute-event.entity';
 import { RentObligationNft } from '../agreements/entities/rent-obligation-nft.entity';
 import { AnchorTransaction } from '../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
 import { StellarController } from './controllers/stellar.controller';
 import { AnchorController } from './controllers/anchor.controller';
+import { DisputeController } from './controllers/dispute.controller';
 import { AgentRegistryController } from './controllers/agent-registry.controller';
 import { AgentRegistryService } from './services/agent-registry.service';
 import { StellarService } from './services/stellar.service';
@@ -31,6 +35,9 @@ import stellarConfig from './config/stellar.config';
       StellarAccount,
       StellarTransaction,
       StellarEscrow,
+      Arbiter,
+      DisputeVote,
+      DisputeEvent,
       RentObligationNft,
       AnchorTransaction,
       SupportedCurrency,
@@ -38,7 +45,7 @@ import stellarConfig from './config/stellar.config';
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
   ],
-  controllers: [StellarController, AnchorController, AgentRegistryController],
+  controllers: [StellarController, AnchorController, AgentRegistryController, DisputeController],
   providers: [
     StellarService,
     EncryptionService,
