@@ -26,7 +26,7 @@ export const tenantNavItems: navItems[] = [
   },
   {
     name: 'Updates & Maintenance',
-    href: '/#',
+    href: '/tenant/updates',
     icon: Construction,
   },
   {
