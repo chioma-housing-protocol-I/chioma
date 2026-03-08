@@ -94,3 +94,23 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'Error updating schema: %', SQLERRM;
 END $$;
+
+-- Add rent_obligation_nfts table
+CREATE TABLE IF NOT EXISTS rent_obligation_nfts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agreement_id UUID NOT NULL REFERENCES rent_agreements(id),
+  obligation_id VARCHAR(255) NOT NULL,
+  current_owner VARCHAR(56) NOT NULL,
+  original_landlord VARCHAR(56) NOT NULL,
+  mint_tx_hash VARCHAR(66) NOT NULL,
+  minted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(20) DEFAULT 'active',
+  last_transfer_tx_hash VARCHAR(66),
+  last_transferred_at TIMESTAMP WITH TIME ZONE,
+  transfer_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rent_obligation_nfts_agreement ON rent_obligation_nfts(agreement_id);
+CREATE INDEX IF NOT EXISTS idx_rent_obligation_nfts_owner ON rent_obligation_nfts(current_owner);

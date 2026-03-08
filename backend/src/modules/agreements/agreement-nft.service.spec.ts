@@ -65,7 +65,7 @@ describe('AgreementNftService', () => {
       jest.spyOn(nftRepository, 'save').mockResolvedValue({
         id: 'nft-id',
         agreementId,
-      } as RentObligationNft);
+      } as unknown as RentObligationNft);
 
       const result = await service.mintNftForAgreement(
         agreementId,
@@ -87,7 +87,7 @@ describe('AgreementNftService', () => {
       jest.spyOn(nftRepository, 'findOne').mockResolvedValue({
         id: 'existing-nft',
         agreementId,
-      } as RentObligationNft);
+      } as unknown as RentObligationNft);
 
       await expect(
         service.mintNftForAgreement(agreementId, landlordAddress),
@@ -106,7 +106,7 @@ describe('AgreementNftService', () => {
         agreementId,
         currentOwner: fromAddress,
         transferCount: 0,
-      } as RentObligationNft;
+      } as unknown as RentObligationNft;
 
       jest.spyOn(nftRepository, 'findOne').mockResolvedValue(existingNft);
       jest.spyOn(nftContractService, 'transferObligation').mockResolvedValue({
@@ -121,7 +121,7 @@ describe('AgreementNftService', () => {
       );
 
       expect(result.currentOwner).toBe(toAddress);
-      expect(result.transferCount).toBe(1);
+      expect((result as any).transferCount).toBe(1);
     });
   });
 });

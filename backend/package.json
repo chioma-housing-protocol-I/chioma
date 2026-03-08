@@ -73,7 +73,7 @@
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "ioredis": "^5.9.3",
-    "multer": "^2.0.2",
+    "multer": "^2.1.0",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -164,7 +164,7 @@
     ]
   },
   "overrides": {
-    "tar": "7.5.8",
+    "tar": "7.5.10",
     "minimatch": "^9.0.8",
     "serialize-javascript": "^7.0.3"
   },
@@ -186,7 +186,7 @@
     },
     "overrides": {
       "axios": "1.13.5",
-      "tar": "7.5.8",
+      "tar": "7.5.10",
       "@isaacs/brace-expansion": "5.0.1",
       "minimatch": "^9.0.8",
       "serialize-javascript": "^7.0.3"
