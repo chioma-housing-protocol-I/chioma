@@ -24,7 +24,7 @@ export class DisputeBlockchainService {
     private disputeContractService: DisputeContractService,
   ) {}
 
-  async addArbiter(stellarAddress: string, userId?: number): Promise<Arbiter> {
+  async addArbiter(stellarAddress: string, userId?: string): Promise<Arbiter> {
     const existing = await this.arbiterRepository.findOne({
       where: { stellarAddress },
     });
