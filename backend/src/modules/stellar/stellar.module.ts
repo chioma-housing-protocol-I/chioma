@@ -9,6 +9,7 @@ import { StellarEscrow } from './entities/stellar-escrow.entity';
 import { AgentTransaction } from './entities/agent-transaction.entity';
 import { Arbiter } from './entities/arbiter.entity';
 import { DisputeVote } from './entities/dispute-vote.entity';
+import { DisputeEvent } from './entities/dispute-event.entity';
 import { RentObligationNft } from '../agreements/entities/rent-obligation-nft.entity';
 import { AnchorTransaction } from '../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
@@ -41,6 +42,7 @@ import stellarConfig from './config/stellar.config';
       AgentTransaction,
       Arbiter,
       DisputeVote,
+      DisputeEvent,
       RentObligationNft,
       AnchorTransaction,
       SupportedCurrency,
