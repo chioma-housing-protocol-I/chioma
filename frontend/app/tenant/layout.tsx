@@ -5,6 +5,7 @@ import { Menu, Wallet, Search, User } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { tenantNavItems } from '@/data/tenants-nav-items';
+import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
 
 export default function TenantDashboardLayout({
   children,
@@ -84,9 +85,15 @@ export default function TenantDashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
-          {children}
-        </main>
+        <ClientErrorBoundary
+          source="app/tenant/layout.tsx-main"
+          fallbackTitle="Tenant content failed"
+          fallbackDescription="This tenant section encountered an issue. Retry to restore it."
+        >
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
+            {children}
+          </main>
+        </ClientErrorBoundary>
       </div>
     </div>
   );

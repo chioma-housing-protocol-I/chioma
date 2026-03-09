@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthHydrator } from '@/store/AuthHydrator';
 import { Toaster } from 'react-hot-toast';
+import ErrorMonitoringProvider from '@/components/error/ErrorMonitoringProvider';
+import NetworkStatusBanner from '@/components/error/NetworkStatusBanner';
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -98,6 +100,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthHydrator />
+        <ErrorMonitoringProvider />
+        <NetworkStatusBanner />
         {children}
         <Toaster
           position="bottom-right"

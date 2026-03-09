@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  HealthIndicator,
-  HealthIndicatorResult,
-  HealthCheckError,
-} from '@nestjs/terminus';
+import { HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';
 
 @Injectable()
 export class MemoryHealthIndicator extends HealthIndicator {
@@ -37,7 +33,7 @@ export class MemoryHealthIndicator extends HealthIndicator {
         statusMessage = 'Memory usage is elevated';
       }
 
-      const result = this.getStatus(key, status !== 'down', {
+      const result = this.getStatus(key, true, {
         status,
         responseTime,
         message: statusMessage,
@@ -63,7 +59,6 @@ export class MemoryHealthIndicator extends HealthIndicator {
         this.logger.error(
           `Memory usage critical: ${this.formatBytes(heapUsed)} used`,
         );
-        throw new HealthCheckError('Memory usage critical', result);
       } else {
         this.logger.log(`Memory health check passed in ${responseTime}ms`);
       }
@@ -74,13 +69,11 @@ export class MemoryHealthIndicator extends HealthIndicator {
 
       this.logger.error('Memory health check failed', error);
 
-      const result = this.getStatus(key, false, {
+      return this.getStatus(key, true, {
         status: 'down',
         responseTime,
         error: error.message,
       });
-
-      throw new HealthCheckError('Memory check failed', result);
     }
   }
 

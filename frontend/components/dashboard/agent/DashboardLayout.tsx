@@ -183,7 +183,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Header */}
-        <header className="sticky top-0 z-30 h-16 sm:h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between bg-white border-b border-neutral-100">
+        <header className="sticky top-0 z-30 min-h-16 sm:min-h-20 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between bg-white border-b border-neutral-100">
           <div className="flex items-center gap-4 lg:hidden">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -208,6 +208,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none focus:border-brand-blue/50 focus:ring-4 focus:ring-brand-blue/5 transition-all"
               />
             </div>
+
+            {/* Home Link */}
+            <Link
+              href="/"
+              className="text-neutral-400 hover:text-brand-blue transition-colors"
+              title="Go to Home Page"
+            >
+              <House size={20} />
+            </Link>
 
             {/* Notification */}
             <NotificationBell

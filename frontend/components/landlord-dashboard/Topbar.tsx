@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FaSearch, FaPlus, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaBars, FaTimes, FaHome } from 'react-icons/fa';
 import { NotificationBell } from '@/components/notifications';
 import Link from 'next/link';
 import { navItems } from './Sidebar';
@@ -52,6 +52,14 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
           >
             <FaSearch className="text-gray-500" size={18} />
           </button>
+
+          <Link
+            href="/"
+            className="text-gray-500 hover:text-[#1e40af] transition-colors"
+            title="Go to Home Page"
+          >
+            <FaHome size={22} />
+          </Link>
 
           <NotificationBell
             viewAllHref="/landlords/notifications"
@@ -128,7 +136,9 @@ export default function Topbar({ pageTitle }: { pageTitle: string }) {
         >
           <div>
             <div className="flex items-center justify-between p-4 border-b border-gray-300">
-              <div className="text-lg font-bold text-[#1e40af]">Chioma</div>
+              <Link href="/" className="text-lg font-bold text-[#1e40af]">
+                Chioma
+              </Link>
               <button onClick={() => setMobileOpen(false)}>
                 <FaTimes />
               </button>

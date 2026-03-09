@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
@@ -17,6 +17,7 @@ export const Sidebar = ({ isOpen, onClose, navItems }: SidebarProps) => {
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/tenant') return pathname === '/tenant';
     return pathname.startsWith(href);
   };
 

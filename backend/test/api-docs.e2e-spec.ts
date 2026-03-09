@@ -2,8 +2,6 @@
  * API Documentation & Contract E2E tests.
  * Ensures OpenAPI docs are served and spec is valid; critical endpoints respond with expected contract.
  */
-// Set environment to avoid cache/db dependencies for E2E tests
-process.env.OPENAPI_GENERATE = 'true';
 process.env.NODE_ENV = 'test';
 
 import { Test, TestingModule } from '@nestjs/testing';

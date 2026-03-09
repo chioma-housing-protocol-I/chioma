@@ -1,7 +1,15 @@
 /**
- * Centralized API Client for Chioma Platform
- * Handles all HTTP requests with interceptors, error handling, and retry logic
+ * Centralized API client for frontend requests.
+ * Adds timeout handling, retry backoff, typed error classification, and logging.
  */
+
+import {
+  AppError,
+  classifyUnknownError,
+  createHttpError,
+  logError,
+  withRetry,
+} from '@/lib/errors';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -9,6 +17,8 @@ type RequestConfig = {
   body?: unknown;
   cache?: RequestCache;
   retries?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
 };
 
 type ApiResponse<T> = {
@@ -16,6 +26,11 @@ type ApiResponse<T> = {
   status: number;
   message?: string;
 };
+
+const AUTH_STORAGE_KEYS = {
+  ACCESS_TOKEN: 'chioma_access_token',
+  LEGACY_ACCESS_TOKEN: 'auth_token',
+} as const;
 
 class ApiClient {
   private baseURL: string;
@@ -32,7 +47,31 @@ class ApiClient {
 
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('auth_token');
+
+    return (
+      localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN) ||
+      localStorage.getItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN)
+    );
+  }
+
+  private async parseResponse<T>(response: Response): Promise<T> {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return (await response.json()) as T;
+    }
+
+    return (await response.text()) as T;
+  }
+
+  private clearAuthAndRedirectIfNeeded(status: number) {
+    if (status !== 401 || typeof window === 'undefined') return;
+
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
+
+    if (window.location.pathname !== '/login') {
+      window.location.assign('/login');
+    }
   }
 
   private async request<T>(
@@ -45,6 +84,8 @@ class ApiClient {
       body,
       cache = 'no-cache',
       retries = 3,
+      timeoutMs = 12000,
+      signal,
     } = config;
 
     const token = this.getAuthToken();
@@ -56,49 +97,87 @@ class ApiClient {
 
     const url = `${this.baseURL}${endpoint}`;
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-        cache,
-      });
+    return withRetry(
+      async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      if (!response.ok) {
-        // Handle specific error codes
-        if (response.status === 401) {
-          // Unauthorized - clear token and redirect to login
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
-            window.location.href = '/login';
-          }
+        if (signal) {
+          if (signal.aborted) controller.abort();
+          signal.addEventListener('abort', () => controller.abort(), {
+            once: true,
+          });
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
-        );
-      }
+        try {
+          const response = await fetch(url, {
+            method,
+            headers: requestHeaders,
+            body: body ? JSON.stringify(body) : undefined,
+            cache,
+            signal: controller.signal,
+          });
 
-      const data = await response.json();
-      return {
-        data,
-        status: response.status,
-        message: data.message,
-      };
-    } catch (error) {
-      // Retry logic for network errors
-      if (retries > 0 && error instanceof TypeError) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return this.request<T>(endpoint, { ...config, retries: retries - 1 });
-      }
+          if (!response.ok) {
+            this.clearAuthAndRedirectIfNeeded(response.status);
 
-      throw error;
-    }
+            const errorBody = await response
+              .json()
+              .catch(() => ({ message: response.statusText }));
+            const baseError = createHttpError(response.status, {
+              source: 'lib/api-client.ts',
+              action: `${method} ${endpoint}`,
+              metadata: { responseBody: errorBody },
+            });
+
+            throw new AppError({
+              ...baseError,
+              message: errorBody.message || baseError.message,
+              userMessage: errorBody.message || baseError.userMessage,
+              cause: errorBody,
+            });
+          }
+
+          const data = await this.parseResponse<T>(response);
+          return {
+            data,
+            status: response.status,
+            message:
+              data && typeof data === 'object' && 'message' in (data as object)
+                ? String((data as { message?: string }).message)
+                : undefined,
+          };
+        } catch (error) {
+          const appError = classifyUnknownError(error, {
+            source: 'lib/api-client.ts',
+            action: `${method} ${endpoint}`,
+          });
+
+          logError(appError, appError.context);
+          throw appError;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+      {
+        maxAttempts: retries,
+        shouldRetry: (error) => {
+          const appError = classifyUnknownError(error, {
+            source: 'lib/api-client.ts',
+            action: `retry-check ${method} ${endpoint}`,
+          });
+
+          if (appError.category === 'network') return true;
+          if (typeof appError.status === 'number' && appError.status >= 500) {
+            return true;
+          }
+
+          return false;
+        },
+      },
+    );
   }
 
-  // HTTP Methods
   async get<T>(
     endpoint: string,
     config?: RequestConfig,

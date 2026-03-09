@@ -10,6 +10,8 @@ import { Mail, Lock, User, UserCheck } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import FormInput from '@/components/auth/FormInput';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
+import FormErrorAlert from '@/components/forms/FormErrorAlert';
+import { classifyUnknownError, logError } from '@/lib/errors';
 
 const signupSchema = z.object({
   firstName: z
@@ -68,16 +70,19 @@ export default function SignupPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        setServerError(
-          errorData.message || 'Registration failed. Please try again.',
-        );
-        return;
+        throw new Error(errorData.message || 'Registration failed.');
       }
 
       const result = await response.json();
       setTokens(result.accessToken, result.refreshToken, result.user);
-    } catch {
-      setServerError('Network error. Please check your connection.');
+    } catch (error) {
+      const appError = classifyUnknownError(error, {
+        source: 'app/signup/page.tsx',
+        action: 'submit-signup',
+        route: '/signup',
+      });
+      logError(appError, appError.context);
+      setServerError(appError.userMessage);
     }
   };
 
@@ -99,11 +104,7 @@ export default function SignupPage() {
 
         {/* Glass Form Card */}
         <div className="glass rounded-4xl border border-white/20 shadow-2xl p-6 sm:p-8">
-          {serverError && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-400/30">
-              <p className="text-sm text-red-200">{serverError}</p>
-            </div>
-          )}
+          {serverError && <FormErrorAlert message={serverError} />}
 
           <form
             onSubmit={handleSubmit(onSubmit)}

@@ -2,8 +2,6 @@
  * Integration E2E: critical paths across modules.
  * Covers feedback, developer portal, and public endpoints.
  */
-// Set environment to avoid cache/db dependencies for E2E tests
-process.env.OPENAPI_GENERATE = 'true';
 process.env.NODE_ENV = 'test';
 
 import { Test, TestingModule } from '@nestjs/testing';

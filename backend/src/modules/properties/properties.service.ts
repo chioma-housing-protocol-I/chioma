@@ -105,9 +105,11 @@ export class PropertiesService {
 
   async findAll(query: QueryPropertyDto): Promise<{
     data: Property[];
-    total: number;
-    page: number;
-    limit: number;
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+    };
   }> {
     const {
       page = 1,
@@ -126,9 +128,11 @@ export class PropertiesService {
       cacheKey = this.generateCacheKey(query);
       const cachedData = await this.cacheManager.get<{
         data: Property[];
-        total: number;
-        page: number;
-        limit: number;
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+        };
       }>(cacheKey);
 
       if (cachedData) {
@@ -154,9 +158,11 @@ export class PropertiesService {
 
     const result = {
       data,
-      total,
-      page,
-      limit,
+      meta: {
+        total,
+        page,
+        limit,
+      },
     };
 
     // Cache public listings
