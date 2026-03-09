@@ -12,6 +12,7 @@ import { RentAgreement } from '../../rent/entities/rent-contract.entity';
 import { User } from '../../users/entities/user.entity';
 import { DisputeEvidence } from './dispute-evidence.entity';
 import { DisputeComment } from './dispute-comment.entity';
+import { DisputeVote } from '../../stellar/entities/dispute-vote.entity';
 
 export enum DisputeType {
   RENT_PAYMENT = 'RENT_PAYMENT',
@@ -97,6 +98,11 @@ export class Dispute {
     cascade: true,
   })
   comments: DisputeComment[];
+
+  @OneToMany(() => DisputeVote, (vote: any) => vote.dispute, {
+    cascade: true,
+  })
+  votes: DisputeVote[];
 
   @Column({ name: 'resolved_at', type: 'timestamp', nullable: true })
   resolvedAt: Date;
