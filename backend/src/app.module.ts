@@ -21,6 +21,7 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { PaymentModule } from './modules/payments/payment.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { StellarPayment } from './modules/stellar/entities/stellar-payment.entity';
 import { SecurityModule } from './modules/security/security.module';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -107,7 +108,7 @@ import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/r
             type: 'sqlite',
             database: ':memory:',
             namingStrategy: new SnakeNamingStrategy(),
-            entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
+            entities: [__dirname + '/modules/**/*.entity{.ts,.js}', StellarPayment],
             // Skip schema sync when only generating OpenAPI (faster, fewer failure points)
             synchronize: !openapiGenerate,
             logging: false,
@@ -121,7 +122,7 @@ import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/r
           password: process.env.DB_PASSWORD,
           database: process.env.DB_NAME,
           namingStrategy: new SnakeNamingStrategy(),
-          entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
+          entities: [__dirname + '/modules/**/*.entity{.ts,.js}', StellarPayment],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: false,
           logging: process.env.NODE_ENV === 'development',

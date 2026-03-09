@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
-import { StellarPayment, PaymentStatus } from '../entities/stellar-payment.entity';
+import {
+  StellarPayment,
+  PaymentStatus,
+} from '../entities/stellar-payment.entity';
 
 @Injectable()
 export class PaymentProcessingService {
@@ -15,11 +17,13 @@ export class PaymentProcessingService {
   private readonly adminKeypair?: StellarSdk.Keypair;
   private readonly isConfigured: boolean;
 
+  private readonly paymentRepository: Repository<StellarPayment>;
+
   constructor(
     private readonly configService: ConfigService,
-    @InjectRepository(StellarPayment)
-    private readonly paymentRepository: Repository<StellarPayment>,
+    private readonly dataSource: DataSource,
   ) {
+    this.paymentRepository = this.dataSource.getRepository(StellarPayment);
     const rpcUrl =
       this.configService.get<string>('SOROBAN_RPC_URL') ||
       'https://soroban-testnet.stellar.org';
@@ -90,7 +94,10 @@ export class PaymentProcessingService {
 
       return hash;
     } catch (error) {
-      this.logger.error(`Failed to process rent payment: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to process rent payment: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -166,7 +173,10 @@ export class PaymentProcessingService {
 
       return 0;
     } catch (error) {
-      this.logger.error(`Failed to get payment count: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get payment count: ${error.message}`,
+        error.stack,
+      );
       return 0;
     }
   }
@@ -206,7 +216,10 @@ export class PaymentProcessingService {
 
       return '0';
     } catch (error) {
-      this.logger.error(`Failed to get total paid: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get total paid: ${error.message}`,
+        error.stack,
+      );
       return '0';
     }
   }
