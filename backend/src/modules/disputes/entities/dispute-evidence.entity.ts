@@ -15,14 +15,14 @@ export class DisputeEvidence {
   id: number;
 
   @Column({ name: 'dispute_id' })
-  disputeId: number;
+  disputeId: string;
 
   @ManyToOne(() => Dispute, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'dispute_id' })
   dispute: Dispute;
 
   @Column({ name: 'uploaded_by' })
-  uploadedBy: number;
+  uploadedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'uploaded_by' })

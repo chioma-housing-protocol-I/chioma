@@ -16,14 +16,14 @@ export class DisputeComment {
   id: number;
 
   @Column({ name: 'dispute_id' })
-  disputeId: number;
+  disputeId: string;
 
   @ManyToOne(() => Dispute, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'dispute_id' })
   dispute: Dispute;
 
   @Column({ name: 'user_id' })
-  userId: number;
+  userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

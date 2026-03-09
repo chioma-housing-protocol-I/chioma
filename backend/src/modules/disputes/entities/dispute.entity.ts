@@ -39,14 +39,14 @@ export class Dispute {
   disputeId: string;
 
   @Column({ name: 'agreement_id' })
-  agreementId: number;
+  agreementId: string;
 
   @ManyToOne(() => RentAgreement, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'agreement_id' })
   agreement: RentAgreement;
 
   @Column({ name: 'initiated_by' })
-  initiatedBy: number;
+  initiatedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'initiated_by' })
@@ -82,7 +82,7 @@ export class Dispute {
   resolution: string;
 
   @Column({ name: 'resolved_by', nullable: true })
-  resolvedBy: number;
+  resolvedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'resolved_by' })
