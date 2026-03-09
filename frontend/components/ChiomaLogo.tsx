@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 
 interface ChiomaLogoProps {
@@ -23,21 +22,24 @@ export default function ChiomaLogo({
   // Logo 02 = dark navy on transparent (suits light/white backgrounds)
   const src =
     variant === 'dark'
-      ? '/logo/Chioma Logo 01.svg'
-      : '/logo/Chioma Logo 02.svg';
+      ? '/logo/Chioma%20Logo%2001.svg'
+      : '/logo/Chioma%20Logo%2002.svg';
 
   // Preserve original 311×162 aspect ratio
   const width = Math.round((height * 311) / 162);
 
   const img = (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={src}
       alt="Chioma"
       width={width}
       height={height}
-      priority
       className={className}
-      style={{ display: 'block' }}
+      style={{ display: 'block', minWidth: width, minHeight: height }}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.border = '1px solid red';
+      }}
     />
   );
 
