@@ -53,15 +53,13 @@ export class CreateDisputeVoteTable1773052743002 implements MigrationInterface {
     );
 
     await queryRunner.createIndex(
-      'dispute_vote_dispute_id_index',
       'dispute_vote',
-      ['dispute_id'],
+      new Index('dispute_vote_dispute_id_index', ['dispute_id']),
     );
 
     await queryRunner.createIndex(
-      'dispute_vote_arbiter_address_index',
       'dispute_vote',
-      ['arbiter_address'],
+      new Index('dispute_vote_arbiter_address_index', ['arbiter_address']),
     );
   }
 

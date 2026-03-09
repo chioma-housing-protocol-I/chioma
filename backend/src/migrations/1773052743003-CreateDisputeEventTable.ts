@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, Index } from 'typeorm';
 
 export class CreateDisputeEventTable1773052743003 implements MigrationInterface {
   name = 'CreateDisputeEventTable1773052743003';
@@ -44,9 +44,8 @@ export class CreateDisputeEventTable1773052743003 implements MigrationInterface 
     );
 
     await queryRunner.createIndex(
-      'dispute_event_dispute_id_index',
       'dispute_event',
-      ['dispute_id'],
+      new Index('dispute_event_dispute_id_index', ['dispute_id']),
     );
   }
 

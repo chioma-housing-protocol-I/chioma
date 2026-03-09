@@ -100,7 +100,7 @@ export class DisputeController {
       disputeId,
       arbiterAddress,
       vote,
-      evidence,
+      evidence || '',
     );
     return {
       success: true,

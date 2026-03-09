@@ -13,8 +13,8 @@ import { DisputeComment } from './entities/dispute-comment.entity';
 import {
   RentAgreement,
   AgreementStatus,
-} from '../../rent/entities/rent-contract.entity';
-import { User, UserRole } from '../../users/entities/user.entity';
+} from '../rent/entities/rent-contract.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
@@ -80,8 +80,8 @@ export class DisputesService {
         throw new NotFoundException('User not found');
       }
 
-      const isLandlord = agreement.landlordId === user.id;
-      const isTenant = agreement.tenantId === user.id;
+      const isLandlord = agreement.landlord?.id === user.id;
+      const isTenant = agreement.tenant?.id === user.id;
 
       if (!isLandlord && !isTenant && user.role !== UserRole.ADMIN) {
         throw new ForbiddenException(
@@ -92,7 +92,7 @@ export class DisputesService {
       // Check if there's already an active dispute for this agreement
       const existingDispute = await queryRunner.manager.findOne(Dispute, {
         where: {
-          agreementId: parseInt(createDisputeDto.agreementId),
+          agreementId: createDisputeDto.agreementId,
           status: In([DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW]),
         },
       });
@@ -306,8 +306,8 @@ export class DisputesService {
 
     // Create evidence record
     const evidence = this.evidenceRepository.create({
-      dispute: dispute,
-      uploadedBy: parseInt(userId),
+      disputeId: dispute.id,
+      uploadedBy: userId,
       fileUrl: file.path, // This would be replaced with actual file storage URL
       fileName: file.originalname,
       fileType: file.mimetype,
@@ -338,8 +338,8 @@ export class DisputesService {
     }
 
     const comment = this.commentRepository.create({
-      dispute: dispute,
-      userId: parseInt(userId),
+      disputeId: dispute.id,
+      userId: userId,
       content: addCommentDto.content,
       isInternal: addCommentDto.isInternal || false,
     });
@@ -385,7 +385,7 @@ export class DisputesService {
       await queryRunner.manager.update(Dispute, dispute.id, {
         status: DisputeStatus.RESOLVED,
         resolution: resolveDisputeDto.resolution,
-        resolvedBy: parseInt(userId),
+        resolvedBy: userId,
         resolvedAt: new Date(),
       });
 
@@ -437,7 +437,7 @@ export class DisputesService {
     }
 
     return this.disputeRepository.find({
-      where: { agreementId: parseInt(agreementId) },
+      where: { agreementId },
       relations: ['initiator', 'resolver', 'evidence', 'comments'],
       order: { createdAt: 'DESC' },
     });
