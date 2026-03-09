@@ -14,7 +14,7 @@ import {
   RentAgreement,
   AgreementStatus,
 } from '../../rent/entities/rent-contract.entity';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User, UserRole } from '../../users/entities/user.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
