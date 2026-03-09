@@ -526,7 +526,7 @@ export class DisputeContractService {
       vote,
       evidence,
       votedAt: new Date(),
-      transactionHash: txHash,
+      transactionHash: txHash || '',
     });
 
     await this.disputeVoteRepository.save(disputeVote);
