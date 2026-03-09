@@ -10,6 +10,8 @@ import { Mail, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import FormInput from '@/components/auth/FormInput';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
+import FormErrorAlert from '@/components/forms/FormErrorAlert';
+import { classifyUnknownError, getErrorMessage, logError } from '@/lib/errors';
 
 const loginSchema = z.object({
   email: z.email('Please enter a valid email address'),
@@ -53,9 +55,20 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
-    const result = await login(data.email, data.password);
-    if (!result.success) {
-      setServerError(result.error || 'Login failed. Please try again.');
+    try {
+      const result = await login(data.email, data.password);
+      if (!result.success) {
+        const fallback = getErrorMessage('AUTH_REQUIRED');
+        setServerError(result.error || fallback.message);
+      }
+    } catch (error) {
+      const appError = classifyUnknownError(error, {
+        source: 'app/login/page.tsx',
+        action: 'submit-login',
+        route: '/login',
+      });
+      logError(appError, appError.context);
+      setServerError(appError.userMessage);
     }
   };
 
@@ -77,11 +90,7 @@ export default function LoginPage() {
 
         {/* Glass Form Card */}
         <div className="glass rounded-4xl border border-white/20 shadow-2xl p-6 sm:p-8">
-          {serverError && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-400/30">
-              <p className="text-sm text-red-200">{serverError}</p>
-            </div>
-          )}
+          {serverError && <FormErrorAlert message={serverError} />}
 
           <form
             onSubmit={handleSubmit(onSubmit)}

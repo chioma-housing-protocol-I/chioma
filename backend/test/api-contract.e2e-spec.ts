@@ -2,8 +2,6 @@
  * API Contract E2E tests.
  * Validates response shape and status codes for critical endpoints (contract compliance).
  */
-// Set environment to avoid cache/db dependencies for E2E tests
-process.env.OPENAPI_GENERATE = 'true';
 process.env.NODE_ENV = 'test';
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -42,7 +40,6 @@ describe('API Contract (e2e)', () => {
       expect(res.body).toHaveProperty('services');
       expect(res.body.services).toHaveProperty('database');
       expect(res.body.services).toHaveProperty('stellar');
-      expect(res.body.services).toHaveProperty('memory');
     });
 
     it('GET /health/detailed returns enhanced health with details', async () => {

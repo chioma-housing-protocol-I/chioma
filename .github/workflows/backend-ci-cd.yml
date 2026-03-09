@@ -161,6 +161,12 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: "e2e-test-dummy-secret-not-for-production"
           SECURITY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          RATE_LIMIT_TTL: "60000"
+          RATE_LIMIT_MAX: "100"
+          RATE_LIMIT_AUTH_TTL: "60000"
+          RATE_LIMIT_AUTH_MAX: "5"
+          RATE_LIMIT_STRICT_TTL: "60000"
+          RATE_LIMIT_STRICT_MAX: "10"
           DB_TYPE: postgres
           DB_HOST: localhost
           DB_PORT: "5432"

@@ -17,6 +17,7 @@ import {
   Plus,
   LogOut,
   BellRing,
+  Home,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 
@@ -178,6 +179,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   className="w-full pl-12 pr-4 py-2.5 bg-neutral-100 border border-transparent rounded-lg text-sm focus:outline-none focus:bg-white focus:border-brand-blue transition-colors"
                 />
               </div>
+
+              {/* Home Link */}
+              <Link
+                href="/"
+                className="text-neutral-600 hover:text-brand-blue transition-colors"
+                title="Go to Home Page"
+              >
+                <Home size={22} />
+              </Link>
 
               {/* Notifications */}
               <NotificationBell

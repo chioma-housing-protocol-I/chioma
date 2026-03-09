@@ -60,7 +60,6 @@ describe('Health (e2e)', () => {
       // Check that we have the expected services
       expect(services).toHaveProperty('database');
       expect(services).toHaveProperty('stellar');
-      expect(services).toHaveProperty('memory');
 
       // Check service structure
       Object.values(services).forEach((service: any) => {

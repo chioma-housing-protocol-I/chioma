@@ -17,7 +17,7 @@ export enum PaymentStatus {
   REFUNDED = 'REFUNDED',
 }
 
-@Entity('payments')
+@Entity('rent_payments')
 export class Payment {
   @PrimaryGeneratedColumn()
   id: number;

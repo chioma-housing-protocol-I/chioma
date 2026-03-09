@@ -2,8 +2,6 @@
  * Performance gates: critical endpoints must respond within threshold.
  * Run with: pnpm run test:e2e -- --testPathPattern=performance
  */
-// Set environment to avoid cache/db dependencies for E2E tests
-process.env.OPENAPI_GENERATE = 'true';
 process.env.NODE_ENV = 'test';
 
 import { Test, TestingModule } from '@nestjs/testing';

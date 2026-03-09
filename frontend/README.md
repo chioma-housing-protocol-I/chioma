@@ -33,6 +33,37 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Error Handling Architecture
+
+The frontend now includes a centralized, typed error handling system with route and component boundaries.
+
+### What is in place
+
+- `lib/errors/*`: shared error types, classifiers, message catalog, logging, and retry helpers.
+- `components/error/ErrorFallback.tsx`: accessible reusable fallback UI with retry + safe navigation.
+- `components/error/ClientErrorBoundary.tsx`: component-level React boundary for critical UI regions.
+- `app/error.tsx`, `app/landlords/error.tsx`, `app/dashboard/error.tsx`, `app/tenant/error.tsx`: route-level recoverable boundaries.
+- `components/error/ErrorMonitoringProvider.tsx`: captures `window.onerror` and unhandled promise rejections.
+- `components/error/NetworkStatusBanner.tsx`: offline detection with visible recovery action.
+
+### Usage conventions
+
+- Prefer `classifyUnknownError(...)` in `catch` blocks to normalize unknown failures.
+- Use `appError.userMessage` for user-facing feedback.
+- Use `logError(...)` to report structured context and preserve debugging metadata.
+- Wrap risky/critical component sections with `ClientErrorBoundary` for local recovery.
+- Keep form-level failures accessible via `role="alert"` and `aria-live` (see `FormErrorAlert`).
+
+### Optional external reporting
+
+To connect a real monitoring provider (Sentry, Datadog, etc.), set a browser reporter function:
+
+```ts
+window.__CHIOMA_ERROR_REPORTER__ = (payload) => {
+  // Forward payload to your monitoring endpoint
+};
+```
+
 ## Pipeline Validation with Makefile
 
 ### Frontend Pipeline Checks

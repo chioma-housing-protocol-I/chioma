@@ -21,7 +21,10 @@ export class Kyc {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Column({ type: 'jsonb', nullable: false })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    nullable: false,
+  })
   encryptedKycData: Record<string, any>; // SEP-9 fields, encrypted
 
   @Column({ type: 'enum', enum: KycStatus, default: KycStatus.PENDING })

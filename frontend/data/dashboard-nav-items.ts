@@ -4,7 +4,6 @@ import {
   FileText,
   Wallet,
   Settings,
-  LogOut,
   BellRing,
   User,
 } from 'lucide-react';
