@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { withMiddleware } from './middleware';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -113,112 +114,123 @@ function persistAuth(accessToken: string, refreshToken: string, user: User) {
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
-export const useAuthStore = create<AuthStore>()((set, get) => ({
-  // Initial state — SSR-safe defaults; call hydrate() on client mount
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  isAuthenticated: false,
-  loading: true,
-
-  /**
-   * Hydrate from localStorage on client mount.
-   * Should be called once from the root layout/component.
-   */
-  hydrate: () => {
-    const stored = readStoredAuth();
-    set({ ...stored, loading: false });
-  },
-
-  /**
-   * Directly set tokens & user (useful after registration or
-   * when the backend response is already available).
-   */
-  setTokens: (accessToken: string, refreshToken: string, user: User) => {
-    persistAuth(accessToken, refreshToken, user);
-    set({
-      user,
-      accessToken,
-      refreshToken,
-      isAuthenticated: true,
-      loading: false,
-    });
-  },
-
-  /**
-   * Login with email/password — calls the backend auth endpoint.
-   */
-  login: async (
-    email: string,
-  ): Promise<{ success: boolean; error?: string }> => {
-    // --- REAL AUTHENTICATION LOGIC (Commented out for development) ---
-    /*
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        return {
-          success: false,
-          error: errorData.message || 'Invalid credentials. Please try again.',
-        };
-      }
-
-      const data = await response.json();
-      get().setTokens(data.accessToken, data.refreshToken, data.user);
-      return { success: true };
-    } catch {
-      return {
-        success: false,
-        error: 'Network error. Please check your connection.',
-      };
-    }
-    */
-
-    // DEV BYPASS: instantly log in as landlord
-    get().setTokens('mock-access-token', 'mock-refresh-token', {
-      id: 'dev-123',
-      email: email || 'dev@chioma.local',
-      firstName: 'Dev',
-      lastName: 'Landlord',
-      role: 'landlord',
-    });
-    return { success: true };
-  },
-
-  /**
-   * Logout — clears tokens from storage, cookie, and state.
-   */
-  logout: async () => {
-    const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-
-    // Best-effort call to backend logout
-    if (token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch {
-        // Silently fail — we still clear local state
-      }
-    }
-
-    clearStorage();
-
-    set({
+export const useAuthStore = create<AuthStore>()(
+  withMiddleware(
+    (set, get) => ({
+      // Initial state — SSR-safe defaults; call hydrate() on client mount
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      loading: false,
-    });
-  },
-}));
+      loading: true,
+
+      /**
+       * Hydrate from localStorage on client mount.
+       * Should be called once from the root layout/component.
+       */
+      hydrate: () => {
+        const stored = readStoredAuth();
+        set((state) => {
+          state.user = stored.user;
+          state.accessToken = stored.accessToken;
+          state.refreshToken = stored.refreshToken;
+          state.isAuthenticated = stored.isAuthenticated;
+          state.loading = false;
+        });
+      },
+
+      /**
+       * Directly set tokens & user (useful after registration or
+       * when the backend response is already available).
+       */
+      setTokens: (accessToken: string, refreshToken: string, user: User) => {
+        persistAuth(accessToken, refreshToken, user);
+        set((state) => {
+          state.user = user;
+          state.accessToken = accessToken;
+          state.refreshToken = refreshToken;
+          state.isAuthenticated = true;
+          state.loading = false;
+        });
+      },
+
+      /**
+       * Login with email/password — calls the backend auth endpoint.
+       */
+      login: async (
+        email: string,
+      ): Promise<{ success: boolean; error?: string }> => {
+        // --- REAL AUTHENTICATION LOGIC (Commented out for development) ---
+        /*
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            return {
+              success: false,
+              error: errorData.message || 'Invalid credentials. Please try again.',
+            };
+          }
+
+          const data = await response.json();
+          get().setTokens(data.accessToken, data.refreshToken, data.user);
+          return { success: true };
+        } catch {
+          return {
+            success: false,
+            error: 'Network error. Please check your connection.',
+          };
+        }
+        */
+
+        // DEV BYPASS: instantly log in as landlord
+        get().setTokens('mock-access-token', 'mock-refresh-token', {
+          id: 'dev-123',
+          email: email || 'dev@chioma.local',
+          firstName: 'Dev',
+          lastName: 'Landlord',
+          role: 'landlord',
+        });
+        return { success: true };
+      },
+
+      /**
+       * Logout — clears tokens from storage, cookie, and state.
+       */
+      logout: async () => {
+        const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+
+        // Best-effort call to backend logout
+        if (token) {
+          try {
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch {
+            // Silently fail — we still clear local state
+          }
+        }
+
+        clearStorage();
+
+        set((state) => {
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+          state.isAuthenticated = false;
+          state.loading = false;
+        });
+      },
+    }),
+    'auth',
+  ),
+);
 
 // ─── Convenience Hook (backward-compatible with old AuthContext) ─────────────
 

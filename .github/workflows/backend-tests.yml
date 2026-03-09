@@ -87,6 +87,7 @@ jobs:
       PORT: 3000
 
       # ── Database ─────────────────────────────────────────────────────────────
+      DB_TYPE: postgres
       DB_HOST: localhost
       DB_PORT: 5432
       DB_USERNAME: postgres
@@ -137,6 +138,14 @@ jobs:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || '' }}
 
+      # ── Rate Limiting ─────────────────────────────────────────────────────
+      RATE_LIMIT_TTL: 60000
+      RATE_LIMIT_MAX: 100
+      RATE_LIMIT_AUTH_TTL: 60000
+      RATE_LIMIT_AUTH_MAX: 5
+      RATE_LIMIT_STRICT_TTL: 60000
+      RATE_LIMIT_STRICT_MAX: 10
+
       # ── Logging & Health (non-sensitive) ──────────────────────────────────
       LOG_LEVEL: warn
       LOG_FORMAT: simple
@@ -151,7 +160,7 @@ jobs:
       SENTRY_ENVIRONMENT: test
 
       # ── Encryption ────────────────────────────────────────────────────────
-      ENCRYPTION_KEY: test-encryption-key-for-testing-purposes-only
+      SECURITY_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
     steps:
       - name: Checkout code

@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { withMiddleware } from './middleware';
 import type { Notification } from '@/components/notifications/types';
 import { MOCK_NOTIFICATIONS } from '@/components/notifications/mockData';
 
@@ -33,44 +34,53 @@ export const selectUnreadCount = (state: NotificationStore) =>
 
 // ─── Store ──────────────────────────────────────────────────────────────────
 
-export const useNotificationStore = create<NotificationStore>((set) => ({
-  // — state
-  notifications: [],
-  isLoaded: false,
+export const useNotificationStore = create<NotificationStore>()(
+  withMiddleware(
+    (set) => ({
+      // — state
+      notifications: [],
+      isLoaded: false,
 
-  // — actions
-  fetchNotifications: () => {
-    // TODO: replace with real API call → GET /api/notifications
-    set({
-      notifications: [...MOCK_NOTIFICATIONS].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-      isLoaded: true,
-    });
-  },
+      // — actions
+      fetchNotifications: () => {
+        const sorted = [...MOCK_NOTIFICATIONS].sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        set((state) => {
+          state.notifications = sorted;
+          state.isLoaded = true;
+        });
+      },
 
-  markAsRead: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n,
-      ),
-    })),
+      markAsRead: (id) => {
+        set((state) => {
+          const target = state.notifications.find((n) => n.id === id);
+          if (target) target.read = true;
+        });
+      },
 
-  markAsUnread: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: false } : n,
-      ),
-    })),
+      markAsUnread: (id) => {
+        set((state) => {
+          const target = state.notifications.find((n) => n.id === id);
+          if (target) target.read = false;
+        });
+      },
 
-  markAllAsRead: () =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
-    })),
+      markAllAsRead: () => {
+        set((state) => {
+          state.notifications.forEach((n) => {
+            n.read = true;
+          });
+        });
+      },
 
-  addNotification: (notification) =>
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-    })),
-}));
+      addNotification: (notification) => {
+        set((state) => {
+          state.notifications.unshift(notification);
+        });
+      },
+    }),
+    'notifications',
+  ),
+);

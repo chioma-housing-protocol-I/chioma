@@ -1,3 +1,7 @@
+// CRITICAL: Set DB_TYPE FIRST before any imports or code
+process.env.DB_TYPE = 'postgres';
+process.env.NODE_ENV = 'test';
+
 // Polyfill global crypto for Jest (TypeORM uses crypto.randomUUID())
 if (typeof globalThis.crypto === 'undefined') {
   const nodeCrypto = require('node:crypto');
@@ -22,11 +26,12 @@ process.env.JWT_EXPIRATION = '15m';
 process.env.JWT_REFRESH_EXPIRATION = '7d';
 
 // Database configuration
-process.env.DB_HOST = 'localhost';
-process.env.DB_PORT = '5432';
-process.env.DB_USERNAME = 'postgres';
-process.env.DB_PASSWORD = 'password';
-process.env.DB_NAME = 'chioma_test';
+// Use environment variables if set (for CI), otherwise use local defaults
+if (!process.env.DB_HOST) process.env.DB_HOST = 'localhost';
+if (!process.env.DB_PORT) process.env.DB_PORT = '5433';
+if (!process.env.DB_USERNAME) process.env.DB_USERNAME = 'chioma_dev';
+if (!process.env.DB_PASSWORD) process.env.DB_PASSWORD = 'dev_password';
+if (!process.env.DB_NAME) process.env.DB_NAME = 'chioma_test';
 
 // Stellar configuration
 process.env.STELLAR_NETWORK = 'testnet';
@@ -40,7 +45,7 @@ process.env.PAYMENT_METADATA_SECRET = 'test-payment-secret';
 
 // Use PostgreSQL for E2E tests
 // The GitHub Actions workflow provides a PostgreSQL service
-process.env.NODE_ENV = 'test';
+// Already set at top: process.env.NODE_ENV = 'test';
 
 // Required by AuthModule (JWT strategy / auth service)
 if (!process.env.JWT_SECRET)

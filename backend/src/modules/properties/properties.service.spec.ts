@@ -446,9 +446,9 @@ describe('PropertiesService', () => {
       const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.meta.total).toBe(1);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(10);
     });
 
     it('should apply filters correctly', async () => {

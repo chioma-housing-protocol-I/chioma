@@ -5,31 +5,22 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
+import { AgentTransaction } from '../entities/agent-transaction.entity';
 
-export interface AgentRegistrationParams {
-  agentPublicKey: string;
-  profileHash: string; // IPFS hash of profile JSON
-  agentKeypair: StellarSdk.Keypair;
-}
-
-export interface AgentRating {
-  agentPublicKey: string;
-  raterPublicKey: string;
-  rating: number; // 1-5
-  transactionId: string;
-  raterKeypair: StellarSdk.Keypair;
-}
-
-export interface OnChainAgentProfile {
-  publicKey: string;
-  profileHash: string;
-  isVerified: boolean;
-  averageRating: number;
-  totalRatings: number;
-  totalTransactions: number;
+export interface AgentInfo {
+  agent: string;
+  externalProfileHash: string;
+  verified: boolean;
   registeredAt: number;
+  verifiedAt: number | null;
+  totalRatings: number;
+  totalScore: number;
+  completedAgreements: number;
+  averageRating: number;
 }
 
 @Injectable()
@@ -40,7 +31,11 @@ export class AgentRegistryService {
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(AgentTransaction)
+    private readonly agentTransactionRepo: Repository<AgentTransaction>,
+  ) {
     const rpcUrl =
       this.configService.get<string>('SOROBAN_RPC_URL') ||
       'https://soroban-testnet.stellar.org';
@@ -65,50 +60,12 @@ export class AgentRegistryService {
     }
   }
 
-  async registerAgent(params: AgentRegistrationParams): Promise<string> {
-    if (!this.contract) {
-      throw new BadRequestException('Agent registry contract not configured');
-    }
-    try {
-      const account = await this.server.getAccount(params.agentPublicKey);
-
-      const operation = this.contract.call(
-        'register_agent',
-        new StellarSdk.Address(params.agentPublicKey).toScVal(),
-        xdr.ScVal.scvString(params.profileHash),
-      );
-
-      const tx = new StellarSdk.TransactionBuilder(account, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase: this.networkPassphrase,
-      })
-        .addOperation(operation)
-        .setTimeout(30)
-        .build();
-
-      const prepared = await this.server.prepareTransaction(tx);
-      prepared.sign(params.agentKeypair);
-
-      const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
-      this.logger.log(
-        `Agent registered on-chain: ${params.agentPublicKey} tx=${hash}`,
-      );
-      return hash;
-    } catch (error) {
-      this.logger.error(
-        `Agent registration failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  async verifyAgent(agentPublicKey: string): Promise<string> {
+  async registerAgent(
+    agentAddress: string,
+    profileHash: string,
+  ): Promise<string> {
     if (!this.contract || !this.adminKeypair) {
-      throw new BadRequestException(
-        'Agent registry contract or admin keypair not configured',
-      );
+      throw new BadRequestException('Agent registry contract not configured');
     }
     try {
       const account = await this.server.getAccount(
@@ -116,9 +73,9 @@ export class AgentRegistryService {
       );
 
       const operation = this.contract.call(
-        'verify_agent',
-        new StellarSdk.Address(this.adminKeypair.publicKey()).toScVal(),
-        new StellarSdk.Address(agentPublicKey).toScVal(),
+        'register_agent',
+        new StellarSdk.Address(agentAddress).toScVal(),
+        xdr.ScVal.scvString(profileHash),
       );
 
       const tx = new StellarSdk.TransactionBuilder(account, {
@@ -134,33 +91,35 @@ export class AgentRegistryService {
 
       const result = await this.server.sendTransaction(prepared);
       const hash = await this.pollTransactionStatus(result.hash);
-      this.logger.log(`Agent verified on-chain: ${agentPublicKey} tx=${hash}`);
+      this.logger.log(`Agent registered: ${agentAddress} tx=${hash}`);
       return hash;
     } catch (error) {
       this.logger.error(
-        `Agent verification failed: ${error.message}`,
+        `Agent registration failed: ${error.message}`,
         error.stack,
       );
       throw error;
     }
   }
 
-  async submitRating(params: AgentRating): Promise<string> {
-    if (!this.contract) {
-      throw new BadRequestException('Agent registry contract not configured');
-    }
-    if (params.rating < 1 || params.rating > 5) {
-      throw new BadRequestException('Rating must be between 1 and 5');
+  async verifyAgent(
+    adminAddress: string,
+    agentAddress: string,
+  ): Promise<string> {
+    if (!this.contract || !this.adminKeypair) {
+      throw new BadRequestException(
+        'Agent registry contract or admin keypair not configured',
+      );
     }
     try {
-      const account = await this.server.getAccount(params.raterPublicKey);
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
 
       const operation = this.contract.call(
-        'rate_agent',
-        new StellarSdk.Address(params.raterPublicKey).toScVal(),
-        new StellarSdk.Address(params.agentPublicKey).toScVal(),
-        StellarSdk.nativeToScVal(params.rating, { type: 'u32' }),
-        xdr.ScVal.scvString(params.transactionId),
+        'verify_agent',
+        new StellarSdk.Address(adminAddress).toScVal(),
+        new StellarSdk.Address(agentAddress).toScVal(),
       );
 
       const tx = new StellarSdk.TransactionBuilder(account, {
@@ -172,12 +131,61 @@ export class AgentRegistryService {
         .build();
 
       const prepared = await this.server.prepareTransaction(tx);
-      prepared.sign(params.raterKeypair);
+      prepared.sign(this.adminKeypair);
+
+      const result = await this.server.sendTransaction(prepared);
+      const hash = await this.pollTransactionStatus(result.hash);
+      this.logger.log(`Agent verified: ${agentAddress} tx=${hash}`);
+      return hash;
+    } catch (error) {
+      this.logger.error(
+        `Agent verification failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async rateAgent(
+    raterAddress: string,
+    agentAddress: string,
+    score: number,
+    transactionId: string,
+  ): Promise<string> {
+    if (!this.contract || !this.adminKeypair) {
+      throw new BadRequestException('Agent registry contract not configured');
+    }
+    if (score < 1 || score > 5) {
+      throw new BadRequestException('Rating must be between 1 and 5');
+    }
+    try {
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
+
+      const operation = this.contract.call(
+        'rate_agent',
+        new StellarSdk.Address(raterAddress).toScVal(),
+        new StellarSdk.Address(agentAddress).toScVal(),
+        StellarSdk.nativeToScVal(score, { type: 'u32' }),
+        xdr.ScVal.scvString(transactionId),
+      );
+
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const prepared = await this.server.prepareTransaction(tx);
+      prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
       const hash = await this.pollTransactionStatus(result.hash);
       this.logger.log(
-        `Rating submitted on-chain: agent=${params.agentPublicKey} rating=${params.rating} tx=${hash}`,
+        `Rating submitted: agent=${agentAddress} score=${score} tx=${hash}`,
       );
       return hash;
     } catch (error) {
@@ -189,7 +197,7 @@ export class AgentRegistryService {
     }
   }
 
-  async getAgentProfile(agentPublicKey: string): Promise<OnChainAgentProfile> {
+  async getAgentInfo(agentAddress: string): Promise<AgentInfo | null> {
     if (!this.contract || !this.adminKeypair) {
       throw new BadRequestException('Agent registry contract not configured');
     }
@@ -199,8 +207,8 @@ export class AgentRegistryService {
       );
 
       const operation = this.contract.call(
-        'get_agent',
-        new StellarSdk.Address(agentPublicKey).toScVal(),
+        'get_agent_info',
+        new StellarSdk.Address(agentAddress).toScVal(),
       );
 
       const tx = new StellarSdk.TransactionBuilder(account, {
@@ -214,35 +222,167 @@ export class AgentRegistryService {
       const simulated = await this.server.simulateTransaction(tx);
 
       if (SorobanRpc.Api.isSimulationSuccess(simulated) && simulated.result) {
-        const native = StellarSdk.scValToNative(simulated.result.retval);
+        const result = StellarSdk.scValToNative(simulated.result.retval);
+        if (!result) return null;
+
         return {
-          publicKey: agentPublicKey,
-          profileHash: native.profile_hash || '',
-          isVerified: native.is_verified || false,
-          averageRating: native.average_rating
-            ? Number(native.average_rating) / 100
-            : 0,
-          totalRatings: Number(native.total_ratings) || 0,
-          totalTransactions: Number(native.total_transactions) || 0,
-          registeredAt: Number(native.registered_at) || 0,
+          agent: agentAddress,
+          externalProfileHash: result.external_profile_hash || '',
+          verified: result.verified || false,
+          registeredAt: Number(result.registered_at) || 0,
+          verifiedAt: result.verified_at ? Number(result.verified_at) : null,
+          totalRatings: Number(result.total_ratings) || 0,
+          totalScore: Number(result.total_score) || 0,
+          completedAgreements: Number(result.completed_agreements) || 0,
+          averageRating:
+            result.total_ratings > 0
+              ? result.total_score / result.total_ratings
+              : 0,
         };
       }
-      throw new NotFoundException('Agent not found in registry');
+      return null;
+    } catch (error) {
+      this.logger.error(`Get agent info failed: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  async getAgentCount(): Promise<number> {
+    if (!this.contract || !this.adminKeypair) {
+      throw new BadRequestException('Agent registry contract not configured');
+    }
+    try {
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
+
+      const operation = this.contract.call('get_agent_count');
+
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const simulated = await this.server.simulateTransaction(tx);
+
+      if (SorobanRpc.Api.isSimulationSuccess(simulated) && simulated.result) {
+        return Number(StellarSdk.scValToNative(simulated.result.retval)) || 0;
+      }
+      return 0;
     } catch (error) {
       this.logger.error(
-        `Get agent profile failed: ${error.message}`,
+        `Get agent count failed: ${error.message}`,
         error.stack,
       );
       throw error;
     }
   }
 
-  async isAgentVerified(agentPublicKey: string): Promise<boolean> {
+  async registerTransaction(
+    transactionId: string,
+    agentAddress: string,
+    parties: string[],
+  ): Promise<string> {
+    if (!this.contract || !this.adminKeypair) {
+      throw new BadRequestException('Agent registry contract not configured');
+    }
     try {
-      const profile = await this.getAgentProfile(agentPublicKey);
-      return profile.isVerified;
-    } catch {
-      return false;
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
+
+      const partiesScVal = xdr.ScVal.scvVec(
+        parties.map((p) => new StellarSdk.Address(p).toScVal()),
+      );
+
+      const operation = this.contract.call(
+        'register_transaction',
+        xdr.ScVal.scvString(transactionId),
+        new StellarSdk.Address(agentAddress).toScVal(),
+        partiesScVal,
+      );
+
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const prepared = await this.server.prepareTransaction(tx);
+      prepared.sign(this.adminKeypair);
+
+      const result = await this.server.sendTransaction(prepared);
+      const hash = await this.pollTransactionStatus(result.hash);
+
+      await this.agentTransactionRepo.save({
+        transactionId,
+        agentAddress,
+        parties,
+        completed: false,
+        blockchainHash: hash,
+      });
+
+      this.logger.log(`Transaction registered: ${transactionId} tx=${hash}`);
+      return hash;
+    } catch (error) {
+      this.logger.error(
+        `Transaction registration failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async completeTransaction(
+    transactionId: string,
+    agentAddress: string,
+  ): Promise<string> {
+    if (!this.contract || !this.adminKeypair) {
+      throw new BadRequestException('Agent registry contract not configured');
+    }
+    try {
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
+
+      const operation = this.contract.call(
+        'complete_transaction',
+        xdr.ScVal.scvString(transactionId),
+        new StellarSdk.Address(agentAddress).toScVal(),
+      );
+
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const prepared = await this.server.prepareTransaction(tx);
+      prepared.sign(this.adminKeypair);
+
+      const result = await this.server.sendTransaction(prepared);
+      const hash = await this.pollTransactionStatus(result.hash);
+
+      await this.agentTransactionRepo.update(
+        { transactionId },
+        { completed: true, blockchainHash: hash },
+      );
+
+      this.logger.log(`Transaction completed: ${transactionId} tx=${hash}`);
+      return hash;
+    } catch (error) {
+      this.logger.error(
+        `Transaction completion failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
   }
 

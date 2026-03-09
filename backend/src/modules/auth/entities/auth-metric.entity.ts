@@ -18,6 +18,8 @@ export class AuthMetric {
   @Column({
     type: 'enum',
     enum: AuthMethod,
+    nullable: true,
+    default: AuthMethod.STELLAR,
   })
   authMethod: AuthMethod;
 

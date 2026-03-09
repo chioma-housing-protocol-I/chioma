@@ -8,9 +8,12 @@ import { StellarTransaction } from './entities/stellar-transaction.entity';
 import { StellarEscrow } from './entities/stellar-escrow.entity';
 import { EscrowSignature } from './entities/escrow-signature.entity';
 import { EscrowConditionEntity } from './entities/escrow-condition.entity';
+
+import { AgentTransaction } from './entities/agent-transaction.entity';
 import { RentObligationNft } from '../agreements/entities/rent-obligation-nft.entity';
 import { AnchorTransaction } from '../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
+import { StellarPayment } from './entities/stellar-payment.entity';
 import { StellarController } from './controllers/stellar.controller';
 import { AnchorController } from './controllers/anchor.controller';
 import { AgentRegistryController } from './controllers/agent-registry.controller';
@@ -24,6 +27,8 @@ import { EscrowContractService } from './services/escrow-contract.service';
 import { DisputeContractService } from './services/dispute-contract.service';
 import { RentObligationNftService } from './services/rent-obligation-nft.service';
 import { NftEventProcessor } from './services/nft-event-processor.service';
+import { PaymentProcessingService } from './services/payment-processing.service';
+import { PaymentProcessingController } from './controllers/payment-processing.controller';
 import stellarConfig from './config/stellar.config';
 
 @Module({
@@ -35,14 +40,23 @@ import stellarConfig from './config/stellar.config';
       StellarEscrow,
       EscrowSignature,
       EscrowConditionEntity,
+
+      AgentTransaction,
+
       RentObligationNft,
       AnchorTransaction,
       SupportedCurrency,
+      StellarPayment,
     ]),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
   ],
-  controllers: [StellarController, AnchorController, AgentRegistryController],
+  controllers: [
+    StellarController,
+    AnchorController,
+    AgentRegistryController,
+    PaymentProcessingController,
+  ],
   providers: [
     StellarService,
     EncryptionService,
@@ -54,6 +68,7 @@ import stellarConfig from './config/stellar.config';
     RentObligationNftService,
     NftEventProcessor,
     AgentRegistryService,
+    PaymentProcessingService,
   ],
   exports: [
     StellarService,
@@ -66,6 +81,7 @@ import stellarConfig from './config/stellar.config';
     RentObligationNftService,
     NftEventProcessor,
     AgentRegistryService,
+    PaymentProcessingService,
   ],
 })
 export class StellarModule {}
