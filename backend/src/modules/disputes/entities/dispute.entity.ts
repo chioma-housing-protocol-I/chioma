@@ -8,27 +8,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { DisputeType } from '../dispute.enum';
 import { RentAgreement } from '../../rent/entities/rent-contract.entity';
 import { User } from '../../users/entities/user.entity';
 import { DisputeEvidence } from './dispute-evidence.entity';
 import { DisputeComment } from './dispute-comment.entity';
-
-export enum DisputeType {
-  RENT_PAYMENT = 'RENT_PAYMENT',
-  SECURITY_DEPOSIT = 'SECURITY_DEPOSIT',
-  PROPERTY_DAMAGE = 'PROPERTY_DAMAGE',
-  MAINTENANCE = 'MAINTENANCE',
-  TERMINATION = 'TERMINATION',
-  OTHER = 'OTHER',
-}
-
-export enum DisputeStatus {
-  OPEN = 'OPEN',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  RESOLVED = 'RESOLVED',
-  REJECTED = 'REJECTED',
-  WITHDRAWN = 'WITHDRAWN',
-}
+import { DisputeStatus } from '../dispute-status.enum';
+export { DisputeStatus } from '../dispute-status.enum';
+export { DisputeType } from '../dispute.enum';
 
 @Entity('disputes')
 export class Dispute {

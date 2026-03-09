@@ -19,7 +19,7 @@ export class DisputeEvidence {
 
   @ManyToOne(() => Dispute, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'dispute_id' })
-  dispute: Dispute;
+  dispute: any;
 
   @Column({ name: 'uploaded_by' })
   uploadedBy: number;

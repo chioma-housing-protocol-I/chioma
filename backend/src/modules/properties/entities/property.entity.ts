@@ -9,9 +9,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { PropertyImage } from './property-image.entity';
-import { PropertyAmenity } from './property-amenity.entity';
-import { RentalUnit } from './rental-unit.entity';
+import type { PropertyImage } from './property-image.entity';
+import type { PropertyAmenity } from './property-amenity.entity';
+import type { RentalUnit } from './rental-unit.entity';
 
 export enum PropertyType {
   APARTMENT = 'apartment',

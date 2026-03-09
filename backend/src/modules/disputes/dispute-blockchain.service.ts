@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Dispute, DisputeStatus } from './entities/dispute.entity';
+import { Dispute } from './entities/dispute.entity';
+import { DisputeStatus } from './dispute-status.enum';
 import { Arbiter } from './entities/arbiter.entity';
 import { DisputeVote } from './entities/dispute-vote.entity';
 import {

@@ -8,10 +8,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  RentAgreement,
-  AgreementStatus,
-} from '../rent/entities/rent-contract.entity';
+import { RentAgreement } from '../rent/entities/rent-contract.entity';
+import { AgreementStatus } from '../rent/entities/agreement-status.enum';
 import { Payment, PaymentStatus } from '../rent/entities/payment.entity';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
@@ -41,7 +39,7 @@ export class AgreementsService {
     private readonly paymentRepository: Repository<Payment>,
     private readonly auditService: AuditService,
     @Inject(forwardRef(() => ReviewPromptService))
-    private readonly reviewPromptService: ReviewPromptService,
+    private readonly reviewPromptService: any,
     private readonly chiomaContract: ChiomaContractService,
     private readonly blockchainSync: BlockchainSyncService,
     private readonly escrowIntegration: EscrowIntegrationService,

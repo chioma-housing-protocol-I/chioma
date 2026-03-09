@@ -8,9 +8,9 @@ export class ReviewPromptService {
   constructor(
     private readonly reviewsService: ReviewsService,
     @Inject(forwardRef(() => MaintenanceService))
-    private readonly maintenanceService: MaintenanceService,
+    private readonly maintenanceService: any,
     @Inject(forwardRef(() => AgreementsService))
-    private readonly agreementsService: AgreementsService,
+    private readonly agreementsService: any,
   ) {}
 
   async promptForLeaseReview(_agreementId: string) {

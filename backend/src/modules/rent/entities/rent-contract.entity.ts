@@ -6,16 +6,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Payment } from './payment.entity';
-
-export enum AgreementStatus {
-  DRAFT = 'draft',
-  PENDING_DEPOSIT = 'pending_deposit',
-  ACTIVE = 'active',
-  EXPIRED = 'expired',
-  TERMINATED = 'terminated',
-  DISPUTED = 'disputed',
-}
+import type { Payment } from './payment.entity';
+import { AgreementStatus } from './agreement-status.enum';
+export { AgreementStatus } from './agreement-status.enum';
 
 @Entity('rent_agreements')
 export class RentAgreement {

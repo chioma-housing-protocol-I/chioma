@@ -1,0 +1,8 @@
+export enum AgreementStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  TERMINATED = 'TERMINATED',
+  EXPIRED = 'EXPIRED',
+  DISPUTED = 'DISPUTED',
+  PENDING_DEPOSIT = 'PENDING_DEPOSIT',
+}

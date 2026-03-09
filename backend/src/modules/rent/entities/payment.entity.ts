@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Generated,
 } from 'typeorm';
-import { RentAgreement } from './rent-contract.entity';
+import type { RentAgreement } from './rent-contract.entity';
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
