@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  RentObligationNft,
+  NFTTransfer,
+} from '../../agreements/entities/rent-obligation-nft.entity';
+import { NFTMetadata } from '../dto/rent-obligation-nft.dto';
 
 export interface MintObligationParams {
   agreementId: string;
@@ -29,7 +36,13 @@ export class RentObligationNftService {
   private readonly adminKeypair?: StellarSdk.Keypair;
   private readonly isConfigured: boolean;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(RentObligationNft)
+    private readonly nftRepository: Repository<RentObligationNft>,
+    @InjectRepository(NFTTransfer)
+    private readonly transferRepository: Repository<NFTTransfer>,
+  ) {
     const rpcUrl =
       this.configService.get<string>('SOROBAN_RPC_URL') ||
       'https://soroban-testnet.stellar.org';
@@ -64,6 +77,62 @@ export class RentObligationNftService {
     if (adminSecret) {
       this.adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
     }
+  }
+
+  async mintRentObligationNFT(
+    agreementId: string,
+    tenantAddress: string,
+    metadata: NFTMetadata,
+  ): Promise<string> {
+    // Note: tenantAddress in DTO likely refers to the recipient (landlord).
+    // We use it as the landlord address for minting.
+    const params: MintObligationParams = {
+      agreementId,
+      landlordAddress: tenantAddress,
+    };
+
+    const { txHash, obligationId } = await this.mintObligation(params);
+
+    // Save to DB
+    const nft = this.nftRepository.create({
+      tokenId: obligationId,
+      agreementId: agreementId,
+      currentOwner: tenantAddress,
+      originalOwner: tenantAddress,
+      metadata: metadata,
+      isActive: true,
+      mintedAt: new Date(),
+      mintTransactionHash: txHash,
+    });
+
+    await this.nftRepository.save(nft);
+
+    return txHash;
+  }
+
+  async transferNFT(
+    fromAddress: string,
+    toAddress: string,
+    tokenId: string,
+  ): Promise<string> {
+    const params: TransferObligationParams = {
+      agreementId: tokenId,
+      fromAddress,
+      toAddress,
+    };
+
+    const { txHash } = await this.transferObligation(params);
+
+    // Record transfer
+    await this.recordTransfer(tokenId, fromAddress, toAddress, txHash);
+
+    // Update NFT owner
+    await this.nftRepository.update(
+      { tokenId },
+      { currentOwner: toAddress },
+    );
+
+    return txHash;
   }
 
   async mintObligation(
@@ -133,6 +202,70 @@ export class RentObligationNftService {
       );
       throw error;
     }
+  }
+
+  async burnNFT(tokenId: string, ownerAddress: string): Promise<string> {
+    // The contract does not explicitly support burning.
+    // We will mark it as burned in the database.
+    // In a real scenario, we might transfer to a null address if supported.
+    
+    const nft = await this.nftRepository.findOne({ where: { tokenId } });
+    if (!nft) {
+      throw new Error('NFT not found');
+    }
+
+    if (nft.currentOwner !== ownerAddress) {
+      throw new Error('Unauthorized: Only owner can burn NFT');
+    }
+
+    nft.isActive = false;
+    nft.burnedAt = new Date();
+    // No transaction hash for DB-only burn, or we could generate a dummy one/record the request
+    nft.burnTransactionHash = 'db-burn-' + Date.now();
+
+    await this.nftRepository.save(nft);
+
+    return nft.burnTransactionHash;
+  }
+
+  async getNFTOwner(tokenId: string): Promise<string | null> {
+    // Try DB first
+    const nft = await this.nftRepository.findOne({ where: { tokenId } });
+    if (nft) {
+      return nft.currentOwner;
+    }
+    // Fallback to chain
+    return this.getObligationOwner(tokenId);
+  }
+
+  async getNFTMetadata(tokenId: string): Promise<NFTMetadata | null> {
+    const nft = await this.nftRepository.findOne({ where: { tokenId } });
+    return nft ? nft.metadata : null;
+  }
+
+  async getNFTsByOwner(ownerAddress: string): Promise<RentObligationNft[]> {
+    return this.nftRepository.find({
+      where: { currentOwner: ownerAddress, isActive: true },
+    });
+  }
+
+  async validateNFTOwnership(
+    tokenId: string,
+    ownerAddress: string,
+  ): Promise<boolean> {
+    const owner = await this.getNFTOwner(tokenId);
+    return owner === ownerAddress;
+  }
+
+  private async recordTransfer(tokenId: string, from: string, to: string, txHash: string) {
+    const transfer = this.transferRepository.create({
+      tokenId,
+      fromAddress: from,
+      toAddress: to,
+      transactionHash: txHash,
+      transferredAt: new Date(),
+    });
+    await this.transferRepository.save(transfer);
   }
 
   async getObligationOwner(agreementId: string): Promise<string | null> {

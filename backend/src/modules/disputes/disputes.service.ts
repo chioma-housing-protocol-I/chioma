@@ -5,15 +5,15 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { DisputeType } from './dispute.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
-import { Dispute, DisputeStatus, DisputeType } from './entities/dispute.entity';
+import { Dispute } from './entities/dispute.entity';
+import { DisputeStatus } from './dispute-status.enum';
 import { DisputeEvidence } from './entities/dispute-evidence.entity';
 import { DisputeComment } from './entities/dispute-comment.entity';
-import {
-  RentAgreement,
-  AgreementStatus,
-} from '../rent/entities/rent-contract.entity';
+import { RentAgreement } from '../rent/entities/rent-contract.entity';
+import { AgreementStatus } from '../rent/entities/agreement-status.enum';
 import { User, UserRole } from '../users/entities/user.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RentObligationNft } from '../agreements/entities/rent-obligation-nft.entity';
+import { RentObligationNft } from './entities/rent-obligation-nft.entity';
 
 export interface NftAnalytics {
   totalMinted: number;
@@ -32,7 +32,7 @@ export class NftAnalyticsService {
 
     const activeNfts = nfts.filter((nft) => nft.status === 'active').length;
     const totalTransfers = nfts.reduce(
-      (sum, nft) => sum + nft.transferCount,
+      (sum, nft) => sum + (nft.transferCount || 0),
       0,
     );
 
@@ -85,7 +85,7 @@ export class NftAnalyticsService {
       totalNfts: nfts.length,
       activeNfts: nfts.filter((nft) => nft.status === 'active').length,
       totalTransfersReceived: nfts.reduce(
-        (sum, nft) => sum + nft.transferCount,
+        (sum, nft) => sum + (nft.transferCount || 0),
         0,
       ),
       nfts: nfts.map((nft) => ({

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Dispute, DisputeStatus } from './entities/dispute.entity';
+import { Dispute } from './entities/dispute.entity';
+import { DisputeStatus } from './dispute-status.enum';
 import { User, UserRole } from '../users/entities/user.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 

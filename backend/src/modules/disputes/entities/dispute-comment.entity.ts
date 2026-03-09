@@ -20,7 +20,7 @@ export class DisputeComment {
 
   @ManyToOne(() => Dispute, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'dispute_id' })
-  dispute: Dispute;
+  dispute: any;
 
   @Column({ name: 'user_id' })
   userId: number;

@@ -73,7 +73,7 @@ export class AgreementNftService {
     nft.currentOwner = toAddress;
     nft.lastTransferTxHash = txHash;
     nft.lastTransferredAt = new Date();
-    nft.transferCount += 1;
+    nft.transferCount = (nft.transferCount || 0) + 1;
 
     await this.nftRepository.save(nft);
 

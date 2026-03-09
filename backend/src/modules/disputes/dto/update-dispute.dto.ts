@@ -6,7 +6,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { DisputeStatus } from '../entities/dispute.entity';
+import { DisputeStatus } from '../dispute-status.enum';
 import { Type } from 'class-transformer';
 
 export class UpdateDisputeDto {

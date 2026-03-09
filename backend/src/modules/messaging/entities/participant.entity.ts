@@ -5,8 +5,8 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { ChatRoom } from './chat-room.entity';
-import { Message } from './message.entity';
+import type { ChatRoom } from './chat-room.entity';
+import type { Message } from './message.entity';
 
 @Entity()
 export class Participant {

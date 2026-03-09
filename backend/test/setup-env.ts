@@ -69,3 +69,16 @@ if (!process.env.AGENT_REGISTRY_CONTRACT_ID)
   process.env.AGENT_REGISTRY_CONTRACT_ID = E2E_CONTRACT_ID;
 if (!process.env.SOROBAN_RPC_URL)
   process.env.SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      on: jest.fn(),
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      quit: jest.fn(),
+      disconnect: jest.fn(),
+      // Add any other Redis methods your app uses here if Jest complains
+    };
+  });
+});

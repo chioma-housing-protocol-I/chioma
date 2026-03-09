@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Property } from './property.entity';
+import type { Property } from './property.entity';
 
 export enum RentalUnitStatus {
   AVAILABLE = 'available',

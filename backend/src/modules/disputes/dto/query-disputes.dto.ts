@@ -8,7 +8,8 @@ import {
   IsArray,
   IsUUID,
 } from 'class-validator';
-import { DisputeStatus, DisputeType } from '../entities/dispute.entity';
+import { DisputeStatus } from '../dispute-status.enum';
+import { DisputeType } from '../dispute.enum';
 import { Type } from 'class-transformer';
 
 export class QueryDisputesDto {

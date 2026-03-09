@@ -1,45 +1,42 @@
 import {
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsNumber,
-  Min,
-  Max,
-  IsOptional,
-  IsEnum,
-  MinLength,
-  MaxLength,
   IsArray,
-  IsUUID,
 } from 'class-validator';
-import { DisputeType } from '../entities/dispute.entity';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DisputeType } from '../dispute.enum';
 
 export class CreateDisputeDto {
+  @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  @IsUUID()
   agreementId: string;
 
-  @IsNotEmpty()
+  @ApiProperty({ enum: DisputeType })
   @IsEnum(DisputeType)
   disputeType: DisputeType;
 
-  @IsNumber()
-  @Min(0)
-  @Max(999999999.99)
+  @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
   requestedAmount?: number;
 
+  @ApiProperty()
+  @IsNotEmpty()
   @IsString()
-  @MinLength(10)
-  @MaxLength(2000)
   description: string;
 
-  @IsArray()
-  @IsOptional()
-  evidenceUrls?: string[];
-
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(1000)
   metadata?: string;
+
+  @ApiPropertyOptional()
+  @IsArray()
+  @IsOptional()
+  @IsString({ each: true })
+  evidenceUrls?: string[];
 }
