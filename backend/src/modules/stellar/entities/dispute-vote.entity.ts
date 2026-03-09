@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Arbiter } from './arbiter.entity';
+import { Dispute } from '../../disputes/entities/dispute.entity';
 
 export enum DisputeOutcome {
   FAVOR_LANDLORD = 'FavorLandlord',
@@ -43,6 +44,6 @@ export class DisputeVote {
   @JoinColumn({ name: 'arbiterAddress', referencedColumnName: 'address' })
   arbiter: Arbiter;
 
-  @ManyToOne(() => 'Dispute', dispute => dispute.votes)
-  dispute: 'Dispute';
+  @ManyToOne(() => Dispute, dispute => dispute.votes)
+  dispute: Dispute;
 }

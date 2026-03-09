@@ -14,7 +14,7 @@ import {
   VoteResults,
   ReputationScore,
   DisputeTimelineEvent,
-  ArbiterInfo as ArbiterInfoDto
+  ArbiterInfo
 } from '../dto/dispute-enhanced.dto';
 
 export enum DisputeOutcome {
@@ -31,12 +31,6 @@ export interface DisputeInfo {
   votesFavorLandlord: number;
   votesFavorTenant: number;
   outcome?: DisputeOutcome;
-}
-
-export interface ArbiterInfo {
-  address: string;
-  addedAt: number;
-  active: boolean;
 }
 
 export interface VoteInfo {
@@ -399,12 +393,19 @@ export class DisputeContractService {
     };
   }
 
-  private parseArbiterInfo(result: any): ArbiterInfoDto {
-    const native = StellarSdk.scValToNative(result.retval);
+  private parseArbiterInfo(result: any): ArbiterInfo {
+    const native = StellarSdk.scValToNative(result);
     return {
       address: native.address,
-      addedAt: native.added_at,
-      active: native.active,
+      qualifications: native.qualifications || '',
+      specialization: native.specialization,
+      stakeAmount: native.stake_amount || '0',
+      isActive: native.active || true,
+      reputationScore: native.reputation_score || 0,
+      totalDisputes: native.total_disputes || 0,
+      successfulResolutions: native.successful_resolutions || 0,
+      registeredAt: new Date(native.registered_at * 1000 || Date.now()),
+      lastActiveAt: new Date(native.last_active_at * 1000 || Date.now()),
     };
   }
 
@@ -470,7 +471,7 @@ export class DisputeContractService {
     return `Arbiter ${arbiterAddress} deregistered successfully`;
   }
 
-  async getArbiterPool(): Promise<ArbiterInfoDto[]> {
+  async getArbiterPool(): Promise<ArbiterInfo[]> {
     const arbiters = await this.arbiterRepository.find({
       where: { isActive: true },
       order: { reputationScore: 'DESC' }
