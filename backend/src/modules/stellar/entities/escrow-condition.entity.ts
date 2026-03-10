@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   Index,
 } from 'typeorm';
@@ -18,6 +19,7 @@ export enum ConditionType {
 @Entity('stellar_escrow_conditions')
 @Index('IDX_escrow_conditions_escrow_id', ['escrowId'])
 @Index('IDX_escrow_conditions_type', ['conditionType'])
+@Index('IDX_escrow_conditions_stellar_escrow_id', ['stellarEscrowId'])
 export class EscrowConditionEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -25,6 +27,9 @@ export class EscrowConditionEntity {
   // On-chain escrow identifier (e.g. Soroban BytesN<32> hex string)
   @Column({ name: 'escrow_id', type: 'varchar', length: 128 })
   escrowId: string;
+
+  @Column({ name: 'stellar_escrow_id', type: 'int', nullable: true })
+  stellarEscrowId: number | null;
 
   @Column({
     name: 'condition_type',
@@ -51,6 +56,7 @@ export class EscrowConditionEntity {
   @ManyToOne(() => StellarEscrow, (escrow) => escrow.conditions, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'stellar_escrow_id' })
   escrow: StellarEscrow;
 }
 
