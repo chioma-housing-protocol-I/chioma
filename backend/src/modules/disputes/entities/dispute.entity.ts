@@ -12,6 +12,7 @@ import { RentAgreement } from '../../rent/entities/rent-contract.entity';
 import { User } from '../../users/entities/user.entity';
 import { DisputeEvidence } from './dispute-evidence.entity';
 import { DisputeComment } from './dispute-comment.entity';
+import { DisputeVote } from '../../stellar/entities/dispute-vote.entity';
 
 export enum DisputeType {
   RENT_PAYMENT = 'RENT_PAYMENT',
@@ -39,14 +40,14 @@ export class Dispute {
   disputeId: string;
 
   @Column({ name: 'agreement_id' })
-  agreementId: number;
+  agreementId: string;
 
   @ManyToOne(() => RentAgreement, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'agreement_id' })
   agreement: RentAgreement;
 
   @Column({ name: 'initiated_by' })
-  initiatedBy: number;
+  initiatedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'initiated_by' })
@@ -82,7 +83,7 @@ export class Dispute {
   resolution: string;
 
   @Column({ name: 'resolved_by', nullable: true })
-  resolvedBy: number;
+  resolvedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'resolved_by' })
@@ -97,6 +98,11 @@ export class Dispute {
     cascade: true,
   })
   comments: DisputeComment[];
+
+  @OneToMany(() => DisputeVote, (vote: any) => vote.dispute, {
+    cascade: true,
+  })
+  votes: DisputeVote[];
 
   @Column({ name: 'resolved_at', type: 'timestamp', nullable: true })
   resolvedAt: Date;

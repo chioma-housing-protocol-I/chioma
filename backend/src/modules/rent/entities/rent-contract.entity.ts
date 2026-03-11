@@ -3,10 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Payment } from './payment.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum AgreementStatus {
   DRAFT = 'draft',
@@ -143,6 +146,14 @@ export class RentAgreement {
   paymentSplitConfig: any;
 
   // Relationships
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'landlord_id' })
+  landlord: User;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: User;
+
   @OneToMany(() => Payment, (payment) => payment.agreement)
   payments: Payment[];
 

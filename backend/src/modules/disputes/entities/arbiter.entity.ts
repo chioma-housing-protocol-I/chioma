@@ -15,7 +15,7 @@ export class Arbiter {
   stellarAddress: string;
 
   @Column({ name: 'user_id', nullable: true })
-  userId: number;
+  userId: string;
 
   @Column({ default: true })
   active: boolean;
