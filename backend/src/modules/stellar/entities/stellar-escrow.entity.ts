@@ -8,9 +8,12 @@ import {
   OneToOne,
   JoinColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { StellarAccount } from './stellar-account.entity';
 import { AssetType } from './stellar-transaction.entity';
+import { EscrowSignature } from './escrow-signature.entity';
+import { EscrowConditionEntity } from './escrow-condition.entity';
 
 export enum EscrowStatus {
   PENDING = 'PENDING',
@@ -166,6 +169,39 @@ export class StellarEscrow {
 
   @Column({ name: 'escrow_metadata', type: 'jsonb', nullable: true })
   escrowMetadata: any;
+
+  // Enhanced escrow capabilities
+
+  @Column({ name: 'is_multi_sig', type: 'boolean', default: false })
+  isMultiSig: boolean;
+
+  @Column({ name: 'required_signatures', type: 'int', default: 1 })
+  requiredSignatures: number;
+
+  @Column({
+    name: 'participants',
+    type: 'simple-array',
+    nullable: true,
+  })
+  participants: string[] | null;
+
+  @Column({ name: 'release_time', type: 'bigint', nullable: true })
+  releaseTime: number | null;
+
+  @Column({ name: 'is_time_locked', type: 'boolean', default: false })
+  isTimeLocked: boolean;
+
+  @Column({ name: 'linked_dispute_id', type: 'uuid', nullable: true })
+  linkedDisputeId: string | null;
+
+  @Column({ name: 'dispute_integrated', type: 'boolean', default: false })
+  disputeIntegrated: boolean;
+
+  @OneToMany(() => EscrowSignature, (signature) => signature.escrow)
+  signatures: EscrowSignature[];
+
+  @OneToMany(() => EscrowConditionEntity, (condition) => condition.escrow)
+  conditions: EscrowConditionEntity[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

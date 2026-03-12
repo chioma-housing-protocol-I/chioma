@@ -47,5 +47,15 @@ describe('EscrowContractService', () => {
     expect(service.raiseDispute).toBeDefined();
     expect(service.resolveDispute).toBeDefined();
     expect(service.getEscrow).toBeDefined();
+    expect(service.getApprovalCount).toBeDefined();
+    expect(service.createMultiSigEscrow).toBeDefined();
+    expect(service.addSignature).toBeDefined();
+    expect(service.releaseWithSignatures).toBeDefined();
+    expect(service.createTimeLockedEscrow).toBeDefined();
+    expect(service.checkTimeLockConditions).toBeDefined();
+    expect(service.createConditionalEscrow).toBeDefined();
+    expect(service.validateConditions).toBeDefined();
+    expect(service.integrateWithDispute).toBeDefined();
+    expect(service.releaseOnDisputeResolution).toBeDefined();
   });
 });

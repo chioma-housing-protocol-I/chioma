@@ -93,14 +93,15 @@ import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/r
         const isTest = process.env.NODE_ENV === 'test';
         const openapiGenerate = process.env.OPENAPI_GENERATE === 'true';
 
-        // For OpenAPI generation, return a minimal config that doesn't connect to DB
+        // For OpenAPI generation and E2E tests that set OPENAPI_GENERATE, use in-memory
+        // SQLite with entities and synchronize so tables exist and the app can boot.
         if (openapiGenerate) {
           return {
             type: 'sqlite',
             database: ':memory:',
             namingStrategy: new SnakeNamingStrategy(),
-            entities: [], // Don't load entities for OpenAPI generation
-            synchronize: false,
+            entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
+            synchronize: true,
             logging: false,
           };
         }
