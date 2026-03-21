@@ -10,10 +10,10 @@ import Link from 'next/link';
  */
 const CTA = () => {
   return (
-    <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-br from-orange-600 via-orange-500 to-orange-600">
+    <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-600">
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-orange-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-700/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-700/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -31,7 +31,7 @@ const CTA = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Link
               href="#"
-              className="w-full sm:w-auto bg-white text-orange-600 hover:bg-white/95 px-8 py-4 rounded-lg text-base md:text-lg font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 duration-200"
+              className="w-full sm:w-auto bg-white text-blue-600 hover:bg-white/95 px-8 py-4 rounded-lg text-base md:text-lg font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 duration-200"
             >
               Join as Agent
             </Link>
