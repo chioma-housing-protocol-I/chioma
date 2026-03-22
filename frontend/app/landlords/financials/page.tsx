@@ -199,7 +199,6 @@ const MetricCard = ({
   title,
   value,
   sub,
-  borderColor,
   iconBg,
   icon,
 }: MetricCardProps) => (
