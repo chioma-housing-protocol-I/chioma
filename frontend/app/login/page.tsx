@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,7 +52,7 @@ export default function LoginPage() {
     } else {
       router.push('/');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, searchParams]);
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
@@ -83,16 +84,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md animate-auth-enter relative z-10">
         {/* Logo / Brand */}
         <div className="text-center mb-12">
-          <Link href="/" className="inline-block mb-8 group">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent tracking-tight group-hover:from-blue-200 group-hover:to-indigo-200 transition-all">
-                Chioma
-              </span>
-            </div>
-          </Link>
+          <Logo
+            size="lg"
+            href="/"
+            className="inline-flex justify-center mb-8"
+            textClassName="text-2xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent tracking-tight"
+          />
           <h1 className="text-4xl font-bold text-white mb-2">Welcome back</h1>
           <p className="text-blue-200/80 text-base">
             Access your rental management platform
