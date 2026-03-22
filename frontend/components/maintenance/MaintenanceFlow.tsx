@@ -282,16 +282,16 @@ export default function MaintenanceFlow({
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        <div className="h-10 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-24 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-24 bg-gray-200 rounded-lg animate-pulse" />
+      <div className="space-y-4">
+        <div className="h-12 bg-white/5 border border-white/10 rounded-2xl animate-pulse" />
+        <div className="h-40 bg-white/5 border border-white/10 rounded-3xl animate-pulse" />
+        <div className="h-40 bg-white/5 border border-white/10 rounded-3xl animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-12">
       {isTenant && (
         <MaintenanceRequestForm
           properties={DEFAULT_PROPERTIES}
@@ -300,89 +300,95 @@ export default function MaintenanceFlow({
         />
       )}
 
-      <section className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <section className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 space-y-8 shadow-2xl relative overflow-hidden group">
+        <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-blue-600 blur-[120px] opacity-10 group-hover:opacity-20 transition-opacity duration-700" />
+        
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative z-10">
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">
+            <h2 className="text-2xl font-black text-white tracking-tight">
               Maintenance Requests
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm font-medium text-blue-200/40 mt-1">
               {isManager
                 ? 'Review incoming issues, assign contractors and track progress.'
                 : 'Track status updates for your submitted requests.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 bg-white/5 p-1.5 rounded-2xl border border-white/5">
             <button
               onClick={() => setViewMode('list')}
-              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm border ${
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
                 viewMode === 'list'
-                  ? 'bg-[#1e40af] text-white border-[#1e40af]'
-                  : 'bg-white text-gray-700 border-gray-300'
+                  ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]'
+                  : 'text-blue-200/40 hover:text-white hover:bg-white/5'
               }`}
             >
-              <List size={16} />
+              <List size={14} />
               List
             </button>
             <button
               onClick={() => setViewMode('board')}
-              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm border ${
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
                 viewMode === 'board'
-                  ? 'bg-[#1e40af] text-white border-[#1e40af]'
-                  : 'bg-white text-gray-700 border-gray-300'
+                  ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]'
+                  : 'text-blue-200/40 hover:text-white hover:bg-white/5'
               }`}
             >
-              <LayoutGrid size={16} />
+              <LayoutGrid size={14} />
               Board
             </button>
           </div>
         </div>
 
         {isManager && newCount > 0 && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 flex items-center gap-2">
-            <BellRing size={16} />
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-blue-400 flex items-center gap-3 relative z-10 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+            <BellRing size={14} />
             {newCount} new maintenance request{newCount > 1 ? 's' : ''}{' '}
             received.
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-400 flex items-center gap-3 relative z-10">
+            <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
             {error}
           </div>
         )}
 
         {isManager && (
-          <div className="flex flex-col md:flex-row gap-3">
-            <label className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2.5 bg-gray-50">
-              <Filter size={16} className="text-gray-500" />
+          <div className="flex flex-col md:flex-row gap-4 relative z-10">
+            <label className="flex-1 flex items-center gap-3 border border-white/10 rounded-2xl px-4 py-3 bg-white/5 focus-within:border-blue-500/40 transition-colors group/select">
+              <Filter size={14} className="text-blue-200/40 group-focus-within/select:text-blue-400 transition-colors" />
               <select
                 value={propertyFilter}
                 onChange={(event) => setPropertyFilter(event.target.value)}
-                className="w-full bg-transparent outline-none text-sm"
+                className="w-full bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest text-blue-200/60 transition-colors"
+                style={{ appearance: 'none' }}
               >
-                <option value="all">All properties</option>
+                <option value="all" className="bg-slate-900">All properties</option>
                 {DEFAULT_PROPERTIES.map((property) => (
-                  <option key={property.id} value={property.id}>
+                  <option key={property.id} value={property.id} className="bg-slate-900">
                     {property.name}
                   </option>
                 ))}
               </select>
             </label>
 
-            <label className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2.5 bg-gray-50">
-              <Filter size={16} className="text-gray-500" />
+            <label className="flex-1 flex items-center gap-3 border border-white/10 rounded-2xl px-4 py-3 bg-white/5 focus-within:border-blue-500/40 transition-colors group/select">
+              <Filter size={14} className="text-blue-200/40 group-focus-within/select:text-blue-400 transition-colors" />
               <select
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as 'all' | RequestStatus)
                 }
-                className="w-full bg-transparent outline-none text-sm"
+                className="w-full bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest text-blue-200/60 transition-colors"
+                style={{ appearance: 'none' }}
               >
-                <option value="all">All statuses</option>
+                <option value="all" className="bg-slate-900">All statuses</option>
                 {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
+                  <option key={status} value={status} className="bg-slate-900">
                     {STATUS_LABELS[status]}
                   </option>
                 ))}
@@ -392,13 +398,15 @@ export default function MaintenanceFlow({
         )}
 
         {filtered.length === 0 ? (
-          <EmptyState
-            icon={Filter}
-            title="No maintenance requests"
-            description="Try adjusting filters or submit your first maintenance issue."
-          />
+          <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 py-24 text-center relative z-10">
+            <div className="mx-auto w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+              <Filter className="w-8 h-8 text-blue-200/20" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No maintenance requests</h3>
+            <p className="text-sm font-medium text-blue-200/40">Try adjusting filters or submit your first maintenance issue.</p>
+          </div>
         ) : viewMode === 'list' ? (
-          <div className="space-y-3">
+          <div className="space-y-4 relative z-10">
             {filtered.map((request) => (
               <MaintenanceRequestCard
                 key={request.id}
@@ -409,16 +417,21 @@ export default function MaintenanceFlow({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10">
             {STATUS_OPTIONS.map((status) => (
               <div
                 key={status}
-                className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                className="rounded-3xl border border-white/10 bg-white/5 p-5"
               >
-                <h3 className="font-semibold text-sm text-gray-800 mb-2">
-                  {STATUS_LABELS[status]} ({grouped[status].length})
-                </h3>
-                <div className="space-y-3">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
+                    {STATUS_LABELS[status]}
+                  </h3>
+                  <span className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-blue-200/40">
+                    {grouped[status].length}
+                  </span>
+                </div>
+                <div className="space-y-4">
                   {grouped[status].map((request) => (
                     <MaintenanceRequestCard
                       key={request.id}
@@ -428,9 +441,11 @@ export default function MaintenanceFlow({
                     />
                   ))}
                   {grouped[status].length === 0 && (
-                    <p className="text-xs text-gray-500">
-                      No requests in this column.
-                    </p>
+                    <div className="rounded-2xl border border-dashed border-white/5 bg-white/[0.02] py-8 text-center">
+                      <p className="text-[10px] font-bold text-blue-200/10 uppercase tracking-widest">
+                        Empty column
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

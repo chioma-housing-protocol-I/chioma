@@ -35,18 +35,18 @@ export function ReviewList({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-2 sm:py-4">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-2 sm:py-4 transition-all duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="mb-2 text-3xl font-bold tracking-tight text-slate-900">
+          <h2 className="mb-2 text-3xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">
             {title}
           </h2>
-          <p className="max-w-2xl text-base text-slate-600">{subtitle}</p>
+          <p className="max-w-2xl text-sm font-medium text-blue-200/60 leading-relaxed">{subtitle}</p>
         </div>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600/20 border border-blue-500/30 px-6 py-2.5 text-[10px] font-bold uppercase tracking-widest text-blue-400 transition-all hover:bg-blue-600 hover:text-white shadow-lg"
           >
             <PencilLine className="w-5 h-5" />
             Write a Review

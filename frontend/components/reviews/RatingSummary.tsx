@@ -21,13 +21,15 @@ export function RatingSummary({ stats }: RatingSummaryProps) {
   const { average, total, distribution } = stats;
 
   return (
-    <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-xs flex flex-col md:flex-row gap-8 items-center md:items-start">
+    <div className="bg-white/5 backdrop-blur-sm p-8 rounded-3xl border border-white/10 shadow-xl flex flex-col md:flex-row gap-10 items-center md:items-start overflow-hidden relative">
+      <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-blue-600 blur-[100px] opacity-10" />
+      
       {/* Target Overall Average Rating Display */}
-      <div className="flex flex-col items-center justify-center shrink-0 min-w-[160px]">
-        <h3 className="text-5xl font-black text-gray-900 tracking-tighter mb-2">
+      <div className="flex flex-col items-center justify-center shrink-0 min-w-[160px] relative z-10">
+        <h3 className="text-6xl font-black text-white tracking-tighter mb-4">
           {average.toFixed(1)}
         </h3>
-        <div className="mb-2">
+        <div className="mb-4 pt-4 border-t border-white/5 w-full flex justify-center">
           <StarRatingInput
             value={Math.round(average)}
             onChange={() => {}}
@@ -35,33 +37,33 @@ export function RatingSummary({ stats }: RatingSummaryProps) {
             size="md"
           />
         </div>
-        <p className="text-sm font-medium text-gray-500">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/40">
           Based on {total} {total === 1 ? 'review' : 'reviews'}
         </p>
       </div>
 
       {/* Vertical divider on desktop, horizontal on mobile */}
-      <div className="h-px w-full md:w-px md:h-auto bg-gray-100 shrink-0 hidden md:block" />
+      <div className="h-px w-full md:w-px md:h-40 bg-white/5 shrink-0 relative z-10" />
 
       {/* Progress Bars for each star */}
-      <div className="flex-1 w-full flex flex-col gap-3 justify-center">
+      <div className="flex-1 w-full flex flex-col gap-4 justify-center relative z-10">
         {[5, 4, 3, 2, 1].map((star) => {
           const count = distribution[star as keyof RatingStats['distribution']];
           const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
 
           return (
-            <div key={star} className="flex items-center gap-3">
-              <div className="flex items-center gap-1 w-8 shrink-0 justify-end">
-                <span className="text-sm font-bold text-gray-700">{star}</span>
-                <Star className="w-3.5 h-3.5 fill-gray-400 text-gray-400" />
+            <div key={star} className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 w-10 shrink-0 justify-end">
+                <span className="text-[10px] font-bold text-blue-200/60">{star}</span>
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400 opacity-40" />
               </div>
-              <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
                 <div
-                  className="h-full bg-amber-400 rounded-full transition-all duration-1000 ease-out"
+                  className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(251,191,36,0.2)]"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
-              <div className="w-12 shrink-0 text-xs font-medium text-gray-500 text-right">
+              <div className="w-14 shrink-0 text-[10px] font-bold text-blue-200/40 text-right tracking-widest uppercase">
                 {percentage}%
               </div>
             </div>

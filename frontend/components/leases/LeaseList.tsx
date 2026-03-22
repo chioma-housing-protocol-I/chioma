@@ -22,21 +22,21 @@ export function LeaseList({
     switch (status) {
       case 'ACTIVE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-emerald-500/20">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Active
           </span>
         );
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full border border-amber-100">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-amber-500/20">
             <Clock className="w-3.5 h-3.5" />
             Pending Signature
           </span>
         );
       case 'EXPIRED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full border border-gray-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 text-blue-200/40 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-white/10">
             <XCircle className="w-3.5 h-3.5" />
             Expired
           </span>
@@ -58,50 +58,50 @@ export function LeaseList({
 
   return (
     <>
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <tr className="bg-white/5 border-b border-white/5 text-blue-300/40">
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">
                   Property
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">
                   {currentUserRole === 'LANDLORD' ? 'Tenant' : 'Landlord'}
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">
                   Duration
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">
                   Status
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-right">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-white/5">
               {leases.map((lease) => (
                 <tr
                   key={lease.id}
-                  className="hover:bg-gray-50/50 transition-colors group"
+                  className="hover:bg-white/5 transition-all group"
                 >
                   <td className="px-6 py-5 align-middle">
-                    <p className="font-bold text-gray-900 mb-1">
+                    <p className="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">
                       {lease.property}
                     </p>
-                    <p className="font-semibold text-brand-blue text-sm">
+                    <p className="font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent text-sm">
                       {lease.rentAmount}/yr
                     </p>
                   </td>
-                  <td className="px-6 py-5 align-middle font-medium text-gray-700">
+                  <td className="px-6 py-5 align-middle font-medium text-blue-200/60">
                     {currentUserRole === 'LANDLORD'
                       ? lease.tenantName
                       : lease.landlordName}
                   </td>
-                  <td className="px-6 py-5 align-middle text-sm text-gray-500">
-                    <div>{new Date(lease.startDate).toLocaleDateString()}</div>
-                    <div className="text-xs mt-1">
+                  <td className="px-6 py-5 align-middle text-sm text-blue-200/40">
+                    <div className="font-medium">{new Date(lease.startDate).toLocaleDateString()}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest mt-1.5 opacity-60">
                       to {new Date(lease.endDate).toLocaleDateString()}
                     </div>
                   </td>
@@ -111,7 +111,7 @@ export function LeaseList({
                   <td className="px-6 py-5 align-middle text-right">
                     <button
                       onClick={() => setSelectedLease(lease)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-sm font-bold text-gray-700 rounded-xl hover:bg-brand-blue hover:text-white hover:border-brand-blue transition-colors shadow-xs"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600/20 border border-blue-500/30 text-[10px] font-bold uppercase tracking-widest text-blue-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-lg"
                     >
                       <Eye className="w-4 h-4" />
                       View

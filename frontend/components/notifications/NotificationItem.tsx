@@ -14,17 +14,17 @@ const typeConfig: Record<
 > = {
   message: {
     icon: MessageSquare,
-    bg: 'bg-blue-50',
-    text: 'text-brand-blue-dark',
+    bg: 'bg-brand-blue/10',
+    text: 'text-brand-blue',
   },
   maintenance: {
     icon: Wrench,
-    bg: 'bg-orange-50',
+    bg: 'bg-brand-orange/10',
     text: 'text-brand-orange',
   },
   payment: {
     icon: CreditCard,
-    bg: 'bg-green-50',
+    bg: 'bg-brand-green/10',
     text: 'text-brand-green',
   },
 };
@@ -55,8 +55,8 @@ export default function NotificationItem({
     <div
       className={`flex items-start gap-3 px-4 transition-colors
         ${variant === 'compact' ? 'py-2.5' : 'py-4'}
-        ${notification.read ? 'bg-white' : 'bg-blue-50/40'}
-        ${variant === 'compact' ? 'hover:bg-gray-50' : 'hover:bg-gray-50'}
+        ${notification.read ? 'bg-white' : 'bg-brand-blue/5'}
+        ${variant === 'compact' ? 'hover:bg-neutral-50' : 'hover:bg-neutral-50'}
       `}
     >
       {/* Icon */}
@@ -72,8 +72,8 @@ export default function NotificationItem({
           <p
             className={`text-sm ${
               notification.read
-                ? 'font-normal text-gray-500'
-                : 'font-semibold text-gray-900'
+                ? 'font-normal text-neutral-500'
+                : 'font-semibold text-neutral-900'
             }`}
           >
             {notification.title}
@@ -85,12 +85,12 @@ export default function NotificationItem({
         </div>
 
         {variant === 'full' && (
-          <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">
+          <p className="text-sm text-neutral-500 mt-0.5 line-clamp-2">
             {notification.body}
           </p>
         )}
 
-        <p className="text-xs text-gray-400 mt-1">{timeAgo}</p>
+        <p className="text-xs text-neutral-400 mt-1">{timeAgo}</p>
       </div>
 
       {/* Read status indicator / mark-read button (full variant only) */}
@@ -109,7 +109,7 @@ export default function NotificationItem({
               e.stopPropagation();
               onToggleRead(notification.id);
             }}
-            className="shrink-0 text-xs text-brand-blue hover:text-brand-blue-dark hover:underline mt-0.5 cursor-pointer"
+            className="shrink-0 text-xs text-brand-blue hover:text-brand-blue-dark hover:underline mt-0.5 cursor-pointer transition-colors"
           >
             Mark read
           </button>
