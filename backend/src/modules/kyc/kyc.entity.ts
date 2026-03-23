@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { Encrypted } from '../security/decorators/encrypted.decorator';
 
 export enum KycStatus {
   PENDING = 'PENDING',
@@ -23,11 +24,11 @@ export class Kyc {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Column({
-    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
-    nullable: false,
-  })
+  @Encrypted({ nullable: false })
   encryptedKycData: Record<string, any>; // SEP-9 fields, encrypted
+
+  @Column({ type: 'int', default: 1 })
+  encryptionVersion: number;
 
   @Column({ type: 'enum', enum: KycStatus, default: KycStatus.PENDING })
   status: KycStatus;
