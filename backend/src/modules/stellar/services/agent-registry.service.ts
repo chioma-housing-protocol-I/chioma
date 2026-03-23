@@ -1,9 +1,9 @@
 import {
   Injectable,
-  Logger,
-  NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { LoggerService } from '../../../common/services/logger.service';
+import { Logging } from '../../../common/decorators/logging.decorator';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -25,13 +25,13 @@ export interface AgentInfo {
 
 @Injectable()
 export class AgentRegistryService {
-  private readonly logger = new Logger(AgentRegistryService.name);
   private readonly server: SorobanRpc.Server;
   private readonly contract: Contract | null;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
 
   constructor(
+    private readonly logger: LoggerService,
     private readonly configService: ConfigService,
     @InjectRepository(AgentTransaction)
     private readonly agentTransactionRepo: Repository<AgentTransaction>,
@@ -60,6 +60,7 @@ export class AgentRegistryService {
     }
   }
 
+  @Logging()
   async registerAgent(
     agentAddress: string,
     profileHash: string,
@@ -91,17 +92,18 @@ export class AgentRegistryService {
 
       const result = await this.server.sendTransaction(prepared);
       const hash = await this.pollTransactionStatus(result.hash);
-      this.logger.log(`Agent registered: ${agentAddress} tx=${hash}`);
+      this.logger.info(`Agent registered: ${agentAddress} tx=${hash}`);
       return hash;
     } catch (error) {
       this.logger.error(
         `Agent registration failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async verifyAgent(
     adminAddress: string,
     agentAddress: string,
@@ -135,17 +137,18 @@ export class AgentRegistryService {
 
       const result = await this.server.sendTransaction(prepared);
       const hash = await this.pollTransactionStatus(result.hash);
-      this.logger.log(`Agent verified: ${agentAddress} tx=${hash}`);
+      this.logger.info(`Agent verified: ${agentAddress} tx=${hash}`);
       return hash;
     } catch (error) {
       this.logger.error(
         `Agent verification failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async rateAgent(
     raterAddress: string,
     agentAddress: string,
@@ -184,14 +187,14 @@ export class AgentRegistryService {
 
       const result = await this.server.sendTransaction(prepared);
       const hash = await this.pollTransactionStatus(result.hash);
-      this.logger.log(
+      this.logger.info(
         `Rating submitted: agent=${agentAddress} score=${score} tx=${hash}`,
       );
       return hash;
     } catch (error) {
       this.logger.error(
         `Rating submission failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
@@ -242,7 +245,7 @@ export class AgentRegistryService {
       }
       return null;
     } catch (error) {
-      this.logger.error(`Get agent info failed: ${error.message}`, error.stack);
+      this.logger.error(`Get agent info failed: ${error.message}`, error as Error);
       throw error;
     }
   }
@@ -275,12 +278,13 @@ export class AgentRegistryService {
     } catch (error) {
       this.logger.error(
         `Get agent count failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async registerTransaction(
     transactionId: string,
     agentAddress: string,
@@ -327,17 +331,18 @@ export class AgentRegistryService {
         blockchainHash: hash,
       });
 
-      this.logger.log(`Transaction registered: ${transactionId} tx=${hash}`);
+      this.logger.info(`Transaction registered: ${transactionId} tx=${hash}`);
       return hash;
     } catch (error) {
       this.logger.error(
         `Transaction registration failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async completeTransaction(
     transactionId: string,
     agentAddress: string,
@@ -375,12 +380,12 @@ export class AgentRegistryService {
         { completed: true, blockchainHash: hash },
       );
 
-      this.logger.log(`Transaction completed: ${transactionId} tx=${hash}`);
+      this.logger.info(`Transaction completed: ${transactionId} tx=${hash}`);
       return hash;
     } catch (error) {
       this.logger.error(
         `Transaction completion failed: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }

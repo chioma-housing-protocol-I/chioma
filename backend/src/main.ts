@@ -72,14 +72,6 @@ async function bootstrap() {
   app.use(express.json({ limit: jsonLimit }));
   app.use(express.urlencoded({ extended: true, limit: urlencodedLimit }));
 
-  const loggerMiddleware = new LoggerMiddleware();
-  app.use(loggerMiddleware.use.bind(loggerMiddleware));
-
-  app.useGlobalInterceptors(
-    new LoggingInterceptor(),
-    new RateLimitInterceptor(),
-  );
-
   // Enhanced ValidationPipe configuration
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
   app.useGlobalPipes(

@@ -5,6 +5,8 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+import { LoggerService } from '../../common/services/logger.service';
+import { Logging } from '../../common/decorators/logging.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -22,9 +24,8 @@ const SALT_ROUNDS = 12;
 
 @Injectable()
 export class UsersService {
-  private readonly logger = new Logger(UsersService.name);
-
   constructor(
+    private readonly logger: LoggerService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
@@ -44,6 +45,7 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
+  @Logging()
   async updateProfile(
     userId: string,
     updateProfileDto: UpdateUserProfileDto,
@@ -51,10 +53,11 @@ export class UsersService {
     const user = await this.findById(userId);
     Object.assign(user, updateProfileDto);
     const updatedUser = await this.userRepository.save(user);
-    this.logger.log(`Profile updated for user: ${user.email}`);
+    this.logger.info(`Profile updated for user: ${user.email}`);
     return updatedUser;
   }
 
+  @Logging()
   async changeEmail(
     userId: string,
     changeEmailDto: ChangeEmailDto,
@@ -82,13 +85,14 @@ export class UsersService {
       verificationToken,
     });
 
-    this.logger.log(
+    this.logger.info(
       `Email changed for user: ${user.id} from ${user.email} to ${changeEmailDto.newEmail}`,
     );
 
     return { message: 'Email updated. Please verify your new email address.' };
   }
 
+  @Logging()
   async changePassword(
     userId: string,
     changePasswordDto: ChangePasswordDto,
@@ -119,11 +123,12 @@ export class UsersService {
       refreshToken: null,
     });
 
-    this.logger.log(`Password changed for user: ${user.email}`);
+    this.logger.info(`Password changed for user: ${user.email}`);
 
     return { message: 'Password changed successfully. Please login again.' };
   }
 
+  @Logging()
   async deactivateAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId);
 
@@ -132,7 +137,7 @@ export class UsersService {
       refreshToken: null,
     });
 
-    this.logger.log(`Account deactivated for user: ${user.email}`);
+    this.logger.info(`Account deactivated for user: ${user.email}`);
 
     return { message: 'Account deactivated successfully' };
   }
@@ -140,7 +145,7 @@ export class UsersService {
   async deleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId);
     await this.userRepository.softDelete(userId);
-    this.logger.log(`Account soft-deleted for user: ${user.email}`);
+    this.logger.info(`Account soft-deleted for user: ${user.email}`);
     return { message: 'Account deleted successfully' };
   }
 
@@ -165,7 +170,7 @@ export class UsersService {
     await this.userRepository.restore(user.id);
     await this.userRepository.update(user.id, { isActive: true });
 
-    this.logger.log(`Account restored for user: ${user.email}`);
+    this.logger.info(`Account restored for user: ${user.email}`);
 
     return { message: 'Account restored successfully. You can now log in.' };
   }
@@ -173,7 +178,7 @@ export class UsersService {
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId, true);
     await this.userRepository.delete(userId);
-    this.logger.log(`Account permanently deleted for user: ${user.email}`);
+    this.logger.info(`Account permanently deleted for user: ${user.email}`);
     return { message: 'Account permanently deleted' };
   }
 
@@ -190,6 +195,6 @@ export class UsersService {
   // ✅ moved inside the class
   async setKycStatus(userId: string, status: KycStatus): Promise<void> {
     await this.userRepository.update(userId, { kycStatus: status });
-    this.logger.log(`KYC status updated for user ${userId}: ${status}`);
+    this.logger.info(`KYC status updated for user ${userId}: ${status}`);
   }
 }

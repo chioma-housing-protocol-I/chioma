@@ -7,7 +7,7 @@ import {
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AgreementsModule } from './modules/agreements/agreements.module';
@@ -42,6 +42,10 @@ import { JobQueueService } from './common/services/job-queue.service';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { upstashStore } from './common/cache/upstash-cache.store';
+import { LoggerModule } from './common/logger/logger.module';
+import { ContextMiddleware } from './common/middleware/context.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 
 @Module({
   imports: [
@@ -203,6 +207,7 @@ import { upstashStore } from './common/cache/upstash-cache.store';
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module
     require('./modules/kyc/kyc.module').KycModule,
+    LoggerModule,
   ],
   controllers: [AppController],
   providers: [
@@ -219,6 +224,14 @@ import { upstashStore } from './common/cache/upstash-cache.store';
     {
       provide: APP_FILTER,
       useClass: ThrottlerExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RateLimitInterceptor,
     },
   ],
 })
@@ -248,6 +261,9 @@ export class AppModule implements NestModule {
   }
 
   configure(consumer: MiddlewareConsumer) {
+    // Context propagation (MUST BE FIRST)
+    consumer.apply(ContextMiddleware).forRoutes('*');
+
     // Security headers middleware (applied to all routes)
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
 

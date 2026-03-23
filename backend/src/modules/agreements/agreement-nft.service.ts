@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { LoggerService } from '../../common/services/logger.service';
+import { Logging } from '../../common/decorators/logging.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RentObligationNftService } from '../stellar/services/rent-obligation-nft.service';
@@ -6,14 +8,14 @@ import { RentObligationNft } from './entities/rent-obligation-nft.entity';
 
 @Injectable()
 export class AgreementNftService {
-  private readonly logger = new Logger(AgreementNftService.name);
-
   constructor(
+    private readonly logger: LoggerService,
     @InjectRepository(RentObligationNft)
     private readonly nftRepository: Repository<RentObligationNft>,
     private readonly nftContractService: RentObligationNftService,
   ) {}
 
+  @Logging()
   async mintNftForAgreement(
     agreementId: string,
     landlordAddress: string,
@@ -44,11 +46,12 @@ export class AgreementNftService {
 
     await this.nftRepository.save(nft);
 
-    this.logger.log(`NFT minted for agreement ${agreementId}: ${txHash}`);
+    this.logger.info(`NFT minted for agreement ${agreementId}: ${txHash}`);
 
     return nft;
   }
 
+  @Logging()
   async transferNft(
     agreementId: string,
     fromAddress: string,
@@ -77,7 +80,7 @@ export class AgreementNftService {
 
     await this.nftRepository.save(nft);
 
-    this.logger.log(
+    this.logger.info(
       `NFT transferred for agreement ${agreementId}: ${fromAddress} -> ${toAddress}`,
     );
 
@@ -97,6 +100,7 @@ export class AgreementNftService {
     if (onChainOwner && onChainOwner !== nft.currentOwner) {
       this.logger.warn(
         `Ownership mismatch for ${agreementId}. Syncing: ${nft.currentOwner} -> ${onChainOwner}`,
+        new Error(`Ownership mismatch for ${agreementId}`),
       );
       nft.currentOwner = onChainOwner;
       await this.nftRepository.save(nft);

@@ -5,6 +5,8 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { LoggerService } from '../../../common/services/logger.service';
+import { Logging } from '../../../common/decorators/logging.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -34,13 +36,13 @@ import {
 
 @Injectable()
 export class StellarService {
-  private readonly logger = new Logger(StellarService.name);
   private readonly horizon: StellarSdk.Horizon.Server;
   private readonly networkPassphrase: string;
   private readonly baseFee: string;
   private readonly stellarConfig: StellarConfig;
 
   constructor(
+    private readonly logger: LoggerService,
     @InjectRepository(StellarAccount)
     private readonly accountRepository: Repository<StellarAccount>,
     @InjectRepository(StellarTransaction)
@@ -52,9 +54,9 @@ export class StellarService {
     private readonly encryptionService: EncryptionService,
   ) {
     this.stellarConfig = this.configService.get<StellarConfig>('stellar')!;
+    this.baseFee = this.stellarConfig.baseFee;
     this.horizon = new StellarSdk.Horizon.Server(this.stellarConfig.horizonUrl);
     this.networkPassphrase = this.stellarConfig.networkPassphrase;
-    this.baseFee = this.stellarConfig.baseFee;
   }
 
   // ==================== Account Management ====================
@@ -62,6 +64,7 @@ export class StellarService {
   /**
    * Creates a new Stellar account with encrypted secret key
    */
+  @Logging()
   async createAccount(dto: CreateAccountDto): Promise<StellarAccount> {
     try {
       // Generate a new keypair
@@ -84,7 +87,7 @@ export class StellarService {
       });
 
       const savedAccount = await this.accountRepository.save(account);
-      this.logger.log(`Created Stellar account: ${publicKey}`);
+      this.logger.info(`Created Stellar account: ${publicKey}`);
 
       return savedAccount;
     } catch (error) {
@@ -98,6 +101,7 @@ export class StellarService {
   /**
    * Fund an account using Friendbot (testnet only)
    */
+  @Logging()
   async fundAccountTestnet(publicKey: string): Promise<boolean> {
     if (this.stellarConfig.network !== 'testnet') {
       throw new BadRequestException(
@@ -124,7 +128,7 @@ export class StellarService {
       // Update account balance
       await this.syncAccountFromNetwork(publicKey);
 
-      this.logger.log(`Funded account via Friendbot: ${publicKey}`);
+      this.logger.info(`Funded account via Friendbot: ${publicKey}`);
       return true;
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -238,6 +242,7 @@ export class StellarService {
   /**
    * Send a payment from one account to another
    */
+  @Logging()
   async sendPayment(dto: CreatePaymentDto): Promise<StellarTransaction> {
     // Check for idempotency
     if (dto.idempotencyKey) {
@@ -245,7 +250,7 @@ export class StellarService {
         where: { idempotencyKey: dto.idempotencyKey },
       });
       if (existingTx) {
-        this.logger.log(
+        this.logger.info(
           `Returning existing transaction for idempotency key: ${dto.idempotencyKey}`,
         );
         return existingTx;
@@ -378,7 +383,7 @@ export class StellarService {
           this.logger.error('Failed to sync source account', err),
         );
 
-        this.logger.log(`Payment successful: ${txRecord.transactionHash}`);
+        this.logger.info(`Payment successful: ${txRecord.transactionHash}`);
         return txRecord;
       } catch (submitError: any) {
         txRecord.status = TransactionStatus.FAILED;
@@ -483,6 +488,7 @@ export class StellarService {
   /**
    * Create an escrow account and fund it
    */
+  @Logging()
   async createEscrow(dto: CreateEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -588,7 +594,7 @@ export class StellarService {
       await queryRunner.manager.save(txRecord);
       await queryRunner.commitTransaction();
 
-      this.logger.log(
+      this.logger.info(
         `Created escrow ${savedEscrow.id} with account ${escrowAccount.publicKey}`,
       );
 
@@ -606,6 +612,7 @@ export class StellarService {
   /**
    * Release escrow funds to destination
    */
+  @Logging()
   async releaseEscrow(dto: ReleaseEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -732,7 +739,7 @@ export class StellarService {
       await queryRunner.manager.save(txRecord);
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Released escrow ${escrow.id}`);
+      this.logger.info(`Released escrow ${escrow.id}`);
 
       return this.getEscrowById(escrow.id);
     } catch (error) {
@@ -747,6 +754,7 @@ export class StellarService {
   /**
    * Refund escrow funds back to source
    */
+  @Logging()
   async refundEscrow(dto: RefundEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -842,7 +850,7 @@ export class StellarService {
       await queryRunner.manager.save(txRecord);
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Refunded escrow ${escrow.id}`);
+      this.logger.info(`Refunded escrow ${escrow.id}`);
 
       return this.getEscrowById(escrow.id);
     } catch (error) {
@@ -920,7 +928,7 @@ export class StellarService {
             escrowId: escrow.id,
             reason: 'Escrow expired',
           });
-          this.logger.log(`Processed expired escrow ${escrow.id}`);
+          this.logger.info(`Processed expired escrow ${escrow.id}`);
         } catch (error) {
           this.logger.error(
             `Failed to process expired escrow ${escrow.id}`,

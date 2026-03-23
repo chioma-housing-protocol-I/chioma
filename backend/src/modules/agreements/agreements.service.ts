@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  Logger,
   Inject,
   forwardRef,
 } from '@nestjs/common';
+import { LoggerService } from '../../common/services/logger.service';
+import { Logging } from '../../common/decorators/logging.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -32,9 +33,8 @@ import { EscrowIntegrationService } from './escrow-integration.service';
 
 @Injectable()
 export class AgreementsService {
-  private readonly logger = new Logger(AgreementsService.name);
-
   constructor(
+    private readonly logger: LoggerService,
     @InjectRepository(RentAgreement)
     private readonly agreementRepository: Repository<RentAgreement>,
     @InjectRepository(Payment)
@@ -56,6 +56,7 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
+  @Logging()
   async create(
     createAgreementDto: CreateAgreementDto,
     performedBy?: string,
@@ -116,6 +117,7 @@ export class AgreementsService {
         } catch (escrowError) {
           this.logger.warn(
             `Failed to create escrow for agreement ${savedAgreement.id}: ${escrowError.message}`,
+            escrowError as Error,
           );
           // Don't fail the entire agreement creation if escrow fails
         }
@@ -222,6 +224,7 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
+  @Logging()
   async update(
     id: string,
     updateAgreementDto: UpdateAgreementDto,
@@ -278,6 +281,7 @@ export class AgreementsService {
     includeOldValues: true,
     includeNewValues: true,
   })
+  @Logging()
   async terminate(
     id: string,
     terminateDto: TerminateAgreementDto,
@@ -305,6 +309,7 @@ export class AgreementsService {
     level: AuditLevel.INFO,
     includeNewValues: true,
   })
+  @Logging()
   async recordPayment(
     agreementId: string,
     recordPaymentDto: RecordPaymentDto,

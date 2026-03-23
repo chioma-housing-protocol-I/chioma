@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { LoggerService } from '../../../common/services/logger.service';
+import { Logging } from '../../../common/decorators/logging.decorator';
 import { ConfigService } from '@nestjs/config';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
@@ -24,14 +26,16 @@ export interface PaymentSplit {
 
 @Injectable()
 export class ChiomaContractService {
-  private readonly logger = new Logger(ChiomaContractService.name);
   private readonly server: SorobanRpc.Server;
   private readonly contract?: Contract;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
   private readonly isConfigured: boolean;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly configService: ConfigService,
+  ) {
     const rpcUrl =
       this.configService.get<string>('SOROBAN_RPC_URL') ||
       'https://soroban-testnet.stellar.org';
@@ -67,6 +71,7 @@ export class ChiomaContractService {
     }
   }
 
+  @Logging()
   async createAgreement(params: CreateAgreementParams): Promise<string> {
     try {
       if (!this.isConfigured || !this.contract) {
@@ -114,12 +119,13 @@ export class ChiomaContractService {
     } catch (error) {
       this.logger.error(
         `Failed to create agreement: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async signAgreement(
     tenant: string,
     agreementId: string,
@@ -153,12 +159,13 @@ export class ChiomaContractService {
     } catch (error) {
       this.logger.error(
         `Failed to sign agreement: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async submitAgreement(
     landlord: string,
     agreementId: string,
@@ -192,12 +199,13 @@ export class ChiomaContractService {
     } catch (error) {
       this.logger.error(
         `Failed to submit agreement: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }
   }
 
+  @Logging()
   async cancelAgreement(
     caller: string,
     agreementId: string,
@@ -231,7 +239,7 @@ export class ChiomaContractService {
     } catch (error) {
       this.logger.error(
         `Failed to cancel agreement: ${error.message}`,
-        error.stack,
+        error as Error,
       );
       throw error;
     }

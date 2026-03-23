@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { LoggerService } from '../../../common/services/logger.service';
+import { Logging } from '../../../common/decorators/logging.decorator';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -22,14 +24,16 @@ export interface RentObligationData {
 
 @Injectable()
 export class RentObligationNftService {
-  private readonly logger = new Logger(RentObligationNftService.name);
   private readonly server: SorobanRpc.Server;
   private readonly contract?: Contract;
   private readonly networkPassphrase: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
   private readonly isConfigured: boolean;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly configService: ConfigService,
+  ) {
     const rpcUrl =
       this.configService.get<string>('SOROBAN_RPC_URL') ||
       'https://soroban-testnet.stellar.org';
@@ -66,6 +70,7 @@ export class RentObligationNftService {
     }
   }
 
+  @Logging()
   async mintObligation(
     params: MintObligationParams,
   ): Promise<{ txHash: string; obligationId: string }> {
@@ -85,7 +90,7 @@ export class RentObligationNftService {
 
       const response = await this.server.sendTransaction(tx);
 
-      this.logger.log(
+      this.logger.info(
         `Minted rent obligation NFT for agreement ${params.agreementId}`,
       );
 
@@ -102,6 +107,7 @@ export class RentObligationNftService {
     }
   }
 
+  @Logging()
   async transferObligation(
     params: TransferObligationParams,
   ): Promise<{ txHash: string }> {
@@ -121,7 +127,7 @@ export class RentObligationNftService {
 
       const response = await this.server.sendTransaction(tx);
 
-      this.logger.log(
+      this.logger.info(
         `Transferred obligation ${params.agreementId} from ${params.fromAddress} to ${params.toAddress}`,
       );
 

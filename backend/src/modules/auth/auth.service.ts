@@ -5,6 +5,8 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
+import { LoggerService } from '../../common/services/logger.service';
+import { Logging } from '../../common/decorators/logging.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -34,9 +36,8 @@ const RESET_TOKEN_EXPIRY_HOURS = 1;
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
   constructor(
+    private readonly logger: LoggerService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
@@ -46,6 +47,7 @@ export class AuthService {
     private mfaService: MfaService,
   ) {}
 
+  @Logging()
   async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
 
@@ -83,7 +85,7 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
-    this.logger.log(`User registered successfully: ${savedUser.id}`);
+    this.logger.info(`User registered successfully: ${savedUser.id}`);
 
     // Send verification email asynchronously
     this.emailService
@@ -111,6 +113,7 @@ export class AuthService {
     };
   }
 
+  @Logging()
   async login(
     loginDto: LoginDto,
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
@@ -164,7 +167,7 @@ export class AuthService {
       return await this.mfaService.generateMfaToken(user, this);
     }
 
-    this.logger.log(`User logged in successfully: ${user.id}`);
+    this.logger.info(`User logged in successfully: ${user.id}`);
 
     const { accessToken, refreshToken } = this.generateTokens(
       user.id,
@@ -189,6 +192,7 @@ export class AuthService {
     return this.mfaService.verifyMfaToken(mfaToken, this);
   }
 
+  @Logging()
   async refreshToken(
     refreshTokenDto: RefreshTokenDto,
   ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -232,7 +236,7 @@ export class AuthService {
       // Invalidate old refresh token before setting new one (token rotation)
       await this.updateRefreshToken(user.id, tokens.refreshToken);
 
-      this.logger.log(`Token refreshed and rotated for user: ${user.id}`);
+      this.logger.info(`Token refreshed and rotated for user: ${user.id}`);
 
       return tokens;
     } catch (error: unknown) {
@@ -276,7 +280,7 @@ export class AuthService {
     );
 
     await this.userRepository.save(user);
-    this.logger.log(`Password reset token generated for user: ${user.id}`);
+    this.logger.info(`Password reset token generated for user: ${user.id}`);
 
     // Send password reset email asynchronously
     this.emailService
@@ -343,7 +347,7 @@ export class AuthService {
     user.accountLockedUntil = null;
 
     await this.userRepository.save(user);
-    this.logger.log(`Password reset successful for user: ${user.id}`);
+    this.logger.info(`Password reset successful for user: ${user.id}`);
 
     return {
       message:
@@ -365,7 +369,7 @@ export class AuthService {
     user.verificationToken = null;
 
     await this.userRepository.save(user);
-    this.logger.log(`Email verified for user: ${user.id}`);
+    this.logger.info(`Email verified for user: ${user.id}`);
 
     return {
       message: 'Email verified successfully',
@@ -374,7 +378,7 @@ export class AuthService {
 
   async logout(userId: string): Promise<MessageResponseDto> {
     await this.userRepository.update({ id: userId }, { refreshToken: null });
-    this.logger.log(`User logged out: ${userId}`);
+    this.logger.info(`User logged out: ${userId}`);
 
     return {
       message: 'Logged out successfully',
