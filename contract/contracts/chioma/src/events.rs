@@ -228,6 +228,67 @@ pub(crate) fn extension_proposed(
         extension_id,
         agreement_id,
         new_end_date,
+/// Events for multi-token support
+
+#[contractevent]
+pub struct TokenAdded {
+    pub token: Address,
+    pub symbol: String,
+}
+
+#[contractevent]
+pub struct TokenRemoved {
+    pub token: Address,
+}
+
+#[contractevent]
+pub struct ExchangeRateUpdated {
+    pub from_token: Address,
+    pub to_token: Address,
+    pub rate: i128,
+}
+
+#[contractevent]
+pub struct PaymentMadeWithToken {
+    pub agreement_id: String,
+    pub token: Address,
+    pub amount: i128,
+}
+
+#[contractevent]
+pub struct EscrowReleasedWithToken {
+    pub escrow_id: String,
+    pub token: Address,
+    pub amount: i128,
+}
+
+pub(crate) fn token_added(env: &Env, token: Address, symbol: String) {
+    TokenAdded { token, symbol }.publish(env);
+}
+
+pub(crate) fn token_removed(env: &Env, token: Address) {
+    TokenRemoved { token }.publish(env);
+}
+
+pub(crate) fn exchange_rate_updated(env: &Env, from_token: Address, to_token: Address, rate: i128) {
+    ExchangeRateUpdated {
+        from_token,
+        to_token,
+        rate,
+    }
+    .publish(env);
+}
+
+pub(crate) fn payment_made_with_token(
+    env: &Env,
+    agreement_id: String,
+    token: Address,
+    amount: i128,
+) {
+    PaymentMadeWithToken {
+        agreement_id,
+        token,
+        amount,
     }
     .publish(env);
 }
@@ -250,4 +311,16 @@ pub(crate) fn extension_activated(env: &Env, extension_id: String) {
 /// Helper function to emit extension cancelled event
 pub(crate) fn extension_cancelled(env: &Env, extension_id: String) {
     ExtensionCancelled { extension_id }.publish(env);
+pub(crate) fn escrow_released_with_token(
+    env: &Env,
+    escrow_id: String,
+    token: Address,
+    amount: i128,
+) {
+    EscrowReleasedWithToken {
+        escrow_id,
+        token,
+        amount,
+    }
+    .publish(env);
 }

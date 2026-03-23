@@ -9,4 +9,8 @@ pub enum DataKey {
     Initialized,
     Extension(String),
     ExtensionHistory(String),
+    SupportedToken(soroban_sdk::Address),
+    SupportedTokens,
+    ExchangeRate(soroban_sdk::Address, soroban_sdk::Address),
+    AgreementToken(String),
 }

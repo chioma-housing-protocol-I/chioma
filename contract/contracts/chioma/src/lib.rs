@@ -6,28 +6,42 @@
 //! @title Chioma
 //! @notice On-chain rental agreement lifecycle: create, sign, submit, cancel, and query agreements.
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 mod agreement;
 mod errors;
 mod events;
+mod multi_token;
 mod storage;
 mod types;
 
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod tests_multi_token;
+
 pub use agreement::{
     accept_extension, activate_extension, cancel_agreement, cancel_extension, create_agreement,
     get_agreement, get_agreement_count, get_current_agreement_end, get_extension,
     get_extension_history, get_payment_split, has_agreement, propose_extension, reject_extension,
     sign_agreement, submit_agreement, validate_agreement_params,
+    cancel_agreement, create_agreement, create_agreement_with_token, get_agreement,
+    get_agreement_count, get_agreement_token, get_payment_split, has_agreement,
+    make_payment_with_token, release_escrow_with_token, sign_agreement, submit_agreement,
+    validate_agreement_params,
 };
 pub use errors::RentalError;
+pub use multi_token::{
+    add_supported_token, convert_amount, get_exchange_rate, get_supported_tokens,
+    is_token_supported, remove_supported_token, set_exchange_rate,
+};
 pub use storage::DataKey;
 pub use types::{
     AgreementExtension, AgreementStatus, Config, ContractState, ExtensionHistory, ExtensionStatus,
     PaymentSplit, RentAgreement,
+    AgreementStatus, AgreementWithToken, Config, ContractState, PaymentSplit, RentAgreement,
+    SupportedToken, TokenExchangeRate,
 };
 
 /// Chioma rental agreement contract.
@@ -122,6 +136,145 @@ impl Contract {
         events::config_updated(&env, state.admin, old_config, new_config);
 
         Ok(())
+    }
+
+    // --- Token Management Functions ---
+
+    pub fn add_supported_token(
+        env: Env,
+        token_address: Address,
+        symbol: String,
+        decimals: u32,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        // Only admin can add tokens
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        multi_token::add_supported_token(
+            env,
+            token_address,
+            symbol,
+            decimals,
+            min_amount,
+            max_amount,
+        )
+    }
+
+    pub fn remove_supported_token(env: Env, token_address: Address) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        multi_token::remove_supported_token(env, token_address)
+    }
+
+    pub fn get_supported_tokens(env: Env) -> Result<Vec<SupportedToken>, RentalError> {
+        multi_token::get_supported_tokens(env)
+    }
+
+    pub fn is_token_supported(env: Env, token_address: Address) -> Result<bool, RentalError> {
+        multi_token::is_token_supported(env, token_address)
+    }
+
+    // --- Exchange Rate Functions ---
+
+    pub fn set_exchange_rate(
+        env: Env,
+        from_token: Address,
+        to_token: Address,
+        rate: i128,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        multi_token::set_exchange_rate(env, from_token, to_token, rate)
+    }
+
+    pub fn get_exchange_rate(
+        env: Env,
+        from_token: Address,
+        to_token: Address,
+    ) -> Result<i128, RentalError> {
+        multi_token::get_exchange_rate(env, from_token, to_token)
+    }
+
+    pub fn update_exchange_rates(
+        env: Env,
+        rates: Vec<(Address, Address, i128)>,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        for (from, to, rate) in rates.iter() {
+            multi_token::set_exchange_rate(env.clone(), from, to, rate)?;
+        }
+        Ok(())
+    }
+
+    pub fn convert_amount(
+        env: Env,
+        from_token: Address,
+        to_token: Address,
+        amount: i128,
+    ) -> Result<i128, RentalError> {
+        multi_token::convert_amount(env, from_token, to_token, amount)
+    }
+
+    // --- Agreement Functions with Token ---
+
+    pub fn create_agreement_with_token(
+        env: Env,
+        property_id: String,
+        tenant: Address,
+        landlord: Address,
+        payment_token: Address,
+        rent_amount: i128,
+        deposit_amount: i128,
+        lease_start: u64,
+        lease_end: u64,
+    ) -> Result<String, RentalError> {
+        Self::check_paused(&env)?;
+        agreement::create_agreement_with_token(
+            &env,
+            property_id,
+            tenant,
+            landlord,
+            payment_token,
+            rent_amount,
+            deposit_amount,
+            lease_start,
+            lease_end,
+        )
+    }
+
+    pub fn get_agreement_token(env: Env, agreement_id: String) -> Result<Address, RentalError> {
+        agreement::get_agreement_token(&env, agreement_id)
+    }
+
+    // --- Payment Functions with Token ---
+
+    pub fn make_payment_with_token(
+        env: Env,
+        agreement_id: String,
+        amount: i128,
+        token: Address,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::make_payment_with_token(&env, agreement_id, amount, token)
+    }
+
+    pub fn release_escrow_with_token(
+        env: Env,
+        escrow_id: String,
+        token: Address,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::release_escrow_with_token(&env, escrow_id, token)
     }
 
     /// Create a new rental agreement.

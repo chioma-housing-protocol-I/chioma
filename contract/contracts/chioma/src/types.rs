@@ -68,6 +68,13 @@ pub enum ExtensionStatus {
     Active,
     Completed,
     Cancelled,
+pub struct SupportedToken {
+    pub token_address: Address,
+    pub symbol: String,
+    pub decimals: u32,
+    pub enabled: bool,
+    pub min_amount: i128,
+    pub max_amount: i128,
 }
 
 #[contracttype]
@@ -81,6 +88,11 @@ pub struct AgreementExtension {
     pub extension_deposit: i128,
     pub status: ExtensionStatus,
     pub created_at: u64,
+pub struct AgreementWithToken {
+    pub agreement_id: String,
+    pub payment_token: Address,
+    pub rent_amount: i128,
+    pub deposit_amount: i128,
 }
 
 #[contracttype]
@@ -89,4 +101,9 @@ pub struct ExtensionHistory {
     pub agreement_id: String,
     pub extensions: Vec<AgreementExtension>,
     pub total_extensions: u32,
+pub struct TokenExchangeRate {
+    pub from_token: Address,
+    pub to_token: Address,
+    pub rate: i128, // Scaled by 10^18
+    pub updated_at: u64,
 }

@@ -63,6 +63,35 @@ pub fn create_agreement(
     // Tenant MUST authorize creation
     tenant.require_auth();
 
+    create_agreement_internal(
+        env,
+        agreement_id,
+        landlord,
+        tenant,
+        agent,
+        monthly_rent,
+        security_deposit,
+        start_date,
+        end_date,
+        agent_commission_rate,
+        payment_token,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_agreement_internal(
+    env: &Env,
+    agreement_id: String,
+    landlord: Address,
+    tenant: Address,
+    agent: Option<Address>,
+    monthly_rent: i128,
+    security_deposit: i128,
+    start_date: u64,
+    end_date: u64,
+    agent_commission_rate: u32,
+    payment_token: Address,
+) -> Result<(), RentalError> {
     // Validate inputs
     validate_agreement_params(
         env,
@@ -378,6 +407,47 @@ pub fn propose_extension(
         agreement_id.clone(),
         agreement_id.clone(),
         extension_end,
+/// Create a new agreement with a specific payment token
+#[allow(clippy::too_many_arguments)]
+pub fn create_agreement_with_token(
+    env: &Env,
+    property_id: String,
+    tenant: Address,
+    landlord: Address,
+    payment_token: Address,
+    rent_amount: i128,
+    deposit_amount: i128,
+    lease_start: u64,
+    lease_end: u64,
+) -> Result<String, RentalError> {
+    tenant.require_auth();
+
+    // Check if token is supported
+    if !crate::multi_token::is_token_supported(env.clone(), payment_token.clone())? {
+        return Err(RentalError::TokenNotSupported);
+    }
+
+    // Use property_id + nonce or just property_id if it's unique
+    let agreement_id = property_id; // For simplicity, using property_id as agreement_id
+
+    create_agreement_internal(
+        env,
+        agreement_id.clone(),
+        landlord,
+        tenant,
+        None,
+        rent_amount,
+        deposit_amount,
+        lease_start,
+        lease_end,
+        0,
+        payment_token.clone(),
+    )?;
+
+    // Store the token mapping explicitly if needed, but it's already in RentAgreement
+    env.storage().persistent().set(
+        &DataKey::AgreementToken(agreement_id.clone()),
+        &payment_token,
     );
 
     Ok(agreement_id)
@@ -515,6 +585,74 @@ pub fn activate_extension(env: &Env, extension_id: String) -> Result<(), RentalE
         .remove(&DataKey::Extension(extension_id.clone()));
 
     events::extension_activated(env, extension_id);
+/// Get the payment token for an agreement
+pub fn get_agreement_token(env: &Env, agreement_id: String) -> Result<Address, RentalError> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::AgreementToken(agreement_id))
+        .ok_or(RentalError::AgreementNotFound)
+}
+
+/// Make a payment for an agreement using a specific token
+pub fn make_payment_with_token(
+    env: &Env,
+    agreement_id: String,
+    amount: i128,
+    token: Address,
+) -> Result<(), RentalError> {
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if agreement.status != AgreementStatus::Active {
+        return Err(RentalError::AgreementNotActive);
+    }
+
+    agreement.tenant.require_auth();
+
+    // Convert amount to the agreement's base token if they differ
+    let amount_in_base = if token != agreement.payment_token {
+        crate::multi_token::convert_amount(
+            env.clone(),
+            token.clone(),
+            agreement.payment_token.clone(),
+            amount,
+        )?
+    } else {
+        amount
+    };
+
+    if amount_in_base < agreement.monthly_rent {
+        return Err(RentalError::InsufficientPayment);
+    }
+
+    // Transfer tokens from tenant to contract (escrow)
+    let client = soroban_sdk::token::Client::new(env, &token);
+    client.transfer(&agreement.tenant, env.current_contract_address(), &amount);
+
+    // Update agreement state
+    agreement.total_rent_paid += amount_in_base;
+    agreement.payment_count += 1;
+
+    // Simple split for now: 100% to landlord
+    let split = PaymentSplit {
+        landlord_amount: amount_in_base,
+        platform_amount: 0,
+        token: token.clone(),
+        payment_date: env.ledger().timestamp(),
+        payer: agreement.tenant.clone(),
+    };
+    agreement
+        .payment_history
+        .set(agreement.payment_count, split);
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+
+    events::payment_made_with_token(env, agreement_id, token, amount);
 
     Ok(())
 }
@@ -598,4 +736,34 @@ pub fn get_current_agreement_end(env: &Env, agreement_id: String) -> Result<u64,
         .ok_or(RentalError::AgreementNotFound)?;
 
     Ok(agreement.end_date)
+}
+/// Release escrow for an agreement
+pub fn release_escrow_with_token(
+    env: &Env,
+    escrow_id: String,
+    token: Address,
+) -> Result<(), RentalError> {
+    // For simplicity, we assume escrow_id is the agreement_id
+    let agreement_id = escrow_id.clone();
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only landlord can release? Or admin?
+    // Let's assume landlord for this implementation
+    agreement.landlord.require_auth();
+
+    let contract_addr = env.current_contract_address();
+    let client = soroban_sdk::token::Client::new(env, &token);
+    let balance = client.balance(&contract_addr);
+
+    if balance > 0 {
+        client.transfer(&contract_addr, &agreement.landlord, &balance);
+    }
+
+    events::escrow_released_with_token(env, escrow_id, token, balance);
+
+    Ok(())
 }

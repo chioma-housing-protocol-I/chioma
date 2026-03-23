@@ -21,4 +21,8 @@ pub enum RentalError {
     ExtensionNotFound = 19,
     ExtensionAlreadyExists = 20,
     NotLandlord = 21,
+    TokenNotSupported = 19,
+    RateNotFound = 20,
+    ConversionError = 21,
+    InsufficientPayment = 22,
 }
