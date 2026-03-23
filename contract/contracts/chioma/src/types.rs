@@ -68,6 +68,10 @@ pub enum ExtensionStatus {
     Active,
     Completed,
     Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SupportedToken {
     pub token_address: Address,
     pub symbol: String,
@@ -88,6 +92,10 @@ pub struct AgreementExtension {
     pub extension_deposit: i128,
     pub status: ExtensionStatus,
     pub created_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgreementWithToken {
     pub agreement_id: String,
     pub payment_token: Address,
@@ -101,6 +109,10 @@ pub struct ExtensionHistory {
     pub agreement_id: String,
     pub extensions: Vec<AgreementExtension>,
     pub total_extensions: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TokenExchangeRate {
     pub from_token: Address,
     pub to_token: Address,

@@ -228,6 +228,10 @@ pub(crate) fn extension_proposed(
         extension_id,
         agreement_id,
         new_end_date,
+    }
+    .publish(env);
+}
+
 /// Events for multi-token support
 
 #[contractevent]
@@ -311,6 +315,8 @@ pub(crate) fn extension_activated(env: &Env, extension_id: String) {
 /// Helper function to emit extension cancelled event
 pub(crate) fn extension_cancelled(env: &Env, extension_id: String) {
     ExtensionCancelled { extension_id }.publish(env);
+}
+
 pub(crate) fn escrow_released_with_token(
     env: &Env,
     escrow_id: String,

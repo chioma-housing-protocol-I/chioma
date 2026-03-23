@@ -23,13 +23,10 @@ mod tests_multi_token;
 
 pub use agreement::{
     accept_extension, activate_extension, cancel_agreement, cancel_extension, create_agreement,
-    get_agreement, get_agreement_count, get_current_agreement_end, get_extension,
-    get_extension_history, get_payment_split, has_agreement, propose_extension, reject_extension,
-    sign_agreement, submit_agreement, validate_agreement_params,
-    cancel_agreement, create_agreement, create_agreement_with_token, get_agreement,
-    get_agreement_count, get_agreement_token, get_payment_split, has_agreement,
-    make_payment_with_token, release_escrow_with_token, sign_agreement, submit_agreement,
-    validate_agreement_params,
+    create_agreement_with_token, get_agreement, get_agreement_count, get_agreement_token,
+    get_current_agreement_end, get_extension, get_extension_history, get_payment_split,
+    has_agreement, make_payment_with_token, propose_extension, reject_extension,
+    release_escrow_with_token, sign_agreement, submit_agreement, validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use multi_token::{
@@ -38,10 +35,9 @@ pub use multi_token::{
 };
 pub use storage::DataKey;
 pub use types::{
-    AgreementExtension, AgreementStatus, Config, ContractState, ExtensionHistory, ExtensionStatus,
-    PaymentSplit, RentAgreement,
-    AgreementStatus, AgreementWithToken, Config, ContractState, PaymentSplit, RentAgreement,
-    SupportedToken, TokenExchangeRate,
+    AgreementExtension, AgreementStatus, AgreementWithToken, Config, ContractState,
+    ExtensionHistory, ExtensionStatus, PaymentSplit, RentAgreement, SupportedToken,
+    TokenExchangeRate,
 };
 
 /// Chioma rental agreement contract.

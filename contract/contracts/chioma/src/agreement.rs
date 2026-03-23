@@ -407,6 +407,11 @@ pub fn propose_extension(
         agreement_id.clone(),
         agreement_id.clone(),
         extension_end,
+    );
+
+    Ok(agreement_id)
+}
+
 /// Create a new agreement with a specific payment token
 #[allow(clippy::too_many_arguments)]
 pub fn create_agreement_with_token(
@@ -585,6 +590,10 @@ pub fn activate_extension(env: &Env, extension_id: String) -> Result<(), RentalE
         .remove(&DataKey::Extension(extension_id.clone()));
 
     events::extension_activated(env, extension_id);
+
+    Ok(())
+}
+
 /// Get the payment token for an agreement
 pub fn get_agreement_token(env: &Env, agreement_id: String) -> Result<Address, RentalError> {
     env.storage()
