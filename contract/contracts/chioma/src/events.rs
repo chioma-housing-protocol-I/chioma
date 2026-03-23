@@ -173,3 +173,81 @@ pub(crate) fn config_updated(env: &Env, admin: Address, old_config: Config, new_
     }
     .publish(env);
 }
+
+/// Event emitted when an extension is proposed
+/// Topics: ["ext_propose", extension_id: String, agreement_id: String]
+#[contractevent(topics = ["ext_propose"])]
+pub struct ExtensionProposed {
+    #[topic]
+    pub extension_id: String,
+    #[topic]
+    pub agreement_id: String,
+    pub new_end_date: u64,
+}
+
+/// Event emitted when an extension is accepted
+/// Topics: ["ext_accept", extension_id: String]
+#[contractevent(topics = ["ext_accept"])]
+pub struct ExtensionAccepted {
+    #[topic]
+    pub extension_id: String,
+}
+
+/// Event emitted when an extension is rejected
+/// Topics: ["ext_reject", extension_id: String]
+#[contractevent(topics = ["ext_reject"])]
+pub struct ExtensionRejected {
+    #[topic]
+    pub extension_id: String,
+}
+
+/// Event emitted when an extension is activated
+/// Topics: ["ext_active", extension_id: String]
+#[contractevent(topics = ["ext_active"])]
+pub struct ExtensionActivated {
+    #[topic]
+    pub extension_id: String,
+}
+
+/// Event emitted when an extension is cancelled
+/// Topics: ["ext_cancel", extension_id: String]
+#[contractevent(topics = ["ext_cancel"])]
+pub struct ExtensionCancelled {
+    #[topic]
+    pub extension_id: String,
+}
+
+/// Helper function to emit extension proposed event
+pub(crate) fn extension_proposed(
+    env: &Env,
+    extension_id: String,
+    agreement_id: String,
+    new_end_date: u64,
+) {
+    ExtensionProposed {
+        extension_id,
+        agreement_id,
+        new_end_date,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit extension accepted event
+pub(crate) fn extension_accepted(env: &Env, extension_id: String) {
+    ExtensionAccepted { extension_id }.publish(env);
+}
+
+/// Helper function to emit extension rejected event
+pub(crate) fn extension_rejected(env: &Env, extension_id: String) {
+    ExtensionRejected { extension_id }.publish(env);
+}
+
+/// Helper function to emit extension activated event
+pub(crate) fn extension_activated(env: &Env, extension_id: String) {
+    ExtensionActivated { extension_id }.publish(env);
+}
+
+/// Helper function to emit extension cancelled event
+pub(crate) fn extension_cancelled(env: &Env, extension_id: String) {
+    ExtensionCancelled { extension_id }.publish(env);
+}

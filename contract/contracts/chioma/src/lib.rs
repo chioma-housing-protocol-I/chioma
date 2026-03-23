@@ -18,12 +18,17 @@ mod types;
 mod tests;
 
 pub use agreement::{
-    cancel_agreement, create_agreement, get_agreement, get_agreement_count, get_payment_split,
-    has_agreement, sign_agreement, submit_agreement, validate_agreement_params,
+    accept_extension, activate_extension, cancel_agreement, cancel_extension, create_agreement,
+    get_agreement, get_agreement_count, get_current_agreement_end, get_extension,
+    get_extension_history, get_payment_split, has_agreement, propose_extension, reject_extension,
+    sign_agreement, submit_agreement, validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use storage::DataKey;
-pub use types::{AgreementStatus, Config, ContractState, PaymentSplit, RentAgreement};
+pub use types::{
+    AgreementExtension, AgreementStatus, Config, ContractState, ExtensionHistory, ExtensionStatus,
+    PaymentSplit, RentAgreement,
+};
 
 /// Chioma rental agreement contract.
 ///
@@ -254,5 +259,112 @@ impl Contract {
         month: u32,
     ) -> Result<PaymentSplit, RentalError> {
         agreement::get_payment_split(&env, agreement_id, month)
+    }
+
+    /// Propose a new agreement extension.
+    ///
+    /// @notice Landlord proposes an extension for an active agreement.
+    /// @param env The Soroban environment.
+    /// @param agreement_id Identifier of the agreement to extend.
+    /// @param extension_months Number of months to extend by.
+    /// @param new_rent Optional new monthly rent for the extension.
+    /// @param new_deposit Optional new security deposit for the extension.
+    /// @return The extension ID (same as agreement_id in this implementation).
+    pub fn propose_extension(
+        env: Env,
+        agreement_id: String,
+        extension_months: u32,
+        new_rent: Option<i128>,
+        new_deposit: Option<i128>,
+    ) -> Result<String, RentalError> {
+        Self::check_paused(&env)?;
+        agreement::propose_extension(&env, agreement_id, extension_months, new_rent, new_deposit)
+    }
+
+    /// Accept an agreement extension.
+    ///
+    /// @notice Tenant accepts a proposed extension.
+    /// @param env The Soroban environment.
+    /// @param extension_id Identifier of the extension.
+    /// @return Ok(()) on success.
+    pub fn accept_extension(env: Env, extension_id: String) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::accept_extension(&env, extension_id)
+    }
+
+    /// Reject an agreement extension.
+    ///
+    /// @notice Tenant or landlord rejects a proposed extension.
+    /// @param env The Soroban environment.
+    /// @param extension_id Identifier of the extension.
+    /// @param reason Reason for rejection.
+    /// @return Ok(()) on success.
+    pub fn reject_extension(
+        env: Env,
+        extension_id: String,
+        reason: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::reject_extension(&env, extension_id, reason)
+    }
+
+    /// Activate an accepted extension.
+    ///
+    /// @notice Landlord activates an extension that has been accepted by the tenant.
+    /// @param env The Soroban environment.
+    /// @param extension_id Identifier of the extension.
+    /// @return Ok(()) on success.
+    pub fn activate_extension(env: Env, extension_id: String) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::activate_extension(&env, extension_id)
+    }
+
+    /// Cancel a proposed extension.
+    ///
+    /// @notice Landlord cancels their own proposed extension.
+    /// @param env The Soroban environment.
+    /// @param extension_id Identifier of the extension.
+    /// @param reason Reason for cancellation.
+    /// @return Ok(()) on success.
+    pub fn cancel_extension(
+        env: Env,
+        extension_id: String,
+        reason: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::cancel_extension(&env, extension_id, reason)
+    }
+
+    /// Retrieve details of an extension.
+    ///
+    /// @notice Returns full extension data by ID.
+    /// @param env The Soroban environment.
+    /// @param extension_id Identifier of the extension.
+    /// @return The extension on success.
+    pub fn get_extension(env: Env, extension_id: String) -> Result<AgreementExtension, RentalError> {
+        agreement::get_extension(&env, extension_id)
+    }
+
+    /// Get extension history for an agreement.
+    ///
+    /// @notice Returns all historical extensions for a given agreement.
+    /// @param env The Soroban environment.
+    /// @param agreement_id Identifier of the agreement.
+    /// @return ExtensionHistory on success.
+    pub fn get_extension_history(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<ExtensionHistory, RentalError> {
+        agreement::get_extension_history(&env, agreement_id)
+    }
+
+    /// Get current end date for an agreement.
+    ///
+    /// @notice Returns the current end date from the agreement storage.
+    /// @param env The Soroban environment.
+    /// @param agreement_id Identifier of the agreement.
+    /// @return The end date timestamp.
+    pub fn get_current_agreement_end(env: Env, agreement_id: String) -> Result<u64, RentalError> {
+        agreement::get_current_agreement_end(&env, agreement_id)
     }
 }

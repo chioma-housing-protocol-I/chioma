@@ -1,10 +1,13 @@
 //! Agreement management logic for the Chioma/Rental contract.
-use soroban_sdk::{Address, Env, Map, String};
+use soroban_sdk::{Address, Env, Map, String, Vec};
 
 use crate::errors::RentalError;
 use crate::events;
 use crate::storage::DataKey;
-use crate::types::{AgreementStatus, PaymentSplit, RentAgreement};
+use crate::types::{
+    AgreementExtension, AgreementStatus, ExtensionHistory, ExtensionStatus, PaymentSplit,
+    RentAgreement,
+};
 
 const TTL_THRESHOLD: u32 = 500000;
 const TTL_BUMP: u32 = 500000;
@@ -308,4 +311,283 @@ pub fn get_payment_split(
         .payment_history
         .get(month)
         .ok_or(RentalError::AgreementNotFound)
+}
+
+/// Propose a new agreement extension
+pub fn propose_extension(
+    env: &Env,
+    agreement_id: String,
+    extension_months: u32,
+    new_rent: Option<i128>,
+    new_deposit: Option<i128>,
+) -> Result<String, RentalError> {
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only landlord can propose extension
+    agreement.landlord.require_auth();
+
+    // Agreement must be Active
+    if agreement.status != AgreementStatus::Active {
+        return Err(RentalError::InvalidState);
+    }
+
+    // Check if there's already a proposed extension
+    if env
+        .storage()
+        .persistent()
+        .has(&DataKey::Extension(agreement_id.clone()))
+    {
+        return Err(RentalError::ExtensionAlreadyExists);
+    }
+
+    // Calculate dates
+    let extension_start = agreement.end_date;
+    let seconds_per_month: u64 = 30 * 24 * 60 * 60; // Approximate
+    let extension_end = extension_start + (extension_months as u64 * seconds_per_month);
+
+    let extension_rent = new_rent.unwrap_or(agreement.monthly_rent);
+    let extension_deposit = new_deposit.unwrap_or(agreement.security_deposit);
+
+    let extension = AgreementExtension {
+        id: agreement_id.clone(),
+        original_agreement_id: agreement_id.clone(),
+        extension_start,
+        extension_end,
+        extension_rent,
+        extension_deposit,
+        status: ExtensionStatus::Proposed,
+        created_at: env.ledger().timestamp(),
+    };
+
+    // Store extension
+    env.storage()
+        .persistent()
+        .set(&DataKey::Extension(agreement_id.clone()), &extension);
+    env.storage().persistent().extend_ttl(
+        &DataKey::Extension(agreement_id.clone()),
+        TTL_THRESHOLD,
+        TTL_BUMP,
+    );
+
+    events::extension_proposed(
+        env,
+        agreement_id.clone(),
+        agreement_id.clone(),
+        extension_end,
+    );
+
+    Ok(agreement_id)
+}
+
+/// Accept an agreement extension
+pub fn accept_extension(env: &Env, extension_id: String) -> Result<(), RentalError> {
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Extension(extension_id.clone()))
+        .ok_or(RentalError::ExtensionNotFound)?;
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only tenant can accept extension
+    agreement.tenant.require_auth();
+
+    if extension.status != ExtensionStatus::Proposed {
+        return Err(RentalError::InvalidState);
+    }
+
+    extension.status = ExtensionStatus::Accepted;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Extension(extension_id.clone()), &extension);
+
+    events::extension_accepted(env, extension_id);
+
+    Ok(())
+}
+
+/// Reject an agreement extension
+pub fn reject_extension(env: &Env, extension_id: String, _reason: String) -> Result<(), RentalError> {
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Extension(extension_id.clone()))
+        .ok_or(RentalError::ExtensionNotFound)?;
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Either party can reject? Usually tenant rejects landlord's proposal
+    // But let's allow both for now if they are authorized
+    if !agreement.tenant.has_auth() && !agreement.landlord.has_auth() {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if extension.status != ExtensionStatus::Proposed {
+        return Err(RentalError::InvalidState);
+    }
+
+    extension.status = ExtensionStatus::Rejected;
+
+    // Move to history
+    let mut history = get_extension_history(env, extension.original_agreement_id.clone())?;
+    history.extensions.push_back(extension.clone());
+    history.total_extensions += 1;
+    env.storage().persistent().set(
+        &DataKey::ExtensionHistory(extension.original_agreement_id.clone()),
+        &history,
+    );
+
+    // Remove from active extensions
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Extension(extension_id.clone()));
+
+    events::extension_rejected(env, extension_id);
+
+    Ok(())
+}
+
+/// Activate an accepted extension
+pub fn activate_extension(env: &Env, extension_id: String) -> Result<(), RentalError> {
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Extension(extension_id.clone()))
+        .ok_or(RentalError::ExtensionNotFound)?;
+
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only landlord can activate extension (or maybe automatic, but issue says landlord)
+    agreement.landlord.require_auth();
+
+    if extension.status != ExtensionStatus::Accepted {
+        return Err(RentalError::InvalidState);
+    }
+
+    // Update agreement
+    agreement.end_date = extension.extension_end;
+    agreement.monthly_rent = extension.extension_rent;
+    agreement.security_deposit = extension.extension_deposit;
+    // We might need to update other things like next_payment_due if it was completed?
+    // But extensions happen before completion usually.
+
+    extension.status = ExtensionStatus::Active;
+
+    // Move to history
+    let mut history = get_extension_history(env, extension.original_agreement_id.clone())?;
+    history.extensions.push_back(extension.clone());
+    history.total_extensions += 1;
+    env.storage().persistent().set(
+        &DataKey::ExtensionHistory(extension.original_agreement_id.clone()),
+        &history,
+    );
+
+    // Update agreement in storage
+    env.storage().persistent().set(
+        &DataKey::Agreement(extension.original_agreement_id.clone()),
+        &agreement,
+    );
+
+    // Remove from active extensions
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Extension(extension_id.clone()));
+
+    events::extension_activated(env, extension_id);
+
+    Ok(())
+}
+
+/// Cancel a proposed extension
+pub fn cancel_extension(env: &Env, extension_id: String, _reason: String) -> Result<(), RentalError> {
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Extension(extension_id.clone()))
+        .ok_or(RentalError::ExtensionNotFound)?;
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    // Only landlord can cancel their own proposal
+    agreement.landlord.require_auth();
+
+    if extension.status != ExtensionStatus::Proposed {
+        return Err(RentalError::InvalidState);
+    }
+
+    extension.status = ExtensionStatus::Cancelled;
+
+    // Move to history
+    let mut history = get_extension_history(env, extension.original_agreement_id.clone())?;
+    history.extensions.push_back(extension.clone());
+    history.total_extensions += 1;
+    env.storage().persistent().set(
+        &DataKey::ExtensionHistory(extension.original_agreement_id.clone()),
+        &history,
+    );
+
+    // Remove from active extensions
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Extension(extension_id.clone()));
+
+    events::extension_cancelled(env, extension_id);
+
+    Ok(())
+}
+
+/// Retrieve an extension by ID
+pub fn get_extension(env: &Env, extension_id: String) -> Result<AgreementExtension, RentalError> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Extension(extension_id))
+        .ok_or(RentalError::ExtensionNotFound)
+}
+
+/// Retrieve extension history for an agreement
+pub fn get_extension_history(
+    env: &Env,
+    agreement_id: String,
+) -> Result<ExtensionHistory, RentalError> {
+    Ok(env
+        .storage()
+        .persistent()
+        .get(&DataKey::ExtensionHistory(agreement_id.clone()))
+        .unwrap_or(ExtensionHistory {
+            agreement_id,
+            extensions: Vec::new(env),
+            total_extensions: 0,
+        }))
+}
+
+/// Get current agreement end date
+pub fn get_current_agreement_end(env: &Env, agreement_id: String) -> Result<u64, RentalError> {
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    Ok(agreement.end_date)
 }

@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Map, String};
+use soroban_sdk::{contracttype, Address, Map, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -57,4 +57,36 @@ pub struct ContractState {
     pub admin: Address,
     pub config: Config,
     pub initialized: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ExtensionStatus {
+    Proposed,
+    Accepted,
+    Rejected,
+    Active,
+    Completed,
+    Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgreementExtension {
+    pub id: String,
+    pub original_agreement_id: String,
+    pub extension_start: u64,
+    pub extension_end: u64,
+    pub extension_rent: i128,
+    pub extension_deposit: i128,
+    pub status: ExtensionStatus,
+    pub created_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExtensionHistory {
+    pub agreement_id: String,
+    pub extensions: Vec<AgreementExtension>,
+    pub total_extensions: u32,
 }

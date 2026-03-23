@@ -1172,3 +1172,138 @@ fn test_contract_paused_operations() {
     let res_sign_success = client.try_sign_agreement(&tenant, &agreement_id);
     assert!(res_sign_success.is_ok());
 }
+
+#[test]
+fn test_agreement_extension_lifecycle() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "EXT_TEST_001");
+
+    // 1. Create and sign agreement to make it Active
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &1000000,
+        &0,
+        &Address::generate(&env),
+    );
+    client.submit_agreement(&landlord, &agreement_id);
+    client.sign_agreement(&tenant, &agreement_id);
+
+    // 2. Propose extension
+    let extension_id = client.propose_extension(&agreement_id, &6, &Some(1200), &Some(2500));
+    assert_eq!(extension_id, agreement_id);
+
+    let extension = client.get_extension(&extension_id).unwrap();
+    assert_eq!(extension.status, ExtensionStatus::Proposed);
+    assert_eq!(extension.extension_rent, 1200);
+    assert_eq!(extension.extension_deposit, 2500);
+
+    // 3. Accept extension
+    client.accept_extension(&extension_id);
+    let extension = client.get_extension(&extension_id).unwrap();
+    assert_eq!(extension.status, ExtensionStatus::Accepted);
+
+    // 4. Activate extension
+    client.activate_extension(&extension_id);
+
+    // 5. Verify agreement updated
+    let agreement = client.get_agreement(&agreement_id).unwrap();
+    assert_eq!(agreement.monthly_rent, 1200);
+    assert_eq!(agreement.security_deposit, 2500);
+    assert!(agreement.end_date > 1000000);
+
+    // 6. Verify history
+    let history = client.get_extension_history(&agreement_id).unwrap();
+    assert_eq!(history.total_extensions, 1);
+    assert_eq!(history.extensions.get(0).unwrap().status, ExtensionStatus::Active);
+
+    // 7. Verify extension removed from active storage
+    let res = client.try_get_extension(&extension_id);
+    assert!(res.is_err());
+}
+
+#[test]
+fn test_reject_extension() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "REJECT_EXT");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &1000000,
+        &0,
+        &Address::generate(&env),
+    );
+    client.submit_agreement(&landlord, &agreement_id);
+    client.sign_agreement(&tenant, &agreement_id);
+
+    client.propose_extension(&agreement_id, &3, &None, &None);
+    client.reject_extension(&agreement_id, &String::from_str(&env, "too expensive"));
+
+    let history = client.get_extension_history(&agreement_id).unwrap();
+    assert_eq!(history.total_extensions, 1);
+    assert_eq!(
+        history.extensions.get(0).unwrap().status,
+        ExtensionStatus::Rejected
+    );
+
+    let res = client.try_get_extension(&agreement_id);
+    assert!(res.is_err());
+}
+
+#[test]
+fn test_cancel_extension() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "CANCEL_EXT");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &1000000,
+        &0,
+        &Address::generate(&env),
+    );
+    client.submit_agreement(&landlord, &agreement_id);
+    client.sign_agreement(&tenant, &agreement_id);
+
+    client.propose_extension(&agreement_id, &3, &None, &None);
+    client.cancel_extension(&agreement_id, &String::from_str(&env, "changed my mind"));
+
+    let history = client.get_extension_history(&agreement_id).unwrap();
+    assert_eq!(history.total_extensions, 1);
+    assert_eq!(
+        history.extensions.get(0).unwrap().status,
+        ExtensionStatus::Cancelled
+    );
+}

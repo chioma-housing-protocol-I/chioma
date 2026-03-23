@@ -7,4 +7,6 @@ pub enum DataKey {
     AgreementCount,
     State,
     Initialized,
+    Extension(String),
+    ExtensionHistory(String),
 }
