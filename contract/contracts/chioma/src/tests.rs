@@ -1204,14 +1204,14 @@ fn test_agreement_extension_lifecycle() {
     let extension_id = client.propose_extension(&agreement_id, &6, &Some(1200), &Some(2500));
     assert_eq!(extension_id, agreement_id);
 
-    let extension = client.get_extension(&extension_id).unwrap();
+    let extension = client.get_extension(&extension_id);
     assert_eq!(extension.status, ExtensionStatus::Proposed);
     assert_eq!(extension.extension_rent, 1200);
     assert_eq!(extension.extension_deposit, 2500);
 
     // 3. Accept extension
     client.accept_extension(&extension_id);
-    let extension = client.get_extension(&extension_id).unwrap();
+    let extension = client.get_extension(&extension_id);
     assert_eq!(extension.status, ExtensionStatus::Accepted);
 
     // 4. Activate extension
@@ -1224,7 +1224,7 @@ fn test_agreement_extension_lifecycle() {
     assert!(agreement.end_date > 1000000);
 
     // 6. Verify history
-    let history = client.get_extension_history(&agreement_id).unwrap();
+    let history = client.get_extension_history(&agreement_id);
     assert_eq!(history.total_extensions, 1);
     assert_eq!(
         history.extensions.get(0).unwrap().status,
@@ -1264,7 +1264,7 @@ fn test_reject_extension() {
     client.propose_extension(&agreement_id, &3, &None, &None);
     client.reject_extension(&agreement_id, &String::from_str(&env, "too expensive"));
 
-    let history = client.get_extension_history(&agreement_id).unwrap();
+    let history = client.get_extension_history(&agreement_id);
     assert_eq!(history.total_extensions, 1);
     assert_eq!(
         history.extensions.get(0).unwrap().status,
@@ -1303,7 +1303,7 @@ fn test_cancel_extension() {
     client.propose_extension(&agreement_id, &3, &None, &None);
     client.cancel_extension(&agreement_id, &String::from_str(&env, "changed my mind"));
 
-    let history = client.get_extension_history(&agreement_id).unwrap();
+    let history = client.get_extension_history(&agreement_id);
     assert_eq!(history.total_extensions, 1);
     assert_eq!(
         history.extensions.get(0).unwrap().status,

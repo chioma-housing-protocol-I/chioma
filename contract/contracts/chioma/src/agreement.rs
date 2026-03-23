@@ -508,11 +508,8 @@ pub fn reject_extension(
         .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    // Either party can reject? Usually tenant rejects landlord's proposal
-    // But let's allow both for now if they are authorized
-    if !agreement.tenant.has_auth() && !agreement.landlord.has_auth() {
-        return Err(RentalError::Unauthorized);
-    }
+    // Only tenant can reject extension proposal from landlord
+    agreement.tenant.require_auth();
 
     if extension.status != ExtensionStatus::Proposed {
         return Err(RentalError::InvalidState);
