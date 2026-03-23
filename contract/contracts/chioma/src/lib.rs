@@ -341,7 +341,10 @@ impl Contract {
     /// @param env The Soroban environment.
     /// @param extension_id Identifier of the extension.
     /// @return The extension on success.
-    pub fn get_extension(env: Env, extension_id: String) -> Result<AgreementExtension, RentalError> {
+    pub fn get_extension(
+        env: Env,
+        extension_id: String,
+    ) -> Result<AgreementExtension, RentalError> {
         agreement::get_extension(&env, extension_id)
     }
 

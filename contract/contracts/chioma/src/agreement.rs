@@ -416,7 +416,11 @@ pub fn accept_extension(env: &Env, extension_id: String) -> Result<(), RentalErr
 }
 
 /// Reject an agreement extension
-pub fn reject_extension(env: &Env, extension_id: String, _reason: String) -> Result<(), RentalError> {
+pub fn reject_extension(
+    env: &Env,
+    extension_id: String,
+    _reason: String,
+) -> Result<(), RentalError> {
     let mut extension: AgreementExtension = env
         .storage()
         .persistent()
@@ -516,7 +520,11 @@ pub fn activate_extension(env: &Env, extension_id: String) -> Result<(), RentalE
 }
 
 /// Cancel a proposed extension
-pub fn cancel_extension(env: &Env, extension_id: String, _reason: String) -> Result<(), RentalError> {
+pub fn cancel_extension(
+    env: &Env,
+    extension_id: String,
+    _reason: String,
+) -> Result<(), RentalError> {
     let mut extension: AgreementExtension = env
         .storage()
         .persistent()

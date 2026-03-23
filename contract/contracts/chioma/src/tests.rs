@@ -1226,7 +1226,10 @@ fn test_agreement_extension_lifecycle() {
     // 6. Verify history
     let history = client.get_extension_history(&agreement_id).unwrap();
     assert_eq!(history.total_extensions, 1);
-    assert_eq!(history.extensions.get(0).unwrap().status, ExtensionStatus::Active);
+    assert_eq!(
+        history.extensions.get(0).unwrap().status,
+        ExtensionStatus::Active
+    );
 
     // 7. Verify extension removed from active storage
     let res = client.try_get_extension(&extension_id);
