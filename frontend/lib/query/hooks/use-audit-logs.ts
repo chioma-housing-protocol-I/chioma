@@ -52,7 +52,8 @@ export function useAuditStats() {
   return useQuery({
     queryKey: queryKeys.audit.stats(),
     queryFn: async () => {
-      const { data } = await apiClient.get<Record<string, unknown>>('/audit/stats');
+      const { data } =
+        await apiClient.get<Record<string, unknown>>('/audit/stats');
       return data;
     },
   });
@@ -61,9 +62,19 @@ export function useAuditStats() {
 /**
  * Fetch audit trail for a specific entity.
  */
-export function useAuditTrail(entityType: string, entityId: string, limit?: number) {
+export function useAuditTrail(
+  entityType: string,
+  entityId: string,
+  limit?: number,
+) {
   return useQuery({
-    queryKey: [...queryKeys.audit.all, 'trail', entityType, entityId, { limit }],
+    queryKey: [
+      ...queryKeys.audit.all,
+      'trail',
+      entityType,
+      entityId,
+      { limit },
+    ],
     queryFn: async () => {
       const { data } = await apiClient.get<AuditLog[]>(
         `/audit/trail/${entityType}/${entityId}${limit ? `?limit=${limit}` : ''}`,

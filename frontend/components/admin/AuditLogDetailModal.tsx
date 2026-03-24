@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
-import { X, Database, Clock, ShieldCheck, User as UserIcon, Globe, Terminal } from 'lucide-react';
+import {
+  X,
+  Database,
+  Clock,
+  ShieldCheck,
+  User as UserIcon,
+  Globe,
+  Terminal,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import type { AuditLog } from '@/types';
 
@@ -21,11 +29,18 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
           <div className="flex items-center gap-3">
             <ShieldCheck className="text-blue-400" size={24} />
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Audit Log Detail</h3>
-              <p className="text-[10px] text-blue-300/40 uppercase tracking-widest font-bold">Log ID: {log.id}</p>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Audit Log Detail
+              </h3>
+              <p className="text-[10px] text-blue-300/40 uppercase tracking-widest font-bold">
+                Log ID: {log.id}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-blue-300/40 hover:text-white hover:bg-white/10 rounded-xl transition-all">
+          <button
+            onClick={onClose}
+            className="p-2 text-blue-300/40 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+          >
             <X size={20} />
           </button>
         </div>
@@ -38,25 +53,37 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
               <label className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest flex items-center gap-1.5">
                 <Clock size={12} /> Timestamp
               </label>
-              <p className="text-sm text-white font-medium">{format(new Date(log.createdAt), 'PPPP p')}</p>
+              <p className="text-sm text-white font-medium">
+                {format(new Date(log.createdAt), 'PPPP p')}
+              </p>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest flex items-center gap-1.5">
                 <UserIcon size={12} /> Performed By
               </label>
-              <p className="text-sm text-white font-medium">{log.user?.email || log.userId || 'System Action'}</p>
+              <p className="text-sm text-white font-medium">
+                {log.user?.email || log.userId || 'System Action'}
+              </p>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest flex items-center gap-1.5">
                 <Database size={12} /> Target Entity
               </label>
-              <p className="text-sm text-white font-medium">{log.entity} ({log.entityId})</p>
+              <p className="text-sm text-white font-medium">
+                {log.entity} ({log.entityId})
+              </p>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest flex items-center gap-1.5">
                 <Globe size={12} /> Environment
               </label>
-              <p className="text-xs text-blue-200/60 font-mono truncate" title={log.userAgent}>{log.ipAddress || 'Internal'} • {log.userAgent?.split(' ')[0] || 'Utility'}</p>
+              <p
+                className="text-xs text-blue-200/60 font-mono truncate"
+                title={log.userAgent}
+              >
+                {log.ipAddress || 'Internal'} •{' '}
+                {log.userAgent?.split(' ')[0] || 'Utility'}
+              </p>
             </div>
           </div>
 
@@ -66,9 +93,9 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
               <Terminal size={12} /> Change Log / Metadata
             </label>
             <div className="bg-black/40 rounded-2xl border border-white/5 p-4 overflow-hidden">
-               <pre className="text-xs text-emerald-400 font-mono overflow-x-auto">
-                 {JSON.stringify(log.changes || {}, null, 2)}
-               </pre>
+              <pre className="text-xs text-emerald-400 font-mono overflow-x-auto">
+                {JSON.stringify(log.changes || {}, null, 2)}
+              </pre>
             </div>
           </div>
         </div>

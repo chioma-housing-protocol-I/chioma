@@ -14,12 +14,16 @@ export const AuditLogFilters: React.FC<FiltersProps> = ({
   setFilters,
   onClear,
 }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setFilters({ ...filters, [name]: value, page: 1 });
   };
 
-  const hasFilters = Object.values(filters).some(v => v !== '' && v !== undefined && v !== 1);
+  const hasFilters = Object.values(filters).some(
+    (v) => v !== '' && v !== undefined && v !== 1,
+  );
 
   return (
     <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/10 space-y-6">
@@ -42,7 +46,10 @@ export const AuditLogFilters: React.FC<FiltersProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search */}
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors" size={18} />
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+            size={18}
+          />
           <input
             type="text"
             name="search"
@@ -55,25 +62,43 @@ export const AuditLogFilters: React.FC<FiltersProps> = ({
 
         {/* Action Type */}
         <div className="relative group">
-          <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors" size={18} />
+          <Activity
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+            size={18}
+          />
           <select
             name="action"
             value={filters.action || ''}
             onChange={handleChange}
             className="w-full pl-12 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:bg-white/10 focus:border-blue-500 appearance-none transition-all"
           >
-            <option value="" className="bg-slate-900">All Actions</option>
-            <option value="CREATE" className="bg-slate-900">Create</option>
-            <option value="UPDATE" className="bg-slate-900">Update</option>
-            <option value="DELETE" className="bg-slate-900">Delete</option>
-            <option value="LOGIN" className="bg-slate-900">Login</option>
-            <option value="PAYMENT" className="bg-slate-900">Payment</option>
+            <option value="" className="bg-slate-900">
+              All Actions
+            </option>
+            <option value="CREATE" className="bg-slate-900">
+              Create
+            </option>
+            <option value="UPDATE" className="bg-slate-900">
+              Update
+            </option>
+            <option value="DELETE" className="bg-slate-900">
+              Delete
+            </option>
+            <option value="LOGIN" className="bg-slate-900">
+              Login
+            </option>
+            <option value="PAYMENT" className="bg-slate-900">
+              Payment
+            </option>
           </select>
         </div>
 
         {/* Date Range Start */}
         <div className="relative group">
-          <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors" size={18} />
+          <Calendar
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+            size={18}
+          />
           <input
             type="date"
             name="startDate"
@@ -85,7 +110,10 @@ export const AuditLogFilters: React.FC<FiltersProps> = ({
 
         {/* Performed By (User ID) */}
         <div className="relative group">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors" size={18} />
+          <User
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+            size={18}
+          />
           <input
             type="text"
             name="performedBy"

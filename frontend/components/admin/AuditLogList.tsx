@@ -49,35 +49,54 @@ export const AuditLogList: React.FC<ListProps> = ({
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-white/5 text-blue-300/40">
               <tr>
-                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Action</th>
-                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Entity</th>
-                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Performed By</th>
-                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Date & Time</th>
-                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Details</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                  Action
+                </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                  Entity
+                </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                  Performed By
+                </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                  Date & Time
+                </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">
+                  Details
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {data.map((log) => (
-                <tr key={log.id} className="hover:bg-white/5 transition-colors group">
+                <tr
+                  key={log.id}
+                  className="hover:bg-white/5 transition-colors group"
+                >
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getActionBadge(log.action)}`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getActionBadge(log.action)}`}
+                    >
                       {log.action}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-white font-medium">{log.entity}</span>
-                      <span className="text-[10px] text-blue-300/40 font-mono truncate max-w-[120px]">{log.entityId}</span>
+                      <span className="text-white font-medium">
+                        {log.entity}
+                      </span>
+                      <span className="text-[10px] text-blue-300/40 font-mono truncate max-w-[120px]">
+                        {log.entityId}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                       <div className="w-7 h-7 bg-white/5 rounded-full flex items-center justify-center border border-white/5">
-                          <UserIcon size={14} className="text-blue-300/60" />
-                       </div>
-                       <span className="text-blue-200/60 font-medium truncate max-w-[150px]">
-                         {log.user?.email || log.userId || 'System'}
-                       </span>
+                      <div className="w-7 h-7 bg-white/5 rounded-full flex items-center justify-center border border-white/5">
+                        <UserIcon size={14} className="text-blue-300/60" />
+                      </div>
+                      <span className="text-blue-200/60 font-medium truncate max-w-[150px]">
+                        {log.user?.email || log.userId || 'System'}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-blue-200/60">
@@ -95,7 +114,10 @@ export const AuditLogList: React.FC<ListProps> = ({
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-blue-200/40">
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-blue-200/40"
+                  >
                     No audit logs found matching your criteria.
                   </td>
                 </tr>
@@ -108,7 +130,8 @@ export const AuditLogList: React.FC<ListProps> = ({
       {/* Pagination */}
       <div className="flex items-center justify-between px-2">
         <p className="text-xs text-blue-300/40">
-          Page <span className="text-white font-bold">{page}</span> of <span className="text-white font-bold">{totalPages}</span>
+          Page <span className="text-white font-bold">{page}</span> of{' '}
+          <span className="text-white font-bold">{totalPages}</span>
         </p>
         <div className="flex items-center gap-2">
           <button
