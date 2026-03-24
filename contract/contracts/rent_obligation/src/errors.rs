@@ -10,4 +10,8 @@ pub enum ObligationError {
     ObligationNotFound = 4,
     Unauthorized = 5,
     InvalidOwner = 6,
+    AlreadyBurned = 7,
+    BurnRecordNotFound = 8,
+    CannotBurnActiveObligation = 9,
+    InvalidBurnReason = 10,
 }

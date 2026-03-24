@@ -14,4 +14,10 @@ pub enum DataKey {
     SupportedTokens,
     ExchangeRate(soroban_sdk::Address, soroban_sdk::Address),
     AgreementToken(String),
+    DepositInterestConfig(String),
+    DepositInterest(String),
+    ErrorLog(u32),
+    ErrorLogCount,
+    RoyaltyConfig(String),
+    RoyaltyPayments(String),
 }

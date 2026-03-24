@@ -14,6 +14,7 @@ This contract enables landlords to tokenize their rental income streams as NFTs.
 
 - **NFT Minting**: Create unique tokens for each rent agreement
 - **Ownership Transfer**: Transfer obligation ownership between addresses
+- **NFT Burn**: Burn completed obligations with audit records
 - **Duplicate Prevention**: Ensures only one token per agreement
 - **Event Emission**: Tracks minting and transfer activities
 - **Owner Queries**: Check current owner of any obligation
@@ -58,6 +59,32 @@ Check if an obligation exists for a given agreement.
 ### `get_obligation_count() -> u32`
 Get total count of minted obligations.
 
+### `burn_nft(token_id: String, reason: String)`
+Burn a rent obligation NFT.
+- **Parameters**:
+  - `token_id`: Agreement identifier
+  - `reason`: One of `LeaseCompleted`, `AgreementTerminated`, `DisputeResolved`, `UserRequested`
+- **Authorization**: Requires current owner signature
+- **Rules**:
+  - Burn reason is required and validated
+  - NFT can only be burned after lease end checkpoint (post-mint ledger timestamp)
+  - Already-burned NFTs cannot be burned again
+- **Errors**:
+  - `NotInitialized`
+  - `ObligationNotFound`
+  - `AlreadyBurned`
+  - `CannotBurnActiveObligation`
+  - `InvalidBurnReason`
+
+### `can_burn(token_id: String) -> Result<bool, ObligationError>`
+Check whether an NFT is burnable under current rules.
+
+### `get_burn_record(token_id: String) -> Result<BurnRecord, ObligationError>`
+Get immutable burn audit record for a burned NFT.
+
+### `get_burned_nfts(owner: Address) -> Result<Vec<String>, ObligationError>`
+Get owner burn history (token IDs).
+
 ## Events
 
 ### ObligationMinted
@@ -69,6 +96,11 @@ Emitted when a new obligation NFT is minted.
 Emitted when an obligation is transferred.
 - Topics: `["transferred", from: Address, to: Address]`
 - Data: `agreement_id`
+
+### NFTBurned
+Emitted when an obligation NFT is burned.
+- Topics: `["burned", owner: Address]`
+- Data: `token_id`, `reason`
 
 ## Integration with Rental System
 
@@ -88,11 +120,14 @@ make build
 
 ```bash
 make test
+cargo test nft_burn
 ```
 
 ## Security Considerations
 
 - Authorization is required for minting and transfers
 - Only the current owner can transfer an obligation
+- Only the current owner can burn an obligation NFT
+- Burn records are persisted for auditability
 - Duplicate minting is prevented at the contract level
 - All storage uses persistent storage with TTL extension

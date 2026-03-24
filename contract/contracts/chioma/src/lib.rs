@@ -9,9 +9,11 @@
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 mod agreement;
+mod deposit_interest;
 mod errors;
 mod events;
 mod multi_token;
+mod royalties;
 mod storage;
 mod types;
 
@@ -20,6 +22,15 @@ mod tests;
 
 #[cfg(test)]
 mod tests_multi_token;
+
+#[cfg(test)]
+mod tests_deposit_interest;
+
+#[cfg(test)]
+mod tests_errors;
+
+#[cfg(test)]
+mod tests_royalties;
 
 pub use agreement::{
     accept_extension, activate_extension, cancel_agreement, cancel_extension, create_agreement,
@@ -37,6 +48,9 @@ pub use storage::DataKey;
 pub use types::{
     AgreementExtension, AgreementStatus, AgreementWithToken, Config, ContractState,
     ExtensionHistory, ExtensionStatus, PauseState, PaymentSplit, RentAgreement, SupportedToken,
+    AgreementStatus, AgreementWithToken, CompoundingFrequency, Config, ContractState,
+    DepositInterest, DepositInterestConfig, ErrorContext, InterestAccrual, InterestRecipient,
+    PauseState, PaymentSplit, RentAgreement, RoyaltyConfig, RoyaltyPayment, SupportedToken,
     TokenExchangeRate,
 };
 
@@ -609,5 +623,135 @@ impl Contract {
     /// @return The end date timestamp.
     pub fn get_current_agreement_end(env: Env, agreement_id: String) -> Result<u64, RentalError> {
         agreement::get_current_agreement_end(&env, agreement_id)
+    // ─── Deposit Interest Functions ───────────────────────────────────────────
+
+    /// Set the interest configuration for a security deposit.
+    ///
+    /// Admin-only. Also initialises the DepositInterest record on first call.
+    pub fn set_deposit_interest_config(
+        env: Env,
+        agreement_id: String,
+        annual_rate: u32,
+        compounding_frequency: CompoundingFrequency,
+        interest_recipient: InterestRecipient,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+        deposit_interest::set_deposit_interest_config(
+            env,
+            agreement_id,
+            annual_rate,
+            compounding_frequency,
+            interest_recipient,
+        )
+    }
+
+    /// Get the interest configuration for a security deposit.
+    pub fn get_deposit_interest_config(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<DepositInterestConfig, RentalError> {
+        deposit_interest::get_deposit_interest_config(env, agreement_id)
+    }
+
+    /// Calculate (but do not persist) the interest accrued so far.
+    pub fn calculate_accrued_interest(env: Env, escrow_id: String) -> Result<i128, RentalError> {
+        deposit_interest::calculate_accrued_interest(env, escrow_id)
+    }
+
+    /// Accrue interest up to the current ledger time and persist the update.
+    pub fn accrue_interest(env: Env, escrow_id: String) -> Result<InterestAccrual, RentalError> {
+        Self::check_paused(&env)?;
+        deposit_interest::accrue_interest(env, escrow_id)
+    }
+
+    /// Get the full deposit-interest state.
+    pub fn get_deposit_interest(
+        env: Env,
+        escrow_id: String,
+    ) -> Result<DepositInterest, RentalError> {
+        deposit_interest::get_deposit_interest(env, escrow_id)
+    }
+
+    /// Get the accrual history for a deposit.
+    pub fn get_accrual_history(
+        env: Env,
+        escrow_id: String,
+    ) -> Result<Vec<InterestAccrual>, RentalError> {
+        deposit_interest::get_accrual_history(env, escrow_id)
+    }
+
+    /// Distribute all accrued interest to tenant / landlord per configuration.
+    pub fn distribute_interest(env: Env, escrow_id: String) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        deposit_interest::distribute_interest(env, escrow_id)
+    }
+
+    /// (Keeper / oracle entry-point) Accrue interest for all deposits.
+    pub fn process_interest_accruals(env: Env) -> Result<Vec<String>, RentalError> {
+        Self::check_paused(&env)?;
+        deposit_interest::process_interest_accruals(env)
+    }
+
+    /// Log an error context for diagnostics.
+    pub fn log_error(
+        env: Env,
+        error: RentalError,
+        operation: String,
+        details: String,
+    ) -> Result<(), RentalError> {
+        errors::log_error(&env, error, operation, details)
+    }
+
+    /// Retrieve the most recent error logs.
+    pub fn get_error_logs(env: Env, limit: u32) -> Result<Vec<ErrorContext>, RentalError> {
+        errors::get_error_logs(&env, limit)
+    }
+
+    // ─── Royalty Functions ───────────────────────────────────────────────────
+
+    /// Set the royalty configuration for a specific token (agreement).
+    pub fn set_royalty(
+        env: Env,
+        token_id: String,
+        royalty_percentage: u32,
+        royalty_recipient: Address,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        royalties::set_royalty(env, token_id, royalty_percentage, royalty_recipient)
+    }
+
+    /// Retrieve the royalty configuration for a token.
+    pub fn get_royalty(env: Env, token_id: String) -> Result<RoyaltyConfig, RentalError> {
+        royalties::get_royalty(env, token_id)
+    }
+
+    /// Calculate the royalty amount for a given sale price.
+    pub fn calculate_royalty(
+        env: Env,
+        token_id: String,
+        sale_price: i128,
+    ) -> Result<i128, RentalError> {
+        royalties::calculate_royalty(env, token_id, sale_price)
+    }
+
+    /// Perform a transfer of the "agreement" ownership with royalty payment.
+    pub fn transfer_with_royalty(
+        env: Env,
+        token_id: String,
+        to: Address,
+        sale_price: i128,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        royalties::transfer_with_royalty(env, token_id, to, sale_price)
+    }
+
+    /// Get the royalty payment history for a token.
+    pub fn get_royalty_payments(
+        env: Env,
+        token_id: String,
+    ) -> Result<Vec<RoyaltyPayment>, RentalError> {
+        royalties::get_royalty_payments(env, token_id)
     }
 }

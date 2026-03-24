@@ -351,3 +351,106 @@ pub(crate) fn escrow_released_with_token(
     }
     .publish(env);
 }
+
+// ─── Deposit Interest Events ──────────────────────────────────────────────────
+
+#[contractevent]
+pub struct InterestConfigSet {
+    pub agreement_id: String,
+    pub annual_rate: u32,
+}
+
+#[contractevent]
+pub struct InterestAccruedEvent {
+    pub escrow_id: String,
+    pub amount: i128,
+    pub total_accrued: i128,
+}
+
+#[contractevent]
+pub struct InterestDistributed {
+    pub escrow_id: String,
+    pub tenant_share: i128,
+    pub landlord_share: i128,
+}
+
+pub(crate) fn interest_config_set(env: &Env, agreement_id: String, annual_rate: u32) {
+    InterestConfigSet {
+        agreement_id,
+        annual_rate,
+    }
+    .publish(env);
+}
+
+pub(crate) fn interest_accrued(env: &Env, escrow_id: String, amount: i128, total_accrued: i128) {
+    InterestAccruedEvent {
+        escrow_id,
+        amount,
+        total_accrued,
+    }
+    .publish(env);
+}
+
+pub(crate) fn interest_distributed(
+    env: &Env,
+    escrow_id: String,
+    tenant_share: i128,
+    landlord_share: i128,
+) {
+    InterestDistributed {
+        escrow_id,
+        tenant_share,
+        landlord_share,
+    }
+    .publish(env);
+}
+
+#[contractevent]
+pub struct ErrorOccurred {
+    pub error_code: u32,
+    pub operation: String,
+    pub timestamp: u64,
+}
+
+pub(crate) fn error_occurred(env: &Env, error_code: u32, operation: String, timestamp: u64) {
+    ErrorOccurred {
+        error_code,
+        operation,
+        timestamp,
+    }
+    .publish(env);
+}
+
+// ─── Royalty Events ───────────────────────────────────────────────────────────
+
+#[contractevent]
+pub struct RoyaltySet {
+    pub token_id: String,
+    pub percentage: u32,
+    pub recipient: Address,
+}
+
+#[contractevent]
+pub struct RoyaltyPaid {
+    pub token_id: String,
+    pub amount: i128,
+    pub recipient: Address,
+}
+
+pub(crate) fn royalty_set(env: &Env, token_id: String, percentage: u32, recipient: Address) {
+    RoyaltySet {
+        token_id,
+        percentage,
+        recipient,
+    }
+    .publish(env);
+}
+
+pub(crate) fn royalty_paid(env: &Env, token_id: String, amount: i128, recipient: Address) {
+    RoyaltyPaid {
+        token_id,
+        amount,
+        recipient,
+    }
+    .publish(env);
+}

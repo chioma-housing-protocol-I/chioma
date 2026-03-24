@@ -17,11 +17,19 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 import { ConfigService } from '@nestjs/config';
+import { LoggerService } from './common/services/logger.service';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Use custom logger service
+  const loggerService = app.get(LoggerService);
+  app.useLogger(loggerService);
+
   const configService = app.get(ConfigService);
 
   // Parse CORS origins from environment variable
