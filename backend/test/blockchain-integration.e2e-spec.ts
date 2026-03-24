@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { LoggerModule } from '../src/common/logger/logger.module';
 import { AgreementsModule } from '../src/modules/agreements/agreements.module';
 import { AgreementsService } from '../src/modules/agreements/agreements.service';
 import { ChiomaContractService } from '../src/modules/stellar/services/chioma-contract.service';
@@ -22,6 +23,7 @@ describe('Blockchain Integration (e2e)', () => {
           ttl: 600,
           max: 100,
         }),
+        LoggerModule,
         TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST || 'localhost',
