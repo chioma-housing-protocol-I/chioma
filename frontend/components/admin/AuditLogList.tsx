@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Eye, ChevronLeft, ChevronRight, Activity, Database, User as UserIcon, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, User as UserIcon } from 'lucide-react';
 import type { AuditLog, PaginatedResponse } from '@/types';
 
 interface ListProps {

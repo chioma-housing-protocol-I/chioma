@@ -4,8 +4,8 @@ import React from 'react';
 import { Search, Filter, Calendar, User, Activity, X } from 'lucide-react';
 
 interface FiltersProps {
-  filters: any;
-  setFilters: (filters: any) => void;
+  filters: Record<string, string | number | undefined>;
+  setFilters: (filters: Record<string, string | number | undefined>) => void;
   onClear: () => void;
 }
 

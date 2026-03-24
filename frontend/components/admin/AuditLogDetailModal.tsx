@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Code, Database, Clock, ShieldCheck, User as UserIcon, Globe, Terminal } from 'lucide-react';
+import { X, Database, Clock, ShieldCheck, User as UserIcon, Globe, Terminal } from 'lucide-react';
 import { format } from 'date-fns';
 import type { AuditLog } from '@/types';
 

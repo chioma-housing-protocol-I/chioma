@@ -163,7 +163,7 @@ export default function AuditLogsPage() {
   );
 }
 
-function StatCard({ title, value, trend, icon, color }: any) {
+function StatCard({ title, value, trend, icon, color }: { title: string; value: string | number; trend: string; icon: React.ReactNode; color: string }) {
   const colorMap: Record<string, string> = {
     blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
     rose: 'text-rose-400 bg-rose-500/10 border-rose-500/20',

@@ -52,7 +52,7 @@ export function useAuditStats() {
   return useQuery({
     queryKey: queryKeys.audit.stats(),
     queryFn: async () => {
-      const { data } = await apiClient.get<any>('/audit/stats');
+      const { data } = await apiClient.get<Record<string, unknown>>('/audit/stats');
       return data;
     },
   });
