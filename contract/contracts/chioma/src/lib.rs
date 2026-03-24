@@ -38,6 +38,8 @@ pub use types::{
     AgreementExtension, AgreementStatus, AgreementWithToken, Config, ContractState,
     ExtensionHistory, ExtensionStatus, PaymentSplit, RentAgreement, SupportedToken,
     TokenExchangeRate,
+    AgreementStatus, AgreementWithToken, Config, ContractState, PauseState, PaymentSplit,
+    RentAgreement, SupportedToken, TokenExchangeRate,
 };
 
 /// Chioma rental agreement contract.
@@ -83,6 +85,14 @@ impl Contract {
         env.storage().instance().set(&DataKey::State, &state);
         env.storage().instance().extend_ttl(500000, 500000);
 
+        if config.paused {
+            Self::set_pause_state(
+                &env,
+                admin.clone(),
+                String::from_str(&env, "Initialized in paused mode"),
+            );
+        }
+
         events::contract_initialized(&env, admin, config);
 
         Ok(())
@@ -97,11 +107,25 @@ impl Contract {
         env.storage().instance().get(&DataKey::State)
     }
 
+    fn set_pause_state(env: &Env, admin: Address, reason: String) -> PauseState {
+        let pause_state = PauseState {
+            is_paused: true,
+            paused_at: env.ledger().timestamp(),
+            paused_by: admin,
+            pause_reason: reason,
+        };
+
+        env.storage()
+            .instance()
+            .set(&DataKey::PauseState, &pause_state);
+        env.storage().instance().extend_ttl(500000, 500000);
+
+        pause_state
+    }
+
     fn check_paused(env: &Env) -> Result<(), RentalError> {
-        if let Some(state) = Self::get_state(env.clone()) {
-            if state.config.paused {
-                return Err(RentalError::ContractPaused);
-            }
+        if Self::is_paused(env.clone()) {
+            return Err(RentalError::ContractPaused);
         }
         Ok(())
     }
@@ -119,6 +143,8 @@ impl Contract {
 
         state.admin.require_auth();
 
+        let was_paused = Self::is_paused(env.clone());
+
         if new_config.fee_bps > 10_000 {
             return Err(RentalError::InvalidConfig);
         }
@@ -129,9 +155,76 @@ impl Contract {
         env.storage().instance().set(&DataKey::State, &state);
         env.storage().instance().extend_ttl(500000, 500000);
 
+        if new_config.paused && !was_paused {
+            let reason = String::from_str(&env, "Paused via config update");
+            Self::set_pause_state(&env, state.admin.clone(), reason.clone());
+            events::paused(&env, reason, state.admin.clone());
+        } else if !new_config.paused && was_paused {
+            env.storage().instance().remove(&DataKey::PauseState);
+            events::unpaused(&env, state.admin.clone());
+        }
+
         events::config_updated(&env, state.admin, old_config, new_config);
 
         Ok(())
+    }
+
+    pub fn pause(env: Env, reason: String) -> Result<(), RentalError> {
+        let mut state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+
+        state.admin.require_auth();
+
+        if Self::is_paused(env.clone()) {
+            return Err(RentalError::AlreadyPaused);
+        }
+
+        Self::set_pause_state(&env, state.admin.clone(), reason.clone());
+
+        if !state.config.paused {
+            state.config.paused = true;
+            env.storage().instance().set(&DataKey::State, &state);
+            env.storage().instance().extend_ttl(500000, 500000);
+        }
+
+        events::paused(&env, reason, state.admin);
+        Ok(())
+    }
+
+    pub fn unpause(env: Env) -> Result<(), RentalError> {
+        let mut state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+
+        state.admin.require_auth();
+
+        if !Self::is_paused(env.clone()) {
+            return Err(RentalError::NotPaused);
+        }
+
+        env.storage().instance().remove(&DataKey::PauseState);
+
+        if state.config.paused {
+            state.config.paused = false;
+            env.storage().instance().set(&DataKey::State, &state);
+            env.storage().instance().extend_ttl(500000, 500000);
+        }
+
+        events::unpaused(&env, state.admin);
+        Ok(())
+    }
+
+    pub fn is_paused(env: Env) -> bool {
+        if let Some(pause_state) = env
+            .storage()
+            .instance()
+            .get::<DataKey, PauseState>(&DataKey::PauseState)
+        {
+            return pause_state.is_paused;
+        }
+
+        if let Some(state) = Self::get_state(env) {
+            return state.config.paused;
+        }
+
+        false
     }
 
     // --- Token Management Functions ---

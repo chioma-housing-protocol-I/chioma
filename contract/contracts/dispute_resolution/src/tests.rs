@@ -1,6 +1,10 @@
 use super::*;
 use crate::dispute::RentAgreement;
-use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, String};
+use soroban_sdk::{
+    contract, contractimpl,
+    testutils::{Address as _, Ledger},
+    Address, Env, String,
+};
 
 /// Mock chioma contract that returns a valid RentAgreement for testing.
 #[contract]
@@ -548,4 +552,220 @@ fn test_get_arbiter_count() {
     let arbiter3 = Address::generate(&env);
     client.add_arbiter(&admin, &arbiter3);
     assert_eq!(client.get_arbiter_count(), 3);
+}
+
+fn setup_appeal_ready_dispute(
+    env: &Env,
+) -> (
+    DisputeResolutionContractClient<'_>,
+    Address,
+    String,
+    Address,
+    Address,
+    Address,
+) {
+    let client = create_contract(env);
+    let admin = Address::generate(env);
+    let appellant = Address::generate(env);
+    let dispute_id = String::from_str(env, "dispute-appeal-1");
+
+    let original_arbiter_1 = Address::generate(env);
+    let original_arbiter_2 = Address::generate(env);
+    let original_arbiter_3 = Address::generate(env);
+
+    let new_arbiter_1 = Address::generate(env);
+    let new_arbiter_2 = Address::generate(env);
+    let new_arbiter_3 = Address::generate(env);
+
+    env.mock_all_auths();
+    client.initialize(&admin, &3, &Address::generate(env));
+
+    client.add_arbiter(&admin, &original_arbiter_1);
+    client.add_arbiter(&admin, &original_arbiter_2);
+    client.add_arbiter(&admin, &original_arbiter_3);
+    client.add_arbiter(&admin, &new_arbiter_1);
+    client.add_arbiter(&admin, &new_arbiter_2);
+    client.add_arbiter(&admin, &new_arbiter_3);
+
+    env.ledger().with_mut(|ledger| ledger.timestamp = 1_000_000);
+
+    env.as_contract(&client.address, || {
+        let mut voters = soroban_sdk::Vec::new(env);
+        voters.push_back(original_arbiter_1);
+        voters.push_back(original_arbiter_2);
+        voters.push_back(original_arbiter_3);
+
+        let dispute = Dispute {
+            agreement_id: dispute_id.clone(),
+            details_hash: String::from_str(env, "QmResolvedDispute"),
+            raised_at: 900_000,
+            resolved: true,
+            resolved_at: Some(999_000),
+            votes_favor_landlord: 2,
+            votes_favor_tenant: 1,
+            voters,
+        };
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::Dispute(dispute_id.clone()), &dispute);
+    });
+
+    (
+        client,
+        appellant,
+        dispute_id,
+        new_arbiter_1,
+        new_arbiter_2,
+        new_arbiter_3,
+    )
+}
+
+#[test]
+fn test_appeal_creation_selects_new_arbiters_and_charges_fee() {
+    let env = Env::default();
+    let (client, appellant, dispute_id, _, _, _) = setup_appeal_ready_dispute(&env);
+
+    let appeal_id = client
+        .try_create_appeal(
+            &appellant,
+            &dispute_id,
+            &String::from_str(&env, "appeal reason"),
+        )
+        .unwrap()
+        .unwrap();
+
+    let appeal = client.get_appeal(&appeal_id).unwrap();
+    assert_eq!(appeal.status, AppealStatus::Pending);
+    assert_eq!(appeal.appeal_arbiters.len(), 3);
+
+    let dispute = client.get_dispute(&dispute_id).unwrap();
+    for arbiter in appeal.appeal_arbiters.iter() {
+        assert!(!dispute.voters.contains(arbiter));
+    }
+
+    env.as_contract(&client.address, || {
+        let fee_paid: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::AppealFeePaid(appeal_id.clone()))
+            .unwrap();
+        assert_eq!(fee_paid, 100);
+    });
+}
+
+#[test]
+fn test_appeal_voting_and_resolution_approved_refunds_fee() {
+    let env = Env::default();
+    let (client, appellant, dispute_id, arbiter_1, arbiter_2, arbiter_3) =
+        setup_appeal_ready_dispute(&env);
+
+    let appeal_id = client
+        .try_create_appeal(
+            &appellant,
+            &dispute_id,
+            &String::from_str(&env, "wrong original outcome"),
+        )
+        .unwrap()
+        .unwrap();
+
+    assert!(client
+        .try_vote_on_appeal(&arbiter_1, &appeal_id, &DisputeOutcome::FavorTenant)
+        .is_ok());
+    assert!(client
+        .try_vote_on_appeal(&arbiter_2, &appeal_id, &DisputeOutcome::FavorTenant)
+        .is_ok());
+    assert!(client
+        .try_vote_on_appeal(&arbiter_3, &appeal_id, &DisputeOutcome::FavorLandlord)
+        .is_ok());
+
+    assert!(client.try_resolve_appeal(&appeal_id).is_ok());
+
+    let appeal = client.get_appeal(&appeal_id).unwrap();
+    assert_eq!(appeal.status, AppealStatus::Approved);
+    assert!(appeal.resolved_at.is_some());
+
+    env.as_contract(&client.address, || {
+        let refunded: bool = env
+            .storage()
+            .persistent()
+            .get(&DataKey::AppealFeeRefunded(appeal_id.clone()))
+            .unwrap();
+        assert!(refunded);
+    });
+}
+
+#[test]
+fn test_appeal_cancellation() {
+    let env = Env::default();
+    let (client, appellant, dispute_id, _, _, _) = setup_appeal_ready_dispute(&env);
+
+    let appeal_id = client
+        .try_create_appeal(
+            &appellant,
+            &dispute_id,
+            &String::from_str(&env, "cancel this appeal"),
+        )
+        .unwrap()
+        .unwrap();
+
+    assert!(client.try_cancel_appeal(&appellant, &appeal_id).is_ok());
+
+    let appeal = client.get_appeal(&appeal_id).unwrap();
+    assert_eq!(appeal.status, AppealStatus::Cancelled);
+}
+
+#[test]
+fn test_appeal_window_expired() {
+    let env = Env::default();
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let appellant = Address::generate(&env);
+    let dispute_id = String::from_str(&env, "dispute-expired");
+
+    env.mock_all_auths();
+    client.initialize(&admin, &3, &Address::generate(&env));
+
+    let old_arbiter_1 = Address::generate(&env);
+    let old_arbiter_2 = Address::generate(&env);
+    let old_arbiter_3 = Address::generate(&env);
+    let new_arbiter_1 = Address::generate(&env);
+    let new_arbiter_2 = Address::generate(&env);
+    let new_arbiter_3 = Address::generate(&env);
+    client.add_arbiter(&admin, &old_arbiter_1);
+    client.add_arbiter(&admin, &old_arbiter_2);
+    client.add_arbiter(&admin, &old_arbiter_3);
+    client.add_arbiter(&admin, &new_arbiter_1);
+    client.add_arbiter(&admin, &new_arbiter_2);
+    client.add_arbiter(&admin, &new_arbiter_3);
+
+    env.ledger().with_mut(|ledger| ledger.timestamp = 2_000_000);
+    env.as_contract(&client.address, || {
+        let mut voters = soroban_sdk::Vec::new(&env);
+        voters.push_back(old_arbiter_1);
+        voters.push_back(old_arbiter_2);
+        voters.push_back(old_arbiter_3);
+
+        let dispute = Dispute {
+            agreement_id: dispute_id.clone(),
+            details_hash: String::from_str(&env, "QmResolvedOld"),
+            raised_at: 500_000,
+            resolved: true,
+            resolved_at: Some(1_000_000),
+            votes_favor_landlord: 2,
+            votes_favor_tenant: 1,
+            voters,
+        };
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::Dispute(dispute_id.clone()), &dispute);
+    });
+
+    let result = client.try_create_appeal(
+        &appellant,
+        &dispute_id,
+        &String::from_str(&env, "too late appeal"),
+    );
+    assert_eq!(result, Err(Ok(DisputeError::AppealWindowExpired)));
 }

@@ -1097,19 +1097,28 @@ fn test_contract_paused_operations() {
     };
     client.initialize(&admin, &config);
 
-    // Pause contract
-    let paused_config = Config {
-        fee_bps: 100,
-        fee_collector: fee_collector.clone(),
-        paused: true,
-    };
-    client.update_config(&paused_config);
+    client.pause(&String::from_str(&env, "incident response"));
 
-    // Verify state is paused
+    assert!(client.is_paused());
+
     let state = client.get_state().unwrap();
     assert!(state.config.paused);
 
-    // Try create agreement (should fail with ContractPaused = 17)
+    env.as_contract(&client.address, || {
+        let pause_state: PauseState = env
+            .storage()
+            .instance()
+            .get(&storage::DataKey::PauseState)
+            .unwrap();
+
+        assert!(pause_state.is_paused);
+        assert_eq!(pause_state.paused_by, admin);
+        assert_eq!(
+            pause_state.pause_reason,
+            String::from_str(&env, "incident response")
+        );
+    });
+
     let res = client.try_create_agreement(
         &String::from_str(&env, "agreement-paused"),
         &landlord,
@@ -1124,15 +1133,9 @@ fn test_contract_paused_operations() {
     );
     assert_eq!(res, Err(Ok(RentalError::ContractPaused)));
 
-    // Unpause
-    let unpaused_config = Config {
-        fee_bps: 100,
-        fee_collector: fee_collector.clone(),
-        paused: false,
-    };
-    client.update_config(&unpaused_config);
+    client.unpause();
+    assert!(!client.is_paused());
 
-    // Create agreement
     let agreement_id_str = "agreement-active";
     let agreement_id = String::from_str(&env, agreement_id_str);
     client.create_agreement(
@@ -1148,11 +1151,9 @@ fn test_contract_paused_operations() {
         &payment_token,
     );
 
-    // Manually set to Pending (as create_agreement sets it to Draft)
     let mut agreement = client.get_agreement(&agreement_id).unwrap();
     agreement.status = AgreementStatus::Pending;
 
-    // We need to use env.as_contract to write to storage
     env.as_contract(&client.address, || {
         env.storage().persistent().set(
             &storage::DataKey::Agreement(agreement_id.clone()),
@@ -1160,15 +1161,12 @@ fn test_contract_paused_operations() {
         );
     });
 
-    // Pause again
-    client.update_config(&paused_config);
+    client.pause(&String::from_str(&env, "second incident"));
 
-    // Try sign agreement (should fail)
     let res_sign = client.try_sign_agreement(&tenant, &agreement_id);
     assert_eq!(res_sign, Err(Ok(RentalError::ContractPaused)));
 
-    // Unpause and verify success
-    client.update_config(&unpaused_config);
+    client.unpause();
     let res_sign_success = client.try_sign_agreement(&tenant, &agreement_id);
     assert!(res_sign_success.is_ok());
 }
@@ -1309,4 +1307,126 @@ fn test_cancel_extension() {
         history.extensions.get(0).unwrap().status,
         ExtensionStatus::Cancelled
     );
+fn test_pause_unpause_events_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+
+    let pause_res = client.try_pause(&String::from_str(&env, "security patching"));
+    assert!(pause_res.is_ok());
+    let events_after_pause = env.events().all();
+    assert_eq!(events_after_pause.len(), 1);
+
+    let unpause_res = client.try_unpause();
+    assert!(unpause_res.is_ok());
+    let events_after_unpause = env.events().all();
+    assert_eq!(events_after_unpause.len(), 1);
+}
+
+#[test]
+fn test_pause_double_call_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+    client.pause(&String::from_str(&env, "maintenance"));
+
+    let result = client.try_pause(&String::from_str(&env, "maintenance again"));
+    assert_eq!(result, Err(Ok(RentalError::AlreadyPaused)));
+}
+
+#[test]
+fn test_unpause_when_not_paused_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+    let result = client.try_unpause();
+    assert_eq!(result, Err(Ok(RentalError::NotPaused)));
+}
+
+#[test]
+#[should_panic]
+fn test_pause_unauthorized() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    initialize_contract_state(&env, &client, &admin);
+
+    let attacker = Address::generate(&env);
+    let reason = String::from_str(&env, "malicious pause");
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "pause",
+                args: (reason.clone(),).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .pause(&reason);
+}
+
+#[test]
+#[should_panic]
+fn test_unpause_unauthorized() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    initialize_contract_state(&env, &client, &admin);
+    let reason = String::from_str(&env, "maintenance");
+    client
+        .mock_auths(&[MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "pause",
+                args: (reason.clone(),).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .pause(&reason);
+
+    let attacker = Address::generate(&env);
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "unpause",
+                args: ().into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .unpause();
 }

@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, String};
+use soroban_sdk::{contracttype, Address, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -34,6 +34,7 @@ pub struct Dispute {
     pub resolved_at: Option<u64>,
     pub votes_favor_landlord: u32,
     pub votes_favor_tenant: u32,
+    pub voters: Vec<Address>,
 }
 
 impl Dispute {
@@ -57,4 +58,36 @@ pub struct Vote {
     pub agreement_id: String,
     pub favor_landlord: bool,
     pub voted_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AppealStatus {
+    Pending,
+    InProgress,
+    Approved,
+    Rejected,
+    Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AppealVote {
+    pub arbiter: Address,
+    pub vote: DisputeOutcome,
+    pub timestamp: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DisputeAppeal {
+    pub id: String,
+    pub dispute_id: String,
+    pub appellant: Address,
+    pub reason: String,
+    pub status: AppealStatus,
+    pub appeal_arbiters: Vec<Address>,
+    pub votes: Vec<AppealVote>,
+    pub created_at: u64,
+    pub resolved_at: Option<u64>,
 }

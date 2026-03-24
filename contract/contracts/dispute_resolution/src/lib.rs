@@ -12,12 +12,15 @@ mod types;
 mod tests;
 
 pub use dispute::{
-    add_arbiter, get_arbiter, get_arbiter_count, get_dispute, get_vote, raise_dispute,
-    resolve_dispute, vote_on_dispute,
+    add_arbiter, cancel_appeal, create_appeal, get_appeal, get_arbiter, get_arbiter_count,
+    get_dispute, get_vote, raise_dispute, resolve_appeal, resolve_dispute, vote_on_appeal,
+    vote_on_dispute,
 };
 pub use errors::DisputeError;
 pub use storage::DataKey;
-pub use types::{Arbiter, ContractState, Dispute, DisputeOutcome, Vote};
+pub use types::{
+    AppealStatus, AppealVote, Arbiter, ContractState, Dispute, DisputeAppeal, DisputeOutcome, Vote,
+};
 
 #[contract]
 pub struct DisputeResolutionContract;
@@ -187,5 +190,39 @@ impl DisputeResolutionContract {
     /// * `Option<Vote>` - The vote information if it exists
     pub fn get_vote(env: Env, agreement_id: String, arbiter: Address) -> Option<Vote> {
         dispute::get_vote(&env, agreement_id, arbiter)
+    }
+
+    pub fn create_appeal(
+        env: Env,
+        appellant: Address,
+        dispute_id: String,
+        reason: String,
+    ) -> Result<String, DisputeError> {
+        dispute::create_appeal(&env, appellant, dispute_id, reason)
+    }
+
+    pub fn vote_on_appeal(
+        env: Env,
+        arbiter: Address,
+        appeal_id: String,
+        vote: DisputeOutcome,
+    ) -> Result<(), DisputeError> {
+        dispute::vote_on_appeal(&env, arbiter, appeal_id, vote)
+    }
+
+    pub fn resolve_appeal(env: Env, appeal_id: String) -> Result<(), DisputeError> {
+        dispute::resolve_appeal(&env, appeal_id)
+    }
+
+    pub fn cancel_appeal(
+        env: Env,
+        appellant: Address,
+        appeal_id: String,
+    ) -> Result<(), DisputeError> {
+        dispute::cancel_appeal(&env, appellant, appeal_id)
+    }
+
+    pub fn get_appeal(env: Env, appeal_id: String) -> Option<DisputeAppeal> {
+        dispute::get_appeal(&env, appeal_id)
     }
 }

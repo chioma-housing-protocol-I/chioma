@@ -76,6 +76,19 @@ pub struct ConfigUpdated {
     pub new_paused: bool,
 }
 
+#[contractevent(topics = ["paused"])]
+pub struct Paused {
+    #[topic]
+    pub paused_by: Address,
+    pub reason: String,
+}
+
+#[contractevent(topics = ["unpaused"])]
+pub struct Unpaused {
+    #[topic]
+    pub unpaused_by: Address,
+}
+
 /// Helper function to emit contract initialized event
 pub(crate) fn contract_initialized(env: &Env, admin: Address, config: Config) {
     ContractInitialized {
@@ -230,6 +243,12 @@ pub(crate) fn extension_proposed(
         new_end_date,
     }
     .publish(env);
+pub(crate) fn paused(env: &Env, reason: String, paused_by: Address) {
+    Paused { paused_by, reason }.publish(env);
+}
+
+pub(crate) fn unpaused(env: &Env, unpaused_by: Address) {
+    Unpaused { unpaused_by }.publish(env);
 }
 
 /// Events for multi-token support

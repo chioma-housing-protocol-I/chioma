@@ -3,6 +3,7 @@ import {
   ValidationPipe,
   MiddlewareConsumer,
   NestModule,
+  Logger,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -46,6 +47,12 @@ import { LoggerModule } from './common/logger/logger.module';
 import { ContextMiddleware } from './common/middleware/context.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { I18nModule } from './modules/i18n/i18n.module';
+import { LocalizationMiddleware } from './modules/i18n/middleware/localization.middleware';
+import { CleanupModule } from './modules/cleanup/cleanup.module';
+import { AiModule } from './modules/ai/ai.module';
+
+const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
@@ -65,7 +72,7 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
           useFactory: async () => {
             // Use Upstash REST API if URL is provided (better for serverless/Render)
             if (process.env.REDIS_URL && process.env.REDIS_TOKEN) {
-              console.log('[Redis] Using Upstash REST API');
+              appLogger.log('[Redis] Using Upstash REST API');
 
               return {
                 store: upstashStore({
@@ -103,7 +110,7 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
               redisConfig.username = process.env.REDIS_USERNAME;
             }
 
-            console.log('[Redis] Using ioredis with TLS');
+            appLogger.log('[Redis] Using ioredis with TLS');
 
             const client = new Redis(redisConfig);
 
@@ -171,7 +178,8 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
           synchronize: isTest,
           logging: process.env.NODE_ENV === 'development',
         };
-        console.log('[TypeORM Config] PostgreSQL config:', {
+        appLogger.log('[TypeORM Config] PostgreSQL config');
+        appLogger.debug({
           type: config.type,
           host: config.host,
           port: config.port,
@@ -197,11 +205,14 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
     NotificationsModule,
     ProfileModule,
     SecurityModule,
+    I18nModule,
     StorageModule,
     ReviewsModule,
     FeedbackModule,
     DeveloperModule,
     SearchModule,
+    CleanupModule,
+    AiModule,
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [RateLimitingModule] : []),
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
@@ -237,9 +248,9 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
 })
 export class AppModule implements NestModule {
   constructor() {
-    console.log('AppModule constructor: validating rate limit config');
+    appLogger.log('Validating rate limit config');
     this.validateRateLimitConfig();
-    console.log('AppModule constructor: validation passed');
+    appLogger.log('Rate limit config validation passed');
   }
 
   private validateRateLimitConfig(): void {
@@ -263,6 +274,7 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // Context propagation (MUST BE FIRST)
     consumer.apply(ContextMiddleware).forRoutes('*');
+    consumer.apply(LocalizationMiddleware).forRoutes('*');
 
     // Security headers middleware (applied to all routes)
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
