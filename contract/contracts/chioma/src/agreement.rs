@@ -44,10 +44,7 @@ pub fn validate_agreement_params(
 
 /// Create a new rent agreement
 #[allow(clippy::too_many_arguments)]
-pub fn create_agreement(
-    env: &Env,
-    input: crate::types::AgreementInput,
-) -> Result<(), RentalError> {
+pub fn create_agreement(env: &Env, input: crate::types::AgreementInput) -> Result<(), RentalError> {
     // Tenant MUST authorize creation
     input.tenant.require_auth();
 
