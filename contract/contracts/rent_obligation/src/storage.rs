@@ -7,4 +7,7 @@ pub enum DataKey {
     Obligation(String),
     Owner(String),
     ObligationCount,
+    BurnRecord(String),
+    BurnedNfts(String),
+    BurnCount,
 }

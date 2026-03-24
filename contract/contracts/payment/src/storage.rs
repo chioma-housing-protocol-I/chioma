@@ -15,4 +15,12 @@ pub enum DataKey {
     PlatformFeeCollector,
     /// Agreement storage (for reading agreement data)
     Agreement(String),
+    /// Store recurring payment by ID
+    RecurringPayment(String),
+    /// Counter for recurring payments
+    RecurringPaymentCount,
+    /// Executions for recurring payment
+    PaymentExecutions(String),
+    /// List of failed recurring payment IDs
+    FailedRecurringPayments,
 }

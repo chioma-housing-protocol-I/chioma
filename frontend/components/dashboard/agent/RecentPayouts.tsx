@@ -3,34 +3,47 @@
 import React from 'react';
 import { DollarSign } from 'lucide-react';
 
-const RecentPayouts = () => {
-  const payouts = [
-    {
-      id: 1,
-      title: 'Commission - Highland Apt',
-      time: '2 mins ago',
-      amount: '+$1,200',
-      currency: 'USDC',
-      isPositive: true,
-    },
-    {
-      id: 2,
-      title: 'Listing Fee - Sunset Villa',
-      time: '1 day ago',
-      amount: '-$50.00',
-      currency: 'USDC',
-      isPositive: false,
-    },
-    {
-      id: 3,
-      title: 'Commission - Lake House',
-      time: '3 days ago',
-      amount: '+$850',
-      currency: 'USDC',
-      isPositive: true,
-    },
-  ];
+export interface PayoutTransaction {
+  id: string | number;
+  title: string;
+  time: string;
+  amount: string;
+  currency: string;
+  isPositive: boolean;
+}
 
+interface RecentPayoutsProps {
+  payouts?: PayoutTransaction[];
+}
+
+const defaultPayouts: PayoutTransaction[] = [
+  {
+    id: 1,
+    title: 'Commission - Highland Apt',
+    time: '2 mins ago',
+    amount: '+$1,200',
+    currency: 'USDC',
+    isPositive: true,
+  },
+  {
+    id: 2,
+    title: 'Listing Fee - Sunset Villa',
+    time: '1 day ago',
+    amount: '-$50.00',
+    currency: 'USDC',
+    isPositive: false,
+  },
+  {
+    id: 3,
+    title: 'Commission - Lake House',
+    time: '3 days ago',
+    amount: '+$850',
+    currency: 'USDC',
+    isPositive: true,
+  },
+];
+
+const RecentPayouts = ({ payouts = defaultPayouts }: RecentPayoutsProps) => {
   return (
     <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/10">
       <h3 className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest mb-6">

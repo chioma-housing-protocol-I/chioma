@@ -22,6 +22,7 @@ For example, if a landlord and tenant disagree on a security deposit release, ve
 - **Majority Rule**: Disputes are resolved based on majority votes
 - **Minimum Votes Requirement**: Configurable minimum number of votes required for resolution
 - **Transparent Outcome**: Clear outcomes (FavorLandlord or FavorTenant)
+- **Dispute Appeals**: Second-level review with separate arbiters and majority decision
 
 ## Architecture
 
@@ -59,6 +60,17 @@ pub enum DisputeOutcome {
 - `agreement_id`: Agreement being voted on
 - `favor_landlord`: Vote direction (true = landlord, false = tenant)
 - `voted_at`: Timestamp of the vote
+
+#### DisputeAppeal
+- `id`: Appeal identifier
+- `dispute_id`: Dispute being appealed
+- `appellant`: Address that opened the appeal
+- `reason`: Appeal reason text
+- `status`: Pending / InProgress / Approved / Rejected / Cancelled
+- `appeal_arbiters`: Arbiter panel selected for the appeal
+- `votes`: Appeal votes cast by eligible appeal arbiters
+- `created_at`: Appeal creation timestamp
+- `resolved_at`: Appeal resolution/cancellation timestamp
 
 ## Contract Methods
 
@@ -141,6 +153,40 @@ Resolves a dispute by evaluating votes and determining the outcome.
 - `DisputeAlreadyResolved`: Dispute already resolved
 - `InsufficientVotes`: Minimum required votes not met
 
+### Create Appeal
+```rust
+pub fn create_appeal(env: Env, appellant: Address, dispute_id: String, reason: String) -> Result<String, DisputeError>
+```
+
+Rules enforced:
+- dispute must be resolved
+- appeal must be created within 7 days of dispute resolution
+- appeal arbiter panel must exclude original dispute arbiters
+- minimum 3 appeal arbiters required
+- appeal fee is recorded and tracked
+
+### Vote on Appeal
+```rust
+pub fn vote_on_appeal(env: Env, arbiter: Address, appeal_id: String, vote: DisputeOutcome) -> Result<(), DisputeError>
+```
+
+### Resolve Appeal
+```rust
+pub fn resolve_appeal(env: Env, appeal_id: String) -> Result<(), DisputeError>
+```
+
+Resolution uses majority vote. If appeal outcome differs from original dispute outcome, appeal is approved and fee refund is recorded.
+
+### Cancel Appeal
+```rust
+pub fn cancel_appeal(env: Env, appellant: Address, appeal_id: String) -> Result<(), DisputeError>
+```
+
+### Get Appeal
+```rust
+pub fn get_appeal(env: Env, appeal_id: String) -> Option<DisputeAppeal>
+```
+
 ## Query Methods
 
 ### Get State
@@ -188,6 +234,16 @@ Returns a specific vote for a dispute.
 | 9 | AlreadyVoted | Arbiter already voted |
 | 10 | InvalidDetailsHash | Details hash is empty |
 | 11 | InsufficientVotes | Not enough votes to resolve |
+| 14 | AppealAlreadyExists | Appeal already exists for dispute |
+| 15 | AppealNotFound | Appeal does not exist |
+| 16 | AppealWindowExpired | Appeal created after 7-day window |
+| 17 | InsufficientAppealArbiters | Fewer than 3 eligible appeal arbiters |
+| 18 | ArbiterNotEligibleForAppeal | Arbiter not in appeal panel |
+| 19 | AppealAlreadyResolved | Appeal already finalized |
+| 20 | AppealAlreadyVoted | Arbiter already voted on appeal |
+| 21 | InsufficientAppealVotes | Not enough votes to resolve appeal |
+| 22 | AppealFeeRequired | Appeal fee required |
+| 23 | AppealNotCancelable | Appeal cannot be canceled in current state |
 
 ## Events
 
@@ -205,6 +261,18 @@ Emitted when an arbiter casts a vote.
 
 ### DisputeResolved
 Emitted when a dispute is resolved with the outcome.
+
+### AppealCreated
+Emitted when an appeal is created.
+
+### AppealVoted
+Emitted when an appeal arbiter votes.
+
+### AppealResolved
+Emitted when an appeal is resolved.
+
+### AppealCancelled
+Emitted when an appeal is canceled.
 
 ## Usage Example
 

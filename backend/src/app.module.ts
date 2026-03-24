@@ -3,6 +3,7 @@ import {
   ValidationPipe,
   MiddlewareConsumer,
   NestModule,
+  Logger,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -42,6 +43,13 @@ import { JobQueueService } from './common/services/job-queue.service';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { upstashStore } from './common/cache/upstash-cache.store';
+import { I18nModule } from './modules/i18n/i18n.module';
+import { LocalizationMiddleware } from './modules/i18n/middleware/localization.middleware';
+import { CleanupModule } from './modules/cleanup/cleanup.module';
+import { AiModule } from './modules/ai/ai.module';
+import { LoggerModule } from './common/services/logger.module';
+
+const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
@@ -49,6 +57,7 @@ import { upstashStore } from './common/cache/upstash-cache.store';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    LoggerModule,
     process.env.NODE_ENV === 'test'
       ? CacheModule.register({
           isGlobal: true,
@@ -61,7 +70,7 @@ import { upstashStore } from './common/cache/upstash-cache.store';
           useFactory: async () => {
             // Use Upstash REST API if URL is provided (better for serverless/Render)
             if (process.env.REDIS_URL && process.env.REDIS_TOKEN) {
-              console.log('[Redis] Using Upstash REST API');
+              appLogger.log('[Redis] Using Upstash REST API');
 
               return {
                 store: upstashStore({
@@ -99,7 +108,7 @@ import { upstashStore } from './common/cache/upstash-cache.store';
               redisConfig.username = process.env.REDIS_USERNAME;
             }
 
-            console.log('[Redis] Using ioredis with TLS');
+            appLogger.log('[Redis] Using ioredis with TLS');
 
             const client = new Redis(redisConfig);
 
@@ -167,7 +176,8 @@ import { upstashStore } from './common/cache/upstash-cache.store';
           synchronize: isTest,
           logging: process.env.NODE_ENV === 'development',
         };
-        console.log('[TypeORM Config] PostgreSQL config:', {
+        appLogger.log('[TypeORM Config] PostgreSQL config');
+        appLogger.debug({
           type: config.type,
           host: config.host,
           port: config.port,
@@ -193,11 +203,14 @@ import { upstashStore } from './common/cache/upstash-cache.store';
     NotificationsModule,
     ProfileModule,
     SecurityModule,
+    I18nModule,
     StorageModule,
     ReviewsModule,
     FeedbackModule,
     DeveloperModule,
     SearchModule,
+    CleanupModule,
+    AiModule,
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [RateLimitingModule] : []),
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
@@ -224,9 +237,9 @@ import { upstashStore } from './common/cache/upstash-cache.store';
 })
 export class AppModule implements NestModule {
   constructor() {
-    console.log('AppModule constructor: validating rate limit config');
+    appLogger.log('Validating rate limit config');
     this.validateRateLimitConfig();
-    console.log('AppModule constructor: validation passed');
+    appLogger.log('Rate limit config validation passed');
   }
 
   private validateRateLimitConfig(): void {
@@ -248,6 +261,8 @@ export class AppModule implements NestModule {
   }
 
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LocalizationMiddleware).forRoutes('*');
+
     // Security headers middleware (applied to all routes)
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
 

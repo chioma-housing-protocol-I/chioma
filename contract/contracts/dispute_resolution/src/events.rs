@@ -42,6 +42,35 @@ pub struct DisputeResolved {
     pub votes_favor_tenant: u32,
 }
 
+#[contractevent(topics = ["appeal_created"])]
+pub struct AppealCreated {
+    #[topic]
+    pub appeal_id: String,
+    #[topic]
+    pub dispute_id: String,
+}
+
+#[contractevent(topics = ["appeal_voted"])]
+pub struct AppealVoted {
+    #[topic]
+    pub appeal_id: String,
+    #[topic]
+    pub arbiter: Address,
+}
+
+#[contractevent(topics = ["appeal_resolved"])]
+pub struct AppealResolved {
+    #[topic]
+    pub appeal_id: String,
+    pub outcome: DisputeOutcome,
+}
+
+#[contractevent(topics = ["appeal_cancelled"])]
+pub struct AppealCancelled {
+    #[topic]
+    pub appeal_id: String,
+}
+
 pub(crate) fn contract_initialized(env: &Env, admin: Address, min_votes_required: u32) {
     ContractInitialized {
         admin,
@@ -85,4 +114,24 @@ pub(crate) fn dispute_resolved(
         votes_favor_tenant,
     }
     .publish(env);
+}
+
+pub(crate) fn appeal_created(env: &Env, appeal_id: String, dispute_id: String) {
+    AppealCreated {
+        appeal_id,
+        dispute_id,
+    }
+    .publish(env);
+}
+
+pub(crate) fn appeal_voted(env: &Env, appeal_id: String, arbiter: Address) {
+    AppealVoted { appeal_id, arbiter }.publish(env);
+}
+
+pub(crate) fn appeal_resolved(env: &Env, appeal_id: String, outcome: DisputeOutcome) {
+    AppealResolved { appeal_id, outcome }.publish(env);
+}
+
+pub(crate) fn appeal_cancelled(env: &Env, appeal_id: String) {
+    AppealCancelled { appeal_id }.publish(env);
 }

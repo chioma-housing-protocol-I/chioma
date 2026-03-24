@@ -3,7 +3,27 @@
 import React from 'react';
 import { StellarLogo } from '@/components/icons/StellarLogo';
 
-const WalletCard = () => {
+interface WalletCardProps {
+  balance?: number;
+  currency?: 'USDC' | 'XLM';
+  onCurrencyToggle?: () => void;
+  onWithdraw?: () => void;
+}
+
+const WalletCard = ({
+  balance = 12450.0,
+  currency = 'USDC',
+  onCurrencyToggle,
+  onWithdraw,
+}: WalletCardProps = {}) => {
+  const formattedBalance = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(balance);
+
+  const displayBalance =
+    currency === 'USDC' ? formattedBalance : `${balance.toLocaleString()} XLM`;
+
   return (
     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
       {/* Decorative Elements */}
@@ -20,15 +40,22 @@ const WalletCard = () => {
               Stellar Wallet
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/20 flex items-center justify-center backdrop-blur-md shadow-lg group-hover:rotate-12 transition-transform">
-            <StellarLogo size={24} color="white" />
-          </div>
+          <button
+            onClick={onCurrencyToggle}
+            className="px-3 py-1.5 rounded-xl bg-white/20 border border-white/20 flex items-center justify-center backdrop-blur-md shadow-lg hover:bg-white/30 transition-colors text-xs font-bold"
+            title="Toggle Currency"
+          >
+            <StellarLogo size={16} color="white" className="mr-2" />
+            {currency}
+          </button>
         </div>
 
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-white flex items-baseline gap-2">
-            $12,450.00
-            <span className="text-base font-bold text-blue-200">USDC</span>
+            {displayBalance}
+            {currency === 'USDC' && (
+              <span className="text-base font-bold text-blue-200">USDC</span>
+            )}
           </h2>
           <div className="flex items-center gap-2 mt-2">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
@@ -39,7 +66,10 @@ const WalletCard = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <button className="py-2.5 px-4 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-xs font-bold transition-all border border-white/10 uppercase tracking-widest shadow-lg">
+          <button
+            onClick={onWithdraw}
+            className="py-2.5 px-4 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-xs font-bold transition-all border border-white/10 uppercase tracking-widest shadow-lg"
+          >
             Withdraw
           </button>
           <button className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-xs font-bold transition-all border border-white/10 uppercase tracking-widest">

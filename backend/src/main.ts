@@ -12,16 +12,26 @@ Sentry.init({
 
 import * as express from 'express';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { ConfigService } from '@nestjs/config';
+import { LoggerService } from './common/services/logger.service';
+
+const bootstrapLogger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Use custom logger service
+  const loggerService = app.get(LoggerService);
+  app.useLogger(loggerService);
+
   const configService = app.get(ConfigService);
 
   // Parse CORS origins from environment variable
@@ -157,6 +167,8 @@ async function bootstrap() {
     customSiteTitle: 'Chioma API Docs',
   });
 
-  await app.listen(process.env.PORT ?? 5000);
+  const port = process.env.PORT ?? 5000;
+  await app.listen(port);
+  bootstrapLogger.log(`Application started on port ${port}`);
 }
 void bootstrap();

@@ -3,7 +3,13 @@ use soroban_sdk::{contracttype, Address, Env, Map, String};
 use crate::errors::DisputeError;
 use crate::events;
 use crate::storage::DataKey;
-use crate::types::{Arbiter, ContractState, Dispute, DisputeOutcome, Vote};
+use crate::types::{
+    AppealStatus, AppealVote, Arbiter, ContractState, Dispute, DisputeAppeal, DisputeOutcome, Vote,
+};
+
+const APPEAL_WINDOW_SECONDS: u64 = 7 * 24 * 60 * 60;
+const APPEAL_MIN_ARBITERS: u32 = 3;
+const APPEAL_FEE: i128 = 100;
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -75,6 +81,18 @@ pub fn add_arbiter(env: &Env, admin: Address, arbiter: Address) -> Result<(), Di
     env.storage().persistent().set(&key, &arbiter_info);
     env.storage().persistent().extend_ttl(&key, 500000, 500000);
 
+    let list_key = DataKey::ArbiterList;
+    let mut arbiter_list: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&list_key)
+        .unwrap_or(soroban_sdk::Vec::new(env));
+    arbiter_list.push_back(arbiter.clone());
+    env.storage().persistent().set(&list_key, &arbiter_list);
+    env.storage()
+        .persistent()
+        .extend_ttl(&list_key, 500000, 500000);
+
     let count_key = DataKey::ArbiterCount;
     let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
     env.storage().persistent().set(&count_key, &(count + 1));
@@ -137,6 +155,7 @@ pub fn raise_dispute(
         resolved_at: None,
         votes_favor_landlord: 0,
         votes_favor_tenant: 0,
+        voters: soroban_sdk::Vec::new(env),
     };
 
     env.storage().persistent().set(&key, &dispute);
@@ -203,6 +222,7 @@ pub fn vote_on_dispute(
     } else {
         dispute.votes_favor_tenant += 1;
     }
+    dispute.voters.push_back(arbiter.clone());
 
     env.storage().persistent().set(&dispute_key, &dispute);
     env.storage()
@@ -281,4 +301,302 @@ pub fn get_arbiter_count(env: &Env) -> u32 {
 pub fn get_vote(env: &Env, agreement_id: String, arbiter: Address) -> Option<Vote> {
     let key = DataKey::Vote(agreement_id, arbiter);
     env.storage().persistent().get(&key)
+}
+
+pub fn create_appeal(
+    env: &Env,
+    appellant: Address,
+    dispute_id: String,
+    reason: String,
+) -> Result<String, DisputeError> {
+    if !env.storage().persistent().has(&DataKey::Initialized) {
+        return Err(DisputeError::NotInitialized);
+    }
+
+    appellant.require_auth();
+
+    if reason.is_empty() {
+        return Err(DisputeError::InvalidDetailsHash);
+    }
+
+    let dispute_key = DataKey::Dispute(dispute_id.clone());
+    let dispute: Dispute = env
+        .storage()
+        .persistent()
+        .get(&dispute_key)
+        .ok_or(DisputeError::DisputeNotFound)?;
+
+    if !dispute.resolved {
+        return Err(DisputeError::InvalidAgreementState);
+    }
+
+    let resolved_at = dispute
+        .resolved_at
+        .ok_or(DisputeError::DisputeAlreadyResolved)?;
+    let now = env.ledger().timestamp();
+
+    if now > resolved_at + APPEAL_WINDOW_SECONDS {
+        return Err(DisputeError::AppealWindowExpired);
+    }
+
+    let existing_appeal_key = DataKey::AppealForDispute(dispute_id.clone());
+    if env.storage().persistent().has(&existing_appeal_key) {
+        return Err(DisputeError::AppealAlreadyExists);
+    }
+
+    let arbiter_list_key = DataKey::ArbiterList;
+    let arbiter_list: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&arbiter_list_key)
+        .unwrap_or(soroban_sdk::Vec::new(env));
+
+    let mut selected_arbiters = soroban_sdk::Vec::new(env);
+
+    for arbiter in arbiter_list.iter() {
+        if dispute.voters.contains(arbiter.clone()) {
+            continue;
+        }
+
+        let arbiter_info: Option<Arbiter> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Arbiter(arbiter.clone()));
+
+        if let Some(info) = arbiter_info {
+            if info.active {
+                selected_arbiters.push_back(arbiter.clone());
+            }
+        }
+
+        if selected_arbiters.len() >= APPEAL_MIN_ARBITERS {
+            break;
+        }
+    }
+
+    if selected_arbiters.len() < APPEAL_MIN_ARBITERS {
+        return Err(DisputeError::InsufficientAppealArbiters);
+    }
+
+    let appeal_count_key = DataKey::AppealCount;
+    let appeal_count: u32 = env
+        .storage()
+        .persistent()
+        .get(&appeal_count_key)
+        .unwrap_or(0);
+    let next_count = appeal_count + 1;
+    let appeal_id = dispute_id.clone();
+
+    let appeal = DisputeAppeal {
+        id: appeal_id.clone(),
+        dispute_id: dispute_id.clone(),
+        appellant,
+        reason,
+        status: AppealStatus::Pending,
+        appeal_arbiters: selected_arbiters,
+        votes: soroban_sdk::Vec::new(env),
+        created_at: now,
+        resolved_at: None,
+    };
+
+    let appeal_key = DataKey::Appeal(appeal_id.clone());
+    env.storage().persistent().set(&appeal_key, &appeal);
+    env.storage()
+        .persistent()
+        .extend_ttl(&appeal_key, 500000, 500000);
+
+    env.storage()
+        .persistent()
+        .set(&existing_appeal_key, &appeal_id);
+    env.storage()
+        .persistent()
+        .extend_ttl(&existing_appeal_key, 500000, 500000);
+
+    env.storage()
+        .persistent()
+        .set(&appeal_count_key, &next_count);
+    env.storage()
+        .persistent()
+        .extend_ttl(&appeal_count_key, 500000, 500000);
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::AppealFeePaid(appeal_id.clone()), &APPEAL_FEE);
+    env.storage()
+        .persistent()
+        .set(&DataKey::AppealFeeRefunded(appeal_id.clone()), &false);
+
+    events::appeal_created(env, appeal_id.clone(), dispute_id);
+
+    Ok(appeal_id)
+}
+
+pub fn vote_on_appeal(
+    env: &Env,
+    arbiter: Address,
+    appeal_id: String,
+    vote: DisputeOutcome,
+) -> Result<(), DisputeError> {
+    if !env.storage().persistent().has(&DataKey::Initialized) {
+        return Err(DisputeError::NotInitialized);
+    }
+
+    arbiter.require_auth();
+
+    let appeal_key = DataKey::Appeal(appeal_id.clone());
+    let mut appeal: DisputeAppeal = env
+        .storage()
+        .persistent()
+        .get(&appeal_key)
+        .ok_or(DisputeError::AppealNotFound)?;
+
+    match appeal.status {
+        AppealStatus::Approved | AppealStatus::Rejected | AppealStatus::Cancelled => {
+            return Err(DisputeError::AppealAlreadyResolved);
+        }
+        _ => {}
+    }
+
+    if !appeal.appeal_arbiters.contains(arbiter.clone()) {
+        return Err(DisputeError::ArbiterNotEligibleForAppeal);
+    }
+
+    for existing_vote in appeal.votes.iter() {
+        if existing_vote.arbiter == arbiter {
+            return Err(DisputeError::AppealAlreadyVoted);
+        }
+    }
+
+    if appeal.status == AppealStatus::Pending {
+        appeal.status = AppealStatus::InProgress;
+    }
+
+    appeal.votes.push_back(AppealVote {
+        arbiter: arbiter.clone(),
+        vote,
+        timestamp: env.ledger().timestamp(),
+    });
+
+    env.storage().persistent().set(&appeal_key, &appeal);
+    env.storage()
+        .persistent()
+        .extend_ttl(&appeal_key, 500000, 500000);
+
+    events::appeal_voted(env, appeal_id, arbiter);
+
+    Ok(())
+}
+
+pub fn resolve_appeal(env: &Env, appeal_id: String) -> Result<(), DisputeError> {
+    if !env.storage().persistent().has(&DataKey::Initialized) {
+        return Err(DisputeError::NotInitialized);
+    }
+
+    let appeal_key = DataKey::Appeal(appeal_id.clone());
+    let mut appeal: DisputeAppeal = env
+        .storage()
+        .persistent()
+        .get(&appeal_key)
+        .ok_or(DisputeError::AppealNotFound)?;
+
+    match appeal.status {
+        AppealStatus::Approved | AppealStatus::Rejected | AppealStatus::Cancelled => {
+            return Err(DisputeError::AppealAlreadyResolved);
+        }
+        _ => {}
+    }
+
+    if appeal.votes.len() < APPEAL_MIN_ARBITERS {
+        return Err(DisputeError::InsufficientAppealVotes);
+    }
+
+    let mut votes_favor_landlord = 0u32;
+    let mut votes_favor_tenant = 0u32;
+
+    for appeal_vote in appeal.votes.iter() {
+        if appeal_vote.vote == DisputeOutcome::FavorLandlord {
+            votes_favor_landlord += 1;
+        } else {
+            votes_favor_tenant += 1;
+        }
+    }
+
+    let appeal_outcome = if votes_favor_landlord > votes_favor_tenant {
+        DisputeOutcome::FavorLandlord
+    } else {
+        DisputeOutcome::FavorTenant
+    };
+
+    let dispute: Dispute = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Dispute(appeal.dispute_id.clone()))
+        .ok_or(DisputeError::DisputeNotFound)?;
+
+    let original_outcome = dispute
+        .get_outcome()
+        .ok_or(DisputeError::DisputeAlreadyResolved)?;
+
+    if appeal_outcome != original_outcome {
+        appeal.status = AppealStatus::Approved;
+        env.storage()
+            .persistent()
+            .set(&DataKey::AppealFeeRefunded(appeal_id.clone()), &true);
+    } else {
+        appeal.status = AppealStatus::Rejected;
+        env.storage()
+            .persistent()
+            .set(&DataKey::AppealFeeRefunded(appeal_id.clone()), &false);
+    }
+
+    appeal.resolved_at = Some(env.ledger().timestamp());
+
+    env.storage().persistent().set(&appeal_key, &appeal);
+    env.storage()
+        .persistent()
+        .extend_ttl(&appeal_key, 500000, 500000);
+
+    events::appeal_resolved(env, appeal_id, appeal_outcome);
+
+    Ok(())
+}
+
+pub fn cancel_appeal(env: &Env, appellant: Address, appeal_id: String) -> Result<(), DisputeError> {
+    if !env.storage().persistent().has(&DataKey::Initialized) {
+        return Err(DisputeError::NotInitialized);
+    }
+
+    appellant.require_auth();
+
+    let appeal_key = DataKey::Appeal(appeal_id.clone());
+    let mut appeal: DisputeAppeal = env
+        .storage()
+        .persistent()
+        .get(&appeal_key)
+        .ok_or(DisputeError::AppealNotFound)?;
+
+    if appeal.appellant != appellant {
+        return Err(DisputeError::Unauthorized);
+    }
+
+    match appeal.status {
+        AppealStatus::Pending | AppealStatus::InProgress => {}
+        _ => return Err(DisputeError::AppealNotCancelable),
+    }
+
+    appeal.status = AppealStatus::Cancelled;
+    appeal.resolved_at = Some(env.ledger().timestamp());
+
+    env.storage().persistent().set(&appeal_key, &appeal);
+    env.storage()
+        .persistent()
+        .extend_ttl(&appeal_key, 500000, 500000);
+
+    events::appeal_cancelled(env, appeal_id);
+
+    Ok(())
+}
+
+pub fn get_appeal(env: &Env, appeal_id: String) -> Option<DisputeAppeal> {
+    env.storage().persistent().get(&DataKey::Appeal(appeal_id))
 }

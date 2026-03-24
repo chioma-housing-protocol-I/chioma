@@ -1,6 +1,6 @@
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Events, MockAuth, MockAuthInvoke},
+    testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke},
     Address, Env, IntoVal, String,
 };
 
@@ -297,4 +297,300 @@ fn test_events_emitted() {
 
     let all_events = env.events().all();
     assert!(!all_events.is_empty());
+}
+
+#[test]
+fn test_nft_burn_by_owner() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+
+    let record = client.get_burn_record(&agreement_id);
+    assert_eq!(record.token_id, agreement_id);
+    assert_eq!(record.burned_by, landlord);
+    assert_eq!(record.reason, String::from_str(&env, "LeaseCompleted"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_nft_burn_already_burned_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn test_nft_burn_record_not_found() {
+    let env = Env::default();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let agreement_id = String::from_str(&env, "nonexistent");
+
+    client.get_burn_record(&agreement_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_nft_burn_nonexistent_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let agreement_id = String::from_str(&env, "nonexistent");
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "UserRequested"));
+}
+
+#[test]
+#[should_panic]
+fn test_nft_burn_requires_auth() {
+    let env = Env::default();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &landlord,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "mint_obligation",
+                args: (&agreement_id, &landlord).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .mint_obligation(&agreement_id, &landlord);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+}
+
+#[test]
+fn test_nft_burn_can_burn_after_lease_end() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+
+    let can_burn_result = client.can_burn(&agreement_id);
+    assert!(can_burn_result);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_nft_burn_can_burn_nonexistent_fails() {
+    let env = Env::default();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let agreement_id = String::from_str(&env, "nonexistent");
+
+    client.can_burn(&agreement_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_nft_burn_can_burn_already_burned_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+    client.can_burn(&agreement_id);
+}
+
+#[test]
+fn test_nft_burn_with_allowed_reasons() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+
+    let agreement_id1 = String::from_str(&env, "agreement_001");
+    client.mint_obligation(&agreement_id1, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id1, &String::from_str(&env, "LeaseCompleted"));
+    assert_eq!(
+        client.get_burn_record(&agreement_id1).reason,
+        String::from_str(&env, "LeaseCompleted")
+    );
+
+    let agreement_id2 = String::from_str(&env, "agreement_002");
+    client.mint_obligation(&agreement_id2, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(
+        &agreement_id2,
+        &String::from_str(&env, "AgreementTerminated"),
+    );
+    assert_eq!(
+        client.get_burn_record(&agreement_id2).reason,
+        String::from_str(&env, "AgreementTerminated")
+    );
+
+    let agreement_id3 = String::from_str(&env, "agreement_003");
+    client.mint_obligation(&agreement_id3, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id3, &String::from_str(&env, "DisputeResolved"));
+    assert_eq!(
+        client.get_burn_record(&agreement_id3).reason,
+        String::from_str(&env, "DisputeResolved")
+    );
+
+    let agreement_id4 = String::from_str(&env, "agreement_004");
+    client.mint_obligation(&agreement_id4, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id4, &String::from_str(&env, "UserRequested"));
+    assert_eq!(
+        client.get_burn_record(&agreement_id4).reason,
+        String::from_str(&env, "UserRequested")
+    );
+}
+
+#[test]
+fn test_nft_burn_events_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+
+    let all_events = env.events().all();
+    assert!(!all_events.is_empty());
+}
+
+#[test]
+fn test_nft_burn_history_tracking() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id, &String::from_str(&env, "UserRequested"));
+
+    let burned = client.get_burned_nfts(&landlord);
+    assert_eq!(burned.len(), 1);
+    assert_eq!(burned.get(0).unwrap(), agreement_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_nft_burn_cannot_burn_active_obligation() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #10)")]
+fn test_nft_burn_invalid_reason_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    client.initialize();
+
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+    env.ledger().with_mut(|li| {
+        li.timestamp = li.timestamp.saturating_add(1);
+    });
+    client.burn_nft(&agreement_id, &String::from_str(&env, "InvalidReason"));
 }
