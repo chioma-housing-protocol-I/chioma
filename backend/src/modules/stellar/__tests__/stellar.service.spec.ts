@@ -1,3 +1,4 @@
+import { LoggerService } from '../../../common/services/logger.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -123,6 +124,18 @@ describe('StellarService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: LoggerService,
+          useValue: {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+            log: jest.fn(),
+            fatal: jest.fn(),
+          },
+        },
         StellarService,
         {
           provide: getRepositoryToken(StellarAccount),

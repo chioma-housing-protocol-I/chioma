@@ -9,7 +9,8 @@ export class ContextMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     const requestId = (req.headers['x-request-id'] as string) || randomUUID();
-    const correlationId = (req.headers['x-correlation-id'] as string) || requestId;
+    const correlationId =
+      (req.headers['x-correlation-id'] as string) || requestId;
     const traceId = (req.headers['x-trace-id'] as string) || randomUUID();
 
     const context = {

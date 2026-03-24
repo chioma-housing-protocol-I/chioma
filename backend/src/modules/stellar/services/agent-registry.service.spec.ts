@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AgentRegistryService } from './agent-registry.service';
 import { AgentTransaction } from '../entities/agent-transaction.entity';
+import { LoggerService } from '../../../common/services/logger.service';
 
 describe('AgentRegistryService', () => {
   let service: AgentRegistryService;
@@ -34,6 +35,10 @@ describe('AgentRegistryService', () => {
       providers: [
         AgentRegistryService,
         {
+          provide: LoggerService,
+          useValue: { info: jest.fn(), error: jest.fn() },
+        },
+        {
           provide: ConfigService,
           useValue: mockConfigService,
         },
@@ -56,7 +61,9 @@ describe('AgentRegistryService', () => {
 
   describe('registerAgent', () => {
     it('should throw error if contract not configured', async () => {
+      const mockLogger = { info: jest.fn(), error: jest.fn() } as any;
       const serviceWithoutContract = new AgentRegistryService(
+        mockLogger,
         {
           get: jest.fn(() => ''),
         } as any,
@@ -71,7 +78,9 @@ describe('AgentRegistryService', () => {
 
   describe('getAgentCount', () => {
     it('should throw error if contract not configured', async () => {
+      const mockLogger = { info: jest.fn(), error: jest.fn() } as any;
       const serviceWithoutContract = new AgentRegistryService(
+        mockLogger,
         {
           get: jest.fn(() => ''),
         } as any,

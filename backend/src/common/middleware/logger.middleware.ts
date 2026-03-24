@@ -31,12 +31,17 @@ export class LoggerMiddleware implements NestMiddleware {
 }
 
 export function sanitizeBody(body: any): any {
-  if (!body) return body;
+  if (!body || typeof body !== 'object') return body;
+  if (Array.isArray(body)) return body.map(sanitizeBody);
+
   const sensitiveFields = ['password', 'token', 'secret', 'authorization'];
   const sanitized = { ...body };
-  for (const field of sensitiveFields) {
-    if (field in sanitized) {
-      sanitized[field] = '[REDACTED]';
+
+  for (const key of Object.keys(sanitized)) {
+    if (sensitiveFields.includes(key.toLowerCase())) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+      sanitized[key] = sanitizeBody(sanitized[key]);
     }
   }
   return sanitized;

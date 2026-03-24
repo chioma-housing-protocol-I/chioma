@@ -1,0 +1,13 @@
+
+> backend@0.0.1 test /home/jahrulez/Desktop/oss/jahrulez/chioma/backend
+> jest --forceExit -- --json
+
+No tests found, exiting with code 1
+Run with `--passWithNoTests` to exit with code 0
+In /home/jahrulez/Desktop/oss/jahrulez/chioma/backend/src
+  372 files checked.
+  testMatch:  - 0 matches
+  testPathIgnorePatterns: /node_modules/ - 372 matches
+  testRegex: .*\.spec\.ts$ - 46 matches
+Pattern: --json - 0 matches
+ ELIFECYCLE  Test failed. See above for more details.

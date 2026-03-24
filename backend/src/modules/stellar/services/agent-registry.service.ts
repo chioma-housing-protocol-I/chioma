@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { LoggerService } from '../../../common/services/logger.service';
 import { Logging } from '../../../common/decorators/logging.decorator';
 import { ConfigService } from '@nestjs/config';
@@ -245,7 +242,10 @@ export class AgentRegistryService {
       }
       return null;
     } catch (error) {
-      this.logger.error(`Get agent info failed: ${error.message}`, error as Error);
+      this.logger.error(
+        `Get agent info failed: ${error.message}`,
+        error as Error,
+      );
       throw error;
     }
   }

@@ -1,3 +1,4 @@
+import { LoggerService } from '../../common/services/logger.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,18 @@ describe('AgreementNftService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: LoggerService,
+          useValue: {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+            log: jest.fn(),
+            fatal: jest.fn(),
+          },
+        },
         AgreementNftService,
         {
           provide: getRepositoryToken(RentObligationNft),

@@ -31,41 +31,57 @@ export class LoggerService {
 
     const format = winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-      winston.format.printf(
-        (info) => {
-          const context = this.cls.get() || {};
-          const logPayload = {
-            timestamp: info.timestamp,
-            level: info.level.toUpperCase(),
-            message: info.message,
-            service: context.service || 'Global',
-            method: context.method,
-            userId: context.userId,
-            requestId: context.requestId,
-            correlationId: context.correlationId,
-            traceId: context.traceId,
-            duration: info.duration,
-            context: info.context || {},
-            ...(info.error && { error: { message: info.error.message, stack: info.error.stack } }),
-          };
+      winston.format.printf((info) => {
+        const context = this.cls.get() || {};
+        const logPayload = {
+          timestamp: info.timestamp,
+          level: String(info.level).toUpperCase(),
+          message: info.message,
+          service: context.service || 'Global',
+          method: context.method,
+          userId: context.userId,
+          requestId: context.requestId,
+          correlationId: context.correlationId,
+          traceId: context.traceId,
+          duration: info.duration,
+          context: info.context || {},
+          ...(info.error
+            ? {
+                error: {
+                  message:
+                    (info.error as any).message ||
+                    ((info.error as any).toString
+                      ? (info.error as any).toString()
+                      : JSON.stringify(info.error)),
+                  stack: (info.error as any).stack,
+                },
+              }
+            : {}),
+        };
 
-          if (isProd) {
-            return JSON.stringify(logPayload);
-          }
-
-          const colorizer = winston.format.colorize();
-          const levelStr = colorizer.colorize(info.level, info.level.toUpperCase());
-          const contextStr = context.method ? ` [${context.service}:${context.method}]` : '';
-          const reqIdStr = context.requestId ? ` (reqId: ${context.requestId})` : '';
-
-          return `${info.timestamp} ${levelStr}${contextStr}${reqIdStr}: ${info.message}${info.duration ? ` (${info.duration}ms)` : ''}`;
+        if (isProd) {
+          return JSON.stringify(logPayload);
         }
-      ),
+
+        const colorizer = winston.format.colorize();
+        const levelStr = colorizer.colorize(
+          String(info.level),
+          String(info.level).toUpperCase(),
+        );
+        const contextStr = context.method
+          ? ` [${context.service}:${context.method}]`
+          : '';
+        const reqIdStr = context.requestId
+          ? ` (reqId: ${context.requestId})`
+          : '';
+
+        return `${String(info.timestamp)} ${levelStr}${contextStr}${reqIdStr}: ${String(
+          info.message,
+        )}${info.duration ? ` (${Number(info.duration)}ms)` : ''}`;
+      }),
     );
 
-    const transports: winston.transport[] = [
-      new winston.transports.Console(),
-    ];
+    const transports: winston.transport[] = [new winston.transports.Console()];
 
     if (isProd) {
       transports.push(
@@ -75,7 +91,7 @@ export class LoggerService {
           zippedArchive: true,
           maxSize: '20m',
           maxFiles: '14d',
-        })
+        }),
       );
     }
 

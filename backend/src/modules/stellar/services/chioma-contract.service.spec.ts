@@ -1,3 +1,4 @@
+import { LoggerService } from '../../../common/services/logger.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ChiomaContractService } from './chioma-contract.service';
@@ -21,6 +22,18 @@ describe('ChiomaContractService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: LoggerService,
+          useValue: {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+            log: jest.fn(),
+            fatal: jest.fn(),
+          },
+        },
         ChiomaContractService,
         {
           provide: ConfigService,
