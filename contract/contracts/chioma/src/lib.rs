@@ -36,10 +36,8 @@ pub use multi_token::{
 pub use storage::DataKey;
 pub use types::{
     AgreementExtension, AgreementStatus, AgreementWithToken, Config, ContractState,
-    ExtensionHistory, ExtensionStatus, PaymentSplit, RentAgreement, SupportedToken,
+    ExtensionHistory, ExtensionStatus, PauseState, PaymentSplit, RentAgreement, SupportedToken,
     TokenExchangeRate,
-    AgreementStatus, AgreementWithToken, Config, ContractState, PauseState, PaymentSplit,
-    RentAgreement, SupportedToken, TokenExchangeRate,
 };
 
 /// Chioma rental agreement contract.

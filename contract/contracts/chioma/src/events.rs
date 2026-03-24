@@ -243,6 +243,8 @@ pub(crate) fn extension_proposed(
         new_end_date,
     }
     .publish(env);
+}
+
 pub(crate) fn paused(env: &Env, reason: String, paused_by: Address) {
     Paused { paused_by, reason }.publish(env);
 }

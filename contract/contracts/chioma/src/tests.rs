@@ -1307,6 +1307,9 @@ fn test_cancel_extension() {
         history.extensions.get(0).unwrap().status,
         ExtensionStatus::Cancelled
     );
+}
+
+#[test]
 fn test_pause_unpause_events_emitted() {
     let env = Env::default();
     env.mock_all_auths();

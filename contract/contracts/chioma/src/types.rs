@@ -68,6 +68,10 @@ pub enum ExtensionStatus {
     Active,
     Completed,
     Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PauseState {
     pub is_paused: bool,
     pub paused_at: u64,
