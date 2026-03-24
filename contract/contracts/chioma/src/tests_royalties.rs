@@ -40,9 +40,22 @@ fn test_set_and_get_royalty() {
     let token = Address::generate(&env);
     let id = String::from_str(&env, "T1");
 
-    client.create_agreement(
-        &id, &landlord, &tenant, &None, &1000, &5000, &100, &1_000_000, &0, &token,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 5000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let recipient = Address::generate(&env);
     client.set_royalty(&id, &500, &recipient); // 5%
@@ -63,9 +76,22 @@ fn test_calculate_royalty() {
     let landlord = Address::generate(&env);
     let tenant = Address::generate(&env);
     let token = Address::generate(&env);
-    client.create_agreement(
-        &id, &landlord, &tenant, &None, &1000, &5000, &100, &1_000_000, &0, &token,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 5000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.set_royalty(&id, &1000, &Address::generate(&env)); // 10%
 
@@ -85,18 +111,22 @@ fn test_transfer_with_royalty() {
     let (token_address, token_client) = create_token_mock(&env, &token_admin);
     let id = String::from_str(&env, "T1");
 
-    client.create_agreement(
-        &id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &5000,
-        &100,
-        &1_000_000,
-        &0,
-        &token_address,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 5000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token_address.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let recipient = Address::generate(&env);
     client.set_royalty(&id, &1000, &recipient); // 10%
@@ -142,9 +172,22 @@ fn test_invalid_royalty_percentage_fails() {
     let landlord = Address::generate(&env);
     let tenant = Address::generate(&env);
     let token = Address::generate(&env);
-    client.create_agreement(
-        &id, &landlord, &tenant, &None, &1000, &5000, &100, &1_000_000, &0, &token,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 5000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.set_royalty(&id, &2501, &Address::generate(&env)); // > 25%
 }

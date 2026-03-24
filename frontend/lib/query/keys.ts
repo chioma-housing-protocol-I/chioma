@@ -67,4 +67,13 @@ export const queryKeys = {
     profile: () => [...queryKeys.user.all, 'profile'] as const,
     preferences: () => [...queryKeys.user.all, 'preferences'] as const,
   },
+
+  // ── Audit Logs ───────────────────────────────────────────────────────────
+  audit: {
+    all: ['audit'] as const,
+    lists: () => [...queryKeys.audit.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.audit.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.audit.all, 'detail', id] as const,
+    stats: () => [...queryKeys.audit.all, 'stats'] as const,
+  },
 } as const;

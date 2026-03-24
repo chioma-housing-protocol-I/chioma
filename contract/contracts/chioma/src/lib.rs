@@ -34,9 +34,9 @@ mod tests_royalties;
 
 pub use agreement::{
     cancel_agreement, create_agreement, create_agreement_with_token, get_agreement,
-    get_agreement_count, get_agreement_token, get_payment_split, has_agreement,
-    make_payment_with_token, release_escrow_with_token, sign_agreement, submit_agreement,
-    validate_agreement_params,
+    get_agreement_count, get_agreement_token, get_payment_history, get_payment_split,
+    has_agreement, make_payment_with_token, release_escrow_with_token, sign_agreement,
+    submit_agreement, update_metadata, validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use multi_token::{
@@ -45,10 +45,10 @@ pub use multi_token::{
 };
 pub use storage::DataKey;
 pub use types::{
-    AgreementStatus, AgreementWithToken, CompoundingFrequency, Config, ContractState,
-    DepositInterest, DepositInterestConfig, ErrorContext, InterestAccrual, InterestRecipient,
-    PauseState, PaymentSplit, RentAgreement, RoyaltyConfig, RoyaltyPayment, SupportedToken,
-    TokenExchangeRate,
+    AgreementInput, AgreementStatus, AgreementTerms, AgreementWithToken, Attribute,
+    CompoundingFrequency, Config, ContractState, DepositInterest, DepositInterestConfig,
+    ErrorContext, InterestAccrual, InterestRecipient, PauseState, PaymentSplit, RentAgreement,
+    RoyaltyConfig, RoyaltyPayment, SupportedToken, TokenExchangeRate,
 };
 
 /// Chioma rental agreement contract.
@@ -327,27 +327,10 @@ impl Contract {
 
     pub fn create_agreement_with_token(
         env: Env,
-        property_id: String,
-        tenant: Address,
-        landlord: Address,
-        payment_token: Address,
-        rent_amount: i128,
-        deposit_amount: i128,
-        lease_start: u64,
-        lease_end: u64,
+        input: crate::types::AgreementInput,
     ) -> Result<String, RentalError> {
         Self::check_paused(&env)?;
-        agreement::create_agreement_with_token(
-            &env,
-            property_id,
-            tenant,
-            landlord,
-            payment_token,
-            rent_amount,
-            deposit_amount,
-            lease_start,
-            lease_end,
-        )
+        agreement::create_agreement_with_token(&env, input)
     }
 
     pub fn get_agreement_token(env: Env, agreement_id: String) -> Result<Address, RentalError> {
@@ -393,31 +376,10 @@ impl Contract {
     #[allow(clippy::too_many_arguments)]
     pub fn create_agreement(
         env: Env,
-        agreement_id: String,
-        landlord: Address,
-        tenant: Address,
-        agent: Option<Address>,
-        monthly_rent: i128,
-        security_deposit: i128,
-        start_date: u64,
-        end_date: u64,
-        agent_commission_rate: u32,
-        payment_token: Address,
+        input: crate::types::AgreementInput,
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
-        agreement::create_agreement(
-            &env,
-            agreement_id,
-            landlord,
-            tenant,
-            agent,
-            monthly_rent,
-            security_deposit,
-            start_date,
-            end_date,
-            agent_commission_rate,
-            payment_token,
-        )
+        agreement::create_agreement(&env, input)
     }
 
     /// Sign an existing rental agreement.
@@ -510,6 +472,22 @@ impl Contract {
         month: u32,
     ) -> Result<PaymentSplit, RentalError> {
         agreement::get_payment_split(&env, agreement_id, month)
+    }
+
+    /// Get all payments for an agreement.
+    pub fn get_payment_history(env: Env, agreement_id: String) -> Vec<PaymentSplit> {
+        agreement::get_payment_history(&env, agreement_id)
+    }
+
+    /// Update metadata for an agreement.
+    pub fn update_metadata(
+        env: Env,
+        agreement_id: String,
+        metadata_uri: String,
+        attributes: Vec<Attribute>,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::update_metadata(&env, agreement_id, metadata_uri, attributes)
     }
 
     // ─── Deposit Interest Functions ───────────────────────────────────────────
