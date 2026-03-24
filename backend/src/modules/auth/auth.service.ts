@@ -3,7 +3,6 @@ import {
   BadRequestException,
   UnauthorizedException,
   ConflictException,
-  Logger,
 } from '@nestjs/common';
 import { LoggerService } from '../../common/services/logger.service';
 import { Logging } from '../../common/decorators/logging.decorator';
@@ -15,7 +14,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { EmailService } from '../notifications/email.service';
 import { User } from '../users/entities/user.entity';
-import { MfaDevice } from './entities/mfa-device.entity';
+
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -136,9 +135,6 @@ export class AuthService {
     if (user.accountLockedUntil) {
       const now = new Date();
       if (user.accountLockedUntil > now) {
-        const minutesRemaining = Math.ceil(
-          (user.accountLockedUntil.getTime() - now.getTime()) / (1000 * 60),
-        );
         this.logger.warn(`Login attempt for locked account: ${email}`);
         throw new UnauthorizedException('Invalid email or password');
       } else {

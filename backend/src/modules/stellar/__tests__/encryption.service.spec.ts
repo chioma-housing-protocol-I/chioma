@@ -86,7 +86,7 @@ describe('EncryptionService', () => {
         encryptionKey: 'properly-configured-key',
       });
 
-      const _module = Test.createTestingModule({
+      Test.createTestingModule({
         providers: [
           EncryptionService,
           { provide: ConfigService, useValue: mockConfigService },

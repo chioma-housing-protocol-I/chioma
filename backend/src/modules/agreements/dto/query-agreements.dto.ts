@@ -1,7 +1,7 @@
 import { IsOptional, IsString, IsEnum, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AgreementStatus } from '../../rent/entities/rent-contract.entity';
-import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryAgreementsDto {
   @ApiPropertyOptional({

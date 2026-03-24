@@ -19,15 +19,11 @@ import { MfaDevice } from './entities/mfa-device.entity';
 import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { RegisterDto } from './dto/register.dto';
-import { Repository } from 'typeorm';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let userRepository: Repository<User>;
-  let jwtService: JwtService;
-  let configService: ConfigService;
   let emailService: EmailService;
 
   const mockUser: Partial<User> = {
@@ -133,9 +129,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
     emailService = module.get<EmailService>(EmailService);
   });
 

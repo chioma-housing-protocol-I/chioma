@@ -4,7 +4,7 @@ import { AbuseDetectionService } from '../services/abuse-detection.service';
 
 describe('AbuseDetectionService', () => {
   let service: AbuseDetectionService;
-  let cacheManager: any;
+  // cacheManager accessed via mockCacheManager
 
   const mockCacheManager = {
     get: jest.fn(),
@@ -26,7 +26,7 @@ describe('AbuseDetectionService', () => {
     }).compile();
 
     service = module.get<AbuseDetectionService>(AbuseDetectionService);
-    cacheManager = module.get(CACHE_MANAGER);
+    // cacheManager retrieved from module
   });
 
   it('should be defined', () => {

@@ -15,9 +15,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { LoggerMiddleware } from './common/middleware/logger.middleware';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+
 import { ConfigService } from '@nestjs/config';
 
 const bootstrapLogger = new Logger('Bootstrap');

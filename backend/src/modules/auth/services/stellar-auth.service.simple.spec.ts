@@ -1,17 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { StellarAuthService } from './stellar-auth.service';
-import { User, AuthMethod } from '../../users/entities/user.entity';
+import { User } from '../../users/entities/user.entity';
 import { StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
 
 describe('StellarAuthService', () => {
   let service: StellarAuthService;
-  let userRepository: Repository<User>;
-  let jwtService: JwtService;
 
   const mockWalletAddress =
     'GBTT5LIQ7BOBRY4GNJGY37GKPYRPTXVM6NGWDN3NGLGH2EKFO7JU57ZC';
@@ -61,8 +58,6 @@ describe('StellarAuthService', () => {
     }).compile();
 
     service = module.get<StellarAuthService>(StellarAuthService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    jwtService = module.get<JwtService>(JwtService);
 
     mockConfigService.get.mockReturnValue('test-secret-key');
   });

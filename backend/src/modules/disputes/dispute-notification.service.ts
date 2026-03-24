@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 
 export interface DisputeNotificationData {

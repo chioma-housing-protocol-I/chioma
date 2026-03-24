@@ -2,16 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { StellarAuthService } from '../services/stellar-auth.service';
 import { User, AuthMethod } from '../../users/entities/user.entity';
 
 describe('StellarAuthService', () => {
   let service: StellarAuthService;
-  let userRepository: Repository<User>;
-  let jwtService: JwtService;
-  let configService: ConfigService;
 
   const mockUserRepository = {
     findOne: jest.fn(),
@@ -61,9 +57,6 @@ describe('StellarAuthService', () => {
     }).compile();
 
     service = module.get<StellarAuthService>(StellarAuthService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
 
     mockConfigService.get.mockReturnValue('test-secret-key');
   });

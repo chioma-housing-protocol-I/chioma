@@ -28,7 +28,6 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')

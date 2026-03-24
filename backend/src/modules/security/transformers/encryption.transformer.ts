@@ -87,10 +87,10 @@ class EncryptionTransformerImpl implements ValueTransformer {
 
       try {
         return JSON.parse(decryptedString);
-      } catch (e) {
+      } catch {
         return decryptedString;
       }
-    } catch (error) {
+    } catch {
       throw new Error('Decryption failed for encrypted field');
     }
   }

@@ -82,7 +82,7 @@ export class EscrowIntegrationService {
 
   async approveEscrowRelease(
     escrowId: number,
-    releaseTo: string,
+    _releaseTo: string,
   ): Promise<void> {
     try {
       const escrow = await this.escrowRepository.findOne({

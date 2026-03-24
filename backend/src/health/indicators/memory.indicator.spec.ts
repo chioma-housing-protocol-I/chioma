@@ -1,9 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HealthCheckError } from '@nestjs/terminus';
 import { MemoryHealthIndicator } from './memory.indicator';
 
 // Mock process.memoryUsage at module level
-const _mockMemoryUsage = jest.fn();
 
 describe('MemoryHealthIndicator', () => {
   let indicator: MemoryHealthIndicator;

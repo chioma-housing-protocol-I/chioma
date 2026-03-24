@@ -113,7 +113,7 @@
     "@nestjs/testing": "^11.0.1",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
-    "@types/bcryptjs": "^3.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/csurf": "^1.11.5",
     "@types/express": "^5.0.0",
     "@types/helmet": "^4.0.0",

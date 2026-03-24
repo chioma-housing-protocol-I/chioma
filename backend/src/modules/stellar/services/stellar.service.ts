@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
@@ -656,17 +655,13 @@ export class StellarService {
         escrowAccount.publicKey,
       );
 
-      // Build asset
-      let _asset: StellarSdk.Asset;
-      if (escrow.assetType === AssetType.NATIVE) {
-        _asset = StellarSdk.Asset.native();
-      } else {
+      // Validate asset type
+      if (escrow.assetType !== AssetType.NATIVE) {
         if (!escrow.assetCode || !escrow.assetIssuer) {
           throw new BadRequestException(
             'Asset code and issuer required for non-native assets',
           );
         }
-        _asset = new StellarSdk.Asset(escrow.assetCode, escrow.assetIssuer);
       }
 
       // Calculate amount to send (leave minimum for account deletion)

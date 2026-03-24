@@ -1,7 +1,6 @@
 import { LoggerService } from '../../common/services/logger.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   NotFoundException,
   UnauthorizedException,
@@ -14,7 +13,6 @@ import { KycStatus } from '../kyc/kyc.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let _userRepository: Repository<User>;
 
   const mockUser: User = {
     id: '1',
@@ -72,7 +70,6 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
   afterEach(() => {

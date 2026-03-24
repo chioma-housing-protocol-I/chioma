@@ -6,8 +6,7 @@ import { Repository } from 'typeorm';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 
 describe('MaintenanceService', () => {
-  let service: MaintenanceService;
-  let _repo: Repository<MaintenanceRequest>;
+  // service accessed via module MaintenanceService;
 
   const mockStorageService = {};
   const mockNotificationsService = { notify: jest.fn() };
@@ -39,10 +38,7 @@ describe('MaintenanceService', () => {
         { provide: ReviewPromptService, useValue: mockReviewPromptService },
       ],
     }).compile();
-    service = module.get<MaintenanceService>(MaintenanceService);
-    _repo = module.get<Repository<MaintenanceRequest>>(
-      getRepositoryToken(MaintenanceRequest),
-    );
+    module.get<MaintenanceService>(MaintenanceService);
   });
 
   it('should pass a placeholder test', () => {

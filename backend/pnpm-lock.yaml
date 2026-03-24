@@ -216,8 +216,8 @@ importers:
         specifier: ^1.10.7
         version: 1.15.8(@swc/helpers@0.5.19)
       '@types/bcryptjs':
-        specifier: ^3.0.0
-        version: 3.0.0
+        specifier: ^2.4.6
+        version: 2.4.6
       '@types/csurf':
         specifier: ^1.11.5
         version: 1.11.5
@@ -2285,9 +2285,8 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
-  '@types/bcryptjs@3.0.0':
-    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
-    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
+  '@types/bcryptjs@2.4.6':
+    resolution: {integrity: sha512-9xlo6R2qDs5uixm0bcIqCeMCE6HiQsIyel9KQySStiyqNl2tnj2mP3DX1Nf56MD6KMenNNlBBsy3LJ7gUEQPXQ==}
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -8599,9 +8598,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.28.6
 
-  '@types/bcryptjs@3.0.0':
-    dependencies:
-      bcryptjs: 2.4.3
+  '@types/bcryptjs@2.4.6': {}
 
   '@types/body-parser@1.19.6':
     dependencies:

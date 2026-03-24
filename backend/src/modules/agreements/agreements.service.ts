@@ -20,11 +20,7 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { AuditService } from '../audit/audit.service';
-import {
-  AuditAction,
-  AuditLevel,
-  AuditStatus,
-} from '../audit/entities/audit-log.entity';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 import { ChiomaContractService } from '../stellar/services/chioma-contract.service';
@@ -59,7 +55,7 @@ export class AgreementsService {
   @Logging()
   async create(
     createAgreementDto: CreateAgreementDto,
-    performedBy?: string,
+    _performedBy?: string,
   ): Promise<RentAgreement> {
     // Validate dates
     const startDate = new Date(createAgreementDto.startDate);
@@ -228,7 +224,7 @@ export class AgreementsService {
   async update(
     id: string,
     updateAgreementDto: UpdateAgreementDto,
-    performedBy?: string,
+    _performedBy?: string,
   ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
     const oldValues = {
@@ -285,7 +281,7 @@ export class AgreementsService {
   async terminate(
     id: string,
     terminateDto: TerminateAgreementDto,
-    performedBy?: string,
+    _performedBy?: string,
   ): Promise<RentAgreement> {
     const agreement = await this.findOne(id);
 
@@ -293,7 +289,7 @@ export class AgreementsService {
       throw new BadRequestException('Agreement is already terminated');
     }
 
-    const oldStatus = agreement.status;
+    // oldStatus used for auditing
     agreement.status = AgreementStatus.TERMINATED;
     agreement.terminationDate = new Date();
     agreement.terminationReason = terminateDto.terminationReason;

@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
-  Logger,
 } from '@nestjs/common';
 import { LoggerService } from '../../common/services/logger.service';
 import { Logging } from '../../common/decorators/logging.decorator';

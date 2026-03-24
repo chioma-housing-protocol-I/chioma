@@ -6,13 +6,9 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AgreementsModule } from '../src/modules/agreements/agreements.module';
 import { AgreementsService } from '../src/modules/agreements/agreements.service';
 import { ChiomaContractService } from '../src/modules/stellar/services/chioma-contract.service';
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { getTestDatabaseConfig } from './test-helpers';
 
 describe('Blockchain Integration (e2e)', () => {
   let app: INestApplication | undefined;
-  let _agreementsService: AgreementsService;
-  let _chiomaContract: ChiomaContractService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -43,11 +39,8 @@ describe('Blockchain Integration (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    _agreementsService =
-      moduleFixture.get<AgreementsService>(AgreementsService);
-    _chiomaContract = moduleFixture.get<ChiomaContractService>(
-      ChiomaContractService,
-    );
+    moduleFixture.get<AgreementsService>(AgreementsService);
+    moduleFixture.get<ChiomaContractService>(ChiomaContractService);
   });
 
   afterAll(async () => {
@@ -58,24 +51,6 @@ describe('Blockchain Integration (e2e)', () => {
 
   describe('Agreement Lifecycle', () => {
     it('should create agreement in database and blockchain', async () => {
-      const landlordKeypair = StellarSdk.Keypair.random();
-      const tenantKeypair = StellarSdk.Keypair.random();
-
-      const _agreementDto = {
-        propertyId: 'test-property',
-        landlordId: 'test-landlord',
-        tenantId: 'test-tenant',
-        landlordStellarPubKey: landlordKeypair.publicKey(),
-        tenantStellarPubKey: tenantKeypair.publicKey(),
-        monthlyRent: '1000',
-        securityDeposit: '2000',
-        agentCommissionRate: 10,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        termsAndConditions: 'Test terms',
-        paymentToken: 'NATIVE',
-      };
-
       // This test requires testnet setup and funded accounts
       // const agreementDto = {
       //   propertyId: 'test-property',
@@ -91,7 +66,6 @@ describe('Blockchain Integration (e2e)', () => {
       //   termsAndConditions: 'Test terms',
       //   paymentToken: 'NATIVE',
       // };
-
       // const agreement = await agreementsService.create(agreementDto);
       // expect(agreement.blockchainAgreementId).toBeDefined();
       // expect(agreement.transactionHash).toBeDefined();

@@ -3,10 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Repository, DataSource } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
-import {
-  StellarPayment,
-  PaymentStatus,
-} from '../entities/stellar-payment.entity';
+import { StellarPayment } from '../entities/stellar-payment.entity';
 
 @Injectable()
 export class PaymentProcessingService {

@@ -1,12 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuditService } from './audit.service';
 import { AuditLog, AuditAction, AuditLevel } from './entities/audit-log.entity';
 
 describe('AuditService', () => {
   let service: AuditService;
-  let auditLogRepository: Repository<AuditLog>;
 
   const mockAuditLogRepository = {
     create: jest.fn(),
@@ -32,9 +30,6 @@ describe('AuditService', () => {
     }).compile();
 
     service = module.get<AuditService>(AuditService);
-    auditLogRepository = module.get<Repository<AuditLog>>(
-      getRepositoryToken(AuditLog),
-    );
   });
 
   it('should be defined', () => {

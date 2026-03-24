@@ -81,7 +81,6 @@ describe('StellarService', () => {
   let accountRepository: Repository<StellarAccount>;
   let transactionRepository: Repository<StellarTransaction>;
   let escrowRepository: Repository<StellarEscrow>;
-  let _encryptionService: EncryptionService;
 
   const mockConfigService = {
     get: jest.fn().mockReturnValue({
@@ -224,7 +223,6 @@ describe('StellarService', () => {
     escrowRepository = module.get<Repository<StellarEscrow>>(
       getRepositoryToken(StellarEscrow),
     );
-    _encryptionService = module.get<EncryptionService>(EncryptionService);
   });
 
   afterEach(() => {

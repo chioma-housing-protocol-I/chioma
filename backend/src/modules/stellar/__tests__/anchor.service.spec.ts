@@ -12,8 +12,6 @@ import { PaymentMethodType } from '../dto/deposit-request.dto';
 
 describe('AnchorService', () => {
   let service: AnchorService;
-  let _anchorTransactionRepo: any;
-  let _supportedCurrencyRepo: any;
 
   const mockAnchorTransactionRepo = {
     create: jest.fn(),
@@ -56,8 +54,6 @@ describe('AnchorService', () => {
     }).compile();
 
     service = module.get<AnchorService>(AnchorService);
-    _anchorTransactionRepo = module.get(getRepositoryToken(AnchorTransaction));
-    _supportedCurrencyRepo = module.get(getRepositoryToken(SupportedCurrency));
   });
 
   afterEach(() => {
