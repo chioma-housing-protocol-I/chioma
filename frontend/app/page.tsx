@@ -1,27 +1,25 @@
 import Navbar from '@/components/Navbar';
-import Hero from '@/components/Hero';
-import AudienceCards from '@/components/sections/AudienceCards';
-import StepsCard from '@/components/sections/StepsCard';
-
-import SecurityFeatures from '@/components/sections/SecurityFeatures';
-import CTA from '@/components/CTA';
-import Mainfooter from '@/components/Mainfooter';
+import Hero from '@/components/landing/Hero';
+import Features from '@/components/landing/Features';
+import HowItWorks from '@/components/landing/HowItWorks';
+import Stats from '@/components/landing/Stats';
+import Testimonials from '@/components/landing/Testimonials';
+import CTA from '@/components/landing/CTA';
+import Footer from '@/components/landing/Footer';
+import ForWho from '@/components/landing/ForWho';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-brand-gradient selection:bg-white/30 selection:text-white">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <Navbar />
       <Hero />
-
-      {/* Keeping existing sections for now */}
-      <div className="bg-white">
-        <AudienceCards />
-      </div>
-      <StepsCard />
-      <SecurityFeatures />
-
+      <Stats />
+      <Features />
+      <HowItWorks />
+      <ForWho />
+      <Testimonials />
       <CTA />
-      <Mainfooter />
+      <Footer />
     </main>
   );
 }

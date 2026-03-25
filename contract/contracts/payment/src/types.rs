@@ -58,3 +58,83 @@ pub struct RentAgreement {
     pub next_payment_due: u64,
     pub payment_history: Map<u32, PaymentSplit>,
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RecurringPayment {
+    pub id: String,
+    pub agreement_id: String,
+    pub payer: Address,
+    pub payee: Address,
+    pub amount: i128,
+    pub frequency: PaymentFrequency,
+    pub start_date: u64,
+    pub end_date: u64,
+    pub next_payment_date: u64,
+    pub status: RecurringStatus,
+    pub auto_renew: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PaymentFrequency {
+    Daily,
+    Weekly,
+    BiWeekly,
+    Monthly,
+    Quarterly,
+    Annually,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum RecurringStatus {
+    Active,
+    Paused,
+    Completed,
+    Cancelled,
+    Failed,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PaymentExecution {
+    pub recurring_id: String,
+    pub executed_at: u64,
+    pub amount: i128,
+    pub status: ExecutionStatus,
+    pub transaction_hash: Option<String>,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ExecutionStatus {
+    Success,
+    Failed,
+    Pending,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum RecurringPaymentEvent {
+    RecurringPaymentCreated {
+        recurring_id: String,
+        agreement_id: String,
+        amount: i128,
+    },
+    RecurringPaymentExecuted {
+        recurring_id: String,
+        executed_at: u64,
+    },
+    RecurringPaymentPaused {
+        recurring_id: String,
+    },
+    RecurringPaymentResumed {
+        recurring_id: String,
+    },
+    RecurringPaymentCancelled {
+        recurring_id: String,
+    },
+    RecurringPaymentFailed {
+        recurring_id: String,
+    },
+}

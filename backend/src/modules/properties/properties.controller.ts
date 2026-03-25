@@ -29,9 +29,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ListingStatus } from './entities/property.entity';
+import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
 
 @ApiTags('Properties')
-@Controller('api/properties')
+@Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 

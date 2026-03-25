@@ -61,16 +61,17 @@ export default function PropertiesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">
             Your Properties
           </h1>
-          <p className="text-neutral-500 mt-1">
+          <p className="text-blue-200/60 font-medium mt-1">
             Manage and monitor all your properties
           </p>
         </div>
+        Broadway, Header:
         <Link
           href="/landlords/properties/add"
-          className="flex items-center justify-center space-x-2 px-6 py-3 bg-brand-blue text-white font-semibold rounded-lg hover:bg-brand-blue-dark transition-all shadow-sm shadow-brand-blue/20 hover:shadow-brand-blue/30"
+          className="flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600/50 border border-blue-500/30 text-white font-bold rounded-2xl hover:bg-blue-600 hover:border-blue-400 transition-all shadow-xl uppercase tracking-widest text-xs"
         >
           <Plus size={20} />
           <span>Add Property</span>

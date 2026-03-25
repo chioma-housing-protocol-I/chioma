@@ -42,6 +42,8 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+package-lock.json
+
 # temp directory
 .temp
 .tmp
@@ -54,3 +56,6 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Generated OpenAPI spec (use pnpm run openapi:generate)
+openapi.json

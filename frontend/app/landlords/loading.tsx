@@ -13,18 +13,21 @@ export default function DashboardLoading() {
       {/* KPI Cards skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-gray-200 h-28" />
+          <div
+            key={i}
+            className="rounded-xl bg-slate-700/50 border border-white/10 h-28"
+          />
         ))}
       </div>
 
       {/* Chart + Activity skeleton */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 rounded-xl bg-gray-200 h-64" />
-        <div className="rounded-xl bg-gray-200 h-64" />
+        <div className="xl:col-span-2 rounded-xl bg-slate-700/50 border border-white/10 h-64" />
+        <div className="rounded-xl bg-slate-700/50 border border-white/10 h-64" />
       </div>
 
       {/* Table skeleton */}
-      <div className="rounded-xl bg-gray-200 h-48" />
+      <div className="rounded-xl bg-slate-700/50 border border-white/10 h-48" />
     </div>
   );
 }

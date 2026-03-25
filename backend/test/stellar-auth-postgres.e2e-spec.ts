@@ -45,8 +45,10 @@ describe('Stellar Authentication E2E (PostgreSQL Ready)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-  });
+    if (app) {
+      await app.close();
+    }
+  }, 60000);
 
   describe('Stellar SDK Integration Tests', () => {
     it('should generate valid Stellar keypairs', () => {

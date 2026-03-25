@@ -1,28 +1,33 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { AuthService } from './auth.service';
-import { User, UserRole } from '../users/entities/user.entity';
-import { MfaDevice } from './entities/mfa-device.entity';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
+import * as bcrypt from 'bcryptjs';
+
 import {
-  UnauthorizedException,
-  ConflictException,
   BadRequestException,
+  ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { User, UserRole } from '../users/entities/user.entity';
+
+import { AuthService } from './auth.service';
+import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../notifications/email.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login.dto';
+import { MfaDevice } from './entities/mfa-device.entity';
+import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { RegisterDto } from './dto/register.dto';
+import { Repository } from 'typeorm';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userRepository: Repository<User>;
   let jwtService: JwtService;
   let configService: ConfigService;
+  let emailService: EmailService;
 
   const mockUser: Partial<User> = {
     id: 'test-user-id',
@@ -66,7 +71,7 @@ describe('AuthService', () => {
         JWT_EXPIRATION: '15m',
         JWT_REFRESH_EXPIRATION: '7d',
       };
-      return config[key];
+      return config[key as never];
     }),
   };
 
@@ -96,6 +101,21 @@ describe('AuthService', () => {
             validatePassword: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: EmailService,
+          useValue: {
+            sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+            sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: MfaService,
+          useValue: {
+            checkMfaRequired: jest.fn().mockResolvedValue(false),
+            generateMfaToken: jest.fn().mockResolvedValue(undefined),
+            verifyMfaToken: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -103,6 +123,7 @@ describe('AuthService', () => {
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     jwtService = module.get<JwtService>(JwtService);
     configService = module.get<ConfigService>(ConfigService);
+    emailService = module.get<EmailService>(EmailService);
   });
 
   afterEach(() => {
@@ -141,8 +162,13 @@ describe('AuthService', () => {
       expect(result.user.email).toBe(registerDto.email);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: registerDto.email },
+        withDeleted: true,
       });
       expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        registerDto.email,
+        expect.any(String),
+      );
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -261,6 +287,10 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('message');
       expect(result.message).toContain('If an account exists');
       expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        forgotPasswordDto.email,
+        expect.any(String),
+      );
     });
 
     it('should return generic message for non-existent email (security)', async () => {

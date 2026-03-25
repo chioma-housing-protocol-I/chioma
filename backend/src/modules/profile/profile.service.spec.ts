@@ -11,6 +11,7 @@ import { SorobanClientService } from '../../common/services/soroban-client.servi
 import { ProfileContractService } from '../../blockchain/profile/profile.service';
 import { IpfsService } from './services/ipfs.service';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
+import { KycStatus } from '../kyc/kyc.entity';
 import { AccountTypeDto } from './dto/create-profile.dto';
 
 describe('ProfileService', () => {
@@ -38,6 +39,7 @@ describe('ProfileService', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    kycStatus: KycStatus.PENDING,
   };
 
   const mockProfileMetadata: ProfileMetadata = {

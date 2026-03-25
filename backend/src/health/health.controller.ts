@@ -1,15 +1,13 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
-import {
-  HealthCheckService,
-  HealthCheck,
-  HealthCheckResult,
-} from '@nestjs/terminus';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { HealthCheckService, HealthCheck } from '@nestjs/terminus';
 import { HealthService } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
 
+@ApiTags('Health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -22,6 +20,13 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
+  @ApiOperation({
+    summary: 'Basic health check',
+    description:
+      'Returns overall status and per-service health (database, stellar, memory).',
+  })
+  @ApiResponse({ status: 200, description: 'Service healthy or degraded' })
+  @ApiResponse({ status: 503, description: 'Service unhealthy' })
   async check(@Res() res: Response) {
     try {
       const result = await this.health.check([
@@ -47,6 +52,12 @@ export class HealthController {
 
   @Get('detailed')
   @HealthCheck()
+  @ApiOperation({
+    summary: 'Detailed health check',
+    description: 'Includes system details (Node version, memory, PID).',
+  })
+  @ApiResponse({ status: 200, description: 'Detailed health info' })
+  @ApiResponse({ status: 503, description: 'Service unhealthy' })
   async detailedCheck(@Res() res: Response) {
     try {
       const result = await this.health.check([

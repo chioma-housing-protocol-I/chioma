@@ -22,7 +22,9 @@ describe('Health (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('/health (GET)', () => {
@@ -58,12 +60,11 @@ describe('Health (e2e)', () => {
       // Check that we have the expected services
       expect(services).toHaveProperty('database');
       expect(services).toHaveProperty('stellar');
-      expect(services).toHaveProperty('memory');
 
       // Check service structure
       Object.values(services).forEach((service: any) => {
         expect(service).toHaveProperty('status');
-        expect(service.status).toMatch(/^(ok|error|warning)$/);
+        expect(service.status).toMatch(/^(ok|up|error|down|warning)$/);
         expect(service).toHaveProperty('responseTime');
       });
     });

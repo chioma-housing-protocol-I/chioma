@@ -58,6 +58,7 @@ export class AnchorTransaction {
   @Column({ type: 'text', nullable: true })
   destination?: string;
 
+  @Index()
   @Column({ name: 'stellar_transaction_id', nullable: true })
   stellarTransactionId?: string;
 

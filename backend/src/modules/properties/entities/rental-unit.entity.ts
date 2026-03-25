@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Property } from './property.entity';
 
@@ -16,6 +17,7 @@ export enum RentalUnitStatus {
 }
 
 @Entity('rental_units')
+@Index(['propertyId', 'status'])
 export class RentalUnit {
   @PrimaryGeneratedColumn('uuid')
   id: string;

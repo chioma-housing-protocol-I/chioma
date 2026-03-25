@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StellarController } from '../controllers/stellar.controller';
 import { StellarService } from '../services/stellar.service';
+import { EscrowContractService } from '../services/escrow-contract.service';
 import { StellarAccountType } from '../entities/stellar-account.entity';
 import {
   TransactionStatus,
@@ -10,7 +11,8 @@ import { EscrowStatus } from '../entities/stellar-escrow.entity';
 
 describe('StellarController', () => {
   let controller: StellarController;
-  let stellarService: StellarService;
+  let _stellarService: StellarService;
+  let _escrowContractService: EscrowContractService;
 
   const mockStellarService = {
     createAccount: jest.fn(),
@@ -31,6 +33,19 @@ describe('StellarController', () => {
     listEscrows: jest.fn(),
   };
 
+  const mockEscrowContractService = {
+    createMultiSigEscrow: jest.fn(),
+    addSignature: jest.fn(),
+    releaseWithSignatures: jest.fn(),
+    createTimeLockedEscrow: jest.fn(),
+    checkTimeLockConditions: jest.fn(),
+    createConditionalEscrow: jest.fn(),
+    validateConditions: jest.fn(),
+    integrateWithDispute: jest.fn(),
+    releaseOnDisputeResolution: jest.fn(),
+    checkHealth: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StellarController],
@@ -39,11 +54,18 @@ describe('StellarController', () => {
           provide: StellarService,
           useValue: mockStellarService,
         },
+        {
+          provide: EscrowContractService,
+          useValue: mockEscrowContractService,
+        },
       ],
     }).compile();
 
     controller = module.get<StellarController>(StellarController);
-    stellarService = module.get<StellarService>(StellarService);
+    _stellarService = module.get<StellarService>(StellarService);
+    _escrowContractService = module.get<EscrowContractService>(
+      EscrowContractService,
+    );
   });
 
   afterEach(() => {

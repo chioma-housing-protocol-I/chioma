@@ -48,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD curl -e "require('http').get('http://localhost:3000/health', (res) => {if (res.statusCode !== 200) throw new Error(res.statusCode)})"
 
 # Start the application
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]

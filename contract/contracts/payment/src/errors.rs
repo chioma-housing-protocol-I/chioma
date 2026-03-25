@@ -21,4 +21,20 @@ pub enum PaymentError {
     PaymentNotDue = 18,
     /// Invalid amount provided
     InvalidAmount = 5,
+    /// Recurring payment not found
+    RecurringPaymentNotFound = 19,
+    /// Invalid recurring payment dates
+    InvalidRecurringDates = 20,
+    /// Recurring payment is not active
+    RecurringPaymentNotActive = 21,
+    /// Recurring payment is not paused
+    RecurringPaymentNotPaused = 22,
+    /// Recurring payment already cancelled
+    RecurringPaymentAlreadyCancelled = 23,
+    /// Recurring payment already completed
+    RecurringPaymentAlreadyCompleted = 24,
+    /// Recurring payment execution failed
+    RecurringPaymentExecutionFailed = 25,
+    /// Recurring payment is not failed
+    RecurringPaymentNotFailed = 26,
 }

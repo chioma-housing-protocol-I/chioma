@@ -16,6 +16,7 @@ import { PropertyImage } from './entities/property-image.entity';
 import { PropertyAmenity } from './entities/property-amenity.entity';
 import { RentalUnit } from './entities/rental-unit.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
+import { KycStatus } from '../kyc/kyc.entity';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -42,6 +43,7 @@ describe('PropertiesService', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    kycStatus: KycStatus.PENDING,
   };
 
   const mockAdmin: User = {
@@ -235,6 +237,23 @@ describe('PropertiesService', () => {
     });
   });
 
+  describe('findById', () => {
+    it('throws because the method is not implemented (use findOne instead)', () => {
+      expect(() => service.findById('any-id')).toThrow(
+        'Method not implemented.',
+      );
+    });
+
+    it('throws for undefined and object inputs', () => {
+      expect(() => service.findById(undefined)).toThrow(
+        'Method not implemented.',
+      );
+      expect(() => service.findById({ id: 'x' })).toThrow(
+        'Method not implemented.',
+      );
+    });
+  });
+
   describe('findOne', () => {
     it('should return a property by id', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
@@ -248,11 +267,54 @@ describe('PropertiesService', () => {
       });
     });
 
+    it('should pass the requested id through to the repository for different identifiers', async () => {
+      const uuid = '123e4567-e89b-12d3-a456-426614174000';
+      mockPropertyRepository.findOne.mockResolvedValue({
+        ...mockProperty,
+        id: uuid,
+      });
+
+      await service.findOne(uuid);
+
+      expect(mockPropertyRepository.findOne).toHaveBeenCalledWith({
+        where: { id: uuid },
+        relations: ['images', 'amenities', 'rentalUnits', 'owner'],
+      });
+    });
+
     it('should throw NotFoundException if property not found', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('non-existent-id')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should include the id in NotFoundException message when not found', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne('missing-uuid')).rejects.toThrow(
+        'Property with ID missing-uuid not found',
+      );
+    });
+
+    it('should treat empty string id as not found when repository returns null', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne('')).rejects.toThrow(NotFoundException);
+      expect(mockPropertyRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '' },
+        relations: ['images', 'amenities', 'rentalUnits', 'owner'],
+      });
+    });
+
+    it('should propagate repository errors', async () => {
+      mockPropertyRepository.findOne.mockRejectedValue(
+        new Error('database unavailable'),
+      );
+
+      await expect(service.findOne('property-id')).rejects.toThrow(
+        'database unavailable',
       );
     });
   });
@@ -275,6 +337,57 @@ describe('PropertiesService', () => {
 
       await expect(service.findOnePublic('property-id')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with the same message as findOne when property does not exist', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOnePublic('unknown-id')).rejects.toThrow(
+        'Property with ID unknown-id not found',
+      );
+    });
+
+    it('should not expose draft listings publicly (same 404 message as missing)', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue({
+        ...mockProperty,
+        status: ListingStatus.DRAFT,
+      });
+
+      await expect(service.findOnePublic('property-id')).rejects.toThrow(
+        'Property with ID property-id not found',
+      );
+    });
+
+    it('should not expose archived listings publicly', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue({
+        ...mockProperty,
+        status: ListingStatus.ARCHIVED,
+      });
+
+      await expect(service.findOnePublic('property-id')).rejects.toThrow(
+        'Property with ID property-id not found',
+      );
+    });
+
+    it('should not expose rented listings publicly', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue({
+        ...mockProperty,
+        status: ListingStatus.RENTED,
+      });
+
+      await expect(service.findOnePublic('property-id')).rejects.toThrow(
+        'Property with ID property-id not found',
+      );
+    });
+
+    it('should propagate errors from findOne when the repository fails', async () => {
+      mockPropertyRepository.findOne.mockRejectedValue(
+        new Error('query timeout'),
+      );
+
+      await expect(service.findOnePublic('property-id')).rejects.toThrow(
+        'query timeout',
       );
     });
   });
@@ -444,9 +557,9 @@ describe('PropertiesService', () => {
       const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.meta.total).toBe(1);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(10);
     });
 
     it('should apply filters correctly', async () => {
@@ -470,6 +583,9 @@ describe('PropertiesService', () => {
         city: 'New York',
       });
 
+      // Note: After refactoring to use PropertyQueryBuilder,
+      // the query building logic is now in a separate class
+      // but the interface and behavior remain the same
       expect(mockQueryBuilder.andWhere).toHaveBeenCalled();
     });
 

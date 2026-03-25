@@ -3,19 +3,18 @@ import { HealthCheckError } from '@nestjs/terminus';
 import { MemoryHealthIndicator } from './memory.indicator';
 
 // Mock process.memoryUsage at module level
-const mockMemoryUsage = jest.fn();
+const _mockMemoryUsage = jest.fn();
 
 describe('MemoryHealthIndicator', () => {
   let indicator: MemoryHealthIndicator;
-  let originalMemoryUsage: typeof process.memoryUsage;
+  let memoryUsageSpy: jest.SpyInstance;
 
   beforeAll(() => {
-    originalMemoryUsage = process.memoryUsage;
-    (process as any).memoryUsage = mockMemoryUsage;
+    memoryUsageSpy = jest.spyOn(process, 'memoryUsage');
   });
 
   afterAll(() => {
-    (process as any).memoryUsage = originalMemoryUsage;
+    memoryUsageSpy.mockRestore();
   });
 
   beforeEach(async () => {
@@ -24,7 +23,7 @@ describe('MemoryHealthIndicator', () => {
     }).compile();
 
     indicator = module.get<MemoryHealthIndicator>(MemoryHealthIndicator);
-    mockMemoryUsage.mockClear();
+    memoryUsageSpy.mockClear();
   });
 
   it('should be defined', () => {
@@ -33,7 +32,7 @@ describe('MemoryHealthIndicator', () => {
 
   describe('isHealthy', () => {
     it('should return healthy status when memory usage is normal', async () => {
-      mockMemoryUsage.mockReturnValue({
+      memoryUsageSpy.mockReturnValue({
         heapUsed: 100 * 1024 * 1024, // 100MB
         heapTotal: 200 * 1024 * 1024, // 200MB
         external: 10 * 1024 * 1024, // 10MB
@@ -61,7 +60,7 @@ describe('MemoryHealthIndicator', () => {
     });
 
     it('should return warning status when memory usage is elevated', async () => {
-      mockMemoryUsage.mockReturnValue({
+      memoryUsageSpy.mockReturnValue({
         heapUsed: 600 * 1024 * 1024, // 600MB (above warning threshold)
         heapTotal: 800 * 1024 * 1024, // 800MB
         external: 10 * 1024 * 1024,
@@ -75,8 +74,8 @@ describe('MemoryHealthIndicator', () => {
       expect(result.memory.message).toBe('Memory usage is elevated');
     });
 
-    it('should throw HealthCheckError when memory usage is critical', async () => {
-      mockMemoryUsage.mockReturnValue({
+    it('should return down status when memory usage is critical', async () => {
+      memoryUsageSpy.mockReturnValue({
         heapUsed: 1200 * 1024 * 1024, // 1200MB (above error threshold)
         heapTotal: 1500 * 1024 * 1024, // 1500MB
         external: 10 * 1024 * 1024,
@@ -84,19 +83,19 @@ describe('MemoryHealthIndicator', () => {
         arrayBuffers: 5 * 1024 * 1024,
       });
 
-      await expect(indicator.isHealthy('memory')).rejects.toThrow(
-        HealthCheckError,
-      );
+      const result = await indicator.isHealthy('memory');
+      expect(result.memory.status).toBe('down');
+      expect(result.memory.message).toBe('Memory usage is critical');
     });
 
     it('should handle process.memoryUsage errors', async () => {
-      mockMemoryUsage.mockImplementation(() => {
+      memoryUsageSpy.mockImplementation(() => {
         throw new Error('Memory usage error');
       });
 
-      await expect(indicator.isHealthy('memory')).rejects.toThrow(
-        HealthCheckError,
-      );
+      const result = await indicator.isHealthy('memory');
+      expect(result.memory.status).toBe('down');
+      expect(result.memory.error).toBe('Memory usage error');
     });
   });
 

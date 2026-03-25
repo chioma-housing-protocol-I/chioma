@@ -25,8 +25,8 @@ export default function SecurityFeatures() {
   ];
 
   return (
-    <section className="py-20 bg-blue-800">
-      <div className="container mx-auto px-6 max-w-6xl">
+    <section className="py-20 bg-slate-900">
+      <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Security Built into Every Lease
@@ -37,15 +37,15 @@ export default function SecurityFeatures() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-8 text-center hover:bg-white/20 transition-all "
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 md:p-8 text-center hover:bg-white/10 transition-all"
             >
-              <div className="w-16 h-16 .bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <feature.icon className="size-12 text-orange-500" />
+              <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <feature.icon className="size-12 text-blue-400" />
               </div>
               <h3 className="text-xl font-bold text-white mb-3">
                 {feature.title}
               </h3>
-              <p className="text-blue-100 leading-relaxed text-sm">
+              <p className="text-slate-300 leading-relaxed text-sm">
                 {feature.description}
               </p>
             </div>

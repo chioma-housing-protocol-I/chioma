@@ -32,11 +32,11 @@ const audiences = [
     description:
       'Faster closings and transparent commission tracking on an immutable ledger.',
     cta: 'Partner with Us',
-    borderColor: 'border-orange-500',
-    iconBg: 'bg-orange-100',
-    iconColor: 'text-orange-500',
-    ctaColor: 'text-orange-500',
-    icon: <Handshake className="w-8 h-8 text-orange-500" strokeWidth={1.5} />,
+    borderColor: 'border-purple-500',
+    iconBg: 'bg-purple-100',
+    iconColor: 'text-purple-500',
+    ctaColor: 'text-purple-500',
+    icon: <Handshake className="w-8 h-8 text-purple-500" strokeWidth={1.5} />,
   },
 ];
 
@@ -48,7 +48,7 @@ export default function AudienceCards() {
           {audiences.map((audience) => (
             <div
               key={audience.role}
-              className={`group bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-t-8 ${audience.borderColor} flex flex-col items-start`}
+              className={`group bg-white rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-t-8 ${audience.borderColor} flex flex-col items-start`}
             >
               <div
                 className={`mb-6 p-4 rounded-2xl ${audience.iconBg} group-hover:scale-105 transition-transform duration-300`}
@@ -56,11 +56,11 @@ export default function AudienceCards() {
                 {audience.icon}
               </div>
 
-              <h3 className="text-xl font-bold text-zinc-900 mb-4">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">
                 {audience.title}
               </h3>
 
-              <p className="text-zinc-500 mb-8 leading-relaxed">
+              <p className="text-slate-600 mb-8 leading-relaxed">
                 {audience.description}
               </p>
 

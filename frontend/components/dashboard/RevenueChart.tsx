@@ -30,16 +30,16 @@ const RevenueChart = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
+    <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-neutral-900">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-xl font-bold text-white tracking-tight">
           Revenue Analytics
         </h2>
         <div className="relative">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-sm font-medium text-neutral-700 transition-colors">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-blue-200 transition-colors shadow-lg">
             <span>{timeRange}</span>
-            <ChevronDown size={16} />
+            <ChevronDown size={14} />
           </button>
         </div>
       </div>
@@ -53,60 +53,77 @@ const RevenueChart = () => {
           >
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1} />
-                <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#E5E7EB"
+              stroke="rgba(255, 255, 255, 0.05)"
               vertical={false}
             />
             <XAxis
               dataKey="month"
-              stroke="#9CA3AF"
-              style={{ fontSize: '12px' }}
+              stroke="rgba(255, 255, 255, 0.3)"
+              style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+              }}
               tickLine={false}
               axisLine={false}
+              dy={10}
             />
             <YAxis
-              stroke="#9CA3AF"
-              style={{ fontSize: '12px' }}
+              stroke="rgba(255, 255, 255, 0.3)"
+              style={{ fontSize: '10px', fontWeight: 600 }}
               tickLine={false}
               axisLine={false}
               tickFormatter={formatValue}
+              dx={-10}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                padding: '12px',
               }}
+              itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}
+              labelStyle={{
+                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '10px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                marginBottom: '4px',
+              }}
+              cursor={{ stroke: 'rgba(59, 130, 246, 0.5)', strokeWidth: 2 }}
               formatter={(value: number | undefined) => {
                 if (value === undefined) return ['₦0M', 'Revenue'];
-                return [formatValue(value), 'Revenue'];
+                return [`₦${value}M`, 'Revenue'];
               }}
-              labelStyle={{ fontWeight: 600, color: '#111827' }}
             />
             <Line
               type="monotone"
               dataKey="revenue"
-              stroke="#2563EB"
-              strokeWidth={3}
+              stroke="#3b82f6"
+              strokeWidth={4}
               dot={{
-                fill: '#2563EB',
+                fill: '#1e40af',
                 strokeWidth: 2,
-                r: 4,
-                stroke: '#fff',
+                r: 5,
+                stroke: '#3b82f6',
               }}
               activeDot={{
-                r: 6,
-                fill: '#2563EB',
+                r: 7,
+                fill: '#2563eb',
                 stroke: '#fff',
-                strokeWidth: 2,
+                strokeWidth: 3,
               }}
               fill="url(#colorRevenue)"
+              animationDuration={1500}
             />
           </LineChart>
         </ResponsiveContainer>

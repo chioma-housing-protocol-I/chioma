@@ -32,12 +32,12 @@ const NewLeads = () => {
   ];
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-100">
+    <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/10 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+        <h3 className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
           New Leads
         </h3>
-        <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-bold rounded-full">
+        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full border border-blue-500/20">
           3 New
         </span>
       </div>
@@ -50,25 +50,24 @@ const NewLeads = () => {
                 src={lead.avatar}
                 alt={lead.name}
                 fill
+                sizes="36px"
                 className="object-cover"
               />
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-baseline mb-0.5">
-                <h4 className="text-sm font-bold text-neutral-900">
-                  {lead.name}
-                </h4>
-                <span className="text-[10px] text-neutral-400">
+                <h4 className="text-sm font-bold text-white">{lead.name}</h4>
+                <span className="text-[10px] text-blue-300/40 font-bold uppercase">
                   {lead.time}
                 </span>
               </div>
-              <p className="text-xs text-neutral-500 truncate">
+              <p className="text-xs text-blue-200/60 truncate">
                 {lead.message}
               </p>
             </div>
 
-            <button className="text-xs font-semibold text-brand-blue hover:text-blue-700 transition-colors shrink-0 self-center">
+            <button className="text-[10px] font-bold text-blue-400 hover:text-white transition-all uppercase tracking-widest shrink-0 self-center">
               Reply
             </button>
           </div>

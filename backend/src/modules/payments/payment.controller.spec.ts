@@ -6,7 +6,7 @@ import {
   PaymentScheduleController,
 } from './payment.controller';
 import { PaymentService } from './payment.service';
-import { RecordPaymentDto } from './dto/record-payment.dto';
+import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
@@ -69,7 +69,7 @@ describe('Payment Controllers', () => {
   });
 
   it('records payment with user id', async () => {
-    const dto: RecordPaymentDto = {
+    const dto: CreatePaymentRecordDto = {
       agreementId: 'agreement_1',
       amount: 100,
       paymentMethodId: '1',

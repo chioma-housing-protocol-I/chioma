@@ -1,6 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { PaymentMethod } from './entities/payment-method.entity';
+import { RetryService } from '../../common/services/retry.service';
+import { NetworkError, TimeoutError } from '../../common/errors/retry-errors';
 
 export type GatewayChargeResponse = {
   success: boolean;
@@ -29,7 +31,7 @@ export class PaymentGatewayService {
   private readonly http: AxiosInstance;
   private readonly gateway: string;
 
-  constructor() {
+  constructor(private readonly retryService: RetryService) {
     this.gateway = (process.env.PAYMENT_GATEWAY || 'mock').toLowerCase();
     this.http = axios.create({
       timeout: parseInt(process.env.PAYMENT_GATEWAY_TIMEOUT_MS || '10000'),
@@ -115,33 +117,39 @@ export class PaymentGatewayService {
       return { success: false, error: 'Missing Paystack authorization code' };
     }
 
-    const response = await this.http.post(
-      'https://api.paystack.co/transaction/charge_authorization',
-      {
-        email: userEmail,
-        amount: Math.round(amount * 100),
-        authorization_code: authorizationCode,
-        currency,
+    return this.retryService.execute(
+      async () => {
+        const response = await this.http.post(
+          'https://api.paystack.co/transaction/charge_authorization',
+          {
+            email: userEmail,
+            amount: Math.round(amount * 100),
+            authorization_code: authorizationCode,
+            currency,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${secret}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (!response.data?.status) {
+          return {
+            success: false,
+            error: response.data?.message || 'Paystack error',
+          };
+        }
+
+        return {
+          success: true,
+          chargeId: response.data?.data?.reference || `paystack_${Date.now()}`,
+        };
       },
-      {
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-      },
+      { retryableErrors: [NetworkError, TimeoutError] },
+      'PaymentGateway.chargePaystack',
     );
-
-    if (!response.data?.status) {
-      return {
-        success: false,
-        error: response.data?.message || 'Paystack error',
-      };
-    }
-
-    return {
-      success: true,
-      chargeId: response.data?.data?.reference || `paystack_${Date.now()}`,
-    };
   }
 
   private async chargeFlutterwave(
@@ -165,34 +173,40 @@ export class PaymentGatewayService {
     }
 
     const txRef = `flw-${Date.now()}`;
-    const response = await this.http.post(
-      'https://api.flutterwave.com/v3/tokenized-charges',
-      {
-        token,
-        currency,
-        amount,
-        email: userEmail,
-        tx_ref: txRef,
+    return this.retryService.execute(
+      async () => {
+        const response = await this.http.post(
+          'https://api.flutterwave.com/v3/tokenized-charges',
+          {
+            token,
+            currency,
+            amount,
+            email: userEmail,
+            tx_ref: txRef,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${secret}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (response.data?.status !== 'success') {
+          return {
+            success: false,
+            error: response.data?.message || 'Flutterwave error',
+          };
+        }
+
+        return {
+          success: true,
+          chargeId: response.data?.data?.id?.toString() || txRef,
+        };
       },
-      {
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-      },
+      { retryableErrors: [NetworkError, TimeoutError] },
+      'PaymentGateway.chargeFlutterwave',
     );
-
-    if (response.data?.status !== 'success') {
-      return {
-        success: false,
-        error: response.data?.message || 'Flutterwave error',
-      };
-    }
-
-    return {
-      success: true,
-      chargeId: response.data?.data?.id?.toString() || txRef,
-    };
   }
 
   private async refundPaystack(
@@ -204,31 +218,37 @@ export class PaymentGatewayService {
       throw new BadRequestException('PAYSTACK_SECRET_KEY is not configured');
     }
 
-    const response = await this.http.post(
-      'https://api.paystack.co/refund',
-      {
-        transaction: chargeId,
-        amount: Math.round(amount * 100),
+    return this.retryService.execute(
+      async () => {
+        const response = await this.http.post(
+          'https://api.paystack.co/refund',
+          {
+            transaction: chargeId,
+            amount: Math.round(amount * 100),
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${secret}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (!response.data?.status) {
+          return {
+            success: false,
+            error: response.data?.message || 'Paystack error',
+          };
+        }
+
+        return {
+          success: true,
+          refundId: response.data?.data?.reference || `refund_${Date.now()}`,
+        };
       },
-      {
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-      },
+      { retryableErrors: [NetworkError, TimeoutError] },
+      'PaymentGateway.refundPaystack',
     );
-
-    if (!response.data?.status) {
-      return {
-        success: false,
-        error: response.data?.message || 'Paystack error',
-      };
-    }
-
-    return {
-      success: true,
-      refundId: response.data?.data?.reference || `refund_${Date.now()}`,
-    };
   }
 
   private async refundFlutterwave(
@@ -240,30 +260,37 @@ export class PaymentGatewayService {
       throw new BadRequestException('FLUTTERWAVE_SECRET_KEY is not configured');
     }
 
-    const response = await this.http.post(
-      'https://api.flutterwave.com/v3/refunds',
-      {
-        id: chargeId,
-        amount,
+    return this.retryService.execute(
+      async () => {
+        const response = await this.http.post(
+          'https://api.flutterwave.com/v3/refunds',
+          {
+            id: chargeId,
+            amount,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${secret}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (response.data?.status !== 'success') {
+          return {
+            success: false,
+            error: response.data?.message || 'Flutterwave error',
+          };
+        }
+
+        return {
+          success: true,
+          refundId:
+            response.data?.data?.id?.toString() || `refund_${Date.now()}`,
+        };
       },
-      {
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-      },
+      { retryableErrors: [NetworkError, TimeoutError] },
+      'PaymentGateway.refundFlutterwave',
     );
-
-    if (response.data?.status !== 'success') {
-      return {
-        success: false,
-        error: response.data?.message || 'Flutterwave error',
-      };
-    }
-
-    return {
-      success: true,
-      refundId: response.data?.data?.id?.toString() || `refund_${Date.now()}`,
-    };
   }
 }

@@ -55,42 +55,44 @@ const RecentListings = () => {
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'Active':
-        return 'bg-emerald-100 text-emerald-700';
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20';
       case 'Pending':
-        return 'bg-orange-100 text-orange-700';
+        return 'bg-orange-500/20 text-orange-400 border-orange-500/20';
       case 'Draft':
-        return 'bg-neutral-100 text-neutral-600';
+        return 'bg-white/5 text-blue-200/40 border-white/10';
       default:
-        return 'bg-neutral-100 text-neutral-600';
+        return 'bg-white/5 text-blue-200/40 border-white/10';
     }
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-100">
+    <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/10">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-neutral-900">Recent Listings</h2>
-        <button className="flex items-center text-sm font-semibold text-brand-blue hover:text-blue-700 transition-colors">
+        <h2 className="text-lg font-bold text-white tracking-tight">
+          Recent Listings
+        </h2>
+        <button className="flex items-center text-[10px] font-bold text-blue-400 hover:text-white transition-all uppercase tracking-widest">
           View All
-          <ArrowRight size={16} className="ml-1" />
+          <ArrowRight size={14} className="ml-1.5" />
         </button>
       </div>
 
       <table className="w-full">
         <thead>
-          <tr className="border-b border-neutral-50 text-left">
-            <th className="pb-3 text-xs font-bold text-neutral-400 uppercase tracking-wider pl-0">
+          <tr className="border-b border-white/5 text-left">
+            <th className="pb-3 text-[10px] font-bold text-blue-300/40 uppercase tracking-widest pl-0">
               Property
             </th>
-            <th className="pb-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <th className="pb-3 text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
               Status
             </th>
-            <th className="pb-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <th className="pb-3 text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
               Price
             </th>
-            <th className="pb-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <th className="pb-3 text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
               Views
             </th>
-            <th className="pb-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <th className="pb-3 text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
               Actions
             </th>
           </tr>
@@ -105,14 +107,15 @@ const RecentListings = () => {
                       src={item.image}
                       alt={item.title}
                       fill
+                      sizes="48px"
                       className="object-cover"
                     />
                   </div>
                   <div>
-                    <div className="font-bold text-neutral-900 text-sm">
+                    <div className="font-bold text-white text-sm">
                       {item.title}
                     </div>
-                    <div className="text-xs text-neutral-500 font-medium">
+                    <div className="text-[10px] text-blue-300/40 font-bold uppercase tracking-widest mt-0.5">
                       {item.address}
                     </div>
                   </div>
@@ -121,24 +124,24 @@ const RecentListings = () => {
 
               <td className="py-4">
                 <span
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold ${getStatusStyle(item.status)}`}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${getStatusStyle(item.status)}`}
                 >
                   {item.status}
                 </span>
               </td>
 
               <td className="py-4">
-                <div className="text-sm font-bold text-neutral-900">
+                <div className="text-sm font-bold text-white tracking-tight">
                   {item.price}
-                  <span className="text-neutral-400 text-xs font-medium">
+                  <span className="text-blue-300/40 text-[10px] font-bold uppercase tracking-widest ml-1">
                     {item.period}
                   </span>
                 </div>
               </td>
 
               <td className="py-4">
-                <div className="flex items-center gap-1.5 text-neutral-500 text-sm font-medium">
-                  <Eye size={16} />
+                <div className="flex items-center gap-1.5 text-blue-200/60 text-xs font-bold">
+                  <Eye size={14} className="text-blue-400" />
                   {item.views}
                 </div>
               </td>

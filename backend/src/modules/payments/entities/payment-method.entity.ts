@@ -35,7 +35,10 @@ export class PaymentMethod {
   @Column({ default: false })
   isDefault: boolean;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    nullable: true,
+  })
   metadata: PaymentMethodMetadata | null;
 
   @Column({ type: 'text', nullable: true })

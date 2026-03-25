@@ -28,4 +28,12 @@ pub enum EscrowError {
     EmptyDisputeReason = 10,
     /// Invalid approval target (neither beneficiary nor depositor)
     InvalidApprovalTarget = 11,
+    /// Timeout has not been reached yet
+    TimeoutNotReached = 12,
+    /// Invalid timeout configuration value
+    InvalidTimeoutConfig = 13,
+    /// Invalid release amount (e.g., exceeds escrow balance, zero or negative)
+    InvalidAmount = 14,
+    /// Empty reason string for release
+    EmptyReleaseReason = 15,
 }

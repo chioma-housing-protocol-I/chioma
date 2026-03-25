@@ -9,6 +9,7 @@ import {
 } from './entities/audit-log.entity';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { User } from '../users/entities/user.entity';
+import { PaginationUtils, DateUtils } from '../../common/utils';
 
 export interface AuditLogData {
   action: AuditAction;
@@ -144,13 +145,13 @@ export class AuditService {
     // Apply filters
     if (queryDto.startDate) {
       queryBuilder.andWhere('audit_log.performed_at >= :startDate', {
-        startDate: new Date(queryDto.startDate),
+        startDate: DateUtils.parseDate(queryDto.startDate),
       });
     }
 
     if (queryDto.endDate) {
       queryBuilder.andWhere('audit_log.performed_at <= :endDate', {
-        endDate: new Date(queryDto.endDate),
+        endDate: DateUtils.parseDate(queryDto.endDate),
       });
     }
 
@@ -198,20 +199,16 @@ export class AuditService {
     }
 
     const page = queryDto.page || 1;
-    const limit = Math.min(queryDto.limit || 50, 100); // Max 100 per page
-    const offset = (page - 1) * limit;
+    const limit = Math.min(queryDto.limit || 50, 100);
+
+    PaginationUtils.validatePagination(page, limit);
+    const offset = PaginationUtils.calculateOffset(page, limit);
 
     queryBuilder.skip(offset).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getAuditTrail(

@@ -89,17 +89,74 @@ export class CsrfMiddleware implements NestMiddleware {
     const isProduction =
       this.configService.get<string>('NODE_ENV') === 'production';
 
-    // Set cookie with secure flags
-    res.cookie(this.cookieName, token, {
-      httpOnly: false, // Must be readable by JavaScript for double-submit pattern
-      secure: isProduction, // Only send over HTTPS in production
-      sameSite: 'strict',
+    // Cookie settings for CSRF protection
+    const cookieOptions = {
+      httpOnly: false, // IMPORTANT: Must be false for double-submit cookie pattern - client needs to read this
+      secure: isProduction, // Only send over HTTPS in production to prevent man-in-the-middle attacks
+      sameSite: 'strict' as const, // Strict same-site policy to prevent CSRF attacks
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
-    });
+    };
+
+    // Verify cookie settings are correctly configured
+    this.verifyCookieSettings(cookieOptions, isProduction);
+
+    // Set cookie with verified secure flags
+    res.cookie(this.cookieName, token, cookieOptions);
 
     // Also set in response header for convenience
     res.setHeader('X-CSRF-Token', token);
+
+    this.logger.debug(
+      `CSRF token generated with settings: secure=${cookieOptions.secure}, httpOnly=${cookieOptions.httpOnly}, sameSite=${cookieOptions.sameSite}`,
+    );
+  }
+
+  /**
+   * Verify that cookie settings are properly configured for security
+   * @throws Error if cookie settings are insecure
+   */
+  private verifyCookieSettings(
+    cookieOptions: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'strict' | 'lax' | 'none';
+    },
+    isProduction: boolean,
+  ): void {
+    // Verify httpOnly is false (required for double-submit pattern)
+    if (cookieOptions.httpOnly !== false) {
+      this.logger.error(
+        'CSRF cookie httpOnly must be false for double-submit pattern',
+      );
+      throw new Error(
+        'Invalid CSRF cookie configuration: httpOnly must be false',
+      );
+    }
+
+    // Verify secure flag matches environment
+    if (isProduction && !cookieOptions.secure) {
+      this.logger.error(
+        'CSRF cookie must have secure flag in production environment',
+      );
+      throw new Error(
+        'Invalid CSRF cookie configuration: secure must be true in production',
+      );
+    }
+
+    // Verify sameSite is set to strict or lax
+    if (!['strict', 'lax'].includes(cookieOptions.sameSite)) {
+      this.logger.error(
+        `CSRF cookie sameSite must be 'strict' or 'lax', got: ${cookieOptions.sameSite}`,
+      );
+      throw new Error(
+        'Invalid CSRF cookie configuration: sameSite must be strict or lax',
+      );
+    }
+
+    this.logger.log(
+      `CSRF cookie settings verified: environment=${isProduction ? 'production' : 'development'}, secure=${cookieOptions.secure}, httpOnly=${cookieOptions.httpOnly}, sameSite=${cookieOptions.sameSite}`,
+    );
   }
 
   /**

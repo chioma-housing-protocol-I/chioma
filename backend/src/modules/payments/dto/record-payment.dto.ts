@@ -7,7 +7,7 @@ import {
   IsDateString,
 } from 'class-validator';
 
-export class RecordPaymentDto {
+export class CreatePaymentRecordDto {
   @IsOptional()
   @IsString()
   agreementId?: string;

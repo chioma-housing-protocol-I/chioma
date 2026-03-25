@@ -40,7 +40,7 @@ export class Payment {
   userId: string;
 
   @Column({ nullable: true, type: 'varchar' })
-  agreementId: string | null; // Reference to agreement
+  agreementId: string | null; // Reference to agreement (no FK constraint)
 
   @Column('decimal', { precision: 12, scale: 2 })
   amount: number;
@@ -66,7 +66,10 @@ export class Payment {
   @Column({ nullable: true, type: 'varchar' })
   referenceNumber: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
   processedAt: Date;
 
   @Column({ length: 100, nullable: true, type: 'varchar' })
@@ -78,7 +81,10 @@ export class Payment {
   @Column({ type: 'text', nullable: true })
   refundReason: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    nullable: true,
+  })
   metadata: PaymentMetadata | null;
 
   @Column({ type: 'text', nullable: true })

@@ -18,35 +18,37 @@ export default function KPICard({
   trend,
 }: KPICardProps) {
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group relative overflow-hidden">
+    <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/10 shadow-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 group relative overflow-hidden">
       {/* Decorative gradient orb */}
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-brand-blue/10 rounded-full blur-2xl group-hover:bg-brand-blue/20 transition-all duration-500"></div>
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all duration-500"></div>
 
       <div className="flex items-center justify-between mb-4 relative">
-        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">
+        <h3 className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
           {title}
         </h3>
-        <div className="p-2 bg-neutral-100 rounded-lg text-neutral-600 group-hover:bg-brand-blue group-hover:text-white transition-colors duration-300">
-          <Icon size={20} />
+        <div className="p-2.5 bg-white/5 border border-white/5 rounded-xl text-blue-400/60 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
+          <Icon size={18} strokeWidth={2.5} />
         </div>
       </div>
 
       <div className="relative">
-        <p className="text-3xl font-bold text-neutral-900 tracking-tight">
-          {value}
-        </p>
+        <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
 
         {trend && (
-          <div className="mt-2 flex items-center space-x-1">
+          <div className="mt-3 flex items-center space-x-2">
             <span
-              className={`text-sm font-medium ${
-                trend.isPositive ? 'text-emerald-600' : 'text-red-500'
+              className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg border ${
+                trend.isPositive
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
               }`}
             >
               {trend.isPositive ? '+' : '-'}
               {Math.abs(trend.value)}%
             </span>
-            <span className="text-sm text-neutral-400">vs last month</span>
+            <span className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
+              Growth
+            </span>
           </div>
         )}
       </div>

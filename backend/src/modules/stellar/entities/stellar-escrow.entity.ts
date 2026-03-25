@@ -6,17 +6,22 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { StellarAccount } from './stellar-account.entity';
 import { AssetType } from './stellar-transaction.entity';
+import { EscrowSignature } from './escrow-signature.entity';
+import { EscrowCondition } from './escrow-condition.entity';
 
 export enum EscrowStatus {
   PENDING = 'PENDING',
+  FUNDED = 'FUNDED',
   ACTIVE = 'ACTIVE',
   RELEASED = 'RELEASED',
   REFUNDED = 'REFUNDED',
+  DISPUTED = 'DISPUTED',
   EXPIRED = 'EXPIRED',
   CANCELLED = 'CANCELLED',
 }
@@ -116,6 +121,94 @@ export class StellarEscrow {
 
   @Column({ name: 'rent_agreement_id', type: 'uuid', nullable: true })
   rentAgreementId: string | null;
+
+  // Blockchain integration fields
+  @Column({
+    name: 'blockchain_escrow_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  blockchainEscrowId: string | null;
+
+  @Column({
+    name: 'on_chain_status',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  onChainStatus: string | null;
+
+  @Column({
+    name: 'escrow_contract_address',
+    type: 'varchar',
+    length: 56,
+    nullable: true,
+  })
+  escrowContractAddress: string | null;
+
+  @Column({
+    name: 'arbiter_address',
+    type: 'varchar',
+    length: 56,
+    nullable: true,
+  })
+  arbiterAddress: string | null;
+
+  @Column({ name: 'dispute_id', type: 'uuid', nullable: true })
+  disputeId: string | null;
+
+  @Column({ name: 'dispute_reason', type: 'text', nullable: true })
+  disputeReason: string | null;
+
+  @Column({ name: 'blockchain_synced_at', type: 'timestamp', nullable: true })
+  blockchainSyncedAt: Date | null;
+
+  @Column({ name: 'approval_count', type: 'int', default: 0 })
+  approvalCount: number;
+
+  @Column({ name: 'escrow_metadata', type: 'jsonb', nullable: true })
+  escrowMetadata: any;
+
+  // Multi-signature support
+  @Column({ name: 'is_multi_sig', default: false })
+  isMultiSig: boolean;
+
+  @Column({ name: 'required_signatures', default: 1 })
+  requiredSignatures: number;
+
+  @Column({ name: 'participants', type: 'simple-array', nullable: true })
+  participants: string[];
+
+  // Time-lock support
+  @Column({ name: 'release_time', type: 'bigint', nullable: true })
+  releaseTime: number | null;
+
+  @Column({ name: 'is_time_locked', default: false })
+  isTimeLocked: boolean;
+
+  // Dispute integration
+  @Column({
+    name: 'linked_dispute_id',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  linkedDisputeId: string | null;
+
+  @Column({ name: 'dispute_integrated', default: false })
+  disputeIntegrated: boolean;
+
+  // Relations
+  @OneToMany(() => EscrowSignature, (signature) => signature.escrow, {
+    cascade: true,
+  })
+  signatures: EscrowSignature[];
+
+  @OneToMany(() => EscrowCondition, (condition) => condition.escrow, {
+    cascade: true,
+  })
+  conditions: EscrowCondition[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

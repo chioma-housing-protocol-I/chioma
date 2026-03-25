@@ -1,0 +1,64 @@
+# Docker Compose for running the API with interactive documentation.
+# Use: docker compose -f docker-compose.docs.yml up
+# Then open http://localhost:5000/api/docs for Swagger UI.
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: chioma_docs_db
+    environment:
+      POSTGRES_USER: postgres_cax
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: chioma_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - chioma_docs_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres_cax']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: chioma_docs_redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chioma_docs_api
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: development
+      PORT: '5000'
+      DB_HOST: db
+      DB_PORT: '5432'
+      DB_USERNAME: postgres_cax
+      DB_PASSWORD: password
+      DB_NAME: chioma_db
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      RATE_LIMIT_TTL: '60000'
+      RATE_LIMIT_MAX: '100'
+      RATE_LIMIT_AUTH_TTL: '60000'
+      RATE_LIMIT_AUTH_MAX: '5'
+      RATE_LIMIT_STRICT_TTL: '60000'
+      RATE_LIMIT_STRICT_MAX: '10'
+      FRONTEND_URL: http://localhost:3001
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+volumes:
+  chioma_docs_pg_data:

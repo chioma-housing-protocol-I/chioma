@@ -104,6 +104,33 @@ export class Dispute {
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
+  @Column({ name: 'blockchain_agreement_id', nullable: true })
+  blockchainAgreementId: string;
+
+  @Column({ name: 'details_hash', nullable: true })
+  detailsHash: string;
+
+  @Column({ name: 'blockchain_raised_at', type: 'bigint', nullable: true })
+  blockchainRaisedAt?: number;
+
+  @Column({ name: 'blockchain_resolved_at', type: 'bigint', nullable: true })
+  blockchainResolvedAt?: number;
+
+  @Column({ name: 'votes_favor_landlord', default: 0 })
+  votesFavorLandlord: number;
+
+  @Column({ name: 'votes_favor_tenant', default: 0 })
+  votesFavorTenant: number;
+
+  @Column({ name: 'blockchain_outcome', nullable: true })
+  blockchainOutcome: string;
+
+  @Column({ name: 'transaction_hash', nullable: true })
+  transactionHash: string;
+
+  @Column({ name: 'blockchain_synced_at', type: 'timestamp', nullable: true })
+  blockchainSyncedAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

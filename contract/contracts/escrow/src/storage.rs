@@ -1,13 +1,17 @@
 //! Storage operations for the Escrow contract.
 //! Implements single-responsibility getter/setter helpers.
-use soroban_sdk::{BytesN, Env, Vec};
+use soroban_sdk::{Address, BytesN, Env, Vec};
 
-use crate::types::{DataKey, Escrow, ReleaseApproval};
+use crate::types::{DataKey, Escrow, ReleaseApproval, ReleaseRecord, TimeoutConfig};
 
 /// Escrow storage management.
 pub struct EscrowStorage;
 
 impl EscrowStorage {
+    pub const DEFAULT_ESCROW_TIMEOUT_DAYS: u64 = 14;
+    pub const DEFAULT_DISPUTE_TIMEOUT_DAYS: u64 = 30;
+    pub const DEFAULT_PAYMENT_TIMEOUT_DAYS: u64 = 7;
+
     /// Retrieve an escrow by ID.
     /// Returns None if escrow doesn't exist.
     pub fn get(env: &Env, id: &BytesN<32>) -> Option<Escrow> {
@@ -46,10 +50,70 @@ impl EscrowStorage {
     }
 
     /// Clear all approvals for an escrow.
-    /// Useful when transitioning to a new state (e.g., from Disputed back to Funded).
+    /// Also clears per-target counts and per-signer flags.
     pub fn clear_approvals(env: &Env, escrow_id: &BytesN<32>) {
         let key = DataKey::Approvals(escrow_id.clone());
         env.storage().persistent().remove(&key);
+    }
+
+    /// Get the approval count for a specific release target (O(1) lookup).
+    pub fn get_approval_count_for_target(
+        env: &Env,
+        escrow_id: &BytesN<32>,
+        release_to: &Address,
+    ) -> u32 {
+        let key = DataKey::ApprovalCount(escrow_id.clone(), release_to.clone());
+        env.storage().persistent().get::<_, u32>(&key).unwrap_or(0)
+    }
+
+    /// Increment the approval count for a specific release target.
+    pub fn increment_approval_count(env: &Env, escrow_id: &BytesN<32>, release_to: &Address) {
+        let count = Self::get_approval_count_for_target(env, escrow_id, release_to);
+        let key = DataKey::ApprovalCount(escrow_id.clone(), release_to.clone());
+        env.storage().persistent().set(&key, &(count + 1));
+    }
+
+    /// Check if a specific signer has already approved a specific target (O(1) lookup).
+    pub fn has_signer_approved(
+        env: &Env,
+        escrow_id: &BytesN<32>,
+        signer: &Address,
+        release_to: &Address,
+    ) -> bool {
+        let key = DataKey::SignerApproved(escrow_id.clone(), signer.clone(), release_to.clone());
+        env.storage()
+            .persistent()
+            .get::<_, bool>(&key)
+            .unwrap_or(false)
+    }
+
+    /// Mark a signer as having approved a specific target.
+    pub fn set_signer_approved(
+        env: &Env,
+        escrow_id: &BytesN<32>,
+        signer: &Address,
+        release_to: &Address,
+    ) {
+        let key = DataKey::SignerApproved(escrow_id.clone(), signer.clone(), release_to.clone());
+        env.storage().persistent().set(&key, &true);
+    }
+
+    /// Clear approval counts and signer flags for given targets.
+    pub fn clear_approval_counts(
+        env: &Env,
+        escrow_id: &BytesN<32>,
+        targets: &[Address],
+        signers: &[Address],
+    ) {
+        for target in targets {
+            let count_key = DataKey::ApprovalCount(escrow_id.clone(), target.clone());
+            env.storage().persistent().remove(&count_key);
+            for signer in signers {
+                let flag_key =
+                    DataKey::SignerApproved(escrow_id.clone(), signer.clone(), target.clone());
+                env.storage().persistent().remove(&flag_key);
+            }
+        }
     }
 
     /// Get the current count of escrows created.
@@ -66,5 +130,47 @@ impl EscrowStorage {
         env.storage()
             .instance()
             .set(&DataKey::EscrowCount, &(count + 1));
+    }
+
+    /// Fetch timeout config or return defaults.
+    pub fn get_timeout_config(env: &Env) -> TimeoutConfig {
+        env.storage()
+            .instance()
+            .get(&DataKey::TimeoutConfig)
+            .unwrap_or(TimeoutConfig {
+                escrow_timeout_days: Self::DEFAULT_ESCROW_TIMEOUT_DAYS,
+                dispute_timeout_days: Self::DEFAULT_DISPUTE_TIMEOUT_DAYS,
+                payment_timeout_days: Self::DEFAULT_PAYMENT_TIMEOUT_DAYS,
+            })
+    }
+
+    /// Persist timeout configuration in instance storage.
+    pub fn set_timeout_config(env: &Env, config: &TimeoutConfig) {
+        env.storage()
+            .instance()
+            .set(&DataKey::TimeoutConfig, config);
+    }
+
+    /// Retrieve release history for an escrow.
+    /// Returns empty Vec if no releases have been made yet.
+    pub fn get_release_history(env: &Env, escrow_id: &BytesN<32>) -> Vec<ReleaseRecord> {
+        let key = DataKey::ReleaseHistory(escrow_id.clone());
+        match env
+            .storage()
+            .persistent()
+            .get::<_, Vec<ReleaseRecord>>(&key)
+        {
+            Some(history) => history,
+            None => Vec::new(env),
+        }
+    }
+
+    /// Add a new release record to the history.
+    /// Appends to existing release history list.
+    pub fn add_release_record(env: &Env, escrow_id: &BytesN<32>, record: ReleaseRecord) {
+        let mut history = Self::get_release_history(env, escrow_id);
+        history.push_back(record);
+        let key = DataKey::ReleaseHistory(escrow_id.clone());
+        env.storage().persistent().set(&key, &history);
     }
 }

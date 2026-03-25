@@ -2,13 +2,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
+  Index,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Payment } from './payment.entity';
 
 export enum AgreementStatus {
@@ -21,6 +19,7 @@ export enum AgreementStatus {
 }
 
 @Entity('rent_agreements')
+@Index(['propertyId', 'status'])
 export class RentAgreement {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -128,6 +127,22 @@ export class RentAgreement {
 
   @Column({ name: 'termination_reason', type: 'text', nullable: true })
   terminationReason: string;
+
+  // Blockchain Integration
+  @Column({ name: 'blockchain_agreement_id', nullable: true })
+  blockchainAgreementId: string;
+
+  @Column({ name: 'on_chain_status', nullable: true })
+  onChainStatus: string;
+
+  @Column({ name: 'transaction_hash', nullable: true })
+  transactionHash: string;
+
+  @Column({ name: 'blockchain_synced_at', type: 'timestamp', nullable: true })
+  blockchainSyncedAt: Date;
+
+  @Column({ name: 'payment_split_config', type: 'jsonb', nullable: true })
+  paymentSplitConfig: any;
 
   // Relationships
   @OneToMany(() => Payment, (payment) => payment.agreement)

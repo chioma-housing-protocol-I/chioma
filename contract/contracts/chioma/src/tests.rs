@@ -402,6 +402,73 @@ fn test_invalid_dates_rejected() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_backdated_agreement_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "BACKDATED");
+
+    // Set ledger timestamp to a known value
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1000000;
+    });
+
+    // Try to create agreement with start_date more than 1 day in the past
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &900000, // More than 1 day (86400 seconds) before current time
+        &2000000,
+        &0,
+        &Address::generate(&env),
+    );
+}
+
+#[test]
+fn test_agreement_within_grace_period_accepted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "GRACE_PERIOD");
+
+    // Set ledger timestamp to a known value
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1000000;
+    });
+
+    // Create agreement with start_date within grace period (less than 1 day ago)
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &950000, // Within 1 day grace period
+        &2000000,
+        &0,
+        &Address::generate(&env),
+    );
+
+    assert!(client.has_agreement(&agreement_id));
+}
+
+#[test]
 #[should_panic(expected = "Error(Contract, #4)")]
 fn test_duplicate_agreement_id() {
     let env = Env::default();
@@ -661,6 +728,207 @@ fn test_sign_agreement_event_emission() {
 }
 
 #[test]
+fn test_submit_agreement_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "SUBMIT_001");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+
+    let agreement_before = client.get_agreement(&agreement_id).unwrap();
+    assert_eq!(agreement_before.status, AgreementStatus::Draft);
+
+    client.submit_agreement(&landlord, &agreement_id);
+
+    let agreement_after = client.get_agreement(&agreement_id).unwrap();
+    assert_eq!(agreement_after.status, AgreementStatus::Pending);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #13)")]
+fn test_submit_agreement_not_found() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let landlord = Address::generate(&env);
+
+    client.submit_agreement(&landlord, &String::from_str(&env, "NONEXISTENT"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #18)")]
+fn test_submit_agreement_unauthorized() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let non_landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "SUBMIT_UNAUTH");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+
+    client.submit_agreement(&non_landlord, &agreement_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #15)")]
+fn test_submit_agreement_invalid_state() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "SUBMIT_INVALID";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    client.submit_agreement(&landlord, &String::from_str(&env, agreement_id));
+}
+
+#[test]
+fn test_cancel_agreement_success_draft() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "CANCEL_DRAFT");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+
+    client.cancel_agreement(&landlord, &agreement_id);
+
+    let agreement = client.get_agreement(&agreement_id).unwrap();
+    assert_eq!(agreement.status, AgreementStatus::Cancelled);
+}
+
+#[test]
+fn test_cancel_agreement_success_pending() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "CANCEL_PENDING";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    client.cancel_agreement(&landlord, &String::from_str(&env, agreement_id));
+
+    let agreement = client
+        .get_agreement(&String::from_str(&env, agreement_id))
+        .unwrap();
+    assert_eq!(agreement.status, AgreementStatus::Cancelled);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #13)")]
+fn test_cancel_agreement_not_found() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let landlord = Address::generate(&env);
+
+    client.cancel_agreement(&landlord, &String::from_str(&env, "NONEXISTENT"));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #18)")]
+fn test_cancel_agreement_unauthorized() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let non_landlord = Address::generate(&env);
+
+    let agreement_id = String::from_str(&env, "CANCEL_UNAUTH");
+
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &2000,
+        &100,
+        &200,
+        &0,
+        &Address::generate(&env),
+    );
+
+    client.cancel_agreement(&non_landlord, &agreement_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #15)")]
+fn test_cancel_agreement_invalid_state() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    let agreement_id = "CANCEL_INVALID";
+    create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
+
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
+
+    // Status is now Active
+
+    client.cancel_agreement(&landlord, &String::from_str(&env, agreement_id));
+}
+
+#[test]
 fn test_get_agreement() {
     let env = Env::default();
     env.mock_all_auths();
@@ -808,4 +1076,222 @@ proptest! {
             prop_assert!(result.is_err());
         }
     }
+}
+
+#[test]
+fn test_contract_paused_operations() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let fee_collector = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let payment_token = Address::generate(&env);
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: fee_collector.clone(),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    client.pause(&String::from_str(&env, "incident response"));
+
+    assert!(client.is_paused());
+
+    let state = client.get_state().unwrap();
+    assert!(state.config.paused);
+
+    env.as_contract(&client.address, || {
+        let pause_state: PauseState = env
+            .storage()
+            .instance()
+            .get(&storage::DataKey::PauseState)
+            .unwrap();
+
+        assert!(pause_state.is_paused);
+        assert_eq!(pause_state.paused_by, admin);
+        assert_eq!(
+            pause_state.pause_reason,
+            String::from_str(&env, "incident response")
+        );
+    });
+
+    let res = client.try_create_agreement(
+        &String::from_str(&env, "agreement-paused"),
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &500,
+        &100,
+        &200,
+        &10,
+        &payment_token,
+    );
+    assert_eq!(res, Err(Ok(RentalError::ContractPaused)));
+
+    client.unpause();
+    assert!(!client.is_paused());
+
+    let agreement_id_str = "agreement-active";
+    let agreement_id = String::from_str(&env, agreement_id_str);
+    client.create_agreement(
+        &agreement_id,
+        &landlord,
+        &tenant,
+        &None,
+        &1000,
+        &500,
+        &100,
+        &200,
+        &10,
+        &payment_token,
+    );
+
+    let mut agreement = client.get_agreement(&agreement_id).unwrap();
+    agreement.status = AgreementStatus::Pending;
+
+    env.as_contract(&client.address, || {
+        env.storage().persistent().set(
+            &storage::DataKey::Agreement(agreement_id.clone()),
+            &agreement,
+        );
+    });
+
+    client.pause(&String::from_str(&env, "second incident"));
+
+    let res_sign = client.try_sign_agreement(&tenant, &agreement_id);
+    assert_eq!(res_sign, Err(Ok(RentalError::ContractPaused)));
+
+    client.unpause();
+    let res_sign_success = client.try_sign_agreement(&tenant, &agreement_id);
+    assert!(res_sign_success.is_ok());
+}
+
+#[test]
+fn test_pause_unpause_events_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+
+    let pause_res = client.try_pause(&String::from_str(&env, "security patching"));
+    assert!(pause_res.is_ok());
+    let events_after_pause = env.events().all();
+    assert_eq!(events_after_pause.len(), 1);
+
+    let unpause_res = client.try_unpause();
+    assert!(unpause_res.is_ok());
+    let events_after_unpause = env.events().all();
+    assert_eq!(events_after_unpause.len(), 1);
+}
+
+#[test]
+fn test_pause_double_call_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+    client.pause(&String::from_str(&env, "maintenance"));
+
+    let result = client.try_pause(&String::from_str(&env, "maintenance again"));
+    assert_eq!(result, Err(Ok(RentalError::AlreadyPaused)));
+}
+
+#[test]
+fn test_unpause_when_not_paused_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+
+    client.initialize(&admin, &config);
+    let result = client.try_unpause();
+    assert_eq!(result, Err(Ok(RentalError::NotPaused)));
+}
+
+#[test]
+#[should_panic]
+fn test_pause_unauthorized() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    initialize_contract_state(&env, &client, &admin);
+
+    let attacker = Address::generate(&env);
+    let reason = String::from_str(&env, "malicious pause");
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "pause",
+                args: (reason.clone(),).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .pause(&reason);
+}
+
+#[test]
+#[should_panic]
+fn test_unpause_unauthorized() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    initialize_contract_state(&env, &client, &admin);
+    let reason = String::from_str(&env, "maintenance");
+    client
+        .mock_auths(&[MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "pause",
+                args: (reason.clone(),).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .pause(&reason);
+
+    let attacker = Address::generate(&env);
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "unpause",
+                args: ().into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .unpause();
 }

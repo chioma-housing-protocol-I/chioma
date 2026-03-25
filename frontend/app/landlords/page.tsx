@@ -3,9 +3,19 @@
 import React from 'react';
 import { Home, Users, DollarSign, PenTool } from 'lucide-react';
 import KPICard from '@/components/landlord-dashboard/KPICard';
-import RevenueChart from '@/components/dashboard/RevenueChart';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import PropertyPortfolio from '@/components/dashboard/PropertyPortfolio';
+import dynamic from 'next/dynamic';
+
+const RevenueChart = dynamic(
+  () => import('@/components/dashboard/RevenueChart'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-80 w-full bg-white/5 animate-pulse rounded-3xl border border-white/10" />
+    ),
+  },
+);
 
 export default function DashboardPage() {
   return (
@@ -13,10 +23,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-3xl font-bold text-white tracking-tight">
             Overview
           </h1>
-          <p className="text-neutral-500 mt-1">
+          <p className="text-blue-200/60 mt-1">
             Here&apos;s what&apos;s happening with your properties today.
           </p>
         </div>

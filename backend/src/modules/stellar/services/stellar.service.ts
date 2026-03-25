@@ -5,6 +5,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Retry } from '../../../common/decorators/retry.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -98,6 +99,12 @@ export class StellarService {
   /**
    * Fund an account using Friendbot (testnet only)
    */
+  @Retry({
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    backoffMultiplier: 2,
+  })
   async fundAccountTestnet(publicKey: string): Promise<boolean> {
     if (this.stellarConfig.network !== 'testnet') {
       throw new BadRequestException(
@@ -174,6 +181,12 @@ export class StellarService {
   /**
    * Get account info from Stellar network
    */
+  @Retry({
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    backoffMultiplier: 2,
+  })
   async getAccountInfoFromNetwork(
     publicKey: string,
   ): Promise<StellarSdk.Horizon.AccountResponse> {
@@ -198,6 +211,12 @@ export class StellarService {
   /**
    * Sync account data from Stellar network
    */
+  @Retry({
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    backoffMultiplier: 2,
+  })
   async syncAccountFromNetwork(publicKey: string): Promise<StellarAccount> {
     const account = await this.getAccountByPublicKey(publicKey);
 
@@ -650,16 +669,16 @@ export class StellarService {
       );
 
       // Build asset
-      let asset: StellarSdk.Asset;
+      let _asset: StellarSdk.Asset;
       if (escrow.assetType === AssetType.NATIVE) {
-        asset = StellarSdk.Asset.native();
+        _asset = StellarSdk.Asset.native();
       } else {
         if (!escrow.assetCode || !escrow.assetIssuer) {
           throw new BadRequestException(
             'Asset code and issuer required for non-native assets',
           );
         }
-        asset = new StellarSdk.Asset(escrow.assetCode, escrow.assetIssuer);
+        _asset = new StellarSdk.Asset(escrow.assetCode, escrow.assetIssuer);
       }
 
       // Calculate amount to send (leave minimum for account deletion)

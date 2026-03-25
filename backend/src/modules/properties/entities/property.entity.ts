@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { PropertyImage } from './property-image.entity';
@@ -97,10 +98,14 @@ export class Property {
   petsAllowed: boolean;
 
   // Metadata
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    nullable: true,
+  })
   metadata: Record<string, any>;
 
   // Relations
+  @Index()
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
 

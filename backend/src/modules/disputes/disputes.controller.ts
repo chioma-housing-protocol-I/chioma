@@ -14,6 +14,13 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { DisputesService } from './disputes.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
@@ -26,6 +33,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 
+@ApiTags('Disputes')
+@ApiBearerAuth('JWT-auth')
 @Controller('disputes')
 @UseGuards(JwtAuthGuard)
 export class DisputesController {
@@ -33,6 +42,10 @@ export class DisputesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a dispute' })
+  @ApiResponse({ status: 201, description: 'Dispute created' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createDispute(
     @Body() createDisputeDto: CreateDisputeDto,
     @Request() req,
@@ -41,11 +54,17 @@ export class DisputesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List disputes with filters' })
+  @ApiResponse({ status: 200, description: 'Paginated disputes' })
   async findAll(@Query() query: QueryDisputesDto, @Request() req) {
     return this.disputesService.findAll(query, req.user.id);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get dispute by ID' })
+  @ApiParam({ name: 'id' })
+  @ApiResponse({ status: 200, description: 'Dispute details' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   async findOne(@Param('id') id: string) {
     return this.disputesService.findOne(parseInt(id));
   }
