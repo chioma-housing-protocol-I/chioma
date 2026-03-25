@@ -12,14 +12,17 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useAuditLogs, useAuditStats } from '@/lib/query/hooks/use-audit-logs';
-import { AuditLogFilters } from '@/components/admin/AuditLogFilters';
+import {
+  AuditLogFilters,
+  type AuditLogFilterState,
+} from '@/components/admin/AuditLogFilters';
 import { AuditLogList } from '@/components/admin/AuditLogList';
 import { AuditLogDetailModal } from '@/components/admin/AuditLogDetailModal';
 import type { AuditLog } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function AuditLogsPage() {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<AuditLogFilterState>({
     page: 1,
     limit: 10,
     search: '',

@@ -3,9 +3,19 @@
 import React from 'react';
 import { Search, Filter, Calendar, User, Activity, X } from 'lucide-react';
 
+export interface AuditLogFilterState {
+  page: number;
+  limit: number;
+  search: string;
+  action: string;
+  startDate: string;
+  performedBy: string;
+  [key: string]: string | number | undefined;
+}
+
 interface FiltersProps {
-  filters: Record<string, string | number | undefined>;
-  setFilters: (filters: Record<string, string | number | undefined>) => void;
+  filters: AuditLogFilterState;
+  setFilters: (filters: AuditLogFilterState) => void;
   onClear: () => void;
 }
 
