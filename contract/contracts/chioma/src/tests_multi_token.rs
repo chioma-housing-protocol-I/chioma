@@ -9,7 +9,7 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 fn initialize_contract(env: &Env, client: &ContractClient<'_>, admin: &Address) {
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(admin, &config);
@@ -24,7 +24,7 @@ fn test_add_supported_token() {
     initialize_contract(&env, &client, &admin);
 
     let token_addr = Address::generate(&env);
-    let symbol = String::from_str(env, "USDC");
+    let symbol = String::from_str(&env, "USDC");
 
     client.add_supported_token(&token_addr, &symbol, &6, &1, &1000000);
 
@@ -44,7 +44,7 @@ fn test_remove_supported_token() {
     initialize_contract(&env, &client, &admin);
 
     let token_addr = Address::generate(&env);
-    let symbol = String::from_str(env, "USDC");
+    let symbol = String::from_str(&env, "USDC");
 
     client.add_supported_token(&token_addr, &symbol, &6, &1, &1000000);
     assert!(client.is_token_supported(&token_addr));
@@ -89,13 +89,13 @@ fn test_create_agreement_with_token() {
 
     client.add_supported_token(
         &token_addr,
-        &String::from_str(env, "USDC"),
+        &String::from_str(&env, "USDC"),
         &6,
         &1,
         &1000000000,
     );
 
-    let property_id = String::from_str(env, "PROP1");
+    let property_id = String::from_str(&env, "PROP1");
     let agreement_id = client.create_agreement_with_token(&AgreementInput {
         agreement_id: property_id.clone(),
         tenant: tenant.clone(),
@@ -109,8 +109,8 @@ fn test_create_agreement_with_token() {
             agent_commission_rate: 0,
         },
         payment_token: token_addr.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     assert_eq!(agreement_id, property_id);
@@ -137,14 +137,14 @@ fn test_make_payment_with_different_token() {
 
     client.add_supported_token(
         &base_token,
-        &String::from_str(env, "USDC"),
+        &String::from_str(&env, "USDC"),
         &6,
         &1,
         &1000000000,
     );
     client.add_supported_token(
         &pay_token,
-        &String::from_str(env, "EURT"),
+        &String::from_str(&env, "EURT"),
         &6,
         &1,
         &1000000000,
@@ -155,7 +155,7 @@ fn test_make_payment_with_different_token() {
     client.set_exchange_rate(&pay_token, &base_token, &rate);
 
     let agreement_id = client.create_agreement_with_token(&AgreementInput {
-        agreement_id: String::from_str(env, "PROP1").clone(),
+        agreement_id: String::from_str(&env, "PROP1").clone(),
         tenant: tenant.clone(),
         landlord: landlord.clone(),
         agent: None,
@@ -167,8 +167,8 @@ fn test_make_payment_with_different_token() {
             agent_commission_rate: 0,
         },
         payment_token: base_token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     // Sign agreement to make it active

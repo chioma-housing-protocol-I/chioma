@@ -134,7 +134,7 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 fn initialize_contract_state(env: &Env, client: &ContractClient<'_>, admin: &Address) {
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client
@@ -244,7 +244,7 @@ fn test_create_agreement_success() {
     let landlord = Address::generate(&env);
     let agent = Some(Address::generate(&env));
 
-    let agreement_id = String::from_str(env, "AGREEMENT_001");
+    let agreement_id = String::from_str(&env, "AGREEMENT_001");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -259,8 +259,8 @@ fn test_create_agreement_success() {
             agent_commission_rate: 10,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let events = env.events().all();
@@ -282,7 +282,7 @@ fn test_create_agreement_with_agent() {
     let landlord = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "AGREEMENT_WITH_AGENT");
+    let agreement_id = String::from_str(&env, "AGREEMENT_WITH_AGENT");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -297,8 +297,8 @@ fn test_create_agreement_with_agent() {
             agent_commission_rate: 5,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -312,7 +312,7 @@ fn test_create_agreement_without_agent() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "AGREEMENT_NO_AGENT");
+    let agreement_id = String::from_str(&env, "AGREEMENT_NO_AGENT");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -327,8 +327,8 @@ fn test_create_agreement_without_agent() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -343,7 +343,7 @@ fn test_negative_rent_rejected() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "BAD_RENT");
+    let agreement_id = String::from_str(&env, "BAD_RENT");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -358,8 +358,8 @@ fn test_negative_rent_rejected() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -374,7 +374,7 @@ fn test_zero_monthly_rent_rejected() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "ZERO_RENT");
+    let agreement_id = String::from_str(&env, "ZERO_RENT");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -389,8 +389,8 @@ fn test_zero_monthly_rent_rejected() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -405,7 +405,7 @@ fn test_invalid_dates_rejected() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "BAD_DATES");
+    let agreement_id = String::from_str(&env, "BAD_DATES");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -420,8 +420,8 @@ fn test_invalid_dates_rejected() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -436,7 +436,7 @@ fn test_backdated_agreement_rejected() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "BACKDATED");
+    let agreement_id = String::from_str(&env, "BACKDATED");
 
     // Set ledger timestamp to a known value
     env.ledger().with_mut(|li| {
@@ -457,8 +457,8 @@ fn test_backdated_agreement_rejected() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -472,7 +472,7 @@ fn test_agreement_within_grace_period_accepted() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "GRACE_PERIOD");
+    let agreement_id = String::from_str(&env, "GRACE_PERIOD");
 
     // Set ledger timestamp to a known value
     env.ledger().with_mut(|li| {
@@ -493,8 +493,8 @@ fn test_agreement_within_grace_period_accepted() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     assert!(client.has_agreement(&agreement_id));
@@ -511,7 +511,7 @@ fn test_duplicate_agreement_id() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "DUPLICATE_ID");
+    let agreement_id = String::from_str(&env, "DUPLICATE_ID");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -526,8 +526,8 @@ fn test_duplicate_agreement_id() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.create_agreement(&AgreementInput {
@@ -543,8 +543,8 @@ fn test_duplicate_agreement_id() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -559,7 +559,7 @@ fn test_invalid_commission_rate() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "BAD_COMMISSION");
+    let agreement_id = String::from_str(&env, "BAD_COMMISSION");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -574,8 +574,8 @@ fn test_invalid_commission_rate() {
             agent_commission_rate: 101,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 }
 
@@ -587,7 +587,7 @@ fn create_pending_agreement(
     landlord: &Address,
 ) {
     client.create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, agreement_id).clone(),
+        agreement_id: String::from_str(&env, agreement_id).clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -598,19 +598,19 @@ fn create_pending_agreement(
             end_date: 1000000,
             agent_commission_rate: 0,
         },
-        payment_token: Address::generate(env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let mut agreement = client
-        .get_agreement(&String::from_str(env, agreement_id))
+        .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
     agreement.status = AgreementStatus::Pending;
 
     env.as_contract(&client.address, || {
         env.storage().persistent().set(
-            &storage::DataKey::Agreement(String::from_str(env, agreement_id)),
+            &storage::DataKey::Agreement(String::from_str(&env, agreement_id)),
             &agreement,
         );
     });
@@ -628,10 +628,10 @@ fn test_sign_agreement_success() {
     let agreement_id = "SIGN_001";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 
     let agreement = client
-        .get_agreement(&String::from_str(env, agreement_id))
+        .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
     assert_eq!(agreement.status, AgreementStatus::Active);
     assert!(agreement.signed_at.is_some());
@@ -647,7 +647,7 @@ fn test_sign_agreement_not_found() {
     let client = create_contract(&env);
     let tenant = Address::generate(&env);
 
-    client.sign_agreement(&tenant, &String::from_str(env, "NONEXISTENT"));
+    client.sign_agreement(&tenant, &String::from_str(&env, "NONEXISTENT"));
 }
 
 #[test]
@@ -664,7 +664,7 @@ fn test_sign_agreement_not_tenant() {
     let agreement_id = "SIGN_002";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.sign_agreement(&impostor, &String::from_str(env, agreement_id));
+    client.sign_agreement(&impostor, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -680,7 +680,7 @@ fn test_sign_agreement_invalid_state() {
     let agreement_id = "SIGN_003";
 
     client.create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, agreement_id).clone(),
+        agreement_id: String::from_str(&env, agreement_id).clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -692,11 +692,11 @@ fn test_sign_agreement_invalid_state() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -712,7 +712,7 @@ fn test_sign_agreement_expired() {
     let agreement_id = "SIGN_004";
 
     client.create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, agreement_id).clone(),
+        agreement_id: String::from_str(&env, agreement_id).clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -724,25 +724,25 @@ fn test_sign_agreement_expired() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let mut agreement = client
-        .get_agreement(&String::from_str(env, agreement_id))
+        .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
     agreement.status = AgreementStatus::Pending;
 
     env.as_contract(&client.address, || {
         env.storage().persistent().set(
-            &storage::DataKey::Agreement(String::from_str(env, agreement_id)),
+            &storage::DataKey::Agreement(String::from_str(&env, agreement_id)),
             &agreement,
         );
     });
 
     env.ledger().with_mut(|li| li.timestamp = 300);
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -758,9 +758,9 @@ fn test_sign_agreement_already_signed() {
     let agreement_id = "SIGN_005";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -777,7 +777,7 @@ fn test_sign_agreement_event_emission() {
 
     let events_before = env.events().all().len();
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 
     let events_after = env.events().all();
     assert!(events_after.len() > events_before);
@@ -792,7 +792,7 @@ fn test_submit_agreement_success() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "SUBMIT_001");
+    let agreement_id = String::from_str(&env, "SUBMIT_001");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -807,8 +807,8 @@ fn test_submit_agreement_success() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let agreement_before = client.get_agreement(&agreement_id).unwrap();
@@ -829,7 +829,7 @@ fn test_submit_agreement_not_found() {
     let client = create_contract(&env);
     let landlord = Address::generate(&env);
 
-    client.submit_agreement(&landlord, &String::from_str(env, "NONEXISTENT"));
+    client.submit_agreement(&landlord, &String::from_str(&env, "NONEXISTENT"));
 }
 
 #[test]
@@ -843,7 +843,7 @@ fn test_submit_agreement_unauthorized() {
     let landlord = Address::generate(&env);
     let non_landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "SUBMIT_UNAUTH");
+    let agreement_id = String::from_str(&env, "SUBMIT_UNAUTH");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -858,8 +858,8 @@ fn test_submit_agreement_unauthorized() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.submit_agreement(&non_landlord, &agreement_id);
@@ -878,7 +878,7 @@ fn test_submit_agreement_invalid_state() {
     let agreement_id = "SUBMIT_INVALID";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.submit_agreement(&landlord, &String::from_str(env, agreement_id));
+    client.submit_agreement(&landlord, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -890,7 +890,7 @@ fn test_cancel_agreement_success_draft() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "CANCEL_DRAFT");
+    let agreement_id = String::from_str(&env, "CANCEL_DRAFT");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -905,8 +905,8 @@ fn test_cancel_agreement_success_draft() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.cancel_agreement(&landlord, &agreement_id);
@@ -927,10 +927,10 @@ fn test_cancel_agreement_success_pending() {
     let agreement_id = "CANCEL_PENDING";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.cancel_agreement(&landlord, &String::from_str(env, agreement_id));
+    client.cancel_agreement(&landlord, &String::from_str(&env, agreement_id));
 
     let agreement = client
-        .get_agreement(&String::from_str(env, agreement_id))
+        .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
     assert_eq!(agreement.status, AgreementStatus::Cancelled);
 }
@@ -944,7 +944,7 @@ fn test_cancel_agreement_not_found() {
     let client = create_contract(&env);
     let landlord = Address::generate(&env);
 
-    client.cancel_agreement(&landlord, &String::from_str(env, "NONEXISTENT"));
+    client.cancel_agreement(&landlord, &String::from_str(&env, "NONEXISTENT"));
 }
 
 #[test]
@@ -958,7 +958,7 @@ fn test_cancel_agreement_unauthorized() {
     let landlord = Address::generate(&env);
     let non_landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "CANCEL_UNAUTH");
+    let agreement_id = String::from_str(&env, "CANCEL_UNAUTH");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -973,8 +973,8 @@ fn test_cancel_agreement_unauthorized() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.cancel_agreement(&non_landlord, &agreement_id);
@@ -993,11 +993,11 @@ fn test_cancel_agreement_invalid_state() {
     let agreement_id = "CANCEL_INVALID";
     create_pending_agreement(&env, &client, agreement_id, &tenant, &landlord);
 
-    client.sign_agreement(&tenant, &String::from_str(env, agreement_id));
+    client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 
     // Status is now Active
 
-    client.cancel_agreement(&landlord, &String::from_str(env, agreement_id));
+    client.cancel_agreement(&landlord, &String::from_str(&env, agreement_id));
 }
 
 #[test]
@@ -1009,7 +1009,7 @@ fn test_get_agreement() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "GET_001");
+    let agreement_id = String::from_str(&env, "GET_001");
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
@@ -1024,8 +1024,8 @@ fn test_get_agreement() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let agreement = client.get_agreement(&agreement_id).unwrap();
@@ -1043,7 +1043,7 @@ fn test_has_agreement() {
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
 
-    let agreement_id = String::from_str(env, "HAS_001");
+    let agreement_id = String::from_str(&env, "HAS_001");
 
     assert!(!client.has_agreement(&agreement_id));
 
@@ -1060,8 +1060,8 @@ fn test_has_agreement() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     assert!(client.has_agreement(&agreement_id));
@@ -1079,7 +1079,7 @@ fn test_get_agreement_count() {
     assert_eq!(client.get_agreement_count(), 0);
 
     client.create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, "COUNT_001").clone(),
+        agreement_id: String::from_str(&env, "COUNT_001").clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -1091,14 +1091,14 @@ fn test_get_agreement_count() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     assert_eq!(client.get_agreement_count(), 1);
 
     client.create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, "COUNT_002").clone(),
+        agreement_id: String::from_str(&env, "COUNT_002").clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -1110,8 +1110,8 @@ fn test_get_agreement_count() {
             agent_commission_rate: 0,
         },
         payment_token: Address::generate(&env).clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     assert_eq!(client.get_agreement_count(), 2);
@@ -1135,7 +1135,7 @@ proptest! {
         let tenant = Address::generate(&env);
         let landlord = Address::generate(&env);
         let payment_token = Address::generate(&env);
-        let agreement_id = String::from_str(env, "FUZZ_AGREEMENT");
+        let agreement_id = String::from_str(&env, "FUZZ_AGREEMENT");
 
         // Disable panic catching since we expect some combinations to fail
         let result = client.try_create_agreement(&AgreementInput {
@@ -1151,8 +1151,8 @@ proptest! {
             agent_commission_rate: agent_commission_rate,
         },
         payment_token: payment_token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
         let is_valid_rent = monthly_rent > 0;
@@ -1189,7 +1189,7 @@ fn test_contract_paused_operations() {
     };
     client.initialize(&admin, &config);
 
-    client.pause(&String::from_str(env, "incident response"));
+    client.pause(&String::from_str(&env, "incident response"));
 
     assert!(client.is_paused());
 
@@ -1207,12 +1207,12 @@ fn test_contract_paused_operations() {
         assert_eq!(pause_state.paused_by, admin);
         assert_eq!(
             pause_state.pause_reason,
-            String::from_str(env, "incident response")
+            String::from_str(&env, "incident response")
         );
     });
 
     let res = client.try_create_agreement(&AgreementInput {
-        agreement_id: String::from_str(env, "agreement-paused").clone(),
+        agreement_id: String::from_str(&env, "agreement-paused").clone(),
         landlord: landlord.clone(),
         tenant: tenant.clone(),
         agent: None,
@@ -1224,8 +1224,8 @@ fn test_contract_paused_operations() {
             agent_commission_rate: 10,
         },
         payment_token: payment_token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
     assert_eq!(res, Err(Ok(RentalError::ContractPaused)));
 
@@ -1233,7 +1233,7 @@ fn test_contract_paused_operations() {
     assert!(!client.is_paused());
 
     let agreement_id_str = "agreement-active";
-    let agreement_id = String::from_str(env, agreement_id_str);
+    let agreement_id = String::from_str(&env, agreement_id_str);
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
         landlord: landlord.clone(),
@@ -1247,8 +1247,8 @@ fn test_contract_paused_operations() {
             agent_commission_rate: 10,
         },
         payment_token: payment_token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let mut agreement = client.get_agreement(&agreement_id).unwrap();
@@ -1261,7 +1261,7 @@ fn test_contract_paused_operations() {
         );
     });
 
-    client.pause(&String::from_str(env, "second incident"));
+    client.pause(&String::from_str(&env, "second incident"));
 
     let res_sign = client.try_sign_agreement(&tenant, &agreement_id);
     assert_eq!(res_sign, Err(Ok(RentalError::ContractPaused)));
@@ -1286,7 +1286,7 @@ fn test_pause_unpause_events_emitted() {
 
     client.initialize(&admin, &config);
 
-    let pause_res = client.try_pause(&String::from_str(env, "security patching"));
+    let pause_res = client.try_pause(&String::from_str(&env, "security patching"));
     assert!(pause_res.is_ok());
     let events_after_pause = env.events().all();
     assert_eq!(events_after_pause.len(), 1);
@@ -1311,9 +1311,9 @@ fn test_pause_double_call_fails() {
     };
 
     client.initialize(&admin, &config);
-    client.pause(&String::from_str(env, "maintenance"));
+    client.pause(&String::from_str(&env, "maintenance"));
 
-    let result = client.try_pause(&String::from_str(env, "maintenance again"));
+    let result = client.try_pause(&String::from_str(&env, "maintenance again"));
     assert_eq!(result, Err(Ok(RentalError::AlreadyPaused)));
 }
 
@@ -1345,7 +1345,7 @@ fn test_pause_unauthorized() {
     initialize_contract_state(&env, &client, &admin);
 
     let attacker = Address::generate(&env);
-    let reason = String::from_str(env, "malicious pause");
+    let reason = String::from_str(&env, "malicious pause");
 
     client
         .mock_auths(&[MockAuth {
@@ -1368,7 +1368,7 @@ fn test_unpause_unauthorized() {
 
     let admin = Address::generate(&env);
     initialize_contract_state(&env, &client, &admin);
-    let reason = String::from_str(env, "maintenance");
+    let reason = String::from_str(&env, "maintenance");
     client
         .mock_auths(&[MockAuth {
             address: &admin,

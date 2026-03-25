@@ -13,10 +13,10 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 
 fn setup(env: &Env) -> (ContractClient<'_>, Address) {
     let client = create_contract(env);
-    let admin = Address::generate(env);
+    let admin = Address::generate(&env);
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(&admin, &config);
@@ -31,8 +31,8 @@ fn create_agreement_helper(
     landlord: &Address,
     deposit: i128,
 ) -> String {
-    let id = String::from_str(env, "AGR001");
-    let token = Address::generate(env);
+    let id = String::from_str(&env, "AGR001");
+    let token = Address::generate(&env);
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
         landlord: landlord.clone(),
@@ -46,8 +46,8 @@ fn create_agreement_helper(
             agent_commission_rate: 0,
         },
         payment_token: token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
     id
 }
@@ -253,7 +253,7 @@ fn test_config_not_found_error() {
     env.mock_all_auths();
     let (client, _) = setup(&env);
 
-    client.get_deposit_interest_config(&String::from_str(env, "NONEXISTENT"));
+    client.get_deposit_interest_config(&String::from_str(&env, "NONEXISTENT"));
 }
 
 #[test]

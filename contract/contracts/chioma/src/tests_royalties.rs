@@ -38,7 +38,7 @@ fn test_set_and_get_royalty() {
     let landlord = Address::generate(&env);
     let tenant = Address::generate(&env);
     let token = Address::generate(&env);
-    let id = String::from_str(env, "T1");
+    let id = String::from_str(&env, "T1");
 
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
@@ -53,8 +53,8 @@ fn test_set_and_get_royalty() {
             agent_commission_rate: 0,
         },
         payment_token: token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let recipient = Address::generate(&env);
@@ -72,7 +72,7 @@ fn test_calculate_royalty() {
     env.mock_all_auths();
     let (client, _admin) = setup(&env);
 
-    let id = String::from_str(env, "T1");
+    let id = String::from_str(&env, "T1");
     let landlord = Address::generate(&env);
     let tenant = Address::generate(&env);
     let token = Address::generate(&env);
@@ -89,8 +89,8 @@ fn test_calculate_royalty() {
             agent_commission_rate: 0,
         },
         payment_token: token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.set_royalty(&id, &1000, &Address::generate(&env)); // 10%
@@ -109,7 +109,7 @@ fn test_transfer_with_royalty() {
     let tenant = Address::generate(&env);
     let token_admin = Address::generate(&env);
     let (token_address, token_client) = create_token_mock(&env, &token_admin);
-    let id = String::from_str(env, "T1");
+    let id = String::from_str(&env, "T1");
 
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
@@ -124,8 +124,8 @@ fn test_transfer_with_royalty() {
             agent_commission_rate: 0,
         },
         payment_token: token_address.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     let recipient = Address::generate(&env);
@@ -168,7 +168,7 @@ fn test_invalid_royalty_percentage_fails() {
     env.mock_all_auths();
     let (client, _admin) = setup(&env);
 
-    let id = String::from_str(env, "T1");
+    let id = String::from_str(&env, "T1");
     let landlord = Address::generate(&env);
     let tenant = Address::generate(&env);
     let token = Address::generate(&env);
@@ -185,8 +185,8 @@ fn test_invalid_royalty_percentage_fails() {
             agent_commission_rate: 0,
         },
         payment_token: token.clone(),
-        metadata_uri: String::from_str(env, "").clone(),
-        attributes: Vec::new(env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
     });
 
     client.set_royalty(&id, &2501, &Address::generate(&env)); // > 25%

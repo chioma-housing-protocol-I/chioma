@@ -11,10 +11,10 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 
 fn setup(env: &Env) -> ContractClient<'_> {
     let client = create_contract(env);
-    let admin = Address::generate(env);
+    let admin = Address::generate(&env);
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(&admin, &config);
@@ -38,11 +38,11 @@ fn test_error_codes_and_messages() {
     // Check messages
     assert_eq!(
         RentalError::BookingNotFound.message(&env),
-        String::from_str(env, "Booking not found. Please check the booking ID.")
+        String::from_str(&env, "Booking not found. Please check the booking ID.")
     );
     assert_eq!(
         RentalError::Unauthorized.message(&env),
-        String::from_str(env, "You are not authorized to perform this action.")
+        String::from_str(&env, "You are not authorized to perform this action.")
     );
 }
 
@@ -52,8 +52,8 @@ fn test_log_and_get_errors() {
     env.mock_all_auths();
     let client = setup(&env);
 
-    let op = String::from_str(env, "create_agreement");
-    let details = String::from_str(env, "Missing ID");
+    let op = String::from_str(&env, "create_agreement");
+    let details = String::from_str(&env, "Missing ID");
 
     client.log_error(&RentalError::BookingNotFound, &op, &details);
 
@@ -73,8 +73,8 @@ fn test_multiple_logs_limit() {
     env.mock_all_auths();
     let client = setup(&env);
 
-    let op = String::from_str(env, "op");
-    let details = String::from_str(env, "details");
+    let op = String::from_str(&env, "op");
+    let details = String::from_str(&env, "details");
 
     for _i in 0..15 {
         client.log_error(&RentalError::InternalError, &op, &details);
