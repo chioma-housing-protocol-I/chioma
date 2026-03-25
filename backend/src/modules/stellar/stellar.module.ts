@@ -9,13 +9,18 @@ import { StellarEscrow } from './entities/stellar-escrow.entity';
 import { EscrowSignature } from './entities/escrow-signature.entity';
 import { EscrowCondition } from './entities/escrow-condition.entity';
 import { AgentTransaction } from './entities/agent-transaction.entity';
+import { Arbiter } from '../disputes/entities/arbiter.entity';
+import { DisputeVote } from '../disputes/entities/dispute-vote.entity';
+import { DisputeEvent } from '../disputes/entities/dispute-event.entity';
 import { RentObligationNft } from '../agreements/entities/rent-obligation-nft.entity';
 import { AnchorTransaction } from '../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
 import { StellarPayment } from './entities/stellar-payment.entity';
+import { Dispute } from '../disputes/entities/dispute.entity';
 import { StellarController } from './controllers/stellar.controller';
 import { AnchorController } from './controllers/anchor.controller';
 import { AgentRegistryController } from './controllers/agent-registry.controller';
+import { DisputeController } from './controllers/dispute.controller';
 import { AgentRegistryService } from './services/agent-registry.service';
 import { StellarService } from './services/stellar.service';
 import { EncryptionService } from './services/encryption.service';
@@ -24,6 +29,7 @@ import { ChiomaContractService } from './services/chioma-contract.service';
 import { BlockchainEventService } from './services/blockchain-event.service';
 import { EscrowContractService } from './services/escrow-contract.service';
 import { DisputeContractService } from './services/dispute-contract.service';
+import { DisputeContractEnhancedService } from './services/dispute-contract-enhanced.service';
 import { RentObligationNftService } from './services/rent-obligation-nft.service';
 import { NftEventProcessor } from './services/nft-event-processor.service';
 import { PaymentProcessingService } from './services/payment-processing.service';
@@ -40,6 +46,10 @@ import stellarConfig from './config/stellar.config';
       EscrowSignature,
       EscrowCondition,
       AgentTransaction,
+      Arbiter,
+      DisputeVote,
+      DisputeEvent,
+      Dispute,
       RentObligationNft,
       AnchorTransaction,
       SupportedCurrency,
@@ -52,6 +62,7 @@ import stellarConfig from './config/stellar.config';
     StellarController,
     AnchorController,
     AgentRegistryController,
+    DisputeController,
     PaymentProcessingController,
   ],
   providers: [
@@ -62,6 +73,7 @@ import stellarConfig from './config/stellar.config';
     BlockchainEventService,
     EscrowContractService,
     DisputeContractService,
+    DisputeContractEnhancedService,
     RentObligationNftService,
     NftEventProcessor,
     AgentRegistryService,
@@ -75,6 +87,7 @@ import stellarConfig from './config/stellar.config';
     BlockchainEventService,
     EscrowContractService,
     DisputeContractService,
+    DisputeContractEnhancedService,
     RentObligationNftService,
     NftEventProcessor,
     AgentRegistryService,
