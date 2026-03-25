@@ -35,6 +35,7 @@ import {
 } from 'crypto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
+import { Logging } from '../../common/logger/logging.decorator';
 
 @Injectable()
 export class PaymentService {
@@ -52,6 +53,7 @@ export class PaymentService {
     private readonly usersService: UsersService,
   ) {}
 
+  @Logging()
   async recordPayment(dto: RecordPaymentDto, userId: string): Promise<Payment> {
     this.ensureUserId(userId);
 
@@ -151,6 +153,7 @@ export class PaymentService {
     return savedPayment;
   }
 
+  @Logging()
   async processRefund(
     paymentId: string,
     dto: ProcessRefundDto,

@@ -16,12 +16,19 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { LoggerService } from './common/logger/logger.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  const logger = app.get(LoggerService);
+  app.useLogger(logger);
+
   const configService = app.get(ConfigService);
 
   // Parse CORS origins from environment variable
@@ -65,11 +72,11 @@ async function bootstrap() {
   app.use(express.json({ limit: jsonLimit }));
   app.use(express.urlencoded({ extended: true, limit: urlencodedLimit }));
 
-  const loggerMiddleware = new LoggerMiddleware();
+  const loggerMiddleware = app.get(LoggerMiddleware);
   app.use(loggerMiddleware.use.bind(loggerMiddleware));
 
   app.useGlobalInterceptors(
-    new LoggingInterceptor(),
+    app.get(LoggingInterceptor),
     new RateLimitInterceptor(),
   );
 

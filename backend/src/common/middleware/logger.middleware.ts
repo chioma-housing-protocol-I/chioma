@@ -1,7 +1,8 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { randomUUID } from 'crypto';
 import { HttpLog } from '../interfaces/http-log.interface';
+import { LoggerService } from '../logger/logger.service';
+import { RequestContext } from '../logger/request-context';
 
 const SENSITIVE_HEADERS = ['authorization', 'cookie'];
 const SENSITIVE_BODY_FIELDS = ['password', 'token', 'secret'];
@@ -39,15 +40,15 @@ export function sanitizeBody(body: unknown): unknown {
 
 @Injectable()
 export class LoggerMiddleware implements NestMiddleware {
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext('Http');
+  }
+
   use(req: Request, res: Response, next: NextFunction) {
     if (req.path === '/health') return next();
 
     const start = process.hrtime();
-    const correlationId =
-      (req.headers['x-request-id'] as string | undefined) || randomUUID();
-
-    (req as Request & { correlationId?: string }).correlationId = correlationId;
-    res.setHeader('x-request-id', correlationId);
+    const correlationId = RequestContext.correlationId;
 
     const method = req.method;
     const url = req.originalUrl;
@@ -59,7 +60,7 @@ export class LoggerMiddleware implements NestMiddleware {
       req.socket.remoteAddress ||
       'unknown';
 
-    const userAgent = req.headers['user-agent'] || undefined;
+    const userAgent = (req.headers['user-agent'] as string) || undefined;
     const requestHeaders = sanitizeHeaders(
       req.headers as Record<string, unknown>,
     );
@@ -87,9 +88,7 @@ export class LoggerMiddleware implements NestMiddleware {
       else if (statusCode >= 400) level = 'WARN';
       else if (responseTime > DEFAULT_SLOW_THRESHOLD) level = 'WARN';
 
-      const logPayload: HttpLog = {
-        timestamp: new Date().toISOString(),
-        level,
+      const logPayload = {
         method,
         url,
         statusCode,
@@ -103,14 +102,16 @@ export class LoggerMiddleware implements NestMiddleware {
         responseSize,
       };
 
-      const isProd = process.env.NODE_ENV === 'production';
-
-      if (isProd) {
-        console.log(JSON.stringify(logPayload));
-      } else {
-        console.log(
-          `[${logPayload.timestamp}] ${level}: ${method} ${url} - ${statusCode} - ${responseTime}ms - IP: ${ip} - reqId: ${correlationId}`,
+      if (level === 'ERROR') {
+        this.logger.error(
+          `HTTP ${method} ${url} - ${statusCode}`,
+          undefined,
+          logPayload,
         );
+      } else if (level === 'WARN') {
+        this.logger.warn(`HTTP ${method} ${url} - ${statusCode}`, logPayload);
+      } else {
+        this.logger.info(`HTTP ${method} ${url} - ${statusCode}`, logPayload);
       }
     });
 

@@ -30,10 +30,15 @@ import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { SentryModule } from '@sentry/nestjs/setup';
+import { LoggerModule } from './common/logger/logger.module';
+import { ContextMiddleware } from './common/logger/context.middleware';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
+    LoggerModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -96,6 +101,8 @@ import { SentryModule } from '@sentry/nestjs/setup';
   controllers: [AppController],
   providers: [
     AppService,
+    LoggerMiddleware,
+    LoggingInterceptor,
     {
       provide: 'APP_PIPE',
       useClass: ValidationPipe,
@@ -108,6 +115,9 @@ import { SentryModule } from '@sentry/nestjs/setup';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // Context propagation (applied to all routes)
+    consumer.apply(ContextMiddleware).forRoutes('*');
+
     // Security headers middleware (applied to all routes)
     consumer.apply(SecurityHeadersMiddleware).forRoutes('*');
 

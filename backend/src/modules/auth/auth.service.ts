@@ -24,6 +24,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { Logging } from '../../common/logger/logging.decorator';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -44,6 +45,7 @@ export class AuthService {
     private passwordPolicyService: PasswordPolicyService,
   ) {}
 
+  @Logging()
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
 
@@ -92,6 +94,7 @@ export class AuthService {
     };
   }
 
+  @Logging()
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
 
@@ -242,6 +245,7 @@ export class AuthService {
     }
   }
 
+  @Logging()
   async refreshToken(
     refreshTokenDto: RefreshTokenDto,
   ): Promise<{ accessToken: string; refreshToken: string }> {

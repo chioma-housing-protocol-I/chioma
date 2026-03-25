@@ -7,9 +7,14 @@ import {
 import { Observable, tap } from 'rxjs';
 import * as Sentry from '@sentry/nestjs';
 import { sanitizeBody } from '../middleware/logger.middleware';
+import { LoggerService } from '../logger/logger.service';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext('LoggingInterceptor');
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
     const res = context.switchToHttp().getResponse();
@@ -35,7 +40,12 @@ export class LoggingInterceptor implements NestInterceptor {
       tap({
         error: (error: Error) => {
           // Errors are captured by Sentry's global error handler already,
-          // but we add extra breadcrumb context here.
+          // but we add extra context and log it through our LoggerService.
+          this.logger.error(`${req.method} ${req.url} - Error`, error, {
+            method: req.method,
+            url: req.url,
+          });
+
           Sentry.addBreadcrumb({
             category: 'http',
             message: `${req.method} ${req.url} - Error: ${error.message}`,
