@@ -376,3 +376,50 @@ pub(crate) fn royalty_paid(env: &Env, token_id: String, amount: i128, recipient:
     }
     .publish(env);
 }
+
+// ─── Rate Limiting Events ─────────────────────────────────────────────────────
+
+#[contractevent(topics = ["rate_limit"])]
+pub struct RateLimitExceeded {
+    #[topic]
+    pub user: Address,
+    pub function_name: String,
+    pub reason: crate::types::RateLimitReason,
+    pub timestamp: u64,
+}
+
+#[contractevent]
+pub struct RateLimitConfigUpdated {
+    pub max_calls_per_block: u32,
+    pub max_calls_per_user_per_day: u32,
+    pub cooldown_blocks: u32,
+}
+
+pub(crate) fn rate_limit_exceeded(
+    env: &Env,
+    user: Address,
+    function_name: String,
+    reason: crate::types::RateLimitReason,
+) {
+    RateLimitExceeded {
+        user,
+        function_name,
+        reason,
+        timestamp: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn rate_limit_config_updated(
+    env: &Env,
+    max_calls_per_block: u32,
+    max_calls_per_user_per_day: u32,
+    cooldown_blocks: u32,
+) {
+    RateLimitConfigUpdated {
+        max_calls_per_block,
+        max_calls_per_user_per_day,
+        cooldown_blocks,
+    }
+    .publish(env);
+}

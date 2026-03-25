@@ -13,6 +13,7 @@ mod deposit_interest;
 mod errors;
 mod events;
 mod multi_token;
+mod rate_limit;
 mod royalties;
 mod storage;
 mod types;
@@ -32,11 +33,14 @@ mod tests_errors;
 #[cfg(test)]
 mod tests_royalties;
 
+#[cfg(test)]
+mod tests_rate_limit;
+
 pub use agreement::{
     cancel_agreement, create_agreement, create_agreement_with_token, get_agreement,
-    get_agreement_count, get_agreement_token, get_payment_split, has_agreement,
-    make_payment_with_token, release_escrow_with_token, sign_agreement, submit_agreement,
-    validate_agreement_params,
+    get_agreement_count, get_agreement_token, get_payment_history, get_payment_split,
+    has_agreement, make_payment_with_token, release_escrow_with_token, sign_agreement,
+    submit_agreement, update_metadata, validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use multi_token::{
@@ -45,10 +49,11 @@ pub use multi_token::{
 };
 pub use storage::DataKey;
 pub use types::{
-    AgreementStatus, AgreementWithToken, CompoundingFrequency, Config, ContractState,
-    DepositInterest, DepositInterestConfig, ErrorContext, InterestAccrual, InterestRecipient,
-    PauseState, PaymentSplit, RentAgreement, RoyaltyConfig, RoyaltyPayment, SupportedToken,
-    TokenExchangeRate,
+    AgreementInput, AgreementStatus, AgreementTerms, AgreementWithToken, Attribute,
+    CompoundingFrequency, Config, ContractState, DepositInterest, DepositInterestConfig,
+    ErrorContext, InterestAccrual, InterestRecipient, PauseState, PaymentSplit, RateLimitConfig,
+    RateLimitReason, RentAgreement, RoyaltyConfig, RoyaltyPayment, SupportedToken,
+    TokenExchangeRate, UserCallCount,
 };
 
 /// Chioma rental agreement contract.
@@ -327,27 +332,10 @@ impl Contract {
 
     pub fn create_agreement_with_token(
         env: Env,
-        property_id: String,
-        tenant: Address,
-        landlord: Address,
-        payment_token: Address,
-        rent_amount: i128,
-        deposit_amount: i128,
-        lease_start: u64,
-        lease_end: u64,
+        input: crate::types::AgreementInput,
     ) -> Result<String, RentalError> {
         Self::check_paused(&env)?;
-        agreement::create_agreement_with_token(
-            &env,
-            property_id,
-            tenant,
-            landlord,
-            payment_token,
-            rent_amount,
-            deposit_amount,
-            lease_start,
-            lease_end,
-        )
+        agreement::create_agreement_with_token(&env, input)
     }
 
     pub fn get_agreement_token(env: Env, agreement_id: String) -> Result<Address, RentalError> {
@@ -393,31 +381,10 @@ impl Contract {
     #[allow(clippy::too_many_arguments)]
     pub fn create_agreement(
         env: Env,
-        agreement_id: String,
-        landlord: Address,
-        tenant: Address,
-        agent: Option<Address>,
-        monthly_rent: i128,
-        security_deposit: i128,
-        start_date: u64,
-        end_date: u64,
-        agent_commission_rate: u32,
-        payment_token: Address,
+        input: crate::types::AgreementInput,
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
-        agreement::create_agreement(
-            &env,
-            agreement_id,
-            landlord,
-            tenant,
-            agent,
-            monthly_rent,
-            security_deposit,
-            start_date,
-            end_date,
-            agent_commission_rate,
-            payment_token,
-        )
+        agreement::create_agreement(&env, input)
     }
 
     /// Sign an existing rental agreement.
@@ -510,6 +477,22 @@ impl Contract {
         month: u32,
     ) -> Result<PaymentSplit, RentalError> {
         agreement::get_payment_split(&env, agreement_id, month)
+    }
+
+    /// Get all payments for an agreement.
+    pub fn get_payment_history(env: Env, agreement_id: String) -> Vec<PaymentSplit> {
+        agreement::get_payment_history(&env, agreement_id)
+    }
+
+    /// Update metadata for an agreement.
+    pub fn update_metadata(
+        env: Env,
+        agreement_id: String,
+        metadata_uri: String,
+        attributes: Vec<Attribute>,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::update_metadata(&env, agreement_id, metadata_uri, attributes)
     }
 
     // ─── Deposit Interest Functions ───────────────────────────────────────────
@@ -642,5 +625,55 @@ impl Contract {
         token_id: String,
     ) -> Result<Vec<RoyaltyPayment>, RentalError> {
         royalties::get_royalty_payments(env, token_id)
+    }
+
+    // ─── Rate Limiting Functions ──────────────────────────────────────────────
+
+    /// Set rate limit configuration (admin only).
+    pub fn set_rate_limit_config(env: Env, config: RateLimitConfig) -> Result<(), RentalError> {
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        rate_limit::set_rate_limit_config(&env, config.clone())?;
+
+        events::rate_limit_config_updated(
+            &env,
+            config.max_calls_per_block,
+            config.max_calls_per_user_per_day,
+            config.cooldown_blocks,
+        );
+
+        Ok(())
+    }
+
+    /// Get current rate limit configuration.
+    pub fn get_rate_limit_config(env: Env) -> RateLimitConfig {
+        rate_limit::get_rate_limit_config(&env)
+    }
+
+    /// Get user call statistics for a specific function.
+    pub fn get_user_call_count(
+        env: Env,
+        user: Address,
+        function_name: String,
+    ) -> Option<UserCallCount> {
+        rate_limit::get_user_call_count(&env, &user, function_name)
+    }
+
+    /// Get current block call count for a function.
+    pub fn get_block_call_count(env: Env, function_name: String) -> u32 {
+        rate_limit::get_block_call_count(&env, function_name)
+    }
+
+    /// Reset rate limits for a user (admin only, emergency use).
+    pub fn reset_user_rate_limit(
+        env: Env,
+        user: Address,
+        function_name: String,
+    ) -> Result<(), RentalError> {
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        state.admin.require_auth();
+
+        rate_limit::reset_user_rate_limit(&env, &user, function_name)
     }
 }

@@ -11,6 +11,7 @@ pub mod dispute;
 pub mod errors;
 pub mod escrow_impl;
 pub mod events;
+pub mod rate_limit;
 pub mod storage;
 pub mod types;
 

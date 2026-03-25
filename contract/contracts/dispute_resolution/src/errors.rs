@@ -30,4 +30,6 @@ pub enum DisputeError {
     TimeoutNotReached = 24,
     InvalidTimeoutConfig = 25,
     InvalidRating = 26,
+    RateLimitExceeded = 27,
+    CooldownNotMet = 28,
 }

@@ -37,4 +37,8 @@ pub enum PaymentError {
     RecurringPaymentExecutionFailed = 25,
     /// Recurring payment is not failed
     RecurringPaymentNotFailed = 26,
+    /// Rate limit exceeded for this operation
+    RateLimitExceeded = 27,
+    /// Cooldown period not met
+    CooldownNotMet = 28,
 }

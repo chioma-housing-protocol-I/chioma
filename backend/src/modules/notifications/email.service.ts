@@ -93,4 +93,89 @@ export class EmailService {
       throw new Error('Failed to send password reset email');
     }
   }
+
+  @Retry({
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    backoffMultiplier: 2,
+  })
+  async sendNotificationEmail(
+    email: string,
+    subject: string,
+    template: string,
+    data: Record<string, any>,
+  ): Promise<void> {
+    const mailOptions = {
+      from: this.configService.get<string>('EMAIL_FROM'),
+      to: email,
+      subject,
+      html: this.renderTemplate(template, data),
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Notification email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send notification email to ${email}`,
+        error instanceof Error ? error.stack : 'Unknown error',
+      );
+      throw new Error('Failed to send notification email');
+    }
+  }
+
+  @Retry({
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    backoffMultiplier: 2,
+  })
+  async sendAlertEmail(
+    email: string,
+    subject: string,
+    data: Record<string, any>,
+  ): Promise<void> {
+    const mailOptions = {
+      from: this.configService.get<string>('EMAIL_FROM'),
+      to: email,
+      subject,
+      html: `
+        <h1>${subject}</h1>
+        <p>${data.message || 'An alert has been triggered'}</p>
+        ${data.details ? `<pre>${JSON.stringify(data.details, null, 2)}</pre>` : ''}
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Alert email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send alert email to ${email}`,
+        error instanceof Error ? error.stack : 'Unknown error',
+      );
+      throw new Error('Failed to send alert email');
+    }
+  }
+
+  private renderTemplate(template: string, data: Record<string, any>): string {
+    // Simple template rendering - can be extended with more sophisticated templating
+    let html = `<h1>${data.title || 'Notification'}</h1>`;
+    html += `<p>${data.message || ''}</p>`;
+
+    if (data.items && Array.isArray(data.items)) {
+      html += '<ul>';
+      for (const item of data.items) {
+        html += `<li>${item}</li>`;
+      }
+      html += '</ul>';
+    }
+
+    if (data.actionUrl) {
+      html += `<a href="${data.actionUrl}">${data.actionText || 'View Details'}</a>`;
+    }
+
+    return html;
+  }
 }

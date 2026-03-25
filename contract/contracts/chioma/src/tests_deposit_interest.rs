@@ -33,9 +33,22 @@ fn create_agreement_helper(
 ) -> String {
     let id = String::from_str(env, "AGR001");
     let token = Address::generate(env);
-    client.create_agreement(
-        &id, landlord, tenant, &None, &1000, &deposit, &100, &1_000_000, &0, &token,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: deposit,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token.clone(),
+        metadata_uri: String::from_str(env, "").clone(),
+        attributes: Vec::new(env).clone(),
+    });
     id
 }
 

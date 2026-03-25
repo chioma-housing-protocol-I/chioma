@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Redis } from '@upstash/redis';
 
 /**
@@ -7,6 +8,7 @@ import { Redis } from '@upstash/redis';
 export class UpstashCacheStore {
   private client: Redis;
   private ttl: number;
+  private readonly logger = new Logger(UpstashCacheStore.name);
 
   constructor(client: Redis, ttl = 600) {
     this.client = client;
@@ -18,7 +20,7 @@ export class UpstashCacheStore {
       const value = await this.client.get(key);
       return value as T;
     } catch (error) {
-      console.error('[UpstashCache] GET error:', error);
+      this.logger.error(`GET error for key ${key}:`, error);
       return undefined;
     }
   }
@@ -32,7 +34,7 @@ export class UpstashCacheStore {
         await this.client.set(key, value);
       }
     } catch (error) {
-      console.error('[UpstashCache] SET error:', error);
+      this.logger.error(`SET error for key ${key}:`, error);
       throw error;
     }
   }
@@ -41,7 +43,7 @@ export class UpstashCacheStore {
     try {
       await this.client.del(key);
     } catch (error) {
-      console.error('[UpstashCache] DEL error:', error);
+      this.logger.error(`DEL error for key ${key}:`, error);
       throw error;
     }
   }
@@ -50,7 +52,7 @@ export class UpstashCacheStore {
     try {
       await this.client.flushdb();
     } catch (error) {
-      console.error('[UpstashCache] RESET error:', error);
+      this.logger.error('RESET error:', error);
       throw error;
     }
   }
@@ -60,7 +62,7 @@ export class UpstashCacheStore {
       const values = await this.client.mget(...keys);
       return values as (T | undefined)[];
     } catch (error) {
-      console.error('[UpstashCache] MGET error:', error);
+      this.logger.error(`MGET error for keys ${keys.join(', ')}:`, error);
       return keys.map(() => undefined);
     }
   }
@@ -72,7 +74,7 @@ export class UpstashCacheStore {
         args.map(([key, value]) => this.set(key, value, ttlValue)),
       );
     } catch (error) {
-      console.error('[UpstashCache] MSET error:', error);
+      this.logger.error('MSET error:', error);
       throw error;
     }
   }
@@ -83,7 +85,7 @@ export class UpstashCacheStore {
         await this.client.del(...keys);
       }
     } catch (error) {
-      console.error('[UpstashCache] MDEL error:', error);
+      this.logger.error(`MDEL error for keys ${keys.join(', ')}:`, error);
       throw error;
     }
   }
@@ -95,7 +97,7 @@ export class UpstashCacheStore {
       const keys = await this.client.keys(pattern);
       return keys;
     } catch (error) {
-      console.error('[UpstashCache] KEYS error:', error);
+      this.logger.error(`KEYS error for pattern ${pattern}:`, error);
       return [];
     }
   }
@@ -105,7 +107,7 @@ export class UpstashCacheStore {
       const ttlValue = await this.client.ttl(key);
       return ttlValue;
     } catch (error) {
-      console.error('[UpstashCache] TTL error:', error);
+      this.logger.error(`TTL error for key ${key}:`, error);
       return -1;
     }
   }

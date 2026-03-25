@@ -23,4 +23,10 @@ pub enum DataKey {
     PaymentExecutions(String),
     /// List of failed recurring payment IDs
     FailedRecurringPayments,
+    /// Rate limiting configuration
+    RateLimitConfig,
+    /// User call count for rate limiting
+    UserCallCount(soroban_sdk::Address, String),
+    /// Block call count for rate limiting
+    BlockCallCount(u64, String),
 }

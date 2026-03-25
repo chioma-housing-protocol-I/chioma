@@ -11,6 +11,7 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 pub mod errors;
 pub mod events;
 pub mod payment_impl;
+pub mod rate_limit;
 pub mod storage;
 pub mod types;
 
@@ -247,6 +248,9 @@ impl PaymentContract {
 
         // Authorization
         from.require_auth();
+
+        // Rate limiting check
+        crate::rate_limit::check_rate_limit(&env, &from, "pay_rent")?;
 
         // Load agreement
         let mut agreement: RentAgreement = env

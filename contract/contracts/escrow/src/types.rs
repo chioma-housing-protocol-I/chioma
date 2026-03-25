@@ -82,6 +82,26 @@ pub struct ReleaseRecord {
     pub reason: String,
 }
 
+/// Rate limiting configuration.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[contracttype]
+pub struct RateLimitConfig {
+    pub max_calls_per_block: u32,
+    pub max_calls_per_user_per_day: u32,
+    pub cooldown_blocks: u32,
+}
+
+/// User call count for rate limiting.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[contracttype]
+pub struct UserCallCount {
+    pub user: Address,
+    pub call_count: u32,
+    pub last_call_block: u64,
+    pub daily_count: u32,
+    pub daily_reset_block: u64,
+}
+
 /// Storage key variants for persistent storage.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[contracttype]
@@ -102,4 +122,10 @@ pub enum DataKey {
     TimeoutConfig,
     /// Store release history for an escrow: DataKey::ReleaseHistory(escrow_id)
     ReleaseHistory(BytesN<32>),
+    /// Rate limiting configuration
+    RateLimitConfig,
+    /// User call count for rate limiting: DataKey::UserCallCount(user, function_name)
+    UserCallCount(Address, String),
+    /// Block call count for rate limiting: DataKey::BlockCallCount(block_number, function_name)
+    BlockCallCount(u64, String),
 }

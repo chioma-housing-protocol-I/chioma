@@ -2,6 +2,7 @@ use soroban_sdk::{contracttype, Address, Env, Map, String};
 
 use crate::errors::DisputeError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{
     AppealStatus, AppealVote, Arbiter, ArbiterStats, ContractState, Dispute, DisputeAppeal,
@@ -158,6 +159,9 @@ pub fn raise_dispute(
 ) -> Result<(), DisputeError> {
     raiser.require_auth();
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &raiser, "raise_dispute")?;
+
     let state: ContractState = env
         .storage()
         .instance()
@@ -222,6 +226,9 @@ pub fn vote_on_dispute(
     }
 
     arbiter.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &arbiter, "vote_on_dispute")?;
 
     let arbiter_key = DataKey::Arbiter(arbiter.clone());
     let arbiter_info: Arbiter = env
@@ -833,6 +840,9 @@ pub fn vote_on_dispute_weighted(
 
     arbiter.require_auth();
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &arbiter, "vote_on_dispute_weighted")?;
+
     let arbiter_info: Arbiter = env
         .storage()
         .persistent()
@@ -944,19 +954,22 @@ pub fn resolve_dispute_weighted(
 
     let total_weight = wdisp.weighted_votes_favor_landlord + wdisp.weighted_votes_favor_tenant;
 
-    let outcome = if wdisp.weighted_votes_favor_landlord > wdisp.weighted_votes_favor_tenant {
-        DisputeOutcome::FavorLandlord
-    } else if wdisp.weighted_votes_favor_tenant > wdisp.weighted_votes_favor_landlord {
-        DisputeOutcome::FavorTenant
-    } else {
-        // Tie: first vote wins — look up voters[0]'s WeightedVote
-        let first_voter = wdisp.voters.get(0).unwrap();
-        let first_wvote: WeightedVote = env
-            .storage()
-            .persistent()
-            .get(&DataKey::WeightedVote(dispute_id.clone(), first_voter))
-            .unwrap();
-        first_wvote.vote
+    let outcome = match wdisp
+        .weighted_votes_favor_landlord
+        .cmp(&wdisp.weighted_votes_favor_tenant)
+    {
+        core::cmp::Ordering::Greater => DisputeOutcome::FavorLandlord,
+        core::cmp::Ordering::Less => DisputeOutcome::FavorTenant,
+        core::cmp::Ordering::Equal => {
+            // Tie: first vote wins — look up voters[0]'s WeightedVote
+            let first_voter = wdisp.voters.get(0).unwrap();
+            let first_wvote: WeightedVote = env
+                .storage()
+                .persistent()
+                .get(&DataKey::WeightedVote(dispute_id.clone(), first_voter))
+                .unwrap();
+            first_wvote.vote
+        }
     };
 
     dispute.resolved = true;

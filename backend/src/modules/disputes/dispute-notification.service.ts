@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
@@ -19,6 +19,7 @@ export interface DisputeNotificationData {
 
 @Injectable()
 export class DisputeNotificationService {
+  private readonly logger = new Logger(DisputeNotificationService.name);
   /**
    * Send notification for dispute creation
    */
@@ -185,7 +186,9 @@ export class DisputeNotificationService {
     // For now, we'll implement a placeholder that could be connected to
     // the actual notification system
 
-    console.log(`Admin notification: ${title} - Dispute ${dispute.disputeId}`);
+    this.logger.log(
+      `Admin notification: ${title} - Dispute ${dispute.disputeId}`,
+    );
 
     // Example implementation:
     // const admins = await this.userRepository.find({ where: { role: UserRole.ADMIN } });
@@ -213,7 +216,7 @@ export class DisputeNotificationService {
     // This would integrate with the actual notification service
     // For now, we'll log it
 
-    console.log(`Notification sent to user ${notification.userId}:`, {
+    this.logger.debug(`Notification sent to user ${notification.userId}:`, {
       type: notification.type,
       title: notification.title,
       message: notification.message,

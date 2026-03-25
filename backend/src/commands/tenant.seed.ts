@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../database/data-source';
 import {
   AuthMethod,
@@ -7,6 +8,7 @@ import {
 } from '../modules/users/entities/user.entity';
 
 const SALT_ROUNDS = 12;
+const logger = new Logger('TenantSeed');
 
 interface SeedTenantOptions {
   email?: string;
@@ -192,10 +194,10 @@ export async function seedTenantUser(
 
     if (existingUser) {
       if (!config.force) {
-        console.log(
+        logger.log(
           `Tenant seed skipped: user already exists for ${config.email}`,
         );
-        console.log('Use --force to update the existing user.');
+        logger.log('Use --force to update the existing user.');
         return;
       }
 
@@ -214,7 +216,7 @@ export async function seedTenantUser(
 
       await userRepository.save(existingUser);
 
-      console.log(`Tenant user updated: ${existingUser.email}`);
+      logger.log(`Tenant user updated: ${existingUser.email}`);
     } else {
       const tenantUser = userRepository.create({
         email: config.email,
@@ -234,12 +236,12 @@ export async function seedTenantUser(
       });
 
       const savedTenant = await userRepository.save(tenantUser);
-      console.log(`Tenant user created: ${savedTenant.email}`);
+      logger.log(`Tenant user created: ${savedTenant.email}`);
     }
 
     const passwordSource = config.password ? 'provided' : 'generated';
-    console.log(`Tenant password (${passwordSource}): ${plainPassword}`);
-    console.log('Tenant seeding completed successfully.');
+    logger.log(`Tenant password (${passwordSource}): ${plainPassword}`);
+    logger.log('Tenant seeding completed successfully.');
   } finally {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
@@ -256,7 +258,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Tenant seeding failed:', message);
+      logger.error('Tenant seeding failed:', message);
       process.exit(1);
     });
 }

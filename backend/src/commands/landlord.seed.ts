@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../database/data-source';
 import {
   AuthMethod,
@@ -7,6 +8,7 @@ import {
 } from '../modules/users/entities/user.entity';
 
 const SALT_ROUNDS = 12;
+const logger = new Logger('LandlordSeed');
 
 interface SeedLandlordOptions {
   email?: string;
@@ -192,10 +194,10 @@ export async function seedLandlordUser(
 
     if (existingUser) {
       if (!config.force) {
-        console.log(
+        logger.log(
           `Landlord seed skipped: user already exists for ${config.email}`,
         );
-        console.log('Use --force to update the existing user.');
+        logger.log('Use --force to update the existing user.');
         return;
       }
 
@@ -214,7 +216,7 @@ export async function seedLandlordUser(
 
       await userRepository.save(existingUser);
 
-      console.log(`Landlord user updated: ${existingUser.email}`);
+      logger.log(`Landlord user updated: ${existingUser.email}`);
     } else {
       const landlordUser = userRepository.create({
         email: config.email,
@@ -234,12 +236,12 @@ export async function seedLandlordUser(
       });
 
       const savedLandlord = await userRepository.save(landlordUser);
-      console.log(`Landlord user created: ${savedLandlord.email}`);
+      logger.log(`Landlord user created: ${savedLandlord.email}`);
     }
 
     const passwordSource = config.password ? 'provided' : 'generated';
-    console.log(`Landlord password (${passwordSource}): ${plainPassword}`);
-    console.log('Landlord seeding completed successfully.');
+    logger.log(`Landlord password (${passwordSource}): ${plainPassword}`);
+    logger.log('Landlord seeding completed successfully.');
   } finally {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
@@ -256,7 +258,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Landlord seeding failed:', message);
+      logger.error('Landlord seeding failed:', message);
       process.exit(1);
     });
 }

@@ -2,11 +2,11 @@
 //! Implements checks-effects-interactions pattern for reentrancy safety.
 use soroban_sdk::{contract, contractimpl, token, xdr::ToXdr, Address, BytesN, Env};
 
-use crate::dispute::DisputeHandler;
-use crate::events;
-
 use crate::access::AccessControl;
+use crate::dispute::DisputeHandler;
 use crate::errors::EscrowError;
+use crate::events;
+use crate::rate_limit;
 use crate::storage::EscrowStorage;
 use crate::types::{Escrow, EscrowStatus, ReleaseApproval, ReleaseRecord, TimeoutConfig};
 
@@ -158,6 +158,9 @@ impl EscrowContract {
 
         // Authorize the approval
         caller.require_auth();
+
+        // Rate limiting check
+        rate_limit::check_rate_limit(&env, &caller, "approve_release")?;
 
         // Verify release target is valid (must be beneficiary or depositor)
         if release_to != escrow.beneficiary && release_to != escrow.depositor {

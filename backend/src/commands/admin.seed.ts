@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../database/data-source';
 import {
   AuthMethod,
@@ -7,6 +8,7 @@ import {
 } from '../modules/users/entities/user.entity';
 
 const SALT_ROUNDS = 12;
+const logger = new Logger('AdminSeed');
 
 interface SeedAdminOptions {
   email?: string;
@@ -194,10 +196,10 @@ export async function seedAdminUser(
 
     if (existingUser) {
       if (!config.force) {
-        console.log(
+        logger.log(
           `Admin seed skipped: user already exists for ${config.email}`,
         );
-        console.log('Use --force to update the existing user.');
+        logger.log('Use --force to update the existing user.');
         return;
       }
 
@@ -216,7 +218,7 @@ export async function seedAdminUser(
 
       await userRepository.save(existingUser);
 
-      console.log(`Admin user updated: ${existingUser.email}`);
+      logger.log(`Admin user updated: ${existingUser.email}`);
     } else {
       const adminUser = userRepository.create({
         email: config.email,
@@ -236,12 +238,12 @@ export async function seedAdminUser(
       });
 
       const savedAdmin = await userRepository.save(adminUser);
-      console.log(`Admin user created: ${savedAdmin.email}`);
+      logger.log(`Admin user created: ${savedAdmin.email}`);
     }
 
     const passwordSource = config.password ? 'provided' : 'generated';
-    console.log(`Admin password (${passwordSource}): ${plainPassword}`);
-    console.log('Admin seeding completed successfully.');
+    logger.log(`Admin password (${passwordSource}): ${plainPassword}`);
+    logger.log('Admin seeding completed successfully.');
   } finally {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
@@ -258,7 +260,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Admin seeding failed:', message);
+      logger.error('Admin seeding failed:', message);
       process.exit(1);
     });
 }

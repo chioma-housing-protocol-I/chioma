@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../database/data-source';
 import {
   AuthMethod,
@@ -7,6 +8,7 @@ import {
 } from '../modules/users/entities/user.entity';
 
 const SALT_ROUNDS = 12;
+const logger = new Logger('AgentSeed');
 
 interface SeedAgentOptions {
   email?: string;
@@ -192,10 +194,10 @@ export async function seedAgentUser(
 
     if (existingUser) {
       if (!config.force) {
-        console.log(
+        logger.log(
           `Agent seed skipped: user already exists for ${config.email}`,
         );
-        console.log('Use --force to update the existing user.');
+        logger.log('Use --force to update the existing user.');
         return;
       }
 
@@ -214,7 +216,7 @@ export async function seedAgentUser(
 
       await userRepository.save(existingUser);
 
-      console.log(`Agent user updated: ${existingUser.email}`);
+      logger.log(`Agent user updated: ${existingUser.email}`);
     } else {
       const agentUser = userRepository.create({
         email: config.email,
@@ -234,12 +236,12 @@ export async function seedAgentUser(
       });
 
       const savedAgent = await userRepository.save(agentUser);
-      console.log(`Agent user created: ${savedAgent.email}`);
+      logger.log(`Agent user created: ${savedAgent.email}`);
     }
 
     const passwordSource = config.password ? 'provided' : 'generated';
-    console.log(`Agent password (${passwordSource}): ${plainPassword}`);
-    console.log('Agent seeding completed successfully.');
+    logger.log(`Agent password (${passwordSource}): ${plainPassword}`);
+    logger.log('Agent seeding completed successfully.');
   } finally {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
@@ -256,7 +258,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Agent seeding failed:', message);
+      logger.error('Agent seeding failed:', message);
       process.exit(1);
     });
 }

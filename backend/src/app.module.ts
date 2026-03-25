@@ -219,6 +219,8 @@ const appLogger = new Logger('AppModule');
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module
     require('./modules/kyc/kyc.module').KycModule,
+    // Queue module
+    ...(process.env.OPENAPI_GENERATE !== 'true' ? [QueuesModule] : []),
   ],
   controllers: [AppController],
   providers: [
