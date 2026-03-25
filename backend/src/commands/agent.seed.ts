@@ -1,14 +1,14 @@
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../database/data-source';
 import {
   AuthMethod,
   User,
   UserRole,
 } from '../modules/users/entities/user.entity';
-import { LoggerService } from '../common/services/logger.service';
 
-const logger = new LoggerService(undefined, 'AgentSeed');
 const SALT_ROUNDS = 12;
+const logger = new Logger('AgentSeed');
 
 interface SeedAgentOptions {
   email?: string;
@@ -194,10 +194,10 @@ export async function seedAgentUser(
 
     if (existingUser) {
       if (!config.force) {
-        logger.warn(
+        logger.log(
           `Agent seed skipped: user already exists for ${config.email}`,
         );
-        logger.warn('Use --force to update the existing user.');
+        logger.log('Use --force to update the existing user.');
         return;
       }
 
@@ -240,7 +240,7 @@ export async function seedAgentUser(
     }
 
     const passwordSource = config.password ? 'provided' : 'generated';
-    logger.debug(`Agent password (${passwordSource}): ${plainPassword}`);
+    logger.log(`Agent password (${passwordSource}): ${plainPassword}`);
     logger.log('Agent seeding completed successfully.');
   } finally {
     if (AppDataSource.isInitialized) {

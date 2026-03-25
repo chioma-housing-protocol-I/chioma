@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { parseCliArgs, seedAdminUser } from './admin.seed';
 import { parseCliArgs as parseAgentArgs, seedAgentUser } from './agent.seed';
 import { parseCliArgs as parseTenantArgs, seedTenantUser } from './tenant.seed';
@@ -5,11 +6,9 @@ import {
   parseCliArgs as parseLandlordArgs,
   seedLandlordUser,
 } from './landlord.seed';
-import { LoggerService } from '../common/services/logger.service';
-
-const logger = new LoggerService(undefined, 'CommandRunner');
 
 type SupportedCommand = 'admin' | 'agent' | 'tenant' | 'landlord';
+const logger = new Logger('SeedCommand');
 
 function printUsage(): void {
   logger.log('Usage: pnpm run seed:[command] -- [options]');
