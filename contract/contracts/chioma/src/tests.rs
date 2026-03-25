@@ -134,7 +134,7 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 fn initialize_contract_state(env: &Env, client: &ContractClient<'_>, admin: &Address) {
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client
@@ -246,18 +246,22 @@ fn test_create_agreement_success() {
 
     let agreement_id = String::from_str(&env, "AGREEMENT_001");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &agent,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &10,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: agent.clone(),
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 10,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let events = env.events().all();
     assert_eq!(events.len(), 1);
@@ -280,18 +284,22 @@ fn test_create_agreement_with_agent() {
 
     let agreement_id = String::from_str(&env, "AGREEMENT_WITH_AGENT");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &Some(agent.clone()),
-        &1500,
-        &3000,
-        &1000,
-        &2000,
-        &5,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: Some(agent.clone()),
+        terms: AgreementTerms {
+            monthly_rent: 1500,
+            security_deposit: 3000,
+            start_date: 1000,
+            end_date: 2000,
+            agent_commission_rate: 5,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -306,18 +314,22 @@ fn test_create_agreement_without_agent() {
 
     let agreement_id = String::from_str(&env, "AGREEMENT_NO_AGENT");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1200,
-        &2400,
-        &500,
-        &1500,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1200,
+            security_deposit: 2400,
+            start_date: 500,
+            end_date: 1500,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -333,18 +345,22 @@ fn test_negative_rent_rejected() {
 
     let agreement_id = String::from_str(&env, "BAD_RENT");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &-100,
-        &1000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: -100,
+            security_deposit: 1000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -360,18 +376,22 @@ fn test_zero_monthly_rent_rejected() {
 
     let agreement_id = String::from_str(&env, "ZERO_RENT");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &0,
-        &1000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 0,
+            security_deposit: 1000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -387,18 +407,22 @@ fn test_invalid_dates_rejected() {
 
     let agreement_id = String::from_str(&env, "BAD_DATES");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &200,
-        &100,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 200,
+            end_date: 100,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -420,18 +444,22 @@ fn test_backdated_agreement_rejected() {
     });
 
     // Try to create agreement with start_date more than 1 day in the past
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &900000, // More than 1 day (86400 seconds) before current time
-        &2000000,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 900000,
+            end_date: 2000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -452,18 +480,22 @@ fn test_agreement_within_grace_period_accepted() {
     });
 
     // Create agreement with start_date within grace period (less than 1 day ago)
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &950000, // Within 1 day grace period
-        &2000000,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 950000,
+            end_date: 2000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     assert!(client.has_agreement(&agreement_id));
 }
@@ -481,31 +513,39 @@ fn test_duplicate_agreement_id() {
 
     let agreement_id = String::from_str(&env, "DUPLICATE_ID");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 #[test]
@@ -521,18 +561,22 @@ fn test_invalid_commission_rate() {
 
     let agreement_id = String::from_str(&env, "BAD_COMMISSION");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &101,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 101,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 }
 
 fn create_pending_agreement(
@@ -542,27 +586,31 @@ fn create_pending_agreement(
     tenant: &Address,
     landlord: &Address,
 ) {
-    client.create_agreement(
-        &String::from_str(env, agreement_id),
-        landlord,
-        tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &1000000,
-        &0,
-        &Address::generate(env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, agreement_id).clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let mut agreement = client
-        .get_agreement(&String::from_str(env, agreement_id))
+        .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
     agreement.status = AgreementStatus::Pending;
 
     env.as_contract(&client.address, || {
         env.storage().persistent().set(
-            &storage::DataKey::Agreement(String::from_str(env, agreement_id)),
+            &storage::DataKey::Agreement(String::from_str(&env, agreement_id)),
             &agreement,
         );
     });
@@ -631,18 +679,22 @@ fn test_sign_agreement_invalid_state() {
 
     let agreement_id = "SIGN_003";
 
-    client.create_agreement(
-        &String::from_str(&env, agreement_id),
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &1000000,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, agreement_id).clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 }
@@ -659,18 +711,22 @@ fn test_sign_agreement_expired() {
 
     let agreement_id = "SIGN_004";
 
-    client.create_agreement(
-        &String::from_str(&env, agreement_id),
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, agreement_id).clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let mut agreement = client
         .get_agreement(&String::from_str(&env, agreement_id))
@@ -738,18 +794,22 @@ fn test_submit_agreement_success() {
 
     let agreement_id = String::from_str(&env, "SUBMIT_001");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let agreement_before = client.get_agreement(&agreement_id).unwrap();
     assert_eq!(agreement_before.status, AgreementStatus::Draft);
@@ -785,18 +845,22 @@ fn test_submit_agreement_unauthorized() {
 
     let agreement_id = String::from_str(&env, "SUBMIT_UNAUTH");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.submit_agreement(&non_landlord, &agreement_id);
 }
@@ -828,18 +892,22 @@ fn test_cancel_agreement_success_draft() {
 
     let agreement_id = String::from_str(&env, "CANCEL_DRAFT");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.cancel_agreement(&landlord, &agreement_id);
 
@@ -892,18 +960,22 @@ fn test_cancel_agreement_unauthorized() {
 
     let agreement_id = String::from_str(&env, "CANCEL_UNAUTH");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     client.cancel_agreement(&non_landlord, &agreement_id);
 }
@@ -939,18 +1011,22 @@ fn test_get_agreement() {
 
     let agreement_id = String::from_str(&env, "GET_001");
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let agreement = client.get_agreement(&agreement_id).unwrap();
     assert_eq!(agreement.monthly_rent, 1000);
@@ -971,18 +1047,22 @@ fn test_has_agreement() {
 
     assert!(!client.has_agreement(&agreement_id));
 
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     assert!(client.has_agreement(&agreement_id));
 }
@@ -998,33 +1078,41 @@ fn test_get_agreement_count() {
 
     assert_eq!(client.get_agreement_count(), 0);
 
-    client.create_agreement(
-        &String::from_str(&env, "COUNT_001"),
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, "COUNT_001").clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     assert_eq!(client.get_agreement_count(), 1);
 
-    client.create_agreement(
-        &String::from_str(&env, "COUNT_002"),
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &2000,
-        &100,
-        &200,
-        &0,
-        &Address::generate(&env),
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, "COUNT_002").clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 0,
+        },
+        payment_token: Address::generate(&env).clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     assert_eq!(client.get_agreement_count(), 2);
 }
@@ -1050,18 +1138,22 @@ proptest! {
         let agreement_id = String::from_str(&env, "FUZZ_AGREEMENT");
 
         // Disable panic catching since we expect some combinations to fail
-        let result = client.try_create_agreement(
-            &agreement_id,
-            &landlord,
-            &tenant,
-            &None,
-            &monthly_rent,
-            &security_deposit,
-            &start_date,
-            &end_date,
-            &agent_commission_rate,
-            &payment_token,
-        );
+        let result = client.try_create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: monthly_rent,
+            security_deposit: security_deposit,
+            start_date: start_date,
+            end_date: end_date,
+            agent_commission_rate: agent_commission_rate,
+        },
+        payment_token: payment_token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
         let is_valid_rent = monthly_rent > 0;
         let is_valid_deposit = security_deposit >= 0;
@@ -1119,18 +1211,22 @@ fn test_contract_paused_operations() {
         );
     });
 
-    let res = client.try_create_agreement(
-        &String::from_str(&env, "agreement-paused"),
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &500,
-        &100,
-        &200,
-        &10,
-        &payment_token,
-    );
+    let res = client.try_create_agreement(&AgreementInput {
+        agreement_id: String::from_str(&env, "agreement-paused").clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 500,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 10,
+        },
+        payment_token: payment_token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
     assert_eq!(res, Err(Ok(RentalError::ContractPaused)));
 
     client.unpause();
@@ -1138,18 +1234,22 @@ fn test_contract_paused_operations() {
 
     let agreement_id_str = "agreement-active";
     let agreement_id = String::from_str(&env, agreement_id_str);
-    client.create_agreement(
-        &agreement_id,
-        &landlord,
-        &tenant,
-        &None,
-        &1000,
-        &500,
-        &100,
-        &200,
-        &10,
-        &payment_token,
-    );
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 500,
+            start_date: 100,
+            end_date: 200,
+            agent_commission_rate: 10,
+        },
+        payment_token: payment_token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     let mut agreement = client.get_agreement(&agreement_id).unwrap();
     agreement.status = AgreementStatus::Pending;

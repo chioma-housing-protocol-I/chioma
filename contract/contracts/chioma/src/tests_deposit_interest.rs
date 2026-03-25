@@ -13,10 +13,10 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 
 fn setup(env: &Env) -> (ContractClient<'_>, Address) {
     let client = create_contract(env);
-    let admin = Address::generate(env);
+    let admin = Address::generate(&env);
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(&admin, &config);
@@ -31,11 +31,24 @@ fn create_agreement_helper(
     landlord: &Address,
     deposit: i128,
 ) -> String {
-    let id = String::from_str(env, "AGR001");
-    let token = Address::generate(env);
-    client.create_agreement(
-        &id, landlord, tenant, &None, &1000, &deposit, &100, &1_000_000, &0, &token,
-    );
+    let id = String::from_str(&env, "AGR001");
+    let token = Address::generate(&env);
+    client.create_agreement(&AgreementInput {
+        agreement_id: id.clone(),
+        landlord: landlord.clone(),
+        tenant: tenant.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: deposit,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
     id
 }
 

@@ -9,7 +9,7 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 fn initialize_contract(env: &Env, client: &ContractClient<'_>, admin: &Address) {
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(admin, &config);
@@ -96,16 +96,22 @@ fn test_create_agreement_with_token() {
     );
 
     let property_id = String::from_str(&env, "PROP1");
-    let agreement_id = client.create_agreement_with_token(
-        &property_id,
-        &tenant,
-        &landlord,
-        &token_addr,
-        &1000,
-        &2000,
-        &100,
-        &1000000,
-    );
+    let agreement_id = client.create_agreement_with_token(&AgreementInput {
+        agreement_id: property_id.clone(),
+        tenant: tenant.clone(),
+        landlord: landlord.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: token_addr.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     assert_eq!(agreement_id, property_id);
     let fetched_token = client.get_agreement_token(&agreement_id);
@@ -148,16 +154,22 @@ fn test_make_payment_with_different_token() {
     let rate = 1_100_000_000_000_000_000;
     client.set_exchange_rate(&pay_token, &base_token, &rate);
 
-    let agreement_id = client.create_agreement_with_token(
-        &String::from_str(&env, "PROP1"),
-        &tenant,
-        &landlord,
-        &base_token,
-        &1100, // Monthly rent in USDC
-        &2200,
-        &100,
-        &1000000,
-    );
+    let agreement_id = client.create_agreement_with_token(&AgreementInput {
+        agreement_id: String::from_str(&env, "PROP1").clone(),
+        tenant: tenant.clone(),
+        landlord: landlord.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1100,
+            security_deposit: 2200, // Monthly rent in USDC
+            start_date: 100,
+            end_date: 1000000,
+            agent_commission_rate: 0,
+        },
+        payment_token: base_token.clone(),
+        metadata_uri: String::from_str(&env, "").clone(),
+        attributes: Vec::new(&env).clone(),
+    });
 
     // Sign agreement to make it active
     client.submit_agreement(&landlord, &agreement_id);

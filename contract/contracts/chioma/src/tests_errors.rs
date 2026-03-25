@@ -11,10 +11,10 @@ fn create_contract(env: &Env) -> ContractClient<'_> {
 
 fn setup(env: &Env) -> ContractClient<'_> {
     let client = create_contract(env);
-    let admin = Address::generate(env);
+    let admin = Address::generate(&env);
     let config = Config {
         fee_bps: 100,
-        fee_collector: Address::generate(env),
+        fee_collector: Address::generate(&env),
         paused: false,
     };
     client.initialize(&admin, &config);

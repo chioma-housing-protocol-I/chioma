@@ -18,4 +18,5 @@ pub enum DataKey {
     ErrorLogCount,
     RoyaltyConfig(String),
     RoyaltyPayments(String),
+    PaymentRecord(String, u32),
 }

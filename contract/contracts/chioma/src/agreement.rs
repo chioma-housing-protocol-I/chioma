@@ -1,5 +1,5 @@
 //! Agreement management logic for the Chioma/Rental contract.
-use soroban_sdk::{Address, Env, Map, String};
+use soroban_sdk::{Address, Env, String, Vec};
 
 use crate::errors::RentalError;
 use crate::events;
@@ -44,60 +44,29 @@ pub fn validate_agreement_params(
 
 /// Create a new rent agreement
 #[allow(clippy::too_many_arguments)]
-pub fn create_agreement(
-    env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-    agent: Option<Address>,
-    monthly_rent: i128,
-    security_deposit: i128,
-    start_date: u64,
-    end_date: u64,
-    agent_commission_rate: u32,
-    payment_token: Address,
-) -> Result<(), RentalError> {
+pub fn create_agreement(env: &Env, input: crate::types::AgreementInput) -> Result<(), RentalError> {
     // Tenant MUST authorize creation
-    tenant.require_auth();
+    input.tenant.require_auth();
 
-    create_agreement_internal(
-        env,
-        agreement_id,
-        landlord,
-        tenant,
-        agent,
-        monthly_rent,
-        security_deposit,
-        start_date,
-        end_date,
-        agent_commission_rate,
-        payment_token,
-    )
+    create_agreement_internal(env, input)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn create_agreement_internal(
     env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-    agent: Option<Address>,
-    monthly_rent: i128,
-    security_deposit: i128,
-    start_date: u64,
-    end_date: u64,
-    agent_commission_rate: u32,
-    payment_token: Address,
+    input: crate::types::AgreementInput,
 ) -> Result<(), RentalError> {
     // Validate inputs
     validate_agreement_params(
         env,
-        &monthly_rent,
-        &security_deposit,
-        &start_date,
-        &end_date,
-        &agent_commission_rate,
+        &input.terms.monthly_rent,
+        &input.terms.security_deposit,
+        &input.terms.start_date,
+        &input.terms.end_date,
+        &input.terms.agent_commission_rate,
     )?;
+
+    let agreement_id = input.agreement_id.clone();
 
     // Check for duplicate agreement_id
     if env
@@ -111,21 +80,22 @@ fn create_agreement_internal(
     // Initialize agreement
     let agreement = RentAgreement {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
-        agent: agent.clone(),
-        monthly_rent,
-        security_deposit,
-        start_date,
-        end_date,
-        agent_commission_rate,
+        landlord: input.landlord.clone(),
+        tenant: input.tenant.clone(),
+        agent: input.agent.clone(),
+        monthly_rent: input.terms.monthly_rent,
+        security_deposit: input.terms.security_deposit,
+        start_date: input.terms.start_date,
+        end_date: input.terms.end_date,
+        agent_commission_rate: input.terms.agent_commission_rate,
         status: AgreementStatus::Draft,
         total_rent_paid: 0,
         payment_count: 0,
         signed_at: None,
-        payment_token,
-        next_payment_due: start_date,
-        payment_history: Map::new(env),
+        payment_token: input.payment_token.clone(),
+        next_payment_due: input.terms.start_date,
+        metadata_uri: input.metadata_uri,
+        attributes: input.attributes,
     };
 
     // Store agreement
@@ -154,13 +124,13 @@ fn create_agreement_internal(
     events::agreement_created(
         env,
         agreement_id,
-        tenant,
-        landlord,
-        monthly_rent,
-        security_deposit,
-        start_date,
-        end_date,
-        agent,
+        agreement.tenant.clone(),
+        agreement.landlord.clone(),
+        agreement.monthly_rent,
+        agreement.security_deposit,
+        agreement.start_date,
+        agreement.end_date,
+        agreement.agent,
     );
 
     Ok(())
@@ -321,65 +291,94 @@ pub fn get_agreement_count(env: &Env) -> u32 {
         .unwrap_or(0)
 }
 
-/// Get payment split for a specific month in an agreement
 pub fn get_payment_split(
     env: &Env,
     agreement_id: String,
     month: u32,
 ) -> Result<PaymentSplit, RentalError> {
-    let agreement: RentAgreement = env
+    env.storage()
+        .persistent()
+        .get(&DataKey::PaymentRecord(agreement_id, month))
+        .ok_or(RentalError::AgreementNotFound)
+}
+
+/// Get all payments for an agreement
+pub fn get_payment_history(env: &Env, agreement_id: String) -> Vec<PaymentSplit> {
+    let mut history = Vec::new(env);
+    let agreement: RentAgreement = match env
         .storage()
         .persistent()
-        .get(&DataKey::Agreement(agreement_id))
+        .get(&DataKey::Agreement(agreement_id.clone()))
+    {
+        Some(a) => a,
+        None => return history,
+    };
+
+    for i in 1..=agreement.payment_count {
+        if let Some(payment) = env
+            .storage()
+            .persistent()
+            .get(&DataKey::PaymentRecord(agreement_id.clone(), i))
+        {
+            history.push_back(payment);
+        }
+    }
+    history
+}
+
+/// Update metadata for an agreement
+pub fn update_metadata(
+    env: &Env,
+    agreement_id: String,
+    metadata_uri: String,
+    attributes: Vec<crate::types::Attribute>,
+) -> Result<(), RentalError> {
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    agreement
-        .payment_history
-        .get(month)
-        .ok_or(RentalError::AgreementNotFound)
+    agreement.landlord.require_auth();
+
+    agreement.metadata_uri = metadata_uri;
+    agreement.attributes = attributes;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Agreement(agreement_id), &agreement);
+    Ok(())
 }
 
 /// Create a new agreement with a specific payment token
 #[allow(clippy::too_many_arguments)]
 pub fn create_agreement_with_token(
     env: &Env,
-    property_id: String,
-    tenant: Address,
-    landlord: Address,
-    payment_token: Address,
-    rent_amount: i128,
-    deposit_amount: i128,
-    lease_start: u64,
-    lease_end: u64,
+    input: crate::types::AgreementInput,
 ) -> Result<String, RentalError> {
-    tenant.require_auth();
+    input.tenant.require_auth();
 
     // Check if token is supported
-    if !crate::multi_token::is_token_supported(env.clone(), payment_token.clone())? {
+    if !crate::multi_token::is_token_supported(env.clone(), input.payment_token.clone())? {
         return Err(RentalError::TokenNotSupported);
     }
 
-    // Use property_id + nonce or just property_id if it's unique
-    let agreement_id = property_id; // For simplicity, using property_id as agreement_id
+    let agreement_id = input.agreement_id.clone();
 
-    create_agreement_internal(
-        env,
-        agreement_id.clone(),
-        landlord,
-        tenant,
-        None,
-        rent_amount,
-        deposit_amount,
-        lease_start,
-        lease_end,
-        0,
-        payment_token.clone(),
-    )?;
+    create_agreement_internal(env, input)?;
 
     // Store the token mapping explicitly if needed, but it's already in RentAgreement
+    // Wait, create_agreement_internal already set the agreement.
+    // We just need the extra DataKey::AgreementToken if the frontend relies on it.
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .unwrap();
+
     env.storage().persistent().set(
         &DataKey::AgreementToken(agreement_id.clone()),
-        &payment_token,
+        &agreement.payment_token,
     );
 
     Ok(agreement_id)
@@ -444,9 +443,12 @@ pub fn make_payment_with_token(
         payment_date: env.ledger().timestamp(),
         payer: agreement.tenant.clone(),
     };
-    agreement
-        .payment_history
-        .set(agreement.payment_count, split);
+
+    let record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
+    env.storage().persistent().set(&record_key, &split);
+    env.storage()
+        .persistent()
+        .extend_ttl(&record_key, TTL_THRESHOLD, TTL_BUMP);
 
     env.storage()
         .persistent()
