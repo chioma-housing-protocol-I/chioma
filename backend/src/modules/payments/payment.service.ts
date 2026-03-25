@@ -54,7 +54,10 @@ export class PaymentService {
   ) {}
 
   @Logging()
-  async recordPayment(dto: RecordPaymentDto, userId: string): Promise<Payment> {
+  async recordPayment(
+    dto: CreatePaymentRecordDto,
+    userId: string,
+  ): Promise<Payment> {
     this.ensureUserId(userId);
 
     const idempotencyKey = this.getIdempotencyKey(dto);

@@ -23,7 +23,6 @@ import { ThrottlerExceptionFilter } from './common/filters/throttler-exception.f
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { PaymentModule } from './modules/payments/payment.module';
 import { ProfileModule } from './modules/profile/profile.module';
-import { StellarPayment } from './modules/stellar/entities/stellar-payment.entity';
 import { SecurityModule } from './modules/security/security.module';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -38,6 +37,19 @@ import { LoggerModule } from './common/logger/logger.module';
 import { ContextMiddleware } from './common/logger/context.middleware';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { upstashStore } from './common/cache/upstash-cache.store';
+import { I18nModule } from './modules/i18n/i18n.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
+import { DeveloperModule } from './modules/developer/developer.module';
+import { SearchModule } from './modules/search/search.module';
+import { CleanupModule } from './modules/cleanup/cleanup.module';
+import { AiModule } from './modules/ai/ai.module';
+import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
+import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
+
+const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
@@ -185,6 +197,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     DisputesModule,
     MonitoringModule,
     // Load HealthModule only when not generating OpenAPI (avoids loading broken @nestjs/terminus in script)
+
     ...(process.env.OPENAPI_GENERATE !== 'true'
       ? [require('./health/health.module').HealthModule]
       : []),
@@ -201,6 +214,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     CleanupModule,
     AiModule,
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [RateLimitingModule] : []),
+
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
     // KYC module

@@ -20,7 +20,6 @@ import { LoggerService } from './common/logger/logger.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { ConfigService } from '@nestjs/config';
-import { LoggerService } from './common/services/logger.service';
 
 const bootstrapLogger = new Logger('Bootstrap');
 

@@ -10,6 +10,7 @@ import { tap } from 'rxjs/operators';
 import * as Sentry from '@sentry/nestjs';
 import { sanitizeBody } from '../middleware/logger.middleware';
 import { LoggerService } from '../logger/logger.service';
+import { RequestContext } from '../logger/request-context';
 
 const SENSITIVE_HEADERS = ['authorization', 'cookie', 'x-api-key'];
 
@@ -64,6 +65,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     if (req.user?.id) {
       Sentry.setUser({ id: req.user.id, email: req.user.email });
+      RequestContext.set({ userId: req.user.id });
     }
 
     this.logger.log(
@@ -85,7 +87,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
           Sentry.addBreadcrumb({
             category: 'http',
-            message: `${method} ${url} - Error: ${message}`,
+            message: `${method} ${url} - Error: ${error.message}`,
             level: 'error',
           });
         },

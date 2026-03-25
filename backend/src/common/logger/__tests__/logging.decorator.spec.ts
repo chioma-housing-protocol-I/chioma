@@ -1,16 +1,12 @@
+import { Logger } from '@nestjs/common';
 import { Logging } from '../logging.decorator';
-import { LoggerService } from '../logger.service';
-
-jest.mock('../logger.service');
 
 describe('@Logging() decorator', () => {
   beforeEach(() => {
-    jest.spyOn(LoggerService.prototype, 'debug').mockImplementation(() => {});
-    jest.spyOn(LoggerService.prototype, 'info').mockImplementation(() => {});
-    jest.spyOn(LoggerService.prototype, 'error').mockImplementation(() => {});
-    jest
-      .spyOn(LoggerService.prototype, 'setContext')
-      .mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -34,11 +30,11 @@ describe('@Logging() decorator', () => {
     const result = await instance.successMethod('world');
 
     expect(result).toBe('hello world');
-    expect(LoggerService.prototype.debug).toHaveBeenCalledWith(
+    expect(Logger.prototype.debug).toHaveBeenCalledWith(
       'Entering successMethod',
       expect.any(Object),
     );
-    expect(LoggerService.prototype.info).toHaveBeenCalledWith(
+    expect(Logger.prototype.log).toHaveBeenCalledWith(
       'Exiting successMethod',
       expect.objectContaining({
         method: 'successMethod',
@@ -51,9 +47,9 @@ describe('@Logging() decorator', () => {
     const instance = new TestClass();
     await expect(instance.errorMethod()).rejects.toThrow('fail');
 
-    expect(LoggerService.prototype.error).toHaveBeenCalledWith(
+    expect(Logger.prototype.error).toHaveBeenCalledWith(
       'Error in errorMethod',
-      new Error('fail'),
+      expect.stringContaining('fail'),
       expect.objectContaining({
         method: 'errorMethod',
         duration: expect.any(Number),

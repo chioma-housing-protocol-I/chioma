@@ -26,7 +26,11 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
+import {
+  AuthResponseDto,
+  MessageResponseDto,
+  AuthLoginResponseDto,
+} from './dto/auth-response.dto';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -81,7 +85,7 @@ export class AuthController {
     @Body() registerDto: RegisterDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthLoginResponseDto> {
     const startTime = Date.now();
 
     try {
@@ -89,7 +93,7 @@ export class AuthController {
       const duration = Date.now() - startTime;
 
       // Set secure refresh token cookie
-      if (result.refreshToken) {
+      if (!result.mfaRequired && result.refreshToken) {
         this.setRefreshTokenCookie(res, result.refreshToken);
       }
 
@@ -102,10 +106,15 @@ export class AuthController {
         userAgent: req.get('user-agent') ?? undefined,
       });
 
+      if (result.mfaRequired) {
+        return result;
+      }
+
       // Don't return refreshToken in response body when using cookies
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { refreshToken: _refreshToken, ...responseWithoutRefresh } = result;
-      return responseWithoutRefresh as AuthResponseDto;
+      const { refreshToken: _refreshToken, ...responseWithoutRefresh } =
+        result as any;
+      return responseWithoutRefresh as AuthLoginResponseDto;
     } catch (error: unknown) {
       const duration = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -146,10 +155,7 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<
-    | AuthResponseDto
-    | { mfaRequired: true; mfaToken: string; user: AuthResponseDto['user'] }
-  > {
+  ): Promise<AuthLoginResponseDto> {
     const startTime = Date.now();
 
     try {
@@ -157,16 +163,8 @@ export class AuthController {
       const duration = Date.now() - startTime;
 
       // If MFA is required, return MFA token
-      if (
-        'mfaRequired' in result &&
-        result.mfaRequired &&
-        'mfaToken' in result
-      ) {
-        return {
-          mfaRequired: true,
-          mfaToken: result.mfaToken,
-          user: result.user,
-        };
+      if ('mfaRequired' in result && result.mfaRequired) {
+        return result;
       }
 
       // Set secure refresh token cookie
@@ -189,9 +187,9 @@ export class AuthController {
         refreshToken: _refreshToken,
         mfaRequired: _mfaRequired,
         ...responseWithoutRefresh
-      } = result;
+      } = result as any;
       /* eslint-enable @typescript-eslint/no-unused-vars */
-      return responseWithoutRefresh as AuthResponseDto;
+      return responseWithoutRefresh as AuthLoginResponseDto;
     } catch (error: unknown) {
       const duration = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Unknown error';

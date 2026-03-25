@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LoggerService } from '../logger.service';
 import { LogLevel } from '../logger.interfaces';
 import { RequestContext } from '../request-context';
+import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/nestjs';
 
 jest.mock('@sentry/nestjs');
@@ -9,16 +10,27 @@ jest.mock('@sentry/nestjs');
 describe('LoggerService', () => {
   let service: LoggerService;
 
+  let configService: jest.Mocked<ConfigService>;
+
   beforeEach(async () => {
+    configService = {
+      get: jest.fn().mockImplementation((key, defaultValue) => {
+        if (key === 'NODE_ENV') return process.env.NODE_ENV || 'development';
+        return defaultValue;
+      }),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LoggerService],
+      providers: [
+        LoggerService,
+        {
+          provide: ConfigService,
+          useValue: configService,
+        },
+      ],
     }).compile();
 
     service = module.get<LoggerService>(LoggerService);
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-    jest.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -31,24 +43,29 @@ describe('LoggerService', () => {
 
   it('should format logs as JSON in production', () => {
     process.env.NODE_ENV = 'production';
+    service = new LoggerService(configService);
+    const logSpy = jest.spyOn(service['logger'], 'log');
+
     service.setContext('TestService');
     service.info('test message', { foo: 'bar' });
 
-    expect(console.log).toHaveBeenCalled();
-    const output = (console.log as jest.Mock).mock.calls[0][0];
-    const parsed = JSON.parse(output);
+    expect(logSpy).toHaveBeenCalled();
+    const [_level, _message, entry] = (logSpy as jest.Mock).mock.calls[0];
 
-    expect(parsed.level).toBe(LogLevel.INFO);
-    expect(parsed.message).toBe('test message');
-    expect(parsed.service).toBe('TestService');
-    expect(parsed.context).toEqual({ foo: 'bar' });
-    expect(parsed.timestamp).toBeDefined();
+    expect(_level).toBe('info');
+    expect(_message).toBe('test message');
+    expect(entry.service).toBe('TestService');
+    expect(entry.context).toEqual({ foo: 'bar' });
+    expect(entry.timestamp).toBeDefined();
 
     delete process.env.NODE_ENV;
   });
 
   it('should include RequestContext IDs in logs', () => {
     process.env.NODE_ENV = 'production';
+    service = new LoggerService(configService);
+    const logSpy = jest.spyOn(service['logger'], 'log');
+
     RequestContext.run(
       { correlationId: 'corr-123', requestId: 'req-456' },
       () => {
@@ -56,28 +73,29 @@ describe('LoggerService', () => {
       },
     );
 
-    const output = (console.log as jest.Mock).mock.calls[0][0];
-    const parsed = JSON.parse(output);
+    const [, , entry] = (logSpy as jest.Mock).mock.calls[0];
 
-    expect(parsed.correlationId).toBe('corr-123');
-    expect(parsed.requestId).toBe('req-456');
+    expect(entry.correlationId).toBe('corr-123');
+    expect(entry.requestId).toBe('req-456');
 
     delete process.env.NODE_ENV;
   });
 
   it('should forward errors to Sentry', () => {
     const error = new Error('test error');
+    const logSpy = jest.spyOn(service['logger'], 'log');
     service.error('oops', error);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
-    expect(console.error).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith('error', 'oops', expect.anything());
   });
 
   it('should forward fatal errors to Sentry', () => {
     const error = new Error('fatal error');
+    const logSpy = jest.spyOn(service['logger'], 'log');
     service.fatal('critical', error);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
-    expect(console.error).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith('error', 'critical', expect.anything());
   });
 });

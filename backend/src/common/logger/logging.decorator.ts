@@ -1,11 +1,9 @@
-import { LoggerService } from './logger.service';
+import { Logger } from '@nestjs/common';
 
 /**
  * Method decorator that auto-logs method entry, exit, duration and errors.
  */
 export function Logging() {
-  const logger = new LoggerService();
-
   return function (
     target: any,
     propertyKey: string,
@@ -13,7 +11,7 @@ export function Logging() {
   ) {
     const originalMethod = descriptor.value;
     const className = target.constructor.name;
-    logger.setContext(className);
+    const logger = new Logger(className);
 
     descriptor.value = async function (...args: any[]) {
       const start = Date.now();
@@ -22,7 +20,7 @@ export function Logging() {
       try {
         const result = await originalMethod.apply(this, args);
         const duration = Date.now() - start;
-        logger.info(`Exiting ${propertyKey}`, {
+        logger.log(`Exiting ${propertyKey}`, {
           method: propertyKey,
           duration,
         });
@@ -31,7 +29,7 @@ export function Logging() {
         const duration = Date.now() - start;
         logger.error(
           `Error in ${propertyKey}`,
-          error instanceof Error ? error : String(error),
+          error instanceof Error ? error.stack : String(error),
           {
             method: propertyKey,
             duration,

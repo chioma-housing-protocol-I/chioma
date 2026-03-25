@@ -32,6 +32,7 @@ import {
   RefundEscrowDto,
   ListEscrowsDto,
 } from '../dto';
+import { Logging } from '../../../common/logger/logging.decorator';
 
 @Injectable()
 export class StellarService {
@@ -63,6 +64,7 @@ export class StellarService {
   /**
    * Creates a new Stellar account with encrypted secret key
    */
+  @Logging()
   async createAccount(dto: CreateAccountDto): Promise<StellarAccount> {
     try {
       // Generate a new keypair
@@ -99,6 +101,7 @@ export class StellarService {
   /**
    * Fund an account using Friendbot (testnet only)
    */
+  @Logging()
   @Retry({
     maxAttempts: 3,
     delay: 1000,
@@ -257,6 +260,7 @@ export class StellarService {
   /**
    * Send a payment from one account to another
    */
+  @Logging()
   async sendPayment(dto: CreatePaymentDto): Promise<StellarTransaction> {
     // Check for idempotency
     if (dto.idempotencyKey) {
@@ -502,6 +506,7 @@ export class StellarService {
   /**
    * Create an escrow account and fund it
    */
+  @Logging()
   async createEscrow(dto: CreateEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -625,6 +630,7 @@ export class StellarService {
   /**
    * Release escrow funds to destination
    */
+  @Logging()
   async releaseEscrow(dto: ReleaseEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -766,6 +772,7 @@ export class StellarService {
   /**
    * Refund escrow funds back to source
    */
+  @Logging()
   async refundEscrow(dto: RefundEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

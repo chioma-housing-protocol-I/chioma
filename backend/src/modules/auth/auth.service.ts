@@ -23,7 +23,10 @@ import {
   AuthSuccessResponseDto,
   MfaRequiredResponseDto,
   MessageResponseDto,
+  AuthResponseDto,
+  AuthLoginResponseDto,
 } from './dto/auth-response.dto';
+import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { Logging } from '../../common/logger/logging.decorator';
 
@@ -47,7 +50,7 @@ export class AuthService {
   ) {}
 
   @Logging()
-  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+  async register(registerDto: RegisterDto): Promise<AuthLoginResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
 
     // Validate password against policy
@@ -113,7 +116,7 @@ export class AuthService {
   }
 
   @Logging()
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto): Promise<AuthLoginResponseDto> {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({

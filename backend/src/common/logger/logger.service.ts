@@ -1,29 +1,46 @@
-import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
+import {
+  Injectable,
+  LoggerService as NestLoggerService,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as winston from 'winston';
+import * as DailyRotateFile from 'winston-daily-rotate-file';
 import * as Sentry from '@sentry/nestjs';
 import { LogLevel, LogEntry, LogContext } from './logger.interfaces';
 import { RequestContext } from './request-context';
 
 /**
- * Centralised structured logger.
+ * Centralised structured logger using Winston.
  *
- * - In **production** every log is a single-line JSON object.
- * - In **development** a human-readable coloured line is printed.
+ * - In **production/staging**: single-line JSON with daily file rotation.
+ * - In **development**: human-readable coloured console output.
  * - Error/Fatal levels are automatically forwarded to Sentry.
  * - Context from AsyncLocalStorage (request/correlation/trace IDs, userId) is
- *   attached automatically.
+ *   attached automatically to every log entry.
+ * - Supports multiple log levels compatible with NestJS and standard logging.
  */
 @Injectable()
-export class LoggerService implements NestLoggerService {
+export class LoggerService implements NestLoggerService, OnModuleInit {
+  private logger: winston.Logger;
   private serviceName = 'App';
 
-  /** Set the service/class context for all subsequent log calls. */
+  constructor(private readonly configService: ConfigService) {
+    this.logger = this.createWinstonLogger();
+  }
+
+  onModuleInit() {
+    // Ensure the logger is ready
+  }
+
+  /** Set the service/class context for all subsequent log calls in this instance. */
   setContext(name: string): void {
     this.serviceName = name;
   }
 
   /** Create a child logger pre-bound to a specific service name. */
   forContext(name: string): LoggerService {
-    const child = new LoggerService();
+    const child = new LoggerService(this.configService);
     child.serviceName = name;
     return child;
   }
@@ -90,6 +107,89 @@ export class LoggerService implements NestLoggerService {
   /*  Internal                                                           */
   /* ------------------------------------------------------------------ */
 
+  private createWinstonLogger(): winston.Logger {
+    const env = this.configService.get('NODE_ENV', 'development');
+    const isProd = env === 'production' || env === 'staging';
+    const logLevel = this.configService.get(
+      'LOG_LEVEL',
+      isProd ? 'info' : 'debug',
+    );
+
+    const transports: winston.transport[] = [];
+
+    // Console transport
+    transports.push(
+      new winston.transports.Console({
+        level: logLevel,
+        format: isProd
+          ? winston.format.combine(
+              winston.format.timestamp(),
+              winston.format.json(),
+            )
+          : winston.format.combine(
+              winston.format.colorize(),
+              winston.format.timestamp({ format: 'HH:mm:ss' }),
+              winston.format.printf(
+                ({
+                  timestamp,
+                  level,
+                  message,
+                  service,
+                  method,
+                  duration,
+                  ...meta
+                }: any) => {
+                  const svc = service ? `[${service}]` : '';
+                  const mthd = method ? `${method}()` : '';
+                  const dur = duration !== undefined ? ` (${duration}ms)` : '';
+                  const metaStr = Object.keys(meta).length
+                    ? ` ${JSON.stringify(meta)}`
+                    : '';
+                  return `[${String(timestamp)}] ${String(level).padEnd(5)} ${svc} ${mthd} ${String(message)}${dur}${metaStr}`;
+                },
+              ),
+            ),
+      }),
+    );
+
+    // File transport for production/staging (rotated daily)
+    if (isProd) {
+      transports.push(
+        new DailyRotateFile({
+          filename: 'logs/application-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          maxSize: '20m',
+          maxFiles: '14d',
+          level: logLevel,
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+      );
+
+      transports.push(
+        new DailyRotateFile({
+          filename: 'logs/error-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          maxSize: '20m',
+          maxFiles: '30d',
+          level: 'error',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+      );
+    }
+
+    return winston.createLogger({
+      level: logLevel,
+      transports,
+      exitOnError: false,
+    });
+  }
+
   private write(
     level: LogLevel,
     message: string,
@@ -111,7 +211,7 @@ export class LoggerService implements NestLoggerService {
       traceId: ctx?.traceId ?? reqCtx.traceId,
     };
 
-    // Attach extra context fields (any keys not consumed above)
+    // Attach extra context fields
     const extraKeys = ctx
       ? Object.keys(ctx).filter(
           (k) =>
@@ -140,40 +240,24 @@ export class LoggerService implements NestLoggerService {
       };
     }
 
-    const isProd = process.env.NODE_ENV === 'production';
-
-    if (isProd) {
-      // Structured JSON (one line per entry)
-      this.emit(level, JSON.stringify(entry));
-    } else {
-      // Human-readable
-      const parts = [
-        `[${entry.timestamp}]`,
-        level.padEnd(5),
-        `[${this.serviceName}]`,
-        ctx?.method ? `${ctx.method}()` : '',
-        message,
-        ctx?.duration !== undefined ? `(${ctx.duration}ms)` : '',
-        error ? `\n  ${error.stack ?? error.message}` : '',
-      ].filter(Boolean);
-      this.emit(level, parts.join(' '));
-    }
+    // Winston handles the actual output and formatting based on transports
+    const winstonLevel = this.mapToWinstonLevel(level);
+    this.logger.log(winstonLevel, message, entry);
   }
 
-  private emit(level: LogLevel, text: string): void {
+  private mapToWinstonLevel(level: LogLevel): string {
     switch (level) {
       case LogLevel.DEBUG:
-        console.debug(text);
-        break;
+        return 'debug';
+      case LogLevel.INFO:
+        return 'info';
       case LogLevel.WARN:
-        console.warn(text);
-        break;
+        return 'warn';
       case LogLevel.ERROR:
       case LogLevel.FATAL:
-        console.error(text);
-        break;
+        return 'error';
       default:
-        console.log(text);
+        return 'info';
     }
   }
 
