@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { ArbiterList } from './ArbiterList';
 import { ArbiterStats } from './ArbiterStats';
-import { ArbiterAssignment } from './ArbiterAssignment';
+import { ArbiterAssignment, type ArbiterAssignmentPayload } from './ArbiterAssignment';
 import { Button } from '@/components/ui/button';
 
 interface Arbiter {
@@ -25,7 +25,7 @@ interface ArbiterManagementProps {
 }
 
 export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementProps) {
-  const [arbiters, setArbiters] = useState<Arbiter[]>(initialArbiters);
+  const [arbiters] = useState<Arbiter[]>(initialArbiters);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedArbiterId, setSelectedArbiterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementPro
     setShowAssignmentModal(true);
   }, []);
 
-  const handleAssignmentSubmit = useCallback(async (data: any) => {
+  const handleAssignmentSubmit = useCallback(async (data: ArbiterAssignmentPayload) => {
     setLoading(true);
     try {
       // TODO: Call API to assign arbiter to dispute
@@ -49,20 +49,6 @@ export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementPro
       setLoading(false);
     }
   }, [selectedArbiterId]);
-
-  const handleUpdateStatus = useCallback(async (arbiterId: string, status: string) => {
-    setLoading(true);
-    try {
-      // TODO: Call API to update arbiter status
-      setArbiters(arbiters.map(a =>
-        a.id === arbiterId ? { ...a, status: status as any } : a
-      ));
-    } catch (error) {
-      console.error('Status update error:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [arbiters]);
 
   const handleViewDetails = useCallback((arbiterId: string) => {
     // TODO: Open details modal or navigate to details page
@@ -96,7 +82,6 @@ export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementPro
         <ArbiterList
           arbiters={arbiters}
           onAssign={handleAssign}
-          onUpdateStatus={handleUpdateStatus}
           onViewDetails={handleViewDetails}
           loading={loading}
         />

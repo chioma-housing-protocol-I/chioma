@@ -32,9 +32,16 @@ interface Arbiter {
 interface ArbiterAssignmentProps {
   arbiterId?: string | null;
   arbiters: Arbiter[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ArbiterAssignmentPayload) => void;
   onClose: () => void;
   loading?: boolean;
+}
+
+export interface ArbiterAssignmentPayload {
+  arbiterId: string;
+  disputeId: string;
+  notes: string;
+  assignedAt: string;
 }
 
 export function ArbiterAssignment({

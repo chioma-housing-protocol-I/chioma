@@ -37,7 +37,6 @@ interface Arbiter {
 interface ArbiterListProps {
   arbiters: Arbiter[];
   onAssign?: (arbiterId: string) => void;
-  onUpdateStatus?: (arbiterId: string, status: string) => void;
   onViewDetails?: (arbiterId: string) => void;
   loading?: boolean;
 }
@@ -45,7 +44,6 @@ interface ArbiterListProps {
 export function ArbiterList({
   arbiters,
   onAssign,
-  onUpdateStatus,
   onViewDetails,
   loading = false,
 }: ArbiterListProps) {
@@ -56,7 +54,7 @@ export function ArbiterList({
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredArbiters = useMemo(() => {
-    let filtered = arbiters.filter((arbiter) => {
+    const filtered = arbiters.filter((arbiter) => {
       const matchesSearch =
         arbiter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         arbiter.email.toLowerCase().includes(searchTerm.toLowerCase());
