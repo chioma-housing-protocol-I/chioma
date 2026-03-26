@@ -32,7 +32,10 @@ export default function PendingKycPage() {
   const approveMutation = useApproveKycVerification();
   const rejectMutation = useRejectKycVerification();
 
-  const hasFilters = filters.search !== '' || filters.sortBy !== 'createdAt' || filters.sortOrder !== 'desc';
+  const hasFilters =
+    filters.search !== '' ||
+    filters.sortBy !== 'createdAt' ||
+    filters.sortOrder !== 'desc';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-4 sm:p-6 lg:p-8 space-y-8">
@@ -201,7 +204,9 @@ function StatCard({
         {icon}
       </div>
       <div>
-        <p className="text-xs text-blue-200/60 uppercase tracking-wider">{title}</p>
+        <p className="text-xs text-blue-200/60 uppercase tracking-wider">
+          {title}
+        </p>
         <h3 className="text-2xl font-bold text-white">{value}</h3>
       </div>
     </div>

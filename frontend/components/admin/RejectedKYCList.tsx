@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import {
-  AlertCircle,
-  Eye,
-  FileText,
-  RefreshCw,
-  Search,
-  X,
-} from 'lucide-react';
+import { AlertCircle, Eye, FileText, RefreshCw, Search, X } from 'lucide-react';
 import type { KycVerification, PaginatedResponse } from '@/types';
 
 interface RejectedKYCListProps {
@@ -64,7 +57,8 @@ export function RejectedKYCList({
   setPage,
 }: RejectedKYCListProps) {
   const [selectedDocUrl, setSelectedDocUrl] = useState<string | null>(null);
-  const [selectedDocName, setSelectedDocName] = useState<string>('Document Preview');
+  const [selectedDocName, setSelectedDocName] =
+    useState<string>('Document Preview');
 
   const totalPages = data?.totalPages ?? 1;
   const rows = useMemo(() => data?.data ?? [], [data]);
@@ -83,7 +77,9 @@ export function RejectedKYCList({
     return (
       <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-10 text-center space-y-3">
         <Search className="mx-auto text-blue-300/40" size={28} />
-        <p className="text-white font-semibold">No rejected KYC verifications</p>
+        <p className="text-white font-semibold">
+          No rejected KYC verifications
+        </p>
         <p className="text-blue-200/60 text-sm">
           All clear — no rejections match the current filters.
         </p>
@@ -111,7 +107,8 @@ export function RejectedKYCList({
             <tbody>
               {rows.map((item) => {
                 const docs = item.documents ?? [];
-                const fullName = `${item.kycData?.first_name ?? ''} ${item.kycData?.last_name ?? ''}`.trim();
+                const fullName =
+                  `${item.kycData?.first_name ?? ''} ${item.kycData?.last_name ?? ''}`.trim();
                 const resubmitted = isResubmitted(item);
 
                 return (
@@ -127,7 +124,9 @@ export function RejectedKYCList({
                       <p className="text-xs text-blue-200/70">
                         {item.user?.email || 'No email'}
                       </p>
-                      <p className="text-xs text-blue-300/50 mt-1">ID: {item.userId}</p>
+                      <p className="text-xs text-blue-300/50 mt-1">
+                        ID: {item.userId}
+                      </p>
                     </td>
 
                     {/* KYC details */}
@@ -163,7 +162,9 @@ export function RejectedKYCList({
                     <td className="px-5 py-4 align-top">
                       <div className="space-y-2">
                         {docs.length === 0 ? (
-                          <p className="text-xs text-amber-300/80">No documents</p>
+                          <p className="text-xs text-amber-300/80">
+                            No documents
+                          </p>
                         ) : (
                           docs.map((doc) => (
                             <button
@@ -172,7 +173,9 @@ export function RejectedKYCList({
                               onClick={() => {
                                 setSelectedDocUrl(doc.url);
                                 setSelectedDocName(
-                                  doc.filename || doc.type || 'Document Preview',
+                                  doc.filename ||
+                                    doc.type ||
+                                    'Document Preview',
                                 );
                               }}
                               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white transition-all mr-2"
@@ -220,7 +223,8 @@ export function RejectedKYCList({
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-blue-200/70">
-          Showing page {page} of {totalPages} ({data?.total ?? rows.length} total)
+          Showing page {page} of {totalPages} ({data?.total ?? rows.length}{' '}
+          total)
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -247,7 +251,9 @@ export function RejectedKYCList({
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
           <div className="w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <p className="text-sm text-white font-semibold">{selectedDocName}</p>
+              <p className="text-sm text-white font-semibold">
+                {selectedDocName}
+              </p>
               <button
                 type="button"
                 onClick={() => setSelectedDocUrl(null)}

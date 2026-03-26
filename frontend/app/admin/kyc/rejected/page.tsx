@@ -69,13 +69,14 @@ export default function RejectedKycPage() {
     if (!data) return data;
     if (!filters.reason || filters.reason === 'All reasons') return data;
     const pattern = new RegExp(filters.reason.split(' ')[0], 'i');
-    const filtered = data.data.filter((item) => pattern.test(item.reason ?? ''));
+    const filtered = data.data.filter((item) =>
+      pattern.test(item.reason ?? ''),
+    );
     return { ...data, data: filtered, total: filtered.length };
   }, [data, filters.reason]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-red-950/20 to-slate-950 p-4 sm:p-6 lg:p-8 space-y-8">
-
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -125,7 +126,8 @@ export default function RejectedKycPage() {
           value={
             (data?.data ?? []).filter(
               (v) =>
-                new Date(v.updatedAt).getTime() - new Date(v.createdAt).getTime() >
+                new Date(v.updatedAt).getTime() -
+                  new Date(v.createdAt).getTime() >
                 60_000,
             ).length
           }
@@ -168,7 +170,11 @@ export default function RejectedKycPage() {
               type="text"
               value={filters.search}
               onChange={(e) =>
-                setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }))
+                setFilters((prev) => ({
+                  ...prev,
+                  page: 1,
+                  search: e.target.value,
+                }))
               }
               placeholder="Search user, email, ID…"
               className="w-full pl-12 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:bg-white/10 focus:border-rose-500 transition-all"
@@ -184,12 +190,20 @@ export default function RejectedKycPage() {
             <select
               value={filters.reason}
               onChange={(e) =>
-                setFilters((prev) => ({ ...prev, page: 1, reason: e.target.value }))
+                setFilters((prev) => ({
+                  ...prev,
+                  page: 1,
+                  reason: e.target.value,
+                }))
               }
               className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:bg-white/10 focus:border-rose-500 appearance-none transition-all"
             >
               {REASON_PRESETS.map((r) => (
-                <option key={r} value={r === 'All reasons' ? '' : r} className="bg-slate-900">
+                <option
+                  key={r}
+                  value={r === 'All reasons' ? '' : r}
+                  className="bg-slate-900"
+                >
                   {r}
                 </option>
               ))}
@@ -208,9 +222,15 @@ export default function RejectedKycPage() {
             }
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:bg-white/10 focus:border-rose-500 appearance-none transition-all"
           >
-            <option value="createdAt" className="bg-slate-900">Sort: Rejected date</option>
-            <option value="updatedAt" className="bg-slate-900">Sort: Updated date</option>
-            <option value="status" className="bg-slate-900">Sort: Status</option>
+            <option value="createdAt" className="bg-slate-900">
+              Sort: Rejected date
+            </option>
+            <option value="updatedAt" className="bg-slate-900">
+              Sort: Updated date
+            </option>
+            <option value="status" className="bg-slate-900">
+              Sort: Status
+            </option>
           </select>
 
           {/* Sort order */}
@@ -225,8 +245,12 @@ export default function RejectedKycPage() {
             }
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:bg-white/10 focus:border-rose-500 appearance-none transition-all"
           >
-            <option value="desc" className="bg-slate-900">Order: Newest first</option>
-            <option value="asc" className="bg-slate-900">Order: Oldest first</option>
+            <option value="desc" className="bg-slate-900">
+              Order: Newest first
+            </option>
+            <option value="asc" className="bg-slate-900">
+              Order: Oldest first
+            </option>
           </select>
         </div>
       </div>
@@ -269,7 +293,9 @@ function StatCard({
         {icon}
       </div>
       <div>
-        <p className="text-xs text-blue-200/60 uppercase tracking-wider">{title}</p>
+        <p className="text-xs text-blue-200/60 uppercase tracking-wider">
+          {title}
+        </p>
         <h3 className="text-2xl font-bold text-white">{value}</h3>
       </div>
     </div>
