@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { LeaseList } from '@/components/leases/LeaseList';
 import type { Lease } from '@/components/leases/LeaseDetailsModal';
 import { FileSignature } from 'lucide-react';
+import UnifiedDocumentsPage from '@/components/UnifiedDocumentsPage';
 
 const MOCK_LEASES: Lease[] = [
   {
@@ -78,3 +79,5 @@ export default function LandlordDocumentsPage() {
     </div>
   );
 }
+  export default function LandlordDocumentsPage() {
+    return <UnifiedDocumentsPage leases={MOCK_LEASES} />;
