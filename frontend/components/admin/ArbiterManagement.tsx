@@ -3,7 +3,10 @@
 import { useState, useCallback } from 'react';
 import { ArbiterList } from './ArbiterList';
 import { ArbiterStats } from './ArbiterStats';
-import { ArbiterAssignment, type ArbiterAssignmentPayload } from './ArbiterAssignment';
+import {
+  ArbiterAssignment,
+  type ArbiterAssignmentPayload,
+} from './ArbiterAssignment';
 import { Button } from '@/components/ui/button';
 
 interface Arbiter {
@@ -24,10 +27,14 @@ interface ArbiterManagementProps {
   initialArbiters?: Arbiter[];
 }
 
-export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementProps) {
+export function ArbiterManagement({
+  initialArbiters = [],
+}: ArbiterManagementProps) {
   const [arbiters] = useState<Arbiter[]>(initialArbiters);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
-  const [selectedArbiterId, setSelectedArbiterId] = useState<string | null>(null);
+  const [selectedArbiterId, setSelectedArbiterId] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const handleAssign = useCallback((arbiterId: string) => {
@@ -35,20 +42,23 @@ export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementPro
     setShowAssignmentModal(true);
   }, []);
 
-  const handleAssignmentSubmit = useCallback(async (data: ArbiterAssignmentPayload) => {
-    setLoading(true);
-    try {
-      // TODO: Call API to assign arbiter to dispute
-      console.log('Assigning arbiter:', selectedArbiterId, data);
-      setShowAssignmentModal(false);
-      // Show success toast
-    } catch (error) {
-      console.error('Assignment error:', error);
-      // Show error toast
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedArbiterId]);
+  const handleAssignmentSubmit = useCallback(
+    async (data: ArbiterAssignmentPayload) => {
+      setLoading(true);
+      try {
+        // TODO: Call API to assign arbiter to dispute
+        console.log('Assigning arbiter:', selectedArbiterId, data);
+        setShowAssignmentModal(false);
+        // Show success toast
+      } catch (error) {
+        console.error('Assignment error:', error);
+        // Show error toast
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedArbiterId],
+  );
 
   const handleViewDetails = useCallback((arbiterId: string) => {
     // TODO: Open details modal or navigate to details page
@@ -57,9 +67,9 @@ export function ArbiterManagement({ initialArbiters = [] }: ArbiterManagementPro
 
   const stats = {
     totalArbiters: arbiters.length,
-    activeArbiters: arbiters.filter(a => a.status === 'active').length,
+    activeArbiters: arbiters.filter((a) => a.status === 'active').length,
     avgResolutionTime: Math.round(
-      arbiters.reduce((sum, a) => sum + a.resolutionTime, 0) / arbiters.length
+      arbiters.reduce((sum, a) => sum + a.resolutionTime, 0) / arbiters.length,
     ),
     avgRating: (
       arbiters.reduce((sum, a) => sum + a.rating, 0) / arbiters.length

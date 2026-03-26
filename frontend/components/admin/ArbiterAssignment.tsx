@@ -55,7 +55,7 @@ export function ArbiterAssignment({
   const [disputeId, setDisputeId] = useState('');
   const [notes, setNotes] = useState('');
 
-  const selectedArbiterData = arbiters.find(a => a.id === selectedArbiter);
+  const selectedArbiterData = arbiters.find((a) => a.id === selectedArbiter);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +91,8 @@ export function ArbiterAssignment({
               </SelectTrigger>
               <SelectContent>
                 {arbiters
-                  .filter(a => a.status === 'active')
-                  .map(arbiter => (
+                  .filter((a) => a.status === 'active')
+                  .map((arbiter) => (
                     <SelectItem key={arbiter.id} value={arbiter.id}>
                       {arbiter.name} ({arbiter.activeCases} active cases)
                     </SelectItem>
@@ -104,9 +104,15 @@ export function ArbiterAssignment({
           {/* Arbiter Info */}
           {selectedArbiterData && (
             <div className="bg-gray-50 p-3 rounded-md text-sm space-y-1">
-              <p><strong>Email:</strong> {selectedArbiterData.email}</p>
-              <p><strong>Status:</strong> {selectedArbiterData.status}</p>
-              <p><strong>Active Cases:</strong> {selectedArbiterData.activeCases}</p>
+              <p>
+                <strong>Email:</strong> {selectedArbiterData.email}
+              </p>
+              <p>
+                <strong>Status:</strong> {selectedArbiterData.status}
+              </p>
+              <p>
+                <strong>Active Cases:</strong> {selectedArbiterData.activeCases}
+              </p>
             </div>
           )}
 
@@ -138,7 +144,10 @@ export function ArbiterAssignment({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !selectedArbiter || !disputeId}>
+            <Button
+              type="submit"
+              disabled={loading || !selectedArbiter || !disputeId}
+            >
               {loading ? 'Assigning...' : 'Assign Arbiter'}
             </Button>
           </DialogFooter>

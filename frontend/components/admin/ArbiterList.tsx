@@ -87,7 +87,7 @@ export function ArbiterList({
   const totalPages = Math.ceil(filteredArbiters.length / itemsPerPage);
   const paginatedArbiters = filteredArbiters.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const getStatusBadgeColor = (status: string) => {
@@ -122,10 +122,13 @@ export function ArbiterList({
 
         <div>
           <label className="text-sm font-medium">Status</label>
-          <Select value={statusFilter} onValueChange={(value) => {
-            setStatusFilter(value);
-            setCurrentPage(1);
-          }}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setCurrentPage(1);
+            }}
+          >
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -155,10 +158,13 @@ export function ArbiterList({
 
         <div>
           <label className="text-sm font-medium">Per Page</label>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-            setItemsPerPage(parseInt(value));
-            setCurrentPage(1);
-          }}>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => {
+              setItemsPerPage(parseInt(value));
+              setCurrentPage(1);
+            }}
+          >
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -208,7 +214,8 @@ export function ArbiterList({
                   <TableCell>{arbiter.email}</TableCell>
                   <TableCell>
                     <Badge className={getStatusBadgeColor(arbiter.status)}>
-                      {arbiter.status.charAt(0).toUpperCase() + arbiter.status.slice(1)}
+                      {arbiter.status.charAt(0).toUpperCase() +
+                        arbiter.status.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell>{arbiter.experience} yrs</TableCell>
@@ -284,7 +291,9 @@ export function ArbiterList({
           </div>
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            onClick={() =>
+              setCurrentPage(Math.min(totalPages, currentPage + 1))
+            }
             disabled={currentPage === totalPages}
           >
             Next

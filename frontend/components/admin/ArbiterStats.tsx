@@ -40,9 +40,7 @@ export function ArbiterStats({ stats }: ArbiterStatsProps) {
           <div className="text-2xl font-bold text-green-600">
             {stats.activeArbiters}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Available for assignment
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Available for assignment</p>
         </CardContent>
       </Card>
 
@@ -65,9 +63,7 @@ export function ArbiterStats({ stats }: ArbiterStatsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.avgRating}⭐
-          </div>
+          <div className="text-2xl font-bold">{stats.avgRating}⭐</div>
           <p className="text-xs text-gray-500 mt-1">out of 5</p>
         </CardContent>
       </Card>

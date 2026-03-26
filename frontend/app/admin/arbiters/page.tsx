@@ -90,9 +90,12 @@ export default function ArbitersPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Arbiter Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Arbiter Management
+          </h1>
           <p className="mt-2 text-gray-600">
-            Manage arbiters, assign them to disputes, and track their performance
+            Manage arbiters, assign them to disputes, and track their
+            performance
           </p>
         </div>
 
