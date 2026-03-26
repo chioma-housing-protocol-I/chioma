@@ -12,6 +12,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const pageTitleMap: Record<string, string> = {
     '/admin/audit-logs': 'Audit Logs',
+    '/admin/kyc': 'Pending KYC Verifications',
+    '/admin/kyc/rejected': 'Rejected KYC Verifications',
   };
 
   const pageTitle = pageTitleMap[pathname] ?? 'Admin';
