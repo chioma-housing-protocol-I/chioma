@@ -3,7 +3,11 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type ModalType =
+  | 'propertyDetail'
+  | 'propertyInquiry'
   | 'propertyAgreement'
+  | 'agreementView'
+  | 'agreementSigning'
   | 'dispute'
   | 'disputeResolution'
   | 'payment'

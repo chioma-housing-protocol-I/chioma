@@ -10,8 +10,16 @@ import {
   FolderOpen,
   Upload,
   List,
+  Building2,
+  FileSignature,
 } from 'lucide-react';
 import type { Document, DocumentMetadata } from '@/components/documents';
+import type {
+  PropertyDetailData,
+  PropertyInquiryData,
+  AgreementViewData,
+  AgreementSigningData,
+} from '@/components/modals/types';
 
 // Import types for type safety
 interface PropertyAgreementData {
@@ -71,6 +79,75 @@ export default function ModalsDemo() {
   const { openModal } = useModal();
 
   const modalDemos = [
+    {
+      title: 'Property Workflow',
+      description: 'View property details and send inquiries',
+      icon: Building2,
+      color: 'bg-indigo-500',
+      actions: [
+        {
+          label: 'Open Property Detail',
+          onClick: () =>
+            openModal('propertyDetail', {
+              property: {
+                id: 'property-001',
+                title: 'Contemporary 3BR Duplex',
+                address: '12 Admiralty Way, Lekki, Lagos',
+                price: 3200,
+                bedrooms: 3,
+                bathrooms: 3,
+                areaSqft: 1850,
+                landlordName: 'Chioma Estates',
+                description:
+                  'Modern duplex with a fitted kitchen, backup power, and secure estate access.',
+                images: [
+                  'https://images.unsplash.com/photo-1560185007-c5ca9d2c014d',
+                  'https://images.unsplash.com/photo-1494526585095-c41746248156',
+                  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c',
+                  'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85',
+                ],
+                amenities: ['24/7 power', 'Gym', 'Security', 'Parking'],
+              } as PropertyDetailData,
+              onInquirySubmit: async (data: PropertyInquiryData) => {
+                console.log('Property inquiry:', data);
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              },
+            }),
+        },
+      ],
+    },
+    {
+      title: 'Agreement Workflow',
+      description: 'View agreement document and complete e-signing',
+      icon: FileSignature,
+      color: 'bg-cyan-500',
+      actions: [
+        {
+          label: 'Open Agreement View',
+          onClick: () =>
+            openModal('agreementView', {
+              agreement: {
+                agreementId: 'agreement-001',
+                propertyTitle: 'Contemporary 3BR Duplex',
+                propertyAddress: '12 Admiralty Way, Lekki, Lagos',
+                landlordName: 'Chioma Estates',
+                tenantName: 'Ada Johnson',
+                monthlyRent: 3200,
+                securityDeposit: 6400,
+                startDate: '2026-04-01',
+                endDate: '2027-03-31',
+                status: 'pending' as const,
+                pdfUrl:
+                  'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+              } as AgreementViewData,
+              onSignSubmit: async (data: AgreementSigningData) => {
+                console.log('Agreement signature:', data);
+                await new Promise((resolve) => setTimeout(resolve, 1200));
+              },
+            }),
+        },
+      ],
+    },
     {
       title: 'Property Agreement',
       description: 'Create, view, or edit rental agreements',
