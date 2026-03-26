@@ -139,3 +139,4 @@ Chioma is not just a rental app.
 
 It is **open financial infrastructure for housing**, built on Stellar, and designed to scale across borders, currencies, and communities.
 
+
