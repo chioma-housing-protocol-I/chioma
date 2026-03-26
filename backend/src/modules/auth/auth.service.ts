@@ -48,14 +48,12 @@ export class AuthService {
 
   async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
+    const normalizedEmail = email.toLowerCase();
 
     // Validate password against policy
     await this.passwordPolicyService.validatePassword(password);
 
-    const existingUser = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-      withDeleted: true,
-    });
+    const existingUser = await this.findUserByEmail(normalizedEmail, true);
 
     if (existingUser) {
       if (existingUser.deletedAt) {
@@ -71,7 +69,8 @@ export class AuthService {
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     const user = this.userRepository.create({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
+      emailHash: this.hashLookupValue(normalizedEmail),
       password: hashedPassword,
       firstName,
       lastName,
@@ -116,9 +115,7 @@ export class AuthService {
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
-    const user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await this.findUserByEmail(email.toLowerCase());
 
     if (!user) {
       this.logger.warn(`Login attempt for non-existent user: ${email}`);
@@ -250,9 +247,7 @@ export class AuthService {
   ): Promise<MessageResponseDto> {
     const { email } = forgotPasswordDto;
 
-    const user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await this.findUserByEmail(email.toLowerCase());
 
     if (!user) {
       this.logger.warn(
@@ -465,5 +460,23 @@ export class AuthService {
     } = user;
     /* eslint-enable @typescript-eslint/no-unused-vars */
     return sanitized;
+  }
+
+  private async findUserByEmail(
+    email: string,
+    withDeleted = false,
+  ): Promise<User | null> {
+    const hash = this.hashLookupValue(email);
+    return this.userRepository.findOne({
+      where: [{ email }, { emailHash: hash }],
+      withDeleted,
+    });
+  }
+
+  private hashLookupValue(value: string): string {
+    return crypto
+      .createHash('sha256')
+      .update(value.trim().toLowerCase())
+      .digest('hex');
   }
 }

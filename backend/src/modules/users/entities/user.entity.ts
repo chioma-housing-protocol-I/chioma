@@ -32,6 +32,13 @@ export class User {
   @Column({ type: 'varchar', unique: true })
   email: string;
 
+  @Column({ name: 'email_encrypted', type: 'bytea', nullable: true, select: false })
+  emailEncrypted?: Buffer | null;
+
+  @Index('idx_users_email_hash', { unique: false })
+  @Column({ name: 'email_hash', type: 'varchar', length: 64, nullable: true, select: false })
+  emailHash?: string | null;
+
   @Exclude()
   @Column({ type: 'varchar', nullable: true })
   password: string;
@@ -44,6 +51,13 @@ export class User {
 
   @Column({ name: 'phone_number', nullable: true, type: 'varchar' })
   phoneNumber: string | null;
+
+  @Column({ name: 'phone_number_encrypted', type: 'bytea', nullable: true, select: false })
+  phoneNumberEncrypted?: Buffer | null;
+
+  @Index('idx_users_phone_hash', { unique: false })
+  @Column({ name: 'phone_number_hash', type: 'varchar', length: 64, nullable: true, select: false })
+  phoneNumberHash?: string | null;
 
   @Column({ name: 'avatar_url', nullable: true, type: 'varchar' })
   avatarUrl: string | null;
@@ -94,6 +108,21 @@ export class User {
     type: 'varchar',
   })
   walletAddress: string | null;
+
+  @Column({ name: 'wallet_address_encrypted', type: 'bytea', nullable: true, select: false })
+  walletAddressEncrypted?: Buffer | null;
+
+  @Index('idx_users_wallet_hash', { unique: false })
+  @Column({ name: 'wallet_address_hash', type: 'varchar', length: 64, nullable: true, select: false })
+  walletAddressHash?: string | null;
+
+  @Column({
+    name: 'encryption_key_version',
+    type: 'int',
+    default: 1,
+    select: false,
+  })
+  encryptionKeyVersion?: number;
 
   @Column({
     name: 'auth_method',

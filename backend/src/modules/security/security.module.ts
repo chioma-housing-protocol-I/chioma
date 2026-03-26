@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SecurityController } from './security.controller';
 import { SecurityEventsService } from './security-events.service';
@@ -14,9 +15,11 @@ import { ThreatEvent } from './entities/threat-event.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
+import { DatabaseEncryptionKeyService } from './database-encryption-key.service';
 
 @Module({
   imports: [
+    ConfigModule,
     TypeOrmModule.forFeature([
       SecurityEvent,
       ThreatEvent,
@@ -34,6 +37,7 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
     RbacService,
     EncryptionService,
     BlockchainAuditService,
+    DatabaseEncryptionKeyService,
     PermissionsGuard,
   ],
   exports: [
@@ -44,6 +48,7 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
     RbacService,
     EncryptionService,
     BlockchainAuditService,
+    DatabaseEncryptionKeyService,
     PermissionsGuard,
   ],
 })
