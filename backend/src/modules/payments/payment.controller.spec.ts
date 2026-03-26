@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
 import {
   PaymentController,
   PaymentMethodController,
@@ -6,6 +7,7 @@ import {
   PaymentScheduleController,
 } from './payment.controller';
 import { PaymentService } from './payment.service';
+import { AuditService } from '../audit/audit.service';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
@@ -48,6 +50,18 @@ describe('Payment Controllers', () => {
         {
           provide: PaymentService,
           useValue: mockPaymentService,
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            log: jest.fn(),
+          },
+        },
+        {
+          provide: Reflector,
+          useValue: {
+            get: jest.fn().mockReturnValue(undefined),
+          },
         },
       ],
     }).compile();

@@ -74,7 +74,7 @@ export default function SignupPage() {
       setTokens(result.accessToken, result.refreshToken, result.user);
 
       // Redirect after successful signup
-      if (result.user.role === 'landlord') {
+      if (result.user.role === 'landlord' || result.user.role === 'admin') {
         router.push('/landlords');
       } else if (result.user.role === 'agent') {
         router.push('/agents');
@@ -132,7 +132,7 @@ export default function SignupPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    if (user.role === 'landlord') {
+                    if (user.role === 'landlord' || user.role === 'admin') {
                       router.push('/landlords');
                     } else if (user.role === 'agent') {
                       router.push('/agents');

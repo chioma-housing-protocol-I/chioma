@@ -5,6 +5,8 @@ import { StoreHydrator } from '@/store/StoreHydrator';
 import { Toaster } from 'react-hot-toast';
 import ErrorMonitoringProvider from '@/components/error/ErrorMonitoringProvider';
 import NetworkStatusBanner from '@/components/error/NetworkStatusBanner';
+import { ModalProvider } from '@/contexts/ModalContext';
+import { ModalManager } from '@/components/modals';
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -106,14 +108,17 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
         <QueryProvider>
-          <StoreHydrator />
-          <ErrorMonitoringProvider />
-          <NetworkStatusBanner />
-          {children}
-          <Toaster
-            position="bottom-right"
-            toastOptions={{ className: 'font-medium' }}
-          />
+          <ModalProvider>
+            <StoreHydrator />
+            <ErrorMonitoringProvider />
+            <NetworkStatusBanner />
+            {children}
+            <ModalManager />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{ className: 'font-medium' }}
+            />
+          </ModalProvider>
         </QueryProvider>
       </body>
     </html>

@@ -1,12 +1,32 @@
-import { Controller, Get, Query, Param, Delete, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  Delete,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { AuditRetentionService } from './audit-retention.service';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { AuditLog } from './entities/audit-log.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Audit Logs')
+@ApiBearerAuth('JWT-auth')
 @Controller('audit')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class AuditController {
   constructor(
     private readonly auditService: AuditService,

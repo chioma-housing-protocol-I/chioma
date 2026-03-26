@@ -32,11 +32,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Disputes')
 @ApiBearerAuth('JWT-auth')
 @Controller('disputes')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(AuditLogInterceptor)
 export class DisputesController {
   constructor(private readonly disputesService: DisputesService) {}
 
@@ -46,6 +50,12 @@ export class DisputesController {
   @ApiResponse({ status: 201, description: 'Dispute created' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @AuditLog({
+    action: AuditAction.ESCROW_DISPUTED,
+    entityType: 'Dispute',
+    level: AuditLevel.WARN,
+    includeNewValues: true,
+  })
   async createDispute(
     @Body() createDisputeDto: CreateDisputeDto,
     @Request() req,
@@ -75,6 +85,13 @@ export class DisputesController {
   }
 
   @Put(':id')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'Dispute',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async update(
     @Param('id') id: string,
     @Body() updateDisputeDto: UpdateDisputeDto,
@@ -99,6 +116,12 @@ export class DisputesController {
   }
 
   @Post(':disputeId/comment')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'DisputeComment',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   async addComment(
     @Param('disputeId') disputeId: string,
     @Body() addCommentDto: AddCommentDto,
@@ -114,6 +137,13 @@ export class DisputesController {
   @Post(':disputeId/resolve')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'Dispute',
+    level: AuditLevel.SECURITY,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async resolveDispute(
     @Param('disputeId') disputeId: string,
     @Body() resolveDisputeDto: ResolveDisputeDto,

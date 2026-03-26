@@ -45,7 +45,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (user.role === 'landlord') {
+    if (user.role === 'landlord' || user.role === 'admin') {
       router.push('/landlords');
     } else if (user.role === 'agent') {
       router.push('/agents');

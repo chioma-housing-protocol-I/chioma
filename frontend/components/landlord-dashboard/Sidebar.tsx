@@ -8,8 +8,10 @@ import { IoDocumentTextSharp } from 'react-icons/io5';
 import { IoMdSettings, IoMdNotifications } from 'react-icons/io';
 import { MdGavel, MdReviews } from 'react-icons/md';
 import Logo from '@/components/Logo';
+import { useAuth } from '@/store/authStore';
+import { MdSecurity } from 'react-icons/md';
 
-export const navItems = [
+const baseNavItems = [
   { icon: HiSquares2X2, label: 'Dashboard', href: '/landlords' },
   { icon: FaBuilding, label: 'Properties', href: '/landlords/properties' },
   { icon: HiUsers, label: 'Tenants', href: '/landlords/tenants' },
@@ -31,11 +33,23 @@ export const navItems = [
   },
   { icon: MdGavel, label: 'Disputes', href: '/landlords/disputes' },
   { icon: MdReviews, label: 'Reviews', href: '/landlords/reviews' },
+  { icon: MdSecurity, label: 'Audit Logs', href: '/landlords/audit-logs' },
   { icon: IoMdSettings, label: 'Settings', href: '/landlords/settings' },
 ];
 
+export function getLandlordNavItems(role?: string) {
+  return baseNavItems.filter((item) => {
+    if (item.href === '/landlords/audit-logs') {
+      return role === 'admin';
+    }
+    return true;
+  });
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const navItems = getLandlordNavItems(user?.role);
 
   return (
     // Desktop: full width (unchanged) on lg and up

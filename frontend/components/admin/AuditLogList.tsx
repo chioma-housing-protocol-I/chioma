@@ -82,7 +82,7 @@ export const AuditLogList: React.FC<ListProps> = ({
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-white font-medium">
-                        {log.entity}
+                        {log.entityType}
                       </span>
                       <span className="text-[10px] text-blue-300/40 font-mono truncate max-w-[120px]">
                         {log.entityId}
@@ -95,12 +95,15 @@ export const AuditLogList: React.FC<ListProps> = ({
                         <UserIcon size={14} className="text-blue-300/60" />
                       </div>
                       <span className="text-blue-200/60 font-medium truncate max-w-[150px]">
-                        {log.user?.email || log.userId || 'System'}
+                        {log.performedBy || 'System'}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-blue-200/60">
-                    {format(new Date(log.createdAt), 'MMM d, yyyy • HH:mm:ss')}
+                    {format(
+                      new Date(log.performedAt),
+                      'MMM d, yyyy • HH:mm:ss',
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button

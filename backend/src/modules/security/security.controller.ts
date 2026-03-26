@@ -12,6 +12,7 @@ import {
   DefaultValuePipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -33,9 +34,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Security')
 @Controller()
+@UseInterceptors(AuditLogInterceptor)
 export class SecurityController {
   constructor(
     private readonly configService: ConfigService,
@@ -166,6 +171,12 @@ export class SecurityController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark a threat event as false positive' })
+  @AuditLog({
+    action: AuditAction.SECURITY_INCIDENT,
+    entityType: 'ThreatEvent',
+    level: AuditLevel.SECURITY,
+    includeNewValues: true,
+  })
   async markFalsePositive(@Param('id') threatId: string) {
     await this.threatDetectionService.markFalsePositive(threatId);
   }
@@ -195,6 +206,12 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Resolve a security incident' })
+  @AuditLog({
+    action: AuditAction.SECURITY_INCIDENT,
+    entityType: 'SecurityIncident',
+    level: AuditLevel.SECURITY,
+    includeNewValues: true,
+  })
   async resolveIncident(
     @Param('id') incidentId: string,
     @Body('resolution') resolution: string,
@@ -315,6 +332,11 @@ export class SecurityController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Seed default RBAC roles and permissions' })
+  @AuditLog({
+    action: AuditAction.PERMISSION_CHANGE,
+    entityType: 'Rbac',
+    level: AuditLevel.SECURITY,
+  })
   async seedRbac() {
     await this.rbacService.seedDefaultRoles();
   }
@@ -327,6 +349,12 @@ export class SecurityController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Anchor latest audit log batch to blockchain' })
   @ApiQuery({ name: 'batchSize', required: false, type: Number })
+  @AuditLog({
+    action: AuditAction.BLOCKCHAIN_TX_SUBMITTED,
+    entityType: 'AuditBatch',
+    level: AuditLevel.SECURITY,
+    includeNewValues: true,
+  })
   async anchorAuditLogs(
     @Query('batchSize', new DefaultValuePipe(100), ParseIntPipe)
     batchSize: number,

@@ -137,16 +137,20 @@ export interface DisputeEvidence {
 
 // Audit Types
 export interface AuditLog {
-  id: string;
-  userId: string;
+  id: number;
+  performedBy?: string;
   user?: User;
   action: string;
-  entity: string;
-  entityId: string;
-  changes?: Record<string, unknown>;
+  entityType?: string;
+  entityId?: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  status?: 'SUCCESS' | 'FAILURE';
+  level?: 'INFO' | 'WARN' | 'ERROR' | 'SECURITY';
   ipAddress?: string;
   userAgent?: string;
-  createdAt: string;
+  performedAt: string;
 }
 
 // Transaction Types
@@ -183,4 +187,28 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
+}
+
+// Document Types
+export type DocumentType = 'pdf' | 'image' | 'docx' | 'xlsx' | 'txt';
+export type DocumentCategory =
+  | 'lease'
+  | 'identity'
+  | 'payment'
+  | 'maintenance'
+  | 'inspection'
+  | 'other';
+
+export interface Document {
+  id: string;
+  name: string;
+  type: DocumentType;
+  url: string;
+  size: number;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+  category?: DocumentCategory;
+  description?: string;
+  thumbnailUrl?: string;
 }
