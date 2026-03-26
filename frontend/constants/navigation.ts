@@ -4,8 +4,10 @@ export type NavigationLink = {
 };
 
 export const NAV_LINKS: NavigationLink[] = [
-  { name: 'Find a Home', href: '/properties' },
-  { name: 'For Landlords', href: '/landlords' },
-  { name: 'For Agents', href: '/agents' },
-  { name: 'Resources', href: '/resources' },
+  { name: 'Home', href: '/' },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Documents', href: '/dashboard/documents' },
+  { name: 'Maintenance', href: '/dashboard/maintenance' },
+  { name: 'Notifications', href: '/dashboard/notifications' },
+  { name: 'Properties', href: '/properties' },
 ];
