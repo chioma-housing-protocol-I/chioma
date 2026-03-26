@@ -1,6 +1,35 @@
 //! Data structures for the Payment contract.
 use soroban_sdk::{contracttype, Address, Map, String};
 
+/// Configuration for late fee calculation per agreement
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LateFeeConfig {
+    pub agreement_id: String,
+    /// Percentage of rent charged as late fee (e.g. 5 = 5%)
+    pub late_fee_percentage: u32,
+    /// Number of days after due date before late fee applies
+    pub grace_period_days: u32,
+    /// Maximum late fee cap (in token units)
+    pub max_late_fee: i128,
+    /// Whether to compound the fee daily
+    pub compounding: bool,
+}
+
+/// Record of a late fee applied to a specific payment
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LateFeeRecord {
+    pub payment_id: String,
+    pub days_late: u32,
+    pub base_amount: i128,
+    pub late_fee: i128,
+    pub total_due: i128,
+    pub calculated_at: u64,
+    pub waived: bool,
+    pub waive_reason: Option<String>,
+}
+
 /// Payment record for tracking individual payments
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

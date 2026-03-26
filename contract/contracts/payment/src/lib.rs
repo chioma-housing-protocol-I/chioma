@@ -10,6 +10,7 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 pub mod errors;
 pub mod events;
+pub mod late_fee;
 pub mod payment_impl;
 pub mod rate_limit;
 pub mod storage;
@@ -23,8 +24,8 @@ pub use errors::PaymentError;
 pub use payment_impl::{calculate_payment_split, create_payment_record};
 pub use storage::DataKey;
 pub use types::{
-    ExecutionStatus, PaymentExecution, PaymentFrequency, PaymentRecord, PaymentSplit,
-    RecurringPayment, RecurringPaymentEvent, RecurringStatus,
+    ExecutionStatus, LateFeeConfig, LateFeeRecord, PaymentExecution, PaymentFrequency,
+    PaymentRecord, PaymentSplit, RecurringPayment, RecurringPaymentEvent, RecurringStatus,
 };
 
 use crate::errors::PaymentError as Error;
@@ -616,5 +617,200 @@ impl PaymentContract {
             .persistent()
             .get(&StorageKey::FailedRecurringPayments)
             .unwrap_or_else(|| Vec::new(&env)))
+    }
+
+    // ─── Late Fee Functions ───────────────────────────────────────────────────
+
+    /// Set or update the late fee configuration for an agreement.
+    /// Only the landlord of the agreement may call this.
+    pub fn set_late_fee_config(
+        env: Env,
+        agreement_id: String,
+        late_fee_percentage: u32,
+        grace_period_days: u32,
+        max_late_fee: i128,
+        compounding: bool,
+    ) -> Result<(), Error> {
+        use crate::types::LateFeeConfig;
+
+        if late_fee_percentage == 0 || late_fee_percentage > 100 {
+            return Err(Error::InvalidLateFeePercentage);
+        }
+
+        let agreement: crate::types::RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        agreement.landlord.require_auth();
+
+        let config = LateFeeConfig {
+            agreement_id: agreement_id.clone(),
+            late_fee_percentage,
+            grace_period_days,
+            max_late_fee,
+            compounding,
+        };
+
+        env.storage()
+            .persistent()
+            .set(&StorageKey::LateFeeConfig(agreement_id.clone()), &config);
+
+        crate::events::late_fee_config_set(
+            &env,
+            agreement_id,
+            late_fee_percentage,
+            grace_period_days,
+        );
+
+        Ok(())
+    }
+
+    /// Get the late fee configuration for an agreement.
+    pub fn get_late_fee_config(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<crate::types::LateFeeConfig, Error> {
+        env.storage()
+            .persistent()
+            .get(&StorageKey::LateFeeConfig(agreement_id))
+            .ok_or(Error::LateFeeConfigNotFound)
+    }
+
+    /// Calculate the late fee for a payment given how many days late it is.
+    /// Returns the late fee amount (not yet persisted).
+    pub fn calculate_late_fee(
+        env: Env,
+        agreement_id: String,
+        payment_id: String,
+        days_late: u32,
+    ) -> Result<i128, Error> {
+        crate::late_fee::calculate_late_fee_amount(&env, &agreement_id, &payment_id, days_late)
+    }
+
+    /// Apply the late fee to a payment, creating a LateFeeRecord.
+    /// Derives days_late from the current ledger timestamp vs the agreement's
+    /// next_payment_due, then persists the record.
+    pub fn apply_late_fee(
+        env: Env,
+        agreement_id: String,
+        payment_id: String,
+    ) -> Result<crate::types::LateFeeRecord, Error> {
+        use crate::types::LateFeeRecord;
+
+        // Ensure not already applied
+        if env
+            .storage()
+            .persistent()
+            .get::<StorageKey, LateFeeRecord>(&StorageKey::LateFeeRecord(payment_id.clone()))
+            .is_some()
+        {
+            return Err(Error::LateFeeAlreadyApplied);
+        }
+
+        let agreement: crate::types::RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        let config: crate::types::LateFeeConfig = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::LateFeeConfig(agreement_id.clone()))
+            .ok_or(Error::LateFeeConfigNotFound)?;
+
+        let now = env.ledger().timestamp();
+        let seconds_per_day: u64 = 86_400;
+        let grace_seconds = (config.grace_period_days as u64) * seconds_per_day;
+        let due_with_grace = agreement.next_payment_due.saturating_add(grace_seconds);
+
+        if now <= due_with_grace {
+            return Err(Error::PaymentNotLate);
+        }
+
+        let seconds_over = now.saturating_sub(due_with_grace);
+        // days_over_grace is how many full days past the grace window
+        let days_over_grace = (seconds_over / seconds_per_day) as u32;
+        // compute_fee expects total days_late (it subtracts grace internally)
+        let days_late_total = days_over_grace + config.grace_period_days;
+
+        let late_fee = crate::late_fee::calculate_late_fee_amount(
+            &env,
+            &agreement_id,
+            &payment_id,
+            days_late_total,
+        )?;
+
+        let record = LateFeeRecord {
+            payment_id: payment_id.clone(),
+            days_late: days_over_grace,
+            base_amount: agreement.monthly_rent,
+            late_fee,
+            total_due: agreement.monthly_rent + late_fee,
+            calculated_at: now,
+            waived: false,
+            waive_reason: None,
+        };
+
+        env.storage()
+            .persistent()
+            .set(&StorageKey::LateFeeRecord(payment_id.clone()), &record);
+
+        crate::events::late_fee_applied(&env, payment_id, late_fee, days_over_grace);
+
+        Ok(record)
+    }
+
+    /// Retrieve a previously applied late fee record.
+    pub fn get_late_fee_record(
+        env: Env,
+        payment_id: String,
+    ) -> Result<crate::types::LateFeeRecord, Error> {
+        env.storage()
+            .persistent()
+            .get(&StorageKey::LateFeeRecord(payment_id))
+            .ok_or(Error::LateFeeRecordNotFound)
+    }
+
+    /// Waive a late fee. Only the landlord of the associated agreement may call this.
+    pub fn waive_late_fee(
+        env: Env,
+        agreement_id: String,
+        payment_id: String,
+        reason: String,
+    ) -> Result<(), Error> {
+        use crate::types::LateFeeRecord;
+
+        let agreement: crate::types::RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id))
+            .ok_or(Error::AgreementNotFound)?;
+
+        agreement.landlord.require_auth();
+
+        let mut record: LateFeeRecord = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::LateFeeRecord(payment_id.clone()))
+            .ok_or(Error::LateFeeRecordNotFound)?;
+
+        if record.waived {
+            return Err(Error::LateFeeAlreadyWaived);
+        }
+
+        record.waived = true;
+        record.waive_reason = Some(reason.clone());
+        record.total_due = record.base_amount; // remove late fee from total
+
+        env.storage()
+            .persistent()
+            .set(&StorageKey::LateFeeRecord(payment_id.clone()), &record);
+
+        crate::events::late_fee_waived(&env, payment_id, reason);
+
+        Ok(())
     }
 }

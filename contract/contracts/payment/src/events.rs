@@ -1,5 +1,55 @@
 use soroban_sdk::{contractevent, Env, String};
 
+#[contractevent(topics = ["late_fee_config_set"])]
+pub struct LateFeeConfigSet {
+    #[topic]
+    pub agreement_id: String,
+    pub percentage: u32,
+    pub grace_period: u32,
+}
+
+#[contractevent(topics = ["late_fee_applied"])]
+pub struct LateFeeApplied {
+    #[topic]
+    pub payment_id: String,
+    pub amount: i128,
+    pub days_late: u32,
+}
+
+#[contractevent(topics = ["late_fee_waived"])]
+pub struct LateFeeWaived {
+    #[topic]
+    pub payment_id: String,
+    pub reason: String,
+}
+
+pub(crate) fn late_fee_config_set(
+    env: &Env,
+    agreement_id: String,
+    percentage: u32,
+    grace_period: u32,
+) {
+    LateFeeConfigSet {
+        agreement_id,
+        percentage,
+        grace_period,
+    }
+    .publish(env);
+}
+
+pub(crate) fn late_fee_applied(env: &Env, payment_id: String, amount: i128, days_late: u32) {
+    LateFeeApplied {
+        payment_id,
+        amount,
+        days_late,
+    }
+    .publish(env);
+}
+
+pub(crate) fn late_fee_waived(env: &Env, payment_id: String, reason: String) {
+    LateFeeWaived { payment_id, reason }.publish(env);
+}
+
 #[contractevent(topics = ["recurring_payment_created"])]
 pub struct RecurringPaymentCreated {
     #[topic]

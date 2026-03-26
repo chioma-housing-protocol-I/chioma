@@ -541,3 +541,392 @@ fn test_recurring_payments_retry_logic() {
     assert_eq!(failed_after_retry.len(), 0);
     assert_eq!(client.get_payment_executions(&recurring_id).len(), 1);
 }
+
+// ─── Late Fee Tests ───────────────────────────────────────────────────────────
+
+use crate::late_fee::compute_fee;
+use crate::types::LateFeeConfig;
+
+fn make_late_fee_config(
+    env: &Env,
+    agreement_id: &str,
+    pct: u32,
+    grace: u32,
+    max: i128,
+    compound: bool,
+) -> LateFeeConfig {
+    LateFeeConfig {
+        agreement_id: String::from_str(env, agreement_id),
+        late_fee_percentage: pct,
+        grace_period_days: grace,
+        max_late_fee: max,
+        compounding: compound,
+    }
+}
+
+#[allow(dead_code)]
+fn seed_late_fee_config(
+    env: &Env,
+    client: &crate::PaymentContractClient<'_>,
+    config: &LateFeeConfig,
+) {
+    use crate::storage::DataKey;
+    env.as_contract(&client.address, || {
+        env.storage()
+            .persistent()
+            .set(&DataKey::LateFeeConfig(config.agreement_id.clone()), config);
+    });
+}
+
+// ── compute_fee unit tests (pure logic, no env needed) ──────────────────────
+
+#[test]
+fn test_late_fee_within_grace_period() {
+    let env = Env::default();
+    let config = make_late_fee_config(&env, "a1", 5, 5, 0, false);
+    // 3 days late, grace is 5 → no fee
+    assert_eq!(compute_fee(&config, 1000, 3), 0);
+    // exactly at grace boundary → no fee
+    assert_eq!(compute_fee(&config, 1000, 5), 0);
+}
+
+#[test]
+fn test_late_fee_simple_calculation() {
+    let env = Env::default();
+    // 5% per day, 5-day grace, no cap, no compounding
+    // days_late=10 → days_over=5 → fee = 1000 * 5/100 * 5 = 250
+    let config = make_late_fee_config(&env, "a1", 5, 5, 0, false);
+    assert_eq!(compute_fee(&config, 1000, 10), 250);
+}
+
+#[test]
+fn test_late_fee_simple_one_day_over_grace() {
+    let env = Env::default();
+    // 5% per day, 5-day grace → 1 day over → fee = 1000 * 5/100 * 1 = 50
+    let config = make_late_fee_config(&env, "a1", 5, 5, 0, false);
+    assert_eq!(compute_fee(&config, 1000, 6), 50);
+}
+
+#[test]
+fn test_late_fee_max_cap_applied() {
+    let env = Env::default();
+    // Without cap: 1000 * 5/100 * 5 = 250; cap at 100 → 100
+    let config = make_late_fee_config(&env, "a1", 5, 5, 100, false);
+    assert_eq!(compute_fee(&config, 1000, 10), 100);
+}
+
+#[test]
+fn test_late_fee_compounding() {
+    let env = Env::default();
+    // 5% compounding, 5-day grace, days_late=10 → 5 days compounding
+    // fee = 1000 * (1.05^5) - 1000 = 1000 * 1.2762... - 1000 ≈ 276
+    // integer: 1000 * 105^5 / 100^5 - 1000
+    let config = make_late_fee_config(&env, "a1", 5, 5, 0, true);
+    let fee = compute_fee(&config, 1000, 10);
+    // 105^5 = 12762815625, /100^5 = 10000000000 → 1276 - 1000 = 276
+    assert_eq!(fee, 276);
+}
+
+#[test]
+fn test_late_fee_compounding_capped() {
+    let env = Env::default();
+    let config = make_late_fee_config(&env, "a1", 5, 5, 200, true);
+    let fee = compute_fee(&config, 1000, 10);
+    assert_eq!(fee, 200); // capped at 200
+}
+
+#[test]
+fn test_late_fee_zero_grace_period() {
+    let env = Env::default();
+    // No grace period: 1 day late → fee = 1000 * 5/100 * 1 = 50
+    let config = make_late_fee_config(&env, "a1", 5, 0, 0, false);
+    assert_eq!(compute_fee(&config, 1000, 1), 50);
+    assert_eq!(compute_fee(&config, 1000, 0), 0);
+}
+
+// ── Contract-level integration tests ────────────────────────────────────────
+
+#[test]
+fn test_set_and_get_late_fee_config() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(
+        &env,
+        "lf_agr_1",
+        &tenant,
+        &landlord,
+        None,
+        2000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    seed_agreement(&env, &client, "lf_agr_1", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_1"), &5, &5, &500, &false);
+
+    let config = client.get_late_fee_config(&String::from_str(&env, "lf_agr_1"));
+    assert_eq!(config.late_fee_percentage, 5);
+    assert_eq!(config.grace_period_days, 5);
+    assert_eq!(config.max_late_fee, 500);
+    assert!(!config.compounding);
+}
+
+#[test]
+fn test_calculate_late_fee_via_contract() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(
+        &env,
+        "lf_agr_2",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    seed_agreement(&env, &client, "lf_agr_2", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_2"), &5, &5, &0, &false);
+
+    // 10 days late, 5-day grace → 5 days over → 1000 * 5% * 5 = 250
+    let fee = client.calculate_late_fee(
+        &String::from_str(&env, "lf_agr_2"),
+        &String::from_str(&env, "pay_001"),
+        &10,
+    );
+    assert_eq!(fee, 250);
+}
+
+#[test]
+fn test_apply_late_fee_creates_record() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    // next_payment_due = 1000, grace = 5 days (432000s)
+    // set ledger to 1000 + 432000 + 86400 = 1 day past grace
+    let mut agreement = create_test_agreement(
+        &env,
+        "lf_agr_3",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    agreement.next_payment_due = 1000;
+    seed_agreement(&env, &client, "lf_agr_3", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_3"), &5, &5, &0, &false);
+
+    // 1 day past grace period
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1000 + 5 * 86_400 + 86_400 + 1;
+    });
+
+    let record = client.apply_late_fee(
+        &String::from_str(&env, "lf_agr_3"),
+        &String::from_str(&env, "pay_lf_001"),
+    );
+
+    assert_eq!(record.days_late, 1);
+    assert_eq!(record.base_amount, 1000);
+    assert_eq!(record.late_fee, 50); // 1000 * 5% * 1 = 50
+    assert_eq!(record.total_due, 1050);
+    assert!(!record.waived);
+}
+
+#[test]
+fn test_apply_late_fee_not_late_returns_error() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let mut agreement = create_test_agreement(
+        &env,
+        "lf_agr_4",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    agreement.next_payment_due = 1_000_000;
+    seed_agreement(&env, &client, "lf_agr_4", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_4"), &5, &5, &0, &false);
+
+    // Ledger is before due date → not late
+    env.ledger().with_mut(|li| {
+        li.timestamp = 500;
+    });
+
+    let result = client.try_apply_late_fee(
+        &String::from_str(&env, "lf_agr_4"),
+        &String::from_str(&env, "pay_lf_002"),
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_waive_late_fee() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let mut agreement = create_test_agreement(
+        &env,
+        "lf_agr_5",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    agreement.next_payment_due = 1000;
+    seed_agreement(&env, &client, "lf_agr_5", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_5"), &5, &5, &0, &false);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1000 + 5 * 86_400 + 86_400 + 1;
+    });
+
+    client.apply_late_fee(
+        &String::from_str(&env, "lf_agr_5"),
+        &String::from_str(&env, "pay_lf_003"),
+    );
+
+    client.waive_late_fee(
+        &String::from_str(&env, "lf_agr_5"),
+        &String::from_str(&env, "pay_lf_003"),
+        &String::from_str(&env, "Tenant hardship"),
+    );
+
+    let record = client.get_late_fee_record(&String::from_str(&env, "pay_lf_003"));
+    assert!(record.waived);
+    assert_eq!(record.total_due, record.base_amount); // fee removed
+}
+
+#[test]
+fn test_apply_late_fee_duplicate_returns_error() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let mut agreement = create_test_agreement(
+        &env,
+        "lf_agr_6",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    agreement.next_payment_due = 1000;
+    seed_agreement(&env, &client, "lf_agr_6", &agreement);
+
+    client.set_late_fee_config(&String::from_str(&env, "lf_agr_6"), &5, &5, &0, &false);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1000 + 5 * 86_400 + 86_400 + 1;
+    });
+
+    client.apply_late_fee(
+        &String::from_str(&env, "lf_agr_6"),
+        &String::from_str(&env, "pay_lf_004"),
+    );
+
+    // Second apply should fail
+    let result = client.try_apply_late_fee(
+        &String::from_str(&env, "lf_agr_6"),
+        &String::from_str(&env, "pay_lf_004"),
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_compounding_late_fee_via_contract() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(
+        &env,
+        "lf_agr_7",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    seed_agreement(&env, &client, "lf_agr_7", &agreement);
+
+    client.set_late_fee_config(
+        &String::from_str(&env, "lf_agr_7"),
+        &5,
+        &5,
+        &0,
+        &true, // compounding
+    );
+
+    // 10 days late → 5 days over grace → compounding fee = 276
+    let fee = client.calculate_late_fee(
+        &String::from_str(&env, "lf_agr_7"),
+        &String::from_str(&env, "pay_comp_001"),
+        &10,
+    );
+    assert_eq!(fee, 276);
+}

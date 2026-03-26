@@ -29,4 +29,8 @@ pub enum DataKey {
     UserCallCount(soroban_sdk::Address, String),
     /// Block call count for rate limiting
     BlockCallCount(u64, String),
+    /// Late fee configuration per agreement
+    LateFeeConfig(String),
+    /// Late fee record per payment
+    LateFeeRecord(String),
 }

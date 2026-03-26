@@ -61,7 +61,10 @@
       "next": "16.1.5",
       "next@>=16.0.0-beta.0 <16.1.7": ">=16.1.7",
       "next@>=16.0.1 <16.1.7": ">=16.1.7",
-      "micromatch>picomatch": "4.0.4",
+      "micromatch>picomatch": "^2.3.2",
+      "fdir>picomatch": "^4.0.4",
+      "tinyglobby>picomatch": "^4.0.4",
+      "vitest>picomatch": "^4.0.4",
       "picomatch@<2.3.2": ">=2.3.2",
       "picomatch@>=4.0.0 <4.0.4": ">=4.0.4"
     }
