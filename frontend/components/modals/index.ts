@@ -6,7 +6,10 @@
 export { BaseModal } from './BaseModal';
 export { PropertyAgreementModal } from './PropertyAgreementModal';
 export { DisputeModal } from './DisputeModal';
+export { DisputeFilingModal } from './DisputeFilingModal';
 export { DisputeResolutionModal } from './DisputeResolutionModal';
+export { DisputeDetailModal } from './DisputeDetailModal';
+export { EvidenceUploadModal } from './EvidenceUploadModal';
 export { PaymentModal } from './PaymentModal';
 export { RefundModal } from './RefundModal';
 export { UserManagementModal } from './UserManagementModal';

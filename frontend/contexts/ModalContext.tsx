@@ -5,7 +5,10 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 export type ModalType =
   | 'propertyAgreement'
   | 'dispute'
+  | 'disputeFiling'
   | 'disputeResolution'
+  | 'disputeDetail'
+  | 'evidenceUpload'
   | 'payment'
   | 'refund'
   | 'userManagement'
