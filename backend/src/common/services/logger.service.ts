@@ -7,6 +7,74 @@ import * as winston from 'winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 import { ConfigService } from '@nestjs/config';
 
+type AnyRecord = Record<string, any>;
+
+const DEFAULT_REDACT_KEYS = [
+  'password',
+  'pass',
+  'pwd',
+  'secret',
+  'token',
+  'access_token',
+  'refresh_token',
+  'id_token',
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'api_key',
+  'apikey',
+  'private_key',
+  'client_secret',
+  'pin',
+  'otp',
+];
+
+function normalizeKey(key: string): string {
+  return key.trim().toLowerCase().replace(/[\s-]/g, '_');
+}
+
+function getRedactKeysFromEnv(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((k) => normalizeKey(k))
+    .filter(Boolean);
+}
+
+function createRedactor(options: {
+  redactKeys: string[];
+  placeholder: string;
+  maxDepth: number;
+}) {
+  const redactSet = new Set(options.redactKeys.map(normalizeKey));
+  const placeholder = options.placeholder;
+  const maxDepth = options.maxDepth;
+
+  const redact = (value: unknown, depth: number): unknown => {
+    if (value == null) return value;
+    if (depth > maxDepth) return '[Truncated]';
+    if (typeof value !== 'object') return value;
+
+    if (Array.isArray(value)) {
+      return value.map((v) => redact(v, depth + 1));
+    }
+
+    const obj = value as AnyRecord;
+    const out: AnyRecord = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const nk = normalizeKey(k);
+      if (redactSet.has(nk)) {
+        out[k] = placeholder;
+      } else {
+        out[k] = redact(v, depth + 1);
+      }
+    }
+    return out;
+  };
+
+  return redact;
+}
+
 /**
  * Production-ready logging service with Winston
  * Features:
@@ -46,10 +114,42 @@ export class LoggerService implements NestLoggerService {
       process.env.LOG_FORMAT ||
       (env === 'production' ? 'json' : 'simple');
 
+    const redactKeys = [
+      ...DEFAULT_REDACT_KEYS,
+      ...getRedactKeysFromEnv(
+        this.configService?.get('LOG_REDACT_KEYS') ||
+          process.env.LOG_REDACT_KEYS,
+      ),
+    ];
+    const redactPlaceholder =
+      this.configService?.get('LOG_REDACT_PLACEHOLDER') ||
+      process.env.LOG_REDACT_PLACEHOLDER ||
+      '[REDACTED]';
+    const redactMaxDepthRaw =
+      this.configService?.get('LOG_REDACT_MAX_DEPTH') ||
+      process.env.LOG_REDACT_MAX_DEPTH;
+    const redactMaxDepth = Math.max(
+      1,
+      Number.isFinite(Number(redactMaxDepthRaw))
+        ? Number(redactMaxDepthRaw)
+        : 6,
+    );
+
+    const redact = createRedactor({
+      redactKeys,
+      placeholder: redactPlaceholder,
+      maxDepth: redactMaxDepth,
+    });
+
     // Define log format
     const formats: winston.Logform.Format[] = [
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
       winston.format.errors({ stack: true }),
+      winston.format((info) => {
+        // Redact sensitive keys anywhere in the info object, including metadata.
+        // Winston expects us to return the (possibly modified) info object.
+        return redact(info, 0) as winston.Logform.TransformableInfo;
+      })(),
     ];
 
     // Add JSON format for production, pretty print for development

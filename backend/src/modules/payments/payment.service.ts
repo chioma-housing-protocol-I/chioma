@@ -14,7 +14,6 @@ import {
 import { PaymentMethod } from './entities/payment-method.entity';
 import {
   PaymentSchedule,
-  PaymentInterval,
   PaymentScheduleStatus,
 } from './entities/payment-schedule.entity';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
@@ -27,14 +26,16 @@ import { PaymentMethodFiltersDto } from './dto/payment-method-filters.dto';
 import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
-import {
-  createCipheriv,
-  randomBytes,
-  createHash,
-  createDecipheriv,
-} from 'crypto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
+import {
+  addDays,
+  calculateNextRunAt,
+  decryptMetadata,
+  encryptMetadata,
+  ensureUserId,
+  getIdempotencyKey,
+} from './payment.helpers';
 
 @Injectable()
 export class PaymentService {
@@ -56,9 +57,9 @@ export class PaymentService {
     dto: CreatePaymentRecordDto,
     userId: string,
   ): Promise<Payment> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
 
-    const idempotencyKey = this.getIdempotencyKey(dto);
+    const idempotencyKey = getIdempotencyKey(dto);
 
     if (idempotencyKey) {
       const existingPayment = await this.paymentRepository.findOne({
@@ -82,9 +83,7 @@ export class PaymentService {
     const netAmount = dto.amount - feeAmount;
 
     const user = await this.usersService.findById(userId);
-    const decryptedMetadata = this.decryptMetadata(
-      paymentMethod.encryptedMetadata,
-    );
+    const decryptedMetadata = decryptMetadata(paymentMethod.encryptedMetadata);
 
     // Process payment through gateway
     const chargeResult = await Promise.resolve(
@@ -159,7 +158,7 @@ export class PaymentService {
     dto: ProcessRefundDto,
     userId: string,
   ): Promise<Payment> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const payment = await this.paymentRepository.findOne({
       where: { id: paymentId, userId },
     });
@@ -215,7 +214,7 @@ export class PaymentService {
   }
 
   async generateReceipt(paymentId: string, userId: string): Promise<any> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const payment = await this.paymentRepository.findOne({
       where: { id: paymentId, userId },
       relations: ['user', 'paymentMethod'],
@@ -270,7 +269,7 @@ export class PaymentService {
     filters: PaymentFiltersDto,
     userId: string,
   ): Promise<Payment[]> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const query = this.paymentRepository
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.user', 'user')
@@ -312,7 +311,7 @@ export class PaymentService {
   }
 
   async getPaymentById(id: string, userId: string): Promise<Payment> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const payment = await this.paymentRepository.findOne({
       where: { id, userId },
       relations: ['user', 'paymentMethod'],
@@ -329,7 +328,7 @@ export class PaymentService {
     dto: CreatePaymentMethodDto,
     userId: string,
   ): Promise<PaymentMethod> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
 
     if (dto.isDefault) {
       await this.paymentMethodRepository.update(
@@ -339,7 +338,7 @@ export class PaymentService {
     }
 
     const encryptedMetadata = dto.sensitiveMetadata
-      ? this.encryptMetadata(dto.sensitiveMetadata)
+      ? encryptMetadata(dto.sensitiveMetadata)
       : null;
 
     const paymentMethod = this.paymentMethodRepository.create({
@@ -360,7 +359,7 @@ export class PaymentService {
     dto: UpdatePaymentMethodDto,
     userId: string,
   ): Promise<PaymentMethod> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const paymentMethod = await this.paymentMethodRepository.findOne({
       where: { id, userId },
     });
@@ -390,7 +389,7 @@ export class PaymentService {
     filters: PaymentMethodFiltersDto,
     userId: string,
   ): Promise<PaymentMethod[]> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const query = this.paymentMethodRepository.createQueryBuilder('method');
 
     query.andWhere('method.userId = :userId', { userId });
@@ -405,7 +404,7 @@ export class PaymentService {
   }
 
   async removePaymentMethod(id: number, userId: string): Promise<void> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const paymentMethod = await this.paymentMethodRepository.findOne({
       where: { id, userId },
     });
@@ -421,7 +420,7 @@ export class PaymentService {
     dto: CreatePaymentScheduleDto,
     userId: string,
   ): Promise<PaymentSchedule> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
 
     const paymentMethod = await this.paymentMethodRepository.findOne({
       where: { id: parseInt(dto.paymentMethodId), userId },
@@ -452,7 +451,7 @@ export class PaymentService {
     dto: UpdatePaymentScheduleDto,
     userId: string,
   ): Promise<PaymentSchedule> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const schedule = await this.paymentScheduleRepository.findOne({
       where: { id, userId },
     });
@@ -478,7 +477,7 @@ export class PaymentService {
     filters: PaymentScheduleFiltersDto,
     userId: string,
   ): Promise<PaymentSchedule[]> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const query = this.paymentScheduleRepository
       .createQueryBuilder('schedule')
       .leftJoinAndSelect('schedule.paymentMethod', 'paymentMethod');
@@ -497,7 +496,7 @@ export class PaymentService {
   }
 
   async runPaymentSchedule(id: string, userId: string): Promise<Payment> {
-    this.ensureUserId(userId);
+    ensureUserId(userId);
     const schedule = await this.paymentScheduleRepository.findOne({
       where: { id, userId },
     });
@@ -557,10 +556,7 @@ export class PaymentService {
 
       schedule.retries = 0;
       schedule.lastError = null;
-      schedule.nextRunAt = this.calculateNextRunAt(
-        schedule.nextRunAt,
-        schedule.interval,
-      );
+      schedule.nextRunAt = calculateNextRunAt(schedule.nextRunAt, schedule.interval);
       await this.paymentScheduleRepository.save(schedule);
 
       await this.notificationsService.notify(
@@ -577,7 +573,7 @@ export class PaymentService {
       if (schedule.retries >= schedule.maxRetries) {
         schedule.status = PaymentScheduleStatus.FAILED;
       } else {
-        schedule.nextRunAt = this.addDays(schedule.nextRunAt, 1);
+        schedule.nextRunAt = addDays(schedule.nextRunAt, 1);
       }
 
       await this.paymentScheduleRepository.save(schedule);
@@ -592,83 +588,4 @@ export class PaymentService {
     }
   }
 
-  private calculateNextRunAt(date: Date, interval: PaymentInterval): Date {
-    const next = new Date(date.getTime());
-    switch (interval) {
-      case PaymentInterval.WEEKLY:
-        return this.addDays(next, 7);
-      case PaymentInterval.MONTHLY:
-        next.setMonth(next.getMonth() + 1);
-        return next;
-      case PaymentInterval.QUARTERLY:
-        next.setMonth(next.getMonth() + 3);
-        return next;
-      case PaymentInterval.YEARLY:
-        next.setFullYear(next.getFullYear() + 1);
-        return next;
-      default:
-        return this.addDays(next, 30);
-    }
-  }
-
-  private addDays(date: Date, days: number): Date {
-    const next = new Date(date.getTime());
-    next.setDate(next.getDate() + days);
-    return next;
-  }
-
-  private getIdempotencyKey(dto: CreatePaymentRecordDto): string | null {
-    const key = (dto as { idempotencyKey?: unknown }).idempotencyKey;
-    return typeof key === 'string' ? key : null;
-  }
-
-  private ensureUserId(userId: string): void {
-    if (!userId) {
-      throw new BadRequestException('User ID is required');
-    }
-  }
-
-  private encryptMetadata(data: Record<string, unknown>): string {
-    const secret = process.env.PAYMENT_METADATA_SECRET;
-    if (!secret) {
-      throw new BadRequestException(
-        'PAYMENT_METADATA_SECRET is required to store sensitive metadata',
-      );
-    }
-
-    const iv = randomBytes(12);
-    const key = createHash('sha256').update(secret).digest();
-    const cipher = createCipheriv('aes-256-gcm', key, iv);
-    const payload = Buffer.from(JSON.stringify(data));
-    const encrypted = Buffer.concat([cipher.update(payload), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
-  }
-
-  private decryptMetadata(
-    payload: string | null,
-  ): Record<string, unknown> | null {
-    if (!payload) {
-      return null;
-    }
-
-    const secret = process.env.PAYMENT_METADATA_SECRET;
-    if (!secret) {
-      return null;
-    }
-
-    const [ivHex, tagHex, dataHex] = payload.split(':');
-    if (!ivHex || !tagHex || !dataHex) {
-      return null;
-    }
-
-    const iv = Buffer.from(ivHex, 'hex');
-    const tag = Buffer.from(tagHex, 'hex');
-    const data = Buffer.from(dataHex, 'hex');
-    const key = createHash('sha256').update(secret).digest();
-    const decipher = createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(tag);
-    const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
-    return JSON.parse(decrypted.toString('utf8')) as Record<string, unknown>;
-  }
 }

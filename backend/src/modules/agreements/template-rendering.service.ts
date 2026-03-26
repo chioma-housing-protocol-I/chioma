@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class TemplateRenderingService {
@@ -15,10 +15,13 @@ export class TemplateRenderingService {
   /**
    * Compiles base content and clauses into a full agreement text.
    */
-  compileAgreement(baseContent: string, clauses: { title: string; content: string }[]): string {
+  compileAgreement(
+    baseContent: string,
+    clauses: { title: string; content: string }[],
+  ): string {
     const clausesText = clauses
       .map((c, i) => `${i + 1}. ${c.title}\n${c.content}`)
-      .join("\n\n");
+      .join('\n\n');
     return `${baseContent}\n\n--- ADDITIONAL CLAUSES ---\n\n${clausesText}`;
   }
 }

@@ -38,7 +38,7 @@ export class DisputeController {
   constructor(
     private readonly disputeEnhancedService: DisputeContractEnhancedService,
     private readonly disputeContractService: DisputeContractService,
-  ) { }
+  ) {}
 
   // ==================== Arbiter Management ====================
 

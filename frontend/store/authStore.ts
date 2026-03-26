@@ -10,7 +10,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'tenant' | 'landlord' | 'agent';
+  role: 'tenant' | 'landlord' | 'agent' | 'admin';
 }
 
 interface AuthState {
@@ -188,13 +188,23 @@ export const useAuthStore = create<AuthStore>()(
         }
         */
 
-        // DEV BYPASS: instantly log in as landlord
+        // DEV BYPASS: map demo emails to roles for local testing.
+        const normalizedEmail = (email || 'dev@chioma.local').toLowerCase();
+        const inferredRole: User['role'] = normalizedEmail.includes('admin')
+          ? 'admin'
+          : normalizedEmail.includes('agent')
+            ? 'agent'
+            : normalizedEmail.includes('tenant')
+              ? 'tenant'
+              : 'landlord';
+
         get().setTokens('mock-access-token', 'mock-refresh-token', {
           id: 'dev-123',
-          email: email || 'dev@chioma.local',
-          firstName: 'Dev',
-          lastName: 'Landlord',
-          role: 'landlord',
+          email: normalizedEmail,
+          firstName:
+            inferredRole.charAt(0).toUpperCase() + inferredRole.slice(1),
+          lastName: 'User',
+          role: inferredRole,
         });
         return { success: true };
       },

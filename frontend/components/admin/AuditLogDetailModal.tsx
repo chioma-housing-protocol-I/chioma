@@ -54,7 +54,7 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
                 <Clock size={12} /> Timestamp
               </label>
               <p className="text-sm text-white font-medium">
-                {format(new Date(log.createdAt), 'PPPP p')}
+                {format(new Date(log.performedAt), 'PPPP p')}
               </p>
             </div>
             <div className="space-y-1">
@@ -62,7 +62,7 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
                 <UserIcon size={12} /> Performed By
               </label>
               <p className="text-sm text-white font-medium">
-                {log.user?.email || log.userId || 'System Action'}
+                {log.performedBy || 'System Action'}
               </p>
             </div>
             <div className="space-y-1">
@@ -70,7 +70,7 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
                 <Database size={12} /> Target Entity
               </label>
               <p className="text-sm text-white font-medium">
-                {log.entity} ({log.entityId})
+                {log.entityType} ({log.entityId})
               </p>
             </div>
             <div className="space-y-1">
@@ -94,7 +94,7 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
             </label>
             <div className="bg-black/40 rounded-2xl border border-white/5 p-4 overflow-hidden">
               <pre className="text-xs text-emerald-400 font-mono overflow-x-auto">
-                {JSON.stringify(log.changes || {}, null, 2)}
+                {JSON.stringify(log.newValues || {}, null, 2)}
               </pre>
             </div>
           </div>

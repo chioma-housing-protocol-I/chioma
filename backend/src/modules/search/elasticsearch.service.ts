@@ -60,7 +60,10 @@ export class ElasticsearchService implements OnModuleInit {
   private enabled = false;
 
   constructor(private configService: ConfigService) {
-    this.esUrl = this.configService.get<string>('ELASTICSEARCH_URL', 'http://localhost:9200');
+    this.esUrl = this.configService.get<string>(
+      'ELASTICSEARCH_URL',
+      'http://localhost:9200',
+    );
   }
 
   async onModuleInit(): Promise<void> {
@@ -72,7 +75,9 @@ export class ElasticsearchService implements OnModuleInit {
         await this.ensureIndex();
       }
     } catch {
-      this.logger.warn('Elasticsearch not available, falling back to PostgreSQL search');
+      this.logger.warn(
+        'Elasticsearch not available, falling back to PostgreSQL search',
+      );
     }
   }
 
@@ -105,7 +110,11 @@ export class ElasticsearchService implements OnModuleInit {
       mappings: {
         properties: {
           id: { type: 'keyword' },
-          title: { type: 'text', analyzer: 'property_analyzer', fields: { keyword: { type: 'keyword' } } },
+          title: {
+            type: 'text',
+            analyzer: 'property_analyzer',
+            fields: { keyword: { type: 'keyword' } },
+          },
           description: { type: 'text', analyzer: 'property_analyzer' },
           type: { type: 'keyword' },
           city: { type: 'keyword' },
@@ -158,10 +167,13 @@ export class ElasticsearchService implements OnModuleInit {
   async bulkIndex(docs: PropertySearchDocument[]): Promise<void> {
     if (!this.enabled || docs.length === 0) return;
 
-    const body = docs.flatMap((doc) => [
-      JSON.stringify({ index: { _index: this.indexName, _id: doc.id } }),
-      JSON.stringify(doc),
-    ]).join('\n') + '\n';
+    const body =
+      docs
+        .flatMap((doc) => [
+          JSON.stringify({ index: { _index: this.indexName, _id: doc.id } }),
+          JSON.stringify(doc),
+        ])
+        .join('\n') + '\n';
 
     const response = await fetch(`${this.esUrl}/_bulk`, {
       method: 'POST',
@@ -174,7 +186,9 @@ export class ElasticsearchService implements OnModuleInit {
     }
   }
 
-  async search(filters: SearchFilters): Promise<SearchResult<PropertySearchDocument>> {
+  async search(
+    filters: SearchFilters,
+  ): Promise<SearchResult<PropertySearchDocument>> {
     if (!this.enabled) {
       return { hits: [], total: 0, page: 1, limit: 20, facets: {} };
     }
@@ -200,10 +214,13 @@ export class ElasticsearchService implements OnModuleInit {
     // Keyword filters
     if (filters.city) filterClauses.push({ term: { city: filters.city } });
     if (filters.state) filterClauses.push({ term: { state: filters.state } });
-    if (filters.country) filterClauses.push({ term: { country: filters.country } });
+    if (filters.country)
+      filterClauses.push({ term: { country: filters.country } });
     if (filters.type) filterClauses.push({ term: { type: filters.type } });
-    if (filters.bedrooms) filterClauses.push({ term: { bedrooms: filters.bedrooms } });
-    if (filters.bathrooms) filterClauses.push({ term: { bathrooms: filters.bathrooms } });
+    if (filters.bedrooms)
+      filterClauses.push({ term: { bedrooms: filters.bedrooms } });
+    if (filters.bathrooms)
+      filterClauses.push({ term: { bathrooms: filters.bathrooms } });
 
     // Price range
     if (filters.minPrice || filters.maxPrice) {
@@ -284,12 +301,19 @@ export class ElasticsearchService implements OnModuleInit {
 
     const data = await response.json();
 
-    const hits = (data.hits?.hits || []).map((hit: any) => hit._source as PropertySearchDocument);
-    const total = typeof data.hits?.total === 'object' ? data.hits.total.value : data.hits?.total || 0;
+    const hits = (data.hits?.hits || []).map(
+      (hit: any) => hit._source as PropertySearchDocument,
+    );
+    const total =
+      typeof data.hits?.total === 'object'
+        ? data.hits.total.value
+        : data.hits?.total || 0;
 
     const facets: Record<string, Array<{ key: string; count: number }>> = {};
     if (data.aggregations) {
-      for (const [name, agg] of Object.entries(data.aggregations as Record<string, any>)) {
+      for (const [name, agg] of Object.entries(
+        data.aggregations as Record<string, any>,
+      )) {
         facets[name] = (agg.buckets || []).map((b: any) => ({
           key: b.key,
           count: b.doc_count,

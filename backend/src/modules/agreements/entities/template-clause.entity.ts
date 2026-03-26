@@ -1,15 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
-import { AgreementTemplate } from "./agreement-template.entity";
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { AgreementTemplate } from './agreement-template.entity';
 
-@Entity("template_clauses")
+@Entity('template_clauses')
 export class TemplateClause {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   title: string;
 
-  @Column({ type: "text" })
+  @Column({ type: 'text' })
   content: string;
 
   @Column({ default: 0 })

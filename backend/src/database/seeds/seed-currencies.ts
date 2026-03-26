@@ -1,5 +1,8 @@
 import { DataSource } from 'typeorm';
 import { SupportedCurrency } from '../../modules/transactions/entities/supported-currency.entity';
+import { createScriptLogger } from '../../common/services/script-logger';
+
+const logger = createScriptLogger('seed-currencies');
 
 export async function seedSupportedCurrencies(dataSource: DataSource) {
   const currencyRepo = dataSource.getRepository(SupportedCurrency);
@@ -55,13 +58,13 @@ export async function seedSupportedCurrencies(dataSource: DataSource) {
     if (!existing) {
       const newCurrency = currencyRepo.create(currency);
       await currencyRepo.save(newCurrency);
-      console.log(`✓ Seeded currency: ${currency.code}`);
+      logger.log(`Seeded currency: ${currency.code}`);
     } else {
-      console.log(`- Currency already exists: ${currency.code}`);
+      logger.debug(`Currency already exists: ${currency.code}`);
     }
   }
 
-  console.log('✓ Currency seeding completed');
+  logger.log('Currency seeding completed');
 }
 
 // Run if executed directly
@@ -69,15 +72,19 @@ if (require.main === module) {
   void import('../../database/data-source').then(async ({ AppDataSource }) => {
     try {
       await AppDataSource.initialize();
-      console.log('Database connected');
+      logger.log('Database connected');
 
       await seedSupportedCurrencies(AppDataSource);
 
       await AppDataSource.destroy();
-      console.log('Database connection closed');
+      logger.log('Database connection closed');
       process.exit(0);
     } catch (error) {
-      console.error('Seeding failed:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Seeding failed', {
+        error: message,
+        stack: error?.stack,
+      });
       process.exit(1);
     }
   });

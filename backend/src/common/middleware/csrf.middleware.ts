@@ -2,6 +2,7 @@ import {
   Injectable,
   NestMiddleware,
   UnauthorizedException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
@@ -129,7 +130,7 @@ export class CsrfMiddleware implements NestMiddleware {
       this.logger.error(
         'CSRF cookie httpOnly must be false for double-submit pattern',
       );
-      throw new Error(
+      throw new InternalServerErrorException(
         'Invalid CSRF cookie configuration: httpOnly must be false',
       );
     }
@@ -139,7 +140,7 @@ export class CsrfMiddleware implements NestMiddleware {
       this.logger.error(
         'CSRF cookie must have secure flag in production environment',
       );
-      throw new Error(
+      throw new InternalServerErrorException(
         'Invalid CSRF cookie configuration: secure must be true in production',
       );
     }
@@ -149,7 +150,7 @@ export class CsrfMiddleware implements NestMiddleware {
       this.logger.error(
         `CSRF cookie sameSite must be 'strict' or 'lax', got: ${cookieOptions.sameSite}`,
       );
-      throw new Error(
+      throw new InternalServerErrorException(
         'Invalid CSRF cookie configuration: sameSite must be strict or lax',
       );
     }

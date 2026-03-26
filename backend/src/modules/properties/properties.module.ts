@@ -26,4 +26,4 @@ import { CacheService } from '../../common/cache/cache.service';
   providers: [PropertiesService, PropertyCacheWarmingService, CacheService],
   exports: [PropertiesService],
 })
-export class PropertiesModule { }
+export class PropertiesModule {}

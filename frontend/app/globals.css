@@ -130,3 +130,21 @@ body {
 .property-popup .leaflet-popup-tip {
   background: white;
 }
+
+/* React PDF Styles */
+.react-pdf__Page {
+  max-width: 100%;
+}
+
+.react-pdf__Page__canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+.react-pdf__Page__textContent {
+  border: 1px solid transparent;
+}
+
+.react-pdf__Page__annotations {
+  border: 1px solid transparent;
+}

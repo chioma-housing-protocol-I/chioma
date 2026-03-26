@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { AuditLog, AuditLevel } from './entities/audit-log.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuditRetentionService {
@@ -11,7 +12,28 @@ export class AuditRetentionService {
   constructor(
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getRetentionDays(level: AuditLevel): number {
+    const envKey = {
+      [AuditLevel.INFO]: 'AUDIT_RETENTION_INFO_DAYS',
+      [AuditLevel.WARN]: 'AUDIT_RETENTION_WARN_DAYS',
+      [AuditLevel.ERROR]: 'AUDIT_RETENTION_ERROR_DAYS',
+      [AuditLevel.SECURITY]: 'AUDIT_RETENTION_SECURITY_DAYS',
+    }[level];
+
+    const defaults = {
+      [AuditLevel.INFO]: 90,
+      [AuditLevel.WARN]: 90,
+      [AuditLevel.ERROR]: 180,
+      [AuditLevel.SECURITY]: 365,
+    };
+
+    const configured = this.configService.get<string>(envKey);
+    const parsed = configured ? parseInt(configured, 10) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : defaults[level];
+  }
 
   // Run daily at 2 AM
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
@@ -22,29 +44,42 @@ export class AuditRetentionService {
       // Keep logs for different periods based on level
       const now = new Date();
 
-      // Delete INFO and WARN logs older than 90 days
-      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      // Delete INFO and WARN logs based on retention config
+      const infoDays = this.getRetentionDays(AuditLevel.INFO);
+      const warnDays = this.getRetentionDays(AuditLevel.WARN);
+      const infoCutoff = new Date(
+        now.getTime() - infoDays * 24 * 60 * 60 * 1000,
+      );
+      const warnCutoff = new Date(
+        now.getTime() - warnDays * 24 * 60 * 60 * 1000,
+      );
       const infoWarnDeleted = await this.auditLogRepository.delete({
         level: AuditLevel.INFO,
-        performed_at: LessThan(ninetyDaysAgo),
+        performed_at: LessThan(infoCutoff),
       });
       const warnDeleted = await this.auditLogRepository.delete({
         level: AuditLevel.WARN,
-        performed_at: LessThan(ninetyDaysAgo),
+        performed_at: LessThan(warnCutoff),
       });
 
-      // Delete ERROR logs older than 180 days
-      const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      // Delete ERROR logs based on retention config
+      const errorDays = this.getRetentionDays(AuditLevel.ERROR);
+      const errorCutoff = new Date(
+        now.getTime() - errorDays * 24 * 60 * 60 * 1000,
+      );
       const errorDeleted = await this.auditLogRepository.delete({
         level: AuditLevel.ERROR,
-        performed_at: LessThan(sixMonthsAgo),
+        performed_at: LessThan(errorCutoff),
       });
 
-      // Keep SECURITY logs for 1 year
-      const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      // Keep SECURITY logs based on retention config
+      const securityDays = this.getRetentionDays(AuditLevel.SECURITY);
+      const securityCutoff = new Date(
+        now.getTime() - securityDays * 24 * 60 * 60 * 1000,
+      );
       const securityDeleted = await this.auditLogRepository.delete({
         level: AuditLevel.SECURITY,
-        performed_at: LessThan(oneYearAgo),
+        performed_at: LessThan(securityCutoff),
       });
 
       this.logger.log(

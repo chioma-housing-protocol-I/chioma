@@ -96,4 +96,12 @@ export const queryKeys = {
     list: (filters: object) => [...queryKeys.users.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.users.all, 'detail', id] as const,
   },
+
+  // ── KYC Verifications (Admin) ────────────────────────────────────────────
+  kyc: {
+    all: ['kyc'] as const,
+    lists: () => [...queryKeys.kyc.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.kyc.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.kyc.all, 'detail', id] as const,
+  },
 } as const;

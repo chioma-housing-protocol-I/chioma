@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,9 +16,13 @@ import {
 import { KycService } from './kyc.service';
 import { SubmitKycDto, KycWebhookDto, KycStatusResponseDto } from './kyc.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('KYC')
 @Controller('kyc')
+@UseInterceptors(AuditLogInterceptor)
 export class KycController {
   constructor(private readonly kycService: KycService) {}
 
@@ -24,6 +36,13 @@ export class KycController {
   })
   @ApiResponse({ status: 200, description: 'KYC submission accepted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @AuditLog({
+    action: AuditAction.KYC_SUBMITTED,
+    entityType: 'Kyc',
+    level: AuditLevel.SECURITY,
+    includeNewValues: true,
+    sensitive: true,
+  })
   async submitKyc(
     @Req() req: { user: { id: string } },
     @Body() dto: SubmitKycDto,
@@ -56,6 +75,13 @@ export class KycController {
       'Called by KYC provider to notify status changes. Not for client use.',
   })
   @ApiResponse({ status: 200, description: 'Webhook processed' })
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'Kyc',
+    level: AuditLevel.SECURITY,
+    includeNewValues: true,
+    sensitive: true,
+  })
   async webhook(@Body() dto: KycWebhookDto) {
     await this.kycService.handleWebhook(dto);
     return { success: true };

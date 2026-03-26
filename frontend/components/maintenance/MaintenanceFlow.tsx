@@ -115,7 +115,8 @@ export default function MaintenanceFlow({
   defaultRole = 'tenant',
 }: MaintenanceFlowProps) {
   const user = useAuthStore((state) => state.user);
-  const effectiveRole: MaintenanceRole = user?.role ?? defaultRole;
+  const effectiveRole: MaintenanceRole =
+    (user?.role as MaintenanceRole) ?? defaultRole;
   const isTenant = effectiveRole === 'tenant';
   const isManager = effectiveRole === 'landlord' || effectiveRole === 'agent';
 

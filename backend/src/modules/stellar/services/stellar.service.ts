@@ -32,10 +32,17 @@ import {
   RefundEscrowDto,
   ListEscrowsDto,
 } from '../dto';
+import {
+  assertSufficientBalance,
+  extractStellarErrorMessage,
+  isTransientStellarError,
+} from './stellar-transaction-resilience';
 
 @Injectable()
 export class StellarService {
   private readonly logger = new Logger(StellarService.name);
+  private readonly txSubmitTimeoutMs = 20000;
+  private readonly txSubmitMaxAttempts = 3;
   private readonly horizon: StellarSdk.Horizon.Server;
   private readonly networkPassphrase: string;
   private readonly baseFee: string;
@@ -312,44 +319,47 @@ export class StellarService {
         asset = StellarSdk.Asset.native();
       }
 
+      assertSufficientBalance(networkAccount, dto.amount, assetType, this.baseFee);
+
       // Build transaction
-      const transactionBuilder = new StellarSdk.TransactionBuilder(
-        networkAccount,
-        {
+      const buildTransaction = (source: StellarSdk.Account) => {
+        const transactionBuilder = new StellarSdk.TransactionBuilder(source, {
           fee: this.baseFee,
           networkPassphrase: this.networkPassphrase,
-        },
-      )
-        .addOperation(
-          StellarSdk.Operation.payment({
-            destination: dto.destinationPublicKey,
-            asset,
-            amount: dto.amount,
-          }),
-        )
-        .setTimeout(180);
+        })
+          .addOperation(
+            StellarSdk.Operation.payment({
+              destination: dto.destinationPublicKey,
+              asset,
+              amount: dto.amount,
+            }),
+          )
+          .setTimeout(180);
 
-      // Add memo if provided
-      if (dto.memo) {
-        switch (dto.memoType) {
-          case MemoType.TEXT:
-            transactionBuilder.addMemo(StellarSdk.Memo.text(dto.memo));
-            break;
-          case MemoType.ID:
-            transactionBuilder.addMemo(StellarSdk.Memo.id(dto.memo));
-            break;
-          case MemoType.HASH:
-            transactionBuilder.addMemo(StellarSdk.Memo.hash(dto.memo));
-            break;
-          case MemoType.RETURN:
-            transactionBuilder.addMemo(StellarSdk.Memo.return(dto.memo));
-            break;
-          default:
-            transactionBuilder.addMemo(StellarSdk.Memo.text(dto.memo));
+        // Add memo if provided
+        if (dto.memo) {
+          switch (dto.memoType) {
+            case MemoType.TEXT:
+              transactionBuilder.addMemo(StellarSdk.Memo.text(dto.memo));
+              break;
+            case MemoType.ID:
+              transactionBuilder.addMemo(StellarSdk.Memo.id(dto.memo));
+              break;
+            case MemoType.HASH:
+              transactionBuilder.addMemo(StellarSdk.Memo.hash(dto.memo));
+              break;
+            case MemoType.RETURN:
+              transactionBuilder.addMemo(StellarSdk.Memo.return(dto.memo));
+              break;
+            default:
+              transactionBuilder.addMemo(StellarSdk.Memo.text(dto.memo));
+          }
         }
-      }
 
-      const transaction = transactionBuilder.build();
+        return transactionBuilder.build();
+      };
+
+      let transaction = buildTransaction(networkAccount);
       transaction.sign(sourceKeypair);
 
       // Create pending transaction record
@@ -384,7 +394,18 @@ export class StellarService {
 
       // Submit to network
       try {
-        const result = await this.horizon.submitTransaction(transaction);
+        const result = await this.submitTransactionWithRetry({
+          transaction,
+          sourcePublicKey: dto.sourcePublicKey,
+          sourceKeypair,
+          rebuildAndResign: async () => {
+            const freshSource = await this.horizon.loadAccount(dto.sourcePublicKey);
+            const rebuilt = buildTransaction(freshSource);
+            rebuilt.sign(sourceKeypair);
+            transaction = rebuilt;
+            return rebuilt;
+          },
+        });
 
         txRecord.status = TransactionStatus.COMPLETED;
         txRecord.ledger = result.ledger;
@@ -401,7 +422,7 @@ export class StellarService {
         return txRecord;
       } catch (submitError: any) {
         txRecord.status = TransactionStatus.FAILED;
-        txRecord.errorMessage = this.extractErrorMessage(submitError);
+        txRecord.errorMessage = extractStellarErrorMessage(submitError);
 
         await queryRunner.manager.save(txRecord);
         await queryRunner.commitTransaction();
@@ -952,16 +973,57 @@ export class StellarService {
 
   // ==================== Helper Methods ====================
 
-  private extractErrorMessage(error: any): string {
-    if (error.response?.data?.extras?.result_codes) {
-      const codes = error.response.data.extras.result_codes;
-      if (codes.operations) {
-        return `Operation failed: ${codes.operations.join(', ')}`;
-      }
-      if (codes.transaction) {
-        return `Transaction failed: ${codes.transaction}`;
+  private async submitTransactionWithRetry(params: {
+    transaction: StellarSdk.Transaction;
+    sourcePublicKey: string;
+    sourceKeypair: StellarSdk.Keypair;
+    rebuildAndResign: () => Promise<StellarSdk.Transaction>;
+  }): Promise<StellarSdk.Horizon.Api.SubmitTransactionResponse> {
+    let currentTx = params.transaction;
+    let delayMs = 500;
+
+    for (let attempt = 1; attempt <= this.txSubmitMaxAttempts; attempt++) {
+      try {
+        return await this.submitWithTimeout(currentTx);
+      } catch (error: any) {
+        const sequenceConflict =
+          error?.response?.data?.extras?.result_codes?.transaction ===
+          'tx_bad_seq';
+        const isTransient = isTransientStellarError(error);
+
+        if (sequenceConflict && attempt < this.txSubmitMaxAttempts) {
+          this.logger.warn(
+            `Sequence conflict for ${params.sourcePublicKey}; rebuilding tx (attempt ${attempt})`,
+          );
+          currentTx = await params.rebuildAndResign();
+          continue;
+        }
+
+        if (isTransient && attempt < this.txSubmitMaxAttempts) {
+          this.logger.warn(
+            `Transient Stellar submit failure (attempt ${attempt}): ${extractStellarErrorMessage(error)}`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          delayMs *= 2;
+          continue;
+        }
+
+        throw error;
       }
     }
-    return error.message || 'Unknown error';
+
+    throw new InternalServerErrorException(
+      'Failed to submit Stellar transaction after retries',
+    );
   }
+
+  private async submitWithTimeout(transaction: StellarSdk.Transaction) {
+    return Promise.race([
+      this.horizon.submitTransaction(transaction),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Transaction submission timeout')), this.txSubmitTimeoutMs),
+      ),
+    ]);
+  }
+
 }

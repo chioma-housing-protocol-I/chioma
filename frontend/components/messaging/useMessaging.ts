@@ -38,6 +38,20 @@ export function useMessaging(): UseMessagingReturn {
   const [isLoadingRooms, setIsLoadingRooms] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
+  const markRoomAsRead = useCallback(async (roomId: string) => {
+    setRooms((prev: ChatRoom[]) =>
+      prev.map((room: ChatRoom) =>
+        room.id === roomId ? { ...room, unreadCount: 0 } : room,
+      ),
+    );
+
+    try {
+      await apiClient.patch(`/messaging/rooms/${roomId}/read`);
+    } catch {
+      // Server support may not exist yet; local clear still improves UX.
+    }
+  }, []);
+
   // ── Fetch rooms on mount ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
@@ -77,13 +91,13 @@ export function useMessaging(): UseMessagingReturn {
 
     // New message from server
     socket.on('message', (message: Message) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === message.id)) return prev;
+      setMessages((prev: Message[]) => {
+        if (prev.some((m: Message) => m.id === message.id)) return prev;
         return [...prev, message];
       });
 
-      setRooms((prev) =>
-        prev.map((r) =>
+      setRooms((prev: ChatRoom[]) =>
+        prev.map((r: ChatRoom) =>
           r.id === message.roomId ? { ...r, lastMessage: message } : r,
         ),
       );
@@ -93,7 +107,7 @@ export function useMessaging(): UseMessagingReturn {
     socket.on('typing', ({ userId, isTyping }: TypingPayload) => {
       if (userId === user.id) return;
 
-      setTypingUsers((prev) => {
+      setTypingUsers((prev: Set<string>) => {
         const next = new Set(prev);
         if (isTyping) next.add(userId);
         else next.delete(userId);
@@ -138,8 +152,9 @@ export function useMessaging(): UseMessagingReturn {
       };
 
       fetchMessages();
+      markRoomAsRead(room.id).catch(() => undefined);
     },
-    [activeRoom],
+    [activeRoom, markRoomAsRead],
   );
 
   // ── Send a message ──────────────────────────────────────────────────────

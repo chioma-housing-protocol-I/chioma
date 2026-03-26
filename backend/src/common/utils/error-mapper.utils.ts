@@ -5,6 +5,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { EntityNotFoundError, QueryFailedError } from 'typeorm';
 
 export interface StandardErrorResponse {
   success: false;
@@ -22,11 +23,11 @@ export class ErrorMapperUtils {
       return error;
     }
 
-    if (error.name === 'EntityNotFoundError' || error.name === 'NotFound') {
+    if (error instanceof EntityNotFoundError) {
       return new NotFoundException(error.message || 'Resource not found');
     }
 
-    if (error.name === 'QueryFailedError' && error.code === '23505') {
+    if (error instanceof QueryFailedError && (error as unknown as { code: string }).code === '23505') {
       return new BadRequestException('Duplicate entry found');
     }
 

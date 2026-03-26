@@ -9,6 +9,7 @@ import {
   Delete,
   Request,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,12 +29,15 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('payments')
+@UseInterceptors(AuditLogInterceptor)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -42,6 +46,12 @@ export class PaymentController {
   @ApiResponse({ status: 201, description: 'Payment recorded' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @AuditLog({
+    action: AuditAction.PAYMENT_COMPLETED,
+    entityType: 'Payment',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   async recordPayment(
     @Body() dto: CreatePaymentRecordDto,
     @Request() req: { user?: { id: string } },
@@ -73,6 +83,12 @@ export class PaymentController {
   }
 
   @Post(':id/refund')
+  @AuditLog({
+    action: AuditAction.PAYMENT_REFUNDED,
+    entityType: 'Payment',
+    level: AuditLevel.WARN,
+    includeNewValues: true,
+  })
   async processRefund(
     @Param('id') id: string,
     @Body() dto: ProcessRefundDto,
@@ -92,10 +108,17 @@ export class PaymentController {
 
 @UseGuards(JwtAuthGuard)
 @Controller('payment-methods')
+@UseInterceptors(AuditLogInterceptor)
 export class PaymentMethodController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'PaymentMethod',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   async createPaymentMethod(
     @Body() dto: CreatePaymentMethodDto,
     @Request() req: { user?: { id: string } },
@@ -112,6 +135,13 @@ export class PaymentMethodController {
   }
 
   @Patch(':id')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'PaymentMethod',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async updatePaymentMethod(
     @Param('id') id: string,
     @Body() dto: UpdatePaymentMethodDto,
@@ -125,6 +155,12 @@ export class PaymentMethodController {
   }
 
   @Delete(':id')
+  @AuditLog({
+    action: AuditAction.DELETE,
+    entityType: 'PaymentMethod',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async deletePaymentMethod(
     @Param('id') id: string,
     @Request() req: { user?: { id: string } },
@@ -164,12 +200,19 @@ export class AgreementPaymentController {
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('payments/schedules')
+@UseInterceptors(AuditLogInterceptor)
 export class PaymentScheduleController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create payment schedule' })
   @ApiResponse({ status: 201, description: 'Schedule created' })
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'PaymentSchedule',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   async createSchedule(
     @Body() dto: CreatePaymentScheduleDto,
     @Request() req: { user?: { id: string } },
@@ -189,6 +232,13 @@ export class PaymentScheduleController {
   }
 
   @Patch(':id')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'PaymentSchedule',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async updateSchedule(
     @Param('id') id: string,
     @Body() dto: UpdatePaymentScheduleDto,
@@ -202,6 +252,12 @@ export class PaymentScheduleController {
   }
 
   @Post(':id/run')
+  @AuditLog({
+    action: AuditAction.PAYMENT_INITIATED,
+    entityType: 'PaymentSchedule',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   async runSchedule(
     @Param('id') id: string,
     @Request() req: { user?: { id: string } },
@@ -210,6 +266,11 @@ export class PaymentScheduleController {
   }
 
   @Post('process-due')
+  @AuditLog({
+    action: AuditAction.BULK_OPERATION,
+    entityType: 'PaymentSchedule',
+    level: AuditLevel.INFO,
+  })
   async processDueSchedules() {
     return this.paymentService.processDueSchedules();
   }

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Keypair,
@@ -60,7 +60,7 @@ export class SorobanClientService {
   getServerKeypair(): Keypair {
     const secretKey = this.configService.get<string>('SERVER_STELLAR_SECRET');
     if (!secretKey) {
-      throw new Error('SERVER_STELLAR_SECRET environment variable is not set');
+      throw new InternalServerErrorException('SERVER_STELLAR_SECRET environment variable is not set');
     }
     return Keypair.fromSecret(secretKey);
   }

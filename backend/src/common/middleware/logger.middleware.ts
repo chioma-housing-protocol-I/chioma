@@ -2,6 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
 import { HttpLog } from '../interfaces/http-log.interface';
+import { LoggerService } from '../services/logger.service';
 
 const SENSITIVE_HEADERS = ['authorization', 'cookie'];
 const SENSITIVE_BODY_FIELDS = ['password', 'token', 'secret'];
@@ -39,6 +40,8 @@ export function sanitizeBody(body: unknown): unknown {
 
 @Injectable()
 export class LoggerMiddleware implements NestMiddleware {
+  constructor(private readonly logger: LoggerService) {}
+
   use(req: Request, res: Response, next: NextFunction) {
     if (req.path === '/health') return next();
 
@@ -103,14 +106,15 @@ export class LoggerMiddleware implements NestMiddleware {
         responseSize,
       };
 
-      const isProd = process.env.NODE_ENV === 'production';
+      const message = `${method} ${url}`;
+      const meta = { http: logPayload };
 
-      if (isProd) {
-        console.log(JSON.stringify(logPayload));
+      if (level === 'ERROR') {
+        this.logger.error(message, meta, 'HTTP');
+      } else if (level === 'WARN') {
+        this.logger.warn(message, meta, 'HTTP');
       } else {
-        console.log(
-          `[${logPayload.timestamp}] ${level}: ${method} ${url} - ${statusCode} - ${responseTime}ms - IP: ${ip} - reqId: ${correlationId}`,
-        );
+        this.logger.log(message, meta, 'HTTP');
       }
     });
 

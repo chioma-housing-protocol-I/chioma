@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
 import {
@@ -182,9 +178,7 @@ export class RentReminderService {
     });
 
     if (!reminder) {
-      throw new NotFoundException(
-        `Reminder with id ${reminderId} not found`,
-      );
+      throw new NotFoundException(`Reminder with id ${reminderId} not found`);
     }
 
     reminder.status = ReminderStatus.CANCELLED;

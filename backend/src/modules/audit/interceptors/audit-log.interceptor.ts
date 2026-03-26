@@ -43,14 +43,11 @@ export class AuditLogInterceptor implements NestInterceptor {
     const ipAddress = this.getClientIp(request);
     const userAgent = request.get('User-Agent');
 
-    const args = context.getArgs();
-    const methodArgs = args.slice(1); // Skip ExecutionContext
-
     return next.handle().pipe(
       tap((result) => {
         this.logOperation(
           auditOptions,
-          methodArgs,
+          request,
           result,
           user,
           ipAddress,
@@ -63,7 +60,7 @@ export class AuditLogInterceptor implements NestInterceptor {
       catchError((error) => {
         this.logOperation(
           auditOptions,
-          methodArgs,
+          request,
           null,
           user,
           ipAddress,
@@ -80,7 +77,7 @@ export class AuditLogInterceptor implements NestInterceptor {
 
   private async logOperation(
     options: AuditLogOptions,
-    methodArgs: any[],
+    request: any,
     result: any,
     user: any,
     ipAddress: string,
@@ -88,12 +85,12 @@ export class AuditLogInterceptor implements NestInterceptor {
     status: AuditStatus,
     errorMessage?: string,
   ): Promise<void> {
-    const entityId = this.extractEntityId(methodArgs, result);
+    const entityId = this.extractEntityId(request, result);
     const oldValues = options.includeOldValues
-      ? this.extractOldValues(methodArgs)
+      ? this.extractOldValues(request)
       : undefined;
     const newValues = options.includeNewValues
-      ? this.extractNewValues(methodArgs, result)
+      ? this.extractNewValues(request, result)
       : undefined;
 
     const level =
@@ -113,50 +110,42 @@ export class AuditLogInterceptor implements NestInterceptor {
       level,
       errorMessage,
       metadata: {
-        method: 'decorated_operation',
+        method: request.method,
+        path: request.originalUrl || request.url,
         sensitive: options.sensitive,
       },
     });
   }
 
-  private extractEntityId(args: any[], result: any): string | undefined {
-    // Try to extract ID from method arguments or result
-    for (const arg of args) {
-      if (arg && typeof arg === 'object' && arg.id) {
-        return arg.id;
-      }
-    }
-    if (result && typeof result === 'object' && result.id) {
-      return result.id;
-    }
-    return undefined;
+  private extractEntityId(request: any, result: any): string | undefined {
+    return (
+      request.params?.id ||
+      request.params?.userId ||
+      request.params?.entityId ||
+      request.body?.id ||
+      result?.id ||
+      result?.paymentId ||
+      undefined
+    );
   }
 
-  private extractOldValues(args: any[]): any {
-    // Look for existing entity in arguments
-    for (const arg of args) {
-      if (arg && typeof arg === 'object' && arg.id && !arg.password) {
-        return arg;
-      }
-    }
-    return undefined;
+  private extractOldValues(request: any): any {
+    // We cannot reliably fetch full pre-image in a generic interceptor.
+    // Capture key request context and rely on service-level logs where needed.
+    return request.params && Object.keys(request.params).length > 0
+      ? { params: request.params }
+      : undefined;
   }
 
-  private extractNewValues(args: any[], result: any): any {
+  private extractNewValues(request: any, result: any): any {
     if (result && typeof result === 'object' && result.id) {
       return result;
     }
-    // Look for update DTO in arguments
-    for (const arg of args) {
-      if (
-        arg &&
-        typeof arg === 'object' &&
-        !arg.id &&
-        Object.keys(arg).length > 0
-      ) {
-        return arg;
-      }
+
+    if (request.body && Object.keys(request.body).length > 0) {
+      return request.body;
     }
+
     return undefined;
   }
 

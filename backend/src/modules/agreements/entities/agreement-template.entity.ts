@@ -1,15 +1,22 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
-import { TemplateClause } from "./template-clause.entity";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { TemplateClause } from './template-clause.entity';
 
-@Entity("agreement_templates")
+@Entity('agreement_templates')
 export class AgreementTemplate {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   name: string;
 
-  @Column({ type: "text" })
+  @Column({ type: 'text' })
   baseContent: string;
 
   @Column()
@@ -18,7 +25,9 @@ export class AgreementTemplate {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => TemplateClause, (clause) => clause.template, { cascade: true })
+  @OneToMany(() => TemplateClause, (clause) => clause.template, {
+    cascade: true,
+  })
   clauses: TemplateClause[];
 
   @CreateDateColumn()

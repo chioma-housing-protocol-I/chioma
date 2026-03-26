@@ -77,7 +77,11 @@ export function encryptSensitiveKycFields(
 
   for (const field of KYC_SENSITIVE_FIELDS) {
     const currentValue = encryptedData[field];
-    if (currentValue !== null && currentValue !== undefined && currentValue !== '') {
+    if (
+      currentValue !== null &&
+      currentValue !== undefined &&
+      currentValue !== ''
+    ) {
       encryptedData[field] = encryptionService.encrypt(
         normalizeString(currentValue),
       );
@@ -129,7 +133,10 @@ export function tryDecryptStoredKycPayload(
 }
 
 export function hashKycPayload(data: KycDataPayload): string {
-  return crypto.createHash('sha256').update(stableStringify(data)).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(stableStringify(data))
+    .digest('hex');
 }
 
 export function prepareKycPayloadForStorage(

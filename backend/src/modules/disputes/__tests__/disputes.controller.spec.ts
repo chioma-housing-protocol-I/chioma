@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
 import { DisputesController } from '../disputes.controller';
 import { DisputesService } from '../disputes.service';
+import { AuditService } from '../../audit/audit.service';
 import { CreateDisputeDto } from '../dto/create-dispute.dto';
 import { AddCommentDto } from '../dto/add-comment.dto';
 import { ResolveDisputeDto } from '../dto/resolve-dispute.dto';
@@ -49,6 +51,18 @@ describe('DisputesController', () => {
             addComment: jest.fn(),
             resolveDispute: jest.fn(),
             getAgreementDisputes: jest.fn(),
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            log: jest.fn(),
+          },
+        },
+        {
+          provide: Reflector,
+          useValue: {
+            get: jest.fn().mockReturnValue(undefined),
           },
         },
       ],

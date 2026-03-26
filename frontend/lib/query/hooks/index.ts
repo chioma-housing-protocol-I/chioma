@@ -33,3 +33,9 @@ export {
   useSuspendUser,
   useActivateUser,
 } from './use-admin-users';
+
+export {
+  usePendingKycVerifications,
+  useApproveKycVerification,
+  useRejectKycVerification,
+} from './use-kyc-verifications';

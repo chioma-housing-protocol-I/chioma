@@ -4,16 +4,19 @@ import { useState } from 'react';
 import { FaSearch, FaBars, FaTimes, FaHome } from 'react-icons/fa';
 import { NotificationBell } from '@/components/notifications';
 import Link from 'next/link';
-import { navItems } from './Sidebar';
+import { getLandlordNavItems } from './Sidebar';
 import Image from 'next/image';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
 import { usePathname } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { useAuth } from '@/store/authStore';
 
 export default function Topbar({ pageTitle }: { pageTitle: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuth();
+  const navItems = getLandlordNavItems(user?.role);
 
   return (
     <>

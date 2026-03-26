@@ -2,10 +2,15 @@ import {
   IsOptional,
   IsString,
   IsDateString,
-  IsIn,
+  IsEnum,
   IsUUID,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../entities/audit-log.entity';
 
 export class QueryAuditLogsDto {
   @IsOptional()
@@ -29,26 +34,16 @@ export class QueryAuditLogsDto {
   entityId?: string;
 
   @IsOptional()
-  @IsIn([
-    'CREATE',
-    'UPDATE',
-    'DELETE',
-    'LOGIN',
-    'LOGOUT',
-    'PASSWORD_CHANGE',
-    'PERMISSION_CHANGE',
-    'DATA_ACCESS',
-    'CONFIG_CHANGE',
-  ])
-  action?: string;
+  @IsEnum(AuditAction)
+  action?: AuditAction;
 
   @IsOptional()
-  @IsIn(['SUCCESS', 'FAILURE'])
-  status?: string;
+  @IsEnum(AuditStatus)
+  status?: AuditStatus;
 
   @IsOptional()
-  @IsIn(['INFO', 'WARN', 'ERROR', 'SECURITY'])
-  level?: string;
+  @IsEnum(AuditLevel)
+  level?: AuditLevel;
 
   @IsOptional()
   @Transform(({ value }) => value?.toLowerCase())

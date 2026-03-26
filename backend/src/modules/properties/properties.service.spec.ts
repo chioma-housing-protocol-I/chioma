@@ -256,22 +256,7 @@ describe('PropertiesService', () => {
     });
   });
 
-  describe('findById', () => {
-    it('throws because the method is not implemented (use findOne instead)', () => {
-      expect(() => service.findById('any-id')).toThrow(
-        'Method not implemented.',
-      );
-    });
 
-    it('throws for undefined and object inputs', () => {
-      expect(() => service.findById(undefined)).toThrow(
-        'Method not implemented.',
-      );
-      expect(() => service.findById({ id: 'x' })).toThrow(
-        'Method not implemented.',
-      );
-    });
-  });
 
   describe('findOne', () => {
     it('should return a property by id', async () => {

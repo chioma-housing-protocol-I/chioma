@@ -137,16 +137,20 @@ export interface DisputeEvidence {
 
 // Audit Types
 export interface AuditLog {
-  id: string;
-  userId: string;
+  id: number;
+  performedBy?: string;
   user?: User;
   action: string;
-  entity: string;
-  entityId: string;
-  changes?: Record<string, unknown>;
+  entityType?: string;
+  entityId?: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  status?: 'SUCCESS' | 'FAILURE';
+  level?: 'INFO' | 'WARN' | 'ERROR' | 'SECURITY';
   ipAddress?: string;
   userAgent?: string;
-  createdAt: string;
+  performedAt: string;
 }
 
 // Transaction Types
@@ -162,6 +166,41 @@ export interface Transaction {
   metadata?: Record<string, unknown>;
   blockchainTxHash?: string;
   createdAt: string;
+}
+
+// KYC Types (Admin)
+export type KycStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NEEDS_INFO';
+
+export interface KycDocument {
+  id: string;
+  type: string;
+  url: string;
+  filename?: string;
+}
+
+export interface KycVerification {
+  id: string;
+  userId: string;
+  status: KycStatus;
+  reason?: string;
+  providerReference?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    name?: string;
+    email: string;
+    phone?: string;
+    role?: User['role'];
+  };
+  kycData?: {
+    first_name?: string;
+    last_name?: string;
+    dob?: string;
+    country?: string;
+    [key: string]: unknown;
+  };
+  documents?: KycDocument[];
 }
 
 // API Response Types
@@ -183,4 +222,28 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
+}
+
+// Document Types
+export type DocumentType = 'pdf' | 'image' | 'docx' | 'xlsx' | 'txt';
+export type DocumentCategory =
+  | 'lease'
+  | 'identity'
+  | 'payment'
+  | 'maintenance'
+  | 'inspection'
+  | 'other';
+
+export interface Document {
+  id: string;
+  name: string;
+  type: DocumentType;
+  url: string;
+  size: number;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+  category?: DocumentCategory;
+  description?: string;
+  thumbnailUrl?: string;
 }

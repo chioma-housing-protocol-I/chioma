@@ -9,12 +9,15 @@
 
 import { AppDataSource } from './data-source';
 import { seedSupportedCurrencies } from './seeds/seed-currencies';
+import { createScriptLogger } from '../common/services/script-logger';
+
+const logger = createScriptLogger('seed-runner');
 
 export async function runAllDataSeeds(): Promise<void> {
   await AppDataSource.initialize();
   try {
     await seedSupportedCurrencies(AppDataSource);
-    console.log('Data seeding completed.');
+    logger.log('Data seeding completed.');
   } finally {
     await AppDataSource.destroy();
   }
@@ -22,7 +25,11 @@ export async function runAllDataSeeds(): Promise<void> {
 
 if (require.main === module) {
   void runAllDataSeeds().catch((err) => {
-    console.error('Seeding failed:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Seeding failed', {
+      error: message,
+      stack: err?.stack,
+    });
     process.exit(1);
   });
 }
