@@ -26,6 +26,8 @@ import {
 } from './dto/auth-response.dto';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { MfaService } from './services/mfa.service';
+import { LoggerService } from '../../common/logger/logger.service';
+import { Logging } from '../../common/logger/logging.decorator';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -44,8 +46,10 @@ export class AuthService {
     private passwordPolicyService: PasswordPolicyService,
     private emailService: EmailService,
     private mfaService: MfaService,
+    private readonly loggerService: LoggerService,
   ) {}
 
+  @Logging({ service: 'AuthService' })
   async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
     const { email, password, firstName, lastName, role } = registerDto;
     const normalizedEmail = email.toLowerCase();
