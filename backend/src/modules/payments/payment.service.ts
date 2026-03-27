@@ -119,11 +119,12 @@ export class PaymentService {
         userId,
         agreementId: dto.agreementId ?? null,
         amount: dto.amount,
-        feeAmount,
+        transactionFee: feeAmount,
         netAmount,
         currency: 'NGN',
         status: PaymentStatus.FAILED,
-        paymentMethodId: paymentMethod.id,
+        paymentMethod: paymentMethod.paymentType,
+        paymentMethodRelationId: paymentMethod.id,
         referenceNumber: dto.referenceNumber,
         processedAt: new Date(),
         metadata: { error: chargeResult.error } as PaymentMetadata,
@@ -145,11 +146,12 @@ export class PaymentService {
       userId,
       agreementId: dto.agreementId ?? null,
       amount: dto.amount,
-      feeAmount,
+      transactionFee: feeAmount,
       netAmount,
       currency: 'NGN',
       status: PaymentStatus.COMPLETED,
-      paymentMethodId: paymentMethod.id,
+      paymentMethod: paymentMethod.paymentType,
+      paymentMethodRelationId: paymentMethod.id,
       referenceNumber: dto.referenceNumber || chargeResult.chargeId,
       processedAt: new Date(),
       metadata: { chargeId: chargeResult.chargeId },
@@ -188,7 +190,7 @@ export class PaymentService {
       throw new BadRequestException('Only completed payments can be refunded');
     }
 
-    if (dto.amount > payment.amount - payment.refundedAmount) {
+    if (dto.amount > payment.amount - payment.refundAmount) {
       throw new BadRequestException('Refund amount exceeds available amount');
     }
 
@@ -206,10 +208,11 @@ export class PaymentService {
     }
 
     // Update payment
-    payment.refundedAmount += dto.amount;
+    payment.refundAmount += dto.amount;
     payment.refundReason = dto.reason;
+    payment.refundStatus = 'completed'; // Mocking success for now
     payment.status =
-      payment.refundedAmount >= payment.amount
+      payment.refundAmount >= payment.amount
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIAL_REFUND;
     payment.metadata = {

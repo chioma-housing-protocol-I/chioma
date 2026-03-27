@@ -98,6 +98,27 @@ export class User {
   @Column({ name: 'last_login_at', nullable: true, type: 'timestamp' })
   lastLoginAt: Date | null;
 
+  @Column({ name: 'login_count', type: 'int', default: 0 })
+  loginCount: number;
+
+  @Column({ name: 'preferred_language', type: 'varchar', length: 10, default: 'en' })
+  preferredLanguage: string;
+
+  @Column({ name: 'timezone', type: 'varchar', length: 50, default: 'UTC' })
+  timezone: string;
+
+  @Column({ name: 'two_factor_enabled', type: 'boolean', default: false })
+  twoFactorEnabled: boolean;
+
+  @Column({ name: 'email_notifications', type: 'boolean', default: true })
+  emailNotifications: boolean;
+
+  @Column({ name: 'sms_notifications', type: 'boolean', default: false })
+  smsNotifications: boolean;
+
+  @Column({ name: 'marketing_opt_in', type: 'boolean', default: false })
+  marketingOptIn: boolean;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 

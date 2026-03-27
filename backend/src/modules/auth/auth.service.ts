@@ -156,6 +156,7 @@ export class AuthService {
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
     user.lastLoginAt = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
 
     await this.userRepository.save(user);
 

@@ -51,26 +51,32 @@ export class Payment {
   @Column({ nullable: true, type: 'varchar' })
   agreementId: string | null; // Reference to agreement (no FK constraint)
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { name: 'amount', precision: 12, scale: 2 })
   amount: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0.0 })
-  feeAmount: number;
+  @Column('decimal', { name: 'transaction_fee', precision: 18, scale: 2, default: 0.0 })
+  transactionFee: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
-  netAmount: number; // Will be computed
+  @Column('decimal', { name: 'net_amount', precision: 12, scale: 2, nullable: true })
+  netAmount: number;
 
   @Column({ length: 3, default: 'NGN' })
   currency: string;
 
   @Column({ default: PaymentStatus.PENDING })
-  status: PaymentStatus; // pending, completed, failed, refunded, partial_refund
+  status: PaymentStatus;
+
+  @Column({ name: 'payment_method', type: 'varchar', length: 50, nullable: true })
+  paymentMethod: string;
 
   @ManyToOne(() => PaymentMethod, { nullable: true })
-  paymentMethod: PaymentMethod;
+  paymentMethodRelation: PaymentMethod;
 
   @Column({ nullable: true })
-  paymentMethodId: number;
+  paymentMethodRelationId: number;
+
+  @Column({ name: 'receipt_url', type: 'varchar', length: 255, nullable: true })
+  receiptUrl: string;
 
   @Column({ nullable: true, type: 'varchar' })
   referenceNumber: string;
@@ -84,10 +90,13 @@ export class Payment {
   @Column({ length: 100, nullable: true, type: 'varchar' })
   idempotencyKey: string | null;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0.0 })
-  refundedAmount: number;
+  @Column({ name: 'refund_status', type: 'varchar', length: 20, default: 'none' })
+  refundStatus: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column('decimal', { name: 'refund_amount', precision: 18, scale: 2, default: 0.0 })
+  refundAmount: number;
+
+  @Column({ name: 'refund_reason', type: 'text', nullable: true })
   refundReason: string;
 
   @Column({

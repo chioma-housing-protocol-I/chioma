@@ -31,4 +31,7 @@ pub enum DataKey {
     TimelockAction(String),
     TimelockActionCount,
     ActiveTimelockActions,
+    // Versioning keys
+    CurrentVersion,
+    VersionHistory,
 }
