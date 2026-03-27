@@ -38,6 +38,10 @@ import {
   isTransientStellarError,
 } from './stellar-transaction-resilience';
 
+type SubmitTransactionResponse = Awaited<
+  ReturnType<StellarSdk.Horizon.Server['submitTransaction']>
+>;
+
 @Injectable()
 export class StellarService {
   private readonly logger = new Logger(StellarService.name);
@@ -319,7 +323,12 @@ export class StellarService {
         asset = StellarSdk.Asset.native();
       }
 
-      assertSufficientBalance(networkAccount, dto.amount, assetType, this.baseFee);
+      assertSufficientBalance(
+        networkAccount,
+        dto.amount,
+        assetType,
+        this.baseFee,
+      );
 
       // Build transaction
       const buildTransaction = (source: StellarSdk.Account) => {
@@ -399,7 +408,9 @@ export class StellarService {
           sourcePublicKey: dto.sourcePublicKey,
           sourceKeypair,
           rebuildAndResign: async () => {
-            const freshSource = await this.horizon.loadAccount(dto.sourcePublicKey);
+            const freshSource = await this.horizon.loadAccount(
+              dto.sourcePublicKey,
+            );
             const rebuilt = buildTransaction(freshSource);
             rebuilt.sign(sourceKeypair);
             transaction = rebuilt;
@@ -978,7 +989,7 @@ export class StellarService {
     sourcePublicKey: string;
     sourceKeypair: StellarSdk.Keypair;
     rebuildAndResign: () => Promise<StellarSdk.Transaction>;
-  }): Promise<StellarSdk.Horizon.Api.SubmitTransactionResponse> {
+  }): Promise<SubmitTransactionResponse> {
     let currentTx = params.transaction;
     let delayMs = 500;
 
@@ -1017,13 +1028,17 @@ export class StellarService {
     );
   }
 
-  private async submitWithTimeout(transaction: StellarSdk.Transaction) {
+  private async submitWithTimeout(
+    transaction: StellarSdk.Transaction,
+  ): Promise<SubmitTransactionResponse> {
     return Promise.race([
       this.horizon.submitTransaction(transaction),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Transaction submission timeout')), this.txSubmitTimeoutMs),
+        setTimeout(
+          () => reject(new Error('Transaction submission timeout')),
+          this.txSubmitTimeoutMs,
+        ),
       ),
     ]);
   }
-
 }

@@ -19,6 +19,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { Public } from '../auth/decorators/public.decorator';
+import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
+import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 
 @ApiTags('KYC')
 @Controller('kyc')
@@ -69,6 +72,9 @@ export class KycController {
   }
 
   @Post('webhook')
+  @Public()
+  @UseGuards(WebhookSignatureGuard)
+  @WebhookSecret('KYC_WEBHOOK_SECRET')
   @ApiOperation({
     summary: 'KYC provider webhook',
     description:

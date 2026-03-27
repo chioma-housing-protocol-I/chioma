@@ -6,7 +6,7 @@ import {
   IsString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { KycStatus } from './kyc.entity';
+import { KycStatus } from './kyc-status.enum';
 
 export class SubmitKycDto {
   @ApiProperty({

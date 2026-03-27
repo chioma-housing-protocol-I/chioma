@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import {
   ChevronLeft,
@@ -259,9 +260,12 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                           {(user.name ?? user.email).charAt(0)}
                         </div>
                         <div>
-                          <span className="text-white font-medium block">
+                          <Link
+                            href={`/admin/users/${user.id}`}
+                            className="text-white font-medium block hover:text-blue-400 transition-colors"
+                          >
                             {user.name ?? 'Unknown'}
-                          </span>
+                          </Link>
                           <span className="text-[10px] text-blue-300/40 font-mono">
                             {user.email}
                           </span>

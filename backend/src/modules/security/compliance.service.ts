@@ -92,7 +92,8 @@ export class ComplianceService {
     });
 
     // Encryption at rest
-    const encryptionConfigured = !!process.env.SECURITY_ENCRYPTION_KEY;
+    const encryptionConfigured =
+      !!process.env.SECURITY_ENCRYPTION_KEY || !!process.env.DB_ENCRYPTION_KEY;
     findings.push({
       control: 'GDPR Art.32 – Encryption at Rest',
       status: encryptionConfigured ? 'pass' : 'fail',
@@ -102,7 +103,7 @@ export class ComplianceService {
       riskLevel: encryptionConfigured ? 'low' : 'critical',
       remediation: encryptionConfigured
         ? undefined
-        : 'Set SECURITY_ENCRYPTION_KEY environment variable',
+        : 'Set SECURITY_ENCRYPTION_KEY or DB_ENCRYPTION_KEY environment variable',
     });
 
     // MFA enforcement check
@@ -330,7 +331,8 @@ export class ComplianceService {
   private scoreAuthentication(): number {
     let score = 60;
     if (process.env.JWT_SECRET) score += 10;
-    if (process.env.SECURITY_ENCRYPTION_KEY) score += 10;
+    if (process.env.SECURITY_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY)
+      score += 10;
     if (process.env.MFA_REQUIRED === 'true') score += 10;
     if (parseInt(process.env.RATE_LIMIT_AUTH_MAX ?? '0') > 0) score += 10;
     return Math.min(score, 100);
@@ -338,7 +340,8 @@ export class ComplianceService {
 
   private scoreEncryption(): number {
     let score = 50;
-    if (process.env.SECURITY_ENCRYPTION_KEY) score += 30;
+    if (process.env.SECURITY_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY)
+      score += 30;
     if (process.env.NODE_ENV === 'production') score += 20;
     return Math.min(score, 100);
   }

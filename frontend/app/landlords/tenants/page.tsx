@@ -200,6 +200,9 @@ const MOCK_TENANTS: Tenant[] = [
   },
 ];
 
+const tenantSeedData =
+  process.env.NODE_ENV === 'production' ? [] : MOCK_TENANTS;
+
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -369,7 +372,7 @@ export default function TenantsPage() {
   };
 
   const filtered = useMemo(() => {
-    let data = MOCK_TENANTS;
+    let data = tenantSeedData;
     if (search)
       data = data.filter(
         (t) =>
@@ -399,10 +402,10 @@ export default function TenantsPage() {
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = {
-    total: MOCK_TENANTS.length,
-    active: MOCK_TENANTS.filter((t) => t.status === 'Active').length,
-    pending: MOCK_TENANTS.filter((t) => t.status === 'Pending Sign').length,
-    arrears: MOCK_TENANTS.filter((t) => t.status === 'Arrears').length,
+    total: tenantSeedData.length,
+    active: tenantSeedData.filter((t) => t.status === 'Active').length,
+    pending: tenantSeedData.filter((t) => t.status === 'Pending Sign').length,
+    arrears: tenantSeedData.filter((t) => t.status === 'Arrears').length,
   };
 
   const toggleSelect = (id: string) =>

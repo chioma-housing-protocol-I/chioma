@@ -38,7 +38,49 @@ Reusable base component with common modal functionality.
 
 ## Available Modals
 
-### 1. PropertyAgreementModal
+### 1. PropertyDetailModal
+
+View property details with an image gallery and inquiry workflow.
+
+**Features:**
+
+- Image gallery with thumbnail navigation
+- Property specs (beds, baths, area)
+- Amenities and host details
+- Direct workflow action to inquiry modal
+
+### 2. PropertyInquiryModal
+
+Collect lead inquiries from prospective tenants.
+
+**Features:**
+
+- Form validation for name, email, and message
+- Optional phone capture
+- Success/error feedback
+
+### 3. AgreementViewModal
+
+View agreement summary and PDF before signing.
+
+**Features:**
+
+- Agreement financial and date details
+- Embedded PDF preview
+- Download + sign actions
+
+### 4. AgreementSigningModal
+
+Capture electronic signatures with compliance confirmation.
+
+**Features:**
+
+- Signer identity field
+- Typed e-signature field
+- Required terms acceptance checkbox
+- Validation and submit flow
+
+### 5. PropertyAgreementModal
 
 Create, view, or edit rental agreements.
 
@@ -69,7 +111,7 @@ openModal('propertyAgreement', {
 });
 ```
 
-### 2. DisputeModal
+### 6. DisputeModal
 
 File disputes with evidence upload.
 
@@ -92,7 +134,7 @@ openModal('dispute', {
 });
 ```
 
-### 3. DisputeResolutionModal
+### 7. DisputeResolutionModal
 
 Resolve disputes (admin/landlord view).
 
@@ -119,7 +161,7 @@ openModal('disputeResolution', {
 });
 ```
 
-### 4. PaymentModal
+### 8. PaymentModal
 
 Process rent payments.
 
@@ -144,7 +186,7 @@ openModal('payment', {
 });
 ```
 
-### 5. RefundModal
+### 9. RefundModal
 
 Process refunds.
 
@@ -168,7 +210,7 @@ openModal('refund', {
 });
 ```
 
-### 6. UserManagementModal
+### 10. UserManagementModal
 
 Manage user accounts.
 
@@ -203,7 +245,7 @@ openModal('userManagement', {
 });
 ```
 
-### 7. Document Modals
+### 11. Document Modals
 
 See [Document Components README](../documents/README.md) for details.
 

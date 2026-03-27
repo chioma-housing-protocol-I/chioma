@@ -1,0 +1,28 @@
+export enum TenantScreeningProvider {
+  TRANSUNION_SMARTMOVE = 'TRANSUNION_SMARTMOVE',
+  EXPERIAN_CONNECT = 'EXPERIAN_CONNECT',
+}
+
+export enum TenantScreeningStatus {
+  PENDING_CONSENT = 'PENDING_CONSENT',
+  CONSENTED = 'CONSENTED',
+  SUBMITTED = 'SUBMITTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  REVOKED = 'REVOKED',
+}
+
+export enum ScreeningCheckType {
+  CREDIT = 'CREDIT',
+  BACKGROUND = 'BACKGROUND',
+  RENTAL_HISTORY = 'RENTAL_HISTORY',
+}
+
+export enum TenantScreeningRiskLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  REVIEW = 'REVIEW',
+}

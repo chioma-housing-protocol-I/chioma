@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, IsNull, Not, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import {
@@ -11,6 +11,7 @@ import {
 import { SupportedCurrency } from '../../transactions/entities/supported-currency.entity';
 import { DepositRequestDto } from '../dto/deposit-request.dto';
 import { WithdrawRequestDto } from '../dto/withdraw-request.dto';
+import { QueryAnchorTransactionsDto } from '../dto/query-anchor-transactions.dto';
 
 interface AnchorDepositResponse {
   id: string;
@@ -46,6 +47,17 @@ interface AnchorTransactionResponse {
     external_transaction_id?: string;
     message?: string;
   };
+}
+
+interface AnchorTransactionStats {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  refunded: number;
+  verified: number;
+  averageTimeToAnchorSeconds: number;
 }
 
 @Injectable()
@@ -215,6 +227,149 @@ export class AnchorService {
     }
 
     return transaction;
+  }
+
+  async listTransactions(query: QueryAnchorTransactionsDto): Promise<{
+    data: AnchorTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const queryBuilder =
+      this.anchorTransactionRepo.createQueryBuilder('anchorTransaction');
+
+    if (query.type) {
+      queryBuilder.andWhere('anchorTransaction.type = :type', {
+        type: query.type,
+      });
+    }
+
+    if (query.status) {
+      queryBuilder.andWhere('anchorTransaction.status = :status', {
+        status: query.status,
+      });
+    }
+
+    if (query.startDate) {
+      queryBuilder.andWhere('anchorTransaction.createdAt >= :startDate', {
+        startDate: new Date(query.startDate),
+      });
+    }
+
+    if (query.endDate) {
+      const endDate = new Date(query.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      queryBuilder.andWhere('anchorTransaction.createdAt <= :endDate', {
+        endDate,
+      });
+    }
+
+    if (query.search) {
+      const search = `%${query.search.trim()}%`;
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('anchorTransaction.id::text ILIKE :search', { search })
+            .orWhere('anchorTransaction.anchorTransactionId ILIKE :search', {
+              search,
+            })
+            .orWhere('anchorTransaction.stellarTransactionId ILIKE :search', {
+              search,
+            })
+            .orWhere('anchorTransaction.walletAddress ILIKE :search', {
+              search,
+            })
+            .orWhere('anchorTransaction.currency ILIKE :search', { search })
+            .orWhere('anchorTransaction.destination ILIKE :search', {
+              search,
+            })
+            .orWhere('anchorTransaction.memo ILIKE :search', { search });
+        }),
+      );
+    }
+
+    queryBuilder
+      .orderBy('anchorTransaction.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  async getTransactionStats(): Promise<AnchorTransactionStats> {
+    const [
+      total,
+      pending,
+      processing,
+      completed,
+      failed,
+      refunded,
+      verified,
+      terminalTransactions,
+    ] = await Promise.all([
+      this.anchorTransactionRepo.count(),
+      this.anchorTransactionRepo.count({
+        where: { status: AnchorTransactionStatus.PENDING },
+      }),
+      this.anchorTransactionRepo.count({
+        where: { status: AnchorTransactionStatus.PROCESSING },
+      }),
+      this.anchorTransactionRepo.count({
+        where: { status: AnchorTransactionStatus.COMPLETED },
+      }),
+      this.anchorTransactionRepo.count({
+        where: { status: AnchorTransactionStatus.FAILED },
+      }),
+      this.anchorTransactionRepo.count({
+        where: { status: AnchorTransactionStatus.REFUNDED },
+      }),
+      this.anchorTransactionRepo.count({
+        where: { stellarTransactionId: Not(IsNull()) },
+      }),
+      this.anchorTransactionRepo.find({
+        where: [
+          { status: AnchorTransactionStatus.COMPLETED },
+          { status: AnchorTransactionStatus.REFUNDED },
+          { status: AnchorTransactionStatus.FAILED },
+        ],
+      }),
+    ]);
+
+    const averageTimeToAnchorSeconds =
+      terminalTransactions.length > 0
+        ? Math.round(
+            terminalTransactions.reduce((totalSeconds, transaction) => {
+              const createdAt = new Date(transaction.createdAt).getTime();
+              const updatedAt = new Date(transaction.updatedAt).getTime();
+              const durationSeconds = Math.max(
+                0,
+                Math.round((updatedAt - createdAt) / 1000),
+              );
+              return totalSeconds + durationSeconds;
+            }, 0) / terminalTransactions.length,
+          )
+        : 0;
+
+    return {
+      total,
+      pending,
+      processing,
+      completed,
+      failed,
+      refunded,
+      verified,
+      averageTimeToAnchorSeconds,
+    };
   }
 
   async handleWebhook(payload: any): Promise<void> {

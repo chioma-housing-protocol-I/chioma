@@ -73,6 +73,9 @@ interface TenantMaintenanceTrackerProps {
   className?: string;
 }
 
+const seedMaintenanceRequests =
+  process.env.NODE_ENV === 'production' ? [] : mockMaintenanceRequests;
+
 export default function TenantMaintenanceTracker({
   className = '',
 }: TenantMaintenanceTrackerProps) {
@@ -91,7 +94,7 @@ export default function TenantMaintenanceTracker({
       setLoading(true);
       // In real app: fetch from /api/maintenance?tenantId=${user.id}
       await new Promise((resolve) => setTimeout(resolve, 500));
-      setRequests(mockMaintenanceRequests);
+      setRequests(seedMaintenanceRequests);
       setLoading(false);
     };
 

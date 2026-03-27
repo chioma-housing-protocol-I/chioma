@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
+import { TenantOnboardingBanner } from '@/components/tenant/TenantOnboardingBanner';
 
 // Mock Data
 const mockAgreements = [
@@ -27,9 +28,14 @@ const mockAgreements = [
   },
 ];
 
+const agreements = process.env.NODE_ENV === 'production' ? [] : mockAgreements;
+
 export default function TenantDashboardOverview() {
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
+      {/* Onboarding Banner */}
+      <TenantOnboardingBanner />
+
       {/* Page Heading */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -153,7 +159,7 @@ export default function TenantDashboardOverview() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
-              {mockAgreements.map((agreement) => (
+              {agreements.map((agreement) => (
                 <tr
                   key={agreement.id}
                   className="hover:bg-neutral-50/50 transition-colors"

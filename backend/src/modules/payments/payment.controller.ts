@@ -10,6 +10,7 @@ import {
   Request,
   UseGuards,
   UseInterceptors,
+  Headers,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,6 +33,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import {
+  CreateEscrowGatewayDto,
+  PaymentGatewayWebhookDto,
+  ProcessStellarRentGatewayDto,
+  ReconcilePaymentsDto,
+  RefundEscrowGatewayDto,
+  ReleaseEscrowGatewayDto,
+  RetryFailedPaymentsDto,
+} from './dto/payment-gateway.dto';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
@@ -68,6 +78,85 @@ export class PaymentController {
     @Request() req: { user?: { id: string } },
   ) {
     return this.paymentService.listPayments(filters, req.user?.id || '');
+  }
+
+  @Post('stellar/rent')
+  @ApiOperation({ summary: 'Process Stellar rent payment' })
+  async processStellarRent(
+    @Body() dto: ProcessStellarRentGatewayDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.processStellarRentPayment(
+      dto,
+      req.user?.id || '',
+    );
+  }
+
+  @Post('stellar/escrow')
+  @ApiOperation({ summary: 'Create Stellar escrow deposit' })
+  async createEscrowDeposit(
+    @Body() dto: CreateEscrowGatewayDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.createEscrowDeposit(dto, req.user?.id || '');
+  }
+
+  @Post('stellar/escrow/:escrowId/release')
+  @ApiOperation({ summary: 'Release Stellar escrow deposit' })
+  async releaseEscrowDeposit(
+    @Param('escrowId') escrowId: string,
+    @Body() dto: ReleaseEscrowGatewayDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.releaseEscrowDeposit(
+      parseInt(escrowId, 10),
+      dto,
+      req.user?.id || '',
+    );
+  }
+
+  @Post('stellar/escrow/:escrowId/refund')
+  @ApiOperation({ summary: 'Refund Stellar escrow deposit' })
+  async refundEscrowDeposit(
+    @Param('escrowId') escrowId: string,
+    @Body() dto: RefundEscrowGatewayDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.refundEscrowDeposit(
+      parseInt(escrowId, 10),
+      dto,
+      req.user?.id || '',
+    );
+  }
+
+  @Post('reconciliation/run')
+  @ApiOperation({ summary: 'Reconcile Stellar-backed payments' })
+  async reconcilePayments(
+    @Body() dto: ReconcilePaymentsDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.reconcileStellarPayments(
+      req.user?.id || '',
+      dto.limit,
+    );
+  }
+
+  @Post('retry-failed')
+  @ApiOperation({ summary: 'Retry failed payment records' })
+  async retryFailedPayments(
+    @Body() dto: RetryFailedPaymentsDto,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.paymentService.retryFailedPayments(
+      req.user?.id || '',
+      dto.limit,
+    );
+  }
+
+  @Get('analytics/summary')
+  @ApiOperation({ summary: 'Get payment analytics summary' })
+  async getPaymentAnalytics(@Request() req: { user?: { id: string } }) {
+    return this.paymentService.getPaymentAnalytics(req.user?.id || '');
   }
 
   @Get(':id')
@@ -273,5 +362,20 @@ export class PaymentScheduleController {
   })
   async processDueSchedules() {
     return this.paymentService.processDueSchedules();
+  }
+}
+
+@ApiTags('Payments')
+@Controller('payments/webhooks')
+export class PaymentWebhookController {
+  constructor(private readonly paymentService: PaymentService) {}
+
+  @Post('gateway')
+  @ApiOperation({ summary: 'Handle payment gateway webhook events' })
+  async handleGatewayWebhook(
+    @Body() dto: PaymentGatewayWebhookDto,
+    @Headers('x-chioma-payment-secret') secret?: string,
+  ) {
+    return this.paymentService.handlePaymentGatewayWebhook(dto, secret);
   }
 }

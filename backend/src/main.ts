@@ -54,6 +54,8 @@ async function bootstrap() {
       'X-XSRF-TOKEN',
       'X-CSRF-Token',
       'X-API-Key',
+      'X-Webhook-Signature',
+      'X-Webhook-Timestamp',
     ],
     exposedHeaders: [
       'X-RateLimit-Limit',
@@ -78,11 +80,26 @@ async function bootstrap() {
     configService.get<string>('REQUEST_SIZE_LIMIT_JSON') || '1mb';
   const urlencodedLimit =
     configService.get<string>('REQUEST_SIZE_LIMIT_URLENCODED') || '1mb';
+  const rawBodySaver = (
+    req: express.Request & { rawBody?: string },
+    _res: express.Response,
+    buffer: Buffer,
+  ) => {
+    if (buffer.length > 0) {
+      req.rawBody = buffer.toString('utf8');
+    }
+  };
 
-  app.use(express.json({ limit: jsonLimit }));
-  app.use(express.urlencoded({ extended: true, limit: urlencodedLimit }));
+  app.use(express.json({ limit: jsonLimit, verify: rawBodySaver }));
+  app.use(
+    express.urlencoded({
+      extended: true,
+      limit: urlencodedLimit,
+      verify: rawBodySaver,
+    }),
+  );
 
-  const loggerMiddleware = new LoggerMiddleware();
+  const loggerMiddleware = new LoggerMiddleware(loggerService);
   app.use(loggerMiddleware.use.bind(loggerMiddleware));
 
   app.useGlobalInterceptors(

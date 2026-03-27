@@ -142,12 +142,7 @@ export class PasswordPolicyService {
   private checkPasswordHistory(_newPassword: string, _userId: string): void {
     void _newPassword;
     void _userId;
-    // Note: This requires a password_history table to be implemented
-    // For now, we'll skip this check but leave the method for future implementation
-    // In a full implementation, you would:
-    // 1. Query password_history table for user's last 5 passwords
-    // 2. Compare new password against hashed versions
-    // 3. Throw error if match found
+    // Password history check requires a password_history table (not yet implemented)
   }
 
   /**

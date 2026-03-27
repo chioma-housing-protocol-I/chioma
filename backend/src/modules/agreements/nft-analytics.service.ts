@@ -58,7 +58,7 @@ export class NftAnalyticsService {
       .slice(0, 20)
       .map((nft) => ({
         agreementId: nft.agreementId,
-        from: nft.originalLandlord,
+        from: nft.originalLandlord ?? '',
         to: nft.currentOwner,
         timestamp: nft.lastTransferredAt!,
       }));

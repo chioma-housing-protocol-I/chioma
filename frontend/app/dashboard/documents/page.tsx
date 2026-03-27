@@ -82,8 +82,11 @@ const mockDocuments: Document[] = [
   },
 ];
 
+const initialDocuments =
+  process.env.NODE_ENV === 'production' ? [] : mockDocuments;
+
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments);
+  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(
     null,
   );

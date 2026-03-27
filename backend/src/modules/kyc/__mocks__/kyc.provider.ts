@@ -1,6 +1,6 @@
 // Mock KYC provider integration for development/testing
 import { Injectable } from '@nestjs/common';
-import { KycStatus } from '../kyc.entity';
+import { KycStatus } from '../kyc-status.enum';
 
 @Injectable()
 export class MockKycProvider {

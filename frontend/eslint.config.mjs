@@ -15,6 +15,15 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  // Ignore unused variables/parameters prefixed with underscore.
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
   // Enforce descriptive alt text on all images (including Next.js Image).
   {
     files: ['**/*.tsx', '**/*.jsx'],

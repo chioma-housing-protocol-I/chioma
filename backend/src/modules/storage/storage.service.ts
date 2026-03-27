@@ -211,6 +211,29 @@ export class StorageService {
     this.logger.log(`Deleted file: ${key}`);
   }
 
+  async listFiles(ownerId: string): Promise<FileMetadata[]> {
+    return this.fileMetadataRepo.find({
+      where: { ownerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async updateMetadata(
+    key: string,
+    ownerId: string,
+    fileName: string,
+  ): Promise<FileMetadata> {
+    const file = await this.fileMetadataRepo.findOne({
+      where: { s3Key: key, ownerId },
+    });
+    if (!file) {
+      throw new NotFoundException('File not found or access denied');
+    }
+
+    file.fileName = fileName;
+    return this.fileMetadataRepo.save(file);
+  }
+
   async getFileMetadata(key: string, ownerId: string): Promise<FileMetadata> {
     const file = await this.fileMetadataRepo.findOne({
       where: { s3Key: key, ownerId },

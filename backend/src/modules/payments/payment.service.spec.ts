@@ -18,9 +18,13 @@ import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentInterval } from './entities/payment-schedule.entity';
+import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
+import { StellarService } from '../stellar/services/stellar.service';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
+  find: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   update: jest.fn(),
@@ -59,6 +63,18 @@ const mockUsersService: { findById: jest.Mock } = {
   findById: jest.fn(),
 };
 
+const mockPaymentProcessingService = {
+  processRentPayment: jest.fn(),
+};
+
+const mockStellarService = {
+  createEscrow: jest.fn(),
+  releaseEscrow: jest.fn(),
+  refundEscrow: jest.fn(),
+  getEscrowById: jest.fn(),
+  getTransactionByHash: jest.fn(),
+};
+
 describe('PaymentService', () => {
   let service: PaymentService;
   let paymentRepository: Repository<Payment>;
@@ -92,6 +108,14 @@ describe('PaymentService', () => {
         {
           provide: UsersService,
           useValue: mockUsersService,
+        },
+        {
+          provide: PaymentProcessingService,
+          useValue: mockPaymentProcessingService,
+        },
+        {
+          provide: StellarService,
+          useValue: mockStellarService,
         },
       ],
     }).compile();
@@ -372,6 +396,173 @@ describe('PaymentService', () => {
       await expect(
         service.runPaymentSchedule('schedule_1', 'user_1'),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('stellar gateway flows', () => {
+    it('records stellar rent payment successfully', async () => {
+      const tenantKeypair = StellarSdk.Keypair.random();
+      mockPaymentProcessingService.processRentPayment.mockResolvedValue('tx_1');
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'payment_xlm_1',
+        status: PaymentStatus.COMPLETED,
+      });
+
+      const result = await service.processStellarRentPayment(
+        {
+          tenantAddress: tenantKeypair.publicKey(),
+          tenantSecret: tenantKeypair.secret(),
+          agreementId: 'agreement_1',
+          amount: '25.5',
+        },
+        'user_1',
+      );
+
+      expect(result.id).toBe('payment_xlm_1');
+      expect(
+        mockPaymentProcessingService.processRentPayment,
+      ).toHaveBeenCalled();
+    });
+
+    it('creates a stellar escrow deposit payment record', async () => {
+      mockStellarService.createEscrow.mockResolvedValue({
+        id: 9,
+        status: 'ACTIVE',
+        blockchainEscrowId: 'stellar_escrow_hash',
+      });
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_escrow_1',
+        referenceNumber: 'escrow:9',
+      });
+
+      const result = await service.createEscrowDeposit(
+        {
+          sourcePublicKey:
+            'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+          destinationPublicKey:
+            'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+          amount: '100',
+          agreementId: 'agreement_2',
+        },
+        'user_1',
+      );
+
+      expect(result.referenceNumber).toBe('escrow:9');
+      expect(mockStellarService.createEscrow).toHaveBeenCalled();
+    });
+
+    it('reconciles stellar escrow payments', async () => {
+      (paymentRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 'pay_1',
+          userId: 'user_1',
+          currency: 'XLM',
+          status: PaymentStatus.PENDING,
+          referenceNumber: 'escrow:7',
+          metadata: { gateway: 'stellar', flow: 'escrow_deposit' },
+        },
+      ]);
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        userId: 'user_1',
+        referenceNumber: 'escrow:7',
+        metadata: { gateway: 'stellar', flow: 'escrow_deposit' },
+      });
+      mockStellarService.getEscrowById.mockResolvedValue({
+        id: 7,
+        status: 'RELEASED',
+        releaseTransactionHash: 'release_hash',
+        refundTransactionHash: null,
+      });
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        status: PaymentStatus.COMPLETED,
+      });
+
+      const result = await service.reconcileStellarPayments('user_1', 10);
+
+      expect(result.updated).toBe(1);
+      expect(mockStellarService.getEscrowById).toHaveBeenCalledWith(7);
+    });
+
+    it('updates payment from webhook event', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        status: PaymentStatus.PENDING,
+        metadata: {},
+      });
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        status: PaymentStatus.COMPLETED,
+      });
+
+      const result = await service.handlePaymentGatewayWebhook({
+        eventType: 'payment.completed',
+        paymentId: 'pay_1',
+        status: 'completed',
+        transactionHash: 'tx_complete',
+      });
+
+      expect(result.processed).toBe(true);
+      expect((result.payment as Payment).status).toBe(PaymentStatus.COMPLETED);
+    });
+
+    it('retries failed payments that still have a payment method', async () => {
+      (paymentRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 'pay_1',
+          userId: 'user_1',
+          status: PaymentStatus.FAILED,
+          amount: 150,
+          paymentMethodId: 2,
+          agreementId: 'agreement_1',
+          referenceNumber: 'ref_1',
+          metadata: {},
+        },
+      ]);
+      const recordSpy = jest
+        .spyOn(service, 'recordPayment')
+        .mockResolvedValue({ id: 'retry_success' } as Payment);
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        metadata: { retryAttempts: 1 },
+      });
+
+      const result = await service.retryFailedPayments('user_1', 10);
+
+      expect(result.retried).toBe(1);
+      expect(recordSpy).toHaveBeenCalled();
+    });
+
+    it('builds payment analytics summary', async () => {
+      (paymentRepository.find as jest.Mock).mockResolvedValue([
+        {
+          amount: 10,
+          refundedAmount: 0,
+          currency: 'XLM',
+          status: PaymentStatus.COMPLETED,
+          metadata: { flow: 'rent' },
+        },
+        {
+          amount: 5,
+          refundedAmount: 2,
+          currency: 'NGN',
+          status: PaymentStatus.FAILED,
+          metadata: { flow: 'gateway' },
+        },
+      ]);
+
+      const result = await service.getPaymentAnalytics('user_1');
+
+      expect(result.totalPayments).toBe(2);
+      expect(result.byFlow.rent).toBe(1);
+      expect(result.byCurrency.XLM.count).toBe(1);
     });
   });
 });

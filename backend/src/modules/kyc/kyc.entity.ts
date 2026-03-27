@@ -7,13 +7,7 @@ import {
   Index,
 } from 'typeorm';
 import { Encrypted } from '../security/decorators/encrypted.decorator';
-
-export enum KycStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  NEEDS_INFO = 'NEEDS_INFO',
-}
+import { KycStatus } from './kyc-status.enum';
 
 @Entity('kyc')
 export class Kyc {

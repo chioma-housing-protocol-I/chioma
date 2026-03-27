@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MaintenanceRequest } from './maintenance-request.entity';
 import { MaintenanceService } from './maintenance.service';
@@ -14,7 +14,7 @@ import { UsersModule } from '../users/users.module';
     TypeOrmModule.forFeature([MaintenanceRequest]),
     StorageModule,
     NotificationsModule,
-    forwardRef(() => ReviewsModule),
+    ReviewsModule,
     PropertiesModule,
     UsersModule,
   ],

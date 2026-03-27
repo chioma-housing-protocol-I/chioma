@@ -4,17 +4,20 @@ import { useState } from 'react';
 import { FaSearch, FaBars, FaTimes, FaHome } from 'react-icons/fa';
 import { NotificationBell } from '@/components/notifications';
 import Link from 'next/link';
-import { getAdminNavItems } from './Sidebar';
 import Image from 'next/image';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
 import { usePathname } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { useAuth } from '@/store/authStore';
+import { getAdminNavItems } from './navigation';
 
 export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
-  const navItems = getAdminNavItems();
+  const { user } = useAuth();
+  const navItems = getAdminNavItems(user?.role);
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
   return (
     <>
@@ -37,7 +40,7 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
           <FaSearch className="text-blue-300/40" />
           <input
             type="text"
-            placeholder="Search audit logs..."
+            placeholder={`Search ${pageTitle.toLowerCase()}...`}
             className="mx-3 w-full bg-transparent outline-none text-white text-sm placeholder:text-blue-300/30"
           />
         </div>
@@ -89,7 +92,7 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
             <input
               autoFocus
               type="text"
-              placeholder="Search audit logs..."
+              placeholder={`Search ${pageTitle.toLowerCase()}...`}
               className="w-full outline-none bg-transparent text-white text-sm placeholder:text-blue-300/30"
             />
             <button
@@ -159,6 +162,11 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
                   </Link>
                 );
               })}
+              {navItems.length === 0 && (
+                <p className="px-4 py-3 text-sm text-blue-200/60">
+                  No admin pages available for your role.
+                </p>
+              )}
             </nav>
           </div>
 
@@ -177,9 +185,11 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
 
               <div className="flex flex-col items-start overflow-hidden">
                 <span className="text-sm font-semibold text-white truncate w-full">
-                  Admin
+                  {fullName || user?.email || 'Admin User'}
                 </span>
-                <span className="text-xs text-blue-300/60">Administrator</span>
+                <span className="text-xs text-blue-300/60 capitalize">
+                  {user?.role || 'admin'}
+                </span>
               </div>
 
               <FaArrowRightFromBracket className="ml-auto h-5 w-5 text-blue-300/40 group-hover:text-blue-300" />

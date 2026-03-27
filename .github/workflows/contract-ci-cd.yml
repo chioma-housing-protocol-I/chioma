@@ -1,7 +1,7 @@
 name: Contract CI
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
     paths:
@@ -13,6 +13,9 @@ on:
     paths:
       - "contract/**"
 
+env:
+  IS_PR: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   contract-lint:
     name: Contract lint
@@ -23,6 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -50,22 +55,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          working-directory: contract
-
-      - name: Install Soroban CLI
-        run: cargo install soroban-cli --locked || echo "Soroban CLI already installed"
-
-      - name: Cargo build
-        run: cargo build --locked
-
-      - name: Cargo test
-        run: cargo test --locked

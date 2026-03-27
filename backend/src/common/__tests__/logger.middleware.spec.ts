@@ -6,16 +6,21 @@ import { Request, Response } from 'express';
 
 describe('LoggerMiddleware', () => {
   let middleware: LoggerMiddleware;
+  const mockLogger = {
+    error: jest.fn(),
+    warn: jest.fn(),
+    log: jest.fn(),
+  };
 
   beforeEach(() => {
     process.env.NODE_ENV = 'production';
-    middleware = new LoggerMiddleware();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    middleware = new LoggerMiddleware(mockLogger as any);
   });
 
   afterEach(() => {
     delete process.env.NODE_ENV;
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('redacts sensitive fields in request body', () => {
@@ -66,12 +71,16 @@ describe('LoggerMiddleware', () => {
 
     middleware.use(req, res, next);
 
-    expect(console.log).toHaveBeenCalled();
-    const logCall = (console.log as jest.Mock).mock.calls[0][0];
-    const parsed = JSON.parse(logCall);
-
-    expect(parsed.level).toBe('ERROR');
-    expect(parsed.statusCode).toBe(500);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'GET /test-error',
+      expect.objectContaining({
+        http: expect.objectContaining({
+          level: 'ERROR',
+          statusCode: 500,
+        }),
+      }),
+      'HTTP',
+    );
   });
 
   it('skips logging for /health endpoint', () => {
@@ -84,7 +93,7 @@ describe('LoggerMiddleware', () => {
 
     middleware.use(req, res, next);
 
-    expect(console.log).not.toHaveBeenCalled();
+    expect(mockLogger.log).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
 });

@@ -30,26 +30,10 @@ interface Property {
   createdAt: string;
 }
 
-const AgentPropertiesPage = () => {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    'all' | 'rented' | 'vacant' | 'maintenance'
-  >('all');
-  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
-  const itemsPerPage = 10;
-
-  useEffect(() => {
-    // Simulate API call to fetch agent properties
-    const fetchProperties = async () => {
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Mock data - in production, this would come from an API
-      const mockProperties: Property[] = [
+const seedProperties = (): Property[] =>
+  process.env.NODE_ENV === 'production'
+    ? []
+    : [
         {
           id: 'prop-1',
           title: 'Highland Luxury Apartment',
@@ -140,8 +124,28 @@ const AgentPropertiesPage = () => {
         },
       ];
 
-      setProperties(mockProperties);
-      setTotalPages(Math.ceil(mockProperties.length / itemsPerPage));
+const AgentPropertiesPage = () => {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'rented' | 'vacant' | 'maintenance'
+  >('all');
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    // Simulate API call to fetch agent properties
+    const fetchProperties = async () => {
+      setIsLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const propertiesFromApi = seedProperties();
+      setProperties(propertiesFromApi);
+      setTotalPages(
+        Math.max(1, Math.ceil(propertiesFromApi.length / itemsPerPage)),
+      );
       setIsLoading(false);
     };
 
@@ -193,22 +197,16 @@ const AgentPropertiesPage = () => {
     return diffDays;
   };
 
-  const handleEdit = (propertyId: string) => {
-    // Navigate to edit page
-    console.log('Edit property:', propertyId);
-    // router.push(`/agents/properties/${propertyId}/edit`);
+  const handleEdit = (_propertyId: string) => {
+    // Navigate to edit page - pending router integration
   };
 
-  const handleUnpublish = (propertyId: string) => {
-    // Handle unpublish action
-    console.log('Unpublish property:', propertyId);
-    // Show confirmation modal and update property status
+  const handleUnpublish = (_propertyId: string) => {
+    // Unpublish action - pending confirmation modal integration
   };
 
-  const handleViewContract = (propertyId: string) => {
-    // Navigate to contract details
-    console.log('View contract for property:', propertyId);
-    // router.push(`/agents/contracts?property=${propertyId}`);
+  const handleViewContract = (_propertyId: string) => {
+    // Navigate to contract details - pending router integration
   };
 
   // Filter and search properties

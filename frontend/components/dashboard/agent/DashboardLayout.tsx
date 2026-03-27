@@ -16,6 +16,7 @@ import {
   Plus,
   LogOut,
   Menu,
+  ClipboardCheck,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 import { useMessagingUnreadCount } from '@/components/messaging/useMessagingUnreadCount';
@@ -46,6 +47,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       icon: Wallet,
     },
     {
+      name: 'Transactions',
+      href: '/agents/transactions',
+      icon: ClipboardCheck,
+    },
+    {
       name: 'Messages',
       href: '/agents/messages',
       icon: MessageSquare,
@@ -61,6 +67,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       name: 'Analytics',
       href: '/agents/analytics',
       icon: PieChart,
+    },
+    {
+      name: 'Onboarding',
+      href: '/agents/onboarding',
+      icon: ClipboardCheck,
     },
     {
       name: 'Notifications',

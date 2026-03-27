@@ -1,6 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentInterval } from './entities/payment-schedule.entity';
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'crypto';
 
 export function ensureUserId(userId: string): void {
   if (!userId) {
@@ -8,7 +13,9 @@ export function ensureUserId(userId: string): void {
   }
 }
 
-export function getIdempotencyKey(dto: { idempotencyKey?: unknown }): string | null {
+export function getIdempotencyKey(dto: {
+  idempotencyKey?: unknown;
+}): string | null {
   return typeof dto.idempotencyKey === 'string' ? dto.idempotencyKey : null;
 }
 
@@ -18,7 +25,10 @@ export function addDays(date: Date, days: number): Date {
   return next;
 }
 
-export function calculateNextRunAt(date: Date, interval: PaymentInterval): Date {
+export function calculateNextRunAt(
+  date: Date,
+  interval: PaymentInterval,
+): Date {
   const next = new Date(date.getTime());
   switch (interval) {
     case PaymentInterval.WEEKLY:
@@ -54,7 +64,9 @@ export function encryptMetadata(data: Record<string, unknown>): string {
   return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-export function decryptMetadata(payload: string | null): Record<string, unknown> | null {
+export function decryptMetadata(
+  payload: string | null,
+): Record<string, unknown> | null {
   if (!payload) {
     return null;
   }

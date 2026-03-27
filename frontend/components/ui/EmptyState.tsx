@@ -2,11 +2,12 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  className?: string;
 }
 
 export function EmptyState({
@@ -15,12 +16,17 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  className = '',
 }: EmptyStateProps) {
   return (
-    <div className="border-2 border-dashed border-neutral-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-      <div className="mb-4">
-        <Icon className="text-neutral-400" size={48} />
-      </div>
+    <div
+      className={`flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-neutral-200 p-12 text-center ${className}`}
+    >
+      {Icon && (
+        <div className="mb-4">
+          <Icon className="text-neutral-400" size={48} />
+        </div>
+      )}
       <h3 className="text-xl font-bold text-neutral-900 mb-2">{title}</h3>
       <p className="text-neutral-500 mb-6 max-w-md">{description}</p>
       {actionLabel && onAction && (

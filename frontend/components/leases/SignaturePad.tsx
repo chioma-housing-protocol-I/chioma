@@ -88,9 +88,6 @@ export function SignaturePad({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // In a real app we might want to get the data url
-    // const dataUrl = canvas.toDataURL('image/png');
-    // For now we just pass a string flag
     onSign('SIGNED_DATA');
   };
 

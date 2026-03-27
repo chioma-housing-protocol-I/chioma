@@ -10,7 +10,9 @@ export type WebhookEvent =
   | 'agreement.activated'
   | 'agreement.expired'
   | 'dispute.created'
-  | 'transaction.indexed';
+  | 'transaction.indexed'
+  | 'screening.completed'
+  | 'screening.failed';
 
 export interface WebhookEndpoint {
   id: UUID;

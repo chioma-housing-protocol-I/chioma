@@ -1,9 +1,8 @@
-import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Kyc, KycStatus } from './kyc.entity';
+import { Kyc } from './kyc.entity';
 import { SubmitKycDto, KycWebhookDto } from './kyc.dto';
-import { UsersService } from '../users/users.service';
 import { EncryptionService } from '../security/encryption.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -15,6 +14,8 @@ import {
   decryptSensitiveKycFields,
   encryptSensitiveKycFields,
 } from './kyc-encryption.util';
+import { UserKycStatusService } from '../users/user-kyc-status.service';
+import { KycStatus } from './kyc-status.enum';
 
 @Injectable()
 export class KycService {
@@ -23,8 +24,7 @@ export class KycService {
   constructor(
     @InjectRepository(Kyc)
     private readonly kycRepository: Repository<Kyc>,
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
+    private readonly userKycStatusService: UserKycStatusService,
     private readonly encryptionService: EncryptionService,
     private readonly auditService: AuditService,
   ) {}
@@ -41,7 +41,7 @@ export class KycService {
         status: KycStatus.PENDING,
       });
 
-      await this.usersService.setKycStatus(userId, KycStatus.PENDING);
+      await this.userKycStatusService.setStatus(userId, KycStatus.PENDING);
       const savedKyc = await this.kycRepository.save(kyc);
 
       await this.auditService.log({
@@ -87,7 +87,7 @@ export class KycService {
     if (!kyc) return;
     kyc.status = dto.status;
     await this.kycRepository.save(kyc);
-    await this.usersService.setKycStatus(kyc.userId, dto.status);
+    await this.userKycStatusService.setStatus(kyc.userId, dto.status);
   }
 
   private encryptKycData(

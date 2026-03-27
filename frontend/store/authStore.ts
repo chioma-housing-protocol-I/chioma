@@ -188,6 +188,13 @@ export const useAuthStore = create<AuthStore>()(
         }
         */
 
+        if (process.env.NODE_ENV === 'production') {
+          return {
+            success: false,
+            error: 'Authentication service is unavailable in this environment.',
+          };
+        }
+
         // DEV BYPASS: map demo emails to roles for local testing.
         const normalizedEmail = (email || 'dev@chioma.local').toLowerCase();
         const inferredRole: User['role'] = normalizedEmail.includes('admin')

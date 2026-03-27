@@ -23,6 +23,8 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 let socket: Socket | null = null;
 let currentToken: string | null = null;
+let heartbeatInterval: NodeJS.Timeout | null = null;
+let lastConnectedAt: Date | null = null;
 const listeners = new Map<string, Set<EventHandler>>();
 const statusListeners = new Set<(status: ConnectionStatus) => void>();
 
@@ -30,6 +32,22 @@ const statusListeners = new Set<(status: ConnectionStatus) => void>();
 
 function notifyStatus(status: ConnectionStatus) {
   statusListeners.forEach((fn) => fn(status));
+}
+
+function startHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(() => {
+    if (socket?.connected) {
+      socket.emit('ping', { timestamp: Date.now() });
+    }
+  }, 25_000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
 }
 
 function getSocketUrl(): string {
@@ -58,13 +76,32 @@ export function connect(options: ConnectionOptions): void {
   socket = io(url, {
     auth: { token: options.token },
     transports: ['websocket'],
-    reconnectionAttempts: 10,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1_000,
-    reconnectionDelayMax: 30_000,
+    reconnectionDelayMax: 5_000,
+    timeout: 20_000,
   });
 
-  socket.on('connect', () => notifyStatus('connected'));
-  socket.on('disconnect', () => notifyStatus('disconnected'));
+  socket.on('connect', () => {
+    lastConnectedAt = new Date();
+    notifyStatus('connected');
+    startHeartbeat();
+  });
+
+  socket.on('disconnect', (reason) => {
+    if (reason === 'io server disconnect') {
+      // Server manually disconnected, try reconnecting
+      socket?.connect();
+    }
+    notifyStatus('disconnected');
+    stopHeartbeat();
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('[WS] Connection error:', error.message);
+    notifyStatus('disconnected');
+  });
 
   // Re-attach domain listeners that were registered before connection
   listeners.forEach((handlers, event) => {
@@ -78,12 +115,14 @@ export function connect(options: ConnectionOptions): void {
  * Tear down the current connection and clear all internal state.
  */
 export function disconnect(): void {
+  stopHeartbeat();
   if (!socket) return;
 
   socket.removeAllListeners();
   socket.disconnect();
   socket = null;
   currentToken = null;
+  lastConnectedAt = null;
   notifyStatus('disconnected');
 }
 

@@ -69,4 +69,44 @@ describe('queryKeys', () => {
       expect(queryKeys.user.preferences()).toEqual(['user', 'preferences']);
     });
   });
+
+  describe('anchorTransactions', () => {
+    it('list includes filters', () => {
+      expect(
+        queryKeys.anchorTransactions.list({ status: 'processing' }),
+      ).toEqual(['anchor-transactions', 'list', { status: 'processing' }]);
+    });
+
+    it('detail scopes to an id', () => {
+      expect(queryKeys.anchorTransactions.detail('anchor-1')).toEqual([
+        'anchor-transactions',
+        'detail',
+        'anchor-1',
+      ]);
+    });
+
+    it('stats key is stable', () => {
+      expect(queryKeys.anchorTransactions.stats()).toEqual([
+        'anchor-transactions',
+        'stats',
+      ]);
+    });
+  });
+
+  describe('security', () => {
+    it('events key includes filters', () => {
+      expect(queryKeys.security.events({ hours: 24 })).toEqual([
+        'security',
+        'events',
+        { hours: 24 },
+      ]);
+    });
+
+    it('incident metrics key is stable', () => {
+      expect(queryKeys.security.incidentMetrics()).toEqual([
+        'security',
+        'incident-metrics',
+      ]);
+    });
+  });
 });

@@ -2,7 +2,7 @@ import { PDFGenerationService } from './pdf-generation.service';
 import { AgreementTemplate } from './entities/agreement-template.entity';
 import { TemplateClause } from './entities/template-clause.entity';
 import { TemplateRenderingService } from './template-rendering.service';
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AgreementsController } from './agreements.controller';
 import { AgreementNftController } from './agreement-nft.controller';
@@ -31,7 +31,7 @@ import { StellarModule } from '../stellar/stellar.module';
       NFTTransfer,
     ]),
     AuditModule,
-    forwardRef(() => ReviewsModule),
+    ReviewsModule,
     StellarModule,
   ],
   controllers: [AgreementsController, AgreementNftController],
@@ -50,4 +50,4 @@ import { StellarModule } from '../stellar/stellar.module';
     EscrowIntegrationService,
   ],
 })
-export class AgreementsModule { }
+export class AgreementsModule {}

@@ -1,3 +1,36 @@
+  @Get('me/export')
+  @ApiOperation({ summary: 'Export all user data (GDPR)' })
+  @ApiResponse({ status: 200, description: 'User data export successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async exportUserData(@CurrentUser() user: User) {
+    return this.usersService.exportUserData(user.id);
+  }
+
+  @Delete('me/gdpr')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete user account and anonymize data (GDPR)' })
+  @ApiResponse({ status: 200, description: 'Account deleted and data anonymized' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async gdprDeleteAccount(@CurrentUser() user: User) {
+    return this.usersService.gdprDeleteAccount(user.id);
+  }
+
+  @Post('me/consent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update user consent preferences (GDPR)' })
+  @ApiResponse({ status: 200, description: 'Consent updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateConsent(@CurrentUser() user: User, @Body() consent: any) {
+    return this.usersService.updateConsent(user.id, consent);
+  }
+
+  @Get('me/privacy-settings')
+  @ApiOperation({ summary: 'Get user privacy settings (GDPR)' })
+  @ApiResponse({ status: 200, description: 'Privacy settings retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getPrivacySettings(@CurrentUser() user: User) {
+    return this.usersService.getPrivacySettings(user.id);
+  }
 import {
   Controller,
   Get,

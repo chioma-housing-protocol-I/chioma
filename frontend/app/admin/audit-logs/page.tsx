@@ -47,6 +47,7 @@ const defaultFilters = {
 export default function LandlordsAuditLogsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const canAccessAudit = ['admin', 'auditor'].includes(user?.role ?? '');
 
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,13 +72,13 @@ export default function LandlordsAuditLogsPage() {
   }, [filters, page]);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== 'admin') {
-      router.replace('/landlords');
+    if (!authLoading && !canAccessAudit) {
+      router.replace('/admin');
     }
-  }, [authLoading, user?.role, router]);
+  }, [authLoading, canAccessAudit, router]);
 
   useEffect(() => {
-    if (authLoading || user?.role !== 'admin') {
+    if (authLoading || !canAccessAudit) {
       return;
     }
 
@@ -113,7 +114,7 @@ export default function LandlordsAuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryString, authLoading, user?.role]);
+  }, [queryString, authLoading, canAccessAudit]);
 
   if (authLoading) {
     return (
@@ -128,7 +129,7 @@ export default function LandlordsAuditLogsPage() {
     );
   }
 
-  if (user?.role !== 'admin') {
+  if (!canAccessAudit) {
     return null;
   }
 

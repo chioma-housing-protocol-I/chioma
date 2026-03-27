@@ -30,7 +30,6 @@ import {
 
 @Injectable()
 export class PropertiesService {
-
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
@@ -43,7 +42,7 @@ export class PropertiesService {
     @InjectRepository(PropertyListingDraft)
     private readonly propertyListingDraftRepository: Repository<PropertyListingDraft>,
     private readonly cacheService: CacheService,
-  ) { }
+  ) {}
 
   private generateCacheKey(query: QueryPropertyDto): string {
     const queryStr = JSON.stringify(query);
@@ -396,8 +395,8 @@ export class PropertiesService {
     const typeRaw = basic.type ?? data.type;
     const type =
       typeRaw !== undefined &&
-        typeRaw !== null &&
-        Object.values(PropertyType).includes(typeRaw as PropertyType)
+      typeRaw !== null &&
+      Object.values(PropertyType).includes(typeRaw as PropertyType)
         ? (typeRaw as PropertyType)
         : PropertyType.APARTMENT;
 

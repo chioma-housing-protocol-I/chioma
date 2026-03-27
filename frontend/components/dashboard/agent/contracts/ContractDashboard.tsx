@@ -19,6 +19,9 @@ const FILTER_TABS: {
   { key: 'EXPIRED', label: 'Expired', icon: XCircle },
 ];
 
+const seedContracts =
+  process.env.NODE_ENV === 'production' ? [] : mockContracts;
+
 export function ContractDashboard() {
   const [activeTab, setActiveTab] = useState<ContractFilterTab>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,7 +30,7 @@ export function ContractDashboard() {
   );
 
   const filteredContracts = useMemo(() => {
-    let results = mockContracts;
+    let results = seedContracts;
 
     if (activeTab !== 'ALL') {
       results = results.filter((c) => c.status === activeTab);
@@ -50,10 +53,10 @@ export function ContractDashboard() {
 
   const counts = useMemo(
     () => ({
-      ALL: mockContracts.length,
-      ACTIVE: mockContracts.filter((c) => c.status === 'ACTIVE').length,
-      PENDING: mockContracts.filter((c) => c.status === 'PENDING').length,
-      EXPIRED: mockContracts.filter((c) => c.status === 'EXPIRED').length,
+      ALL: seedContracts.length,
+      ACTIVE: seedContracts.filter((c) => c.status === 'ACTIVE').length,
+      PENDING: seedContracts.filter((c) => c.status === 'PENDING').length,
+      EXPIRED: seedContracts.filter((c) => c.status === 'EXPIRED').length,
     }),
     [],
   );

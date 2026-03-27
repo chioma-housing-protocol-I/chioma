@@ -11,7 +11,7 @@ import { SorobanClientService } from '../../common/services/soroban-client.servi
 import { ProfileContractService } from '../../blockchain/profile/profile.service';
 import { IpfsService } from './services/ipfs.service';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
-import { KycStatus } from '../kyc/kyc.entity';
+import { KycStatus } from '../kyc/kyc-status.enum';
 import { AccountTypeDto } from './dto/create-profile.dto';
 
 describe('ProfileService', () => {

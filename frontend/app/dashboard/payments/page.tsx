@@ -79,6 +79,13 @@ const DEFAULT_FILTERS: PaymentFilters = {
   endDate: '',
 };
 
+function getDateRangeFromFilters(filters: PaymentFilters): DateRange {
+  return {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  };
+}
+
 // Mock data generators
 const generateMockMetrics = (): PaymentMetrics => {
   const baseVolume = 125000 + Math.random() * 50000;
@@ -621,16 +628,7 @@ export default function PaymentMonitoring() {
   const [filters, setFilters] = useState<PaymentFilters>(DEFAULT_FILTERS);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Generate mock data based on filters
-  const dateRange = useMemo<DateRange>(
-    () => ({
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-    }),
-    [filters.startDate, filters.endDate],
-  );
-
-  const metrics = useMemo(() => generateMockMetrics(), [dateRange]);
+  const metrics = useMemo(() => generateMockMetrics(), []);
   const allFailedPayments = useMemo(() => generateMockFailedPayments(20), []);
   const pendingRefunds = useMemo(() => generateMockPendingRefunds(), []);
   const dailyVolumeData = useMemo(() => generateDailyVolumeData(), []);
@@ -668,7 +666,7 @@ export default function PaymentMonitoring() {
       pendingRefunds,
       dailyVolume: dailyVolumeData,
       monthlyTrends: monthlyTrendsData,
-      filters: dateRange,
+      filters: getDateRangeFromFilters(filters),
       exportedAt: new Date().toISOString(),
     };
 

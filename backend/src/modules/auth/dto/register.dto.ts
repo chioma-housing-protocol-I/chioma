@@ -85,4 +85,12 @@ export class RegisterDto {
     message: 'Phone number must be a valid international format',
   })
   phoneNumber?: string;
+  @ApiPropertyOptional({
+    example: 'REF12345',
+    description: 'Referral code from another user (optional)',
+  })
+  @IsOptional()
+  @IsString({ message: 'Referral code must be a string' })
+  @MaxLength(10, { message: 'Referral code must not exceed 10 characters' })
+  referralCode?: string;
 }

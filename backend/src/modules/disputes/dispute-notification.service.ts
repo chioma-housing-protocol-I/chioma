@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 
 export interface DisputeNotificationData {
@@ -182,30 +182,11 @@ export class DisputeNotificationService {
     type: string,
     title: string,
   ): Promise<void> {
-    // This would typically query for all admin users and send notifications
-    // For now, we'll implement a placeholder that could be connected to
-    // the actual notification system
-
     this.logger.log(
       `Admin notification: ${title} - Dispute ${dispute.disputeId}`,
     );
-
-    // Example implementation:
-    // const admins = await this.userRepository.find({ where: { role: UserRole.ADMIN } });
-    // for (const admin of admins) {
-    //   await this.sendNotification({
-    //     userId: admin.id,
-    //     type,
-    //     title,
-    //     message: `Dispute ${dispute.disputeId} requires attention`,
-    //     data: { disputeId: dispute.disputeId },
-    //   });
-    // }
   }
 
-  /**
-   * Send notification (placeholder for actual notification service)
-   */
   private async sendNotification(notification: {
     userId: string;
     type: string;
@@ -213,24 +194,11 @@ export class DisputeNotificationService {
     message: string;
     data: any;
   }): Promise<void> {
-    // This would integrate with the actual notification service
-    // For now, we'll log it
-
     this.logger.debug(`Notification sent to user ${notification.userId}:`, {
       type: notification.type,
       title: notification.title,
       message: notification.message,
       data: notification.data,
     });
-
-    // Example implementation:
-    // await this.notificationService.create({
-    //   userId: notification.userId,
-    //   type: notification.type,
-    //   title: notification.title,
-    //   message: notification.message,
-    //   data: notification.data,
-    //   isRead: false,
-    // });
   }
 }

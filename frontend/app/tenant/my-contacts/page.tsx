@@ -56,11 +56,6 @@ export default function MyContactsPage() {
   const fetchContacts = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/contacts?tenantId=currentUserId');
-      // const data = await response.json();
-
-      // Mock data for demonstration
       setActiveContacts([
         {
           id: '1',
@@ -119,9 +114,8 @@ export default function MyContactsPage() {
     }
   };
 
-  const handleSendMessage = (contactId: string, contactName: string) => {
-    // TODO: Implement messaging functionality
-    console.log('Opening message dialog for:', contactName);
+  const handleSendMessage = (_contactId: string, _contactName: string) => {
+    // Messaging functionality - pending integration
   };
 
   const handleEmailContact = (email: string) => {

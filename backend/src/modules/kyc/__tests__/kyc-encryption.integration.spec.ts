@@ -3,10 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { KycService } from '../kyc.service';
-import { Kyc, KycStatus } from '../kyc.entity';
-import { UsersService } from '../../users/users.service';
+import { Kyc } from '../kyc.entity';
+import { KycStatus } from '../kyc-status.enum';
 import { EncryptionService } from '../../security/encryption.service';
 import { SubmitKycDto } from '../kyc.dto';
+import { UserKycStatusService } from '../../users/user-kyc-status.service';
+import { AuditService } from '../../audit/audit.service';
 
 /**
  * Integration tests for KYC encryption with the KYC service
@@ -32,8 +34,12 @@ describe('KYC Encryption - Integration Tests', () => {
     findOne: jest.fn(),
   };
 
-  const mockUsersService = {
-    setKycStatus: jest.fn().mockResolvedValue(undefined),
+  const mockUserKycStatusService = {
+    setStatus: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockAuditService = {
+    log: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -43,7 +49,11 @@ describe('KYC Encryption - Integration Tests', () => {
         EncryptionService,
         { provide: ConfigService, useValue: mockConfigService },
         { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
-        { provide: UsersService, useValue: mockUsersService },
+        {
+          provide: UserKycStatusService,
+          useValue: mockUserKycStatusService,
+        },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
@@ -80,7 +90,7 @@ describe('KYC Encryption - Integration Tests', () => {
 
       expect(mockKycRepository.create).toHaveBeenCalled();
       expect(mockKycRepository.save).toHaveBeenCalled();
-      expect(mockUsersService.setKycStatus).toHaveBeenCalledWith(
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
         userId,
         KycStatus.PENDING,
       );
@@ -143,7 +153,7 @@ describe('KYC Encryption - Integration Tests', () => {
         where: { providerReference },
       });
       expect(mockKycRepository.save).toHaveBeenCalled();
-      expect(mockUsersService.setKycStatus).toHaveBeenCalledWith(
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
         'user-123',
         KycStatus.APPROVED,
       );
@@ -160,7 +170,7 @@ describe('KYC Encryption - Integration Tests', () => {
       });
 
       expect(mockKycRepository.save).not.toHaveBeenCalled();
-      expect(mockUsersService.setKycStatus).not.toHaveBeenCalled();
+      expect(mockUserKycStatusService.setStatus).not.toHaveBeenCalled();
     });
   });
 
@@ -268,7 +278,7 @@ describe('KYC Encryption - Integration Tests', () => {
         status: KycStatus.APPROVED,
       });
 
-      expect(mockUsersService.setKycStatus).toHaveBeenCalledWith(
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
         'user-approved',
         KycStatus.APPROVED,
       );
@@ -296,7 +306,7 @@ describe('KYC Encryption - Integration Tests', () => {
         reason: 'Document verification failed',
       });
 
-      expect(mockUsersService.setKycStatus).toHaveBeenCalledWith(
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
         'user-rejected',
         KycStatus.REJECTED,
       );
@@ -324,7 +334,7 @@ describe('KYC Encryption - Integration Tests', () => {
         reason: 'Please provide additional documents',
       });
 
-      expect(mockUsersService.setKycStatus).toHaveBeenCalledWith(
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
         'user-needs-info',
         KycStatus.NEEDS_INFO,
       );

@@ -1,7 +1,5 @@
 import {
   Injectable,
-  Inject,
-  forwardRef,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -41,7 +39,6 @@ export class MaintenanceService {
     private readonly notificationsService: NotificationsService,
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
-    @Inject(forwardRef(() => ReviewPromptService))
     private readonly reviewPromptService: ReviewPromptService,
   ) {}
 

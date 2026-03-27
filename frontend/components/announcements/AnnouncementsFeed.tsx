@@ -105,6 +105,9 @@ interface AnnouncementsFeedProps {
   className?: string;
 }
 
+const seedAnnouncements =
+  process.env.NODE_ENV === 'production' ? [] : mockAnnouncements;
+
 export default function AnnouncementsFeed({
   className = '',
 }: AnnouncementsFeedProps) {
@@ -118,7 +121,7 @@ export default function AnnouncementsFeed({
       setLoading(true);
       // In real app: fetch from /api/announcements
       await new Promise((resolve) => setTimeout(resolve, 500));
-      setAnnouncements(mockAnnouncements);
+      setAnnouncements(seedAnnouncements);
       setLoading(false);
     };
 

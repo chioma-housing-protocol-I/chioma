@@ -386,6 +386,15 @@ export class AgentRegistryService {
     }
   }
 
+  async getAgentTransactions(
+    agentAddress: string,
+  ): Promise<AgentTransaction[]> {
+    return this.agentTransactionRepo.find({
+      where: { agentAddress },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   private async pollTransactionStatus(
     hash: string,
     maxAttempts = 15,

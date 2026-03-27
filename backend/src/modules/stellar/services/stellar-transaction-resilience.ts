@@ -65,7 +65,11 @@ export function extractStellarErrorMessage(error: any): string {
       return `Transaction failed: ${codes.transaction}`;
     }
   }
-  if (String(error?.message || '').toLowerCase().includes('timeout')) {
+  if (
+    String(error?.message || '')
+      .toLowerCase()
+      .includes('timeout')
+  ) {
     return 'Transaction submission timed out';
   }
   return error.message || 'Unknown error';

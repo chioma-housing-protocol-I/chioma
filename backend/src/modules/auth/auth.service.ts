@@ -26,6 +26,9 @@ import {
 } from './dto/auth-response.dto';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { MfaService } from './services/mfa.service';
+import { ReferralService } from '../referral/referral.service';
+import { LoggerService } from '../../common/logger/logger.service';
+import { Logging } from '../../common/logger/logging.decorator';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -44,18 +47,20 @@ export class AuthService {
     private passwordPolicyService: PasswordPolicyService,
     private emailService: EmailService,
     private mfaService: MfaService,
+    private referralService: ReferralService,
+    private readonly loggerService: LoggerService,
   ) {}
 
+  @Logging({ service: 'AuthService' })
   async register(registerDto: RegisterDto): Promise<AuthSuccessResponseDto> {
-    const { email, password, firstName, lastName, role } = registerDto;
+    const { email, password, firstName, lastName, role, referralCode } =
+      registerDto;
+    const normalizedEmail = email.toLowerCase();
 
     // Validate password against policy
     await this.passwordPolicyService.validatePassword(password);
 
-    const existingUser = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-      withDeleted: true,
-    });
+    const existingUser = await this.findUserByEmail(normalizedEmail, true);
 
     if (existingUser) {
       if (existingUser.deletedAt) {
@@ -69,9 +74,11 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const userReferralCode = await this.referralService.generateReferralCode();
 
     const user = this.userRepository.create({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
+      emailHash: this.hashLookupValue(normalizedEmail),
       password: hashedPassword,
       firstName,
       lastName,
@@ -80,9 +87,22 @@ export class AuthService {
       failedLoginAttempts: 0,
       verificationToken,
       isActive: true,
+      referralCode: userReferralCode,
     });
 
     const savedUser = await this.userRepository.save(user);
+
+    // Track referral if code provided
+    if (referralCode) {
+      await this.referralService
+        .trackReferral(savedUser, referralCode)
+        .catch((err) => {
+          this.logger.error(
+            `Failed to track referral for user ${savedUser.id}: ${err.message}`,
+          );
+        });
+    }
+
     this.logger.log(`User registered successfully: ${savedUser.id}`);
 
     // Send verification email asynchronously
@@ -116,9 +136,7 @@ export class AuthService {
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
-    const user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await this.findUserByEmail(email.toLowerCase());
 
     if (!user) {
       this.logger.warn(`Login attempt for non-existent user: ${email}`);
@@ -155,6 +173,7 @@ export class AuthService {
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
     user.lastLoginAt = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
 
     await this.userRepository.save(user);
 
@@ -250,9 +269,7 @@ export class AuthService {
   ): Promise<MessageResponseDto> {
     const { email } = forgotPasswordDto;
 
-    const user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await this.findUserByEmail(email.toLowerCase());
 
     if (!user) {
       this.logger.warn(
@@ -465,5 +482,23 @@ export class AuthService {
     } = user;
     /* eslint-enable @typescript-eslint/no-unused-vars */
     return sanitized;
+  }
+
+  private async findUserByEmail(
+    email: string,
+    withDeleted = false,
+  ): Promise<User | null> {
+    const hash = this.hashLookupValue(email);
+    return this.userRepository.findOne({
+      where: [{ email }, { emailHash: hash }],
+      withDeleted,
+    });
+  }
+
+  private hashLookupValue(value: string): string {
+    return crypto
+      .createHash('sha256')
+      .update(value.trim().toLowerCase())
+      .digest('hex');
   }
 }

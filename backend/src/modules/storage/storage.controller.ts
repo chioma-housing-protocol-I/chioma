@@ -5,6 +5,8 @@ import {
   Get,
   Query,
   Req,
+  Patch,
+  Delete,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,6 +22,8 @@ import {
   GetUploadUrlDto,
   UploadUrlResponseDto,
   DownloadUrlResponseDto,
+  UpdateFileMetadataDto,
+  FileMetadataResponseDto,
 } from './dto/upload-url.dto';
 
 @ApiTags('Storage')
@@ -83,5 +87,53 @@ export class StorageController {
   ) {
     const url = await this.storageService.getDownloadUrl(key, req.user.id);
     return { url };
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'List files',
+    description: 'Returns a list of all files owned by the authenticated user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of files',
+    type: [FileMetadataResponseDto],
+  })
+  async listFiles(@Req() req: { user: { id: string } }) {
+    return this.storageService.listFiles(req.user.id);
+  }
+
+  @Patch()
+  @ApiOperation({
+    summary: 'Update file metadata',
+    description: 'Updates file metadata like file name for a given key.',
+  })
+  @ApiQuery({ name: 'key', required: true })
+  @ApiResponse({
+    status: 200,
+    description: 'File metadata updated',
+    type: FileMetadataResponseDto,
+  })
+  async updateMetadata(
+    @Query('key') key: string,
+    @Body() body: UpdateFileMetadataDto,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.storageService.updateMetadata(key, req.user.id, body.fileName);
+  }
+
+  @Delete()
+  @ApiOperation({
+    summary: 'Delete file',
+    description: 'Deletes a file from storage and removes its metadata.',
+  })
+  @ApiQuery({ name: 'key', required: true })
+  @ApiResponse({ status: 200, description: 'File deleted' })
+  async deleteFile(
+    @Query('key') key: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    await this.storageService.deleteFile(key, req.user.id);
+    return { success: true };
   }
 }

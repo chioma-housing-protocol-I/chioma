@@ -134,7 +134,7 @@ export default function PropertyListing() {
     west: number;
   }) => {
     if (!searchAsIMove) return;
-    const filtered = properties.filter((p) => {
+    const _filtered = properties.filter((p) => {
       if (!p.latitude || !p.longitude) return false;
       return (
         p.latitude >= bounds.south &&
@@ -143,7 +143,6 @@ export default function PropertyListing() {
         p.longitude <= bounds.east
       );
     });
-    console.log('Properties in bounds:', filtered.length);
   };
 
   const filteredProperties = properties;

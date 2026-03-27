@@ -7,12 +7,15 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci-cd.yml"
-  pull_request:
+  pull_request_target:
     branches:
       - "**"
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci-cd.yml"
+
+env:
+  IS_PR: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint-and-test:
@@ -25,6 +28,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -80,6 +85,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -105,14 +112,14 @@ jobs:
           retention-days: 7
 
   deploy:
-    name: Deploy (Optional)
+    name: Deploy to Vercel (Production)
     runs-on: ubuntu-latest
     needs: build
     if: >
-      github.ref == 'refs/heads/main' && 
       github.event_name == 'push' &&
-      contains(github.event.head_commit.modified, 'frontend/') ||
-      contains(github.event.head_commit.added, 'frontend/')
+      github.ref == 'refs/heads/main' && 
+      (contains(github.event.head_commit.modified, 'frontend/') ||
+      contains(github.event.head_commit.added, 'frontend/'))
     defaults:
       run:
         working-directory: ./frontend
@@ -120,6 +127,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4

@@ -56,11 +56,6 @@ export default function MyRentalsPage() {
   const fetchRentals = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/agreements?status=active&tenantId=currentUserId');
-      // const data = await response.json();
-
-      // Mock data for demonstration
       setActiveRentals([
         {
           id: '1',
@@ -99,14 +94,12 @@ export default function MyRentalsPage() {
     }
   };
 
-  const handlePayRent = (agreementId: string) => {
-    // TODO: Implement Stellar payment flow
-    console.log('Initiating payment for agreement:', agreementId);
+  const handlePayRent = (_agreementId: string) => {
+    // Stellar payment flow - pending integration
   };
 
-  const handleViewContract = (smartContractId?: string) => {
-    // TODO: Navigate to smart contract view
-    console.log('Viewing contract:', smartContractId);
+  const handleViewContract = (_smartContractId?: string) => {
+    // Smart contract view - pending integration
   };
 
   const handleRequestMaintenance = (propertyId: string) => {

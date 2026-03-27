@@ -9,7 +9,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 import { User, UserRole, AuthMethod } from './entities/user.entity';
-import { KycStatus } from '../kyc/kyc.entity';
+import { KycStatus } from '../kyc/kyc-status.enum';
 
 describe('UsersService', () => {
   let service: UsersService;

@@ -2,15 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KycService } from './kyc.service';
-import { Kyc, KycStatus } from './kyc.entity';
-import { UsersService } from '../users/users.service';
+import { Kyc } from './kyc.entity';
+import { KycStatus } from './kyc-status.enum';
 import { EncryptionService } from '../security/encryption.service';
 import { SubmitKycDto, KycWebhookDto } from './kyc.dto';
+import { UserKycStatusService } from '../users/user-kyc-status.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('KycService', () => {
   let service: KycService;
   let kycRepository: Repository<Kyc>;
-  let usersService: UsersService;
+  let userKycStatusService: UserKycStatusService;
   let encryptionService: EncryptionService;
 
   const mockKycRepository = {
@@ -19,13 +21,17 @@ describe('KycService', () => {
     findOne: jest.fn(),
   };
 
-  const mockUsersService = {
-    setKycStatus: jest.fn(),
+  const mockUserKycStatusService = {
+    setStatus: jest.fn(),
   };
 
   const mockEncryptionService = {
     encrypt: jest.fn((data: string) => `encrypted_${data}`),
     decrypt: jest.fn((data: string) => data.replace('encrypted_', '')),
+  };
+
+  const mockAuditService = {
+    log: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockUserId = 'user-123';
@@ -51,19 +57,24 @@ describe('KycService', () => {
           useValue: mockKycRepository,
         },
         {
-          provide: UsersService,
-          useValue: mockUsersService,
+          provide: UserKycStatusService,
+          useValue: mockUserKycStatusService,
         },
         {
           provide: EncryptionService,
           useValue: mockEncryptionService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();
 
     service = module.get<KycService>(KycService);
     kycRepository = module.get<Repository<Kyc>>(getRepositoryToken(Kyc));
-    usersService = module.get<UsersService>(UsersService);
+    userKycStatusService =
+      module.get<UserKycStatusService>(UserKycStatusService);
     encryptionService = module.get<EncryptionService>(EncryptionService);
   });
 
@@ -90,14 +101,14 @@ describe('KycService', () => {
 
       mockKycRepository.create.mockReturnValue(mockKyc);
       mockKycRepository.save.mockResolvedValue(mockKyc);
-      mockUsersService.setKycStatus.mockResolvedValue(undefined);
+      mockUserKycStatusService.setStatus.mockResolvedValue(undefined);
 
       const result = await service.submitKyc(mockUserId, submitDto);
 
       expect(encryptionService.encrypt).toHaveBeenCalledTimes(10); // All sensitive fields
       expect(mockKycRepository.create).toHaveBeenCalled();
       expect(mockKycRepository.save).toHaveBeenCalled();
-      expect(usersService.setKycStatus).toHaveBeenCalledWith(
+      expect(userKycStatusService.setStatus).toHaveBeenCalledWith(
         mockUserId,
         KycStatus.PENDING,
       );
@@ -248,7 +259,7 @@ describe('KycService', () => {
         where: { providerReference: 'ref-123' },
       });
       expect(mockKycRepository.save).toHaveBeenCalled();
-      expect(usersService.setKycStatus).toHaveBeenCalledWith(
+      expect(userKycStatusService.setStatus).toHaveBeenCalledWith(
         mockUserId,
         KycStatus.APPROVED,
       );
@@ -265,7 +276,7 @@ describe('KycService', () => {
       await service.handleWebhook(webhookDto);
 
       expect(mockKycRepository.save).not.toHaveBeenCalled();
-      expect(usersService.setKycStatus).not.toHaveBeenCalled();
+      expect(userKycStatusService.setStatus).not.toHaveBeenCalled();
     });
   });
 
@@ -285,12 +296,16 @@ describe('KycService', () => {
             useValue: mockKycRepository,
           },
           {
-            provide: UsersService,
-            useValue: mockUsersService,
+            provide: UserKycStatusService,
+            useValue: mockUserKycStatusService,
           },
           {
             provide: EncryptionService,
             useValue: realEncryptionService,
+          },
+          {
+            provide: AuditService,
+            useValue: mockAuditService,
           },
         ],
       }).compile();

@@ -12,13 +12,14 @@ import { PaymentMethodType } from '../dto/deposit-request.dto';
 
 describe('AnchorService', () => {
   let service: AnchorService;
-  let _anchorTransactionRepo: any;
-  let _supportedCurrencyRepo: any;
 
   const mockAnchorTransactionRepo = {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    count: jest.fn(),
+    find: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockSupportedCurrencyRepo = {
@@ -56,8 +57,6 @@ describe('AnchorService', () => {
     }).compile();
 
     service = module.get<AnchorService>(AnchorService);
-    _anchorTransactionRepo = module.get(getRepositoryToken(AnchorTransaction));
-    _supportedCurrencyRepo = module.get(getRepositoryToken(SupportedCurrency));
   });
 
   afterEach(() => {
@@ -158,6 +157,85 @@ describe('AnchorService', () => {
           stellarTransactionId: 'stellar-tx-456',
         }),
       );
+    });
+  });
+
+  describe('listTransactions', () => {
+    it('should return paginated anchor transactions', async () => {
+      const queryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([
+          [
+            {
+              id: 'anchor-1',
+              status: AnchorTransactionStatus.PROCESSING,
+            },
+          ],
+          1,
+        ]),
+      };
+
+      mockAnchorTransactionRepo.createQueryBuilder.mockReturnValue(
+        queryBuilder,
+      );
+
+      const result = await service.listTransactions({
+        page: 1,
+        limit: 20,
+        status: AnchorTransactionStatus.PROCESSING,
+        search: 'anchor-1',
+      });
+
+      expect(result).toEqual({
+        data: [{ id: 'anchor-1', status: AnchorTransactionStatus.PROCESSING }],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      });
+      expect(mockAnchorTransactionRepo.createQueryBuilder).toHaveBeenCalledWith(
+        'anchorTransaction',
+      );
+      expect(queryBuilder.getManyAndCount).toHaveBeenCalled();
+    });
+  });
+
+  describe('getTransactionStats', () => {
+    it('should calculate anchor transaction statistics', async () => {
+      mockAnchorTransactionRepo.count
+        .mockResolvedValueOnce(12)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(6);
+      mockAnchorTransactionRepo.find.mockResolvedValue([
+        {
+          createdAt: new Date('2026-03-01T10:00:00.000Z'),
+          updatedAt: new Date('2026-03-01T10:02:00.000Z'),
+        },
+        {
+          createdAt: new Date('2026-03-01T11:00:00.000Z'),
+          updatedAt: new Date('2026-03-01T11:01:00.000Z'),
+        },
+      ]);
+
+      const result = await service.getTransactionStats();
+
+      expect(result).toEqual({
+        total: 12,
+        pending: 2,
+        processing: 3,
+        completed: 5,
+        failed: 1,
+        refunded: 1,
+        verified: 6,
+        averageTimeToAnchorSeconds: 90,
+      });
     });
   });
 });

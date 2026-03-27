@@ -38,12 +38,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
-      if (status === HttpStatus.TOO_MANY_REQUESTS) {
+      if (status === 429) {
         const message =
           typeof exceptionResponse === 'string'
             ? exceptionResponse
-            : ((exceptionResponse as Record<string, unknown>).message as string) ||
-              'Too Many Requests';
+            : ((exceptionResponse as Record<string, unknown>)
+                .message as string) || 'Too Many Requests';
         return {
           status,
           body: { statusCode: status, message, retryAfter: 60 },
@@ -62,7 +62,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof EntityNotFoundError) {
       return {
         status: HttpStatus.NOT_FOUND,
-        body: { statusCode: HttpStatus.NOT_FOUND, message: 'Resource not found', error: 'Not Found' },
+        body: {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: 'Resource not found',
+          error: 'Not Found',
+        },
       };
     }
 
@@ -72,28 +76,47 @@ export class AllExceptionsFilter implements ExceptionFilter {
     ) {
       return {
         status: HttpStatus.BAD_REQUEST,
-        body: { statusCode: HttpStatus.BAD_REQUEST, message: 'Duplicate entry found', error: 'Bad Request' },
+        body: {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Duplicate entry found',
+          error: 'Bad Request',
+        },
       };
     }
 
     if (exception instanceof TimeoutError) {
       return {
         status: HttpStatus.REQUEST_TIMEOUT,
-        body: { statusCode: HttpStatus.REQUEST_TIMEOUT, message: exception.message, error: 'Request Timeout' },
+        body: {
+          statusCode: HttpStatus.REQUEST_TIMEOUT,
+          message: exception.message,
+          error: 'Request Timeout',
+        },
       };
     }
 
-    if (exception instanceof NetworkError || exception instanceof MaxRetriesExceededError) {
+    if (
+      exception instanceof NetworkError ||
+      exception instanceof MaxRetriesExceededError
+    ) {
       return {
         status: HttpStatus.SERVICE_UNAVAILABLE,
-        body: { statusCode: HttpStatus.SERVICE_UNAVAILABLE, message: exception.message, error: 'Service Unavailable' },
+        body: {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          message: exception.message,
+          error: 'Service Unavailable',
+        },
       };
     }
 
     if (exception instanceof DecryptionFailedError) {
       return {
         status: HttpStatus.BAD_REQUEST,
-        body: { statusCode: HttpStatus.BAD_REQUEST, message: exception.message, error: 'Bad Request' },
+        body: {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: exception.message,
+          error: 'Bad Request',
+        },
       };
     }
 
@@ -104,7 +127,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
       return {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
-        body: { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An internal error occurred', error: 'Internal Server Error' },
+        body: {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'An internal error occurred',
+          error: 'Internal Server Error',
+        },
       };
     }
 
@@ -114,7 +141,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     );
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,
-      body: { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'An unexpected error occurred', error: 'Internal Server Error' },
+      body: {
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'An unexpected error occurred',
+        error: 'Internal Server Error',
+      },
     };
   }
 }

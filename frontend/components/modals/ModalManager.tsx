@@ -2,16 +2,37 @@
 
 import React from 'react';
 import { useModal } from '@/contexts/ModalContext';
+import { PropertyDetailModal } from './PropertyDetailModal';
+import { PropertyInquiryModal } from './PropertyInquiryModal';
 import { PropertyAgreementModal } from './PropertyAgreementModal';
+import { AgreementViewModal } from './AgreementViewModal';
+import { AgreementSigningModal } from './AgreementSigningModal';
 import { DisputeModal } from './DisputeModal';
+import { DisputeFilingModal } from './DisputeFilingModal';
+import type { DisputeFilingData } from './DisputeFilingModal';
 import { DisputeResolutionModal } from './DisputeResolutionModal';
+import { DisputeDetailModal } from './DisputeDetailModal';
+import { EvidenceUploadModal } from './EvidenceUploadModal';
+import type { EvidenceUploadData } from './EvidenceUploadModal';
 import { PaymentModal } from './PaymentModal';
+import type { DashboardDispute } from '@/lib/dashboard-data';
 import { RefundModal } from './RefundModal';
 import { UserManagementModal } from './UserManagementModal';
+import { RefundRequestModal } from './RefundRequestModal';
+import type { RefundRequestData } from './RefundRequestModal';
+import { UserProfileEditModal } from './UserProfileEditModal';
+import type { UserProfileData } from './UserProfileEditModal';
+import { AccountSettingsModal } from './AccountSettingsModal';
+import type { AccountSettingsData } from './AccountSettingsModal';
 import dynamic from 'next/dynamic';
 import type { Document, DocumentMetadata } from '@/components/documents';
+import type {
+  PropertyDetailData,
+  PropertyInquiryData,
+  AgreementViewData,
+  AgreementSigningData,
+} from './types';
 
-// Import types for type safety
 interface PropertyAgreementData {
   propertyId: string;
   propertyTitle: string;
@@ -120,13 +141,44 @@ const DocumentListModal = dynamic(
  * ```
  */
 export const ModalManager: React.FC = () => {
-  const { modalState, closeModal } = useModal();
+  const { modalState, closeModal, openModal } = useModal();
 
   if (!modalState.isOpen || !modalState.type) {
     return null;
   }
 
   switch (modalState.type) {
+    case 'propertyDetail':
+      return (
+        <PropertyDetailModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          property={modalState.data?.property as PropertyDetailData | null}
+          onInquiryClick={(property) =>
+            openModal('propertyInquiry', {
+              propertyId: property.id,
+              propertyTitle: property.title,
+              onSubmit: modalState.data?.onInquirySubmit,
+            })
+          }
+        />
+      );
+
+    case 'propertyInquiry':
+      return (
+        <PropertyInquiryModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          propertyId={modalState.data?.propertyId as string | undefined}
+          propertyTitle={modalState.data?.propertyTitle as string | undefined}
+          onSubmit={
+            modalState.data?.onSubmit as
+              | ((data: PropertyInquiryData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
     case 'propertyAgreement':
       return (
         <PropertyAgreementModal
@@ -142,6 +194,37 @@ export const ModalManager: React.FC = () => {
         />
       );
 
+    case 'agreementView':
+      return (
+        <AgreementViewModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          agreement={modalState.data?.agreement as AgreementViewData | null}
+          onSignClick={(agreement) =>
+            openModal('agreementSigning', {
+              agreementId: agreement.agreementId,
+              signerName: agreement.tenantName,
+              onSubmit: modalState.data?.onSignSubmit,
+            })
+          }
+        />
+      );
+
+    case 'agreementSigning':
+      return (
+        <AgreementSigningModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          agreementId={modalState.data?.agreementId as string | undefined}
+          signerName={modalState.data?.signerName as string | undefined}
+          onSubmit={
+            modalState.data?.onSubmit as
+              | ((data: AgreementSigningData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
     case 'dispute':
       return (
         <DisputeModal
@@ -151,6 +234,49 @@ export const ModalManager: React.FC = () => {
           onSubmit={
             modalState.data?.onSubmit as
               | ((data: DisputeData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
+    case 'disputeFiling':
+      return (
+        <DisputeFilingModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          agreementId={modalState.data?.agreementId as string | undefined}
+          onSubmit={
+            modalState.data?.onSubmit as
+              | ((data: DisputeFilingData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
+    case 'disputeDetail':
+      return (
+        <DisputeDetailModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          dispute={modalState.data?.dispute as DashboardDispute | null}
+          onUploadEvidence={
+            modalState.data?.onUploadEvidence as
+              | ((disputeId: string) => void)
+              | undefined
+          }
+        />
+      );
+
+    case 'evidenceUpload':
+      return (
+        <EvidenceUploadModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          disputeId={(modalState.data?.disputeId as string) ?? ''}
+          disputeTitle={modalState.data?.disputeTitle as string | undefined}
+          onUpload={
+            modalState.data?.onUpload as
+              | ((data: EvidenceUploadData) => Promise<void>)
               | undefined
           }
         />
@@ -229,6 +355,67 @@ export const ModalManager: React.FC = () => {
           onDelete={
             modalState.data?.onDelete as
               | ((userId: string) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
+    case 'refundRequest':
+      return (
+        <RefundRequestModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          paymentId={modalState.data?.paymentId as string | undefined}
+          paymentAmount={modalState.data?.paymentAmount as number | undefined}
+          propertyName={modalState.data?.propertyName as string | undefined}
+          onSubmit={
+            modalState.data?.onSubmit as
+              | ((data: RefundRequestData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
+    case 'userProfileEdit':
+      return (
+        <UserProfileEditModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          profile={
+            modalState.data?.profile as Partial<UserProfileData> | undefined
+          }
+          onSubmit={
+            modalState.data?.onSubmit as
+              | ((data: UserProfileData) => Promise<void>)
+              | undefined
+          }
+        />
+      );
+
+    case 'accountSettings':
+      return (
+        <AccountSettingsModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          settings={
+            modalState.data?.settings as AccountSettingsData | undefined
+          }
+          onSaveSettings={
+            modalState.data?.onSaveSettings as
+              | ((data: AccountSettingsData) => Promise<void>)
+              | undefined
+          }
+          onChangePassword={
+            modalState.data?.onChangePassword as
+              | ((
+                  currentPassword: string,
+                  newPassword: string,
+                ) => Promise<void>)
+              | undefined
+          }
+          onDeleteAccount={
+            modalState.data?.onDeleteAccount as
+              | (() => Promise<void>)
               | undefined
           }
         />

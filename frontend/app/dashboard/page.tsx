@@ -27,6 +27,8 @@ const mockAgreements = [
   },
 ];
 
+const agreements = process.env.NODE_ENV === 'production' ? [] : mockAgreements;
+
 export default function TenantDashboardOverview() {
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
@@ -157,7 +159,7 @@ export default function TenantDashboardOverview() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {mockAgreements.map((agreement) => (
+              {agreements.map((agreement) => (
                 <tr
                   key={agreement.id}
                   className="hover:bg-white/5 transition-colors group"

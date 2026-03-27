@@ -3,12 +3,22 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type ModalType =
+  | 'propertyDetail'
+  | 'propertyInquiry'
   | 'propertyAgreement'
+  | 'agreementView'
+  | 'agreementSigning'
   | 'dispute'
+  | 'disputeFiling'
   | 'disputeResolution'
+  | 'disputeDetail'
+  | 'evidenceUpload'
   | 'payment'
   | 'refund'
   | 'userManagement'
+  | 'refundRequest'
+  | 'userProfileEdit'
+  | 'accountSettings'
   | 'documentViewer'
   | 'documentUpload'
   | 'documentList'

@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { Payment } from './payment.entity';
+import { RentObligationNft } from '../../agreements/entities/rent-obligation-nft.entity';
 
 export enum AgreementStatus {
   DRAFT = 'draft',
@@ -147,6 +148,9 @@ export class RentAgreement {
   // Relationships
   @OneToMany(() => Payment, (payment) => payment.agreement)
   payments: Payment[];
+
+  @OneToMany(() => RentObligationNft, (nft) => nft.agreement)
+  rentObligationNfts: RentObligationNft[];
 
   // Timestamps
   @CreateDateColumn({ name: 'created_at' })

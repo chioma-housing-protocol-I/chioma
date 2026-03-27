@@ -10,7 +10,7 @@ import {
   ListingStatus,
 } from './entities/property.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
-import { KycStatus } from '../kyc/kyc.entity';
+import { KycStatus } from '../kyc/kyc-status.enum';
 
 describe('PropertiesController', () => {
   let controller: PropertiesController;

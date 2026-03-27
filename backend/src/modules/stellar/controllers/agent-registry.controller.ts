@@ -87,14 +87,9 @@ export class AgentRegistryController {
     return { txHash, message: 'Transaction registered on-chain' };
   }
 
-  @Post('transactions/complete')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mark transaction as completed' })
-  async completeTransaction(@Body() dto: CompleteTransactionDto) {
-    const txHash = await this.agentRegistry.completeTransaction(
-      dto.transactionId,
-      dto.agentAddress,
-    );
-    return { txHash, message: 'Transaction completed on-chain' };
+  @Get('transactions/:agentAddress')
+  @ApiOperation({ summary: 'Get transactions for an agent' })
+  async getAgentTransactions(@Param('agentAddress') agentAddress: string) {
+    return this.agentRegistry.getAgentTransactions(agentAddress);
   }
 }
