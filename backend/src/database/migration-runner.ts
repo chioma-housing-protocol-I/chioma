@@ -50,7 +50,6 @@ export async function runMigrationsWithRollback(): Promise<{
   error?: string;
 }> {
   let run = 0;
-  let reverted = false;
   try {
     const hadTable = await ensureMigrationsTableExists();
     if (!hadTable) {
@@ -72,7 +71,6 @@ export async function runMigrationsWithRollback(): Promise<{
     console.error('Migration run failed:', message);
     try {
       await AppDataSource.undoLastMigration();
-      reverted = true;
       console.error('Reverted last migration.');
     } catch (revertErr) {
       const revertMsg =

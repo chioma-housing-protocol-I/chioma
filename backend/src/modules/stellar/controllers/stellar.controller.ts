@@ -31,9 +31,7 @@ import {
   AddSignatureDto,
   ReleaseWithSignaturesDto,
   CreateTimeLockedEscrowDto,
-  CheckTimeLockConditionsDto,
   CreateConditionalEscrowDto,
-  ValidateConditionsDto,
   IntegrateWithDisputeDto,
   ReleaseOnDisputeResolutionDto,
 } from '../dto/escrow-enhanced.dto';

@@ -58,7 +58,7 @@ export class QueryBuilderUtils {
    */
   static buildComplexQuery(
     query: SelectQueryBuilder<any>,
-    criteria: any,
+    _criteria: any,
   ): SelectQueryBuilder<any> {
     // This can be expanded based on specific needs like full-text search, etc.
     return query;

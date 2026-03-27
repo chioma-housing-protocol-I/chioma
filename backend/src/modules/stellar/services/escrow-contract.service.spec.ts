@@ -12,9 +12,9 @@ import {
 
 describe('EscrowContractService', () => {
   let service: EscrowContractService;
-  let escrowRepository: Repository<StellarEscrow>;
-  let signatureRepository: Repository<EscrowSignature>;
-  let conditionRepository: Repository<EscrowCondition>;
+  let _escrowRepository: Repository<StellarEscrow>;
+  let _signatureRepository: Repository<EscrowSignature>;
+  let _conditionRepository: Repository<EscrowCondition>;
 
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
@@ -70,13 +70,13 @@ describe('EscrowContractService', () => {
     }).compile();
 
     service = module.get<EscrowContractService>(EscrowContractService);
-    escrowRepository = module.get<Repository<StellarEscrow>>(
+    _escrowRepository = module.get<Repository<StellarEscrow>>(
       getRepositoryToken(StellarEscrow),
     );
-    signatureRepository = module.get<Repository<EscrowSignature>>(
+    _signatureRepository = module.get<Repository<EscrowSignature>>(
       getRepositoryToken(EscrowSignature),
     );
-    conditionRepository = module.get<Repository<EscrowCondition>>(
+    _conditionRepository = module.get<Repository<EscrowCondition>>(
       getRepositoryToken(EscrowCondition),
     );
   });

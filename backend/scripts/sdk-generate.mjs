@@ -18,7 +18,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
 const outputDir = process.argv[2] || path.join(rootDir, 'sdks');
-const openapiPath = process.env.OPENAPI_JSON || path.join(rootDir, 'openapi.json');
+const openapiPath =
+  process.env.OPENAPI_JSON || path.join(rootDir, 'openapi.json');
 
 // Ensure openapi.json exists
 if (!fs.existsSync(openapiPath)) {
@@ -50,15 +51,20 @@ for (const g of generators) {
     [
       '@openapitools/openapi-generator-cli',
       'generate',
-      '-i', openapiPath,
-      '-g', g.name,
-      '-o', outPath,
+      '-i',
+      openapiPath,
+      '-g',
+      g.name,
+      '-o',
+      outPath,
       '--additional-properties=supportsES6=true',
     ],
     { cwd: rootDir, stdio: 'inherit', shell: true },
   );
   if (result.status !== 0) {
-    console.warn(`${g.name} generator failed (non-fatal). Install with: npx @openapitools/openapi-generator-cli version-manager set 7`);
+    console.warn(
+      `${g.name} generator failed (non-fatal). Install with: npx @openapitools/openapi-generator-cli version-manager set 7`,
+    );
   }
 }
 

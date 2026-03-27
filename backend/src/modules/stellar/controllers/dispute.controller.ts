@@ -6,14 +6,8 @@ import {
   Param,
   HttpCode,
   HttpStatus,
-  UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { DisputeContractEnhancedService } from '../services/dispute-contract-enhanced.service';
 import { DisputeContractService } from '../services/dispute-contract.service';
 import {
@@ -24,7 +18,6 @@ import {
   CastVoteDto,
   EnforceResolutionDto,
   ResolveStellarDisputeDto,
-  UpdateReputationDto,
   ArbiterInfoDto,
   VoteResultsDto,
   DisputeTimelineDto,

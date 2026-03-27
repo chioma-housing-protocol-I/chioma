@@ -102,7 +102,7 @@ export class EncryptionService {
           decipher.final(),
         ]);
         return decrypted.toString('utf8');
-      } catch (error) {
+      } catch {
         // Try next key
         continue;
       }

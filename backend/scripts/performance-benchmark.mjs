@@ -7,7 +7,8 @@
  */
 import autocannon from 'autocannon';
 
-const BASE_URL = process.env.BASE_URL || process.argv[2] || 'http://localhost:5000';
+const BASE_URL =
+  process.env.BASE_URL || process.argv[2] || 'http://localhost:5000';
 
 const ENDPOINTS = [
   { path: '/health', method: 'GET', name: 'Health' },

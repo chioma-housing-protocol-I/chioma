@@ -103,7 +103,6 @@ export class AuthController {
       });
 
       // Don't return refreshToken in response body when using cookies
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { refreshToken: _refreshToken, ...responseWithoutRefresh } = result;
       return responseWithoutRefresh as AuthResponseDto;
     } catch (error: unknown) {
@@ -184,13 +183,11 @@ export class AuthController {
       });
 
       // Don't return refreshToken in response body when using cookies
-      /* eslint-disable @typescript-eslint/no-unused-vars */
       const {
         refreshToken: _refreshToken,
         mfaRequired: _mfaRequired,
         ...responseWithoutRefresh
       } = result;
-      /* eslint-enable @typescript-eslint/no-unused-vars */
       return responseWithoutRefresh as AuthResponseDto;
     } catch (error: unknown) {
       const duration = Date.now() - startTime;
@@ -282,7 +279,6 @@ export class AuthController {
     });
 
     // Don't return refreshToken in response body when using cookies
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { refreshToken: _refreshToken, ...responseWithoutRefresh } = result;
     return responseWithoutRefresh as AuthResponseDto;
   }

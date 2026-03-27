@@ -17,7 +17,7 @@ import { AuditService } from '../../audit/audit.service';
 describe('KYC Encryption - Integration Tests', () => {
   let kycService: KycService;
   let encryptionService: EncryptionService;
-  let kycRepository: Repository<Kyc>;
+  let _kycRepository: Repository<Kyc>;
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -59,7 +59,7 @@ describe('KYC Encryption - Integration Tests', () => {
 
     kycService = module.get<KycService>(KycService);
     encryptionService = module.get<EncryptionService>(EncryptionService);
-    kycRepository = module.get<Repository<Kyc>>(getRepositoryToken(Kyc));
+    _kycRepository = module.get<Repository<Kyc>>(getRepositoryToken(Kyc));
 
     jest.clearAllMocks();
   });

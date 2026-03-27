@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertTriangle, Scale } from 'lucide-react';
@@ -71,7 +71,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -83,8 +83,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
     },
   });
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const description = watch('description');
+  const description = useWatch({ control, name: 'description', defaultValue: '' });
 
   const handleClose = () => {
     reset();

@@ -5,7 +5,7 @@ import { UserTier, EndpointCategory } from '../types/rate-limit.types';
 
 describe('RateLimitService', () => {
   let service: RateLimitService;
-  let cacheManager: any;
+  let _cacheManager: any;
 
   const mockCacheManager = {
     get: jest.fn(),
@@ -30,7 +30,7 @@ describe('RateLimitService', () => {
     }).compile();
 
     service = module.get<RateLimitService>(RateLimitService);
-    cacheManager = module.get(CACHE_MANAGER);
+    _cacheManager = module.get(CACHE_MANAGER);
   });
 
   it('should be defined', () => {

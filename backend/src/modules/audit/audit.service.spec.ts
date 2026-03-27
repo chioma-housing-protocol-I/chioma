@@ -6,7 +6,7 @@ import { AuditLog, AuditAction, AuditLevel } from './entities/audit-log.entity';
 
 describe('AuditService', () => {
   let service: AuditService;
-  let auditLogRepository: Repository<AuditLog>;
+  let _auditLogRepository: Repository<AuditLog>;
 
   const mockAuditLogRepository = {
     create: jest.fn(),
@@ -32,7 +32,7 @@ describe('AuditService', () => {
     }).compile();
 
     service = module.get<AuditService>(AuditService);
-    auditLogRepository = module.get<Repository<AuditLog>>(
+    _auditLogRepository = module.get<Repository<AuditLog>>(
       getRepositoryToken(AuditLog),
     );
   });

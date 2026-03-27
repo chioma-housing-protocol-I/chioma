@@ -1,5 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
-
 export class ValidationUtils {
   /**
    * Validates an email address format

@@ -19,7 +19,9 @@ function run(): void {
   console.log(`en common.ok: ${i18n.t('common.ok', 'en')}`);
   console.log(`fr common.ok: ${i18n.t('common.ok', 'fr')}`);
   console.log(`es auth.loginSuccess: ${i18n.t('auth.loginSuccess', 'es')}`);
-  console.log(`ar security.accountLocked: ${i18n.t('security.accountLocked', 'ar')}`);
+  console.log(
+    `ar security.accountLocked: ${i18n.t('security.accountLocked', 'ar')}`,
+  );
 }
 
 run();

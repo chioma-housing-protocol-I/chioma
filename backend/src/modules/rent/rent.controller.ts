@@ -91,18 +91,9 @@ export class RentController {
    */
   @Get('agreements/:id/schedule')
   async getPaymentSchedule(@Param('id', ParseUUIDPipe) id: string) {
-    // getRentHistory will throw NotFoundException if the agreement doesn't exist,
-    // but we need the agreement itself to build the schedule.
-    const history = await this.rentService.getRentHistory(id);
-
-    // We re-use getRentHistory's agreement lookup indirectly; fetch agreement
-    // details by calling generatePaymentSchedule after verifying existence.
-    // For a cleaner approach we access the repository through the service.
-    // Here we rely on the service's getRentHistory having validated the agreement.
-
-    // The service exposes generatePaymentSchedule as a pure function, so we
-    // need the agreement data. We fetch it via the underlying repository
-    // exposed through the service layer.
+    // Validate the agreement exists (throws NotFoundException if not found),
+    // then generate the payment schedule.
+    await this.rentService.getRentHistory(id);
     return this.rentService.generatePaymentSchedule(
       id,
       0, // placeholder – the controller will be enhanced once an agreement-fetch method is added

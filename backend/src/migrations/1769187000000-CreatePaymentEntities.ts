@@ -5,7 +5,7 @@ export class CreatePaymentEntities1769187000000 implements MigrationInterface {
   name = 'CreatePaymentEntities1769187000000';
   private readonly logger = new Logger(CreatePaymentEntities1769187000000.name);
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
+  public async up(_queryRunner: QueryRunner): Promise<void> {
     // Tables payment_methods and payments are already created by CreatePaymentsTable migration (1769185616877)
     // This migration is a no-op to avoid conflicts
     this.logger.log(

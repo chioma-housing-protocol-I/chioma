@@ -1,16 +1,16 @@
 export const PassportStrategy = jest
   .fn()
-  .mockImplementation((strategy?: any, name?: string) => {
+  .mockImplementation((_strategy?: any, _name?: string) => {
     return class MockStrategy {
-      constructor(...args: any[]) {
+      constructor(..._args: any[]) {
         // Mock implementation
       }
     };
   });
 
-export const AuthGuard = jest.fn().mockImplementation((name?: string) => {
+export const AuthGuard = jest.fn().mockImplementation((_name?: string) => {
   return class MockAuthGuard {
-    constructor(...args: any[]) {
+    constructor(..._args: any[]) {
       // Mock implementation
     }
   };

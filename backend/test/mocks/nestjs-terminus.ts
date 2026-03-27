@@ -1,5 +1,5 @@
 export class TerminusModule {
-  static forRoot(options?: any): any {
+  static forRoot(_options?: any): any {
     return {
       module: TerminusModule,
       providers: [],

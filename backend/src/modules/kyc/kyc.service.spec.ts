@@ -11,7 +11,7 @@ import { AuditService } from '../audit/audit.service';
 
 describe('KycService', () => {
   let service: KycService;
-  let kycRepository: Repository<Kyc>;
+  let _kycRepository: Repository<Kyc>;
   let userKycStatusService: UserKycStatusService;
   let encryptionService: EncryptionService;
 
@@ -72,7 +72,7 @@ describe('KycService', () => {
     }).compile();
 
     service = module.get<KycService>(KycService);
-    kycRepository = module.get<Repository<Kyc>>(getRepositoryToken(Kyc));
+    _kycRepository = module.get<Repository<Kyc>>(getRepositoryToken(Kyc));
     userKycStatusService =
       module.get<UserKycStatusService>(UserKycStatusService);
     encryptionService = module.get<EncryptionService>(EncryptionService);

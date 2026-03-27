@@ -9,7 +9,7 @@ import { StellarHealthIndicator } from './stellar.indicator';
 describe('StellarHealthIndicator', () => {
   let indicator: StellarHealthIndicator;
   let httpService: HttpService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,7 +34,7 @@ describe('StellarHealthIndicator', () => {
 
     indicator = module.get<StellarHealthIndicator>(StellarHealthIndicator);
     httpService = module.get<HttpService>(HttpService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

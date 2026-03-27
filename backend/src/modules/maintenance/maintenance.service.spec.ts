@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 
 describe('MaintenanceService', () => {
-  let service: MaintenanceService;
+  let _service: MaintenanceService;
   let _repo: Repository<MaintenanceRequest>;
 
   const mockStorageService = {};
@@ -39,7 +39,7 @@ describe('MaintenanceService', () => {
         { provide: ReviewPromptService, useValue: mockReviewPromptService },
       ],
     }).compile();
-    service = module.get<MaintenanceService>(MaintenanceService);
+    _service = module.get<MaintenanceService>(MaintenanceService);
     _repo = module.get<Repository<MaintenanceRequest>>(
       getRepositoryToken(MaintenanceRequest),
     );

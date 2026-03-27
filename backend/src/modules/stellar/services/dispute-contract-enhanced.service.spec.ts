@@ -16,12 +16,12 @@ import { DisputeOutcome } from '../dto/dispute-enhanced.dto';
 
 describe('DisputeContractEnhancedService', () => {
   let service: DisputeContractEnhancedService;
-  let arbiterRepository: Repository<Arbiter>;
-  let voteRepository: Repository<DisputeVote>;
-  let eventRepository: Repository<DisputeEvent>;
-  let disputeRepository: Repository<Dispute>;
-  let disputeContractService: DisputeContractService;
-  let escrowContractService: EscrowContractService;
+  let _arbiterRepository: Repository<Arbiter>;
+  let _voteRepository: Repository<DisputeVote>;
+  let _eventRepository: Repository<DisputeEvent>;
+  let _disputeRepository: Repository<Dispute>;
+  let _disputeContractService: DisputeContractService;
+  let _escrowContractService: EscrowContractService;
 
   const mockArbiterRepository = {
     create: jest.fn(),
@@ -103,22 +103,22 @@ describe('DisputeContractEnhancedService', () => {
     service = module.get<DisputeContractEnhancedService>(
       DisputeContractEnhancedService,
     );
-    arbiterRepository = module.get<Repository<Arbiter>>(
+    _arbiterRepository = module.get<Repository<Arbiter>>(
       getRepositoryToken(Arbiter),
     );
-    voteRepository = module.get<Repository<DisputeVote>>(
+    _voteRepository = module.get<Repository<DisputeVote>>(
       getRepositoryToken(DisputeVote),
     );
-    eventRepository = module.get<Repository<DisputeEvent>>(
+    _eventRepository = module.get<Repository<DisputeEvent>>(
       getRepositoryToken(DisputeEvent),
     );
-    disputeRepository = module.get<Repository<Dispute>>(
+    _disputeRepository = module.get<Repository<Dispute>>(
       getRepositoryToken(Dispute),
     );
-    disputeContractService = module.get<DisputeContractService>(
+    _disputeContractService = module.get<DisputeContractService>(
       DisputeContractService,
     );
-    escrowContractService = module.get<EscrowContractService>(
+    _escrowContractService = module.get<EscrowContractService>(
       EscrowContractService,
     );
   });

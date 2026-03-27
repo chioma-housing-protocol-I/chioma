@@ -103,7 +103,7 @@ export class NftService {
     }
   }
 
-  private async executeMint(agreementId: string, landlordAddress: string) {
+  private async executeMint(_agreementId: string, _landlordAddress: string) {
     return { txHash: 'mock-tx-hash' };
   }
 }

@@ -335,7 +335,6 @@ export class StellarAuthService {
   }
 
   private sanitizeUser(user: User) {
-    /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       password: _password,
       refreshToken: _refreshToken,
@@ -343,7 +342,6 @@ export class StellarAuthService {
       verificationToken: _verificationToken,
       ...sanitized
     } = user;
-    /* eslint-enable @typescript-eslint/no-unused-vars */
     return sanitized;
   }
 }

@@ -46,7 +46,6 @@ import {
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
-import { EscrowStatus } from '../stellar/entities/stellar-escrow.entity';
 import { TransactionStatus } from '../stellar/entities/stellar-transaction.entity';
 
 @Injectable()

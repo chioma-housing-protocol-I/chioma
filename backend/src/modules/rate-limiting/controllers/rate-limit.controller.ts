@@ -11,10 +11,7 @@ import { RateLimitService } from '../services/rate-limit.service';
 import { AbuseDetectionService } from '../services/abuse-detection.service';
 import { RateLimitAnalyticsService } from '../services/rate-limit-analytics.service';
 import { EndpointCategory } from '../types/rate-limit.types';
-import {
-  SkipRateLimit,
-  RateLimitCategory,
-} from '../decorators/rate-limit.decorator';
+import { SkipRateLimit } from '../decorators/rate-limit.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';

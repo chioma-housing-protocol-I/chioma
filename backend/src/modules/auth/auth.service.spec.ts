@@ -24,9 +24,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let userRepository: Repository<User>;
-  let jwtService: JwtService;
-  let configService: ConfigService;
+  let _userRepository: Repository<User>;
+  let _jwtService: JwtService;
+  let _configService: ConfigService;
   let emailService: EmailService;
 
   const mockUser: Partial<User> = {
@@ -120,9 +120,9 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    _jwtService = module.get<JwtService>(JwtService);
+    _configService = module.get<ConfigService>(ConfigService);
     emailService = module.get<EmailService>(EmailService);
   });
 

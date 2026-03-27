@@ -7,7 +7,7 @@ import { AgreementsModule } from '../src/modules/agreements/agreements.module';
 import { AgreementsService } from '../src/modules/agreements/agreements.service';
 import { ChiomaContractService } from '../src/modules/stellar/services/chioma-contract.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { getTestDatabaseConfig } from './test-helpers';
+import { getTestDatabaseConfig as _getTestDatabaseConfig } from './test-helpers';
 
 describe('Blockchain Integration (e2e)', () => {
   let app: INestApplication | undefined;
@@ -77,31 +77,10 @@ describe('Blockchain Integration (e2e)', () => {
       };
 
       // This test requires testnet setup and funded accounts
-      // const agreementDto = {
-      //   propertyId: 'test-property',
-      //   landlordId: 'test-landlord',
-      //   tenantId: 'test-tenant',
-      //   landlordStellarPubKey: landlordKeypair.publicKey(),
-      //   tenantStellarPubKey: tenantKeypair.publicKey(),
-      //   monthlyRent: '1000',
-      //   securityDeposit: '2000',
-      //   agentCommissionRate: 10,
-      //   startDate: new Date().toISOString(),
-      //   endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      //   termsAndConditions: 'Test terms',
-      //   paymentToken: 'NATIVE',
-      // };
-
-      // const agreement = await agreementsService.create(agreementDto);
-      // expect(agreement.blockchainAgreementId).toBeDefined();
-      // expect(agreement.transactionHash).toBeDefined();
     });
 
     it('should maintain consistency between database and blockchain', async () => {
       // Test data consistency verification
-      // const agreement = await agreementsService.findOne('test-id');
-      // const onChainExists = await chiomaContract.hasAgreement(agreement.agreementNumber);
-      // expect(onChainExists).toBe(true);
     });
 
     it('should rollback database on blockchain failure', async () => {

@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { PropertyRegistryController } from './property-registry.controller';
 import { PropertyRegistryService } from '../services/property-registry.service';
 

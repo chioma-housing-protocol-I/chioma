@@ -28,7 +28,10 @@ function parseCliOptions(argv: string[]): CliOptions {
   const rawBatchSize = batchSizeArg?.split('=')[1];
 
   return {
-    batchSize: parseBatchSizeArg(rawBatchSize, DEFAULT_KYC_MIGRATION_BATCH_SIZE),
+    batchSize: parseBatchSizeArg(
+      rawBatchSize,
+      DEFAULT_KYC_MIGRATION_BATCH_SIZE,
+    ),
   };
 }
 
@@ -203,7 +206,9 @@ async function verifyMigration(batchSize: number): Promise<void> {
 
       if (row.rolled_back_at) {
         if (row.encrypted_kyc_data !== row.original_encrypted_kyc_data) {
-          throw new Error(`Rollback verification failed for KYC record ${row.id}`);
+          throw new Error(
+            `Rollback verification failed for KYC record ${row.id}`,
+          );
         }
         verified += 1;
         continue;
@@ -211,14 +216,18 @@ async function verifyMigration(batchSize: number): Promise<void> {
 
       if (row.original_format === 'encrypted') {
         if (!tryDecryptStoredKycPayload(row.encrypted_kyc_data)) {
-          throw new Error(`Encrypted KYC payload could not be decrypted for ${row.id}`);
+          throw new Error(
+            `Encrypted KYC payload could not be decrypted for ${row.id}`,
+          );
         }
         verified += 1;
         continue;
       }
 
       if (!row.plaintext_checksum) {
-        throw new Error(`Missing plaintext checksum for migrated KYC record ${row.id}`);
+        throw new Error(
+          `Missing plaintext checksum for migrated KYC record ${row.id}`,
+        );
       }
 
       if (
@@ -228,7 +237,9 @@ async function verifyMigration(batchSize: number): Promise<void> {
           encryptionService,
         )
       ) {
-        throw new Error(`Checksum verification failed for KYC record ${row.id}`);
+        throw new Error(
+          `Checksum verification failed for KYC record ${row.id}`,
+        );
       }
 
       verified += 1;

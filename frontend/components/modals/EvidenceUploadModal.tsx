@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { FileUp, Info } from 'lucide-react';
@@ -46,15 +46,14 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { description: '' },
   });
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const description = watch('description');
+  const description = useWatch({ control, name: 'description', defaultValue: '' });
 
   const handleClose = () => {
     reset();

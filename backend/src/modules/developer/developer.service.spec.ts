@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { DeveloperService } from './developer.service';
 import { ApiKey, ApiKeyStatus } from './entities/api-key.entity';
 import { ApiKeyRotationHistory } from './entities/api-key-rotation-history.entity';
 
 describe('DeveloperService', () => {
   let service: DeveloperService;
-  let apiKeyRepo: jest.Mocked<Repository<ApiKey>>;
-  let rotationHistoryRepo: jest.Mocked<Repository<ApiKeyRotationHistory>>;
+  let _apiKeyRepo: jest.Mocked<Repository<ApiKey>>;
+  let _rotationHistoryRepo: jest.Mocked<Repository<ApiKeyRotationHistory>>;
 
   const mockApiKeyRepo = {
     create: jest.fn(),
@@ -43,8 +43,10 @@ describe('DeveloperService', () => {
     }).compile();
 
     service = module.get<DeveloperService>(DeveloperService);
-    apiKeyRepo = module.get(getRepositoryToken(ApiKey));
-    rotationHistoryRepo = module.get(getRepositoryToken(ApiKeyRotationHistory));
+    _apiKeyRepo = module.get(getRepositoryToken(ApiKey));
+    _rotationHistoryRepo = module.get(
+      getRepositoryToken(ApiKeyRotationHistory),
+    );
 
     jest.clearAllMocks();
   });

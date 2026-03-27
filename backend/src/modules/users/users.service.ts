@@ -256,6 +256,8 @@ async exportUserData(userId: string): Promise<any> {
   }
 
   private hashLookupValue(value: string): string {
-    return createHash('sha256').update(value.trim().toLowerCase()).digest('hex');
+    return createHash('sha256')
+      .update(value.trim().toLowerCase())
+      .digest('hex');
   }
 }

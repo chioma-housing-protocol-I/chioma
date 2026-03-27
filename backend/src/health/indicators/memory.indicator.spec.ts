@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HealthCheckError } from '@nestjs/terminus';
 import { MemoryHealthIndicator } from './memory.indicator';
 
 // Mock process.memoryUsage at module level

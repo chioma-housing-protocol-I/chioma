@@ -19,8 +19,6 @@ export class AuditInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    const handler = context.getHandler();
-    const controller = context.getClass();
 
     const method = request.method;
     const url = request.url;

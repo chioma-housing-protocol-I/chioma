@@ -14,7 +14,6 @@ import {
   VerifyAgentDto,
   RateAgentDto,
   RegisterTransactionDto,
-  CompleteTransactionDto,
 } from '../dto/agent-registry.dto';
 
 @ApiTags('Agent Registry')

@@ -14,7 +14,9 @@ function logAndExit(label: string, err: unknown) {
   if (e.stack) console.error(e.stack);
   process.exit(1);
 }
-process.on('unhandledRejection', (reason) => logAndExit('Unhandled Rejection', reason));
+process.on('unhandledRejection', (reason) =>
+  logAndExit('Unhandled Rejection', reason),
+);
 process.on('uncaughtException', (err) => logAndExit('Uncaught Exception', err));
 import { NestFactory } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
@@ -83,8 +85,7 @@ async function generate() {
   await app.close();
 
   const outputPath =
-    process.env.OPENAPI_OUTPUT ||
-    path.join(__dirname, '..', 'openapi.json');
+    process.env.OPENAPI_OUTPUT || path.join(__dirname, '..', 'openapi.json');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(document, null, 2), 'utf8');
   console.log('OpenAPI spec written to', outputPath);

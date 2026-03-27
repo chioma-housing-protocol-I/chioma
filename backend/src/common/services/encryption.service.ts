@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'node:crypto';
 
@@ -147,7 +142,7 @@ export class EncryptionService {
         ]);
 
         return decrypted.toString('utf8');
-      } catch (err) {
+      } catch (_err) {
         this.logger.debug(`Key ${i + 1} decrypt failed, trying next`);
         // Continue to next key
       }
