@@ -1,5 +1,4 @@
 import { LoggerService, LogContext } from './logger.service';
-import { Injectable, Inject } from '@nestjs/common';
 
 export function Logging(contextInfo: Partial<LogContext> = {}) {
   return function (

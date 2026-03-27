@@ -123,7 +123,12 @@ export class User {
   @Column({ name: 'login_count', type: 'int', default: 0 })
   loginCount: number;
 
-  @Column({ name: 'preferred_language', type: 'varchar', length: 10, default: 'en' })
+  @Column({
+    name: 'preferred_language',
+    type: 'varchar',
+    length: 10,
+    default: 'en',
+  })
   preferredLanguage: string;
 
   @Column({ name: 'timezone', type: 'varchar', length: 50, default: 'UTC' })

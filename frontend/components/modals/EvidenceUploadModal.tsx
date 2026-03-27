@@ -53,7 +53,11 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     defaultValues: { description: '' },
   });
 
-  const description = useWatch({ control, name: 'description', defaultValue: '' });
+  const description = useWatch({
+    control,
+    name: 'description',
+    defaultValue: '',
+  });
 
   const handleClose = () => {
     reset();

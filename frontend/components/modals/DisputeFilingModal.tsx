@@ -83,7 +83,11 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
     },
   });
 
-  const description = useWatch({ control, name: 'description', defaultValue: '' });
+  const description = useWatch({
+    control,
+    name: 'description',
+    defaultValue: '',
+  });
 
   const handleClose = () => {
     reset();
