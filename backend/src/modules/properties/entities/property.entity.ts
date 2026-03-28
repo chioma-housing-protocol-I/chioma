@@ -29,6 +29,19 @@ export enum ListingStatus {
   ARCHIVED = 'archived',
 }
 
+export enum PropertyRentalMode {
+  LONG_TERM = 'long_term',
+  SHORT_TERM = 'short_term',
+  HYBRID = 'hybrid',
+  FLEXIBLE = 'flexible',
+}
+
+export enum CancellationPolicy {
+  FLEXIBLE = 'flexible',
+  MODERATE = 'moderate',
+  STRICT = 'strict',
+}
+
 @Entity('properties')
 export class Property {
   @PrimaryGeneratedColumn('uuid')
@@ -123,6 +136,177 @@ export class Property {
 
   @OneToMany(() => RentalUnit, (unit) => unit.property, { cascade: true })
   rentalUnits: RentalUnit[];
+
+  // Rental mode
+  @Column({
+    name: 'rental_mode',
+    type: 'enum',
+    enum: PropertyRentalMode,
+    default: PropertyRentalMode.LONG_TERM,
+  })
+  rentalMode: PropertyRentalMode;
+
+  // Stay duration
+  @Column({ name: 'min_stay_days', type: 'int', default: 1 })
+  minStayDays: number;
+
+  @Column({ name: 'max_stay_days', type: 'int', nullable: true })
+  maxStayDays: number | null;
+
+  // Short-term pricing
+  @Column({
+    name: 'nightly_rate',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  nightlyRate: number | null;
+
+  @Column({
+    name: 'weekly_discount',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+  })
+  weeklyDiscount: number;
+
+  @Column({
+    name: 'monthly_discount',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+  })
+  monthlyDiscount: number;
+
+  @Column({
+    name: 'cleaning_fee',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  cleaningFee: number;
+
+  @Column({
+    name: 'extra_guest_fee',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  extraGuestFee: number;
+
+  @Column({ name: 'max_guests', type: 'int', default: 4 })
+  maxGuests: number;
+
+  // Booking settings
+  @Column({ name: 'instant_booking', type: 'boolean', default: false })
+  instantBooking: boolean;
+
+  @Column({
+    name: 'require_guest_verification',
+    type: 'boolean',
+    default: true,
+  })
+  requireGuestVerification: boolean;
+
+  @Column({
+    name: 'minimum_guest_rating',
+    type: 'decimal',
+    precision: 3,
+    scale: 1,
+    default: 0,
+  })
+  minimumGuestRating: number;
+
+  @Column({
+    name: 'cancellation_policy',
+    type: 'enum',
+    enum: CancellationPolicy,
+    default: CancellationPolicy.MODERATE,
+  })
+  cancellationPolicy: CancellationPolicy;
+
+  @Column({ name: 'check_in_time', type: 'varchar', default: '15:00' })
+  checkInTime: string;
+
+  @Column({ name: 'check_out_time', type: 'varchar', default: '11:00' })
+  checkOutTime: string;
+
+  @Column({ name: 'check_in_method', type: 'varchar', default: 'lockbox' })
+  checkInMethod: string;
+
+  // Subletting
+  @Column({ name: 'subletting_allowed', type: 'boolean', default: false })
+  sublettingAllowed: boolean;
+
+  @Column({
+    name: 'subletting_approval_required',
+    type: 'boolean',
+    default: true,
+  })
+  sublettingApprovalRequired: boolean;
+
+  @Column({ name: 'subletting_max_days_per_year', type: 'int', default: 90 })
+  sublettingMaxDaysPerYear: number;
+
+  @Column({
+    name: 'subletting_tenant_share',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 60,
+  })
+  sublettingTenantShare: number;
+
+  @Column({
+    name: 'subletting_landlord_share',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 30,
+  })
+  sublettingLandlordShare: number;
+
+  // House rules
+  @Column({ name: 'smoking_allowed', type: 'boolean', default: false })
+  smokingAllowed: boolean;
+
+  @Column({ name: 'parties_allowed', type: 'boolean', default: false })
+  partiesAllowed: boolean;
+
+  @Column({ name: 'children_allowed', type: 'boolean', default: true })
+  childrenAllowed: boolean;
+
+  // AI fields
+  @Column({
+    name: 'ai_pricing_suggestion',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  aiPricingSuggestion: number | null;
+
+  @Column({
+    name: 'ai_optimal_mode',
+    type: 'enum',
+    enum: PropertyRentalMode,
+    nullable: true,
+  })
+  aiOptimalMode: PropertyRentalMode | null;
+
+  @Column({
+    name: 'ai_occupancy_prediction',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  aiOccupancyPrediction: number | null;
 
   // Timestamps
   @CreateDateColumn({ name: 'created_at' })
