@@ -14,6 +14,11 @@ import { Inter } from 'next/font/google';
 export const viewport: Viewport = {
   themeColor: '#1d4ed8',
   colorScheme: 'dark',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 };
 
 const inter = Inter({
@@ -111,28 +116,13 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'Chioma',
-  },
-  category: 'technology',
-  manifest: '/manifest.webmanifest',
-  appleWebApp: {
-    capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Chioma',
   },
+  category: 'technology',
   alternates: {
     canonical: '/',
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: '#1d4ed8',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
 };
 
 export default function RootLayout({
