@@ -53,9 +53,14 @@ export class PropertiesService {
   async create(
     createPropertyDto: CreatePropertyDto,
     ownerId: string,
+    actingUser?: User,
   ): Promise<Property> {
     const { images, amenities, rentalUnits, ...propertyData } =
       createPropertyDto;
+
+    if (!actingUser || actingUser.role !== UserRole.ADMIN) {
+      delete (propertyData as { verificationStatus?: string }).verificationStatus;
+    }
 
     const property = this.propertyRepository.create({
       ...propertyData,
@@ -185,6 +190,36 @@ export class PropertiesService {
     return property;
   }
 
+  async recordView(
+    id: string,
+  ): Promise<{ viewCount: number; lastViewedAt: Date }> {
+    await this.findOnePublic(id);
+    await this.propertyRepository.increment({ id }, 'viewCount', 1);
+    const lastViewedAt = new Date();
+    await this.propertyRepository.update({ id }, { lastViewedAt });
+    const row = await this.propertyRepository.findOne({
+      where: { id },
+      select: ['id', 'viewCount', 'lastViewedAt'],
+    });
+    if (!row) {
+      throw new NotFoundException(`Property with ID ${id} not found`);
+    }
+    return { viewCount: row.viewCount, lastViewedAt: row.lastViewedAt! };
+  }
+
+  async recordFavorite(id: string): Promise<{ favoriteCount: number }> {
+    await this.findOnePublic(id);
+    await this.propertyRepository.increment({ id }, 'favoriteCount', 1);
+    const row = await this.propertyRepository.findOne({
+      where: { id },
+      select: ['id', 'favoriteCount'],
+    });
+    if (!row) {
+      throw new NotFoundException(`Property with ID ${id} not found`);
+    }
+    return { favoriteCount: row.favoriteCount };
+  }
+
   async update(
     id: string,
     updatePropertyDto: UpdatePropertyDto,
@@ -196,7 +231,15 @@ export class PropertiesService {
     const { images, amenities, rentalUnits, ...propertyData } =
       updatePropertyDto;
 
-    Object.assign(property, propertyData);
+    const safePatch = { ...propertyData } as Record<string, unknown>;
+    delete safePatch.viewCount;
+    delete safePatch.favoriteCount;
+    delete safePatch.lastViewedAt;
+    if (user.role !== UserRole.ADMIN) {
+      delete safePatch.verificationStatus;
+    }
+
+    Object.assign(property, safePatch);
     await this.propertyRepository.save(property);
 
     if (images !== undefined) {
@@ -423,6 +466,22 @@ export class PropertiesService {
       hasParking: (data.hasParking as boolean) ?? (basic.hasParking as boolean),
       petsAllowed:
         (data.petsAllowed as boolean) ?? (basic.petsAllowed as boolean),
+      virtualTourUrl:
+        (data.virtualTourUrl as string) ??
+        (basic.virtualTourUrl as string | undefined),
+      videoUrl:
+        (data.videoUrl as string) ?? (basic.videoUrl as string | undefined),
+      floorPlanUrl:
+        (data.floorPlanUrl as string) ??
+        (basic.floorPlanUrl as string | undefined),
+      energyRating:
+        (data.energyRating as string) ??
+        (basic.energyRating as string | undefined),
+      petPolicy:
+        (data.petPolicy as string) ?? (basic.petPolicy as string | undefined),
+      parkingSpaces:
+        (data.parkingSpaces as number) ??
+        (basic.parkingSpaces as number | undefined),
       metadata:
         (data.metadata as Record<string, unknown>) ||
         (basic.metadata as Record<string, unknown>),

@@ -1,36 +1,3 @@
-  @Get('me/export')
-  @ApiOperation({ summary: 'Export all user data (GDPR)' })
-  @ApiResponse({ status: 200, description: 'User data export successful' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async exportUserData(@CurrentUser() user: User) {
-    return this.usersService.exportUserData(user.id);
-  }
-
-  @Delete('me/gdpr')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete user account and anonymize data (GDPR)' })
-  @ApiResponse({ status: 200, description: 'Account deleted and data anonymized' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async gdprDeleteAccount(@CurrentUser() user: User) {
-    return this.usersService.gdprDeleteAccount(user.id);
-  }
-
-  @Post('me/consent')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update user consent preferences (GDPR)' })
-  @ApiResponse({ status: 200, description: 'Consent updated' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async updateConsent(@CurrentUser() user: User, @Body() consent: any) {
-    return this.usersService.updateConsent(user.id, consent);
-  }
-
-  @Get('me/privacy-settings')
-  @ApiOperation({ summary: 'Get user privacy settings (GDPR)' })
-  @ApiResponse({ status: 200, description: 'Privacy settings retrieved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getPrivacySettings(@CurrentUser() user: User) {
-    return this.usersService.getPrivacySettings(user.id);
-  }
 import {
   Controller,
   Get,
@@ -59,6 +26,7 @@ import {
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -66,7 +34,7 @@ import { User, UserRole } from './entities/user.entity';
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
@@ -148,6 +116,46 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUserActivity(@CurrentUser() user: User) {
     return this.usersService.getUserActivity(user.id);
+  }
+
+  @Get('me/export')
+  @ApiOperation({ summary: 'Export all user data (GDPR)' })
+  @ApiResponse({ status: 200, description: 'User data export successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async exportUserData(@CurrentUser() user: User) {
+    return this.usersService.exportUserData(user.id);
+  }
+
+  @Delete('me/gdpr')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete user account and anonymize data (GDPR)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Account deleted and data anonymized',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async gdprDeleteAccount(@CurrentUser() user: User) {
+    return this.usersService.gdprDeleteAccount(user.id);
+  }
+
+  @Post('me/consent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update user consent preferences (GDPR)' })
+  @ApiResponse({ status: 200, description: 'Consent updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateConsent(
+    @CurrentUser() user: User,
+    @Body() consent: Record<string, unknown>,
+  ) {
+    return this.usersService.updateConsent(user.id, consent);
+  }
+
+  @Get('me/privacy-settings')
+  @ApiOperation({ summary: 'Get user privacy settings (GDPR)' })
+  @ApiResponse({ status: 200, description: 'Privacy settings retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getPrivacySettings(@CurrentUser() user: User) {
+    return this.usersService.getPrivacySettings(user.id);
   }
 
   @Public()

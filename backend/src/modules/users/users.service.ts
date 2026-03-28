@@ -1,24 +1,58 @@
-import { AuditService } from '../audit/audit.service';
-import { AuditAction, AuditLevel, AuditStatus } from '../audit/entities/audit-log.entity';
-import { LoggerService } from '../../common/logger/logger.service';
-import { Logging } from '../../common/logger/logging.decorator';
-import { InjectRepository } from '@nestjs/repository';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../user/entities/user.entity';
-import * as bcrypt from 'bcrypt';
-import * as randomBytes from 'randombytes';
-import { SALT_ROUNDS } from '../../common/constants';
+import * as bcrypt from 'bcryptjs';
+import { randomBytes, createHash } from 'crypto';
+import { User } from './entities/user.entity';
+import { AuditService } from '../audit/audit.service';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../audit/entities/audit-log.entity';
+import {
+  UpdateUserProfileDto,
+  ChangeEmailDto,
+  ChangePasswordDto,
+} from './dto/update-user.dto';
+import { UserRestoreDto } from './dto/user-restore.dto';
+import { KycStatus } from '../kyc/kyc-status.enum';
 
-@Logging({ service: 'UsersService' })
-async exportUserData(userId: string): Promise<any> {
-    // Gather all user data for export (including related entities)
-    const user = await this.findById(userId, true);
-    // TODO: Add related data (KYC, agreements, etc.)
-    // For now, just return user entity (excluding sensitive fields)
+const SALT_ROUNDS = 12;
+
+@Injectable()
+export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async findById(id: string, withDeleted = false): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      withDeleted,
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async exportUserData(
+    userId: string,
+  ): Promise<Omit<User, 'password'> & Record<string, unknown>> {
+    const user = await this.findById(userId);
     const { password, ...exportData } = user;
-    // Audit log
-    this.logger.log(`GDPR export for user: ${user.email}`);
-    // TODO: Add auditService.log for compliance
+    void password;
     await this.auditService.log({
       action: AuditAction.DATA_EXPORT,
       entityType: 'User',
@@ -28,47 +62,55 @@ async exportUserData(userId: string): Promise<any> {
       level: AuditLevel.SECURITY,
       metadata: { type: 'GDPR_EXPORT' },
     });
+    this.logger.log(`GDPR export for user: ${user.id}`);
     return exportData;
   }
 
-  @Logging({ service: 'UsersService' })
   async gdprDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId);
-    // Anonymize user data
-    user.email = `deleted_${user.id}@anonymized.local`;
+    const anonEmail = `deleted_${user.id}@anonymized.local`;
+    user.email = anonEmail;
     user.firstName = null;
     user.lastName = null;
     user.phoneNumber = null;
-    user.emailHash = null;
+    user.emailHash = this.hashLookupValue(anonEmail);
     user.phoneNumberHash = null;
-    user.password = '';
+    user.password = await bcrypt.hash(
+      randomBytes(32).toString('hex'),
+      SALT_ROUNDS,
+    );
     user.isActive = false;
-    user.deletedAt = new Date();
+    user.refreshToken = null;
     await this.userRepository.save(user);
-    // Soft delete
     await this.userRepository.softDelete(userId);
-    this.logger.log(`GDPR account deletion and anonymization for user: ${user.id}`);
-    // TODO: Add auditService.log for compliance
     await this.auditService.log({
       action: AuditAction.DELETE,
       entityType: 'User',
-      entityId: user.id,
-      performedBy: user.id,
+      entityId: userId,
+      performedBy: userId,
       status: AuditStatus.SUCCESS,
       level: AuditLevel.SECURITY,
       metadata: { type: 'GDPR_DELETE' },
     });
+    this.logger.log(`GDPR account deletion for user: ${userId}`);
     return { message: 'Account deleted and data anonymized (GDPR)' };
   }
 
-  @Logging({ service: 'UsersService' })
-  async updateConsent(userId: string, consent: any): Promise<{ message: string }> {
-    // Store consent preferences (simple example, should be expanded)
+  async updateConsent(
+    userId: string,
+    consent: Record<string, unknown>,
+  ): Promise<{ message: string }> {
     const user = await this.findById(userId);
-    (user as any).consent = consent;
+    if (typeof consent.emailNotifications === 'boolean') {
+      user.emailNotifications = consent.emailNotifications;
+    }
+    if (typeof consent.smsNotifications === 'boolean') {
+      user.smsNotifications = consent.smsNotifications;
+    }
+    if (typeof consent.marketingOptIn === 'boolean') {
+      user.marketingOptIn = consent.marketingOptIn;
+    }
     await this.userRepository.save(user);
-    this.logger.log(`Consent updated for user: ${user.email}`);
-    // TODO: Add auditService.log for compliance
     await this.auditService.log({
       action: AuditAction.UPDATE,
       entityType: 'User',
@@ -78,14 +120,21 @@ async exportUserData(userId: string): Promise<any> {
       level: AuditLevel.SECURITY,
       metadata: { type: 'GDPR_CONSENT', consent },
     });
+    this.logger.log(`Consent updated for user: ${user.id}`);
     return { message: 'Consent updated' };
   }
 
-  async getPrivacySettings(userId: string): Promise<any> {
-    // Return privacy settings (simple example)
+  async getPrivacySettings(userId: string): Promise<{
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+    marketingOptIn: boolean;
+    dataRetention: string;
+  }> {
     const user = await this.findById(userId);
     return {
-      consent: (user as any).consent || {},
+      emailNotifications: user.emailNotifications,
+      smsNotifications: user.smsNotifications,
+      marketingOptIn: user.marketingOptIn,
       dataRetention: 'standard',
     };
   }
@@ -128,7 +177,8 @@ async exportUserData(userId: string): Promise<any> {
       throw new UnauthorizedException('Invalid password');
     }
 
-    const existingUser = await this.findByEmail(changeEmailDto.newEmail);
+    const normalizedNew = changeEmailDto.newEmail.trim().toLowerCase();
+    const existingUser = await this.findByEmail(normalizedNew);
     if (existingUser) {
       throw new BadRequestException('Email already in use');
     }
@@ -136,14 +186,14 @@ async exportUserData(userId: string): Promise<any> {
     const verificationToken = randomBytes(32).toString('hex');
 
     await this.userRepository.update(userId, {
-      email: changeEmailDto.newEmail,
-      emailHash: this.hashLookupValue(changeEmailDto.newEmail),
+      email: normalizedNew,
+      emailHash: this.hashLookupValue(normalizedNew),
       emailVerified: false,
       verificationToken,
     });
 
     this.logger.log(
-      `Email changed for user: ${user.id} from ${user.email} to ${changeEmailDto.newEmail}`,
+      `Email changed for user: ${user.id} from ${user.email} to ${normalizedNew}`,
     );
 
     return { message: 'Email updated. Please verify your new email address.' };
@@ -208,11 +258,12 @@ async exportUserData(userId: string): Promise<any> {
     userRestoreDto: UserRestoreDto,
   ): Promise<{ message: string }> {
     const { email, password } = userRestoreDto;
+    const normalized = email.trim().toLowerCase();
 
     const user = await this.userRepository.findOne({
       where: [
-        { email: email.toLowerCase() },
-        { emailHash: this.hashLookupValue(email.toLowerCase()) },
+        { email: normalized },
+        { emailHash: this.hashLookupValue(normalized) },
       ],
       withDeleted: true,
     });
@@ -240,7 +291,12 @@ async exportUserData(userId: string): Promise<any> {
     return { message: 'Account permanently deleted' };
   }
 
-  async getUserActivity(userId: string): Promise<any> {
+  async getUserActivity(userId: string): Promise<{
+    lastLogin: Date | null;
+    accountCreated: Date;
+    emailVerified: boolean;
+    isActive: boolean;
+  }> {
     const user = await this.findById(userId);
     return {
       lastLogin: user.lastLoginAt,
@@ -256,6 +312,8 @@ async exportUserData(userId: string): Promise<any> {
   }
 
   private hashLookupValue(value: string): string {
-    return createHash('sha256').update(value.trim().toLowerCase()).digest('hex');
+    return createHash('sha256')
+      .update(value.trim().toLowerCase())
+      .digest('hex');
   }
 }

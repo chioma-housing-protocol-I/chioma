@@ -56,6 +56,17 @@ export interface Property {
   landlord?: User;
   createdAt: string;
   updatedAt: string;
+  /** API-aligned optional fields (Nest/TypeORM property listing) */
+  viewCount?: number;
+  favoriteCount?: number;
+  lastViewedAt?: string | null;
+  verificationStatus?: string | null;
+  virtualTourUrl?: string | null;
+  videoUrl?: string | null;
+  floorPlanUrl?: string | null;
+  energyRating?: string | null;
+  petPolicy?: string | null;
+  parkingSpaces?: number | null;
 }
 
 export interface PropertyImage {
@@ -89,6 +100,15 @@ export interface RentalAgreement {
   blockchainTxHash?: string;
   createdAt: string;
   updatedAt: string;
+  renewalOption?: boolean | null;
+  renewalNoticeDate?: string | null;
+  moveInDate?: string | null;
+  moveOutDate?: string | null;
+  utilitiesIncluded?: boolean | null;
+  maintenanceResponsibility?: string | null;
+  earlyTerminationFee?: number | null;
+  lateFeePercentage?: number | null;
+  gracePeriodDays?: number | null;
 }
 
 // Payment Types

@@ -23,6 +23,11 @@ export type {
 export { useUIStore } from './ui-store';
 export type { UIStore, ThemeMode, ModalState, Toast } from './ui-store';
 
+export { useLoadingStore, LOADING_KEYS } from './loading-store';
+export type { LoadingStore, LoadingKey } from './loading-store';
+
+export { useLoading, withLoading } from '../hooks/use-loading';
+
 // ── Selectors ────────────────────────────────────────────────────────────────
 export {
   selectUser,
@@ -46,6 +51,8 @@ export {
   selectToasts,
   selectGlobalLoading,
   selectIsOnline,
+  selectIsLoadingKey,
+  selectAnyLoading,
 } from './selectors';
 
 // ── Middleware ────────────────────────────────────────────────────────────────

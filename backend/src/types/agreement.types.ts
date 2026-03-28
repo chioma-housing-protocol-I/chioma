@@ -66,6 +66,15 @@ export interface RentAgreement {
   leaseDurationMonths: number;
   renewalOption: boolean;
   renewalNoticeDays?: number;
+  /** Calendar date by which renewal notice is due (if applicable) */
+  renewalNoticeDate?: ISO8601DateTime;
+  moveInDate?: ISO8601DateTime;
+  moveOutDate?: ISO8601DateTime;
+  utilitiesIncluded?: boolean;
+  maintenanceResponsibility?: string;
+  earlyTerminationFee?: string;
+  lateFeePercentage?: number;
+  gracePeriodDays?: number;
 
   // Terms and conditions
   termsAndConditions: string;

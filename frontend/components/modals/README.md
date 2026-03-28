@@ -32,7 +32,7 @@ Renders the appropriate modal based on the current modal state.
 
 ### Base Modal
 
-Reusable base component with common modal functionality.
+Reusable base component with common modal functionality. Supports optional `loading` / `loadingMessage` for an in-modal overlay (uses shared `Spinner` from `@/components/loading`).
 
 ---
 
@@ -46,6 +46,9 @@ View property details with an image gallery and inquiry workflow.
 
 - Image gallery with thumbnail navigation
 - Property specs (beds, baths, area)
+- View/favorite counts, verification badge, energy rating, pet policy, parking spaces
+- Virtual tour, video, and floor plan links or preview when `PropertyDetailData` includes URLs
+- Records a listing view via `POST /properties/:id/view` when the modal opens, and a **Favorite** action calls `POST /properties/:id/favorite` (TanStack Query mutations)
 - Amenities and host details
 - Direct workflow action to inquiry modal
 
@@ -66,6 +69,7 @@ View agreement summary and PDF before signing.
 **Features:**
 
 - Agreement financial and date details
+- Renewal option, renewal notice date, move-in / move-out, utilities, maintenance terms, early termination fee, late fee %, and grace period when present on `AgreementViewData`
 - Embedded PDF preview
 - Download + sign actions
 
@@ -366,6 +370,8 @@ interface BaseModalProps {
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
+  loading?: boolean;
+  loadingMessage?: string;
 }
 ```
 

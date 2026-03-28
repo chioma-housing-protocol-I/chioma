@@ -54,6 +54,14 @@ pnpm run migration:verify-rollback
 
 This runs `migration:run` → `migration:revert` → `migration:run` to prove the last migration can be rolled back and reapplied.
 
+## Rent agreements (`rent_agreements` table)
+
+Lease management columns are added by migration `1781100000000-AddRentAgreementLeaseManagementFields` (`renewal_option`, `renewal_notice_date`, `move_in_date`, `move_out_date`, `utilities_included`, `maintenance_responsibility`, `early_termination_fee`, `late_fee_percentage`, `grace_period_days`). API: `PATCH /api/agreements/:id` (and `PUT`) for updates, `POST /api/agreements/:id/renew` when `renewalOption` is true, `GET /api/agreements/:id/fees?daysPastDue=` for fee estimates.
+
+## Property listings (`properties` table)
+
+Analytics and rich listing fields are maintained by migration `1781000000000-AddPropertyAnalyticsAndDetailFields` (columns: `view_count`, `favorite_count`, `last_viewed_at`, `verification_status`, `virtual_tour_url`, `video_url`, `floor_plan_url`, `energy_rating`, `pet_policy`, `parking_spaces`). Public endpoints `POST /api/properties/:id/view` and `POST /api/properties/:id/favorite` update counts; only **admins** may set `verification_status` via create/patch.
+
 ## Docker / deployment
 
 - Set **`RUN_MIGRATIONS_ON_START=true`** to run `migration:run:prod` in the container entrypoint before the app starts (see `scripts/docker-entrypoint.sh`).

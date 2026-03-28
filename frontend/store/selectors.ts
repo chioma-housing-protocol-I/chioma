@@ -11,6 +11,7 @@ import type { AuthStore } from './authStore';
 import type { NotificationStore } from './notificationStore';
 import type { PropertyStore } from './property-store';
 import type { UIStore } from './ui-store';
+import type { LoadingStore } from './loading-store';
 
 // ─── Auth Selectors ──────────────────────────────────────────────────────────
 
@@ -59,3 +60,11 @@ export const selectActiveModal = (state: UIStore) => state.activeModal;
 export const selectToasts = (state: UIStore) => state.toasts;
 export const selectGlobalLoading = (state: UIStore) => state.globalLoading;
 export const selectIsOnline = (state: UIStore) => state.isOnline;
+
+// ─── Loading store (scoped keys) ───────────────────────────────────────────
+
+export const selectIsLoadingKey =
+  (key: string) => (state: LoadingStore) =>
+    state.loading.get(key) ?? false;
+
+export const selectAnyLoading = (state: LoadingStore) => state.loading.size > 0;

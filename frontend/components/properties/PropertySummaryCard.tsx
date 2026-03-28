@@ -17,6 +17,8 @@ interface PropertySummaryCardProps {
     manager?: string;
     image: string;
     verified?: boolean;
+    viewCount?: number;
+    favoriteCount?: number;
   };
   onClose?: () => void;
 }
@@ -110,7 +112,7 @@ export default function PropertySummaryCard({
         </div>
 
         {/* Features */}
-        <div className="flex gap-4 mb-3 pb-3 border-b border-gray-200 text-gray-700 text-sm">
+        <div className="flex flex-wrap gap-4 mb-3 pb-3 border-b border-gray-200 text-gray-700 text-sm">
           <div className="flex items-center gap-1">
             <Bed className="w-4 h-4" />
             <span>{property.beds} Beds</span>
@@ -123,6 +125,16 @@ export default function PropertySummaryCard({
             <Ruler className="w-4 h-4" />
             <span>{property.sqft} sqft</span>
           </div>
+          {property.viewCount != null && (
+            <div className="flex items-center gap-1 text-gray-500">
+              <span>{property.viewCount.toLocaleString()} views</span>
+            </div>
+          )}
+          {property.favoriteCount != null && (
+            <div className="flex items-center gap-1 text-gray-500">
+              <span>{property.favoriteCount.toLocaleString()} favorites</span>
+            </div>
+          )}
         </div>
 
         {/* Manager */}

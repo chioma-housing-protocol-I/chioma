@@ -113,6 +113,97 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
               {format(new Date(agreement.endDate), 'MMMM d, yyyy')}
             </p>
           </div>
+          {agreement.renewalOption != null && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Renewal option
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {agreement.renewalOption ? 'Yes' : 'No'}
+              </p>
+            </div>
+          )}
+          {agreement.renewalNoticeDate && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Renewal notice by
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {format(new Date(agreement.renewalNoticeDate), 'MMMM d, yyyy')}
+              </p>
+            </div>
+          )}
+          {agreement.moveInDate && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Move-in
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {format(new Date(agreement.moveInDate), 'MMMM d, yyyy')}
+              </p>
+            </div>
+          )}
+          {agreement.moveOutDate && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Move-out
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {format(new Date(agreement.moveOutDate), 'MMMM d, yyyy')}
+              </p>
+            </div>
+          )}
+          {agreement.utilitiesIncluded != null && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Utilities included
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {agreement.utilitiesIncluded ? 'Yes' : 'No'}
+              </p>
+            </div>
+          )}
+          {agreement.maintenanceResponsibility && (
+            <div className="md:col-span-2">
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Maintenance
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {agreement.maintenanceResponsibility}
+              </p>
+            </div>
+          )}
+          {agreement.earlyTerminationFee != null && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Early termination fee
+              </p>
+              <p className="text-sm font-bold text-amber-700">
+                ${agreement.earlyTerminationFee.toLocaleString()}
+              </p>
+            </div>
+          )}
+          {agreement.lateFeePercentage != null && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Late fee (% of rent)
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {agreement.lateFeePercentage}%
+              </p>
+            </div>
+          )}
+          {agreement.gracePeriodDays != null && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-neutral-500">
+                Payment grace period
+              </p>
+              <p className="text-sm font-medium text-neutral-900">
+                {agreement.gracePeriodDays} day
+                {agreement.gracePeriodDays === 1 ? '' : 's'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-neutral-200">

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Spinner } from '@/components/loading';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -15,6 +16,9 @@ interface BaseModalProps {
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
+  /** In-modal loading overlay (blocks interaction with body/footer). */
+  loading?: boolean;
+  loadingMessage?: string;
 }
 
 const sizeClasses = {
@@ -36,6 +40,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   showCloseButton = true,
   closeOnOverlayClick = true,
   closeOnEscape = true,
+  loading = false,
+  loadingMessage,
 }) => {
   useEffect(() => {
     if (!closeOnEscape) return;
@@ -124,11 +130,34 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">{children}</div>
+            <div
+              className={`relative flex-1 overflow-y-auto p-6 ${loading ? 'pointer-events-none' : ''}`}
+            >
+              {children}
+              {loading ? (
+                <div
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/85 p-6 backdrop-blur-sm dark:bg-slate-900/85"
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <Spinner
+                    size="md"
+                    label={loadingMessage ?? 'Loading'}
+                  />
+                  {loadingMessage ? (
+                    <p className="text-center text-sm text-neutral-600 dark:text-neutral-300">
+                      {loadingMessage}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
 
             {/* Footer */}
             {footer && (
-              <div className="px-6 py-4 bg-neutral-50 dark:bg-white/5 border-t border-neutral-200 dark:border-white/5 shrink-0">
+              <div
+                className={`shrink-0 border-t border-neutral-200 bg-neutral-50 px-6 py-4 dark:border-white/5 dark:bg-white/5 ${loading ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 {footer}
               </div>
             )}

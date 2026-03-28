@@ -10,6 +10,16 @@ export interface PropertyDetailData {
   amenities?: string[];
   images?: string[];
   landlordName?: string;
+  viewCount?: number;
+  favoriteCount?: number;
+  lastViewedAt?: string | null;
+  verificationStatus?: string | null;
+  virtualTourUrl?: string | null;
+  videoUrl?: string | null;
+  floorPlanUrl?: string | null;
+  energyRating?: string | null;
+  petPolicy?: string | null;
+  parkingSpaces?: number | null;
 }
 
 export interface PropertyInquiryData {
@@ -33,6 +43,15 @@ export interface AgreementViewData {
   endDate: string;
   pdfUrl?: string;
   status?: 'draft' | 'pending' | 'active' | 'expired' | 'signed';
+  renewalOption?: boolean | null;
+  renewalNoticeDate?: string | null;
+  moveInDate?: string | null;
+  moveOutDate?: string | null;
+  utilitiesIncluded?: boolean | null;
+  maintenanceResponsibility?: string | null;
+  earlyTerminationFee?: number | null;
+  lateFeePercentage?: number | null;
+  gracePeriodDays?: number | null;
 }
 
 export interface AgreementSigningData {

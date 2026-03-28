@@ -67,7 +67,11 @@ export class PropertiesController {
     @Body() createPropertyDto: CreatePropertyDto,
     @CurrentUser() user: User,
   ) {
-    return await this.propertiesService.create(createPropertyDto, user.id);
+    return await this.propertiesService.create(
+      createPropertyDto,
+      user.id,
+      user,
+    );
   }
 
   @Get()
@@ -112,6 +116,41 @@ export class PropertiesController {
       ownerId: user.id,
       status: query.status, // Allow filtering by any status for own properties
     });
+  }
+
+  @Post(':id/view')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a property view',
+    description:
+      'Increments view count and updates last viewed time for published listings.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Property UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({ status: 200, description: 'View recorded' })
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async recordView(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.propertiesService.recordView(id);
+  }
+
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a favorite',
+    description: 'Increments favorite count for a published listing.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Property UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({ status: 200, description: 'Favorite recorded' })
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async recordFavorite(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.propertiesService.recordFavorite(id);
   }
 
   @Get(':id')

@@ -111,6 +111,35 @@ export function useProperty(id: string | null) {
 }
 
 /**
+ * Record a public listing view (increments backend viewCount).
+ */
+export function useRecordPropertyView() {
+  return useMutation({
+    mutationFn: async (propertyId: string) => {
+      const { data } = await apiClient.post<{
+        viewCount: number;
+        lastViewedAt: string;
+      }>(`/properties/${propertyId}/view`);
+      return data;
+    },
+  });
+}
+
+/**
+ * Record interest / favorite (increments backend favoriteCount).
+ */
+export function useRecordPropertyFavorite() {
+  return useMutation({
+    mutationFn: async (propertyId: string) => {
+      const { data } = await apiClient.post<{ favoriteCount: number }>(
+        `/properties/${propertyId}/favorite`,
+      );
+      return data;
+    },
+  });
+}
+
+/**
  * Infinite-scroll property list. Each page returns `PaginatedResponse<Property>`.
  */
 export function useInfiniteProperties(

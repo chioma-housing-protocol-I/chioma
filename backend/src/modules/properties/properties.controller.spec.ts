@@ -68,6 +68,16 @@ describe('PropertiesController', () => {
     images: [],
     amenities: [],
     rentalUnits: [],
+    viewCount: 0,
+    favoriteCount: 0,
+    lastViewedAt: null,
+    verificationStatus: null,
+    virtualTourUrl: null,
+    videoUrl: null,
+    floorPlanUrl: null,
+    energyRating: null,
+    petPolicy: null,
+    parkingSpaces: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -89,6 +99,8 @@ describe('PropertiesController', () => {
     publish: jest.fn(),
     archive: jest.fn(),
     markAsRented: jest.fn(),
+    recordView: jest.fn(),
+    recordFavorite: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -125,6 +137,7 @@ describe('PropertiesController', () => {
       expect(mockPropertiesService.create).toHaveBeenCalledWith(
         createDto,
         mockUser.id,
+        mockUser,
       );
     });
   });
@@ -180,6 +193,38 @@ describe('PropertiesController', () => {
 
       expect(result).toEqual(mockProperty);
       expect(mockPropertiesService.findOnePublic).toHaveBeenCalledWith(
+        'property-id',
+      );
+    });
+  });
+
+  describe('recordView', () => {
+    it('should record a view', async () => {
+      const payload = {
+        viewCount: 2,
+        lastViewedAt: new Date(),
+      };
+      mockPropertiesService.recordView.mockResolvedValue(payload);
+
+      const result = await controller.recordView('property-id');
+
+      expect(result).toEqual(payload);
+      expect(mockPropertiesService.recordView).toHaveBeenCalledWith(
+        'property-id',
+      );
+    });
+  });
+
+  describe('recordFavorite', () => {
+    it('should record a favorite', async () => {
+      mockPropertiesService.recordFavorite.mockResolvedValue({
+        favoriteCount: 4,
+      });
+
+      const result = await controller.recordFavorite('property-id');
+
+      expect(result).toEqual({ favoriteCount: 4 });
+      expect(mockPropertiesService.recordFavorite).toHaveBeenCalledWith(
         'property-id',
       );
     });

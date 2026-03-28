@@ -89,6 +89,16 @@ describe('PropertiesService', () => {
     images: [],
     amenities: [],
     rentalUnits: [],
+    viewCount: 0,
+    favoriteCount: 0,
+    lastViewedAt: null,
+    verificationStatus: null,
+    virtualTourUrl: null,
+    videoUrl: null,
+    floorPlanUrl: null,
+    energyRating: null,
+    petPolicy: null,
+    parkingSpaces: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -98,6 +108,8 @@ describe('PropertiesService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    increment: jest.fn(),
+    update: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
 
@@ -209,7 +221,7 @@ describe('PropertiesService', () => {
         rentalUnits: [],
       });
 
-      const result = await service.create(createDto, mockOwner.id);
+      const result = await service.create(createDto, mockOwner.id, mockOwner);
 
       expect(result.title).toBe('New Property');
       expect(result.status).toBe(ListingStatus.DRAFT);
@@ -249,7 +261,7 @@ describe('PropertiesService', () => {
         images: [{ url: 'https://example.com/img.jpg', isPrimary: true }],
       });
 
-      await service.create(createDto, mockOwner.id);
+      await service.create(createDto, mockOwner.id, mockOwner);
 
       expect(mockImageRepository.create).toHaveBeenCalled();
       expect(mockImageRepository.save).toHaveBeenCalled();
@@ -394,6 +406,69 @@ describe('PropertiesService', () => {
     });
   });
 
+  describe('recordView', () => {
+    it('should increment view count and set last viewed time for published property', async () => {
+      const published = {
+        ...mockProperty,
+        status: ListingStatus.PUBLISHED,
+      };
+      const lastViewedAt = new Date('2026-01-01T12:00:00.000Z');
+      mockPropertyRepository.findOne
+        .mockResolvedValueOnce(published)
+        .mockResolvedValueOnce({
+          id: 'property-id',
+          viewCount: 3,
+          lastViewedAt,
+        });
+      mockPropertyRepository.increment.mockResolvedValue(undefined);
+      mockPropertyRepository.update.mockResolvedValue({ affected: 1 });
+
+      const result = await service.recordView('property-id');
+
+      expect(mockPropertyRepository.increment).toHaveBeenCalledWith(
+        { id: 'property-id' },
+        'viewCount',
+        1,
+      );
+      expect(result.viewCount).toBe(3);
+      expect(result.lastViewedAt).toEqual(lastViewedAt);
+    });
+
+    it('should reject views for non-published listings', async () => {
+      mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
+
+      await expect(service.recordView('property-id')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockPropertyRepository.increment).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('recordFavorite', () => {
+    it('should increment favorite count for published property', async () => {
+      const published = {
+        ...mockProperty,
+        status: ListingStatus.PUBLISHED,
+      };
+      mockPropertyRepository.findOne
+        .mockResolvedValueOnce(published)
+        .mockResolvedValueOnce({
+          id: 'property-id',
+          favoriteCount: 5,
+        });
+      mockPropertyRepository.increment.mockResolvedValue(undefined);
+
+      const result = await service.recordFavorite('property-id');
+
+      expect(mockPropertyRepository.increment).toHaveBeenCalledWith(
+        { id: 'property-id' },
+        'favoriteCount',
+        1,
+      );
+      expect(result.favoriteCount).toBe(5);
+    });
+  });
+
   describe('update', () => {
     it('should update a property by owner', async () => {
       const updateDto = { title: 'Updated Title' };
@@ -427,6 +502,41 @@ describe('PropertiesService', () => {
       await expect(
         service.update('property-id', { title: 'Hack' }, mockOtherUser),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should strip verificationStatus for non-admin owners', async () => {
+      const draft = { ...mockProperty, verificationStatus: null };
+      mockPropertyRepository.findOne.mockResolvedValue(draft);
+      mockPropertyRepository.save.mockImplementation((p) => Promise.resolve(p));
+
+      await service.update(
+        'property-id',
+        { verificationStatus: 'verified', title: 'T' },
+        mockOwner,
+      );
+
+      expect(mockPropertyRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verificationStatus: null,
+          title: 'T',
+        }),
+      );
+    });
+
+    it('should allow admin to set verificationStatus', async () => {
+      const draft = { ...mockProperty, verificationStatus: null };
+      mockPropertyRepository.findOne.mockResolvedValue(draft);
+      mockPropertyRepository.save.mockImplementation((p) => Promise.resolve(p));
+
+      await service.update(
+        'property-id',
+        { verificationStatus: 'verified' },
+        mockAdmin,
+      );
+
+      expect(mockPropertyRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationStatus: 'verified' }),
+      );
     });
   });
 

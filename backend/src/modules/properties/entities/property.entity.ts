@@ -97,6 +97,36 @@ export class Property {
   @Column({ name: 'pets_allowed', type: 'boolean', default: false })
   petsAllowed: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  viewCount: number;
+
+  @Column({ type: 'int', default: 0 })
+  favoriteCount: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastViewedAt: Date | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  verificationStatus: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  virtualTourUrl: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  videoUrl: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  floorPlanUrl: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  energyRating: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  petPolicy: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  parkingSpaces: number | null;
+
   // Metadata
   @Column({
     type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',

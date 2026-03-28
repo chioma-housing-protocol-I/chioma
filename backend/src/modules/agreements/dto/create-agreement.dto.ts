@@ -4,10 +4,13 @@ import {
   IsNumber,
   IsOptional,
   IsDateString,
+  IsBoolean,
+  IsInt,
   Min,
   Max,
   Length,
   Matches,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -167,4 +170,80 @@ export class CreateAgreementDto {
   @IsOptional()
   @IsString()
   termsAndConditions?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether the lease may auto-renew or be extended under renewal terms',
+  })
+  @IsOptional()
+  @IsBoolean()
+  renewalOption?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Deadline to give renewal notice (ISO 8601 date)',
+    example: '2025-11-01',
+  })
+  @IsOptional()
+  @IsDateString()
+  renewalNoticeDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Actual move-in date (ISO 8601 date)',
+    example: '2024-02-05',
+  })
+  @IsOptional()
+  @IsDateString()
+  moveInDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Actual move-out date (ISO 8601 date)',
+    example: '2025-01-28',
+  })
+  @IsOptional()
+  @IsDateString()
+  moveOutDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether rent includes utilities',
+  })
+  @IsOptional()
+  @IsBoolean()
+  utilitiesIncluded?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Who handles routine maintenance (e.g. landlord, tenant, split)',
+    example: 'Landlord handles major; tenant handles minor',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  maintenanceResponsibility?: string;
+
+  @ApiPropertyOptional({
+    description: 'Flat early termination fee amount',
+    example: 1500.0,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  earlyTerminationFee?: number;
+
+  @ApiPropertyOptional({
+    description: 'Late rent penalty as percentage of monthly rent (e.g. 5 = 5%)',
+    example: 5,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  lateFeePercentage?: number;
+
+  @ApiPropertyOptional({
+    description: 'Days after due date before late fee applies',
+    example: 5,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  gracePeriodDays?: number;
 }

@@ -9,7 +9,9 @@ import {
   ValidateNested,
   Min,
   Max,
+  MaxLength,
   IsUrl,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -286,6 +288,70 @@ export class CreatePropertyDto {
   @IsOptional()
   @IsBoolean()
   petsAllowed?: boolean;
+
+  @ApiPropertyOptional({
+    description: '3D or virtual tour URL',
+    example: 'https://example.com/tour',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  virtualTourUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Marketing or walkthrough video URL',
+    example: 'https://example.com/video',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  videoUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Floor plan image URL',
+    example: 'https://example.com/floorplan.png',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  floorPlanUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Energy efficiency label (e.g. A+, B)',
+    example: 'B',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  energyRating?: string;
+
+  @ApiPropertyOptional({
+    description: 'Pet policy summary',
+    example: 'Cats allowed; no dogs',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  petPolicy?: string;
+
+  @ApiPropertyOptional({
+    description: 'Number of parking spaces',
+    example: 2,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  parkingSpaces?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Listing verification state (only admins can set via create/update API)',
+    example: 'verified',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  verificationStatus?: string;
 
   // Metadata
   @ApiPropertyOptional({
