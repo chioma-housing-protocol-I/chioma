@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Webhook } from 'lucide-react';
 import { getAdminNavItems } from '@/components/admin-dashboard/navigation';
 import { useAuth } from '@/store/authStore';
 
@@ -25,6 +26,19 @@ export default function AdminHomePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          <Link
+            href="/developer"
+            className="rounded-3xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 hover:border-white/20 transition-all group"
+          >
+            <Webhook className="w-8 h-8 text-blue-300 group-hover:text-blue-200 transition-colors" />
+            <h2 className="mt-4 text-lg font-semibold text-white">
+              Developer Portal
+            </h2>
+            <p className="mt-1 text-sm text-blue-200/65">
+              Open webhook management and integration tooling for outbound events.
+            </p>
+          </Link>
+
           {navItems.map((item) => (
             <Link
               key={item.href}
