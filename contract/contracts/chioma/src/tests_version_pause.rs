@@ -404,7 +404,7 @@ fn test_pause_metadata_and_reasons() {
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #10)")] // AlreadyPaused
+#[should_panic(expected = "Error(Contract, #23)")] // AlreadyPaused
 fn test_prevent_double_pause() {
     let env = Env::default();
     env.mock_all_auths();
@@ -417,7 +417,7 @@ fn test_prevent_double_pause() {
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #11)")] // NotPaused
+#[should_panic(expected = "Error(Contract, #24)")] // NotPaused
 fn test_prevent_unpause_when_not_paused() {
     let env = Env::default();
     env.mock_all_auths();
@@ -443,7 +443,7 @@ fn test_pause_requires_admin_auth() {
 // --- Pause State Enforcement Tests ---
 
 #[test]
-#[should_panic(expected = "Error(Contract, #9)")] // ContractPaused
+#[should_panic(expected = "Error(Contract, #17)")] // ContractPaused
 fn test_operations_blocked_when_paused() {
     let env = Env::default();
     env.mock_all_auths();

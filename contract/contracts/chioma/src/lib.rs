@@ -113,7 +113,7 @@ impl Contract {
             .get(&DataKey::VersionHistory)
             .unwrap_or(Vec::new(&env));
 
-        history.push_back(version.clone());
+        history = history.push_back(version.clone());
         env.storage()
             .instance()
             .set(&DataKey::VersionHistory, &history);
@@ -146,7 +146,7 @@ impl Contract {
             let mut v = history.get(i).unwrap();
             if v.major == major && v.minor == minor && v.patch == patch {
                 v.status = status.clone();
-                history.set(i, v.clone());
+                history = history.set(i, v.clone());
 
                 // If this is the current version, update it too
                 let current = Self::get_version(env.clone());
