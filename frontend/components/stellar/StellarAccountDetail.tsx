@@ -7,10 +7,8 @@ import {
   Download,
   ExternalLink,
   CheckCircle,
-  XCircle,
   Key,
   Link2,
-  Database,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ManagedStellarAccount } from '@/lib/services/stellar-accounts.service';

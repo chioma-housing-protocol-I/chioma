@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Wallet, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Wallet, CheckCircle, XCircle } from 'lucide-react';
 import type { ManagedStellarAccount } from '@/lib/services/stellar-accounts.service';
 
 interface StellarAccountListProps {

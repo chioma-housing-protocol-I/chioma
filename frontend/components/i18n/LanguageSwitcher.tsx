@@ -15,6 +15,12 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
 
   const current = LOCALE_OPTIONS.find((o) => o.code === locale) ?? LOCALE_OPTIONS[0];
 
+  // Sync html[lang] whenever locale changes — inside an effect to satisfy the
+  // react-hooks/immutability rule (no direct DOM mutation in event handlers).
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -29,10 +35,6 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   function handleSelect(code: SupportedLocale) {
     setLocale(code);
     setOpen(false);
-    // Update html lang attribute
-    if (typeof document !== 'undefined') {
-      document.documentElement.lang = code;
-    }
   }
 
   return (

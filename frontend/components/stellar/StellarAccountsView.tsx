@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Wallet, Plus } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
   fetchUserStellarAccounts,
