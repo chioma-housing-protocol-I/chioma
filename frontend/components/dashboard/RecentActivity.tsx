@@ -1,12 +1,17 @@
 'use client';
 
-import React from 'react';
+import Link from 'next/link';
 import { Wrench, FileCheck, CreditCard, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-const RecentActivity = () => {
+interface RecentActivityProps {
+  viewAllHref?: string;
+}
+
+const RecentActivity = ({ viewAllHref = '/dashboard/notifications' }: RecentActivityProps) => {
   const MOCK_NOW = new Date('2025-01-24T12:00:00');
 
+  // ... activities data ...
   const activities = [
     {
       id: 1,
@@ -70,9 +75,12 @@ const RecentActivity = () => {
         <h2 className="text-xl font-bold text-white tracking-tight">
           Recent Activity
         </h2>
-        <button className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+        <Link
+          href={viewAllHref}
+          className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+        >
           View All
-        </button>
+        </Link>
       </div>
 
       {/* Activity List */}
@@ -107,13 +115,12 @@ const RecentActivity = () => {
                   {activity.description}
                 </p>
                 <span
-                  className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                    activity.status === 'pending'
+                  className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${activity.status === 'pending'
                       ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
                       : activity.status === 'completed'
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                  }`}
+                    }`}
                 >
                   {badge.text}
                 </span>
@@ -123,15 +130,20 @@ const RecentActivity = () => {
         })}
       </div>
 
-      <button className="mt-6 w-full flex items-center justify-center space-x-2 py-3 text-sm font-semibold text-blue-200/60 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10 group">
+      <Link
+        href={viewAllHref}
+        className="mt-6 w-full flex items-center justify-center space-x-2 py-3 text-sm font-semibold text-blue-200/60 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10 group"
+      >
         <span>View All Activity</span>
         <ChevronRight
           size={16}
           className="group-hover:translate-x-1 transition-transform"
         />
-      </button>
+      </Link>
     </div>
   );
 };
+
+export default RecentActivity;
 
 export default RecentActivity;

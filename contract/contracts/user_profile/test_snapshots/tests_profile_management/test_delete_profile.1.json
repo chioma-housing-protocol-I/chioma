@@ -278,7 +278,9 @@
                 "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
               }
             ],
-            "data": "void"
+            "data": {
+              "map": []
+            }
           }
         }
       },

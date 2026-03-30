@@ -81,7 +81,7 @@ export default function DashboardPage() {
 
         {/* Recent Activity - Takes 1 column */}
         <div>
-          <RecentActivity />
+          <RecentActivity viewAllHref="/landlords/notifications" />
         </div>
       </div>
 

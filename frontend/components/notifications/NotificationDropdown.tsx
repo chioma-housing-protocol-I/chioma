@@ -70,17 +70,15 @@ export default function NotificationDropdown({
       </div>
 
       {/* Footer */}
-      {notifications.length > 0 && (
-        <div className="border-t border-white/10 bg-white/5">
-          <Link
-            href={viewAllHref}
-            onClick={onClose}
-            className="block text-center text-sm font-medium text-blue-300 hover:text-white py-2.5 transition-colors"
-          >
-            View All Notifications
-          </Link>
-        </div>
-      )}
+      <div className="border-t border-white/10 bg-white/5">
+        <Link
+          href={viewAllHref}
+          onClick={onClose}
+          className="block text-center text-sm font-medium text-blue-300 hover:text-white py-2.5 transition-colors"
+        >
+          View All Notifications
+        </Link>
+      </div>
     </div>
   );
 }
