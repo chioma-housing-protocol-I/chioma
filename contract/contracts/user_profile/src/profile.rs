@@ -1,8 +1,8 @@
-use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String};
 use crate::errors::ContractError;
 use crate::events;
 use crate::storage::DataKey;
 use crate::types::{AccountType, UserProfile};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String};
 
 #[contract]
 pub struct UserProfileContract;
@@ -285,7 +285,7 @@ mod test {
 
         client.initialize(&admin);
         let result = client.try_initialize(&admin);
-        
+
         assert!(result.is_err());
     }
 
@@ -325,7 +325,7 @@ mod test {
 
         client.initialize(&admin);
         client.create_profile(&user, &AccountType::Tenant, &data_hash);
-        
+
         let result = client.try_create_profile(&user, &AccountType::Landlord, &data_hash);
         assert!(result.is_err());
     }
@@ -498,7 +498,7 @@ mod test {
 
         client.initialize(&admin);
         let result = client.try_create_profile(&user, &AccountType::Tenant, &invalid_hash);
-        
+
         assert!(result.is_err());
     }
 }

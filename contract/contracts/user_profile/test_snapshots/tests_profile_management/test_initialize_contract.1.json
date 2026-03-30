@@ -165,7 +165,9 @@
                 "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
               }
             ],
-            "data": "void"
+            "data": {
+              "map": []
+            }
           }
         }
       },
