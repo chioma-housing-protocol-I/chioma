@@ -83,11 +83,11 @@ The frontend includes a Makefile to run all CI/CD pipeline checks locally before
 #### Quick Start
 
 ```bash
-# Run all frontend pipeline checks (recommended before PR)
-make check
+# Run full CI pipeline (recommended before PR)
+make ci
 
-# Quick check without tests (faster for development)
-make check-quick
+# Quick pre-commit checks (faster for development)
+make pre-commit
 
 # Get help with all available commands
 make help
@@ -97,80 +97,52 @@ make help
 
 ```bash
 # Main pipeline commands
-make check          # Run all checks: lint, format, test, build
-make check-quick    # Quick version: lint, format, build (no tests)
+make ci              # Full pipeline: install → audit → format-check → test → build-storybook → build
+make pre-commit      # Quick checks: format-check → test
 
-# Individual checks
-make lint           # Run ESLint checks
-make format         # Check Prettier formatting
-make test           # Run unit and E2E tests (if available)
-make build          # Create production build
+# Individual steps
+make install         # Install dependencies with frozen lockfile
+make audit           # Run npm audit for security vulnerabilities
+make lint            # Run ESLint checks
+make format          # Format code with Prettier
+make format-check    # Check Prettier formatting without modifying
+make test            # Run unit tests
+make build-storybook # Build Storybook component library
+make build           # Create production build
 
-# Setup and maintenance
-make install        # Install dependencies with frozen lockfile
-make clean          # Clean node_modules and build artifacts
-make setup          # Initial development environment setup
+# Utilities
+make clean           # Clean node_modules and build artifacts
+make setup           # Initial development environment setup
 ```
 
 #### Pipeline Workflow
 
 The Makefile mirrors the GitHub Actions workflow in `.github/workflows/frontend-ci-cd.yml`:
 
-1. **Linting & Formatting** - ESLint and Prettier checks
-2. **Testing** - Unit tests (Jest) and E2E tests (Cypress) if installed
-3. **Build** - Production build verification
-
-### Backend Pipeline Checks
-
-The backend also includes a comprehensive Makefile for CI/CD validation.
-
-#### Backend Quick Start
-
-```bash
-cd ../backend
-
-# Run full CI pipeline (matches GitHub Actions)
-make ci
-
-# Run all backend workflows (CI + security)
-make all
-
-# Get help with all available commands
-make help
-```
-
-#### Key Backend Commands
-
-```bash
-# Main pipeline commands
-make ci              # Full CI pipeline: install, format-check, lint, typecheck, test-cov, build
-make security-ci     # Security pipeline: install, security-lint, security-test, build
-make all             # Run all CI/CD pipelines
-
-# Individual checks
-make lint            # Run ESLint
-make format-check    # Check Prettier formatting
-make typecheck       # TypeScript type checking
-make test            # Run unit tests
-make test-cov        # Run tests with coverage
-make test-e2e        # Run E2E tests (requires PostgreSQL)
-make build           # Build the application
-
-# Pre-commit workflow
-make pre-commit      # Run format-check, lint, typecheck, test
-```
+1. **Dependencies** - Install with frozen lockfile
+2. **Security Audit** - Check for vulnerabilities
+3. **Code Quality** - ESLint and Prettier checks
+4. **Testing** - Unit tests with Vitest
+5. **Storybook** - Build component library
+6. **Production Build** - Next.js production build verification
 
 ### Before Creating a PR
 
 Run these commands to ensure your PR will pass all pipeline checks:
 
 ```bash
-# Frontend checks
+# Frontend - full CI pipeline
 cd frontend
-make check
+make ci
 ```
 
-The makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
+The Makefile is designed to replicate the exact same checks that run in GitHub Actions, giving you confidence that your PR will pass the CI/CD pipeline.
+
+For faster pre-commit validation without the full build:
+
+```bash
+make pre-commit
+```
 
 ## Learn More
 
