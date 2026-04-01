@@ -121,13 +121,14 @@ export default function WalletConnectButton({
             } else {
               // Navigate to role-based dashboard using Next.js router
               setTimeout(() => {
-                const dashboardRoute = userWithRole.role === 'tenant' 
-                  ? '/tenant'
-                  : userWithRole.role === 'landlord'
-                    ? '/landlords'
-                    : userWithRole.role === 'agent'
-                      ? '/agents'
-                      : '/admin';
+                const dashboardRoute =
+                  userWithRole.role === 'tenant'
+                    ? '/tenant'
+                    : userWithRole.role === 'landlord'
+                      ? '/landlords'
+                      : userWithRole.role === 'agent'
+                        ? '/agents'
+                        : '/admin';
                 console.log('🚀 Navigating to:', dashboardRoute);
                 router.push(dashboardRoute);
               }, 500); // Small delay to show success message

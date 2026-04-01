@@ -156,6 +156,5 @@ export default function PropertyCard({
         </div>
       </div>
     </Link>
-
   );
 }

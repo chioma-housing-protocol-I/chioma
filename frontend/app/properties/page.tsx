@@ -33,7 +33,6 @@ export default function PropertyListing() {
   const [mapWidth, setMapWidth] = useState<number>(50); // percentage in split view
   const [isMapCollapsed, setIsMapCollapsed] = useState(false);
 
-
   useEffect(() => {
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 2000);
@@ -164,7 +163,6 @@ export default function PropertyListing() {
     setMapWidth((prev) => Math.min(Math.max(prev + delta, 20), 80));
   };
 
-
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
@@ -255,7 +253,6 @@ export default function PropertyListing() {
             </div>
           </div>
         </header>
-
 
         {/* Main Content */}
         <div className="flex h-[calc(100vh-80px)] overflow-hidden">

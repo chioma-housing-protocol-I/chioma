@@ -11,7 +11,7 @@ export default function AgentLayout({
 }) {
   return (
     // <ProtectedRoute>
-      <DashboardLayout>{children}</DashboardLayout>
+    <DashboardLayout>{children}</DashboardLayout>
     // </ProtectedRoute>
   );
 }

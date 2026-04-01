@@ -85,9 +85,7 @@ export default function RoleSelectionModal({
           <h2 className="text-3xl font-bold text-white mb-2">
             Welcome to Chioma
           </h2>
-          <p className="text-blue-200/60">
-            Select your role to get started
-          </p>
+          <p className="text-blue-200/60">Select your role to get started</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -133,7 +131,9 @@ export default function RoleSelectionModal({
                   {isSelected && isLoading && (
                     <div className="mt-4 flex items-center justify-center gap-2">
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                      <span className="text-xs text-blue-300">Redirecting...</span>
+                      <span className="text-xs text-blue-300">
+                        Redirecting...
+                      </span>
                     </div>
                   )}
                 </div>

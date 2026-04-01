@@ -26,8 +26,8 @@ export function useMessagingUnreadCount() {
     if (isViewingMessages) {
       return 0;
     }
-    const rooms = Array.isArray(data) 
-      ? data 
+    const rooms = Array.isArray(data)
+      ? data
       : (data as any)?.data && Array.isArray((data as any).data)
         ? (data as any).data
         : [];

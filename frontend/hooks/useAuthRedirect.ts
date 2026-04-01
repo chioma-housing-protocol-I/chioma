@@ -8,29 +8,29 @@ import { getDashboardRoute } from '@/lib/navigation/role-navigation';
  * Useful on landing page to prevent authenticated users from seeing the login flow
  */
 export function useAuthRedirect() {
-    const router = useRouter();
-    const { user, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+  const { user, isAuthenticated, loading } = useAuth();
 
-    useEffect(() => {
-        // Wait for auth to load
-        if (loading) {
-            console.log('⏳ Auth still loading...');
-            return;
-        }
+  useEffect(() => {
+    // Wait for auth to load
+    if (loading) {
+      console.log('⏳ Auth still loading...');
+      return;
+    }
 
-        // If user is authenticated, redirect to their dashboard
-        if (isAuthenticated && user) {
-            const userRole = (user.role as string).toLowerCase();
-            const dashboardRoute = getDashboardRoute(userRole as any);
+    // If user is authenticated, redirect to their dashboard
+    if (isAuthenticated && user) {
+      const userRole = (user.role as string).toLowerCase();
+      const dashboardRoute = getDashboardRoute(userRole as any);
 
-            console.log('🚀 User authenticated, redirecting to dashboard:', {
-                userRole,
-                dashboardRoute,
-            });
+      console.log('🚀 User authenticated, redirecting to dashboard:', {
+        userRole,
+        dashboardRoute,
+      });
 
-            router.push(dashboardRoute);
-        }
-    }, [user, isAuthenticated, loading, router]);
+      router.push(dashboardRoute);
+    }
+  }, [user, isAuthenticated, loading, router]);
 
-    return { user, isAuthenticated, loading };
+  return { user, isAuthenticated, loading };
 }

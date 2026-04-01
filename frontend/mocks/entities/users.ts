@@ -89,8 +89,7 @@ export const MOCK_USERS = {
       email: 'admin@chioma.local',
       phone: '+234 800 000 0000',
       role: 'ADMIN' as const,
-      walletAddress:
-        'GABWYJTOT5X5UZM77BAYRAADXACDWT3O57WYMDEOI5F4EBSFATIK6WAM',
+      walletAddress: 'GABWYJTOT5X5UZM77BAYRAADXACDWT3O57WYMDEOI5F4EBSFATIK6WAM',
       isVerified: true,
     },
   ],
