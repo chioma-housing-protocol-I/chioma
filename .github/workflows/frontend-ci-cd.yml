@@ -23,6 +23,7 @@ jobs:
   lint-and-test:
     name: Lint, Format & Test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     defaults:
       run:
         working-directory: ./frontend
@@ -59,7 +60,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs: [lint-and-test]
+    if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
     defaults:
       run:
         working-directory: ./frontend

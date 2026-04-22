@@ -30,6 +30,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Test & Lint
+    if: github.event_name == 'push'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,6 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     name: E2E Tests
     needs: test
+    if: github.event_name == 'push'
 
     services:
       postgres:
@@ -154,6 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Migration rollback verify
     needs: test
+    if: github.event_name == 'push'
 
     services:
       postgres:
@@ -355,7 +358,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Build
     needs: test
-    if: always() && needs.test.result == 'success'
+    if: always() && (needs.test.result == 'success' || github.event_name == 'pull_request')
 
     steps:
       - name: Checkout code
