@@ -5,8 +5,8 @@ import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
 
 export interface CreateAgreementParams {
   agreementId: string;
-  landlord: string;
-  tenant: string;
+  admin: string;
+  user: string;
   agent?: string;
   monthlyRent: string;
   securityDeposit: string;
@@ -17,7 +17,7 @@ export interface CreateAgreementParams {
 }
 
 export interface PaymentSplit {
-  landlordAmount: string;
+  adminAmount: string;
   agentAmount: string;
   totalAmount: string;
 }
@@ -83,8 +83,8 @@ export class ChiomaContractService {
       const operation = this.contract.call(
         'create_agreement',
         xdr.ScVal.scvString(params.agreementId),
-        new StellarSdk.Address(params.landlord).toScVal(),
-        new StellarSdk.Address(params.tenant).toScVal(),
+        new StellarSdk.Address(params.admin).toScVal(),
+        new StellarSdk.Address(params.user).toScVal(),
         params.agent
           ? xdr.ScVal.scvVec([new StellarSdk.Address(params.agent).toScVal()])
           : xdr.ScVal.scvVec([]),
@@ -121,19 +121,19 @@ export class ChiomaContractService {
   }
 
   async signAgreement(
-    tenant: string,
+    user: string,
     agreementId: string,
-    tenantKeypair: StellarSdk.Keypair,
+    userKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
       if (!this.isConfigured || !this.contract) {
         throw new Error('Contract not configured');
       }
-      const account = await this.server.getAccount(tenant);
+      const account = await this.server.getAccount(user);
 
       const operation = this.contract.call(
         'sign_agreement',
-        new StellarSdk.Address(tenant).toScVal(),
+        new StellarSdk.Address(user).toScVal(),
         xdr.ScVal.scvString(agreementId),
       );
 
@@ -146,7 +146,7 @@ export class ChiomaContractService {
         .build();
 
       const prepared = await this.server.prepareTransaction(tx);
-      prepared.sign(tenantKeypair);
+      prepared.sign(userKeypair);
 
       const result = await this.server.sendTransaction(prepared);
       return await this.pollTransactionStatus(result.hash);
@@ -160,19 +160,19 @@ export class ChiomaContractService {
   }
 
   async submitAgreement(
-    landlord: string,
+    admin: string,
     agreementId: string,
-    landlordKeypair: StellarSdk.Keypair,
+    adminKeypair: StellarSdk.Keypair,
   ): Promise<string> {
     try {
       if (!this.isConfigured || !this.contract) {
         throw new Error('Contract not configured');
       }
-      const account = await this.server.getAccount(landlord);
+      const account = await this.server.getAccount(admin);
 
       const operation = this.contract.call(
         'submit_agreement',
-        new StellarSdk.Address(landlord).toScVal(),
+        new StellarSdk.Address(admin).toScVal(),
         xdr.ScVal.scvString(agreementId),
       );
 
@@ -185,7 +185,7 @@ export class ChiomaContractService {
         .build();
 
       const prepared = await this.server.prepareTransaction(tx);
-      prepared.sign(landlordKeypair);
+      prepared.sign(adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
       return await this.pollTransactionStatus(result.hash);
@@ -448,7 +448,7 @@ export class ChiomaContractService {
   private parsePaymentSplit(result: xdr.ScVal): PaymentSplit {
     const native = StellarSdk.scValToNative(result);
     return {
-      landlordAmount: native.landlord_amount?.toString() || '0',
+      adminAmount: native.landlord_amount?.toString() || '0',
       agentAmount: native.agent_amount?.toString() || '0',
       totalAmount: native.total_amount?.toString() || '0',
     };
