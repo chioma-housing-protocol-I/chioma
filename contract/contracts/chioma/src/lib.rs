@@ -5,6 +5,7 @@
 //!
 //! @title Chioma
 //! @notice On-chain rental agreement lifecycle: create, sign, submit, cancel, and query agreements.
+//! Optimized for gas efficiency and security.
 
 use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 
