@@ -88,7 +88,10 @@ export class ErrorFactory {
   /**
    * Converts any error to a BaseAppError
    */
-  static fromError(error: unknown, context?: Record<string, unknown>): BaseAppError {
+  static fromError(
+    error: unknown,
+    context?: Record<string, unknown>,
+  ): BaseAppError {
     // Already a BaseAppError
     if (error instanceof BaseAppError) {
       return error;
@@ -98,9 +101,10 @@ export class ErrorFactory {
     if (error instanceof HttpException) {
       const status = error.getStatus();
       const response = error.getResponse();
-      const message = typeof response === 'string' 
-        ? response 
-        : (response as any).message || error.message;
+      const message =
+        typeof response === 'string'
+          ? response
+          : (response as any).message || error.message;
 
       return new BaseAppError(
         this.httpStatusToErrorCode(status),

@@ -357,8 +357,14 @@ describe('EscrowContractService', () => {
 
   describe('Health Check', () => {
     it('should check service health', async () => {
+      // Mock the server's getHealth method
+      (service as any).server = {
+        getHealth: jest.fn().mockResolvedValue({ status: 'ok' }),
+      };
+
       const result = await service.checkHealth();
       expect(typeof result).toBe('boolean');
+      expect(result).toBe(true);
     });
   });
 });

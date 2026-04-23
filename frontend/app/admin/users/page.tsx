@@ -16,6 +16,7 @@ import {
   useActivateUser,
 } from '@/lib/query/hooks/use-admin-users';
 import { BulkUserOperations } from '@/components/admin/BulkUserOperations';
+import { useModal } from '@/contexts/ModalContext';
 import toast from 'react-hot-toast';
 import type { User } from '@/types';
 
@@ -35,6 +36,7 @@ const DEFAULT_FILTERS: UserFilters = {
 
 export default function AdminUsersPage() {
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_FILTERS);
+  const { openModal } = useModal();
 
   const {
     data: users,
@@ -46,6 +48,20 @@ export default function AdminUsersPage() {
   });
   const suspendUser = useSuspendUser();
   const activateUser = useActivateUser();
+
+  const handleUserClick = (user: User) => {
+    openModal('userManagement', {
+      user: {
+        id: user.id,
+        name: user.name ?? '',
+        email: user.email,
+        role: (user.role === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
+        status: 'active' as const,
+        isVerified: user.isVerified,
+      },
+      mode: 'view',
+    });
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -242,6 +258,7 @@ export default function AdminUsersPage() {
         onBulkSuspend={handleBulkSuspend}
         onBulkActivate={handleBulkActivate}
         onBulkExport={handleBulkExport}
+        onRowClick={handleUserClick}
       />
     </div>
   );

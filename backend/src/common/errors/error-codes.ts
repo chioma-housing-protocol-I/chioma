@@ -100,17 +100,22 @@ export enum ErrorCode {
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   // Authentication & Authorization
   [ErrorCode.AUTH_INVALID_CREDENTIALS]: 'Invalid email or password',
-  [ErrorCode.AUTH_TOKEN_EXPIRED]: 'Your session has expired. Please sign in again',
+  [ErrorCode.AUTH_TOKEN_EXPIRED]:
+    'Your session has expired. Please sign in again',
   [ErrorCode.AUTH_TOKEN_INVALID]: 'Invalid authentication token',
-  [ErrorCode.AUTH_UNAUTHORIZED]: 'You must be signed in to access this resource',
-  [ErrorCode.AUTH_FORBIDDEN]: 'You do not have permission to access this resource',
-  [ErrorCode.AUTH_SESSION_EXPIRED]: 'Your session has expired for security reasons',
+  [ErrorCode.AUTH_UNAUTHORIZED]:
+    'You must be signed in to access this resource',
+  [ErrorCode.AUTH_FORBIDDEN]:
+    'You do not have permission to access this resource',
+  [ErrorCode.AUTH_SESSION_EXPIRED]:
+    'Your session has expired for security reasons',
   [ErrorCode.AUTH_MFA_REQUIRED]: 'Multi-factor authentication is required',
   [ErrorCode.AUTH_MFA_INVALID]: 'Invalid verification code',
 
   // Validation
   [ErrorCode.VALIDATION_FAILED]: 'The provided data is invalid',
-  [ErrorCode.VALIDATION_INVALID_INPUT]: 'One or more fields contain invalid data',
+  [ErrorCode.VALIDATION_INVALID_INPUT]:
+    'One or more fields contain invalid data',
   [ErrorCode.VALIDATION_MISSING_FIELD]: 'Required field is missing',
   [ErrorCode.VALIDATION_INVALID_FORMAT]: 'Invalid data format',
   [ErrorCode.VALIDATION_OUT_OF_RANGE]: 'Value is out of acceptable range',
@@ -134,10 +139,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.OPERATION_NOT_ALLOWED]: 'This operation is not allowed',
   [ErrorCode.QUOTA_EXCEEDED]: 'You have exceeded your quota',
   [ErrorCode.ALREADY_EXISTS]: 'This resource already exists',
-  [ErrorCode.PROHIBITED_CONTENT]: 'Content contains prohibited language or material',
+  [ErrorCode.PROHIBITED_CONTENT]:
+    'Content contains prohibited language or material',
 
   // Blockchain & Smart Contracts
-  [ErrorCode.BLOCKCHAIN_CONNECTION_FAILED]: 'Failed to connect to blockchain network',
+  [ErrorCode.BLOCKCHAIN_CONNECTION_FAILED]:
+    'Failed to connect to blockchain network',
   [ErrorCode.BLOCKCHAIN_TRANSACTION_FAILED]: 'Blockchain transaction failed',
   [ErrorCode.BLOCKCHAIN_INSUFFICIENT_BALANCE]: 'Insufficient balance in wallet',
   [ErrorCode.BLOCKCHAIN_INVALID_ADDRESS]: 'Invalid blockchain address',
@@ -146,7 +153,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.BLOCKCHAIN_TIMEOUT]: 'Blockchain operation timed out',
 
   // External Services
-  [ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE]: 'External service is currently unavailable',
+  [ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE]:
+    'External service is currently unavailable',
   [ErrorCode.EXTERNAL_SERVICE_TIMEOUT]: 'External service request timed out',
   [ErrorCode.EXTERNAL_SERVICE_ERROR]: 'External service error',
   [ErrorCode.PAYMENT_PROVIDER_ERROR]: 'Payment provider error',
@@ -161,9 +169,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.MAX_RETRIES_EXCEEDED]: 'Maximum retry attempts exceeded',
 
   // Rate Limiting
-  [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Rate limit exceeded. Please try again later',
+  [ErrorCode.RATE_LIMIT_EXCEEDED]:
+    'Rate limit exceeded. Please try again later',
   [ErrorCode.TOO_MANY_REQUESTS]: 'Too many requests. Please slow down',
-  [ErrorCode.SUSPICIOUS_ACTIVITY]: 'Access temporarily blocked due to suspicious activity',
+  [ErrorCode.SUSPICIOUS_ACTIVITY]:
+    'Access temporarily blocked due to suspicious activity',
 
   // Data & Encryption
   [ErrorCode.ENCRYPTION_ERROR]: 'Data encryption failed',

@@ -53,7 +53,7 @@ export class ErrorMapperUtils {
     if (
       (error instanceof QueryFailedError ||
         (error as any)?.name === 'QueryFailedError') &&
-      (error as unknown as { code: string }).code === '23505'
+      (error as { code: string }).code === '23505'
     ) {
       return new DuplicateEntryError('Duplicate entry found');
     }
@@ -92,8 +92,9 @@ export class ErrorMapperUtils {
    * Maps database errors to a structured response
    */
   static mapDatabaseError(error: unknown): StandardErrorResponse {
-    const message = error instanceof Error ? error.message : 'Database operation failed';
-    
+    const message =
+      error instanceof Error ? error.message : 'Database operation failed';
+
     return {
       success: false,
       message: 'Database operation failed',
@@ -119,9 +120,10 @@ export class ErrorMapperUtils {
     if (error instanceof HttpException) {
       const status = error.getStatus();
       const response = error.getResponse();
-      const message = typeof response === 'string' 
-        ? response 
-        : (response as any).message || error.message;
+      const message =
+        typeof response === 'string'
+          ? response
+          : (response as any).message || error.message;
 
       return {
         success: false,
@@ -133,7 +135,8 @@ export class ErrorMapperUtils {
 
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      message:
+        error instanceof Error ? error.message : 'An unexpected error occurred',
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: ErrorCode.INTERNAL_SERVER_ERROR,
     };
