@@ -22,6 +22,7 @@ import { StellarService } from '../stellar/services/stellar.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { LockService } from '../../common/lock';
 import { IdempotencyService } from '../../common/idempotency';
+import { FraudHooksService } from '../fraud/fraud-hooks.service';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
@@ -100,6 +101,10 @@ const mockDataSource = {
   ),
 };
 
+const mockFraudHooksService = {
+  onPaymentRecorded: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('PaymentService', () => {
   let service: PaymentService;
   let paymentRepository: Repository<Payment>;
@@ -153,6 +158,10 @@ describe('PaymentService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: FraudHooksService,
+          useValue: mockFraudHooksService,
         },
       ],
     }).compile();
@@ -216,6 +225,7 @@ describe('PaymentService', () => {
         id: 'pay_1',
         amount: 100,
         currency: 'NGN',
+        paymentMethod: 'card',
       });
 
       const dto: CreatePaymentRecordDto = {
@@ -233,6 +243,12 @@ describe('PaymentService', () => {
         expect.stringContaining('100'),
         'PAYMENT_RECEIVED',
       );
+      expect(mockFraudHooksService.onPaymentRecorded).toHaveBeenCalledWith({
+        userId: 'user_1',
+        amount: 100,
+        currency: 'NGN',
+        paymentMethod: 'card',
+      });
     });
 
     it('throws when gateway fails and records failed payment', async () => {
@@ -512,6 +528,9 @@ describe('PaymentService', () => {
       (paymentRepository.save as jest.Mock).mockResolvedValue({
         id: 'payment_xlm_1',
         status: PaymentStatus.COMPLETED,
+        amount: 25.5,
+        currency: 'XLM',
+        paymentMethod: null,
       });
 
       const result = await service.processStellarRentPayment(
@@ -528,6 +547,12 @@ describe('PaymentService', () => {
       expect(
         mockPaymentProcessingService.processRentPayment,
       ).toHaveBeenCalled();
+      expect(mockFraudHooksService.onPaymentRecorded).toHaveBeenCalledWith({
+        userId: 'user_1',
+        amount: 25.5,
+        currency: 'XLM',
+        paymentMethod: undefined,
+      });
     });
 
     it('creates a stellar escrow deposit payment record', async () => {

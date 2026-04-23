@@ -27,6 +27,7 @@ import {
   CACHE_PREFIX_PROPERTIES_LIST,
   TTL_PUBLIC_PROPERTY_LIST_MS,
 } from '../../common/cache/cache.constants';
+import { FraudHooksService } from '../fraud/fraud-hooks.service';
 
 @Injectable()
 export class PropertiesService {
@@ -42,6 +43,7 @@ export class PropertiesService {
     @InjectRepository(PropertyListingDraft)
     private readonly propertyListingDraftRepository: Repository<PropertyListingDraft>,
     private readonly cacheService: CacheService,
+    private readonly fraudHooksService: FraudHooksService,
   ) {}
 
   private generateCacheKey(query: QueryPropertyDto): string {
@@ -320,6 +322,7 @@ export class PropertiesService {
     property.status = ListingStatus.PUBLISHED;
     const saved = await this.propertyRepository.save(property);
     await this.cacheService.invalidatePropertyDomainCaches(id);
+    void this.fraudHooksService.onListingPublished(saved.id);
     return saved;
   }
 

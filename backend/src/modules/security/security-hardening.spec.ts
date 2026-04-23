@@ -220,7 +220,14 @@ describe('RbacService', () => {
     }
   });
 
-  it('user should NOT be able to create properties', () => {
+  it('user should have READ but not CREATE on properties', () => {
+    expect(
+      service.hasPermission(
+        'user',
+        PermissionResource.PROPERTIES,
+        PermissionAction.READ,
+      ),
+    ).toBe(true);
     expect(
       service.hasPermission(
         'user',

@@ -18,6 +18,7 @@ import { StellarModule } from '../stellar/stellar.module';
 import { User } from '../users/entities/user.entity';
 import { AdminRefundsController } from './admin-refunds.controller';
 import { AdminRefundsService } from './admin-refunds.service';
+import { FraudModule } from '../fraud/fraud.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AdminRefundsService } from './admin-refunds.service';
     NotificationsModule,
     UsersModule,
     StellarModule,
+    FraudModule,
   ],
   controllers: [
     PaymentController,

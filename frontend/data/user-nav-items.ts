@@ -10,7 +10,7 @@ import {
   FileText,
   Users,
   Flag,
-  MessageSquare
+  MessageSquare,
 } from 'lucide-react';
 
 export const userNavItems: navItems[] = [

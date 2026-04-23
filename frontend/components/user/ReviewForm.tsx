@@ -40,13 +40,15 @@ export function ReviewForm({ reviewId }: ReviewFormProps) {
       toast.error('Please connect your Web3 wallet to mint this rating.');
       return;
     }
-    
+
     setIsSubmitting(true);
-    toast.loading('Confirming transaction & minting NFT rating on-chain...', { id: 'mint' });
+    toast.loading('Confirming transaction & minting NFT rating on-chain...', {
+      id: 'mint',
+    });
     try {
       // Simulate blockchain minting interaction
-      await new Promise(r => setTimeout(r, 2000));
-      
+      await new Promise((r) => setTimeout(r, 2000));
+
       await updateReviewMutation.mutateAsync({
         id: reviewId,
         payload: { rating, comment },

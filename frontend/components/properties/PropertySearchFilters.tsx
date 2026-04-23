@@ -1,6 +1,14 @@
 'use client';
 
-import { Search, Home, DollarSign, Calendar, ChevronDown, Filter, X } from 'lucide-react';
+import {
+  Search,
+  Home,
+  DollarSign,
+  Calendar,
+  ChevronDown,
+  Filter,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 interface FilterOption {
@@ -58,10 +66,10 @@ export default function PropertySearchFilters() {
           <div className="relative flex-1">
             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-200/50" />
             <input
-               type="date"
-               value={availability}
-               onChange={(e) => setAvailability(e.target.value)}
-               className="w-full appearance-none bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-blue-200/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer"
+              type="date"
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value)}
+              className="w-full appearance-none bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-blue-200/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer"
             />
           </div>
 

@@ -48,6 +48,7 @@ import {
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
 import { TransactionStatus } from '../stellar/entities/stellar-transaction.entity';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
+import { FraudHooksService } from '../fraud/fraud-hooks.service';
 
 @Injectable()
 export class PaymentService {
@@ -67,6 +68,7 @@ export class PaymentService {
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
     private readonly dataSource: DataSource,
+    private readonly fraudHooksService: FraudHooksService,
   ) {}
 
   @Locked({
@@ -176,6 +178,13 @@ export class PaymentService {
 
     const savedPayment = await this.paymentRepository.save(payment);
     this.logger.log(`Payment recorded: ${savedPayment.id}`);
+
+    void this.fraudHooksService.onPaymentRecorded({
+      userId,
+      amount: Number(savedPayment.amount),
+      currency: savedPayment.currency,
+      paymentMethod: savedPayment.paymentMethod ?? undefined,
+    });
 
     await this.notificationsService.notify(
       userId,
@@ -622,6 +631,12 @@ export class PaymentService {
       });
 
       const saved = await this.paymentRepository.save(payment);
+      void this.fraudHooksService.onPaymentRecorded({
+        userId,
+        amount: Number(saved.amount),
+        currency: saved.currency,
+        paymentMethod: saved.paymentMethod ?? undefined,
+      });
       await this.notificationsService.notify(
         userId,
         'Stellar rent payment processed',

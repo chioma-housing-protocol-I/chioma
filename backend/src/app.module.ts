@@ -56,6 +56,7 @@ import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { LockModule } from './common/lock';
 import { IdempotencyModule } from './common/idempotency';
+import { FraudModule } from './modules/fraud/fraud.module';
 
 const appLogger = new Logger('AppModule');
 
@@ -223,6 +224,7 @@ const appLogger = new Logger('AppModule');
     SearchModule,
     CleanupModule,
     AiModule,
+    FraudModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,

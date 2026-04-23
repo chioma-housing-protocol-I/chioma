@@ -48,9 +48,9 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-xl md:text-2xl text-blue-100/90 max-w-3xl mx-auto leading-relaxed"
           >
-            Connect natively with users on the Stellar network.
-            Experience instant payouts and transparent contract tracking without
-            the paperwork.
+            Connect natively with users on the Stellar network. Experience
+            instant payouts and transparent contract tracking without the
+            paperwork.
           </motion.p>
 
           {/* Display Wallet Address if Connected */}

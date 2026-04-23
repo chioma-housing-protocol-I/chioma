@@ -43,7 +43,7 @@ describe('DisputesService', () => {
   } as User;
 
   const mockAgreement: any = {
-    id: 1,
+    id: '1',
     agreementNumber: 'AGR-001',
     adminId: 'landlord-1',
     userId: 'user-1',

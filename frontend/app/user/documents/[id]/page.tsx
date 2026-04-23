@@ -4,8 +4,6 @@ interface PageProps {
   };
 }
 
-export default function UserDocumentDetailPage({
-  params: _params,
-}: PageProps) {
+export default function UserDocumentDetailPage({ params: _params }: PageProps) {
   return null;
 }

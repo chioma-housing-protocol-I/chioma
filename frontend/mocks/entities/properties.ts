@@ -147,5 +147,5 @@ export const MOCK_PROPERTIES: Property[] = [
     latitude: 36.1147,
     longitude: -115.1728,
     amenities: ['Casino', 'Valet', '24/7 Security'],
-  }
+  },
 ];

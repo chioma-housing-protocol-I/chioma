@@ -1,0 +1,22 @@
+{
+  "modelVersion": "xgb-fraud-v1-bootstrap",
+  "trainedAt": "2026-04-23T00:00:00Z",
+  "thresholdReview": 45,
+  "thresholdBlock": 75,
+  "featureWeights": {
+    "accountAgeDays": -0.6,
+    "failedLoginAttempts": 2.2,
+    "loginCount": -0.2,
+    "isKycVerified": -1.8,
+    "listingPriceAnomaly": 2.4,
+    "listingContentRisk": 1.8,
+    "paymentAmountAnomaly": 2.6,
+    "rapidPaymentVelocity": 2.2,
+    "paymentFailureRate": 1.8,
+    "newPaymentMethodRisk": 1.1
+  },
+  "metrics": {
+    "testRecords": 0,
+    "fraudRate": 0
+  }
+}

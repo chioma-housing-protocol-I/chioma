@@ -17,10 +17,12 @@ import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { PropertyAvailability } from './entities/property-availability.entity';
 import { AvailabilityService } from './availability.service';
 import { AvailabilityController } from './availability.controller';
+import { FraudModule } from '../fraud/fraud.module';
 
 @Module({
   imports: [
     ScheduleModule,
+    FraudModule,
     TypeOrmModule.forFeature([
       Property,
       PropertyImage,

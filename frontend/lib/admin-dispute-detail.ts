@@ -412,9 +412,9 @@ export async function loadAdminDisputesList(): Promise<DashboardDispute[]> {
     const response = await apiClient.get<
       | DashboardDispute[]
       | {
-        disputes?: DashboardDispute[];
-        data?: DashboardDispute[];
-      }
+          disputes?: DashboardDispute[];
+          data?: DashboardDispute[];
+        }
     >('/admin/disputes');
     const body = response.data;
     const rows = Array.isArray(body)

@@ -15,10 +15,7 @@ export default function ReviewDetail({ id }: { id: string }) {
 
   return (
     <div className="p-6 space-y-6">
-      <Link
-        href="/user/reviews"
-        className="text-blue-400 hover:text-blue-300"
-      >
+      <Link href="/user/reviews" className="text-blue-400 hover:text-blue-300">
         ← Back to Reviews
       </Link>
       <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 shadow-xl">
