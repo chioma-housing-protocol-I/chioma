@@ -177,6 +177,29 @@ export interface DisputeEvidence {
   uploadedAt: string;
 }
 
+// Arbiter Types
+export interface Arbiter {
+  id: number;
+  stellarAddress: string;
+  userId?: number | null;
+  user?: User | null;
+  active: boolean;
+  blockchainAddedAt?: number | null;
+  transactionHash?: string | null;
+  totalVotes: number;
+  totalDisputesResolved: number;
+  reputationScore: number;
+  successfulResolutions: number;
+  metadata?: {
+    qualifications?: string;
+    specialization?: string;
+    stakeAmount?: string;
+    [key: string]: any;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Audit Types
 export interface AuditLog {
   id: number;
