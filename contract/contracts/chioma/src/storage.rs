@@ -34,4 +34,9 @@ pub enum DataKey {
     // Versioning keys
     CurrentVersion,
     VersionHistory,
+    AgreementExtension(String),
+    ExtensionHistory(String),
+    UpgradeProposal(String),
+    UpgradeProposalCount,
+    ActiveUpgradeProposals,
 }

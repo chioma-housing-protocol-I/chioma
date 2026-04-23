@@ -541,19 +541,20 @@ describe('PropertiesService', () => {
     });
 
     it('should strip verificationStatus for non-admin owners', async () => {
-      const draft = { ...mockProperty, verificationStatus: null };
+      const draft = { ...mockProperty, verificationStatus: 'pending' };
+      const nonAdminOwner = { ...mockOwner, role: UserRole.USER };
       mockPropertyRepository.findOne.mockResolvedValue(draft);
       mockPropertyRepository.save.mockImplementation((p) => Promise.resolve(p));
 
       await service.update(
         'property-id',
         { verificationStatus: 'verified', title: 'T' },
-        mockOwner,
+        nonAdminOwner,
       );
 
       expect(mockPropertyRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          verificationStatus: null,
+          verificationStatus: 'pending',
           title: 'T',
         }),
       );

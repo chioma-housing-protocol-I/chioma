@@ -1,6 +1,8 @@
 'use client';
 import { Folder } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function TenantFilesPage() {
   return (
     <div className="space-y-6">

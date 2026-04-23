@@ -86,11 +86,21 @@ export class AddPropertySearchIndexes1783000000000 implements MigrationInterface
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_property_amenities_name"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_property_amenities_name"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_properties_lat_lng"`);
-    await queryRunner.query(`DROP TRIGGER IF EXISTS "properties_search_vector_trigger" ON "properties"`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS properties_search_vector_update()`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_properties_search_vector"`);
-    await queryRunner.query(`ALTER TABLE "properties" DROP COLUMN IF EXISTS "search_vector"`);
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS "properties_search_vector_trigger" ON "properties"`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS properties_search_vector_update()`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_properties_search_vector"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "properties" DROP COLUMN IF EXISTS "search_vector"`,
+    );
   }
 }

@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Logo from '@/components/Logo';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '@/constants/navigation';
-import WalletConnectButton from '@/components/auth/WalletConnectButton';
 import { useAuth } from '@/store/authStore';
+
+const WalletConnectButton = dynamic(
+  () => import('@/components/auth/WalletConnectButton'),
+  { ssr: false },
+);
 
 interface NavbarProps {
   theme?: 'light' | 'dark';

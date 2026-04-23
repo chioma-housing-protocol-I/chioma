@@ -1,6 +1,8 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+export const dynamic = 'force-dynamic';
+
+import nextDynamic from 'next/dynamic';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
@@ -12,7 +14,7 @@ import { LOADING_KEYS, useLoading } from '@/store';
 import { Spinner } from '@/components/loading';
 import { MOCK_PROPERTIES } from '@/mocks/entities/properties';
 
-const PropertyMapView = dynamic(
+const PropertyMapView = nextDynamic(
   () => import('@/components/properties/PropertyMapView'),
   {
     ssr: false,

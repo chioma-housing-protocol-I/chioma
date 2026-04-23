@@ -516,8 +516,8 @@ describe('PaymentService', () => {
 
       const result = await service.processStellarRentPayment(
         {
-          tenantAddress: tenantKeypair.publicKey(),
-          tenantSecret: tenantKeypair.secret(),
+          userAddress: tenantKeypair.publicKey(),
+          userSecret: tenantKeypair.secret(),
           agreementId: 'agreement_1',
           amount: '25.5',
         },

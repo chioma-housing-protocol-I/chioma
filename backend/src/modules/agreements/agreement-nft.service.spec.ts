@@ -50,8 +50,7 @@ describe('AgreementNftService', () => {
   describe('mintNftForAgreement', () => {
     it('should mint NFT successfully', async () => {
       const agreementId = 'agreement-123';
-      const landlordAddress =
-        'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+      const adminAddress = 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
       jest.spyOn(nftRepository, 'findOne').mockResolvedValue(null);
       jest.spyOn(nftContractService, 'mintObligation').mockResolvedValue({
@@ -60,7 +59,7 @@ describe('AgreementNftService', () => {
       });
       jest.spyOn(nftRepository, 'create').mockReturnValue({
         agreementId,
-        currentOwner: landlordAddress,
+        currentOwner: adminAddress,
       } as RentObligationNft);
       jest.spyOn(nftRepository, 'save').mockResolvedValue({
         id: 'nft-id',
@@ -69,20 +68,19 @@ describe('AgreementNftService', () => {
 
       const result = await service.mintNftForAgreement(
         agreementId,
-        landlordAddress,
+        adminAddress,
       );
 
       expect(result).toBeDefined();
       expect(nftContractService.mintObligation).toHaveBeenCalledWith({
         agreementId,
-        landlordAddress,
+        adminAddress,
       });
     });
 
     it('should throw error if NFT already exists', async () => {
       const agreementId = 'agreement-123';
-      const landlordAddress =
-        'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+      const adminAddress = 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
       jest.spyOn(nftRepository, 'findOne').mockResolvedValue({
         id: 'existing-nft',
@@ -90,7 +88,7 @@ describe('AgreementNftService', () => {
       } as RentObligationNft);
 
       await expect(
-        service.mintNftForAgreement(agreementId, landlordAddress),
+        service.mintNftForAgreement(agreementId, adminAddress),
       ).rejects.toThrow('NFT already minted');
     });
   });

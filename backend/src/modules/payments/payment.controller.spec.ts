@@ -195,8 +195,8 @@ describe('Payment Controllers', () => {
 
   it('processes stellar rent payment with user id', async () => {
     const dto: ProcessStellarRentGatewayDto = {
-      tenantAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
-      tenantSecret: 'SSECRET',
+      userAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      userSecret: 'SSECRET',
       agreementId: 'agreement_1',
       amount: '12.5',
     };

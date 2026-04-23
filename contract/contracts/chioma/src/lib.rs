@@ -51,10 +51,12 @@ mod tests_timelock;
 mod tests_version_pause;
 
 pub use agreement::{
-    approve_agreement, cancel_agreement, create_agreement, create_agreement_with_token,
-    get_agreement, get_agreement_count, get_agreement_token, get_payment_history,
-    get_payment_split, has_agreement, make_payment_with_token, release_escrow_with_token,
-    sign_agreement, submit_agreement, update_metadata, validate_agreement_params,
+    accept_extension, activate_extension, approve_agreement, cancel_agreement, cancel_extension,
+    create_agreement, create_agreement_with_token, get_agreement, get_agreement_count,
+    get_agreement_token, get_current_agreement_end, get_extension, get_extension_history,
+    get_payment_history, get_payment_split, has_agreement, make_payment_with_token,
+    propose_extension, reject_extension, release_escrow_with_token, sign_agreement,
+    submit_agreement, update_metadata, validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use multi_token::{
@@ -63,9 +65,10 @@ pub use multi_token::{
 };
 pub use storage::DataKey;
 pub use types::{
-    ActionType, AdminProposal, AgreementInput, AgreementStatus, AgreementTerms, AgreementWithToken,
-    Attribute, CompoundingFrequency, Config, ContractState, ContractVersion, DepositInterest,
-    DepositInterestConfig, ErrorContext, InterestAccrual, InterestRecipient, MultiSigConfig,
+    ActionType, AdminProposal, AgreementExtension, AgreementInput, AgreementStatus, AgreementTerms,
+    AgreementWithToken, Attribute, CompoundingFrequency, Config, ContractState,
+    ContractUpgradeProposal, ContractVersion, DepositInterest, DepositInterestConfig, ErrorContext,
+    ExtensionHistory, ExtensionStatus, InterestAccrual, InterestRecipient, MultiSigConfig,
     PauseState, PaymentSplit, RateLimitConfig, RateLimitReason, RentAgreement, RoyaltyConfig,
     RoyaltyPayment, SupportedToken, TimelockAction, TimelockActionType, TokenExchangeRate,
     UserCallCount, VersionStatus,
@@ -176,6 +179,197 @@ impl Contract {
             .get(&DataKey::VersionHistory)
             .unwrap_or(Vec::new(&env))
     }
+
+    /// Propose a contract upgrade governed by multi-sig approvals and timelock.
+    pub fn propose_contract_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), RentalError> {
+        proposer.require_auth();
+        multi_sig::require_admin(&env, &proposer)?;
+
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::UpgradeProposal(proposal_id.clone()))
+        {
+            return Err(RentalError::InvalidInput);
+        }
+
+        let config = multi_sig::get_multisig_config(&env)?;
+        let mut approvals = Vec::new(&env);
+        approvals.push_back(proposer.clone());
+
+        let proposal = ContractUpgradeProposal {
+            id: proposal_id.clone(),
+            proposer,
+            wasm_hash,
+            approvals,
+            required_signatures: config.required_signatures,
+            eta: env.ledger().timestamp() + delay_seconds,
+            executed: false,
+            cancelled: false,
+            notes,
+            created_at: env.ledger().timestamp(),
+        };
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+        env.storage().persistent().extend_ttl(
+            &DataKey::UpgradeProposal(proposal_id.clone()),
+            500000,
+            500000,
+        );
+
+        let mut count: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::UpgradeProposalCount)
+            .unwrap_or(0);
+        count += 1;
+        env.storage()
+            .instance()
+            .set(&DataKey::UpgradeProposalCount, &count);
+
+        let mut active: Vec<String> = env
+            .storage()
+            .instance()
+            .get(&DataKey::ActiveUpgradeProposals)
+            .unwrap_or(Vec::new(&env));
+        active.push_back(proposal_id.clone());
+        env.storage()
+            .instance()
+            .set(&DataKey::ActiveUpgradeProposals, &active);
+
+        events::upgrade_proposed(&env, proposal_id, proposal.eta);
+
+        Ok(())
+    }
+
+    /// Approve a contract upgrade proposal as a multi-sig admin.
+    pub fn approve_contract_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<u32, RentalError> {
+        approver.require_auth();
+        multi_sig::require_admin(&env, &approver)?;
+
+        let mut proposal: ContractUpgradeProposal = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UpgradeProposal(proposal_id.clone()))
+            .ok_or(RentalError::ProposalNotFound)?;
+
+        if proposal.executed {
+            return Err(RentalError::ProposalAlreadyExecuted);
+        }
+
+        for approved in proposal.approvals.iter() {
+            if approved == approver {
+                return Err(RentalError::AlreadyApproved);
+            }
+        }
+
+        proposal.approvals.push_back(approver);
+        let approvals = proposal.approvals.len();
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+        events::upgrade_approved(&env, proposal_id, approvals);
+        Ok(approvals)
+    }
+
+    /// Execute an approved upgrade proposal after ETA and record new version metadata.
+    pub fn execute_contract_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+        mut new_version: ContractVersion,
+    ) -> Result<(), RentalError> {
+        executor.require_auth();
+        multi_sig::require_admin(&env, &executor)?;
+
+        let mut proposal: ContractUpgradeProposal = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UpgradeProposal(proposal_id.clone()))
+            .ok_or(RentalError::ProposalNotFound)?;
+
+        if proposal.executed {
+            return Err(RentalError::ProposalAlreadyExecuted);
+        }
+
+        if env.ledger().timestamp() < proposal.eta {
+            return Err(RentalError::TimelockEtaNotReached);
+        }
+
+        if proposal.approvals.len() < proposal.required_signatures {
+            return Err(RentalError::InsufficientApprovals);
+        }
+
+        proposal.executed = true;
+        env.storage()
+            .persistent()
+            .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+        let mut active: Vec<String> = env
+            .storage()
+            .instance()
+            .get(&DataKey::ActiveUpgradeProposals)
+            .unwrap_or(Vec::new(&env));
+
+        let mut remaining = Vec::new(&env);
+        for id in active.iter() {
+            if id != proposal_id {
+                remaining.push_back(id);
+            }
+        }
+        active = remaining;
+        env.storage()
+            .instance()
+            .set(&DataKey::ActiveUpgradeProposals, &active);
+
+        new_version.hash = proposal.wasm_hash;
+        new_version.updated_at = env.ledger().timestamp();
+
+        Self::record_version(env.clone(), new_version)?;
+        events::upgrade_executed(&env, proposal_id);
+
+        Ok(())
+    }
+
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<ContractUpgradeProposal, RentalError> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::UpgradeProposal(proposal_id))
+            .ok_or(RentalError::ProposalNotFound)
+    }
+
+    pub fn get_active_upgrade_proposals(env: Env) -> Vec<String> {
+        env.storage()
+            .instance()
+            .get(&DataKey::ActiveUpgradeProposals)
+            .unwrap_or(Vec::new(&env))
+    }
+
+    pub fn get_upgrade_proposal_count(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::UpgradeProposalCount)
+            .unwrap_or(0)
+    }
+
     /// Initialize the contract with an admin and configuration.
     ///
     /// @notice One-time setup: sets admin and config. Callable only once.
@@ -563,6 +757,81 @@ impl Contract {
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
         agreement::cancel_agreement(&env, caller, agreement_id)
+    }
+
+    pub fn propose_extension(
+        env: Env,
+        caller: Address,
+        agreement_id: String,
+        extension_months: u32,
+        new_rent: Option<i128>,
+        new_deposit: Option<i128>,
+    ) -> Result<String, RentalError> {
+        Self::check_paused(&env)?;
+        agreement::propose_extension(
+            &env,
+            caller,
+            agreement_id,
+            extension_months,
+            new_rent,
+            new_deposit,
+        )
+    }
+
+    pub fn accept_extension(
+        env: Env,
+        caller: Address,
+        extension_id: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::accept_extension(&env, caller, extension_id)
+    }
+
+    pub fn reject_extension(
+        env: Env,
+        caller: Address,
+        extension_id: String,
+        reason: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::reject_extension(&env, caller, extension_id, reason)
+    }
+
+    pub fn activate_extension(
+        env: Env,
+        caller: Address,
+        extension_id: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::activate_extension(&env, caller, extension_id)
+    }
+
+    pub fn cancel_extension(
+        env: Env,
+        caller: Address,
+        extension_id: String,
+        reason: String,
+    ) -> Result<(), RentalError> {
+        Self::check_paused(&env)?;
+        agreement::cancel_extension(&env, caller, extension_id, reason)
+    }
+
+    pub fn get_extension(
+        env: Env,
+        extension_id: String,
+    ) -> Result<AgreementExtension, RentalError> {
+        agreement::get_extension(&env, extension_id)
+    }
+
+    pub fn get_extension_history(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<ExtensionHistory, RentalError> {
+        agreement::get_extension_history(&env, agreement_id)
+    }
+
+    pub fn get_current_agreement_end(env: Env, agreement_id: String) -> Result<u64, RentalError> {
+        agreement::get_current_agreement_end(&env, agreement_id)
     }
 
     /// Retrieve details of a rental agreement.

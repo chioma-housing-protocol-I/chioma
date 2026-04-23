@@ -45,8 +45,8 @@ describe('DisputesService', () => {
   const mockAgreement: any = {
     id: 1,
     agreementNumber: 'AGR-001',
-    landlordId: 'landlord-1',
-    tenantId: 'user-1',
+    adminId: 'landlord-1',
+    userId: 'user-1',
     monthlyRent: 1000,
     securityDeposit: 1000,
     status: AgreementStatus.ACTIVE,

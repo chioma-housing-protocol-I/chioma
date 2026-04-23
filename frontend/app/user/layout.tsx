@@ -1,13 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Menu, Wallet, Search, User } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 import { Sidebar } from '@/components/user-dashboard';
 import { userNavItems } from '@/data/user-nav-items';
 import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
 import { useAuth } from '@/store/authStore';
-import WalletConnectButton from '@/components/auth/WalletConnectButton';
+
+const WalletConnectButton = dynamic(
+  () => import('@/components/auth/WalletConnectButton'),
+  { ssr: false },
+);
 
 export default function UserDashboardLayout({
   children,

@@ -627,3 +627,105 @@ pub(crate) fn version_updated(env: &Env, major: u32, minor: u32, patch: u32) {
     }
     .publish(env);
 }
+
+// ─── Agreement Extension Events ─────────────────────────────────────────────
+
+#[contractevent(topics = ["extension_proposed"])]
+pub struct ExtensionProposed {
+    #[topic]
+    pub extension_id: String,
+    pub agreement_id: String,
+    pub new_end_date: u64,
+}
+
+#[contractevent(topics = ["extension_accepted"])]
+pub struct ExtensionAccepted {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_rejected"])]
+pub struct ExtensionRejected {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_activated"])]
+pub struct ExtensionActivated {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_cancelled"])]
+pub struct ExtensionCancelled {
+    #[topic]
+    pub extension_id: String,
+}
+
+pub(crate) fn extension_proposed(
+    env: &Env,
+    extension_id: String,
+    agreement_id: String,
+    new_end_date: u64,
+) {
+    ExtensionProposed {
+        extension_id,
+        agreement_id,
+        new_end_date,
+    }
+    .publish(env);
+}
+
+pub(crate) fn extension_accepted(env: &Env, extension_id: String) {
+    ExtensionAccepted { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_rejected(env: &Env, extension_id: String) {
+    ExtensionRejected { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_activated(env: &Env, extension_id: String) {
+    ExtensionActivated { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_cancelled(env: &Env, extension_id: String) {
+    ExtensionCancelled { extension_id }.publish(env);
+}
+
+// ─── Contract Upgrade Events ────────────────────────────────────────────────
+
+#[contractevent(topics = ["upgrade_proposed"])]
+pub struct UpgradeProposed {
+    #[topic]
+    pub proposal_id: String,
+    pub eta: u64,
+}
+
+#[contractevent(topics = ["upgrade_approved"])]
+pub struct UpgradeApproved {
+    #[topic]
+    pub proposal_id: String,
+    pub approvals: u32,
+}
+
+#[contractevent(topics = ["upgrade_executed"])]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub proposal_id: String,
+}
+
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, eta: u64) {
+    UpgradeProposed { proposal_id, eta }.publish(env);
+}
+
+pub(crate) fn upgrade_approved(env: &Env, proposal_id: String, approvals: u32) {
+    UpgradeApproved {
+        proposal_id,
+        approvals,
+    }
+    .publish(env);
+}
+
+pub(crate) fn upgrade_executed(env: &Env, proposal_id: String) {
+    UpgradeExecuted { proposal_id }.publish(env);
+}

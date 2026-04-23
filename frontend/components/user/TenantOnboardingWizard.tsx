@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
@@ -26,6 +26,8 @@ import {
   loadTenantOnboardingData,
   saveTenantOnboardingData,
 } from '@/lib/tenant-onboarding';
+import { trackTenantOnboardingEvent } from '@/lib/onboarding-analytics';
+import { useOnboardingContext } from '@/contexts/OnboardingContext';
 
 const TOTAL_STEPS = 4;
 
@@ -542,10 +544,64 @@ export function TenantOnboardingWizard() {
   const [data, setData] = useState<TenantOnboardingData>(() =>
     loadTenantOnboardingData(),
   );
+  const onboarding = useOnboardingContext();
 
   const progressPercent = Math.round(((step + 1) / TOTAL_STEPS) * 100);
   const currentMeta = STEP_META[step];
   const StepIcon = currentMeta.icon;
+
+  useEffect(() => {
+    onboarding.setTotalSteps(TOTAL_STEPS);
+  }, [onboarding]);
+
+  useEffect(() => {
+    onboarding.setCurrentStep(step + 1);
+
+    const payload = {
+      step: step + 1,
+      totalSteps: TOTAL_STEPS,
+      progressPercent,
+      source: 'tenant_wizard',
+    };
+
+    onboarding.track('onboarding_step_viewed', payload);
+    trackTenantOnboardingEvent('tenant_onboarding_step_viewed', payload);
+  }, [onboarding, progressPercent, step]);
+
+  useEffect(() => {
+    const hasSavedProgress =
+      data.completed ||
+      data.skippedSteps.length > 0 ||
+      data.profile.phone.trim() !== '' ||
+      data.profile.location.trim() !== '' ||
+      data.search.savedSearchCity.trim() !== '';
+
+    if (hasSavedProgress) {
+      const payload = {
+        step: step + 1,
+        totalSteps: TOTAL_STEPS,
+        progressPercent,
+        source: 'tenant_wizard',
+      };
+      onboarding.track('onboarding_resumed', payload);
+      trackTenantOnboardingEvent('tenant_onboarding_resumed', payload);
+    } else {
+      onboarding.track('onboarding_started', {
+        step: 1,
+        totalSteps: TOTAL_STEPS,
+        progressPercent: 25,
+        source: 'tenant_wizard',
+      });
+      trackTenantOnboardingEvent('tenant_onboarding_started', {
+        step: 1,
+        totalSteps: TOTAL_STEPS,
+        progressPercent: 25,
+        source: 'tenant_wizard',
+      });
+    }
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const canGoNext = useMemo(() => {
     if (step === 0) return true; // profile is optional, can skip
@@ -572,6 +628,15 @@ export function TenantOnboardingWizard() {
       : [...data.skippedSteps, step];
     const next = { ...data, skippedSteps: skipped };
     updateAndPersist(next);
+    const payload = {
+      step: step + 1,
+      totalSteps: TOTAL_STEPS,
+      progressPercent,
+      source: 'tenant_wizard',
+    };
+    onboarding.track('onboarding_step_skipped', payload);
+    trackTenantOnboardingEvent('tenant_onboarding_step_skipped', payload);
+
     if (step < TOTAL_STEPS - 1) {
       setStep((prev) => prev + 1);
     } else {
@@ -586,11 +651,28 @@ export function TenantOnboardingWizard() {
       completedAt: new Date().toISOString(),
     };
     updateAndPersist(completed);
+    const payload = {
+      step: TOTAL_STEPS,
+      totalSteps: TOTAL_STEPS,
+      progressPercent: 100,
+      source: 'tenant_wizard',
+    };
+    onboarding.track('onboarding_completed', payload);
+    trackTenantOnboardingEvent('tenant_onboarding_completed', payload);
     router.push('/user');
   };
 
   const nextStep = () => {
     if (!canGoNext) return;
+    const payload = {
+      step: step + 1,
+      totalSteps: TOTAL_STEPS,
+      progressPercent,
+      source: 'tenant_wizard',
+    };
+    onboarding.track('onboarding_step_completed', payload);
+    trackTenantOnboardingEvent('tenant_onboarding_step_completed', payload);
+
     if (step < TOTAL_STEPS - 1) {
       setStep((prev) => prev + 1);
     } else {
