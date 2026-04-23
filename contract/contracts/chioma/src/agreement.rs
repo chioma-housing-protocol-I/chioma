@@ -51,10 +51,10 @@ pub fn validate_agreement_params(
 #[allow(clippy::too_many_arguments)]
 pub fn create_agreement(env: &Env, input: crate::types::AgreementInput) -> Result<(), RentalError> {
     // Tenant MUST authorize creation
-    input.tenant.require_auth();
+    input.user.require_auth();
 
     // Rate limiting check
-    rate_limit::check_rate_limit(env, &input.tenant, "create_agreement")?;
+    rate_limit::check_rate_limit(env, &input.user, "create_agreement")?;
 
     create_agreement_internal(env, input)
 }
@@ -88,8 +88,8 @@ fn create_agreement_internal(
     // Initialize agreement
     let agreement = RentAgreement {
         agreement_id: agreement_id.clone(),
-        landlord: input.landlord.clone(),
-        tenant: input.tenant.clone(),
+        admin: input.admin.clone(),
+        user: input.user.clone(),
         agent: input.agent.clone(),
         monthly_rent: input.terms.monthly_rent,
         security_deposit: input.terms.security_deposit,
@@ -133,8 +133,8 @@ fn create_agreement_internal(
     events::agreement_created(
         env,
         agreement_id,
-        agreement.tenant.clone(),
-        agreement.landlord.clone(),
+        agreement.user.clone(),
+        agreement.admin.clone(),
         agreement.monthly_rent,
         agreement.security_deposit,
         agreement.start_date,
@@ -146,12 +146,12 @@ fn create_agreement_internal(
 }
 
 /// Sign an agreement as the tenant
-pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Result<(), RentalError> {
+pub fn sign_agreement(env: &Env, user: Address, agreement_id: String) -> Result<(), RentalError> {
     // Tenant MUST authorize signing
-    tenant.require_auth();
+    user.require_auth();
 
     // Rate limiting check
-    rate_limit::check_rate_limit(env, &tenant, "sign_agreement")?;
+    rate_limit::check_rate_limit(env, &user, "sign_agreement")?;
 
     // Retrieve the agreement
     let mut agreement: RentAgreement = env
@@ -161,7 +161,7 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
         .ok_or(RentalError::AgreementNotFound)?;
 
     // Validate caller is the intended tenant
-    if agreement.tenant != tenant {
+    if agreement.user != user {
         return Err(RentalError::NotTenant);
     }
 
@@ -195,8 +195,8 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
     events::agreement_signed(
         env,
         agreement_id,
-        tenant,
-        agreement.landlord.clone(),
+        user,
+        agreement.admin.clone(),
         current_time,
     );
 
@@ -253,10 +253,10 @@ pub fn approve_agreement(
 /// Submit a draft agreement for tenant signature (Draft → Pending)
 pub fn submit_agreement(
     env: &Env,
-    landlord: Address,
+    admin: Address,
     agreement_id: String,
 ) -> Result<(), RentalError> {
-    landlord.require_auth();
+    admin.require_auth();
 
     let mut agreement: RentAgreement = env
         .storage()
@@ -264,7 +264,7 @@ pub fn submit_agreement(
         .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if agreement.landlord != landlord {
+    if agreement.admin != admin {
         return Err(RentalError::Unauthorized);
     }
 
@@ -283,7 +283,7 @@ pub fn submit_agreement(
         TTL_BUMP,
     );
 
-    events::agreement_submitted(env, agreement_id, landlord, agreement.tenant.clone());
+    events::agreement_submitted(env, agreement_id, admin, agreement.user.clone());
 
     Ok(())
 }
@@ -303,7 +303,7 @@ pub fn cancel_agreement(
         .ok_or(RentalError::AgreementNotFound)?;
 
     // Only landlord can cancel
-    if agreement.landlord != caller {
+    if agreement.admin != caller {
         return Err(RentalError::Unauthorized);
     }
 
@@ -326,7 +326,7 @@ pub fn cancel_agreement(
         TTL_BUMP,
     );
 
-    events::agreement_cancelled(env, agreement_id, caller, agreement.tenant.clone());
+    events::agreement_cancelled(env, agreement_id, caller, agreement.user.clone());
 
     Ok(())
 }
@@ -401,7 +401,7 @@ pub fn update_metadata(
         .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    agreement.landlord.require_auth();
+    agreement.admin.require_auth();
 
     agreement.metadata_uri = metadata_uri;
     agreement.attributes = attributes;
@@ -418,7 +418,7 @@ pub fn create_agreement_with_token(
     env: &Env,
     input: crate::types::AgreementInput,
 ) -> Result<String, RentalError> {
-    input.tenant.require_auth();
+    input.user.require_auth();
 
     // Check if token is supported
     if !crate::multi_token::is_token_supported(env.clone(), input.payment_token.clone())? {
@@ -471,7 +471,7 @@ pub fn make_payment_with_token(
         return Err(RentalError::AgreementNotActive);
     }
 
-    agreement.tenant.require_auth();
+    agreement.user.require_auth();
 
     // Convert amount to the agreement's base token if they differ
     let amount_in_base = if token != agreement.payment_token {
@@ -491,7 +491,7 @@ pub fn make_payment_with_token(
 
     // Transfer tokens from tenant to contract (escrow)
     let client = soroban_sdk::token::Client::new(env, &token);
-    client.transfer(&agreement.tenant, env.current_contract_address(), &amount);
+    client.transfer(&agreement.user, env.current_contract_address(), &amount);
 
     // Update agreement state
     agreement.total_rent_paid += amount_in_base;
@@ -499,11 +499,11 @@ pub fn make_payment_with_token(
 
     // Simple split for now: 100% to landlord
     let split = PaymentSplit {
-        landlord_amount: amount_in_base,
+        admin_amount: amount_in_base,
         platform_amount: 0,
         token: token.clone(),
         payment_date: env.ledger().timestamp(),
-        payer: agreement.tenant.clone(),
+        payer: agreement.user.clone(),
     };
 
     let record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
@@ -537,14 +537,14 @@ pub fn release_escrow_with_token(
 
     // Only landlord can release? Or admin?
     // Let's assume landlord for this implementation
-    agreement.landlord.require_auth();
+    agreement.admin.require_auth();
 
     let contract_addr = env.current_contract_address();
     let client = soroban_sdk::token::Client::new(env, &token);
     let balance = client.balance(&contract_addr);
 
     if balance > 0 {
-        client.transfer(&contract_addr, &agreement.landlord, &balance);
+        client.transfer(&contract_addr, &agreement.admin, &balance);
     }
 
     events::escrow_released_with_token(env, escrow_id, token, balance);
@@ -568,7 +568,7 @@ pub fn propose_extension(
         .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if caller != agreement.landlord && caller != agreement.tenant {
+    if caller != agreement.admin && caller != agreement.user {
         return Err(RentalError::Unauthorized);
     }
 
@@ -590,8 +590,8 @@ pub fn propose_extension(
         status: ExtensionStatus::Proposed,
         created_at: env.ledger().timestamp(),
         proposed_by: caller.clone(),
-        landlord_accepted: caller == agreement.landlord,
-        tenant_accepted: caller == agreement.tenant,
+        landlord_accepted: caller == agreement.admin,
+        tenant_accepted: caller == agreement.user,
         last_reason: None,
     };
 
@@ -646,9 +646,9 @@ pub fn accept_extension(
         .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if caller == agreement.landlord {
+    if caller == agreement.admin {
         extension.landlord_accepted = true;
-    } else if caller == agreement.tenant {
+    } else if caller == agreement.user {
         extension.tenant_accepted = true;
     } else {
         return Err(RentalError::Unauthorized);
@@ -686,7 +686,7 @@ pub fn reject_extension(
         .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if caller != agreement.landlord && caller != agreement.tenant {
+    if caller != agreement.admin && caller != agreement.user {
         return Err(RentalError::Unauthorized);
     }
 
@@ -726,7 +726,7 @@ pub fn activate_extension(
         .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if caller != agreement.landlord {
+    if caller != agreement.admin {
         return Err(RentalError::Unauthorized);
     }
 
@@ -769,7 +769,7 @@ pub fn cancel_extension(
         .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if caller != agreement.landlord && caller != agreement.tenant {
+    if caller != agreement.admin && caller != agreement.user {
         return Err(RentalError::Unauthorized);
     }
 

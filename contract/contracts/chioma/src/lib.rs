@@ -702,11 +702,11 @@ impl Contract {
     /// @return Ok(()) on success.
     pub fn sign_agreement(
         env: Env,
-        tenant: Address,
+        user: Address,
         agreement_id: String,
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
-        agreement::sign_agreement(&env, tenant, agreement_id)
+        agreement::sign_agreement(&env, user, agreement_id)
     }
 
     /// Approve a pending agreement as a witness (PendingApproval → Active).
@@ -736,11 +736,11 @@ impl Contract {
     /// @return Ok(()) on success.
     pub fn submit_agreement(
         env: Env,
-        landlord: Address,
+        admin: Address,
         agreement_id: String,
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
-        agreement::submit_agreement(&env, landlord, agreement_id)
+        agreement::submit_agreement(&env, admin, agreement_id)
     }
 
     /// Cancel an agreement while in Draft or Pending state.

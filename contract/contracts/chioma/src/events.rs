@@ -13,13 +13,13 @@ pub struct ContractInitialized {
 }
 
 /// Event emitted when an agreement is created
-/// Topics: ["agreement_created", tenant: Address, landlord: Address]
+/// Topics: ["agreement_created", user: Address, admin: Address]
 #[contractevent(topics = ["agreement_created"])]
 pub struct AgreementCreated {
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     pub agreement_id: String,
     pub monthly_rent: i128,
     pub security_deposit: i128,
@@ -29,36 +29,36 @@ pub struct AgreementCreated {
 }
 
 /// Event emitted when an agreement is signed
-/// Topics: ["agreement_signed", tenant: Address, landlord: Address]
+/// Topics: ["agreement_signed", user: Address, admin: Address]
 #[contractevent(topics = ["agreement_signed"])]
 pub struct AgreementSigned {
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     pub agreement_id: String,
     pub signed_at: u64,
 }
 
 /// Event emitted when an agreement is submitted for signing
-/// Topics: ["agreement_submitted", landlord: Address, tenant: Address]
+/// Topics: ["agreement_submitted", admin: Address, user: Address]
 #[contractevent(topics = ["agreement_submitted"])]
 pub struct AgreementSubmitted {
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     pub agreement_id: String,
 }
 
 /// Event emitted when an agreement is cancelled
-/// Topics: ["agreement_cancelled", landlord: Address, tenant: Address]
+/// Topics: ["agreement_cancelled", admin: Address, user: Address]
 #[contractevent(topics = ["agreement_cancelled"])]
 pub struct AgreementCancelled {
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     pub agreement_id: String,
 }
 
@@ -114,8 +114,8 @@ pub(crate) fn contract_initialized(env: &Env, admin: Address, config: Config) {
 pub(crate) fn agreement_created(
     env: &Env,
     agreement_id: String,
-    tenant: Address,
-    landlord: Address,
+    user: Address,
+    admin: Address,
     monthly_rent: i128,
     security_deposit: i128,
     start_date: u64,
@@ -123,8 +123,8 @@ pub(crate) fn agreement_created(
     agent: Option<Address>,
 ) {
     AgreementCreated {
-        tenant,
-        landlord,
+        user,
+        admin,
         agreement_id,
         monthly_rent,
         security_deposit,
@@ -139,13 +139,13 @@ pub(crate) fn agreement_created(
 pub(crate) fn agreement_signed(
     env: &Env,
     agreement_id: String,
-    tenant: Address,
-    landlord: Address,
+    user: Address,
+    admin: Address,
     signed_at: u64,
 ) {
     AgreementSigned {
-        tenant,
-        landlord,
+        user,
+        admin,
         agreement_id,
         signed_at,
     }
@@ -153,30 +153,20 @@ pub(crate) fn agreement_signed(
 }
 
 /// Helper function to emit agreement submitted event
-pub(crate) fn agreement_submitted(
-    env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-) {
+pub(crate) fn agreement_submitted(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementSubmitted {
-        landlord,
-        tenant,
+        admin,
+        user,
         agreement_id,
     }
     .publish(env);
 }
 
 /// Helper function to emit agreement cancelled event
-pub(crate) fn agreement_cancelled(
-    env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-) {
+pub(crate) fn agreement_cancelled(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementCancelled {
-        landlord,
-        tenant,
+        admin,
+        user,
         agreement_id,
     }
     .publish(env);
@@ -310,8 +300,8 @@ pub struct InterestAccruedEvent {
 #[contractevent]
 pub struct InterestDistributed {
     pub escrow_id: String,
-    pub tenant_share: i128,
-    pub landlord_share: i128,
+    pub user_share: i128,
+    pub admin_share: i128,
 }
 
 pub(crate) fn interest_config_set(env: &Env, agreement_id: String, annual_rate: u32) {
@@ -334,13 +324,13 @@ pub(crate) fn interest_accrued(env: &Env, escrow_id: String, amount: i128, total
 pub(crate) fn interest_distributed(
     env: &Env,
     escrow_id: String,
-    tenant_share: i128,
-    landlord_share: i128,
+    user_share: i128,
+    admin_share: i128,
 ) {
     InterestDistributed {
         escrow_id,
-        tenant_share,
-        landlord_share,
+        user_share,
+        admin_share,
     }
     .publish(env);
 }

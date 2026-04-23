@@ -33,14 +33,14 @@ fn create_agreement_with_token(
     client: &ContractClient<'_>,
     env: &Env,
     agreement_id: &String,
-    landlord: &Address,
-    tenant: &Address,
+    admin: &Address,
+    user: &Address,
     token: &Address,
 ) {
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -68,8 +68,8 @@ fn test_set_and_get_royalty() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -104,8 +104,8 @@ fn test_calculate_royalty() {
     let token = Address::generate(&env);
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -139,8 +139,8 @@ fn test_transfer_with_royalty() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -175,7 +175,7 @@ fn test_transfer_with_royalty() {
 
     // Verify agreement owner updated
     let ag = client.get_agreement(&id).unwrap();
-    assert_eq!(ag.landlord, buyer);
+    assert_eq!(ag.admin, buyer);
 
     // Verify payments history
     let payments = client.get_royalty_payments(&id);
@@ -200,8 +200,8 @@ fn test_invalid_royalty_percentage_fails() {
     let token = Address::generate(&env);
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,

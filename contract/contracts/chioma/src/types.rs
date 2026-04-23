@@ -140,8 +140,8 @@ pub struct Attribute {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RentAgreement {
     pub agreement_id: String,
-    pub landlord: Address,
-    pub tenant: Address,
+    pub admin: Address,
+    pub user: Address,
     pub agent: Option<Address>,
     pub monthly_rent: i128,
     pub security_deposit: i128,
@@ -162,7 +162,7 @@ pub struct RentAgreement {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PaymentSplit {
-    pub landlord_amount: i128,
+    pub admin_amount: i128,
     pub platform_amount: i128,
     pub token: Address,
     pub payment_date: u64,
@@ -350,8 +350,8 @@ pub enum RateLimitReason {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgreementInput {
     pub agreement_id: String,
-    pub landlord: Address,
-    pub tenant: Address,
+    pub admin: Address,
+    pub user: Address,
     pub agent: Option<Address>,
     pub terms: AgreementTerms,
     pub payment_token: Address,

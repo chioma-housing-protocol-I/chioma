@@ -98,8 +98,8 @@ fn test_create_agreement_with_token() {
     let property_id = String::from_str(&env, "PROP1");
     let agreement_id = client.create_agreement_with_token(&AgreementInput {
         agreement_id: property_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -156,8 +156,8 @@ fn test_make_payment_with_different_token() {
 
     let agreement_id = client.create_agreement_with_token(&AgreementInput {
         agreement_id: String::from_str(&env, "PROP1").clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1100,
@@ -204,8 +204,8 @@ fn test_create_agreement_success() {
 
     let result = client.try_create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -221,8 +221,8 @@ fn test_create_agreement_success() {
 
     assert!(result.is_ok());
     let agreement = client.get_agreement(&agreement_id).unwrap();
-    assert_eq!(agreement.tenant, tenant);
-    assert_eq!(agreement.landlord, landlord);
+    assert_eq!(agreement.user, tenant);
+    assert_eq!(agreement.admin, landlord);
 }
 
 #[test]
@@ -240,8 +240,8 @@ fn test_validate_agreement_monthly_rent_positive() {
     // monthly_rent = 0 should fail
     let result = client.try_create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "AGR-INVALID-1"),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 0,
@@ -273,8 +273,8 @@ fn test_validate_agreement_security_deposit_nonnegative() {
     // security_deposit = 0 should succeed
     let result = client.try_create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "AGR-ZERO-DEPOSIT"),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -306,8 +306,8 @@ fn test_validate_agreement_start_before_end() {
     // start_date >= end_date should fail
     let result = client.try_create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "AGR-INVALID-DATES"),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -339,8 +339,8 @@ fn test_validate_agreement_commission_rate_max_100() {
     // agent_commission_rate > 100 should fail
     let result = client.try_create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "AGR-INVALID-COMMISSION"),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -372,8 +372,8 @@ fn test_sign_agreement_transitions_to_pending() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -409,8 +409,8 @@ fn test_cancel_agreement_from_draft() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -455,8 +455,8 @@ fn test_duplicate_agreement_prevention() {
 
     let input = AgreementInput {
         agreement_id: agreement_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -606,8 +606,8 @@ fn test_create_agreement_with_token_stores_token() {
 
     client.create_agreement_with_token(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        tenant: tenant.clone(),
-        landlord: landlord.clone(),
+        user: tenant.clone(),
+        admin: landlord.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,

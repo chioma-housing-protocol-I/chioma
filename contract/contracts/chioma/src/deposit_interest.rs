@@ -277,7 +277,7 @@ pub fn distribute_interest(env: Env, escrow_id: String) -> Result<(), RentalErro
         .get::<DataKey, crate::types::RentAgreement>(&DataKey::Agreement(escrow_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    let (tenant_share, landlord_share) = match config.interest_recipient {
+    let (user_share, admin_share) = match config.interest_recipient {
         InterestRecipient::Tenant => (total, 0_i128),
         InterestRecipient::Landlord => (0_i128, total),
         InterestRecipient::Split => {
@@ -290,11 +290,11 @@ pub fn distribute_interest(env: Env, escrow_id: String) -> Result<(), RentalErro
     let token_client = soroban_sdk::token::Client::new(&env, &agreement.payment_token);
     let contract_self = env.current_contract_address();
 
-    if tenant_share > 0 {
-        token_client.transfer(&contract_self, &agreement.tenant, &tenant_share);
+    if user_share > 0 {
+        token_client.transfer(&contract_self, &agreement.user, &user_share);
     }
-    if landlord_share > 0 {
-        token_client.transfer(&contract_self, &agreement.landlord, &landlord_share);
+    if admin_share > 0 {
+        token_client.transfer(&contract_self, &agreement.admin, &admin_share);
     }
 
     // Reset accrued interest; principal remains.
@@ -304,6 +304,6 @@ pub fn distribute_interest(env: Env, escrow_id: String) -> Result<(), RentalErro
         .persistent()
         .set(&DataKey::DepositInterest(escrow_id.clone()), &di);
 
-    events::interest_distributed(&env, escrow_id, tenant_share, landlord_share);
+    events::interest_distributed(&env, escrow_id, user_share, admin_share);
     Ok(())
 }

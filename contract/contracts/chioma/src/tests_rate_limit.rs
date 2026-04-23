@@ -32,14 +32,14 @@ fn create_contract() -> (Env, ContractClient<'static>, Address, Address) {
 fn make_input(
     env: &Env,
     agreement_id: &str,
-    landlord: &Address,
-    tenant: &Address,
+    admin: &Address,
+    user: &Address,
     payment_token: &Address,
 ) -> AgreementInput {
     AgreementInput {
         agreement_id: String::from_str(env, agreement_id),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 100_000,
