@@ -36,6 +36,7 @@ pub enum DataKey {
     VersionHistory,
     AgreementExtension(String),
     ExtensionHistory(String),
+    EscrowFrozen(String),
     UpgradeProposal(String),
     UpgradeProposalCount,
     ActiveUpgradeProposals,

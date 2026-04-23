@@ -1398,3 +1398,90 @@ fn test_unpause_unauthorized() {
         }])
         .unpause();
 }
+
+#[test]
+fn test_freeze_and_unfreeze_escrow_by_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_001");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token,
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    client.freeze_escrow(&admin, &agreement_id);
+    assert!(client.is_escrow_frozen(&agreement_id));
+
+    client.unfreeze_escrow(&admin, &agreement_id);
+    assert!(!client.is_escrow_frozen(&agreement_id));
+}
+
+#[test]
+fn test_release_escrow_fails_when_frozen() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_002");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user,
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: payment_token.clone(),
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    client.freeze_escrow(&admin, &agreement_id);
+
+    let result = client.try_release_escrow_with_token(&agreement_id, &payment_token);
+    assert_eq!(result, Err(Ok(RentalError::InvalidState)));
+}

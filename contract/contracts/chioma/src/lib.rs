@@ -54,9 +54,10 @@ pub use agreement::{
     accept_extension, activate_extension, approve_agreement, cancel_agreement, cancel_extension,
     create_agreement, create_agreement_with_token, get_agreement, get_agreement_count,
     get_agreement_token, get_current_agreement_end, get_extension, get_extension_history,
-    get_payment_history, get_payment_split, has_agreement, make_payment_with_token,
-    propose_extension, reject_extension, release_escrow_with_token, sign_agreement,
-    submit_agreement, update_metadata, validate_agreement_params,
+    get_payment_history, get_payment_split, has_agreement, is_escrow_frozen,
+    make_payment_with_token, propose_extension, reject_extension, release_escrow_with_token,
+    set_escrow_frozen, sign_agreement, submit_agreement, update_metadata,
+    validate_agreement_params,
 };
 pub use errors::RentalError;
 pub use multi_token::{
@@ -666,6 +667,47 @@ impl Contract {
     ) -> Result<(), RentalError> {
         Self::check_paused(&env)?;
         agreement::release_escrow_with_token(&env, escrow_id, token)
+    }
+
+    /// Freeze escrow funds for a specific agreement.
+    ///
+    /// Can be called by system admin or a configured multi-sig admin (DAO-voted entity).
+    pub fn freeze_escrow(env: Env, caller: Address, escrow_id: String) -> Result<(), RentalError> {
+        caller.require_auth();
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        let is_system_admin = caller == state.admin;
+        let is_dao_admin = multi_sig::is_admin(&env, &caller).unwrap_or(false);
+
+        if !is_system_admin && !is_dao_admin {
+            return Err(RentalError::Unauthorized);
+        }
+
+        agreement::set_escrow_frozen(&env, escrow_id, true)
+    }
+
+    /// Unfreeze escrow funds for a specific agreement.
+    ///
+    /// Can be called by system admin or a configured multi-sig admin (DAO-voted entity).
+    pub fn unfreeze_escrow(
+        env: Env,
+        caller: Address,
+        escrow_id: String,
+    ) -> Result<(), RentalError> {
+        caller.require_auth();
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        let is_system_admin = caller == state.admin;
+        let is_dao_admin = multi_sig::is_admin(&env, &caller).unwrap_or(false);
+
+        if !is_system_admin && !is_dao_admin {
+            return Err(RentalError::Unauthorized);
+        }
+
+        agreement::set_escrow_frozen(&env, escrow_id, false)
+    }
+
+    /// Check whether escrow funds are currently frozen for an agreement.
+    pub fn is_escrow_frozen(env: Env, escrow_id: String) -> bool {
+        agreement::is_escrow_frozen(&env, escrow_id)
     }
 
     /// Create a new rental agreement.

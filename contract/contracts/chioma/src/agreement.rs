@@ -535,6 +535,10 @@ pub fn release_escrow_with_token(
         .get(&DataKey::Agreement(agreement_id))
         .ok_or(RentalError::AgreementNotFound)?;
 
+    if is_escrow_frozen(env, escrow_id.clone()) {
+        return Err(RentalError::InvalidState);
+    }
+
     // Only landlord can release? Or admin?
     // Let's assume landlord for this implementation
     agreement.admin.require_auth();
@@ -550,6 +554,30 @@ pub fn release_escrow_with_token(
     events::escrow_released_with_token(env, escrow_id, token, balance);
 
     Ok(())
+}
+
+pub fn set_escrow_frozen(env: &Env, escrow_id: String, is_frozen: bool) -> Result<(), RentalError> {
+    if !env
+        .storage()
+        .persistent()
+        .has(&DataKey::Agreement(escrow_id.clone()))
+    {
+        return Err(RentalError::AgreementNotFound);
+    }
+
+    let key = DataKey::EscrowFrozen(escrow_id);
+    env.storage().persistent().set(&key, &is_frozen);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, TTL_THRESHOLD, TTL_BUMP);
+    Ok(())
+}
+
+pub fn is_escrow_frozen(env: &Env, escrow_id: String) -> bool {
+    env.storage()
+        .persistent()
+        .get::<DataKey, bool>(&DataKey::EscrowFrozen(escrow_id))
+        .unwrap_or(false)
 }
 
 pub fn propose_extension(
