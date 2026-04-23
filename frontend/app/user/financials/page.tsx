@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Eye, ShieldCheck } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -26,6 +27,7 @@ interface Transaction {
   amount: number;
   status: string;
   inflow: boolean;
+  previewImage: string;
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -54,6 +56,8 @@ const transactions: Transaction[] = [
     amount: 2500000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GDFE2L8M…3Q9Z',
@@ -63,6 +67,8 @@ const transactions: Transaction[] = [
     amount: 3800000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GHJK9P1N…4W2B',
@@ -72,6 +78,8 @@ const transactions: Transaction[] = [
     amount: 38000,
     status: 'Deducted',
     inflow: false,
+    previewImage:
+      'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GLMN5R7T…8C4D',
@@ -81,6 +89,8 @@ const transactions: Transaction[] = [
     amount: 500000,
     status: 'Processed',
     inflow: false,
+    previewImage:
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GPQR2S6V…1E5F',
@@ -90,6 +100,8 @@ const transactions: Transaction[] = [
     amount: 1800000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1512915922686-57c11dde9b6b?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GSTU8X3Y…6G7H',
@@ -99,6 +111,8 @@ const transactions: Transaction[] = [
     amount: 2500000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1501183638710-841dd1904471?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GUVW4Z0A…9I2J',
@@ -108,6 +122,8 @@ const transactions: Transaction[] = [
     amount: 25000,
     status: 'Deducted',
     inflow: false,
+    previewImage:
+      'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GXYZ1B5C…2K3L',
@@ -117,6 +133,8 @@ const transactions: Transaction[] = [
     amount: 3800000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GABD6E9F…4M5N',
@@ -126,6 +144,8 @@ const transactions: Transaction[] = [
     amount: 2500000,
     status: 'Held',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=160&q=80',
   },
   {
     hash: 'GCDF2G7H…6O8P',
@@ -135,6 +155,8 @@ const transactions: Transaction[] = [
     amount: 1800000,
     status: 'Confirmed',
     inflow: true,
+    previewImage:
+      'https://images.unsplash.com/photo-1512915922686-57c11dde9b6b?auto=format&fit=crop&w=160&q=80',
   },
 ];
 
@@ -187,6 +209,31 @@ const StatusBadge = ({ status }: { status: string }) => (
   >
     {status}
   </span>
+);
+
+const EscrowPreviewLink = ({ tx }: { tx: Transaction }) => (
+  <Link
+    href={`/user/financials/escrows/${encodeURIComponent(tx.hash)}`}
+    className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 hover:text-white transition-all"
+    aria-label={`Preview escrow for ${tx.property}`}
+  >
+    <span className="relative h-7 w-7 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={tx.previewImage}
+        alt=""
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+      <span className="absolute inset-0 flex items-center justify-center bg-slate-950/25">
+        <ShieldCheck size={14} className="text-white" />
+      </span>
+    </span>
+    <span className="inline-flex items-center gap-1">
+      <Eye size={12} />
+      Preview
+    </span>
+  </Link>
 );
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
@@ -456,12 +503,7 @@ export default function FinancialsPage() {
                   <StatusBadge status={tx.status} />
                   {(tx.type === 'Security Deposit' ||
                     tx.type === 'Deposit Refund') && (
-                    <Link
-                      href={`/landlords/financials/escrows/${encodeURIComponent(tx.hash)}`}
-                      className="inline-flex items-center rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 hover:text-white transition-all"
-                    >
-                      Preview
-                    </Link>
+                    <EscrowPreviewLink tx={tx} />
                   )}
                 </div>
               </div>
