@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
+import { UserAvatar } from '@/components/admin/users/UserAvatar';
 import type { User, PaginatedResponse } from '@/types';
 
 interface BulkUserOperationsProps {
@@ -254,9 +255,11 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-white uppercase flex-shrink-0">
-                          {(user.name ?? user.email).charAt(0)}
-                        </div>
+                        <UserAvatar
+                          name={user.name}
+                          email={user.email}
+                          src={user.avatar}
+                        />
                         <div>
                           <Link
                             href={`/admin/users/${user.id}`}
