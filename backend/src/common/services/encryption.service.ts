@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'node:crypto';
+import { BaseAppError } from '../errors/base.error';
+import { ErrorCode } from '../errors/error-codes';
+import { HttpStatus } from '@nestjs/common';
 
 export interface EncryptedData {
   iv: string; // base64
@@ -8,17 +11,27 @@ export interface EncryptedData {
   tag: string; // base64 auth tag
 }
 
-export class EncryptionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'EncryptionError';
+export class EncryptionError extends BaseAppError {
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.ENCRYPTION_ERROR,
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      message,
+      false,
+      context,
+    );
   }
 }
 
-export class DecryptionFailedError extends Error {
-  constructor() {
-    super('Decryption failed: invalid data, key, or tampered');
-    this.name = 'DecryptionFailedError';
+export class DecryptionFailedError extends BaseAppError {
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.DECRYPTION_ERROR,
+      HttpStatus.BAD_REQUEST,
+      message || 'Decryption failed: invalid data, key, or tampered',
+      true,
+      context,
+    );
   }
 }
 

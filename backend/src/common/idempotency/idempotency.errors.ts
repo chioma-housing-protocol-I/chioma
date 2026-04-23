@@ -1,6 +1,15 @@
-export class IdempotencyKeyMissingError extends Error {
-  constructor(message = 'Idempotency key is required but was not provided') {
-    super(message);
-    this.name = 'IdempotencyKeyMissingError';
+import { BaseAppError } from '../errors/base.error';
+import { ErrorCode } from '../errors/error-codes';
+import { HttpStatus } from '@nestjs/common';
+
+export class IdempotencyKeyMissingError extends BaseAppError {
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.IDEMPOTENCY_KEY_MISSING,
+      HttpStatus.BAD_REQUEST,
+      message,
+      true,
+      context,
+    );
   }
 }
