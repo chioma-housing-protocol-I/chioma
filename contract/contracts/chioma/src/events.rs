@@ -153,12 +153,7 @@ pub(crate) fn agreement_signed(
 }
 
 /// Helper function to emit agreement submitted event
-pub(crate) fn agreement_submitted(
-    env: &Env,
-    agreement_id: String,
-    admin: Address,
-    user: Address,
-) {
+pub(crate) fn agreement_submitted(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementSubmitted {
         admin,
         user,
@@ -168,12 +163,7 @@ pub(crate) fn agreement_submitted(
 }
 
 /// Helper function to emit agreement cancelled event
-pub(crate) fn agreement_cancelled(
-    env: &Env,
-    agreement_id: String,
-    admin: Address,
-    user: Address,
-) {
+pub(crate) fn agreement_cancelled(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementCancelled {
         admin,
         user,
