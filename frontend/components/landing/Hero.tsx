@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Sparkles } from 'lucide-react';
+import { CheckCircle2, Search } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/store/authStore';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
@@ -12,6 +13,15 @@ export default function Hero() {
   // AUTH DISABLED - useAuthRedirect commented out for development
   // useAuthRedirect(); // Redirect authenticated users to their dashboard
   const { walletAddress } = useAuth();
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (query.trim()) params.set('q', query.trim());
+    router.push(`/properties?${params.toString()}`);
+  };
 
   return (
     <section className="relative pt-20 pb-32 overflow-hidden">
@@ -84,6 +94,32 @@ export default function Hero() {
               See How It Works
             </Link>
           </motion.div>
+
+          {/* Search Bar */}
+          <motion.form
+            onSubmit={handleSearch}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.35 }}
+            className="flex items-center gap-2 max-w-xl mx-auto w-full mt-2"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300/60 pointer-events-none" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by location, property type..."
+                className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm transition-colors whitespace-nowrap"
+            >
+              Browse Properties
+            </button>
+          </motion.form>
 
           {/* Trust Indicators */}
           <motion.div

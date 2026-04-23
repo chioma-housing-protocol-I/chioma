@@ -16,11 +16,14 @@ export class AuthenticationError extends BaseAppError {
 }
 
 export class AuthorizationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.AUTH_FORBIDDEN, HttpStatus.FORBIDDEN, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.AUTH_FORBIDDEN,
+      HttpStatus.FORBIDDEN,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -28,11 +31,14 @@ export class AuthorizationError extends BaseAppError {
  * Validation Errors
  */
 export class ValidationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.VALIDATION_FAILED,
+      HttpStatus.BAD_REQUEST,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -51,11 +57,7 @@ export class ResourceNotFoundError extends BaseAppError {
 
 export class UserNotFoundError extends ResourceNotFoundError {
   constructor(userId?: string) {
-    super(
-      ErrorCode.USER_NOT_FOUND,
-      undefined,
-      userId ? { userId } : undefined,
-    );
+    super(ErrorCode.USER_NOT_FOUND, undefined, userId ? { userId } : undefined);
   }
 }
 
@@ -113,56 +115,74 @@ export class NotificationNotFoundError extends ResourceNotFoundError {
  * Business Logic Errors
  */
 export class BusinessRuleViolationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.BUSINESS_RULE_VIOLATION, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.BUSINESS_RULE_VIOLATION,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class DuplicateEntryError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.DUPLICATE_ENTRY, HttpStatus.CONFLICT, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.DUPLICATE_ENTRY,
+      HttpStatus.CONFLICT,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class InsufficientFundsError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.INSUFFICIENT_FUNDS, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.INSUFFICIENT_FUNDS,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class InvalidStateTransitionError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.INVALID_STATE_TRANSITION, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.INVALID_STATE_TRANSITION,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class OperationNotAllowedError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.OPERATION_NOT_ALLOWED, HttpStatus.FORBIDDEN, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.OPERATION_NOT_ALLOWED,
+      HttpStatus.FORBIDDEN,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class ProhibitedContentError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.PROHIBITED_CONTENT, HttpStatus.BAD_REQUEST, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.PROHIBITED_CONTENT,
+      HttpStatus.BAD_REQUEST,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -245,7 +265,13 @@ export class RateLimitError extends BaseAppError {
     retryAfter?: number,
     context?: Record<string, unknown>,
   ) {
-    super(ErrorCode.RATE_LIMIT_EXCEEDED, HttpStatus.TOO_MANY_REQUESTS, message, true, context);
+    super(
+      ErrorCode.RATE_LIMIT_EXCEEDED,
+      HttpStatus.TOO_MANY_REQUESTS,
+      message,
+      true,
+      context,
+    );
     this.retryAfter = retryAfter;
   }
 
@@ -258,11 +284,14 @@ export class RateLimitError extends BaseAppError {
 }
 
 export class SuspiciousActivityError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.SUSPICIOUS_ACTIVITY, HttpStatus.TOO_MANY_REQUESTS, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.SUSPICIOUS_ACTIVITY,
+      HttpStatus.TOO_MANY_REQUESTS,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -276,7 +305,13 @@ export class SystemError extends BaseAppError {
     isOperational = false,
     context?: Record<string, unknown>,
   ) {
-    super(code, HttpStatus.INTERNAL_SERVER_ERROR, message, isOperational, context);
+    super(
+      code,
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      message,
+      isOperational,
+      context,
+    );
   }
 }
 
@@ -287,10 +322,13 @@ export class ConfigurationError extends SystemError {
 }
 
 export class ServiceUnavailableError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.SERVICE_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.SERVICE_UNAVAILABLE,
+      HttpStatus.SERVICE_UNAVAILABLE,
+      message,
+      true,
+      context,
+    );
   }
 }

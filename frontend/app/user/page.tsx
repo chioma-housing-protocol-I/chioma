@@ -5,6 +5,9 @@ import { Calendar, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
+import { useModal } from '@/contexts/ModalContext';
+import { apiClient } from '@/lib/api-client';
+import type { AgreementSigningData } from '@/components/modals/types';
 
 const mockAgreements = [
   {
@@ -35,6 +38,40 @@ const agreements = process.env.NODE_ENV === 'production' ? [] : mockAgreements;
 export default function UserDashboardOverview() {
   // AUTH DISABLED - useRoleRedirect commented out for development
   // useRoleRedirect(['user']);
+
+  const { openModal } = useModal();
+
+  const handleAgreementClick = (agreement: (typeof mockAgreements)[0]) => {
+    openModal('agreementView', {
+      agreement: {
+        agreementId: agreement.id,
+        propertyTitle: agreement.property,
+        propertyAddress: agreement.property,
+        landlordName: 'Landlord',
+        tenantName: 'Tenant',
+        monthlyRent: parseFloat(agreement.amount.replace(/[^0-9.]/g, '')),
+        securityDeposit: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date(
+          new Date().setFullYear(new Date().getFullYear() + 1),
+        ).toISOString(),
+        status:
+          agreement.status === 'Active'
+            ? 'active'
+            : agreement.status === 'Pending'
+              ? 'pending'
+              : 'signed',
+      },
+      onSignSubmit: async (data: AgreementSigningData) => {
+        await apiClient.patch(`/agreements/${data.agreementId}`, {
+          status: 'signed',
+          signedAt: data.signedAt,
+          signerName: data.signerName,
+          signature: data.signature,
+        });
+      },
+    });
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
@@ -169,7 +206,8 @@ export default function UserDashboardOverview() {
               {agreements.map((agreement) => (
                 <tr
                   key={agreement.id}
-                  className="hover:bg-white/5 transition-colors group"
+                  onClick={() => handleAgreementClick(agreement)}
+                  className="hover:bg-white/5 transition-colors group cursor-pointer"
                 >
                   <td className="px-6 py-4 font-bold text-white group-hover:text-blue-400 transition-colors">
                     {agreement.id}
@@ -184,17 +222,30 @@ export default function UserDashboardOverview() {
                     {agreement.dueDate}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        agreement.status === 'Active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : agreement.status === 'Pending'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            : 'bg-white/5 text-blue-300/40 border-white/10'
-                      }`}
-                    >
-                      {agreement.status}
-                    </span>
+                    <div className="flex items-center justify-end gap-2">
+                      {agreement.status === 'Pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAgreementClick(agreement);
+                          }}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+                        >
+                          Sign
+                        </button>
+                      )}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          agreement.status === 'Active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : agreement.status === 'Pending'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : 'bg-white/5 text-blue-300/40 border-white/10'
+                        }`}
+                      >
+                        {agreement.status}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))}

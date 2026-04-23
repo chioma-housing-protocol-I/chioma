@@ -26,6 +26,7 @@ interface BulkUserOperationsProps {
   onBulkSuspend: (ids: string[]) => Promise<void>;
   onBulkActivate: (ids: string[]) => Promise<void>;
   onBulkExport: (ids: string[]) => void;
+  onRowClick?: (user: User) => void;
 }
 
 interface ConfirmDialogProps {
@@ -101,6 +102,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   onBulkSuspend,
   onBulkActivate,
   onBulkExport,
+  onRowClick,
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | 'suspend' | 'activate'>(null);
@@ -239,11 +241,15 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                 {data.map((user) => (
                   <tr
                     key={user.id}
-                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''}`}
+                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    onClick={onRowClick ? () => onRowClick(user) : undefined}
                   >
                     <td className="px-5 py-4">
                       <button
-                        onClick={() => toggleOne(user.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleOne(user.id);
+                        }}
                         className="text-blue-300/40 hover:text-blue-400 transition-colors"
                       >
                         {selectedIds.has(user.id) ? (

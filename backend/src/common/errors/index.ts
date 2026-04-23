@@ -14,10 +14,10 @@ export {
   // Authentication & Authorization
   AuthenticationError,
   AuthorizationError,
-  
+
   // Validation
   ValidationError,
-  
+
   // Resource Not Found
   ResourceNotFoundError,
   UserNotFoundError,
@@ -26,7 +26,7 @@ export {
   MaintenanceNotFoundError,
   ReviewNotFoundError,
   NotificationNotFoundError,
-  
+
   // Business Logic
   BusinessRuleViolationError,
   DuplicateEntryError,
@@ -34,24 +34,24 @@ export {
   InvalidStateTransitionError,
   OperationNotAllowedError,
   ProhibitedContentError,
-  
+
   // Blockchain
   BlockchainError,
   BlockchainConnectionError,
   BlockchainTransactionError,
   InsufficientBalanceError,
-  
+
   // External Services
   ExternalServiceError,
   EmailServiceError,
   PaymentProviderError,
   StorageServiceError,
   KycServiceError,
-  
+
   // Rate Limiting
   RateLimitError,
   SuspiciousActivityError,
-  
+
   // System
   SystemError,
   ConfigurationError,
@@ -70,4 +70,7 @@ export { LockNotAcquiredError } from '../lock/lock.errors';
 export { IdempotencyKeyMissingError } from '../idempotency/idempotency.errors';
 
 // Encryption errors
-export { EncryptionError, DecryptionFailedError } from '../services/encryption.service';
+export {
+  EncryptionError,
+  DecryptionFailedError,
+} from '../services/encryption.service';
