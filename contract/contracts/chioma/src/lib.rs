@@ -1278,10 +1278,7 @@ impl Contract {
     /// Estimate the gas cost for a given operation type.
     ///
     /// Returns a conservative upper-bound estimate in Soroban gas units.
-    pub fn estimate_gas_cost(
-        env: Env,
-        operation: OperationType,
-    ) -> Result<u64, RentalError> {
+    pub fn estimate_gas_cost(env: Env, operation: OperationType) -> Result<u64, RentalError> {
         gas_optimization::estimate_gas_cost(env, operation)
     }
 
