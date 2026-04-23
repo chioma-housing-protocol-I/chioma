@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageSquare, Wrench, CreditCard, CheckCheck } from 'lucide-react';
+import {
+  MessageSquare,
+  Wrench,
+  CreditCard,
+  CheckCheck,
+  Bell,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification, NotificationType } from './types';
 
@@ -26,6 +32,12 @@ const typeConfig: Record<
   },
 };
 
+const fallbackConfig = {
+  icon: Bell,
+  bg: 'bg-white/10',
+  text: 'text-blue-200/60',
+};
+
 interface NotificationItemProps {
   notification: Notification;
   onToggleRead: (id: string) => void;
@@ -37,7 +49,11 @@ export default function NotificationItem({
   onToggleRead,
   variant = 'compact',
 }: NotificationItemProps) {
-  const { icon: Icon, bg, text } = typeConfig[notification.type];
+  const {
+    icon: Icon,
+    bg,
+    text,
+  } = typeConfig[notification.type] ?? fallbackConfig;
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
   });

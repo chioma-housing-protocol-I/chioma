@@ -7,7 +7,10 @@ import {
   XCircle,
   Calendar,
   MapPin,
+  Building2,
 } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 import type { Contract, ContractStatus } from '@/types/contracts';
 import { ContractTimeline } from './ContractTimeline';
 
@@ -37,12 +40,48 @@ const STATUS_CONFIG: Record<
   },
 };
 
+function PropertyPreviewImage({
+  src,
+  alt,
+}: {
+  src?: string | null;
+  alt: string;
+}) {
+  const [error, setError] = useState(false);
+
+  if (!src || error) {
+    return (
+      <div className="w-full h-32 bg-white/5 flex items-center justify-center border-b border-white/5">
+        <Building2 size={32} className="text-blue-300/20" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-32 overflow-hidden border-b border-white/5">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+        className="object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
 export function ContractCard({ contract, onViewDetails }: ContractCardProps) {
   const statusConfig = STATUS_CONFIG[contract.status];
   const StatusIcon = statusConfig.icon;
 
   return (
     <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 overflow-hidden group">
+      {/* Property Preview Image */}
+      <PropertyPreviewImage
+        src={(contract as Contract & { propertyImage?: string }).propertyImage}
+        alt={contract.propertyName}
+      />
       {/* Card Header */}
       <div className="p-6 pb-5 border-b border-white/5">
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -84,7 +123,7 @@ export function ContractCard({ contract, onViewDetails }: ContractCardProps) {
           </div>
         </div>
       </div>
-      Broadway, Financial:
+      {/* Financial Details */}
       <div className="px-6 py-4 bg-white/10 border-b border-white/5 grid grid-cols-3 gap-4 text-sm shadow-inner">
         <div>
           <span className="block text-[10px] font-bold text-blue-300/40 uppercase tracking-widest mb-1">
