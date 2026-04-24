@@ -1,12 +1,30 @@
 # Database Backup and Recovery
 
+**Comprehensive Guide to Database Backup and Disaster Recovery**
+
 This document defines backup and recovery procedures for the Chioma backend database, covering backup strategies, verification, recovery procedures, testing, and retention policies.
 
-Use this together with:
+## Quick Links
+
+**New to backup and recovery?** Start here:
+
+- ⚡ [Quick Reference / Overview](./BACKUP_AND_RECOVERY_OVERVIEW.md) - Start here for quick reference
+- 🚀 [Recovery Runbook](./runbooks/RECOVERY_RUNBOOK.md) - Step-by-step procedures for common recovery scenarios
+
+**Checklists by frequency:**
+
+- 📋 [Daily Checklist](./checklists/DAILY_BACKUP_CHECKLIST.md) - Run every day
+- 📋 [Weekly Checklist](./checklists/WEEKLY_BACKUP_CHECKLIST.md) - Run every Monday
+- 📋 [Monthly Checklist](./checklists/MONTHLY_BACKUP_CHECKLIST.md) - Run monthly with full recovery drill
+- 📋 [Quarterly Checklist](./checklists/QUARTERLY_BACKUP_CHECKLIST.md) - Run quarterly with disaster recovery simulation
+
+**Related documentation:**
 
 - [Deployment Runbook](./DEPLOYMENT.md)
 - [Production Setup](./PRODUCTION_SETUP.md)
 - [Monitoring and Alerting](./MONITORING_AND_ALERTING.md)
+- [Incident Response](../../INCIDENT_RESPONSE.md)
+- [Disaster Recovery Plan](./DISASTER_RECOVERY_PLAN.md)
 
 ---
 
