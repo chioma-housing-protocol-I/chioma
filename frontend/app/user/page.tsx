@@ -8,6 +8,9 @@ import {
   ArrowUpRight,
   TrendingUp,
   BarChart3,
+  Eye,
+  ReceiptText,
+  AlertTriangle,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
@@ -50,6 +53,38 @@ const analyticsPreviewData = [
   { month: 'Apr', views: 200 },
   { month: 'May', views: 320 },
   { month: 'Jun', views: 410 },
+];
+
+const DASHBOARD_IMAGE_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=200&q=80';
+
+const dashboardPayments = [
+  {
+    id: 'PMT-2201',
+    property: 'Sunset Apartments, Unit 4B',
+    amount: '$1,200',
+    date: 'Oct 1, 2023',
+    previewImage:
+      'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'PMT-2202',
+    property: 'Downtown Loft, Unit 12',
+    amount: '$2,500',
+    date: 'Nov 1, 2023',
+    previewImage:
+      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=200&q=80',
+  },
+];
+
+const dashboardDisputes = [
+  {
+    id: 'DSP-901',
+    property: 'Sunset Apartments, Unit 4B',
+    status: 'Open',
+    previewImage:
+      'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=200&q=80',
+  },
 ];
 
 export default function UserDashboardOverview() {
@@ -298,6 +333,117 @@ export default function UserDashboardOverview() {
         </div>
       </div>
 
+      {/* Payment and Dispute previews */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Payment Preview
+            </h3>
+            <Link
+              href="/user/payments"
+              className="text-xs font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {dashboardPayments.map((payment) => (
+              <div
+                key={payment.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="relative h-11 w-11 overflow-hidden rounded-xl border border-white/10 bg-white/5 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={payment.previewImage}
+                      alt={`${payment.property} payment receipt preview`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {payment.property}
+                    </p>
+                    <p className="text-xs text-blue-200/50">
+                      {payment.amount} · {payment.date}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/user/payments"
+                  className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                  aria-label={`Preview payment ${payment.id}`}
+                >
+                  <Eye size={12} />
+                  Preview
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Dispute Preview
+            </h3>
+            <Link
+              href="/user/disputes"
+              className="text-xs font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {dashboardDisputes.map((dispute) => (
+              <div
+                key={dispute.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="relative h-11 w-11 overflow-hidden rounded-xl border border-white/10 bg-white/5 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={dispute.previewImage}
+                      alt={`${dispute.property} dispute preview`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {dispute.property}
+                    </p>
+                    <p className="text-xs text-blue-200/50">
+                      {dispute.id} · {dispute.status}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/user/disputes/${dispute.id}`}
+                  className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                  aria-label={`Preview dispute ${dispute.id}`}
+                >
+                  <Eye size={12} />
+                  Preview
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Agreements Table */}
       <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 overflow-hidden">
         <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
@@ -326,6 +472,9 @@ export default function UserDashboardOverview() {
                 </th>
                 <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">
                   Status
+                </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">
+                  Preview
                 </th>
               </tr>
             </thead>
@@ -373,6 +522,17 @@ export default function UserDashboardOverview() {
                         {agreement.status}
                       </span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <Link
+                      href={`/user/agreements/${agreement.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                      aria-label={`Preview agreement ${agreement.id}`}
+                    >
+                      <Eye size={12} />
+                      Preview
+                    </Link>
                   </td>
                 </tr>
               ))}

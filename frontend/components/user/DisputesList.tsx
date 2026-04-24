@@ -137,7 +137,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
         id: 'actions',
         cell: ({ row }) => (
           <Link
-            href={`/tenant/disputes/${row.original.id}`}
+            href={`/user/disputes/${row.original.id}`}
             className="p-2 text-blue-300/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors inline-flex"
           >
             <Eye className="h-4 w-4" />
