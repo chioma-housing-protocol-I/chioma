@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   FileText,
@@ -93,8 +94,9 @@ export default function UserDashboardOverview() {
   // useRoleRedirect(['user']);
 
   const { openModal } = useModal();
+  const router = useRouter();
 
-  const handleAgreementClick = (agreement: (typeof mockAgreements)[0]) => {
+  const handleAgreementSign = (agreement: (typeof mockAgreements)[0]) => {
     openModal('agreementView', {
       agreement: {
         agreementId: agreement.id,
@@ -124,6 +126,10 @@ export default function UserDashboardOverview() {
         });
       },
     });
+  };
+
+  const handleAgreementPreview = (agreementId: string) => {
+    router.push(`/user/agreements/${encodeURIComponent(agreementId)}`);
   };
 
   return (
@@ -509,7 +515,7 @@ export default function UserDashboardOverview() {
               {agreements.map((agreement) => (
                 <tr
                   key={agreement.id}
-                  onClick={() => handleAgreementClick(agreement)}
+                  onClick={() => handleAgreementPreview(agreement.id)}
                   className="hover:bg-white/5 transition-colors group cursor-pointer"
                 >
                   <td className="px-6 py-4 font-bold text-white group-hover:text-blue-400 transition-colors">
@@ -530,7 +536,7 @@ export default function UserDashboardOverview() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAgreementClick(agreement);
+                            handleAgreementSign(agreement);
                           }}
                           className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
                         >
