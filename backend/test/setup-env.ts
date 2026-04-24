@@ -81,3 +81,8 @@ if (!process.env.AGENT_REGISTRY_CONTRACT_ID)
   process.env.AGENT_REGISTRY_CONTRACT_ID = E2E_CONTRACT_ID;
 if (!process.env.SOROBAN_RPC_URL)
   process.env.SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
+
+// KYC provider webhooks (WebhookSignatureGuard + KycController)
+if (!process.env.KYC_WEBHOOK_SECRET) {
+  process.env.KYC_WEBHOOK_SECRET = 'e2e-kyc-webhook-secret-for-signature-tests';
+}
