@@ -251,6 +251,47 @@ describe('PaymentService', () => {
       });
     });
 
+    it('applies transaction fee and net amount calculation for rent payment', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        paymentType: 'bank_transfer',
+        encryptedMetadata: null,
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_fee_1',
+      });
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_fee_1',
+        amount: 250,
+        currency: 'NGN',
+        paymentMethod: 'bank_transfer',
+      });
+
+      await service.recordPayment(
+        {
+          agreementId: 'agreement_fee',
+          amount: 250,
+          paymentMethodId: '1',
+        } as CreatePaymentRecordDto,
+        'user_1',
+      );
+
+      expect(paymentRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 250,
+          transactionFee: 5,
+          netAmount: 245,
+          currency: 'NGN',
+        }),
+      );
+    });
+
     it('throws when gateway fails and records failed payment', async () => {
       (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
       (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
@@ -515,6 +556,39 @@ describe('PaymentService', () => {
       await expect(
         service.runPaymentSchedule('schedule_1', 'user_1'),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('fails schedule when payment method is missing', async () => {
+      const schedule = {
+        id: 'schedule_missing_method',
+        userId: 'user_1',
+        status: PaymentScheduleStatus.ACTIVE,
+        paymentMethodId: null,
+        retries: 0,
+        maxRetries: 3,
+        nextRunAt: new Date(),
+      } as unknown as PaymentSchedule;
+      (paymentScheduleRepository.findOne as jest.Mock).mockResolvedValue(
+        schedule,
+      );
+      (paymentScheduleRepository.save as jest.Mock).mockResolvedValue(schedule);
+
+      await expect(
+        service.runPaymentSchedule('schedule_missing_method', 'user_1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(paymentScheduleRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'schedule_missing_method',
+          status: PaymentScheduleStatus.FAILED,
+        }),
+      );
+      expect(mockNotificationsService.notify).toHaveBeenCalledWith(
+        'user_1',
+        'Recurring payment failed',
+        expect.stringContaining('Payment method is missing'),
+        'PAYMENT_FAILED',
+      );
     });
   });
 
