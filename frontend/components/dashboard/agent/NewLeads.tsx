@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import { PreviewImage } from '@/components/ui/PreviewImage';
+import { User } from 'lucide-react';
 
 const NewLeads = () => {
   const leads = [
@@ -45,15 +46,13 @@ const NewLeads = () => {
       <div className="space-y-4">
         {leads.map((lead) => (
           <div key={lead.id} className="flex items-start gap-3">
-            <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0">
-              <Image
-                src={lead.avatar}
-                alt={lead.name}
-                fill
-                sizes="36px"
-                className="object-cover"
-              />
-            </div>
+            <PreviewImage
+              src={lead.avatar}
+              alt={lead.name}
+              fallbackIcon={User}
+              className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/5"
+              imageClassName="object-cover"
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-baseline mb-0.5">
