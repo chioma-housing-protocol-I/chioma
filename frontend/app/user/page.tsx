@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Calendar, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Calendar,
+  FileText,
+  ArrowUpRight,
+  TrendingUp,
+  BarChart3,
+} from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
@@ -34,6 +42,15 @@ const mockAgreements = [
 ];
 
 const agreements = process.env.NODE_ENV === 'production' ? [] : mockAgreements;
+
+const analyticsPreviewData = [
+  { month: 'Jan', views: 120 },
+  { month: 'Feb', views: 180 },
+  { month: 'Mar', views: 240 },
+  { month: 'Apr', views: 200 },
+  { month: 'May', views: 320 },
+  { month: 'Jun', views: 410 },
+];
 
 export default function UserDashboardOverview() {
   // AUTH DISABLED - useRoleRedirect commented out for development
@@ -165,6 +182,116 @@ export default function UserDashboardOverview() {
                 <h3 className="text-2xl font-bold tracking-tight text-white mt-1">
                   $8,400
                 </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Preview */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/5 text-blue-400 rounded-2xl flex items-center justify-center border border-white/5">
+              <BarChart3 size={20} strokeWidth={1.5} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Analytics
+              </h3>
+              <p className="text-xs text-blue-200/40">
+                Property performance overview
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/user/analytics"
+            className="flex items-center gap-1 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View Analytics
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Chart */}
+          <div className="md:col-span-2 h-40">
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart
+                data={analyticsPreviewData}
+                margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+              >
+                <defs>
+                  <linearGradient
+                    id="analyticsGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{
+                    fill: 'rgba(147, 197, 253, 0.4)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    padding: '8px 12px',
+                  }}
+                  itemStyle={{ color: '#fff', fontSize: '12px' }}
+                  labelStyle={{
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontSize: '10px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#60a5fa"
+                  strokeWidth={2.5}
+                  fill="url(#analyticsGrad)"
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-col gap-4 justify-center">
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+              <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
+                Property Views
+              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-2xl font-bold text-white">1,470</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-400">
+                  <ArrowUpRight size={12} />
+                  +12%
+                </span>
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+              <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
+                Inquiries
+              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-2xl font-bold text-white">83</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-400">
+                  <ArrowUpRight size={12} />
+                  +8%
+                </span>
               </div>
             </div>
           </div>
