@@ -51,6 +51,7 @@ const NewLeads = () => {
                 alt={lead.name}
                 fill
                 sizes="36px"
+                unoptimized
                 className="object-cover"
               />
             </div>

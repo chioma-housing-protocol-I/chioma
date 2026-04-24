@@ -150,6 +150,7 @@ const PropertyPortfolio = () => {
                           alt={property.name}
                           fill
                           sizes="64px"
+                          unoptimized
                           className="object-cover"
                         />
                       </div>
@@ -183,6 +184,7 @@ const PropertyPortfolio = () => {
                             alt={property.tenant.name}
                             fill
                             sizes="32px"
+                            unoptimized
                             className="object-cover"
                           />
                         </div>
@@ -245,6 +247,7 @@ const PropertyPortfolio = () => {
                     alt={property.name}
                     fill
                     sizes="80px"
+                    unoptimized
                     className="object-cover"
                   />
                 </div>
@@ -299,6 +302,7 @@ const PropertyPortfolio = () => {
                         alt={property.tenant.name}
                         fill
                         sizes="32px"
+                        unoptimized
                         className="object-cover"
                       />
                     </div>
