@@ -29,6 +29,9 @@ const statusBadge: Record<DisputeStatus, string> = {
   WITHDRAWN: 'bg-white/5 text-blue-300/40 border-white/10',
 };
 
+const DISPUTE_PREVIEW_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=80&q=80';
+
 interface DisputesListProps {
   className?: string;
 }
@@ -137,9 +140,22 @@ export function DisputesList({ className = '' }: DisputesListProps) {
         id: 'actions',
         cell: ({ row }) => (
           <Link
-            href={`/tenant/disputes/${row.original.id}`}
-            className="p-2 text-blue-300/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors inline-flex"
+            href={`/user/disputes/${row.original.id}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-blue-300/70 hover:text-white hover:bg-blue-500/20 transition-colors"
+            aria-label={`Preview dispute ${row.original.disputeId}`}
           >
+            <span className="relative h-6 w-6 overflow-hidden rounded-md border border-white/10 bg-white/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={DISPUTE_PREVIEW_FALLBACK}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </span>
             <Eye className="h-4 w-4" />
           </Link>
         ),

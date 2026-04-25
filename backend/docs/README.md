@@ -6,23 +6,25 @@ Welcome to the Chioma backend documentation hub. This index covers all aspects o
 
 ## Navigation
 
-| Category                                     | Description                                      |
-| -------------------------------------------- | ------------------------------------------------ |
-| [Getting Started](#getting-started)          | Prerequisites, local setup, environment config   |
-| [API Reference](#api-reference)              | Endpoint docs, standards, versioning, changelog  |
-| [Architecture](#architecture)                | System design, dependency graph, performance     |
-| [Database](#database)                        | Schema, migrations, indexes                      |
-| [Blockchain](#blockchain)                    | Stellar integration, anchor, SEP-0010 auth       |
-| [Authentication](#authentication)            | JWT, Stellar auth, MFA, guards, security         |
-| [Caching](#caching)                          | Redis/Upstash strategy, invalidation, monitoring |
-| [Queues](#queues)                            | Bull queue implementation                        |
-| [Deployment](#deployment)                    | Production setup, Docker, CI/CD                  |
-| [Error Handling](#error-handling)            | Exception filters, error types, error responses  |
-| [Logging & Monitoring](#logging--monitoring) | Logging, Prometheus, Grafana, Sentry, alerts     |
-| [Security](#security)                        | Encryption, threat model, compliance             |
-| [Integrations](#integrations)                | Third-party services                             |
-| [Support](#support)                          | Support procedures, SLAs, maintenance schedules  |
-| [Community](#community)                      | Contributing, code of conduct, team policies     |
+| Category                                        | Description                                      |
+| ----------------------------------------------- | ------------------------------------------------ |
+| [Getting Started](#getting-started)             | Prerequisites, local setup, environment config   |
+| [API Reference](#api-reference)                 | Endpoint docs, standards, versioning, changelog  |
+| [Architecture](#architecture)                   | System design, dependency graph, performance     |
+| [Database](#database)                           | Schema, migrations, indexes                      |
+| [Blockchain](#blockchain)                       | Stellar integration, anchor, SEP-0010 auth       |
+| [Authentication](#authentication)               | JWT, Stellar auth, MFA, guards, security         |
+| [Caching](#caching)                             | Redis/Upstash strategy, invalidation, monitoring |
+| [Queues](#queues)                               | Bull queue implementation                        |
+| [Deployment](#deployment)                       | Production setup, Docker, CI/CD                  |
+| [Error Handling](#error-handling)               | Exception filters, error types, error responses  |
+| [Logging & Monitoring](#logging--monitoring)    | Logging, Prometheus, Grafana, Sentry, alerts     |
+| [Security](#security)                           | Encryption, threat model, compliance             |
+| [Dependency Management](#dependency-management) | Package strategy, auditing, security updates     |
+| [Integrations](#integrations)                   | Third-party services                             |
+| [Support](#support)                             | Support procedures, SLAs, maintenance schedules  |
+| [Incident Response](#incident-response)         | Incident classification, escalation, runbooks    |
+| [Community](#community)                         | Contributing, code of conduct, team policies     |
 
 ---
 
@@ -221,6 +223,14 @@ Security features active in every request:
 
 ---
 
+## Dependency Management
+
+| Document                                            | Summary                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| [Dependency Management](./DEPENDENCY_MANAGEMENT.md) | Package management, version pinning, audits, updates, security |
+
+---
+
 ## Integrations
 
 | Document                                                                   | Summary                                                                    |
@@ -228,6 +238,14 @@ Security features active in every request:
 | [API Integration Procedures](./integrations/API_INTEGRATION_PROCEDURES.md) | Third-party API integration, webhooks, testing, error handling, monitoring |
 | [Tenant Screening](./integrations/TENANT_SCREENING_PROVIDER_RESEARCH.md)   | Third-party screening providers                                            |
 | [Tenant Screening Integration](./api/TENANT_SCREENING_INTEGRATION.md)      | API integration guide                                                      |
+
+---
+
+## Incident Response
+
+| Document                                               | Summary                                                             |
+| ------------------------------------------------------ | ------------------------------------------------------------------- |
+| [Incident Response Procedures](./INCIDENT_RESPONSE.md) | Classification, detection, escalation, communication, runbooks, PIR |
 
 ---
 

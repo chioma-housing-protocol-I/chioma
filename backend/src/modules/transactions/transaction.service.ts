@@ -65,7 +65,7 @@ export class TransactionService {
       try {
         return await this.execute(callback, idempotencyKey);
       } catch (error) {
-        lastError = error as Error;
+        lastError = error instanceof Error ? error : new Error(String(error));
         if (attempt < retries && this.isTransientError(lastError)) {
           this.logger.warn(
             `Transient error on attempt ${attempt}/${retries}, retrying: ${lastError.message}`,
@@ -77,7 +77,10 @@ export class TransactionService {
       }
     }
 
-    throw lastError;
+    if (lastError) {
+      throw lastError;
+    }
+    throw new Error('Unknown error in executeWithRetry');
   }
 
   private isTransientError(error: Error): boolean {

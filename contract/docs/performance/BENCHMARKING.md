@@ -1,122 +1,91 @@
 # Benchmarking Guide
 
-**Priority:** MEDIUM
-**Category:** Documentation
-**Type:** Documentation
-**Status:** Completed
-**Related Issues:** #753, #17, #12, #16
+## 1. Goal
 
-## 1. Introduction
+Benchmarking validates whether gas estimates and real execution behavior remain within acceptable limits after contract changes.
 
-This guide provides procedures for measuring and analyzing the performance of Soroban-based smart contracts within the Chioma ecosystem. Benchmarking is essential to minimize gas costs and ensure system reliability during period of high network traffic.
+## 2. Benchmark targets
 
-## 2. Benchmarking Setup
+Benchmark at least these operations when touched:
 
-### 2.1 Dependencies
-Ensure you have the following tools installed:
-- `rustup` with the `wasm32-unknown-unknown` target.
-- `soroban-cli` (latest version).
-- `cargo-bench` (optional, for low-level performance testing).
+- `create_agreement`
+- `make_payment_with_token`
+- `release_escrow_with_token`
+- `resolve_dispute`
+- `propose_extension`
 
-### 2.2 Compilation Profile
-Always perform benchmarking on optimized release builds to get accurate measurements.
+## 3. Benchmark procedure
+
+### Local contract build
 
 ```bash
-cargo build --release --target wasm32-unknown-unknown
+cd contract
+cargo build --workspace --target wasm32-unknown-unknown --release
 ```
 
-## 3. Performance Measurement
+### Unit/integration verification
 
-### 3.1 Gas Cost Measurement
-Soroban uses "Gas" to measure the cost of contract execution. To measure gas costs for a specific function call:
+```bash
+cargo test
+```
 
-1. **Invoke the function in a local environment:**
+### Soroban invocation profiling
+
 ```bash
 soroban contract invoke \
   --id <CONTRACT_ID> \
   --network testnet \
   -- \
-  <FUNCTION_NAME> \
-  --arg1 <VAL> \
-  <EXTRA_ARGS>
+  create_agreement \
+  --admin <ADMIN> \
+  --user <USER>
 ```
 
-2. **Check the output for gas usage details:**
-The CLI provides cost breakdowns including CPU instructions and RAM usage.
+Capture:
 
-### 3.2 Automated Testing for Costs
-You can use the `soroban-sdk` test utilities to assert on gas costs within your unit tests:
+- CPU instructions
+- memory or RAM usage
+- ledger read/write footprint
+- output success and failure behavior
 
-```rust
-#[test]
-fn test_gas_usage() {
-    let env = Env::default();
-    let contract_id = env.register_contract(None, Contract);
-    let client = ContractClient::new(&env, &contract_id);
-    
-    // Perform operation
-    client.heavy_function();
-    
-    // The test summary will report resource consumption if run with --nocapture
-}
-```
+## 4. Baseline table
 
-## 4. Performance Analysis
+Use the built-in gas estimates as the minimum baseline until more detailed measured values are recorded:
 
-### 4.1 Bottleneck Identification
-Common performance bottlenecks in Soroban include:
-- **Excessive Storage Access:** Reading and writing to persistent storage is the most expensive operation.
-- **Complex Loops:** $O(N^2)$ operations should be avoided.
-- **Large Event Payloads:** Emitting large events increases ledger footprint.
+| Operation                   | Planning baseline |
+| --------------------------- | ----------------: |
+| `create_agreement`          |            32,000 |
+| `make_payment_with_token`   |            59,000 |
+| `release_escrow_with_token` |            41,000 |
+| `resolve_dispute`           |            46,000 |
+| `propose_extension`         |            31,000 |
 
-### 4.2 Resource Metrics
-- **CPU Instructions:** Number of Instructions executed by the VM.
-- **RAM Usage:** Memory used during execution.
-- **Read/Write Bytes:** Data moved to and from the ledger.
+## 5. Comparison workflow
 
-## 5. Baseline Establishment
+1. Run the current benchmark.
+2. Compare against the planning baseline or prior measured benchmark.
+3. Investigate any increase greater than 10%.
+4. Record whether the increase is acceptable, temporary, or a regression.
 
-Before optimizing, establish a baseline for major functions:
-1. Run the benchmark 10 times.
-2. Calculate the average CPU and RAM usage.
-3. Record these values in the `performance_baselines.json` file.
+## 6. Reporting format
 
-## 6. Performance Comparison
+Every benchmark report should include:
 
-When a new optimization is implemented:
-1. Re-run the benchmarks under identical conditions.
-2. Compare the results against the established baseline.
-3. Document the percentage improvement in the PR description.
+- operation tested
+- input shape
+- environment used
+- baseline value
+- measured value
+- percentage change
+- explanation
 
-## 7. Benchmarking Tools
+## 7. Example report snippet
 
-- **Soroban CLI:** Main tool for interaction and basic cost reporting.
-- **Stellar Horizon/RPC:** For monitoring gas usage on the live network.
-- **Criterion.rs:** For local micro-benchmarking of non-contract Rust logic.
-- **Valgrind/Cachegrind:** For memory usage profiling (not Soroban-specific).
-
-## 8. Best Practices
-
-- **Test with realistic data:** Don't benchmark with empty fields. Use payloads that reflect typical production usage.
-- **Isolate environment:** Run benchmarks when your machine is not under heavy load to ensure consistency.
-- **Optimize Storage:** Group multiple reads/writes into single structures where possible.
-- **Use Temporary Storage:** For data that only needs to live for a short period (blocks/days).
-
-## 9. Reporting Benchmarks
-
-Benchmark reports should include:
-- **Environment:** (e.g., Localhost, Testnet).
-- **Function:** The name of the function tested.
-- **CPU:** Instructions used.
-- **Memory:** Bytes used.
-- **Comparison:** % change from baseline.
-- **Recommendation:** Any further potential optimizations.
-
-## 10. Examples
-
-### Benchmarking `create_agreement`
-```bash
-# Record baseline
-soroban contract invoke --id ... -- create_agreement --landlord G... --tenant G...
-# Output: [CPU: 1,200,500, RAM: 450,200]
+```text
+Operation: make_payment_with_token
+Environment: local Soroban test run
+Baseline: 59,000
+Measured: 56,400
+Delta: -4.4%
+Notes: removed one redundant agreement reload before write-back
 ```

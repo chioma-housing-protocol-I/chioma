@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { SecurityModule } from '../security/security.module';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     SecurityModule,
     AuditModule,
     NotificationsModule,
+    WebhooksModule,
   ],
   providers: [KycService],
   controllers: [KycController],

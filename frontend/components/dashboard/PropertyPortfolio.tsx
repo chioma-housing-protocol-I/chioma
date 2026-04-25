@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Building2 } from 'lucide-react';
+import Image from 'next/image';
+import { Building2, Filter, Download, ChevronRight } from 'lucide-react';
 import { PreviewImage } from '@/components/ui/PreviewImage';
 import { format } from 'date-fns';
 
@@ -181,6 +182,7 @@ const PropertyPortfolio = () => {
                             alt={property.tenant.name}
                             fill
                             sizes="32px"
+                            unoptimized
                             className="object-cover"
                           />
                         </div>
@@ -295,6 +297,7 @@ const PropertyPortfolio = () => {
                         alt={property.tenant.name}
                         fill
                         sizes="32px"
+                        unoptimized
                         className="object-cover"
                       />
                     </div>

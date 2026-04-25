@@ -206,7 +206,7 @@ describe('KycService', () => {
       expect(encryptionService.decrypt).not.toHaveBeenCalled();
     });
 
-    it('should handle decryption errors gracefully', async () => {
+    it('should propagate decryption failures', async () => {
       const encryptedKyc: Kyc = {
         id: 'kyc-123',
         userId: mockUserId,
@@ -225,11 +225,9 @@ describe('KycService', () => {
         throw new Error('Decryption failed');
       });
 
-      // Should not throw, but keep encrypted value
-      const result = await service.getKycStatus(mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result?.encryptedKycData.first_name).toBe('corrupted_data');
+      await expect(service.getKycStatus(mockUserId)).rejects.toThrow(
+        'Decryption failed',
+      );
     });
   });
 
@@ -282,6 +280,92 @@ describe('KycService', () => {
 
       expect(mockKycRepository.save).not.toHaveBeenCalled();
       expect(userKycStatusService.setStatus).not.toHaveBeenCalled();
+    });
+
+    it('should notify user on REJECTED webhook', async () => {
+      const notify = jest.fn().mockResolvedValue(undefined);
+      const module = await Test.createTestingModule({
+        providers: [
+          KycService,
+          { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+          { provide: UserKycStatusService, useValue: mockUserKycStatusService },
+          { provide: EncryptionService, useValue: mockEncryptionService },
+          { provide: AuditService, useValue: mockAuditService },
+          { provide: NotificationsService, useValue: { notify } },
+        ],
+      }).compile();
+      const svc = module.get(KycService);
+
+      const existingKyc: Kyc = {
+        id: 'kyc-rej',
+        userId: mockUserId,
+        encryptedKycData: {},
+        encryptionVersion: 1,
+        status: KycStatus.PENDING,
+        providerReference: 'ref-rej',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockKycRepository.findOne.mockResolvedValue(existingKyc);
+      mockKycRepository.save.mockResolvedValue({
+        ...existingKyc,
+        status: KycStatus.REJECTED,
+      });
+
+      await svc.handleWebhook({
+        providerReference: 'ref-rej',
+        status: KycStatus.REJECTED,
+      });
+
+      expect(notify).toHaveBeenCalledWith(
+        mockUserId,
+        'KYC rejected',
+        expect.stringContaining('rejected'),
+        'KYC_REJECTED',
+      );
+    });
+
+    it('should notify user on intermediate status (NEEDS_INFO)', async () => {
+      const notify = jest.fn().mockResolvedValue(undefined);
+      const module = await Test.createTestingModule({
+        providers: [
+          KycService,
+          { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+          { provide: UserKycStatusService, useValue: mockUserKycStatusService },
+          { provide: EncryptionService, useValue: mockEncryptionService },
+          { provide: AuditService, useValue: mockAuditService },
+          { provide: NotificationsService, useValue: { notify } },
+        ],
+      }).compile();
+      const svc = module.get(KycService);
+
+      const existingKyc: Kyc = {
+        id: 'kyc-info',
+        userId: mockUserId,
+        encryptedKycData: {},
+        encryptionVersion: 1,
+        status: KycStatus.PENDING,
+        providerReference: 'ref-info',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockKycRepository.findOne.mockResolvedValue(existingKyc);
+      mockKycRepository.save.mockResolvedValue({
+        ...existingKyc,
+        status: KycStatus.NEEDS_INFO,
+      });
+
+      await svc.handleWebhook({
+        providerReference: 'ref-info',
+        status: KycStatus.NEEDS_INFO,
+      });
+
+      expect(notify).toHaveBeenCalledWith(
+        mockUserId,
+        'KYC status updated',
+        expect.stringContaining('NEEDS_INFO'),
+        'KYC_UPDATED',
+      );
     });
   });
 

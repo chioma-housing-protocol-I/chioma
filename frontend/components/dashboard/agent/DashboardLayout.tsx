@@ -168,6 +168,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 alt="Sarah Jenks profile avatar"
                 width={40}
                 height={40}
+                unoptimized
                 className="object-cover"
               />
             </div>

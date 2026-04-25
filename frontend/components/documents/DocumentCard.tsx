@@ -27,6 +27,8 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onDelete,
   showActions = true,
 }) => {
+  const [thumbnailError, setThumbnailError] = React.useState(false);
+
   const getDocumentIcon = () => {
     switch (document.type) {
       case 'pdf':
@@ -69,18 +71,24 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
     );
   };
 
+  const previewSrc =
+    !thumbnailError && (document.thumbnailUrl || document.type === 'image')
+      ? document.thumbnailUrl || document.url
+      : null;
+
   return (
     <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 hover:shadow-lg transition-all group">
       <div className="flex items-start gap-4">
         {/* Icon/Thumbnail */}
         <div className="shrink-0">
-          {document.thumbnailUrl ? (
+          {previewSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               referrerPolicy="no-referrer"
-              src={document.thumbnailUrl}
+              src={previewSrc}
               alt={document.name}
               className="w-12 h-12 rounded-lg object-cover"
+              onError={() => setThumbnailError(true)}
             />
           ) : (
             <div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center">

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { PreviewImage } from '@/components/ui/PreviewImage';
 import { User } from 'lucide-react';
 
