@@ -28,7 +28,7 @@ import { PDFGenerationService } from './pdf-generation.service';
 import { Locked, LockService } from '../../common/lock';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { AgreementStateService } from './state-machines/agreement-state-machine.service';
-import { EventEmitter } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AgreementStatusChangedEvent } from './events/agreement-status-changed.event';
 
 @Injectable()
@@ -50,7 +50,7 @@ export class AgreementsService {
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
     private readonly stateService: AgreementStateService,
-    private readonly eventEmitter: EventEmitter,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Locked({

@@ -13,9 +13,5 @@ export class AgreementsEventListener {
     this.logger.log(
       `Agreement ${event.agreementId} status changed from ${event.oldStatus} to ${event.newStatus}`,
     );
-
-    // TODO: Send email/in-app notification to relevant parties
-    // Example: await this.alertService.sendAgreementStatusNotification(...)
   }
-}
 }

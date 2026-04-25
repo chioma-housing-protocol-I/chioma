@@ -1,4 +1,5 @@
-import { Injectable, Logger, Cron, CronExpression } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { AgreementStatus } from '../../rent/entities/rent-contract.entity';
 import { AgreementsService } from '../agreements.service';
 
@@ -26,10 +27,11 @@ export class AgreementCronService {
     );
     for (const agr of signedAgreements) {
       try {
+        if (!agr.startDate) continue;
         const startDate = new Date(agr.startDate);
         const depositMet =
           Number(agr.escrowBalance) >= Number(agr.securityDeposit);
-        if (startDate <= now && depositMet) {
+        if (agr.startDate && startDate <= now && depositMet) {
           await this.agreementsService.updateStatusWithGuard(
             agr.id,
             AgreementStatus.ACTIVE,
@@ -50,8 +52,9 @@ export class AgreementCronService {
     );
     for (const agr of activeAgreements) {
       try {
+        if (!agr.endDate) continue;
         const endDate = new Date(agr.endDate);
-        if (endDate < now) {
+        if (agr.endDate && endDate < now) {
           await this.agreementsService.updateStatusWithGuard(
             agr.id,
             AgreementStatus.EXPIRED,
