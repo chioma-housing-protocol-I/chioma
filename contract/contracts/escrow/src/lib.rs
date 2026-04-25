@@ -21,6 +21,9 @@ mod tests;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_rbac;
+
 // Re-export public APIs
 pub use access::AccessControl;
 pub use dispute::DisputeHandler;

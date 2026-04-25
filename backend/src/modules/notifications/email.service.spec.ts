@@ -21,7 +21,9 @@ describe('EmailService', () => {
   };
 
   beforeEach(async () => {
-    sendMailMock = jest.fn().mockResolvedValue({ messageId: 'test-message-id' });
+    sendMailMock = jest
+      .fn()
+      .mockResolvedValue({ messageId: 'test-message-id' });
 
     mockedNodemailer.createTransport.mockReturnValue({
       sendMail: sendMailMock,
@@ -47,7 +49,10 @@ describe('EmailService', () => {
 
   describe('sendVerificationEmail', () => {
     it('sends email to the correct address', async () => {
-      await service.sendVerificationEmail('user@example.com', 'verify-token-123');
+      await service.sendVerificationEmail(
+        'user@example.com',
+        'verify-token-123',
+      );
       expect(sendMailMock).toHaveBeenCalledWith(
         expect.objectContaining({ to: 'user@example.com' }),
       );
@@ -62,7 +67,9 @@ describe('EmailService', () => {
     it('includes a verification URL pointing to the frontend', async () => {
       await service.sendVerificationEmail('user@example.com', 'tok123');
       const mailOptions = sendMailMock.mock.calls[0][0];
-      expect(mailOptions.html).toContain('https://app.chioma.io/verify-email?token=tok123');
+      expect(mailOptions.html).toContain(
+        'https://app.chioma.io/verify-email?token=tok123',
+      );
     });
 
     it('uses configured FROM address', async () => {
@@ -100,7 +107,10 @@ describe('EmailService', () => {
     });
 
     it('includes the reset token in the email body', async () => {
-      await service.sendPasswordResetEmail('reset@example.com', 'my-reset-token');
+      await service.sendPasswordResetEmail(
+        'reset@example.com',
+        'my-reset-token',
+      );
       const mailOptions = sendMailMock.mock.calls[0][0];
       expect(mailOptions.html).toContain('my-reset-token');
     });
@@ -108,7 +118,9 @@ describe('EmailService', () => {
     it('builds reset URL from PASSWORD_RESET_URL config', async () => {
       await service.sendPasswordResetEmail('reset@example.com', 'tok');
       const mailOptions = sendMailMock.mock.calls[0][0];
-      expect(mailOptions.html).toContain('https://app.chioma.io/reset-password?token=tok');
+      expect(mailOptions.html).toContain(
+        'https://app.chioma.io/reset-password?token=tok',
+      );
     });
 
     it('falls back to FRONTEND_URL when PASSWORD_RESET_URL is not set', async () => {
@@ -127,7 +139,9 @@ describe('EmailService', () => {
 
       await svc.sendPasswordResetEmail('reset@example.com', 'tok');
       const mailOptions = sendMailMock.mock.calls[0][0];
-      expect(mailOptions.html).toContain('https://app.chioma.io/reset-password?token=tok');
+      expect(mailOptions.html).toContain(
+        'https://app.chioma.io/reset-password?token=tok',
+      );
     });
 
     it('throws when transporter fails', async () => {
@@ -233,7 +247,9 @@ describe('EmailService', () => {
     });
 
     it('omits details block when details is absent', async () => {
-      await service.sendAlertEmail('admin@chioma.app', 'Alert', { message: 'msg' });
+      await service.sendAlertEmail('admin@chioma.app', 'Alert', {
+        message: 'msg',
+      });
       const mailOptions = sendMailMock.mock.calls[0][0];
       expect(mailOptions.html).not.toContain('<pre>');
     });

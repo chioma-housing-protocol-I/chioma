@@ -20,18 +20,21 @@ import { StellarEscrow, EscrowStatus } from '../entities/stellar-escrow.entity';
 jest.mock('@stellar/stellar-sdk', () => ({
   Keypair: {
     random: jest.fn(() => ({
-      publicKey: () => 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
+      publicKey: () =>
+        'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
       secret: () => 'SABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
     })),
     fromSecret: jest.fn(() => ({
-      publicKey: () => 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
+      publicKey: () =>
+        'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
       sign: jest.fn(),
     })),
   },
   Horizon: {
     Server: jest.fn().mockImplementation(() => ({
       loadAccount: jest.fn().mockResolvedValue({
-        accountId: () => 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
+        accountId: () =>
+          'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
         sequenceNumber: () => '123456789',
         balances: [{ asset_type: 'native', balance: '100.0000000' }],
         subentry_count: 0,
@@ -39,7 +42,9 @@ jest.mock('@stellar/stellar-sdk', () => ({
         signers: [],
         flags: {},
       }),
-      submitTransaction: jest.fn().mockResolvedValue({ hash: 'txhash123', ledger: 12345 }),
+      submitTransaction: jest
+        .fn()
+        .mockResolvedValue({ hash: 'txhash123', ledger: 12345 }),
     })),
   },
   Asset: { native: jest.fn(() => ({ code: 'XLM', issuer: null })) },
@@ -54,7 +59,9 @@ jest.mock('@stellar/stellar-sdk', () => ({
     build: jest.fn().mockReturnValue({
       sign: jest.fn(),
       hash: () => Buffer.from('transaction-hash'),
-      toEnvelope: jest.fn().mockReturnValue({ toXDR: jest.fn().mockReturnValue('xdr') }),
+      toEnvelope: jest
+        .fn()
+        .mockReturnValue({ toXDR: jest.fn().mockReturnValue('xdr') }),
     }),
   })),
   Operation: {
@@ -120,7 +127,9 @@ describe('StellarService — comprehensive coverage', () => {
     rollbackTransaction: jest.fn(),
     release: jest.fn(),
     manager: {
-      save: jest.fn().mockImplementation((entity) => Promise.resolve({ ...entity, id: 1 })),
+      save: jest
+        .fn()
+        .mockImplementation((entity) => Promise.resolve({ ...entity, id: 1 })),
     },
   };
 
@@ -181,7 +190,11 @@ describe('StellarService — comprehensive coverage', () => {
 
   const mockEncryptionService = {
     encrypt: jest.fn().mockReturnValue('encrypted-secret'),
-    decrypt: jest.fn().mockReturnValue('SABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV'),
+    decrypt: jest
+      .fn()
+      .mockReturnValue(
+        'SABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV',
+      ),
     isConfigured: jest.fn().mockReturnValue(true),
   };
 
@@ -189,10 +202,24 @@ describe('StellarService — comprehensive coverage', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StellarService,
-        { provide: getRepositoryToken(StellarAccount), useValue: mockAccountRepository },
-        { provide: getRepositoryToken(StellarTransaction), useValue: mockTransactionRepository },
-        { provide: getRepositoryToken(StellarEscrow), useValue: mockEscrowRepository },
-        { provide: DataSource, useValue: { createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner) } },
+        {
+          provide: getRepositoryToken(StellarAccount),
+          useValue: mockAccountRepository,
+        },
+        {
+          provide: getRepositoryToken(StellarTransaction),
+          useValue: mockTransactionRepository,
+        },
+        {
+          provide: getRepositoryToken(StellarEscrow),
+          useValue: mockEscrowRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+          },
+        },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: EncryptionService, useValue: mockEncryptionService },
       ],
@@ -215,7 +242,9 @@ describe('StellarService — comprehensive coverage', () => {
     it('throws NotFoundException when transaction does not exist', async () => {
       mockTransactionRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getTransactionById(9999)).rejects.toThrow(NotFoundException);
+      await expect(service.getTransactionById(9999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -232,7 +261,9 @@ describe('StellarService — comprehensive coverage', () => {
     it('throws NotFoundException for an unknown hash', async () => {
       mockTransactionRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getTransactionByHash('bad-hash')).rejects.toThrow(NotFoundException);
+      await expect(service.getTransactionByHash('bad-hash')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -249,7 +280,9 @@ describe('StellarService — comprehensive coverage', () => {
     it('throws NotFoundException when escrow does not exist', async () => {
       mockEscrowRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getEscrowById(9999)).rejects.toThrow(NotFoundException);
+      await expect(service.getEscrowById(9999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -285,7 +318,9 @@ describe('StellarService — comprehensive coverage', () => {
     it('throws NotFoundException for unknown ID', async () => {
       mockAccountRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getAccountById(9999)).rejects.toThrow(NotFoundException);
+      await expect(service.getAccountById(9999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -302,7 +337,9 @@ describe('StellarService — comprehensive coverage', () => {
     it('throws NotFoundException for an unknown public key', async () => {
       mockAccountRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getAccountByPublicKey('GUNKNOWN')).rejects.toThrow(NotFoundException);
+      await expect(service.getAccountByPublicKey('GUNKNOWN')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -341,7 +378,9 @@ describe('StellarService — comprehensive coverage', () => {
       const qb = mockTransactionRepository.createQueryBuilder();
       qb.getManyAndCount.mockResolvedValue([[mockTransaction], 1]);
 
-      const result = await service.listTransactions({ status: TransactionStatus.COMPLETED });
+      const result = await service.listTransactions({
+        status: TransactionStatus.COMPLETED,
+      });
       expect(result).toBeDefined();
     });
   });
@@ -362,7 +401,10 @@ describe('StellarService — comprehensive coverage', () => {
     });
 
     it('creates an ESCROW-type account', async () => {
-      mockAccountRepository.save.mockResolvedValue({ ...mockAccount, accountType: StellarAccountType.ESCROW });
+      mockAccountRepository.save.mockResolvedValue({
+        ...mockAccount,
+        accountType: StellarAccountType.ESCROW,
+      });
 
       const result = await service.createAccount({
         userId: 'user-3',

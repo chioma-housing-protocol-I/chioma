@@ -87,14 +87,20 @@ describe('KycController', () => {
         })
         .expect(201);
 
-      expect(res.body).toMatchObject({ id: 'kyc-1', status: KycStatus.PENDING });
+      expect(res.body).toMatchObject({
+        id: 'kyc-1',
+        status: KycStatus.PENDING,
+      });
       expect(kycService.submitKyc).toHaveBeenCalledWith('ctrl-user-1', {
         kycData: { first_name: 'Jane', last_name: 'Doe' },
       });
     });
 
     it('returns 400 when kycData is missing', async () => {
-      await request(app.getHttpServer()).post('/kyc/submit').send({}).expect(400);
+      await request(app.getHttpServer())
+        .post('/kyc/submit')
+        .send({})
+        .expect(400);
       expect(kycService.submitKyc).not.toHaveBeenCalled();
     });
   });
@@ -107,7 +113,9 @@ describe('KycController', () => {
         userId: 'ctrl-user-1',
       });
 
-      const res = await request(app.getHttpServer()).get('/kyc/status').expect(200);
+      const res = await request(app.getHttpServer())
+        .get('/kyc/status')
+        .expect(200);
 
       expect(res.body.status).toBe(KycStatus.APPROVED);
       expect(kycService.getKycStatus).toHaveBeenCalledWith('ctrl-user-1');
@@ -115,7 +123,9 @@ describe('KycController', () => {
 
     it('returns null body shape when no record', async () => {
       kycService.getKycStatus.mockResolvedValue(null);
-      const res = await request(app.getHttpServer()).get('/kyc/status').expect(200);
+      const res = await request(app.getHttpServer())
+        .get('/kyc/status')
+        .expect(200);
       expect(res.body).toEqual(null);
     });
   });

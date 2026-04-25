@@ -334,6 +334,47 @@ export class EscrowContractService {
     }
   }
 
+  async releaseRent(escrowId: string): Promise<string> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
+      if (!this.adminKeypair) {
+        throw new Error('Admin keypair not configured');
+      }
+
+      const account = await this.server.getAccount(
+        this.adminKeypair.publicKey(),
+      );
+
+      const operation = this.contract.call(
+        'release_rent',
+        xdr.ScVal.scvBytes(Buffer.from(escrowId, 'hex')),
+        new StellarSdk.Address(this.adminKeypair.publicKey()).toScVal(),
+      );
+
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const prepared = await this.server.prepareTransaction(tx);
+      prepared.sign(this.adminKeypair);
+
+      const result = await this.server.sendTransaction(prepared);
+      return await this.pollTransactionStatus(result.hash);
+    } catch (error) {
+      this.logger.error(
+        `Failed to release rent for escrow ${escrowId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   async checkHealth(): Promise<boolean> {
     try {
       await this.server.getHealth();

@@ -15,6 +15,7 @@ export enum PaymentStatus {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
   REFUNDED = 'REFUNDED',
+  VERIFIED = 'VERIFIED',
 }
 
 @Entity('rent_payments')

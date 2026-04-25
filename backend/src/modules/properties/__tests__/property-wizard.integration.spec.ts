@@ -24,7 +24,8 @@ const VALID_DATA = {
     { url: 'https://cdn.example.com/img2.jpg', order: 1 },
     { url: 'https://cdn.example.com/img3.jpg', order: 2 },
   ],
-  propertyDescription: 'A beautiful 2-bedroom apartment in the heart of VI with great amenities and views.',
+  propertyDescription:
+    'A beautiful 2-bedroom apartment in the heart of VI with great amenities and views.',
   availableFrom: '2027-06-01',
 };
 
@@ -46,7 +47,11 @@ describe('Property Wizard — Integration Flow', () => {
   beforeEach(async () => {
     draftRepository = {
       create: jest.fn().mockImplementation((dto) => ({ ...dto })),
-      save: jest.fn().mockImplementation((d) => Promise.resolve({ ...d, id: d.id ?? 'draft-uuid' })),
+      save: jest
+        .fn()
+        .mockImplementation((d) =>
+          Promise.resolve({ ...d, id: d.id ?? 'draft-uuid' }),
+        ),
       findOne: jest.fn(),
       remove: jest.fn().mockResolvedValue(undefined),
     };
@@ -58,7 +63,10 @@ describe('Property Wizard — Integration Flow', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PropertyWizardService,
-        { provide: getRepositoryToken(PropertyListingDraft), useValue: draftRepository },
+        {
+          provide: getRepositoryToken(PropertyListingDraft),
+          useValue: draftRepository,
+        },
         { provide: PropertiesService, useValue: propertiesService },
       ],
     }).compile();
@@ -75,7 +83,10 @@ describe('Property Wizard — Integration Flow', () => {
       const result = await service.start('landlord-uuid');
       expect(result.landlordId).toBe('landlord-uuid');
       expect(draftRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ landlordId: 'landlord-uuid', currentStep: 1 }),
+        expect.objectContaining({
+          landlordId: 'landlord-uuid',
+          currentStep: 1,
+        }),
       );
     });
 
@@ -85,7 +96,9 @@ describe('Property Wizard — Integration Flow', () => {
       const after = Date.now();
 
       const expiresMs = result.expiresAt.getTime();
-      expect(expiresMs).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000);
+      expect(expiresMs).toBeGreaterThanOrEqual(
+        before + 29 * 24 * 60 * 60 * 1000,
+      );
       expect(expiresMs).toBeLessThanOrEqual(after + 31 * 24 * 60 * 60 * 1000);
     });
 
@@ -100,19 +113,27 @@ describe('Property Wizard — Integration Flow', () => {
   describe('findDraft', () => {
     it('throws NotFoundException when draft does not exist', async () => {
       draftRepository.findOne.mockResolvedValue(null);
-      await expect(service.findDraft('missing', 'landlord-uuid')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.findDraft('missing', 'landlord-uuid'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws ForbiddenException for wrong landlord', async () => {
-      draftRepository.findOne.mockResolvedValue(makeDraft({ landlordId: 'other-landlord' }));
-      await expect(service.findDraft('draft-uuid', 'landlord-uuid')).rejects.toThrow(ForbiddenException);
+      draftRepository.findOne.mockResolvedValue(
+        makeDraft({ landlordId: 'other-landlord' }),
+      );
+      await expect(
+        service.findDraft('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws GoneException for expired draft', async () => {
       draftRepository.findOne.mockResolvedValue(
         makeDraft({ expiresAt: new Date(Date.now() - 1000) }),
       );
-      await expect(service.findDraft('draft-uuid', 'landlord-uuid')).rejects.toThrow(GoneException);
+      await expect(
+        service.findDraft('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(GoneException);
     });
 
     it('returns the draft when valid and owned', async () => {
@@ -127,22 +148,34 @@ describe('Property Wizard — Integration Flow', () => {
   describe('updateStep', () => {
     it('merges step data and marks step as completed', async () => {
       draftRepository.findOne.mockResolvedValue(makeDraft());
-      const result = await service.updateStep('draft-uuid', 'landlord-uuid', 1, {
-        propertyType: 'apartment',
-        address: '42 Lagos Street',
-        bedrooms: 2,
-        bathrooms: 1,
-      });
+      const result = await service.updateStep(
+        'draft-uuid',
+        'landlord-uuid',
+        1,
+        {
+          propertyType: 'apartment',
+          address: '42 Lagos Street',
+          bedrooms: 2,
+          bathrooms: 1,
+        },
+      );
 
       expect(result.data.propertyType).toBe('apartment');
       expect(result.completedSteps).toContain(1);
     });
 
     it('does not duplicate a step in completedSteps on repeated update', async () => {
-      draftRepository.findOne.mockResolvedValue(makeDraft({ completedSteps: [1] }));
-      const result = await service.updateStep('draft-uuid', 'landlord-uuid', 1, {
-        propertyType: 'house',
-      });
+      draftRepository.findOne.mockResolvedValue(
+        makeDraft({ completedSteps: [1] }),
+      );
+      const result = await service.updateStep(
+        'draft-uuid',
+        'landlord-uuid',
+        1,
+        {
+          propertyType: 'house',
+        },
+      );
 
       const count = result.completedSteps.filter((s: number) => s === 1).length;
       expect(count).toBe(1);
@@ -164,7 +197,12 @@ describe('Property Wizard — Integration Flow', () => {
 
     it('returns validation errors for step 1 when required fields are missing', async () => {
       draftRepository.findOne.mockResolvedValue(makeDraft());
-      const result = await service.updateStep('draft-uuid', 'landlord-uuid', 1, {});
+      const result = await service.updateStep(
+        'draft-uuid',
+        'landlord-uuid',
+        1,
+        {},
+      );
 
       expect(result.validationErrors.propertyType).toBeDefined();
       expect(result.validationErrors.address).toBeDefined();
@@ -172,12 +210,17 @@ describe('Property Wizard — Integration Flow', () => {
 
     it('returns no validation errors when step 2 data is complete', async () => {
       draftRepository.findOne.mockResolvedValue(makeDraft());
-      const result = await service.updateStep('draft-uuid', 'landlord-uuid', 2, {
-        monthlyRent: 1000,
-        securityDeposit: 500,
-        leaseTerm: '6-month',
-        moveInDate: '2027-01-01',
-      });
+      const result = await service.updateStep(
+        'draft-uuid',
+        'landlord-uuid',
+        2,
+        {
+          monthlyRent: 1000,
+          securityDeposit: 500,
+          leaseTerm: '6-month',
+          moveInDate: '2027-01-01',
+        },
+      );
 
       expect(Object.keys(result.validationErrors)).toHaveLength(0);
     });
@@ -186,10 +229,15 @@ describe('Property Wizard — Integration Flow', () => {
       draftRepository.findOne.mockResolvedValue(
         makeDraft({ data: { propertyType: 'apartment', address: 'existing' } }),
       );
-      const result = await service.updateStep('draft-uuid', 'landlord-uuid', 1, {
-        bedrooms: 3,
-        bathrooms: 2,
-      });
+      const result = await service.updateStep(
+        'draft-uuid',
+        'landlord-uuid',
+        1,
+        {
+          bedrooms: 3,
+          bathrooms: 2,
+        },
+      );
 
       expect(result.data.propertyType).toBe('apartment');
       expect(result.data.address).toBe('existing');
@@ -218,20 +266,26 @@ describe('Property Wizard — Integration Flow', () => {
         makeDraft({ completedSteps: [1, 2, 3, 5, 6], data: VALID_DATA }),
       );
 
-      await expect(service.publish('draft-uuid', 'landlord-uuid')).rejects.toThrow(
-        UnprocessableEntityException,
-      );
+      await expect(
+        service.publish('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('throws when fewer than 3 photos provided', async () => {
-      const data = { ...VALID_DATA, photos: [{ url: 'u1', order: 0 }, { url: 'u2', order: 1 }] };
+      const data = {
+        ...VALID_DATA,
+        photos: [
+          { url: 'u1', order: 0 },
+          { url: 'u2', order: 1 },
+        ],
+      };
       draftRepository.findOne.mockResolvedValue(
         makeDraft({ completedSteps: [1, 2, 3, 5, 6, 7], data }),
       );
 
-      await expect(service.publish('draft-uuid', 'landlord-uuid')).rejects.toThrow(
-        UnprocessableEntityException,
-      );
+      await expect(
+        service.publish('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('throws when description is too short', async () => {
@@ -240,9 +294,9 @@ describe('Property Wizard — Integration Flow', () => {
         makeDraft({ completedSteps: [1, 2, 3, 5, 6, 7], data }),
       );
 
-      await expect(service.publish('draft-uuid', 'landlord-uuid')).rejects.toThrow(
-        UnprocessableEntityException,
-      );
+      await expect(
+        service.publish('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('does not call propertiesService.create if validation fails', async () => {
@@ -250,7 +304,9 @@ describe('Property Wizard — Integration Flow', () => {
         makeDraft({ completedSteps: [1], data: {} }),
       );
 
-      await expect(service.publish('draft-uuid', 'landlord-uuid')).rejects.toThrow();
+      await expect(
+        service.publish('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow();
       expect(propertiesService.create).not.toHaveBeenCalled();
     });
 
@@ -260,7 +316,9 @@ describe('Property Wizard — Integration Flow', () => {
       );
       propertiesService.create.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.publish('draft-uuid', 'landlord-uuid')).rejects.toThrow('DB error');
+      await expect(
+        service.publish('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow('DB error');
       expect(draftRepository.remove).not.toHaveBeenCalled();
     });
   });
@@ -275,10 +333,12 @@ describe('Property Wizard — Integration Flow', () => {
     });
 
     it('throws ForbiddenException when landlord does not own draft', async () => {
-      draftRepository.findOne.mockResolvedValue(makeDraft({ landlordId: 'someone-else' }));
-      await expect(service.removeDraft('draft-uuid', 'landlord-uuid')).rejects.toThrow(
-        ForbiddenException,
+      draftRepository.findOne.mockResolvedValue(
+        makeDraft({ landlordId: 'someone-else' }),
       );
+      await expect(
+        service.removeDraft('draft-uuid', 'landlord-uuid'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -288,7 +348,9 @@ describe('Property Wizard — Integration Flow', () => {
     it('completes all steps then publishes successfully', async () => {
       // Simulate a stateful draft that accumulates updates
       let currentDraft = makeDraft();
-      draftRepository.findOne.mockImplementation(() => Promise.resolve({ ...currentDraft }));
+      draftRepository.findOne.mockImplementation(() =>
+        Promise.resolve({ ...currentDraft }),
+      );
       draftRepository.save.mockImplementation((d: any) => {
         currentDraft = { ...currentDraft, ...d };
         return Promise.resolve({ ...currentDraft });
@@ -315,13 +377,16 @@ describe('Property Wizard — Integration Flow', () => {
         ],
       });
       await service.updateStep('draft-uuid', 'landlord-uuid', 6, {
-        propertyDescription: 'A beautiful 2-bedroom apartment in the heart of VI with great amenities.',
+        propertyDescription:
+          'A beautiful 2-bedroom apartment in the heart of VI with great amenities.',
       });
       await service.updateStep('draft-uuid', 'landlord-uuid', 7, {
         availableFrom: '2027-06-01',
       });
 
-      expect(currentDraft.completedSteps).toEqual(expect.arrayContaining([1, 2, 3, 5, 6, 7]));
+      expect(currentDraft.completedSteps).toEqual(
+        expect.arrayContaining([1, 2, 3, 5, 6, 7]),
+      );
 
       // Publish
       draftRepository.findOne.mockResolvedValue({ ...currentDraft });
