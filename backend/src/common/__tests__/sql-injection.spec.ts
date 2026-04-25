@@ -7,19 +7,19 @@ const META: ArgumentMetadata = { type: 'body', metatype: String, data: '' };
 const SQL_PAYLOADS = [
   "' OR '1'='1",
   "'; DROP TABLE users; --",
-  "1; SELECT * FROM properties",
-  "1 UNION SELECT username, password FROM users",
+  '1; SELECT * FROM properties',
+  '1 UNION SELECT username, password FROM users',
   "admin'--",
   "1' AND 1=1--",
-  "1 OR 1=1",
+  '1 OR 1=1',
   "'; INSERT INTO users VALUES ('hacker','hacked'); --",
   "' OR 'x'='x",
   "1; UPDATE users SET password='hacked' WHERE '1'='1",
   '" OR ""="',
   '`; DROP TABLE webhook_endpoints; --`',
   "EXEC xp_cmdshell('dir')",
-  "ALTER TABLE users ADD admin BOOLEAN",
-  "1; DELETE FROM properties --",
+  'ALTER TABLE users ADD admin BOOLEAN',
+  '1; DELETE FROM properties --',
 ];
 
 // Known XSS payloads
@@ -30,7 +30,7 @@ const XSS_PAYLOADS = [
   '<iframe src="evil.com">',
   '<object data="evil.swf">',
   '<embed src="evil.swf">',
-  "onload=alert(1)",
+  'onload=alert(1)',
   "onclick=window.location='http://evil.com'",
 ];
 
@@ -115,13 +115,13 @@ describe('SanitizeValidationPipe — SQL injection prevention', () => {
 
   describe('blocks SQL injection patterns', () => {
     const sqlKeywordPayloads = [
-      "SELECT * FROM users",
+      'SELECT * FROM users',
       "INSERT INTO properties VALUES (1, 'x')",
       "UPDATE users SET role='admin'",
-      "DELETE FROM properties",
-      "DROP TABLE users",
-      "CREATE TABLE evil (id INT)",
-      "ALTER TABLE users ADD COLUMN evil TEXT",
+      'DELETE FROM properties',
+      'DROP TABLE users',
+      'CREATE TABLE evil (id INT)',
+      'ALTER TABLE users ADD COLUMN evil TEXT',
       "EXEC sp_executesql('DROP TABLE users')",
       "EXECUTE IMMEDIATE 'SELECT 1'",
     ];
@@ -138,7 +138,7 @@ describe('SanitizeValidationPipe — SQL injection prevention', () => {
       "' OR 1=1--",
       "'; --",
       '"; DROP TABLE users; --',
-      "1`; --",
+      '1`; --',
     ];
 
     for (const payload of punctuationPayloads) {
@@ -149,11 +149,7 @@ describe('SanitizeValidationPipe — SQL injection prevention', () => {
   });
 
   describe('blocks boolean-based injection', () => {
-    const boolPayloads = [
-      "1 OR 1=1",
-      "1 AND 1=1",
-      "x' OR 3=3--",
-    ];
+    const boolPayloads = ['1 OR 1=1', '1 AND 1=1', "x' OR 3=3--"];
 
     for (const payload of boolPayloads) {
       it(`rejects boolean injection: "${payload}"`, () => {
@@ -196,7 +192,7 @@ describe('SanitizeValidationPipe — SQL injection prevention', () => {
   });
 
   it('rejects SQL injection within an array element', () => {
-    const input = ['safe', "SELECT * FROM users", 'also safe'];
+    const input = ['safe', 'SELECT * FROM users', 'also safe'];
     expect(() => pipe.transform(input, META)).toThrow();
   });
 

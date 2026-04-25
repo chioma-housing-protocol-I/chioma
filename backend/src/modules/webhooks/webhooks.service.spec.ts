@@ -46,7 +46,9 @@ describe('WebhooksService', () => {
 
     deliveryRepository = {
       create: jest.fn().mockImplementation((dto) => ({ ...dto })),
-      save: jest.fn().mockImplementation((d) => Promise.resolve({ ...d, id: 'delivery-1' })),
+      save: jest
+        .fn()
+        .mockImplementation((d) => Promise.resolve({ ...d, id: 'delivery-1' })),
     };
 
     configService = {
@@ -60,8 +62,14 @@ describe('WebhooksService', () => {
       providers: [
         WebhooksService,
         WebhookSignatureService,
-        { provide: getRepositoryToken(WebhookEndpoint), useValue: endpointRepository },
-        { provide: getRepositoryToken(WebhookDelivery), useValue: deliveryRepository },
+        {
+          provide: getRepositoryToken(WebhookEndpoint),
+          useValue: endpointRepository,
+        },
+        {
+          provide: getRepositoryToken(WebhookDelivery),
+          useValue: deliveryRepository,
+        },
         { provide: ConfigService, useValue: configService },
       ],
     }).compile();
@@ -77,11 +85,17 @@ describe('WebhooksService', () => {
     it('delivers to all active endpoints subscribed to the event', async () => {
       const endpoints = [
         mockEndpoint({ id: 'ep-1', events: ['payment.received'] }),
-        mockEndpoint({ id: 'ep-2', events: ['payment.received', 'payment.failed'] }),
+        mockEndpoint({
+          id: 'ep-2',
+          events: ['payment.received', 'payment.failed'],
+        }),
         mockEndpoint({ id: 'ep-3', events: ['deposit.received'] }),
       ];
       endpointRepository.find.mockResolvedValue(endpoints);
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: 'ok' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'ok',
+      });
 
       await service.dispatchEvent('payment.received', { amount: 100 });
 
@@ -110,7 +124,9 @@ describe('WebhooksService', () => {
 
     it('delivers to zero endpoints without throwing when none match', async () => {
       endpointRepository.find.mockResolvedValue([]);
-      await expect(service.dispatchEvent('payment.received', {})).resolves.toBeUndefined();
+      await expect(
+        service.dispatchEvent('payment.received', {}),
+      ).resolves.toBeUndefined();
     });
 
     it('continues delivery to remaining endpoints even if one fails', async () => {
@@ -124,7 +140,9 @@ describe('WebhooksService', () => {
         .mockRejectedValueOnce(new Error('network error'))
         .mockResolvedValueOnce({ status: 200, data: 'ok' });
 
-      await expect(service.dispatchEvent('payment.received', {})).resolves.toBeUndefined();
+      await expect(
+        service.dispatchEvent('payment.received', {}),
+      ).resolves.toBeUndefined();
       expect(mockedAxios.post).toHaveBeenCalledTimes(2);
     });
   });
@@ -134,9 +152,14 @@ describe('WebhooksService', () => {
   describe('deliverEvent', () => {
     it('records a successful delivery with correct status and body', async () => {
       const endpoint = mockEndpoint();
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: 'received' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'received',
+      });
 
-      const result = await service.deliverEvent(endpoint, 'payment.received', { amount: 50 });
+      const result = await service.deliverEvent(endpoint, 'payment.received', {
+        amount: 50,
+      });
 
       expect(result.successful).toBe(true);
       expect(result.responseStatus).toBe(200);
@@ -150,7 +173,11 @@ describe('WebhooksService', () => {
       (mockedAxios.post as jest.Mock).mockRejectedValue(networkError);
       mockedAxios.isAxiosError.mockReturnValue(false);
 
-      const result = await service.deliverEvent(endpoint, 'payment.received', {});
+      const result = await service.deliverEvent(
+        endpoint,
+        'payment.received',
+        {},
+      );
 
       expect(result.successful).toBe(false);
       expect(result.responseBody).toBe('Connection refused');
@@ -173,16 +200,26 @@ describe('WebhooksService', () => {
 
     it('stringifies non-string response body', async () => {
       const endpoint = mockEndpoint();
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: { ok: true } });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: { ok: true },
+      });
 
-      const result = await service.deliverEvent(endpoint, 'payment.received', {});
+      const result = await service.deliverEvent(
+        endpoint,
+        'payment.received',
+        {},
+      );
 
       expect(result.responseBody).toBe(JSON.stringify({ ok: true }));
     });
 
     it('uses endpoint secret over global config secret when present', async () => {
       const endpoint = mockEndpoint({ secret: 'my-endpoint-secret' });
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: '' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
 
       await service.deliverEvent(endpoint, 'payment.received', {});
 
@@ -194,20 +231,29 @@ describe('WebhooksService', () => {
     it('falls back to global config secret when endpoint has no secret', async () => {
       const endpoint = mockEndpoint({ secret: null });
       configService.get.mockReturnValue('fallback-secret');
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: '' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
 
       await service.deliverEvent(endpoint, 'payment.received', {});
 
-      expect(configService.get).toHaveBeenCalledWith('WEBHOOK_SIGNATURE_SECRET');
+      expect(configService.get).toHaveBeenCalledWith(
+        'WEBHOOK_SIGNATURE_SECRET',
+      );
     });
 
     it('includes event, timestamp, and data in the payload', async () => {
       const endpoint = mockEndpoint();
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: '' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
 
       await service.deliverEvent(endpoint, 'payment.received', { amount: 99 });
 
-      const rawBody = (mockedAxios.post as jest.Mock).mock.calls[0][1] as string;
+      const rawBody = (mockedAxios.post as jest.Mock).mock
+        .calls[0][1] as string;
       const parsed = JSON.parse(rawBody);
       expect(parsed.event).toBe('payment.received');
       expect(parsed.timestamp).toBeDefined();
@@ -216,7 +262,10 @@ describe('WebhooksService', () => {
 
     it('sets attemptCount to 1 on first delivery', async () => {
       const endpoint = mockEndpoint();
-      (mockedAxios.post as jest.Mock).mockResolvedValue({ status: 200, data: '' });
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
 
       await service.deliverEvent(endpoint, 'payment.received', {});
 
@@ -239,7 +288,10 @@ describe('WebhooksService', () => {
 
   describe('findEndpoints', () => {
     it('returns endpoints matching the given IDs', async () => {
-      const endpoints = [mockEndpoint({ id: 'ep-1' }), mockEndpoint({ id: 'ep-2' })];
+      const endpoints = [
+        mockEndpoint({ id: 'ep-1' }),
+        mockEndpoint({ id: 'ep-2' }),
+      ];
       endpointRepository.find.mockResolvedValue(endpoints);
 
       const result = await service.findEndpoints(['ep-1', 'ep-2']);
