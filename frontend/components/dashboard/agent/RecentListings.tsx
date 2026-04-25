@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { ArrowRight, Eye } from 'lucide-react';
+import { PreviewImage } from '@/components/ui/PreviewImage';
+import { ArrowRight, Eye, Building2 } from 'lucide-react';
 
 const RecentListings = () => {
   const listings = [
@@ -102,16 +103,13 @@ const RecentListings = () => {
             <tr key={item.id} className="group">
               <td className="py-4 pl-0">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      sizes="48px"
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
+                  <PreviewImage
+                    src={item.image}
+                    alt={item.title}
+                    fallbackIcon={Building2}
+                    className="w-12 h-12 rounded-lg overflow-hidden shrink-0"
+                    imageClassName="object-cover"
+                  />
                   <div>
                     <div className="font-bold text-white text-sm">
                       {item.title}

@@ -532,6 +532,18 @@ export default function UserDashboardOverview() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {/* Preview Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAgreementPreview(agreement.id);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-blue-400 hover:text-white hover:bg-blue-500/20 transition-colors"
+                        title="Preview agreement"
+                      >
+                        <Eye size={12} />
+                        Preview
+                      </button>
                       {agreement.status === 'Pending' && (
                         <button
                           onClick={(e) => {

@@ -11,7 +11,7 @@ describe('XSS Prevention Tests', () => {
       const malicious = '<script>alert("XSS")</script>';
       const escaped = new DOMParser().parseFromString(
         `<div>${malicious}</div>`,
-        'text/html'
+        'text/html',
       ).body.textContent;
 
       expect(escaped).toContain('<script>');

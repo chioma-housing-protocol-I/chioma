@@ -10,7 +10,13 @@ const AGREEMENT_PREVIEW_FALLBACK =
 
 const AGREEMENT_DETAILS: Record<
   string,
-  { property: string; monthlyRent: string; dueDate: string; status: string; image: string }
+  {
+    property: string;
+    monthlyRent: string;
+    dueDate: string;
+    status: string;
+    image: string;
+  }
 > = {
   'AGR-4921': {
     property: 'Sunset Apartments, Unit 4B',
@@ -67,29 +73,41 @@ export default async function AgreementDetailsPage({ params }: PageProps) {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-200/60">
               Agreement Details
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">{id}</h1>
-            <p className="mt-1 text-sm text-blue-200/70">{agreement.property}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
+              {id}
+            </h1>
+            <p className="mt-1 text-sm text-blue-200/70">
+              {agreement.property}
+            </p>
           </div>
         </div>
         <div className="grid gap-4 p-6 sm:grid-cols-3 sm:p-8">
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="mb-2 flex items-center gap-2 text-blue-200/60">
               <FileText size={16} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Rent</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                Rent
+              </span>
             </div>
-            <p className="text-xl font-bold text-white">{agreement.monthlyRent}</p>
+            <p className="text-xl font-bold text-white">
+              {agreement.monthlyRent}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="mb-2 flex items-center gap-2 text-blue-200/60">
               <Calendar size={16} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Next Due</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                Next Due
+              </span>
             </div>
             <p className="text-xl font-bold text-white">{agreement.dueDate}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="mb-2 flex items-center gap-2 text-blue-200/60">
               <Home size={16} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Status</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                Status
+              </span>
             </div>
             <p className="text-xl font-bold text-white">{agreement.status}</p>
           </div>
