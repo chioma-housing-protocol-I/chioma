@@ -246,8 +246,8 @@ describe('CSRF Protection Validation Tests', () => {
         method: 'POST',
         path: '/api/transfer-funds',
         headers: {
-          'origin': 'https://attacker.com',
-          'referer': 'https://attacker.com/malicious',
+          origin: 'https://attacker.com',
+          referer: 'https://attacker.com/malicious',
         },
         cookies: {
           'csrf-token': 'legitimate-token',

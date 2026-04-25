@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ScreeningService } from './screening.service';
 import { TenantScreeningRequest } from './entities/tenant-screening-request.entity';
 import { TenantScreeningConsent } from './entities/tenant-screening-consent.entity';
@@ -38,15 +42,20 @@ describe('ScreeningService — comprehensive coverage', () => {
     encrypt: jest.fn((v: string) => `enc:${v}`),
     decrypt: jest.fn((v: string) => v.replace(/^enc:/, '')),
   };
-  const mockNotificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+  const mockNotificationsService = {
+    notify: jest.fn().mockResolvedValue(undefined),
+  };
   const mockAuditService = { log: jest.fn().mockResolvedValue(undefined) };
-  const mockWebhooksService = { dispatchEvent: jest.fn().mockResolvedValue(undefined) };
+  const mockWebhooksService = {
+    dispatchEvent: jest.fn().mockResolvedValue(undefined),
+  };
 
   const mockConfigService = {
     get: jest.fn((key: string, def?: string) => {
       const cfg: Record<string, string> = {
         TENANT_SCREENING_SANDBOX_MODE: 'true',
-        TENANT_SCREENING_DEFAULT_PROVIDER: UserScreeningProvider.TRANSUNION_SMARTMOVE,
+        TENANT_SCREENING_DEFAULT_PROVIDER:
+          UserScreeningProvider.TRANSUNION_SMARTMOVE,
         TENANT_SCREENING_CONSENT_TTL_DAYS: '30',
         TENANT_SCREENING_REPORT_TTL_DAYS: '30',
       };
@@ -78,9 +87,18 @@ describe('ScreeningService — comprehensive coverage', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScreeningService,
-        { provide: getRepositoryToken(TenantScreeningRequest), useValue: mockScreeningRepository },
-        { provide: getRepositoryToken(TenantScreeningConsent), useValue: mockConsentRepository },
-        { provide: getRepositoryToken(TenantScreeningReport), useValue: mockReportRepository },
+        {
+          provide: getRepositoryToken(TenantScreeningRequest),
+          useValue: mockScreeningRepository,
+        },
+        {
+          provide: getRepositoryToken(TenantScreeningConsent),
+          useValue: mockConsentRepository,
+        },
+        {
+          provide: getRepositoryToken(TenantScreeningReport),
+          useValue: mockReportRepository,
+        },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: EncryptionService, useValue: mockEncryptionService },
         { provide: NotificationsService, useValue: mockNotificationsService },
@@ -114,7 +132,10 @@ describe('ScreeningService — comprehensive coverage', () => {
     });
 
     it('uses the explicitly provided provider', async () => {
-      const screening = { ...pendingScreening, provider: UserScreeningProvider.CERTN };
+      const screening = {
+        ...pendingScreening,
+        provider: UserScreeningProvider.CERTN,
+      };
       mockScreeningRepository.create.mockReturnValue(screening);
       mockScreeningRepository.save.mockResolvedValue(screening);
 
@@ -141,7 +162,10 @@ describe('ScreeningService — comprehensive coverage', () => {
       });
 
       expect(mockAuditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'CREATE', entityType: 'TenantScreeningRequest' }),
+        expect.objectContaining({
+          action: 'CREATE',
+          entityType: 'TenantScreeningRequest',
+        }),
       );
     });
   });
@@ -153,7 +177,9 @@ describe('ScreeningService — comprehensive coverage', () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
 
       await expect(
-        service.grantConsent('screening-1', strangerActor, { consentTextVersion: 'v1' }),
+        service.grantConsent('screening-1', strangerActor, {
+          consentTextVersion: 'v1',
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -161,7 +187,9 @@ describe('ScreeningService — comprehensive coverage', () => {
       mockScreeningRepository.findOne.mockResolvedValue(consentedScreening);
 
       await expect(
-        service.grantConsent('screening-1', tenantActor, { consentTextVersion: 'v1' }),
+        service.grantConsent('screening-1', tenantActor, {
+          consentTextVersion: 'v1',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -224,15 +252,17 @@ describe('ScreeningService — comprehensive coverage', () => {
     it('throws NotFoundException when screening does not exist', async () => {
       mockScreeningRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getScreening('no-such-id', adminActor)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.getScreening('no-such-id', adminActor),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws ForbiddenException when a non-owner non-admin requests a screening', async () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
 
-      await expect(service.getScreening('screening-1', strangerActor)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.getScreening('screening-1', strangerActor),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -252,14 +282,19 @@ describe('ScreeningService — comprehensive coverage', () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
       mockReportRepository.findOne.mockResolvedValue(encryptedReport);
 
-      const result = await service.getScreeningReport('screening-1', tenantActor);
+      const result = await service.getScreeningReport(
+        'screening-1',
+        tenantActor,
+      );
 
       expect(result).toMatchObject({
         screeningId: 'screening-1',
         riskLevel: 'low',
         providerReportId: 'ext-report-123',
       });
-      expect(mockEncryptionService.decrypt).toHaveBeenCalledWith('enc:{"creditScore":750}');
+      expect(mockEncryptionService.decrypt).toHaveBeenCalledWith(
+        'enc:{"creditScore":750}',
+      );
     });
 
     it('logs a DATA_ACCESS audit entry when report is accessed', async () => {
@@ -269,7 +304,10 @@ describe('ScreeningService — comprehensive coverage', () => {
       await service.getScreeningReport('screening-1', tenantActor);
 
       expect(mockAuditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'DATA_ACCESS', entityType: 'TenantScreeningReport' }),
+        expect.objectContaining({
+          action: 'DATA_ACCESS',
+          entityType: 'TenantScreeningReport',
+        }),
       );
     });
 
@@ -277,17 +315,17 @@ describe('ScreeningService — comprehensive coverage', () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
       mockReportRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getScreeningReport('screening-1', tenantActor)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getScreeningReport('screening-1', tenantActor),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws ForbiddenException for a non-owner non-admin', async () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
 
-      await expect(service.getScreeningReport('screening-1', strangerActor)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.getScreeningReport('screening-1', strangerActor),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -307,7 +345,10 @@ describe('ScreeningService — comprehensive coverage', () => {
     });
 
     it('updates the screening status from the webhook payload', async () => {
-      const screening = { ...consentedScreening, providerReference: 'ext-ref-1' };
+      const screening = {
+        ...consentedScreening,
+        providerReference: 'ext-ref-1',
+      };
       mockScreeningRepository.findOne.mockResolvedValue(screening);
       mockScreeningRepository.save.mockImplementation(async (v) => v);
       mockReportRepository.findOne.mockResolvedValue(null);

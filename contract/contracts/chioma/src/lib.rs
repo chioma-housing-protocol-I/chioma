@@ -52,6 +52,9 @@ mod tests_timelock;
 #[cfg(test)]
 mod tests_version_pause;
 
+#[cfg(test)]
+mod tests_rbac;
+
 pub use agreement::{
     accept_extension, activate_extension, approve_agreement, cancel_agreement, cancel_extension,
     create_agreement, create_agreement_with_token, get_agreement, get_agreement_count,

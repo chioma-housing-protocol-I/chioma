@@ -128,23 +128,41 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DisputesService,
-        { provide: getRepositoryToken(Dispute), useValue: mockDisputeRepository },
-        { provide: getRepositoryToken(DisputeEvidence), useValue: mockEvidenceRepository },
-        { provide: getRepositoryToken(DisputeComment), useValue: mockCommentRepository },
-        { provide: getRepositoryToken(RentAgreement), useValue: mockAgreementRepository },
+        {
+          provide: getRepositoryToken(Dispute),
+          useValue: mockDisputeRepository,
+        },
+        {
+          provide: getRepositoryToken(DisputeEvidence),
+          useValue: mockEvidenceRepository,
+        },
+        {
+          provide: getRepositoryToken(DisputeComment),
+          useValue: mockCommentRepository,
+        },
+        {
+          provide: getRepositoryToken(RentAgreement),
+          useValue: mockAgreementRepository,
+        },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditService, useValue: { log: jest.fn() } },
         {
           provide: LockService,
           useValue: {
-            withLock: jest.fn(async (_k: string, _t: number, fn: () => Promise<unknown>) => fn()),
+            withLock: jest.fn(
+              async (_k: string, _t: number, fn: () => Promise<unknown>) =>
+                fn(),
+            ),
           },
         },
         {
           provide: IdempotencyService,
           useValue: {
-            process: jest.fn(async (_k: string, _t: number, fn: () => Promise<unknown>) => fn()),
+            process: jest.fn(
+              async (_k: string, _t: number, fn: () => Promise<unknown>) =>
+                fn(),
+            ),
           },
         },
       ],
@@ -167,10 +185,14 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   // ── resolveDispute ──────────────────────────────────────────────────────────
 
   describe('resolveDispute', () => {
-    const resolveDto: ResolveDisputeDto = { resolution: 'Dispute resolved in favour of tenant' };
+    const resolveDto: ResolveDisputeDto = {
+      resolution: 'Dispute resolved in favour of tenant',
+    };
 
     it('throws ForbiddenException when a non-admin tries to resolve', async () => {
-      jest.spyOn(service, 'findByDisputeId').mockResolvedValue(underReviewDispute);
+      jest
+        .spyOn(service, 'findByDisputeId')
+        .mockResolvedValue(underReviewDispute);
       mockUserRepository.findOne.mockResolvedValue(regularUser);
 
       await expect(
@@ -200,13 +222,20 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service, 'findByDisputeId')
         .mockResolvedValueOnce(underReviewDispute)
-        .mockResolvedValueOnce({ ...underReviewDispute, status: DisputeStatus.RESOLVED });
+        .mockResolvedValueOnce({
+          ...underReviewDispute,
+          status: DisputeStatus.RESOLVED,
+        });
 
       mockUserRepository.findOne.mockResolvedValue(adminUser);
       mockQueryRunner.manager.update.mockResolvedValue(undefined);
       mockQueryRunner.manager.findOne.mockResolvedValue(mockAgreement);
 
-      const result = await service.resolveDispute('dispute-uuid-1', resolveDto, 'admin-1');
+      const result = await service.resolveDispute(
+        'dispute-uuid-1',
+        resolveDto,
+        'admin-1',
+      );
 
       expect(result.status).toBe(DisputeStatus.RESOLVED);
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
@@ -214,7 +243,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     });
 
     it('rolls back the transaction on unexpected error during resolution', async () => {
-      jest.spyOn(service, 'findByDisputeId').mockResolvedValue(underReviewDispute);
+      jest
+        .spyOn(service, 'findByDisputeId')
+        .mockResolvedValue(underReviewDispute);
       mockUserRepository.findOne.mockResolvedValue(adminUser);
       mockQueryRunner.manager.update.mockRejectedValue(new Error('DB failure'));
 
@@ -227,16 +258,26 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     });
 
     it('includes a refundAmount when provided in the DTO', async () => {
-      const dtoWithRefund: ResolveDisputeDto = { resolution: 'Partial refund granted', refundAmount: 250 };
+      const dtoWithRefund: ResolveDisputeDto = {
+        resolution: 'Partial refund granted',
+        refundAmount: 250,
+      };
       jest
         .spyOn(service, 'findByDisputeId')
         .mockResolvedValueOnce(underReviewDispute)
-        .mockResolvedValueOnce({ ...underReviewDispute, status: DisputeStatus.RESOLVED });
+        .mockResolvedValueOnce({
+          ...underReviewDispute,
+          status: DisputeStatus.RESOLVED,
+        });
 
       mockUserRepository.findOne.mockResolvedValue(adminUser);
       mockQueryRunner.manager.update.mockResolvedValue(undefined);
 
-      const result = await service.resolveDispute('dispute-uuid-1', dtoWithRefund, 'admin-1');
+      const result = await service.resolveDispute(
+        'dispute-uuid-1',
+        dtoWithRefund,
+        'admin-1',
+      );
       expect(result.status).toBe(DisputeStatus.RESOLVED);
     });
   });
@@ -267,7 +308,11 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       mockEvidenceRepository.create.mockReturnValue(mockEvidence);
       mockEvidenceRepository.save.mockResolvedValue(mockEvidence);
 
-      const result = await service.addEvidence('dispute-uuid-1', mockFile, 'user-1');
+      const result = await service.addEvidence(
+        'dispute-uuid-1',
+        mockFile,
+        'user-1',
+      );
 
       expect(result).toEqual(mockEvidence);
       expect(mockEvidenceRepository.create).toHaveBeenCalledWith(
@@ -281,17 +326,30 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
     it('includes the optional description when provided', async () => {
       jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
-      jest.spyOn(service as any, 'checkDisputePermission').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
       jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
 
-      mockEvidenceRepository.create.mockReturnValue({ ...mockEvidence, description: 'Invoice copy' });
-      mockEvidenceRepository.save.mockResolvedValue({ ...mockEvidence, description: 'Invoice copy' });
-
-      const result = await service.addEvidence('dispute-uuid-1', mockFile, 'user-1', {
-        fileName: 'evidence.pdf',
-        fileType: 'application/pdf',
+      mockEvidenceRepository.create.mockReturnValue({
+        ...mockEvidence,
         description: 'Invoice copy',
       });
+      mockEvidenceRepository.save.mockResolvedValue({
+        ...mockEvidence,
+        description: 'Invoice copy',
+      });
+
+      const result = await service.addEvidence(
+        'dispute-uuid-1',
+        mockFile,
+        'user-1',
+        {
+          fileName: 'evidence.pdf',
+          fileType: 'application/pdf',
+          description: 'Invoice copy',
+        },
+      );
 
       expect(result.description).toBe('Invoice copy');
     });
@@ -300,40 +358,68 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   // ── addComment ──────────────────────────────────────────────────────────────
 
   describe('addComment', () => {
-    const publicCommentDto: AddCommentDto = { content: 'I have a question', isInternal: false };
-    const internalCommentDto: AddCommentDto = { content: 'Internal note', isInternal: true };
+    const publicCommentDto: AddCommentDto = {
+      content: 'I have a question',
+      isInternal: false,
+    };
+    const internalCommentDto: AddCommentDto = {
+      content: 'Internal note',
+      isInternal: true,
+    };
 
-    const mockComment = { id: 5, content: 'I have a question', isInternal: false };
+    const mockComment = {
+      id: 5,
+      content: 'I have a question',
+      isInternal: false,
+    };
 
     it('allows any party to add a public comment', async () => {
       jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
-      jest.spyOn(service as any, 'checkDisputePermission').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
       mockUserRepository.findOne.mockResolvedValue(regularUser);
       mockCommentRepository.create.mockReturnValue(mockComment);
       mockCommentRepository.save.mockResolvedValue(mockComment);
 
-      const result = await service.addComment('dispute-uuid-1', publicCommentDto, 'user-1');
+      const result = await service.addComment(
+        'dispute-uuid-1',
+        publicCommentDto,
+        'user-1',
+      );
 
       expect(result).toEqual(mockComment);
       expect(mockCommentRepository.save).toHaveBeenCalled();
     });
 
     it('allows admins to add internal comments', async () => {
-      const internalComment = { id: 6, content: 'Internal note', isInternal: true };
+      const internalComment = {
+        id: 6,
+        content: 'Internal note',
+        isInternal: true,
+      };
       jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
-      jest.spyOn(service as any, 'checkDisputePermission').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
       mockUserRepository.findOne.mockResolvedValue(adminUser);
       mockCommentRepository.create.mockReturnValue(internalComment);
       mockCommentRepository.save.mockResolvedValue(internalComment);
 
-      const result = await service.addComment('dispute-uuid-1', internalCommentDto, 'admin-1');
+      const result = await service.addComment(
+        'dispute-uuid-1',
+        internalCommentDto,
+        'admin-1',
+      );
 
       expect(result.isInternal).toBe(true);
     });
 
     it('throws ForbiddenException when a non-admin tries to add an internal comment', async () => {
       jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
-      jest.spyOn(service as any, 'checkDisputePermission').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
       mockUserRepository.findOne.mockResolvedValue(regularUser);
 
       await expect(
@@ -358,12 +444,17 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     it('throws NotFoundException when agreement does not exist', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getAgreementDisputes('999')).rejects.toThrow(NotFoundException);
+      await expect(service.getAgreementDisputes('999')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('allows the landlord (adminId) to view disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockUserRepository.findOne.mockResolvedValue({ ...regularUser, id: 'landlord-1' });
+      mockUserRepository.findOne.mockResolvedValue({
+        ...regularUser,
+        id: 'landlord-1',
+      });
       mockDisputeRepository.find.mockResolvedValue([openDispute]);
 
       const result = await service.getAgreementDisputes('1', 'landlord-1');
@@ -381,15 +472,24 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
     it('throws ForbiddenException when user is not a party to the agreement', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockUserRepository.findOne.mockResolvedValue({ ...regularUser, id: 'stranger', role: UserRole.USER });
+      mockUserRepository.findOne.mockResolvedValue({
+        ...regularUser,
+        id: 'stranger',
+        role: UserRole.USER,
+      });
 
-      await expect(service.getAgreementDisputes('1', 'stranger')).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.getAgreementDisputes('1', 'stranger'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('allows admin to view any agreement disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(adminUser);
-      mockDisputeRepository.find.mockResolvedValue([openDispute, underReviewDispute]);
+      mockDisputeRepository.find.mockResolvedValue([
+        openDispute,
+        underReviewDispute,
+      ]);
 
       const result = await service.getAgreementDisputes('1', 'admin-1');
       expect(result).toHaveLength(2);
@@ -418,7 +518,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('findByDisputeId — additional edge cases', () => {
     it('throws NotFoundException for a non-existent UUID', async () => {
       mockDisputeRepository.findOne.mockResolvedValue(null);
-      await expect(service.findByDisputeId('no-such-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.findByDisputeId('no-such-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

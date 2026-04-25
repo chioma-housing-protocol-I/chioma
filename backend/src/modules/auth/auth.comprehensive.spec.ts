@@ -96,7 +96,10 @@ describe('AuthService — comprehensive coverage', () => {
       providers: [
         AuthService,
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
-        { provide: getRepositoryToken(MfaDevice), useValue: { findOne: jest.fn(), save: jest.fn() } },
+        {
+          provide: getRepositoryToken(MfaDevice),
+          useValue: { findOne: jest.fn(), save: jest.fn() },
+        },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: PasswordPolicyService, useValue: mockPasswordPolicyService },
@@ -107,7 +110,10 @@ describe('AuthService — comprehensive coverage', () => {
         {
           provide: LockService,
           useValue: {
-            withLock: jest.fn(async (_k: string, _t: number, fn: () => Promise<unknown>) => fn()),
+            withLock: jest.fn(
+              async (_k: string, _t: number, fn: () => Promise<unknown>) =>
+                fn(),
+            ),
           },
         },
       ],
@@ -125,9 +131,16 @@ describe('AuthService — comprehensive coverage', () => {
         .mockReturnValueOnce('access-jwt')
         .mockReturnValueOnce('refresh-jwt');
 
-      const result = service.generateTokens('user-1', 'user@example.com', UserRole.USER);
+      const result = service.generateTokens(
+        'user-1',
+        'user@example.com',
+        UserRole.USER,
+      );
 
-      expect(result).toEqual({ accessToken: 'access-jwt', refreshToken: 'refresh-jwt' });
+      expect(result).toEqual({
+        accessToken: 'access-jwt',
+        refreshToken: 'refresh-jwt',
+      });
     });
 
     it('signs the access token with JWT_SECRET and type=access', () => {
@@ -196,15 +209,22 @@ describe('AuthService — comprehensive coverage', () => {
       });
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-refresh' as never);
+      jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('new-hashed-refresh' as never);
       mockJwtService.sign
         .mockReturnValueOnce('new-access-token')
         .mockReturnValueOnce('new-refresh-token');
       mockUserRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      const result = await service.refreshToken({ refreshToken: 'valid-refresh-token' });
+      const result = await service.refreshToken({
+        refreshToken: 'valid-refresh-token',
+      });
 
-      expect(result).toEqual({ accessToken: 'new-access-token', refreshToken: 'new-refresh-token' });
+      expect(result).toEqual({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+      });
       expect(mockUserRepository.update).toHaveBeenCalled();
     });
 
@@ -228,7 +248,10 @@ describe('AuthService — comprehensive coverage', () => {
         role: UserRole.USER,
         type: 'refresh',
       });
-      mockUserRepository.findOne.mockResolvedValue({ ...mockUser, refreshToken: null });
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: null,
+      });
 
       await expect(
         service.refreshToken({ refreshToken: 'revoked-token' }),
@@ -289,7 +312,10 @@ describe('AuthService — comprehensive coverage', () => {
 
       const result = await service.completeMfaLogin('mfa-otp-token');
 
-      expect(mockMfaService.verifyMfaToken).toHaveBeenCalledWith('mfa-otp-token', service);
+      expect(mockMfaService.verifyMfaToken).toHaveBeenCalledWith(
+        'mfa-otp-token',
+        service,
+      );
       expect(result).toEqual(expectedResponse);
     });
   });
@@ -301,7 +327,10 @@ describe('AuthService — comprehensive coverage', () => {
       const user = { ...mockUser, failedLoginAttempts: 3 };
       mockUserRepository.findOne.mockResolvedValue(user);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
-      mockUserRepository.save.mockResolvedValue({ ...user, failedLoginAttempts: 4 });
+      mockUserRepository.save.mockResolvedValue({
+        ...user,
+        failedLoginAttempts: 4,
+      });
 
       await expect(
         service.login({ email: 'user@example.com', password: 'wrong' }),
@@ -332,17 +361,26 @@ describe('AuthService — comprehensive coverage', () => {
 
     it('clears the lockout after the lockout period has passed', async () => {
       const pastLockout = new Date(Date.now() - 1000);
-      const lockedUser = { ...mockUser, accountLockedUntil: pastLockout, failedLoginAttempts: 5 };
+      const lockedUser = {
+        ...mockUser,
+        accountLockedUntil: pastLockout,
+        failedLoginAttempts: 5,
+      };
       mockUserRepository.findOne.mockResolvedValue(lockedUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
       mockJwtService.sign
         .mockReturnValueOnce('acc-token')
         .mockReturnValueOnce('ref-token');
-      mockUserRepository.save.mockImplementation(async (u: typeof lockedUser) => u);
+      mockUserRepository.save.mockImplementation(
+        async (u: typeof lockedUser) => u,
+      );
       mockUserRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      const result = await service.login({ email: 'user@example.com', password: 'correct' });
+      const result = await service.login({
+        email: 'user@example.com',
+        password: 'correct',
+      });
 
       expect((result as any).accessToken).toBe('acc-token');
     });
@@ -371,7 +409,10 @@ describe('AuthService — comprehensive coverage', () => {
       const mfaResponse = { mfaRequired: true, mfaToken: 'pending-mfa-token' };
       mockMfaService.generateMfaToken.mockResolvedValue(mfaResponse);
 
-      const result = await service.login({ email: 'user@example.com', password: 'correct' });
+      const result = await service.login({
+        email: 'user@example.com',
+        password: 'correct',
+      });
 
       expect(mockMfaService.generateMfaToken).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'user-1' }),
