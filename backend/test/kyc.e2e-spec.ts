@@ -11,13 +11,16 @@ import { Repository } from 'typeorm';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from '../src/app.module';
 import { Kyc } from '../src/modules/kyc/kyc.entity';
+import { User } from '../src/modules/users/entities/user.entity';
 import { KycStatus } from '../src/modules/kyc/kyc-status.enum';
 import { UserRole } from '../src/modules/users/entities/user.entity';
 import { WebhookSignatureService } from '../src/modules/webhooks/webhook-signature.service';
+import { clearRepositories } from './test-helpers';
 
 describe('KYC (e2e)', () => {
   let app: INestApplication;
   let kycRepo: Repository<Kyc>;
+  let userRepo: Repository<User>;
   let webhookSig: WebhookSignatureService;
   let accessToken: string;
   let userId: string;
@@ -65,6 +68,7 @@ describe('KYC (e2e)', () => {
     await app.init();
 
     kycRepo = app.get(getRepositoryToken(Kyc));
+    userRepo = app.get(getRepositoryToken(User));
     webhookSig = app.get(WebhookSignatureService);
 
     const reg = await request(app.getHttpServer())
@@ -82,7 +86,16 @@ describe('KYC (e2e)', () => {
     userId = reg.body.user.id;
   }, 120000);
 
+  beforeEach(async () => {
+    await clearRepositories([kycRepo]);
+  }, 60000);
+
+  afterEach(async () => {
+    await clearRepositories([kycRepo]);
+  }, 60000);
+
   afterAll(async () => {
+    await clearRepositories([kycRepo, userRepo]);
     if (app) {
       await app.close();
     }

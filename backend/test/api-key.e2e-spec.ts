@@ -7,7 +7,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DeveloperModule } from '../src/modules/developer/developer.module';
 import { ApiKey } from '../src/modules/developer/entities/api-key.entity';
 import { ApiKeyRotationHistory } from '../src/modules/developer/entities/api-key-rotation-history.entity';
-import { getTestDatabaseConfig } from './test-helpers';
+import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
 
 describe('API Key E2E Tests', () => {
   let app: INestApplication;
@@ -61,13 +61,16 @@ describe('API Key E2E Tests', () => {
     jwtToken = loginResponse.body?.access_token || 'mock-token';
   });
 
+  beforeEach(async () => {
+    await clearRepositories([apiKeyRepository, rotationHistoryRepository]);
+  });
+
+  afterEach(async () => {
+    await clearRepositories([apiKeyRepository, rotationHistoryRepository]);
+  });
+
   afterAll(async () => {
-    if (apiKeyRepository) {
-      await apiKeyRepository.clear();
-    }
-    if (rotationHistoryRepository) {
-      await rotationHistoryRepository.clear();
-    }
+    await clearRepositories([apiKeyRepository, rotationHistoryRepository]);
     if (app) {
       await app.close();
     }
