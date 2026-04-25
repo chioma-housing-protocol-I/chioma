@@ -28,6 +28,22 @@ describe('Rate Limiting E2E', () => {
     await app.init();
   });
 
+  beforeEach(async () => {
+    if (rateLimitService) {
+      await rateLimitService.reset?.().catch(() => {
+        // Ignore if reset is not available
+      });
+    }
+  });
+
+  afterEach(async () => {
+    if (rateLimitService) {
+      await rateLimitService.reset?.().catch(() => {
+        // Ignore if reset is not available
+      });
+    }
+  });
+
   afterAll(async () => {
     await app.close();
   });
