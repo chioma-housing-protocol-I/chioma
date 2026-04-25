@@ -13,6 +13,9 @@ mod types;
 mod tests;
 
 #[cfg(test)]
+mod tests_raise_dispute;
+
+#[cfg(test)]
 mod tests_rate_limit;
 
 pub use dispute::{
