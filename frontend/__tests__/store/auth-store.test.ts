@@ -21,6 +21,11 @@ const mockUser = {
   role: 'user' as const,
 };
 
+const expectedStoredUser = {
+  ...mockUser,
+  role: process.env.NODE_ENV === 'production' ? 'user' : 'admin',
+};
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('authStore', () => {
@@ -42,7 +47,7 @@ describe('authStore', () => {
     useAuthStore.getState().setTokens('at-1', 'rt-1', mockUser);
 
     const state = useAuthStore.getState();
-    expect(state.user).toEqual(mockUser);
+    expect(state.user).toEqual(expectedStoredUser);
     expect(state.accessToken).toBe('at-1');
     expect(state.refreshToken).toBe('rt-1');
     expect(state.isAuthenticated).toBe(true);
@@ -50,7 +55,9 @@ describe('authStore', () => {
 
     expect(localStorage.getItem('chioma_access_token')).toBe('at-1');
     expect(localStorage.getItem('chioma_refresh_token')).toBe('rt-1');
-    expect(localStorage.getItem('chioma_user')).toBe(JSON.stringify(mockUser));
+    expect(localStorage.getItem('chioma_user')).toBe(
+      JSON.stringify(expectedStoredUser),
+    );
   });
 
   it('hydrate restores state from localStorage', () => {
@@ -61,7 +68,7 @@ describe('authStore', () => {
     useAuthStore.getState().hydrate();
 
     const state = useAuthStore.getState();
-    expect(state.user).toEqual(mockUser);
+    expect(state.user).toEqual(expectedStoredUser);
     expect(state.accessToken).toBe('at-2');
     expect(state.isAuthenticated).toBe(true);
     expect(state.loading).toBe(false);

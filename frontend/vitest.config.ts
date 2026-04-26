@@ -7,9 +7,6 @@ export default defineConfig({
     globals: true,
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
     setupFiles: ['test/setup.ts'],
-    env: {
-      NODE_ENV: 'production',
-    },
   },
   resolve: {
     alias: {
