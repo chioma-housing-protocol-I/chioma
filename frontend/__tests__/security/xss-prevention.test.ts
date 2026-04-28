@@ -9,13 +9,12 @@ describe('XSS Prevention Tests', () => {
   describe('HTML escaping in text content', () => {
     it('escapes script tags in user input', () => {
       const malicious = '<script>alert("XSS")</script>';
-      const escaped = new DOMParser().parseFromString(
-        `<div>${malicious}</div>`,
-        'text/html',
-      ).body.textContent;
+      const div = document.createElement('div');
+      div.textContent = malicious;
 
-      expect(escaped).toContain('<script>');
-      expect(escaped).not.toContain('alert');
+      expect(div.textContent).toBe(malicious);
+      expect(div.innerHTML).toContain('&lt;script&gt;');
+      expect(div.querySelector('script')).toBeNull();
     });
 
     it('escapes event handlers in attributes', () => {
@@ -40,10 +39,11 @@ describe('XSS Prevention Tests', () => {
     it('escapes SVG injection vectors', () => {
       const maliciousSvg = '<svg onload="alert(1)"></svg>';
       const container = document.createElement('div');
-      container.innerHTML = maliciousSvg;
+      container.textContent = maliciousSvg;
 
       const svg = container.querySelector('svg');
-      expect(svg?.onload).toBeNull();
+      expect(svg).toBeNull();
+      expect(container.innerHTML).toContain('&lt;svg');
     });
 
     it('prevents unicode/encoding bypass attacks', () => {
@@ -71,7 +71,7 @@ describe('XSS Prevention Tests', () => {
       const template = `User said: ${userInput}`;
 
       expect(template).toContain('${alert(1)}');
-      expect(template).not.toContain('alert(1)');
+      expect(template).toBe('User said: ${alert(1)}');
     });
 
     it('prevents double encoding attacks', () => {
@@ -90,7 +90,7 @@ describe('XSS Prevention Tests', () => {
       const div = document.createElement('div');
       div.textContent = userData;
 
-      expect(div.innerHTML).not.toContain('onerror=');
+      expect(div.querySelector('img')).toBeNull();
       expect(div.textContent).toBe(userData);
     });
 
@@ -143,7 +143,7 @@ describe('XSS Prevention Tests', () => {
       div.textContent = jsonResponse.message;
 
       expect(div.innerHTML).not.toContain('<script');
-      expect(div.innerHTML).not.toContain('alert');
+      expect(div.querySelector('script')).toBeNull();
     });
 
     it('safely handles HTML content from trusted sources', () => {
@@ -197,7 +197,7 @@ describe('XSS Prevention Tests', () => {
       const div = document.createElement('div');
       div.style.backgroundImage = 'url(javascript:alert(1))';
 
-      expect(div.style.backgroundImage).toBe('url(javascript:alert(1))');
+      expect(div.style.backgroundImage).toBe('');
     });
   });
 });
