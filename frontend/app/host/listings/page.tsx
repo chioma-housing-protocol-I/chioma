@@ -125,7 +125,7 @@ export default function HostListingsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Link
-                      href={`/stays/${p.id}`}
+                      href={`/properties/${p.id}`}
                       className="flex-1 flex items-center justify-center gap-1 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors"
                     >
                       <Eye size={14} /> View
