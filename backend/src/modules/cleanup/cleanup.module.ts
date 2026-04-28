@@ -3,6 +3,7 @@ import { CleanupController } from './cleanup.controller';
 import { CodeQualityAnalysisService } from './code-quality-analysis.service';
 import { AutomatedRefactoringService } from './automated-refactoring.service';
 import { DependencyManagementService } from './dependency-management.service';
+import { TempFileCleanupService } from './temp-file-cleanup.service';
 
 @Module({
   controllers: [CleanupController],
@@ -10,6 +11,7 @@ import { DependencyManagementService } from './dependency-management.service';
     CodeQualityAnalysisService,
     AutomatedRefactoringService,
     DependencyManagementService,
+    TempFileCleanupService,
   ],
 })
 export class CleanupModule {}

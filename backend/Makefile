@@ -49,6 +49,11 @@ format-check: ## Check code formatting without modifying files
 	npx prettier --check "src/**/*.ts" "test/**/*.ts"
 	@echo "$(GREEN)✓ Format check passed$(NC)"
 
+verify-backup: ## Verify the latest database backup
+	@echo "$(BLUE)Verifying database backup...$(NC)"
+	bash ./scripts/verify-backup.sh
+	@echo "$(GREEN)✓ Backup verification passed$(NC)"
+
 typecheck: ## Run TypeScript type checking
 	@echo "$(BLUE)Running TypeScript type checking...$(NC)"
 	npx tsc --noEmit

@@ -160,7 +160,9 @@ describe('ReferralService', () => {
     });
 
     it('should not track referral if code does not exist', async () => {
-      const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const loggerWarnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation();
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
@@ -176,7 +178,9 @@ describe('ReferralService', () => {
     });
 
     it('should not allow self-referral', async () => {
-      const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const loggerWarnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation();
 
       mockUserRepository.findOne.mockResolvedValue({
         ...mockReferrer,
@@ -196,7 +200,10 @@ describe('ReferralService', () => {
 
   describe('completeReferral', () => {
     it('should complete a pending referral and distribute reward', async () => {
-      const pendingReferral = { ...mockReferral, status: ReferralStatus.PENDING };
+      const pendingReferral = {
+        ...mockReferral,
+        status: ReferralStatus.PENDING,
+      };
       mockReferralRepository.findOne.mockResolvedValue(pendingReferral);
       mockReferralRepository.save.mockResolvedValue({
         ...pendingReferral,
@@ -216,7 +223,9 @@ describe('ReferralService', () => {
     });
 
     it('should not complete if no pending referral exists', async () => {
-      const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const loggerWarnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation();
 
       mockReferralRepository.findOne.mockResolvedValue(null);
 
@@ -251,7 +260,9 @@ describe('ReferralService', () => {
     });
 
     it('should handle referrer without wallet address', async () => {
-      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
 
       const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
       mockUserRepository.findOne.mockResolvedValue({
@@ -269,11 +280,15 @@ describe('ReferralService', () => {
     });
 
     it('should handle reward distribution errors', async () => {
-      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
 
       const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
       mockUserRepository.findOne.mockResolvedValue(mockReferrer);
-      mockReferralRepository.save.mockRejectedValue(new Error('Database error'));
+      mockReferralRepository.save.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       await (service as any).distributeReward(referral);
 
