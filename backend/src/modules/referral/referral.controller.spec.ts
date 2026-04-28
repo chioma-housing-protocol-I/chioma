@@ -54,7 +54,9 @@ describe('ReferralController', () => {
 
   describe('getStats', () => {
     it('should return referral statistics for the current user', async () => {
-      jest.spyOn(service, 'getReferralStats').mockResolvedValue(mockReferralStats);
+      jest
+        .spyOn(service, 'getReferralStats')
+        .mockResolvedValue(mockReferralStats);
 
       const result = await controller.getStats(mockUser as User);
 

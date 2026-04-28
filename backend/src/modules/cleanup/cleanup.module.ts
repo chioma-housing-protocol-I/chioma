@@ -6,6 +6,7 @@ import { DataArchivalController } from './data-archival.controller';
 import { CodeQualityAnalysisService } from './code-quality-analysis.service';
 import { AutomatedRefactoringService } from './automated-refactoring.service';
 import { DependencyManagementService } from './dependency-management.service';
+import { TempFileCleanupService } from './temp-file-cleanup.service';
 import { DataArchivalService } from './data-archival.service';
 import { TenantScreeningRequest } from '../screening/entities/tenant-screening-request.entity';
 import { TenantScreeningReport } from '../screening/entities/tenant-screening-report.entity';
@@ -25,6 +26,7 @@ import { TenantScreeningConsent } from '../screening/entities/tenant-screening-c
     CodeQualityAnalysisService,
     AutomatedRefactoringService,
     DependencyManagementService,
+    TempFileCleanupService,
     DataArchivalService,
   ],
   exports: [DataArchivalService],

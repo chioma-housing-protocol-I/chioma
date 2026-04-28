@@ -347,12 +347,9 @@ function buildAgreement(overrides: {
   };
 }
 
-function mockHorizonPage(
-  svc: RentReconciliationService,
-  records: unknown[],
-) {
+function mockHorizonPage(svc: RentReconciliationService, records: unknown[]) {
   // The module mock returns `this` for every chained method, so the full chain
   // collapses to a single object. Spying on `call` is sufficient.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   jest.spyOn((svc as any).horizonServer, 'call').mockResolvedValue({ records });
 }

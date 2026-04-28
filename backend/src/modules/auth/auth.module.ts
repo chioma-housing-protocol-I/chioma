@@ -18,6 +18,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { SessionCleanupService } from './cron/session-cleanup.service';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PasswordPolicyService } from './services/password-policy.service';
     PasswordPolicyService,
     JwtStrategy,
     RefreshTokenStrategy,
+    SessionCleanupService,
   ],
   exports: [
     AuthService,
