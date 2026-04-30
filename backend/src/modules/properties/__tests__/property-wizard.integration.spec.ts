@@ -95,7 +95,8 @@ describe('Property Wizard — Integration Flow', () => {
       const result = await service.start('landlord-uuid');
       const after = Date.now();
 
-      const expiresMs = result.expiresAt.getTime();
+      expect(result.expiresAt).toBeDefined();
+      const expiresMs = result.expiresAt!.getTime();
       expect(expiresMs).toBeGreaterThanOrEqual(
         before + 29 * 24 * 60 * 60 * 1000,
       );
