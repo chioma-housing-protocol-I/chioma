@@ -12,6 +12,7 @@ describe('CSRF Protection Validation Tests', () => {
           SECURITY_CSRF_ENABLED: 'true',
           SECURITY_CSRF_TOKEN_LENGTH: '32',
           SECURITY_CSRF_COOKIE_NAME: 'csrf-token',
+          JWT_SECRET: 'test-secret-key',
         };
         return config[key];
       }),
