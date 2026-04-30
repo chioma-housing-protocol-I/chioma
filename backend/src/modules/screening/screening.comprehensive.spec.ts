@@ -134,20 +134,20 @@ describe('ScreeningService — comprehensive coverage', () => {
     it('uses the explicitly provided provider', async () => {
       const screening = {
         ...pendingScreening,
-        provider: UserScreeningProvider.CERTN,
+        provider: UserScreeningProvider.TRANSUNION_SMARTMOVE,
       };
       mockScreeningRepository.create.mockReturnValue(screening);
       mockScreeningRepository.save.mockResolvedValue(screening);
 
       const result = await service.createRequest(adminActor, {
         tenantId: 'tenant-1',
-        provider: UserScreeningProvider.CERTN,
-        requestedChecks: [ScreeningCheckType.CRIMINAL],
+        provider: UserScreeningProvider.TRANSUNION_SMARTMOVE,
+        requestedChecks: [ScreeningCheckType.BACKGROUND],
         applicantData: { legalName: 'Bob' },
         consentVersion: 'v1',
       });
 
-      expect(result.provider).toBe(UserScreeningProvider.CERTN);
+      expect(result.provider).toBe(UserScreeningProvider.TRANSUNION_SMARTMOVE);
     });
 
     it('logs a SECURITY-level audit entry on creation', async () => {
