@@ -57,7 +57,7 @@ describe('Rate Limiting Integration Tests', () => {
   beforeEach(async () => {
     // Clear cache before each test
     const cacheManager = moduleRef.get('CACHE_MANAGER');
-    await cacheManager.reset();
+    await cacheManager.store.reset();
   });
 
   describe('Rate Limit Service Integration', () => {
