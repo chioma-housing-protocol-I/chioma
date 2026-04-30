@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReferralController } from './referral.controller';
 import { ReferralService } from './referral.service';
 import { User, UserRole } from '../users/entities/user.entity';
+import { ReferralStatus } from './entities/referral.entity';
 
 describe('ReferralController', () => {
   let controller: ReferralController;
@@ -24,7 +25,7 @@ describe('ReferralController', () => {
       {
         id: 'ref-1',
         referredName: 'John Doe',
-        status: 'completed',
+        status: ReferralStatus.COMPLETED,
         createdAt: new Date(),
         rewardAmount: 10,
       },

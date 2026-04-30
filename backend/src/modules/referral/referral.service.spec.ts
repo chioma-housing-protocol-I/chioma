@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ReferralService } from './referral.service';
 import { Referral, ReferralStatus } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
@@ -92,6 +92,18 @@ describe('ReferralService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: jest.fn().mockReturnValue({
+              connect: jest.fn(),
+              startTransaction: jest.fn(),
+              commitTransaction: jest.fn(),
+              rollbackTransaction: jest.fn(),
+              release: jest.fn(),
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -127,12 +139,14 @@ describe('ReferralService', () => {
     it('should handle code collision and generate new code', async () => {
       mockUserRepository.findOne
         .mockResolvedValueOnce(mockReferrer) // First code exists
-        .mockResolvedValueOnce(null); // Second code is unique
+        .mockResolvedValueOnce(mockReferrer) // Second code also exists
+        .mockResolvedValueOnce(mockReferrer) // Third code also exists
+        .mockResolvedValueOnce(null); // Fourth code is unique
 
       const result = await service.generateReferralCode();
 
       expect(result).toBeDefined();
-      expect(mockUserRepository.findOne).toHaveBeenCalledTimes(2);
+      expect(mockUserRepository.findOne).toHaveBeenCalledTimes(4);
     });
   });
 
