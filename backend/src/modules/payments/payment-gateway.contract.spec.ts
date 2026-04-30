@@ -36,14 +36,14 @@ describe('PaymentGatewayService - Contract Tests', () => {
 
   describe('Contract: chargePayment', () => {
     it('should return a response conforming to GatewayChargeResponse contract', async () => {
+      const mockUser = { id: 'user_123' } as any;
       const mockPaymentMethod: PaymentMethod = {
-        id: 'pm_123',
+        id: 1,
+        user: mockUser,
         userId: 'user_123',
-        type: 'card',
-        provider: 'paystack',
-        last4: '4242',
-        expiryMonth: 12,
-        expiryYear: 2025,
+        paymentType: 'CREDIT_CARD',
+        lastFour: '4242',
+        expiryDate: new Date('2025-12-31'),
         isDefault: true,
         encryptedMetadata: null,
         metadata: { authorizationCode: 'AUTH_code123' },
@@ -79,14 +79,14 @@ describe('PaymentGatewayService - Contract Tests', () => {
     });
 
     it('should handle payment method with required metadata fields', async () => {
+      const mockUser = { id: 'user_456' } as any;
       const mockPaymentMethod: PaymentMethod = {
-        id: 'pm_456',
+        id: 2,
+        user: mockUser,
         userId: 'user_456',
-        type: 'card',
-        provider: 'flutterwave',
-        last4: '5555',
-        expiryMonth: 6,
-        expiryYear: 2026,
+        paymentType: 'CREDIT_CARD',
+        lastFour: '5555',
+        expiryDate: new Date('2026-06-30'),
         isDefault: false,
         encryptedMetadata: null,
         metadata: { token: 'flw_token_xyz' },
