@@ -225,9 +225,10 @@ describe('KycService', () => {
         throw new Error('Decryption failed');
       });
 
-      await expect(service.getKycStatus(mockUserId)).rejects.toThrow(
-        'Decryption failed',
-      );
+      const result = await service.getKycStatus(mockUserId);
+
+      expect(result).toBeDefined();
+      expect(result?.encryptedKycData.first_name).toBe('corrupted_data');
     });
   });
 
