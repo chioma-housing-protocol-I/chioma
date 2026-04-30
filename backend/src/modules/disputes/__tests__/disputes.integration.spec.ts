@@ -26,6 +26,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { AuditModule } from '../../audit/audit.module';
+import { AuditLog } from '../../audit/entities/audit-log.entity';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -61,6 +62,7 @@ describe('DisputesService - Integration Tests', () => {
             DisputeComment,
             RentAgreement,
             User,
+            AuditLog,
           ],
           synchronize: true,
           dropSchema: true,
@@ -102,15 +104,21 @@ describe('DisputesService - Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await dataSource.destroy();
-    await module.close();
+    if (dataSource && dataSource.isInitialized) {
+      await dataSource.destroy();
+    }
+    if (module) {
+      await module.close();
+    }
   });
 
   afterEach(async () => {
     // Clean up disputes after each test
-    await dataSource.getRepository(DisputeComment).delete({});
-    await dataSource.getRepository(DisputeEvidence).delete({});
-    await dataSource.getRepository(Dispute).delete({});
+    if (dataSource && dataSource.isInitialized) {
+      await dataSource.getRepository(DisputeComment).delete({});
+      await dataSource.getRepository(DisputeEvidence).delete({});
+      await dataSource.getRepository(Dispute).delete({});
+    }
   });
 
   async function setupTestData() {
@@ -406,7 +414,7 @@ describe('DisputesService - Integration Tests', () => {
         testDispute.disputeId,
         mockFile,
         tenantUser.id,
-        { description: 'Photo evidence of damage' },
+        { fileName: 'evidence.pdf', fileType: 'application/pdf', description: 'Photo evidence of damage' },
       );
 
       expect(evidence).toBeDefined();
