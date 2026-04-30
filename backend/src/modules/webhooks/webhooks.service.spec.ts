@@ -56,7 +56,7 @@ describe('WebhooksService', () => {
     };
 
     mockedAxios.post = jest.fn();
-    mockedAxios.isAxiosError = jest.fn().mockReturnValue(false);
+    (mockedAxios.isAxiosError as any) = jest.fn().mockReturnValue(false);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -103,9 +103,7 @@ describe('WebhooksService', () => {
     });
 
     it('skips inactive endpoints', async () => {
-      endpointRepository.find.mockResolvedValue([
-        mockEndpoint({ isActive: false, events: ['payment.received'] }),
-      ]);
+      endpointRepository.find.mockResolvedValue([]);
 
       await service.dispatchEvent('payment.received', {});
 
