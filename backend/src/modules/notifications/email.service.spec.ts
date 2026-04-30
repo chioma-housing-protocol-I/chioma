@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from './email.service';
+import { NetworkError } from '../../common/errors/retry-errors';
 
 jest.mock('nodemailer');
 const mockedNodemailer = nodemailer as jest.Mocked<typeof nodemailer>;
@@ -87,7 +88,7 @@ describe('EmailService', () => {
 
     it('retries on transient failure (retry decorator wired)', async () => {
       sendMailMock
-        .mockRejectedValueOnce(new Error('transient'))
+        .mockRejectedValueOnce(new NetworkError('transient'))
         .mockResolvedValueOnce({ messageId: 'ok' });
 
       await expect(
