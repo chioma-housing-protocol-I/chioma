@@ -13,7 +13,7 @@ import { RATE_LIMIT_CONFIG } from '../config/rate-limit.config';
 export class RateLimitService {
   private readonly logger = new Logger(RateLimitService.name);
 
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) { }
 
   async consumePoints(
     identifier: string,
@@ -38,7 +38,9 @@ export class RateLimitService {
       }
 
       const current = await this.cacheManager.get<number>(key);
-      const consumed = (current || 0) + points;
+      // Ensure current is a valid number, treat non-numeric values as 0
+      const currentValue = typeof current === 'number' ? current : 0;
+      const consumed = currentValue + points;
 
       if (consumed > config.points) {
         if (config.blockDuration) {
@@ -82,10 +84,15 @@ export class RateLimitService {
     identifier: string,
     category: EndpointCategory,
   ): Promise<void> {
-    const key = this.buildKey(identifier, category);
-    const blockKey = this.buildBlockKey(identifier, category);
-    await this.cacheManager.del(key);
-    await this.cacheManager.del(blockKey);
+    try {
+      const key = this.buildKey(identifier, category);
+      const blockKey = this.buildBlockKey(identifier, category);
+      await this.cacheManager.del(key);
+      await this.cacheManager.del(blockKey);
+    } catch (error) {
+      this.logger.error(`Failed to reset limit for ${identifier}: ${error.message}`);
+      // Fail silently to avoid breaking the application
+    }
   }
 
   async getRemainingPoints(
@@ -112,9 +119,14 @@ export class RateLimitService {
     identifier: string,
     durationSeconds: number = 3600,
   ): Promise<void> {
-    const key = `rate_limit:whitelist:${identifier}`;
-    await this.cacheManager.set(key, true, durationSeconds * 1000);
-    this.logger.log(`Whitelisted identifier: ${identifier}`);
+    try {
+      const key = `rate_limit:whitelist:${identifier}`;
+      await this.cacheManager.set(key, true, durationSeconds * 1000);
+      this.logger.log(`Whitelisted identifier: ${identifier}`);
+    } catch (error) {
+      this.logger.error(`Failed to whitelist identifier ${identifier}: ${error.message}`);
+      // Fail silently to avoid breaking the application
+    }
   }
 
   async isWhitelisted(identifier: string): Promise<boolean> {
@@ -127,6 +139,15 @@ export class RateLimitService {
     tier: UserTier,
     category: EndpointCategory,
   ): RateLimitConfig {
+    // Handle unknown tiers and categories gracefully
+    if (!RATE_LIMIT_CONFIG[tier]) {
+      this.logger.warn(`Unknown tier: ${tier}, falling back to FREE`);
+      return RATE_LIMIT_CONFIG[UserTier.FREE][category] || RATE_LIMIT_CONFIG[UserTier.FREE][EndpointCategory.PUBLIC];
+    }
+    if (!RATE_LIMIT_CONFIG[tier][category]) {
+      this.logger.warn(`Unknown category: ${category}, falling back to PUBLIC`);
+      return RATE_LIMIT_CONFIG[tier][EndpointCategory.PUBLIC];
+    }
     return RATE_LIMIT_CONFIG[tier][category];
   }
 
