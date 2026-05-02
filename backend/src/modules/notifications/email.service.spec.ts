@@ -93,7 +93,9 @@ describe('EmailService', () => {
 
       await expect(
         service.sendVerificationEmail('user@example.com', 'tok'),
-      ).resolves.toBeUndefined();
+      ).rejects.toThrow();
+
+      expect(sendMailMock).toHaveBeenCalledTimes(2);
     });
   });
 
