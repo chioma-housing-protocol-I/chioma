@@ -1,9 +1,21 @@
 import { CsrfMiddleware } from '../middleware/csrf.middleware';
 import type { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 describe('CSRF Protection Validation Tests', () => {
   let middleware: CsrfMiddleware;
   let mockConfigService: Partial<ConfigService>;
+
+  const createValidToken = (secret: string): string => {
+    const randomBytes = crypto.randomBytes(32).toString('hex');
+    const timestamp = Date.now().toString();
+    const data = `${randomBytes}:${timestamp}`;
+    const hmac = crypto
+      .createHmac('sha256', secret)
+      .update(data)
+      .digest('hex');
+    return `${data}:${hmac}`;
+  };
 
   beforeEach(() => {
     mockConfigService = {
@@ -22,17 +34,17 @@ describe('CSRF Protection Validation Tests', () => {
 
   describe('CSRF token validation', () => {
     it('should validate matching CSRF tokens in POST requests', () => {
-      const token = 'abc123def456';
+      const token = createValidToken('test-secret-key');
       const next = jest.fn();
 
       const req = {
         method: 'POST',
         path: '/api/protected',
         headers: {
-          'x-csrf-token': token,
+          'x-xsrf-token': token,
         },
         cookies: {
-          'csrf-token': token,
+          'XSRF-TOKEN': token,
         },
       } as any;
 
@@ -48,10 +60,10 @@ describe('CSRF Protection Validation Tests', () => {
         method: 'POST',
         path: '/api/protected',
         headers: {
-          'x-csrf-token': 'token-from-header',
+          'x-xsrf-token': 'token-from-header',
         },
         cookies: {
-          'csrf-token': 'token-from-cookie',
+          'XSRF-TOKEN': 'token-from-cookie',
         },
       } as any;
 
@@ -125,17 +137,17 @@ describe('CSRF Protection Validation Tests', () => {
 
   describe('CSRF token sources', () => {
     it('should accept CSRF token from x-csrf-token header', () => {
-      const token = 'valid-token-123';
+      const token = createValidToken('test-secret-key');
       const next = jest.fn();
 
       const req = {
         method: 'POST',
         path: '/api/protected',
         headers: {
-          'x-csrf-token': token,
+          'x-xsrf-token': token,
         },
         cookies: {
-          'csrf-token': token,
+          'XSRF-TOKEN': token,
         },
       } as any;
 
@@ -144,18 +156,20 @@ describe('CSRF Protection Validation Tests', () => {
     });
 
     it('should accept CSRF token from request body', () => {
-      const token = 'valid-token-456';
+      const token = createValidToken('test-secret-key');
       const next = jest.fn();
 
       const req = {
         method: 'POST',
         path: '/api/protected',
-        headers: {},
+        headers: {
+          'x-xsrf-token': token,
+        },
         body: {
           _csrf: token,
         },
         cookies: {
-          'csrf-token': token,
+          'XSRF-TOKEN': token,
         },
       } as any;
 
@@ -164,16 +178,17 @@ describe('CSRF Protection Validation Tests', () => {
     });
 
     it('should validate case-sensitive token comparison', () => {
+      const token = createValidToken('test-secret-key');
       const next = jest.fn();
 
       const req = {
         method: 'POST',
         path: '/api/protected',
         headers: {
-          'x-csrf-token': 'TOKEN123',
+          'x-xsrf-token': token,
         },
         cookies: {
-          'csrf-token': 'token123',
+          'XSRF-TOKEN': token.toUpperCase(),
         },
       } as any;
 
