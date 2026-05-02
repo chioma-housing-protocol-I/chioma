@@ -82,12 +82,12 @@ export class SanitizePipe implements PipeTransform {
 @Injectable()
 export class SanitizeValidationPipe extends SanitizePipe {
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
-    const sanitized = super.transform(value, metadata);
-
-    // Additional validation for common attack patterns
-    if (typeof sanitized === 'string') {
-      this.validateString(sanitized);
+    // Validate before sanitizing
+    if (typeof value === 'string') {
+      this.validateString(value);
     }
+
+    const sanitized = super.transform(value, metadata);
 
     return sanitized;
   }
