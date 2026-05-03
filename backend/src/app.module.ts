@@ -185,18 +185,19 @@ const appLogger = new Logger('AppModule');
           password: process.env.DB_PASSWORD,
           database: process.env.DB_NAME,
           namingStrategy: new SnakeNamingStrategy(),
-          entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
+          entities: [__dirname + '/modules/users/*.entity{.ts,.js}'],
           migrations: isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
-          synchronize: isTest,
-          logging: process.env.NODE_ENV === 'development',
+          synchronize: false,
+          logging: true,
+          logger: 'advanced-console' as const,
         };
-        appLogger.log('[TypeORM Config] PostgreSQL config');
-        appLogger.debug({
-          type: config.type,
+        console.log('[DEBUG] TypeORM Config:', {
           host: config.host,
           port: config.port,
           username: config.username,
           database: config.database,
+          synchronize: config.synchronize,
+          logging: config.logging,
         });
         return config;
       },

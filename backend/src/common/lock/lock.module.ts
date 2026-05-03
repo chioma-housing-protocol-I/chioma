@@ -34,6 +34,6 @@ import { REDIS_CLIENT } from './redis-client.token';
     },
     LockService,
   ],
-  exports: [LockService],
+  exports: [LockService, REDIS_CLIENT],
 })
-export class LockModule {}
+export class LockModule { }

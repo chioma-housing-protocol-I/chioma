@@ -19,6 +19,7 @@ import { User } from '../users/entities/user.entity';
 import { AdminRefundsController } from './admin-refunds.controller';
 import { AdminRefundsService } from './admin-refunds.service';
 import { FraudModule } from '../fraud/fraud.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FraudModule } from '../fraud/fraud.module';
     UsersModule,
     StellarModule,
     FraudModule,
+    AuditModule,
   ],
   controllers: [
     PaymentController,
@@ -39,4 +41,4 @@ import { FraudModule } from '../fraud/fraud.module';
   providers: [PaymentService, PaymentGatewayService, AdminRefundsService],
   exports: [PaymentService, PaymentGatewayService],
 })
-export class PaymentModule {}
+export class PaymentModule { }
