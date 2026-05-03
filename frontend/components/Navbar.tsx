@@ -11,7 +11,7 @@ import { useAuth } from '@/store/authStore';
 
 const WalletConnectButton = dynamic(
   () => import('@/components/auth/WalletConnectButton'),
-  { ssr: false },
+  { ssr: false, loading: () => <div className="px-6 py-2.5" /> },
 );
 
 interface NavbarProps {
@@ -55,6 +55,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
           ? 'backdrop-blur-xl bg-slate-950/95 border-b border-white/20 py-2 shadow-xl shadow-black/20'
           : 'bg-transparent py-3'
       }`}
+      suppressHydrationWarning
     >
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
         {/* Logo */}

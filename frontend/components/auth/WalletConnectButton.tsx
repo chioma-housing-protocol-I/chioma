@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
 import {
@@ -21,7 +21,6 @@ interface WalletConnectButtonProps {
 export default function WalletConnectButton({
   onSuccess,
   className = '',
-  buttonText = 'Connect Wallet',
 }: WalletConnectButtonProps) {
   const buttonWrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -92,8 +91,10 @@ export default function WalletConnectButton({
           if (result.accessToken && result.refreshToken && result.user) {
             let userWithRole = result.user;
 
-            // Ensure user has a role - detect if missing
+            // Use the role from the backend response directly
+            // The backend already determines the role based on the wallet address
             if (!userWithRole.role) {
+              // Only detect role if backend didn't provide one (shouldn't happen)
               toast.loading('Detecting user role...', { id: 'role-detect' });
               const detectedRole = await detectRoleFromWallet(address);
               toast.dismiss('role-detect');
@@ -114,18 +115,35 @@ export default function WalletConnectButton({
             toast.success('Successfully logged in with Wallet!');
 
             console.log('✅ Auth tokens set. User role:', userWithRole.role);
+            console.log('📋 User object from backend:', userWithRole);
 
             // Call onSuccess callback if provided
             if (onSuccess) {
               onSuccess();
             } else {
-              // Navigate to dashboard based on role
+              // Navigate to dashboard based on role from backend
+              // Check for admin roles: 'admin' or 'super_admin'
+              const isAdmin = ['admin', 'super_admin'].includes(
+                userWithRole.role?.toLowerCase() || '',
+              );
+              const dashboardRoute = isAdmin ? '/admin' : '/user';
+
+              console.log('🚀 Navigating to:', dashboardRoute);
+              console.log('User role:', userWithRole.role);
+              console.log('Is admin:', isAdmin);
+              console.log('Auth state:', {
+                hasAccessToken: !!result.accessToken,
+                hasRefreshToken: !!result.refreshToken,
+                hasUser: !!userWithRole,
+                userRole: userWithRole.role,
+              });
+
+              // Use a longer delay to ensure localStorage is fully synced
+              // and the store hydration on the new page completes
               setTimeout(() => {
-                const dashboardRoute =
-                  userWithRole.role === 'admin' ? '/admin' : '/user';
-                console.log('🚀 Navigating to:', dashboardRoute);
+                console.log('📍 Performing redirect to:', dashboardRoute);
                 router.push(dashboardRoute);
-              }, 500); // Small delay to show success message
+              }, 800);
             }
           } else {
             throw new Error('Invalid authentication response');
@@ -186,7 +204,14 @@ export default function WalletConnectButton({
 
   // Don't render anything until mounted on client
   if (!isMounted) {
-    return <div className={className} />;
+    return (
+      <div
+        className={`${className} px-6 py-2.5 text-sm rounded-lg bg-blue-600 text-white font-medium`}
+        suppressHydrationWarning
+      >
+        Connect Wallet
+      </div>
+    );
   }
 
   return (
