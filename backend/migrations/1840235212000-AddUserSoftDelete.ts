@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddUserSoftDelete1740235212000 implements MigrationInterface {
-  name = 'AddUserSoftDelete1740235212000';
+export class AddUserSoftDelete1840235212000 implements MigrationInterface {
+  name = 'AddUserSoftDelete1840235212000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "users" ADD "deleted_at" TIMESTAMP`);

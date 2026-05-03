@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddPropertyRentalModeFields1790000000000 implements MigrationInterface {
-  name = 'AddPropertyRentalModeFields1790000000000';
+export class AddPropertyRentalModeFields1890000000000 implements MigrationInterface {
+  name = 'AddPropertyRentalModeFields1890000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Enums

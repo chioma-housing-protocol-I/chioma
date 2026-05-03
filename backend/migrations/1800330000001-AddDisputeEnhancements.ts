@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
-export class AddDisputeEnhancements1740330000001 implements MigrationInterface {
+export class AddDisputeEnhancements1800330000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create dispute_events table
     await queryRunner.createTable(

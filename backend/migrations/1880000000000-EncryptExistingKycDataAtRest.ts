@@ -3,7 +3,7 @@ import { Kyc } from '../src/modules/kyc/kyc.entity';
 import { EncryptionService } from '../src/modules/security/encryption.service';
 import { ConfigService } from '@nestjs/config';
 
-export class EncryptExistingKycDataAtRest implements MigrationInterface {
+export class EncryptExistingKycDataAtRest1880000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Initialize config and encryption service
     const configService = new ConfigService();

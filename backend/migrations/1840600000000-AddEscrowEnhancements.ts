@@ -6,7 +6,7 @@ import {
   TableForeignKey,
 } from 'typeorm';
 
-export class AddEscrowEnhancements1740600000000 implements MigrationInterface {
+export class AddEscrowEnhancements1840600000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create escrow_signatures table
     await queryRunner.createTable(

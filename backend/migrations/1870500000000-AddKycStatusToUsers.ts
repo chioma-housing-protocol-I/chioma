@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddKycStatusToUsers1770500000000 implements MigrationInterface {
-  name = 'AddKycStatusToUsers1770500000000';
+export class AddKycStatusToUsers1870500000000 implements MigrationInterface {
+  name = 'AddKycStatusToUsers1870500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
