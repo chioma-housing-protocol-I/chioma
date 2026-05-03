@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Menu, Wallet, Search, User } from 'lucide-react';
+import { Menu, Search, User } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 import { Sidebar } from '@/components/user-dashboard';
 import { userNavItems } from '@/data/user-nav-items';
@@ -20,7 +20,7 @@ export default function UserDashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { walletAddress } = useAuth();
+  const { walletAddress, loading } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 font-sans text-white flex flex-col lg:flex-row">
@@ -107,7 +107,18 @@ export default function UserDashboardLayout({
           fallbackDescription="This user section encountered an issue. Retry to restore it."
         >
           <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
-            {children}
+            {loading ? (
+              <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-blue-200/60 font-medium">
+                    Loading dashboard…
+                  </p>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </ClientErrorBoundary>
       </div>
