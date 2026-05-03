@@ -126,7 +126,7 @@ describe('KycController', () => {
       const res = await request(app.getHttpServer())
         .get('/kyc/status')
         .expect(200);
-      expect(res.body).toBeFalsy();
+      expect(res.body).toEqual({});
     });
   });
 
