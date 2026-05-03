@@ -95,6 +95,20 @@ export default function UserDashboardOverview() {
 
   const { openModal } = useModal();
   const router = useRouter();
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-blue-200/60 font-medium">
+            Loading dashboard…
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAgreementSign = (agreement: (typeof mockAgreements)[0]) => {
     openModal('agreementView', {

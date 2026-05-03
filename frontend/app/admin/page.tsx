@@ -10,8 +10,21 @@ export default function AdminHomePage() {
   // AUTH DISABLED - useRoleRedirect commented out for development
   // useRoleRedirect(['admin', 'support', 'auditor']);
 
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navItems = getAdminNavItems(user?.role);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-blue-200/60 font-medium">
+            Loading admin overview…
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-6">
