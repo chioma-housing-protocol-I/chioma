@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConfigModule } from '@nestjs/config';
 import { AuditService } from './audit.service';
 import { AuditController } from './audit.controller';
 import { AuditLog } from './entities/audit-log.entity';
@@ -9,7 +10,11 @@ import { AuditLogInterceptor } from './interceptors/audit-log.interceptor';
 import { AuditRetentionService } from './audit-retention.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AuditLog]), ScheduleModule.forRoot()],
+  imports: [
+    TypeOrmModule.forFeature([AuditLog]),
+    ScheduleModule.forRoot(),
+    ConfigModule,
+  ],
   controllers: [AuditController],
   providers: [
     AuditService,
@@ -24,4 +29,4 @@ import { AuditRetentionService } from './audit-retention.service';
     AuditRetentionService,
   ],
 })
-export class AuditModule {}
+export class AuditModule { }
