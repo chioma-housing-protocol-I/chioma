@@ -9,4 +9,5 @@ pub enum DataKey {
     AgentCount,
     Transaction(String),
     AgentRating(Address, Address),
+    UpgradeProposal(String),
 }
