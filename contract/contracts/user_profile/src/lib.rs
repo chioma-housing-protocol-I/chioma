@@ -5,6 +5,7 @@ mod events;
 mod profile;
 mod storage;
 mod types;
+mod upgrade;
 
 #[cfg(test)]
 mod tests_profile_management;

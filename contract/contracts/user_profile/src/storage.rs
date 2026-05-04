@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address, String};
 
 /// Storage keys for contract data
 #[contracttype]
@@ -12,4 +12,7 @@ pub enum DataKey {
 
     /// Contract initialization flag
     Initialized,
+
+    /// Upgrade proposal
+    UpgradeProposal(String),
 }
