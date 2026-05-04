@@ -14,6 +14,7 @@ pub mod events;
 pub mod rate_limit;
 pub mod storage;
 pub mod types;
+pub mod upgrade;
 
 #[cfg(test)]
 mod tests;

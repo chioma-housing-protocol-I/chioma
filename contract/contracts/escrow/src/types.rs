@@ -140,4 +140,6 @@ pub enum DataKey {
     BlockCallCount(u64, String),
     /// System admin address for emergency operations
     SystemAdmin,
+    /// Upgrade proposal
+    UpgradeProposal(String),
 }
