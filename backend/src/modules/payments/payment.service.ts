@@ -69,7 +69,7 @@ export class PaymentService {
     private readonly idempotencyService: IdempotencyService,
     private readonly dataSource: DataSource,
     private readonly fraudHooksService: FraudHooksService,
-  ) {}
+  ) { }
 
   @Locked({
     key: (dto: CreatePaymentRecordDto) =>
@@ -288,9 +288,9 @@ export class PaymentService {
       },
       paymentMethod: payment.paymentMethodRelation
         ? {
-            type: payment.paymentMethodRelation.paymentType,
-            lastFour: payment.paymentMethodRelation.lastFour,
-          }
+          type: payment.paymentMethodRelation.paymentType,
+          lastFour: payment.paymentMethodRelation.lastFour,
+        }
         : null,
     };
 
@@ -932,8 +932,8 @@ export class PaymentService {
       ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
       : dto.referenceNumber
         ? await this.paymentRepository.findOne({
-            where: { referenceNumber: dto.referenceNumber },
-          })
+          where: { referenceNumber: dto.referenceNumber },
+        })
         : null;
 
     if (!payment) {
@@ -1071,6 +1071,12 @@ export class PaymentService {
       schedule.status = PaymentScheduleStatus.FAILED;
       schedule.lastError = 'Payment method is missing';
       await this.paymentScheduleRepository.save(schedule);
+      await this.notificationsService.notify(
+        schedule.userId,
+        'Recurring payment failed',
+        `We could not process your scheduled payment. ${schedule.lastError}`.trim(),
+        'PAYMENT_FAILED',
+      );
       throw new BadRequestException('Payment method is missing');
     }
 
