@@ -10,4 +10,5 @@ pub enum DataKey {
     BurnRecord(String),
     BurnedNfts(String),
     BurnCount,
+    UpgradeProposal(String),
 }
