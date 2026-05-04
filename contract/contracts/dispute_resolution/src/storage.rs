@@ -24,4 +24,5 @@ pub enum DataKey {
     RateLimitConfig,
     UserCallCount(Address, String),
     BlockCallCount(u64, String),
+    UpgradeProposal(String),
 }
