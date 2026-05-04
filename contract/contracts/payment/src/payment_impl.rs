@@ -6,6 +6,7 @@ use crate::storage::DataKey;
 use crate::types::{
     AgreementStatus, EscalationType, PaymentRecord, RentAgreement, RentEscalationConfig,
 };
+use crate::upgrade;
 
 /// Calculate the rent amount for a specific period (payment number) with escalation
 pub fn calculate_rent_for_period(
@@ -159,4 +160,44 @@ pub fn pay_rent_with_agent(
     );
 
     Ok(())
+}
+
+// --- Upgrade Functions ---
+
+/// Propose a contract upgrade.
+pub fn propose_upgrade(
+    env: Env,
+    proposer: Address,
+    proposal_id: String,
+    wasm_hash: soroban_sdk::Bytes,
+    notes: String,
+    delay_seconds: u64,
+) -> Result<(), PaymentError> {
+    upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+}
+
+/// Approve an upgrade proposal.
+pub fn approve_upgrade(
+    env: Env,
+    approver: Address,
+    proposal_id: String,
+) -> Result<(), PaymentError> {
+    upgrade::approve_upgrade(&env, approver, proposal_id)
+}
+
+/// Execute an approved upgrade.
+pub fn execute_upgrade(
+    env: Env,
+    executor: Address,
+    proposal_id: String,
+) -> Result<(), PaymentError> {
+    upgrade::execute_upgrade(&env, executor, proposal_id)
+}
+
+/// Get an upgrade proposal.
+pub fn get_upgrade_proposal(
+    env: Env,
+    proposal_id: String,
+) -> Result<upgrade::UpgradeProposal, PaymentError> {
+    upgrade::get_upgrade_proposal(&env, proposal_id)
 }
