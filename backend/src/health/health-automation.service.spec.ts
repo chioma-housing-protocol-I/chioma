@@ -6,6 +6,7 @@ import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
 import { Logger } from '@nestjs/common';
+import { ErrorNotificationService } from '../modules/monitoring/error-notification.service';
 
 describe('HealthAutomationService', () => {
   let service: HealthAutomationService;
@@ -23,6 +24,9 @@ describe('HealthAutomationService', () => {
     const mockDbIndicator = { isHealthy: jest.fn() };
     const mockStellarIndicator = { isHealthy: jest.fn() };
     const mockMemoryIndicator = { isHealthy: jest.fn() };
+    const mockErrorNotificationService = {
+      notifyHealthDegradation: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +36,10 @@ describe('HealthAutomationService', () => {
         { provide: DatabaseHealthIndicator, useValue: mockDbIndicator },
         { provide: StellarHealthIndicator, useValue: mockStellarIndicator },
         { provide: MemoryHealthIndicator, useValue: mockMemoryIndicator },
+        {
+          provide: ErrorNotificationService,
+          useValue: mockErrorNotificationService,
+        },
       ],
     }).compile();
 

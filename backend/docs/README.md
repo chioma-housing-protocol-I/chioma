@@ -172,6 +172,7 @@ Chioma supports dual authentication: **JWT (email/password)** and **Stellar SEP-
 | [Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)     | Pre-deploy and post-deploy safety checklist                             |
 | [Production Setup](./deployment/PRODUCTION_SETUP.md)             | Environment config, secrets, health checks                              |
 | [Monitoring & Alerting](./deployment/MONITORING_AND_ALERTING.md) | Metrics collection, alert configuration, dashboards, alert response     |
+| [Error Notification & Escalation](./deployment/ERROR_NOTIFICATION_AND_ESCALATION.md) | Alert webhooks, email/Slack delivery, escalation tiers |
 | [Backup & Recovery](./deployment/BACKUP_AND_RECOVERY.md)         | Backup strategies, verification, recovery procedures, testing           |
 | [Release Management](./deployment/RELEASE_MANAGEMENT.md)         | Release planning, versioning, release notes, deployment, rollback       |
 

@@ -5,6 +5,7 @@ import { HealthService } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
+import { ErrorNotificationService } from '../modules/monitoring/error-notification.service';
 
 @Injectable()
 export class HealthAutomationService {
@@ -16,6 +17,7 @@ export class HealthAutomationService {
     private databaseHealthIndicator: DatabaseHealthIndicator,
     private stellarHealthIndicator: StellarHealthIndicator,
     private memoryHealthIndicator: MemoryHealthIndicator,
+    private readonly errorNotificationService: ErrorNotificationService,
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -37,16 +39,31 @@ export class HealthAutomationService {
         this.logger.warn(
           'System is degraded: ' + JSON.stringify(enhancedResult.services),
         );
+        await this.errorNotificationService.notifyHealthDegradation({
+          status: 'warning',
+          summary: 'Automated health check reported degraded services',
+          services: enhancedResult.services,
+        });
       } else {
         this.logger.error(
           'System is unhealthy: ' + JSON.stringify(enhancedResult.services),
         );
+        await this.errorNotificationService.notifyHealthDegradation({
+          status: 'error',
+          summary: 'Automated health check reported unhealthy services',
+          services: enhancedResult.services,
+        });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const degradedResult = this.healthService.handlePartialFailure(error);
       this.logger.error(
         'Health check failed: ' + JSON.stringify(degradedResult),
       );
+      await this.errorNotificationService.notifyHealthDegradation({
+        status: 'error',
+        summary: 'Automated health check failed',
+        services: degradedResult.services ?? { error: String(error) },
+      });
     }
   }
 }

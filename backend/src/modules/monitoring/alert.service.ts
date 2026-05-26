@@ -1,20 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AlertPayload } from './alert.types';
+import { ErrorEscalationService } from './error-escalation.service';
+import { ErrorNotificationService } from './error-notification.service';
+import { EscalationTier } from './alert.types';
 
-export interface Alert {
-  status: string;
-  labels: Record<string, string>;
-  annotations: Record<string, string>;
-  startsAt: string;
-  endsAt?: string;
-  generatorURL: string;
-}
+export type Alert = AlertPayload;
 
 @Injectable()
 export class AlertService {
   private readonly logger = new Logger(AlertService.name);
 
-  async handleAlert(payload: any) {
-    const alerts = payload.alerts || [];
+  constructor(
+    private readonly errorNotificationService: ErrorNotificationService,
+    private readonly errorEscalationService: ErrorEscalationService,
+  ) {}
+
+  async handleAlert(payload: { alerts?: AlertPayload[] }): Promise<void> {
+    const alerts = payload.alerts ?? [];
 
     for (const alert of alerts) {
       if (alert.status === 'firing') {
@@ -25,37 +27,33 @@ export class AlertService {
     }
   }
 
-  private async handleFiringAlert(alert: Alert) {
-    const severity = alert.labels.severity || 'info';
+  private async handleFiringAlert(alert: AlertPayload): Promise<void> {
+    const severity = alert.labels.severity ?? 'info';
     const alertName = alert.labels.alertname;
     const summary = alert.annotations.summary;
     const description = alert.annotations.description;
 
-    this.logger.warn(
-      `🚨 ALERT FIRING [${severity.toUpperCase()}]: ${alertName}`,
-      {
-        summary,
-        description,
-        labels: alert.labels,
-      },
-    );
+    this.logger.warn(`ALERT FIRING [${severity.toUpperCase()}]: ${alertName}`, {
+      summary,
+      description,
+      labels: alert.labels,
+    });
 
-    // Send notifications based on severity
-    if (severity === 'critical') {
-      await this.sendCriticalNotification(alert);
+    this.errorEscalationService.trackFiringAlert(alert);
+
+    const normalizedSeverity = severity.toLowerCase();
+    if (['critical', 'high', 'warning'].includes(normalizedSeverity)) {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.ONCALL,
+      );
     }
   }
 
-  private async handleResolvedAlert(alert: Alert) {
+  private async handleResolvedAlert(alert: AlertPayload): Promise<void> {
     const alertName = alert.labels.alertname;
-    this.logger.log(`✅ ALERT RESOLVED: ${alertName}`);
-  }
-
-  private async sendCriticalNotification(alert: Alert) {
-    // Implement notification logic (email, Slack, PagerDuty, etc.)
-    this.logger.error('Critical alert requires immediate attention', {
-      alert: alert.labels.alertname,
-      summary: alert.annotations.summary,
-    });
+    this.logger.log(`ALERT RESOLVED: ${alertName}`);
+    this.errorEscalationService.resolveAlert(alert);
+    await this.errorNotificationService.notifyResolved(alert);
   }
 }
