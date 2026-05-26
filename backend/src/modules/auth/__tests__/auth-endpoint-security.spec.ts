@@ -241,14 +241,8 @@ describe('Auth Endpoint Security', () => {
       }
 
       const controller = new AuthRequiredController();
-      const logoutGuards = Reflect.getMetadata(
-        '__guards__',
-        controller.logout,
-      );
-      const mfaGuards = Reflect.getMetadata(
-        '__guards__',
-        controller.enableMfa,
-      );
+      const logoutGuards = Reflect.getMetadata('__guards__', controller.logout);
+      const mfaGuards = Reflect.getMetadata('__guards__', controller.enableMfa);
 
       expect(logoutGuards).toBeDefined();
       expect(logoutGuards).toContain(JwtAuthGuard);

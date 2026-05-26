@@ -113,7 +113,9 @@ describe('CacheService', () => {
       mockCacheManager.get.mockResolvedValue(undefined);
       await service.set('expired-key', { a: 1 }, 1000, ['property:p2']);
 
-      const cleaned = await service.cleanupExpiredDependencies(Date.now() + 2000);
+      const cleaned = await service.cleanupExpiredDependencies(
+        Date.now() + 2000,
+      );
 
       expect(cleaned).toBe(1);
       expect(service.getStats().cleanups).toBe(1);
@@ -124,7 +126,9 @@ describe('CacheService', () => {
       mockCacheManager.get.mockResolvedValue({ a: 1 });
       await service.set('live-key', { a: 1 }, 1000, ['property:p3']);
 
-      const cleaned = await service.cleanupExpiredDependencies(Date.now() + 2000);
+      const cleaned = await service.cleanupExpiredDependencies(
+        Date.now() + 2000,
+      );
 
       expect(cleaned).toBe(0);
       expect(service.getStats().dependencyTrackedKeys).toBe(1);

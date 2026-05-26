@@ -43,7 +43,10 @@ function getRedactKeysFromEnv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function parseRetentionDays(value: string | undefined, fallback: number): number {
+function parseRetentionDays(
+  value: string | undefined,
+  fallback: number,
+): number {
   if (!value) return fallback;
   const match = value.trim().match(/^(\d+)(d)?$/i);
   if (!match) return fallback;
@@ -378,8 +381,9 @@ export class LoggerService implements NestLoggerService {
   }
 
   async cleanupOldLogFiles(
-    logDir =
-      this.configService?.get('LOG_DIR') || process.env.LOG_DIR || 'logs',
+    logDir = this.configService?.get('LOG_DIR') ||
+      process.env.LOG_DIR ||
+      'logs',
     retentionDays = parseRetentionDays(
       this.configService?.get('LOG_MAX_FILES') || process.env.LOG_MAX_FILES,
       14,

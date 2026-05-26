@@ -6,25 +6,25 @@ Welcome to the Chioma backend documentation hub. This index covers all aspects o
 
 ## Navigation
 
-| Category                                        | Description                                      |
-| ----------------------------------------------- | ------------------------------------------------ |
-| [Getting Started](#getting-started)             | Prerequisites, local setup, environment config   |
-| [API Reference](#api-reference)                 | Endpoint docs, standards, versioning, changelog  |
-| [Architecture](#architecture)                   | System design, dependency graph, performance     |
-| [Database](#database)                           | Schema, migrations, indexes                      |
-| [Blockchain](#blockchain)                       | Stellar integration, anchor, SEP-0010 auth       |
-| [Authentication](#authentication)               | JWT, Stellar auth, MFA, guards, security         |
-| [Caching](#caching)                             | Redis/Upstash strategy, invalidation, monitoring |
-| [Queues](#queues)                               | Bull queue implementation                        |
-| [Deployment](#deployment)                       | Production setup, Docker, CI/CD                  |
-| [Error Handling](#error-handling)               | Exception filters, error types, error responses  |
-| [Logging & Monitoring](#logging--monitoring)    | Logging, Prometheus, Grafana, Sentry, alerts     |
-| [Security](#security)                           | Encryption, threat model, compliance             |
-| [Dependency Management](#dependency-management) | Package strategy, auditing, security updates     |
-| [Integrations](#integrations)                   | Third-party services                             |
-| [Support](#support)                             | Support procedures, SLAs, maintenance schedules  |
-| [Incident Response](#incident-response)         | Incident classification, escalation, runbooks    |
-| [Community](#community)                         | Contributing, code of conduct, team policies     |
+| Category                                        | Description                                                    |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| [Getting Started](#getting-started)             | Prerequisites, local setup, environment config                 |
+| [API Reference](#api-reference)                 | Endpoint docs, standards, versioning, changelog                |
+| [Architecture](#architecture)                   | System design, dependency graph, performance                   |
+| [Database](#database)                           | Schema, migrations, indexes                                    |
+| [Blockchain](#blockchain)                       | Stellar integration, anchor, SEP-0010 auth                     |
+| [Authentication](#authentication)               | JWT, Stellar auth, MFA, guards, security                       |
+| [Caching](#caching)                             | Redis/Upstash strategy, invalidation, monitoring               |
+| [Queues](#queues)                               | Bull queue implementation                                      |
+| [Deployment](#deployment)                       | Production setup, Docker, CI/CD                                |
+| [Error Handling](#error-handling)               | Exception filters, error types, error responses                |
+| [Logging & Monitoring](#logging--monitoring)    | Monitoring setup, logging, Prometheus, Grafana, Sentry, alerts |
+| [Security](#security)                           | Encryption, threat model, compliance                           |
+| [Dependency Management](#dependency-management) | Package strategy, auditing, security updates                   |
+| [Integrations](#integrations)                   | Third-party services                                           |
+| [Support](#support)                             | Support procedures, SLAs, maintenance schedules                |
+| [Incident Response](#incident-response)         | Incident classification, escalation, runbooks                  |
+| [Community](#community)                         | Contributing, code of conduct, team policies                   |
 
 ---
 
@@ -195,9 +195,11 @@ The `AllExceptionsFilter` catches all unhandled exceptions and maps them to stan
 
 ## Logging & Monitoring
 
-| Document                                            | Summary                                                              |
-| --------------------------------------------------- | -------------------------------------------------------------------- |
-| [Logging & Monitoring](./LOGGING_AND_MONITORING.md) | LoggerService, middleware, Sentry, Prometheus, Grafana, Loki, alerts |
+| Document                                                  | Summary                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Monitoring Setup](./MONITORING_SETUP.md)                 | Quick start, metrics endpoint, alert rules, log queries, health checks |
+| [Logging & Monitoring](./LOGGING_AND_MONITORING.md)       | LoggerService, middleware, Sentry, Prometheus, Grafana, Loki, alerts   |
+| [Comprehensive Monitoring](./COMPREHENSIVE_MONITORING.md) | Observability strategy, full metrics catalogue, best practices         |
 
 The platform uses structured JSON logging with correlation IDs, sensitive data sanitization, and a full Prometheus + Grafana + Loki + Alertmanager monitoring stack.
 

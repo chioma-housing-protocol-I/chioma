@@ -113,7 +113,10 @@ describe('MaintenanceService', () => {
     maintenanceRepo.findOne.mockResolvedValue(null);
 
     await expect(
-      service.findAll({ propertyId: 'property-1', status: MaintenanceStatus.OPEN }),
+      service.findAll({
+        propertyId: 'property-1',
+        status: MaintenanceStatus.OPEN,
+      }),
     ).resolves.toEqual([openRequest]);
     expect(maintenanceRepo.find).toHaveBeenCalledWith({
       where: { propertyId: 'property-1', status: MaintenanceStatus.OPEN },

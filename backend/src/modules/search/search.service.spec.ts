@@ -295,18 +295,15 @@ describe('SearchService', () => {
         status: ListingStatus.DRAFT,
       });
 
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'property.city ILIKE :city',
-        { city: '%Lagos%' },
-      );
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'property.state ILIKE :state',
-        { state: '%Lagos State%' },
-      );
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'property.country = :country',
-        { country: 'NG' },
-      );
+      expect(qb.andWhere).toHaveBeenCalledWith('property.city ILIKE :city', {
+        city: '%Lagos%',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('property.state ILIKE :state', {
+        state: '%Lagos State%',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('property.country = :country', {
+        country: 'NG',
+      });
       expect(qb.andWhere).toHaveBeenCalledWith('property.type = :type', {
         type: PropertyType.APARTMENT,
       });
