@@ -276,7 +276,7 @@ export class PerformanceMonitorService {
     const routes: ReturnType<typeof this.getResponseTimeStats>['routes'] = [];
 
     for (const [key, data] of this.performanceData.entries()) {
-      const window = data.filter((d) => d.timestamp.getTime() >= cutoff);
+      const window = data.filter((d) => d.timestamp.getTime() > cutoff);
       if (window.length === 0) continue;
 
       const colonIdx = key.indexOf(':');
