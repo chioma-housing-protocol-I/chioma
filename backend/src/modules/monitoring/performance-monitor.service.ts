@@ -426,7 +426,8 @@ export class PerformanceMonitorService {
     key: string,
     metrics: PerformanceMetrics,
   ): void {
-    const [method, endpoint] = key.split(':');
+    const colonIdx = key.indexOf(':');
+    const endpoint = key.slice(colonIdx + 1);
     const threshold = this.performanceThresholds.find(
       (t) => t.endpoint === endpoint,
     );
