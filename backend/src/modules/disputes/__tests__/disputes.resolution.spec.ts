@@ -6,6 +6,12 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  AuthorizationError,
+  BusinessRuleViolationError,
+  AgreementNotFoundError,
+  DisputeNotFoundError,
+} from '../../../common/errors';
 import { DisputesService } from '../disputes.service';
 import {
   Dispute,
@@ -197,7 +203,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('throws BadRequestException when dispute is OPEN (not UNDER_REVIEW)', async () => {
@@ -206,7 +212,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
 
     it('throws BadRequestException when dispute is already RESOLVED', async () => {
@@ -215,7 +221,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
 
     it('resolves an UNDER_REVIEW dispute and returns updated record', async () => {
@@ -424,7 +430,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.addComment('dispute-uuid-1', internalCommentDto, 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -445,7 +451,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       mockAgreementRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getAgreementDisputes('999')).rejects.toThrow(
-        NotFoundException,
+        AgreementNotFoundError,
       );
     });
 
@@ -480,7 +486,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.getAgreementDisputes('1', 'stranger'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('allows admin to view any agreement disputes', async () => {
@@ -509,7 +515,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('findOne — additional edge cases', () => {
     it('throws NotFoundException for a non-existent numeric ID', async () => {
       mockDisputeRepository.findOne.mockResolvedValue(null);
-      await expect(service.findOne(9999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(9999)).rejects.toThrow(DisputeNotFoundError);
     });
   });
 
@@ -519,7 +525,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     it('throws NotFoundException for a non-existent UUID', async () => {
       mockDisputeRepository.findOne.mockResolvedValue(null);
       await expect(service.findByDisputeId('no-such-uuid')).rejects.toThrow(
-        NotFoundException,
+        DisputeNotFoundError,
       );
     });
   });
