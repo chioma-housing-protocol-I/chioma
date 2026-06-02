@@ -27,7 +27,7 @@ export interface DeadLetterJob {
 export class DLQProcessor {
   private readonly logger = new Logger(DLQProcessor.name);
 
-  constructor(private readonly incident: IncidentService) { }
+  constructor(private readonly incident: IncidentService) {}
 
   /**
    * Process dead-letter queue jobs

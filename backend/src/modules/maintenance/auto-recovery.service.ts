@@ -8,7 +8,10 @@ import { IncidentService } from '../../common/resilience/incident.service';
 import { DegradationService } from '../../common/resilience/degradation.service';
 import { CascadeDetectorService } from '../../common/resilience/cascade-detector.service';
 import { CircuitBreakerService } from '../../common/resilience/circuit-breaker.service';
-import { IncidentSeverity, DegradationLevel } from '../../common/resilience/resilience.types';
+import {
+  IncidentSeverity,
+  DegradationLevel,
+} from '../../common/resilience/resilience.types';
 
 export interface AutoRecoveryAction {
   name: string;
@@ -34,7 +37,7 @@ export class AutoRecoveryService implements OnModuleInit, OnModuleDestroy {
     private readonly degradation: DegradationService,
     private readonly cascadeDetector: CascadeDetectorService,
     private readonly circuitBreaker: CircuitBreakerService,
-  ) { }
+  ) {}
 
   onModuleInit(): void {
     this.registerDefaultActions();
@@ -150,7 +153,10 @@ export class AutoRecoveryService implements OnModuleInit, OnModuleDestroy {
         const currentLevel = this.degradation.getLevel();
 
         if (cascadeStatus.failedServices.length >= 3) {
-          if (currentLevel !== DegradationLevel.PARTIAL && currentLevel !== DegradationLevel.SEVERE) {
+          if (
+            currentLevel !== DegradationLevel.PARTIAL &&
+            currentLevel !== DegradationLevel.SEVERE
+          ) {
             this.degradation.setLevel(
               DegradationLevel.PARTIAL,
               'Escalating due to multiple service failures',
@@ -176,7 +182,10 @@ export class AutoRecoveryService implements OnModuleInit, OnModuleDestroy {
         const cascadeStatus = this.cascadeDetector.getCascadeStatus();
         const currentLevel = this.degradation.getLevel();
 
-        if (!cascadeStatus.isInCascade && currentLevel !== DegradationLevel.NORMAL) {
+        if (
+          !cascadeStatus.isInCascade &&
+          currentLevel !== DegradationLevel.NORMAL
+        ) {
           this.degradation.setLevel(
             DegradationLevel.NORMAL,
             'Removing degradation - all services recovered',
