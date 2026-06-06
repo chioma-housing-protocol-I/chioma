@@ -39,3 +39,25 @@ export class FeatureDisabledError extends BaseAppError {
     this.feature = feature;
   }
 }
+
+/**
+ * Thrown when an external call does not complete within the configured
+ * deadline. Surfaced as HTTP 408 so clients know the upstream, not their
+ * request, was at fault.
+ */
+export class ExternalCallTimeoutError extends BaseAppError {
+  public readonly context: string;
+  public readonly timeoutMs: number;
+
+  constructor(context: string, timeoutMs: number) {
+    super(
+      ErrorCode.EXTERNAL_SERVICE_TIMEOUT,
+      HttpStatus.REQUEST_TIMEOUT,
+      `External call "${context}" timed out after ${timeoutMs} ms`,
+      true,
+      { context, timeoutMs },
+    );
+    this.context = context;
+    this.timeoutMs = timeoutMs;
+  }
+}

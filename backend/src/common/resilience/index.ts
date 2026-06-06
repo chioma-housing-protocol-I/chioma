@@ -3,9 +3,11 @@ export { BulkheadService } from './bulkhead.service';
 export { FallbackService } from './fallback.service';
 export { DegradationService } from './degradation.service';
 export { IncidentService } from './incident.service';
+export { TimeoutService } from './timeout.service';
 export {
   BulkheadCapacityExceededError,
   FeatureDisabledError,
+  ExternalCallTimeoutError,
 } from './resilience.errors';
 export {
   BulkheadOptions,
@@ -23,4 +25,7 @@ export {
   IncidentStatus,
   IncidentTimelineEntry,
   DeclareIncidentInput,
+  TimeoutOptions,
+  TimeoutMetrics,
+  DEFAULT_TIMEOUT_MS,
 } from './resilience.types';
