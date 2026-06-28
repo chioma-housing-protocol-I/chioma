@@ -38,7 +38,16 @@ export default function PropertyListing() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [mapWidth, setMapWidth] = useState<number>(50);
   const [isMapCollapsed, setIsMapCollapsed] = useState(true);
-  const [properties] = useState(MOCK_PROPERTIES);
+  const allProperties = MOCK_PROPERTIES;
+  const qLower = searchQuery.trim().toLowerCase();
+  const filteredProperties = qLower
+    ? allProperties.filter(
+        (p) =>
+          p.title?.toLowerCase().includes(qLower) ||
+          p.location?.toLowerCase().includes(qLower) ||
+          p.category?.toLowerCase().includes(qLower),
+      )
+    : allProperties;
   const [displayedCount, setDisplayedCount] = useState(12);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -126,16 +135,6 @@ export default function PropertyListing() {
       );
     });
   };
-
-  const qLower = searchQuery.trim().toLowerCase();
-  const filteredProperties = qLower
-    ? properties.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(qLower) ||
-          p.location?.toLowerCase().includes(qLower) ||
-          p.category?.toLowerCase().includes(qLower),
-      )
-    : properties;
 
   const toggleMapCollapse = () => {
     setIsMapCollapsed(!isMapCollapsed);
