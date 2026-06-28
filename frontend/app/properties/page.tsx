@@ -39,6 +39,13 @@ export default function PropertyListing() {
   const [mapWidth, setMapWidth] = useState<number>(50);
   const [isMapCollapsed, setIsMapCollapsed] = useState(true);
   const allProperties = MOCK_PROPERTIES;
+  const [displayedCount, setDisplayedCount] = useState(12);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get('q') ?? '',
+  );
+
   const qLower = searchQuery.trim().toLowerCase();
   const filteredProperties = qLower
     ? allProperties.filter(
@@ -48,12 +55,6 @@ export default function PropertyListing() {
           p.category?.toLowerCase().includes(qLower),
       )
     : allProperties;
-  const [displayedCount, setDisplayedCount] = useState(12);
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [searchQuery, setSearchQuery] = useState(
-    () => searchParams.get('q') ?? '',
-  );
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
