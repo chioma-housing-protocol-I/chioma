@@ -58,6 +58,7 @@ export default function PropertyListing() {
 
   useEffect(() => {
     setSearchQuery(searchParams.get('q') ?? '');
+    setDisplayedCount(12);
   }, [searchParams]);
 
   const applySearchToUrl = useCallback(
@@ -84,8 +85,8 @@ export default function PropertyListing() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && displayedCount < properties.length) {
-          setDisplayedCount((prev) => Math.min(prev + 12, properties.length));
+        if (entries[0].isIntersecting && displayedCount < filteredProperties.length) {
+          setDisplayedCount((prev) => Math.min(prev + 12, filteredProperties.length));
         }
       },
       { threshold: 0.1 },
@@ -96,7 +97,7 @@ export default function PropertyListing() {
     }
 
     return () => observer.disconnect();
-  }, [displayedCount, properties.length]);
+  }, [displayedCount, filteredProperties.length]);
 
   // Scroll detection for header visibility
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function PropertyListing() {
     west: number;
   }) => {
     if (!searchAsIMove) return;
-    const _filtered = properties.filter((p) => {
+    const _filtered = allProperties.filter((p) => {
       if (!p.latitude || !p.longitude) return false;
       return (
         p.latitude >= bounds.south &&
