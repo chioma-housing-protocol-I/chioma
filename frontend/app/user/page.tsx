@@ -260,16 +260,16 @@ export default function UserDashboardOverview() {
               Active Lease
             </p>
             <h3 className="text-xl font-bold tracking-tight text-white mt-1">
-              12 Months
+              {leaseMonthsTotal} Months
             </h3>
             <div className="mt-3 w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all duration-1000"
-                style={{ width: '60%' }}
+                style={{ width: `${leaseProgressPct}%` }}
               />
             </div>
             <p className="text-xs text-blue-300/40 mt-3 font-medium uppercase tracking-wider">
-              7 months remaining
+              {leaseMonthsRemaining} months remaining
             </p>
           </div>
         </div>
