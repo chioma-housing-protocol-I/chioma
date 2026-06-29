@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
-import { useState } from 'react';
-import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
-import { useModal } from '@/contexts/ModalContext';
+import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { useFavoriteStatus, useToggleFavorite } from "@/lib/query/hooks";
+import { useModal } from "@/contexts/ModalContext";
 import type {
   PropertyDetailData,
   PropertyInquiryData,
-} from '@/components/modals/types';
+} from "@/components/modals/types";
 
 interface PropertyCardProps {
   property: {
@@ -28,14 +28,14 @@ interface PropertyCardProps {
     longitude?: number;
     images?: string[];
   };
-  variant?: 'grid' | 'list';
+  variant?: "grid" | "list";
 }
 
 export default function PropertyCard({
   property,
-  variant = 'grid',
+  variant = "grid",
 }: PropertyCardProps) {
-  const isList = variant === 'list';
+  const isList = variant === "list";
   const [imageError, setImageError] = useState(false);
   const { openModal } = useModal();
   const propertyId = String(property.id);
@@ -53,8 +53,8 @@ export default function PropertyCard({
       title: property.title,
       description:
         property.description ||
-        `Beautiful ${property.category || 'property'} in ${property.location}`,
-      price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
+        `Beautiful ${property.category || "property"} in ${property.location}`,
+      price: parseFloat(property.price.replace(/[^0-9.]/g, "")),
       address: property.location,
       bedrooms: property.beds,
       bathrooms: property.baths,
@@ -62,15 +62,15 @@ export default function PropertyCard({
       landlordName: property.manager,
       images: property.images || [property.image],
       amenities: property.amenities || [],
-      verificationStatus: property.verified ? 'Verified' : undefined,
+      verificationStatus: property.verified ? "Verified" : undefined,
       viewCount: 0,
       favoriteCount: 0,
     };
 
-    openModal('propertyDetail', {
+    openModal("propertyDetail", {
       property: propertyDetail,
       onInquiryClick: (prop: PropertyDetailData) => {
-        openModal('propertyInquiry', {
+        openModal("propertyInquiry", {
           propertyId: prop.id,
           propertyTitle: prop.title,
           landlordName: prop.landlordName,
@@ -83,13 +83,13 @@ export default function PropertyCard({
     <div onClick={handlePropertyClick} className="block group cursor-pointer">
       <div
         className={`glass-card rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
-          isList ? 'flex flex-col sm:flex-row h-full' : 'flex flex-col h-full'
+          isList ? "flex flex-col sm:flex-row h-full" : "flex flex-col h-full"
         }`}
       >
         {/* Image Container */}
         <div
           className={`relative overflow-hidden cursor-pointer bg-slate-800 flex-shrink-0 ${
-            isList ? 'w-full sm:w-80 h-64 sm:h-auto' : 'w-full aspect-[4/3]'
+            isList ? "w-full sm:w-80 h-64 sm:h-auto" : "w-full aspect-[4/3]"
           }`}
         >
           {!imageError ? (
@@ -129,17 +129,19 @@ export default function PropertyCard({
             }}
             disabled={isFavoritePending}
             aria-pressed={isFavorited}
-            aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label={
+              isFavorited ? "Remove from favorites" : "Add to favorites"
+            }
             className={[
-              'absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart disabled:opacity-60',
-              isFavorited ? 'text-red-400' : '',
-            ].join(' ')}
+              "absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart disabled:opacity-60",
+              isFavorited ? "text-red-400" : "",
+            ].join(" ")}
           >
             <Heart
               className={[
-                'w-5 h-5 transition-transform group-hover/heart:scale-110',
-                isFavorited ? 'fill-current' : '',
-              ].join(' ')}
+                "w-5 h-5 transition-transform group-hover/heart:scale-110",
+                isFavorited ? "fill-current" : "",
+              ].join(" ")}
             />
           </button>
         </div>
@@ -168,7 +170,7 @@ export default function PropertyCard({
             {/* Category Tag & Price */}
             <div className="flex items-center justify-between mb-4">
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border border-emerald-400/20">
-                {property.category || 'Apartment'}
+                {property.category || "Apartment"}
               </span>
               <p className="text-white font-black text-xl tracking-tighter border-b border-white/10 pb-1">
                 {property.price}
@@ -241,4 +243,3 @@ export default function PropertyCard({
     </div>
   );
 }
-
