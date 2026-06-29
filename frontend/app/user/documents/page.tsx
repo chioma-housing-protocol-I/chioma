@@ -2,8 +2,14 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Upload, FolderOpen, FileText } from 'lucide-react';
+import { Upload, FolderOpen, FileText, Loader2 } from 'lucide-react';
 import type { Document, DocumentMetadata } from '@/components/documents';
+import {
+  useLandlordDocuments,
+  useUploadDocument,
+  useDeleteDocument,
+  useDocument,
+} from '@/lib/query/hooks/use-landlord-documents';
 
 const DocumentViewerModal = dynamic(
   () =>
@@ -27,56 +33,44 @@ const DocumentListModal = dynamic(
   { ssr: false },
 );
 
-const mockDocuments: Document[] = [
-  {
-    id: '1',
-    name: 'Lease Agreement - 123 Main St.pdf',
-    type: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    size: 2457600,
-    uploadedBy: 'user-1',
-    uploadedByName: 'John Landlord',
-    uploadedAt: new Date('2024-03-15T10:30:00').toISOString(),
-    category: 'lease',
-    description: 'Annual lease agreement for property at 123 Main Street',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: '2',
-    name: 'Property Inspection Report.pdf',
-    type: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    size: 1843200,
-    uploadedBy: 'user-2',
-    uploadedByName: 'Jane Inspector',
-    uploadedAt: new Date('2024-03-10T14:20:00').toISOString(),
-    category: 'inspection',
-    description: 'Move-in inspection report with photos',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: '3',
-    name: 'Payment Receipt March 2024.pdf',
-    type: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    size: 512000,
-    uploadedBy: 'user-3',
-    uploadedByName: 'Bob Tenant',
-    uploadedAt: new Date('2024-03-01T09:15:00').toISOString(),
-    category: 'payment',
-    description: 'Rent payment receipt for March 2024',
-    thumbnailUrl:
-      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=320&q=80',
-  },
-];
-
-const initialDocuments =
-  process.env.NODE_ENV === 'production' ? [] : mockDocuments;
+function mapToDocumentView(doc: {
+  id: string;
+  name: string;
+  type: string;
+  fileSize: number;
+  fileType: string;
+  url: string;
+  uploadedAt: string;
+  category: string;
+  description?: string;
+}): Document {
+  const docType = doc.fileType?.includes('pdf')
+    ? 'pdf'
+    : doc.fileType?.startsWith('image/')
+      ? 'image'
+      : doc.fileType?.includes('word') || doc.fileType?.includes('docx')
+        ? 'docx'
+        : doc.fileType?.includes('sheet') || doc.fileType?.includes('xlsx')
+          ? 'xlsx'
+          : 'txt';
+  return {
+    id: doc.id,
+    name: doc.name,
+    type: docType,
+    url: doc.url,
+    size: doc.fileSize,
+    uploadedBy: '',
+    uploadedByName: '',
+    uploadedAt: doc.uploadedAt,
+    category: (doc.category as Document['category']) || 'other',
+    description: doc.description,
+  };
+}
 
 export default function TenantDocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
+  const { data: documents = [], isLoading } = useLandlordDocuments();
+  const uploadMutation = useUploadDocument();
+  const deleteMutation = useDeleteDocument();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(
     null,
   );
@@ -87,24 +81,16 @@ export default function TenantDocumentsPage() {
     files: File[],
     metadata: DocumentMetadata,
   ): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const newDocuments: Document[] = files.map((file, index) => ({
-      id: `${Date.now()}-${index}`,
-      name: file.name,
-      type: file.type.startsWith('image/')
-        ? 'image'
-        : file.type === 'application/pdf'
-          ? 'pdf'
-          : 'docx',
-      url: URL.createObjectURL(file),
-      size: file.size,
-      uploadedBy: 'current-user',
-      uploadedByName: 'Current User',
-      uploadedAt: new Date().toISOString(),
-      category: metadata.category,
-      description: metadata.description,
-    }));
-    setDocuments((prev) => [...newDocuments, ...prev]);
+    for (const file of files) {
+      await uploadMutation.mutateAsync({
+        file,
+        metadata: {
+          name: file.name,
+          category: metadata.category || 'other',
+          description: metadata.description,
+        },
+      });
+    }
   };
 
   const handleDownload = (documentId: string) => {
@@ -118,17 +104,22 @@ export default function TenantDocumentsPage() {
   };
 
   const handleDelete = (documentId: string) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== documentId));
+    deleteMutation.mutate(documentId);
   };
 
-  const handleViewDocument = (doc: Document) => {
-    setSelectedDocument(doc);
-    setIsListModalOpen(false);
+  const handleViewDocument = (doc: { id: string }) => {
+    const found = documents.find((d) => d.id === doc.id);
+    if (found) {
+      setSelectedDocument(mapToDocumentView(found));
+      setIsListModalOpen(false);
+    }
   };
+
+  const totalSize = documents.reduce((acc, doc) => acc + doc.fileSize, 0);
+  const categories = new Set(documents.map((d) => d.category));
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight mb-1">
           Documents
@@ -138,14 +129,13 @@ export default function TenantDocumentsPage() {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
           <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center mb-4">
             <FileText className="text-blue-400" size={20} />
           </div>
           <h3 className="text-2xl font-black text-white mb-0.5">
-            {documents.length}
+            {isLoading ? '-' : documents.length}
           </h3>
           <p className="text-sm text-blue-200/40">Total Documents</p>
         </div>
@@ -154,7 +144,7 @@ export default function TenantDocumentsPage() {
             <FolderOpen className="text-purple-400" size={20} />
           </div>
           <h3 className="text-2xl font-black text-white mb-0.5">
-            {new Set(documents.map((d) => d.category)).size}
+            {isLoading ? '-' : categories.size}
           </h3>
           <p className="text-sm text-blue-200/40">Categories</p>
         </div>
@@ -163,17 +153,12 @@ export default function TenantDocumentsPage() {
             <Upload className="text-emerald-400" size={20} />
           </div>
           <h3 className="text-2xl font-black text-white mb-0.5">
-            {(
-              documents.reduce((acc, doc) => acc + doc.size, 0) /
-              (1024 * 1024)
-            ).toFixed(1)}{' '}
-            MB
+            {isLoading ? '-' : `${(totalSize / (1024 * 1024)).toFixed(1)} MB`}
           </h3>
           <p className="text-sm text-blue-200/40">Total Storage</p>
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => setIsUploadModalOpen(true)}
@@ -191,12 +176,15 @@ export default function TenantDocumentsPage() {
         </button>
       </div>
 
-      {/* Recent Documents */}
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
         <div className="px-6 py-5 border-b border-white/5">
           <h2 className="text-lg font-bold text-white">Recent Documents</h2>
         </div>
-        {documents.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+          </div>
+        ) : documents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <FolderOpen className="text-blue-300/20 mb-4" size={48} />
             <p className="text-white font-semibold mb-1">No documents yet</p>
@@ -215,7 +203,7 @@ export default function TenantDocumentsPage() {
             {documents.slice(0, 5).map((doc) => (
               <div
                 key={doc.id}
-                onClick={() => setSelectedDocument(doc)}
+                onClick={() => setSelectedDocument(mapToDocumentView(doc))}
                 className="px-6 py-4 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -228,7 +216,7 @@ export default function TenantDocumentsPage() {
                     </p>
                     <p className="text-xs text-blue-200/40 mt-0.5">
                       {new Date(doc.uploadedAt).toLocaleDateString()} ·{' '}
-                      {(doc.size / (1024 * 1024)).toFixed(2)} MB
+                      {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB
                     </p>
                   </div>
                 </div>
@@ -244,7 +232,11 @@ export default function TenantDocumentsPage() {
       <DocumentViewerModal
         document={selectedDocument}
         onClose={() => setSelectedDocument(null)}
-        onDownload={handleDownload}
+        onDownload={
+          selectedDocument
+            ? () => handleDownload(selectedDocument.id)
+            : undefined
+        }
       />
       <DocumentUploadModal
         isOpen={isUploadModalOpen}
@@ -252,7 +244,7 @@ export default function TenantDocumentsPage() {
         onUpload={handleUpload}
       />
       <DocumentListModal
-        documents={documents}
+        documents={documents.map(mapToDocumentView)}
         isOpen={isListModalOpen}
         onClose={() => setIsListModalOpen(false)}
         onView={handleViewDocument}

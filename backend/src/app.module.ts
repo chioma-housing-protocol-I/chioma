@@ -36,6 +36,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { StorageModule } from './modules/storage/storage.module';
+import { DocumentModule } from './modules/documents/document.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { DeveloperModule } from './modules/developer/developer.module';
@@ -242,6 +243,7 @@ const appLogger = new Logger('AppModule');
     SecurityModule,
     I18nModule,
     StorageModule,
+    DocumentModule,
     ReviewsModule,
     FeedbackModule,
     DeveloperModule,
