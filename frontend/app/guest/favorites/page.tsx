@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Heart } from 'lucide-react';
-import Link from 'next/link';
-import { useFavorites, useRemoveFavorite } from '@/lib/query/hooks';
+import { Heart } from "lucide-react";
+import Link from "next/link";
+import { useFavorites, useRemoveFavorite } from "@/lib/query/hooks";
 
 export default function GuestFavoritesPage() {
   const { data: favorites = [], isLoading, isError } = useFavorites();
@@ -55,7 +55,7 @@ export default function GuestFavoritesPage() {
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-bold text-white">
-                      {property?.title ?? 'Saved property'}
+                      {property?.title ?? "Saved property"}
                     </h2>
                     {property ? (
                       <p className="mt-1 text-sm text-blue-200/60">
@@ -78,13 +78,14 @@ export default function GuestFavoritesPage() {
                   <div className="space-y-2 text-sm text-blue-100/70">
                     <p>${property.price.toLocaleString()} /mo</p>
                     <p>
-                      {property.bedrooms} beds · {property.bathrooms} baths ·{' '}
+                      {property.bedrooms} beds · {property.bathrooms} baths ·{" "}
                       {property.squareFeet.toLocaleString()} sqft
                     </p>
                   </div>
                 ) : (
                   <p className="text-sm text-blue-100/60">
-                    Property details will appear here when the API includes them.
+                    Property details will appear here when the API includes
+                    them.
                   </p>
                 )}
               </article>
