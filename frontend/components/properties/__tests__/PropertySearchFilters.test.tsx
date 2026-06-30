@@ -20,7 +20,7 @@ describe('PropertySearchFilters', () => {
   it('renders the location search input', () => {
     render(React.createElement(PropertySearchFilters));
     expect(
-      screen.getByPlaceholderText('Search by location...'),
+      screen.getByPlaceholderText('Search by location, name, or keyword...'),
     ).toBeInTheDocument();
   });
 
