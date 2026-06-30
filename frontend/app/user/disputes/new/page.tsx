@@ -25,8 +25,9 @@ import { createDispute } from '@/lib/disputes/api';
 export default function NewDisputePage() {
   const router = useRouter();
   const { user, isAuthenticated, loading } = useAuthStore();
-  const { data: agreements = [], isLoading: agreementsLoading } =
+  const { data: agreementsResult, isLoading: agreementsLoading } =
     useUserAgreements();
+  const agreements = agreementsResult?.data ?? [];
   const [formData, setFormData] = useState({
     agreementId: '',
     disputeType: '' as DisputeType | '',

@@ -84,9 +84,8 @@ export function LeaseDetailsModal({
     // Counter previous pending offers
     setOffers((prev: NegotiationOffer[]) =>
       prev
-        .map(
-          (o: NegotiationOffer): NegotiationOffer =>
-            o.status === 'PENDING' ? { ...o, status: 'COUNTERED' } : o,
+        .map((o: NegotiationOffer): NegotiationOffer =>
+          o.status === 'PENDING' ? { ...o, status: 'COUNTERED' } : o,
         )
         .concat(newOffer),
     );

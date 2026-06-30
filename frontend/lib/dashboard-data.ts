@@ -4,11 +4,7 @@ import type { Review as ReviewCardReview } from '@/components/reviews/ReviewCard
 
 export type PaymentStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'REFUNDED';
 export type DisputeStatus =
-  | 'OPEN'
-  | 'UNDER_REVIEW'
-  | 'RESOLVED'
-  | 'REJECTED'
-  | 'WITHDRAWN';
+  'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED' | 'WITHDRAWN';
 export type DisputeType =
   | 'RENT_PAYMENT'
   | 'SECURITY_DEPOSIT'
@@ -364,11 +360,7 @@ export function buildRatingStats(reviews: DashboardReview[]): RatingStats {
 
   for (const review of reviews) {
     const key = Math.min(5, Math.max(1, Math.round(review.rating))) as
-      | 1
-      | 2
-      | 3
-      | 4
-      | 5;
+      1 | 2 | 3 | 4 | 5;
     distribution[key] += 1;
   }
 

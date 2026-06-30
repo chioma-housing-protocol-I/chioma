@@ -18,12 +18,7 @@ import {
 
 type LeaseStatus = 'Active' | 'Pending Sign' | 'Arrears';
 type SortField =
-  | 'name'
-  | 'property'
-  | 'leaseStart'
-  | 'leaseEnd'
-  | 'rentAmount'
-  | 'status';
+  'name' | 'property' | 'leaseStart' | 'leaseEnd' | 'rentAmount' | 'status';
 type SortDir = 'asc' | 'desc';
 
 interface Tenant {

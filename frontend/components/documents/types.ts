@@ -4,12 +4,7 @@
 
 export type DocumentType = 'pdf' | 'image' | 'docx' | 'xlsx' | 'txt';
 export type DocumentCategory =
-  | 'lease'
-  | 'identity'
-  | 'payment'
-  | 'maintenance'
-  | 'inspection'
-  | 'other';
+  'lease' | 'identity' | 'payment' | 'maintenance' | 'inspection' | 'other';
 
 export interface Document {
   id: string;

@@ -2,11 +2,7 @@ import { apiClient } from '@/lib/api-client';
 
 /** Refund lifecycle for admin review and processing. */
 export type AdminRefundStatus =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'PROCESSING'
-  | 'COMPLETED'
-  | 'REJECTED';
+  'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
 
 export interface AdminRefundRequestRow {
   id: string;
