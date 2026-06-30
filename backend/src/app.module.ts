@@ -66,6 +66,7 @@ import { ResponseTimeInterceptor } from './common/interceptors/response-time.int
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { CompressionMiddleware } from './common/middleware/compression.middleware';
 import { CompressionService } from './common/middleware/compression.service';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
 const appLogger = new Logger('AppModule');
 
@@ -298,6 +299,8 @@ const appLogger = new Logger('AppModule');
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+
     consumer.apply(CompressionMiddleware).forRoutes('*');
 
     consumer.apply(LocalizationMiddleware).forRoutes('*');
