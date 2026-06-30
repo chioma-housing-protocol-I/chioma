@@ -10,6 +10,7 @@ import {
   createHttpError,
   logError,
   withRetry,
+  globalCircuitBreaker,
 } from '@/lib/errors';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
@@ -131,6 +132,7 @@ class ApiClient {
     }
 
     const url = `${this.baseURL}${endpoint}`;
+    const breakerName = `${method}:${endpoint}`;
 
     const waitTimeMs = globalRateLimitTracker.getWaitTimeMs();
     if (waitTimeMs > 0) {
@@ -142,6 +144,66 @@ class ApiClient {
       return Promise.reject(error);
     }
 
+    return globalCircuitBreaker.execute(breakerName, () =>
+      withRetry(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+          if (signal) {
+            if (signal.aborted) controller.abort();
+            signal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
+
+          try {
+            const response = await fetch(url, {
+              method,
+              headers: requestHeaders,
+              body: body ? JSON.stringify(body) : undefined,
+              cache,
+              signal: controller.signal,
+            });
+
+            globalRateLimitTracker.updateFromHeaders(
+              response.headers,
+              response.status,
+            );
+
+            if (!response.ok) {
+              this.clearAuthAndRedirectIfNeeded(response.status);
+
+              const errorBody = await response
+                .json()
+                .catch(() => ({ message: response.statusText }));
+              const baseError = createHttpError(response.status, {
+                source: 'lib/api-client.ts',
+                action: `${method} ${endpoint}`,
+                metadata: { responseBody: errorBody },
+              });
+
+              throw new AppError({
+                ...baseError,
+                message: errorBody.message || baseError.message,
+                userMessage: errorBody.message || baseError.userMessage,
+                cause: errorBody,
+              });
+            }
+
+            const data = await this.parseResponse<T>(response);
+            return {
+              data,
+              status: response.status,
+              message:
+                data &&
+                typeof data === 'object' &&
+                'message' in (data as object)
+                  ? String((data as { message?: string }).message)
+                  : undefined,
+            };
+          } catch (error) {
+            const appError = classifyUnknownError(error, {
     return withRetry(
       async () => {
         const controller = new AbortController();
@@ -191,17 +253,28 @@ class ApiClient {
             const baseError = createHttpError(response.status, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
-              metadata: { responseBody: errorBody },
             });
 
-            throw new AppError({
-              ...baseError,
-              message: errorBody.message || baseError.message,
-              userMessage: errorBody.message || baseError.userMessage,
-              cause: errorBody,
-            });
+            logError(appError, appError.context);
+            throw appError;
+          } finally {
+            clearTimeout(timeoutId);
           }
+        },
+        {
+          maxAttempts: retries,
+          endpoint: `${method}:${endpoint}`,
+          shouldRetry: (error) => {
+            const appError = classifyUnknownError(error, {
+              source: 'lib/api-client.ts',
+              action: `retry-check ${method} ${endpoint}`,
+            });
 
+            if (appError.code === 'NETWORK_RATE_LIMIT') return false;
+            if (appError.category === 'network') return true;
+            if (typeof appError.status === 'number' && appError.status >= 500) {
+              return true;
+            }
           const data = await this.parseResponse<T>(response);
           return {
             data,
@@ -247,9 +320,10 @@ class ApiClient {
             return true;
           }
 
-          return false;
+            return false;
+          },
         },
-      },
+      ),
     );
   }
 
