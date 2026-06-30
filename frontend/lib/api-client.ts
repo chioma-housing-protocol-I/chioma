@@ -19,6 +19,7 @@ type RequestConfig = {
   headers?: Record<string, string>;
   body?: unknown;
   cache?: RequestCache;
+  credentials?: RequestCredentials;
   retries?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
@@ -107,6 +108,7 @@ class ApiClient {
       headers = {},
       body,
       cache = 'no-cache',
+      credentials = 'include',
       retries = 3,
       timeoutMs = 12000,
       signal,
@@ -149,6 +151,7 @@ class ApiClient {
             headers: requestHeaders,
             body: body ? JSON.stringify(body) : undefined,
             cache,
+            credentials,
             signal: controller.signal,
           });
 
