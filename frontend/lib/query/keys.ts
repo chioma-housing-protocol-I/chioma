@@ -155,4 +155,13 @@ export const queryKeys = {
     landlordOverview: (days: number) =>
       [...queryKeys.analytics.all, 'landlord-overview', days] as const,
   },
+
+  documents: {
+    all: ['documents'] as const,
+    lists: () => [...queryKeys.documents.all, 'list'] as const,
+    list: (filters: object) =>
+      [...queryKeys.documents.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.documents.all, 'detail', id] as const,
+    shared: () => [...queryKeys.documents.all, 'shared'] as const,
+  },
 } as const;

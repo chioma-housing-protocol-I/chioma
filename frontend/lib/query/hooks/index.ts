@@ -110,3 +110,20 @@ export type {
   CacheInvalidationConfig,
   UseCacheInvalidationResult,
 } from './use-cache-invalidation';
+
+export {
+  useLandlordDocuments,
+  useSharedDocuments,
+  useDocument,
+  useUploadDocument,
+  useDeleteDocument,
+  useArchiveDocument,
+  useShareDocument,
+  useUpdateDocument,
+} from './use-landlord-documents';
+export type {
+  DocumentRecord,
+  DocumentStatus,
+  DocumentType,
+  DocumentFilters,
+} from './use-landlord-documents';
