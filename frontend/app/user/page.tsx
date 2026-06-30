@@ -96,7 +96,8 @@ export default function UserDashboardOverview() {
   const { openModal } = useModal();
   const router = useRouter();
   const { loading } = useAuth();
-  const { data: apiAgreements = [] } = useUserAgreements();
+  const { data: agreementsResult } = useUserAgreements();
+  const apiAgreements = agreementsResult?.data ?? [];
   const { data: paymentsData } = usePayments({ limit: 50 });
   const apiPayments = paymentsData?.data ?? [];
 

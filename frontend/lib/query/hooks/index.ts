@@ -70,6 +70,21 @@ export {
   useResolveSecurityIncident,
 } from './use-security-dashboard';
 
+export {
+  useAgreements,
+  useUserAgreements,
+  useAgreement,
+  useAgreementFees,
+  useCreateAgreement,
+  useUpdateAgreement,
+  useSignAgreement,
+  useTerminateAgreement,
+  useRenewAgreement,
+  useRecordPayment,
+} from './use-agreements';
+
+export type { AgreementSummary, AgreementResponse } from './use-agreements';
+
 export { useLandlordPropertyAnalytics } from './use-property-analytics';
 
 export { useOptimisticUpdate } from './use-optimistic-update';
