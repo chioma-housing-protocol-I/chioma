@@ -87,7 +87,11 @@ export function useAgreementFees(
   daysPastDue?: number,
 ) {
   return useQuery({
-    queryKey: [...queryKeys.agreements.detail(agreementId ?? ''), 'fees', daysPastDue],
+    queryKey: [
+      ...queryKeys.agreements.detail(agreementId ?? ''),
+      'fees',
+      daysPastDue,
+    ],
     enabled: Boolean(agreementId),
     queryFn: async () => {
       const fees = await agreementService.getFees(agreementId!, daysPastDue);

@@ -129,8 +129,20 @@ export interface AgreementResponse {
   createdAt: string;
   updatedAt: string;
   property?: { id?: string; title?: string; address?: string };
-  tenant?: { id?: string; firstName?: string; lastName?: string; name?: string; email?: string };
-  landlord?: { id?: string; firstName?: string; lastName?: string; name?: string; email?: string };
+  tenant?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    email?: string;
+  };
+  landlord?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    email?: string;
+  };
 }
 
 export interface AgreementFeeSnapshot {
@@ -157,11 +169,14 @@ class AgreementService {
     return response;
   }
 
-  async getAll(filters: AgreementFilters = {}): Promise<{ data: AgreementResponse[]; meta?: { total: number } }> {
+  async getAll(
+    filters: AgreementFilters = {},
+  ): Promise<{ data: AgreementResponse[]; meta?: { total: number } }> {
     const qs = this.buildQueryString(filters);
-    const { data } = await apiClient.get<{ data: AgreementResponse[]; meta?: { total: number } }>(
-      `${this.baseEndpoint}${qs}`,
-    );
+    const { data } = await apiClient.get<{
+      data: AgreementResponse[];
+      meta?: { total: number };
+    }>(`${this.baseEndpoint}${qs}`);
     return data;
   }
 
@@ -172,7 +187,10 @@ class AgreementService {
     return data;
   }
 
-  async update(id: string, payload: UpdateAgreementPayload): Promise<AgreementResponse> {
+  async update(
+    id: string,
+    payload: UpdateAgreementPayload,
+  ): Promise<AgreementResponse> {
     const { data } = await apiClient.patch<AgreementResponse>(
       `${this.baseEndpoint}/${id}`,
       payload,
@@ -180,7 +198,10 @@ class AgreementService {
     return data;
   }
 
-  async terminate(id: string, payload: TerminateAgreementPayload): Promise<AgreementResponse> {
+  async terminate(
+    id: string,
+    payload: TerminateAgreementPayload,
+  ): Promise<AgreementResponse> {
     const { data } = await apiClient.delete<AgreementResponse>(
       `${this.baseEndpoint}/${id}`,
       { body: payload },
@@ -188,7 +209,10 @@ class AgreementService {
     return data;
   }
 
-  async renew(id: string, payload: RenewAgreementPayload = {}): Promise<AgreementResponse> {
+  async renew(
+    id: string,
+    payload: RenewAgreementPayload = {},
+  ): Promise<AgreementResponse> {
     const { data } = await apiClient.post<AgreementResponse>(
       `${this.baseEndpoint}/${id}/renew`,
       payload,
@@ -196,7 +220,10 @@ class AgreementService {
     return data;
   }
 
-  async sign(id: string, payload: SignaturePayload): Promise<AgreementResponse> {
+  async sign(
+    id: string,
+    payload: SignaturePayload,
+  ): Promise<AgreementResponse> {
     const { data } = await apiClient.patch<AgreementResponse>(
       `${this.baseEndpoint}/${id}`,
       { status: 'signed', ...payload },
@@ -215,7 +242,7 @@ class AgreementService {
 
     const baseUrl =
       typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL || '/api')
+        ? process.env.NEXT_PUBLIC_API_URL || '/api'
         : '/api';
     const response = await fetch(
       `${baseUrl}${this.baseEndpoint}/${id}/download`,
@@ -225,7 +252,10 @@ class AgreementService {
     return response.blob();
   }
 
-  async getFees(id: string, daysPastDue?: number): Promise<AgreementFeeSnapshot> {
+  async getFees(
+    id: string,
+    daysPastDue?: number,
+  ): Promise<AgreementFeeSnapshot> {
     const qs = daysPastDue !== undefined ? `?daysPastDue=${daysPastDue}` : '';
     const { data } = await apiClient.get<AgreementFeeSnapshot>(
       `${this.baseEndpoint}/${id}/fees${qs}`,
@@ -233,7 +263,10 @@ class AgreementService {
     return data;
   }
 
-  async recordPayment(id: string, payload: RecordPaymentPayload): Promise<void> {
+  async recordPayment(
+    id: string,
+    payload: RecordPaymentPayload,
+  ): Promise<void> {
     await apiClient.post(`${this.baseEndpoint}/${id}/pay`, payload);
   }
 

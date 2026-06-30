@@ -62,7 +62,7 @@ export default function AgreementDetailsPage() {
           ? 'Signed'
           : agreement.status === 'terminated'
             ? 'Terminated'
-            : agreement.status ?? 'Unknown';
+            : (agreement.status ?? 'Unknown');
 
   const imageUrl = AGREEMENT_PREVIEW_FALLBACK;
 

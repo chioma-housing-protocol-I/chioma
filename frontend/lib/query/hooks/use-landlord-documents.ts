@@ -5,11 +5,7 @@ import { apiClient } from '@/lib/api-client';
 
 export type DocumentStatus = 'ACTIVE' | 'ARCHIVED' | 'EXPIRED';
 export type DocumentType =
-  | 'LEASE'
-  | 'INSPECTION'
-  | 'RECEIPT'
-  | 'CONTRACT'
-  | 'OTHER';
+  'LEASE' | 'INSPECTION' | 'RECEIPT' | 'CONTRACT' | 'OTHER';
 
 export interface DocumentFilters {
   status?: DocumentStatus | 'ALL';

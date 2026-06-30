@@ -12,10 +12,7 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ConflictResolutionStrategy =
-  | 'server-wins'
-  | 'client-wins'
-  | 'last-write-wins'
-  | 'manual';
+  'server-wins' | 'client-wins' | 'last-write-wins' | 'manual';
 
 export interface ConflictResolution {
   conflictId: string;

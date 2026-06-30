@@ -61,9 +61,14 @@ describe('agreementService', () => {
         status: 200,
       });
 
-      const result = await agreementService.getAll({ status: 'pending', limit: 20 });
+      const result = await agreementService.getAll({
+        status: 'pending',
+        limit: 20,
+      });
 
-      expect(apiClient.get).toHaveBeenCalledWith('/agreements?status=pending&limit=20');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/agreements?status=pending&limit=20',
+      );
       expect(result.data).toHaveLength(1);
       expect(result.meta?.total).toBe(1);
     });
@@ -95,9 +100,13 @@ describe('agreementService', () => {
     it('should PATCH /agreements/:id with the payload', async () => {
       apiClient.patch.mockResolvedValue({ data: mockAgreement, status: 200 });
 
-      const result = await agreementService.update('agr-1', { monthlyRent: 1400 });
+      const result = await agreementService.update('agr-1', {
+        monthlyRent: 1400,
+      });
 
-      expect(apiClient.patch).toHaveBeenCalledWith('/agreements/agr-1', { monthlyRent: 1400 });
+      expect(apiClient.patch).toHaveBeenCalledWith('/agreements/agr-1', {
+        monthlyRent: 1400,
+      });
       expect(result).toEqual(mockAgreement);
     });
   });
@@ -125,7 +134,9 @@ describe('agreementService', () => {
       const renewed = { ...mockAgreement, endDate: '2028-01-01T00:00:00.000Z' };
       apiClient.post.mockResolvedValue({ data: renewed, status: 200 });
 
-      const result = await agreementService.renew('agr-1', { extendMonths: 12 });
+      const result = await agreementService.renew('agr-1', {
+        extendMonths: 12,
+      });
 
       expect(apiClient.post).toHaveBeenCalledWith('/agreements/agr-1/renew', {
         extendMonths: 12,
@@ -165,9 +176,12 @@ describe('agreementService', () => {
 
       const result = await agreementService.downloadPdf('agr-1');
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/agreements/agr-1/download', {
-        headers: {},
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/agreements/agr-1/download',
+        {
+          headers: {},
+        },
+      );
       expect(result).toBe(fakeBlob);
     });
 
@@ -183,7 +197,12 @@ describe('agreementService', () => {
   describe('getFees', () => {
     it('should GET /agreements/:id/fees', async () => {
       apiClient.get.mockResolvedValue({
-        data: { monthlyRent: 1200, earlyTerminationFee: 1200, lateFeePercentage: 5, gracePeriodDays: 5 },
+        data: {
+          monthlyRent: 1200,
+          earlyTerminationFee: 1200,
+          lateFeePercentage: 5,
+          gracePeriodDays: 5,
+        },
         status: 200,
       });
 
@@ -195,13 +214,20 @@ describe('agreementService', () => {
 
     it('should include daysPastDue when provided', async () => {
       apiClient.get.mockResolvedValue({
-        data: { monthlyRent: 1200, earlyTerminationFee: 1200, lateFeePercentage: 5, gracePeriodDays: 5 },
+        data: {
+          monthlyRent: 1200,
+          earlyTerminationFee: 1200,
+          lateFeePercentage: 5,
+          gracePeriodDays: 5,
+        },
         status: 200,
       });
 
       await agreementService.getFees('agr-1', 10);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/agreements/agr-1/fees?daysPastDue=10');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/agreements/agr-1/fees?daysPastDue=10',
+      );
     });
   });
 
@@ -223,7 +249,10 @@ describe('agreementService', () => {
 
   describe('getPayments', () => {
     it('should GET /agreements/:id/payments', async () => {
-      apiClient.get.mockResolvedValue({ data: [{ id: 'pmt-1', amount: 1200 }], status: 200 });
+      apiClient.get.mockResolvedValue({
+        data: [{ id: 'pmt-1', amount: 1200 }],
+        status: 200,
+      });
 
       const result = await agreementService.getPayments('agr-1');
 
