@@ -11,7 +11,7 @@ import {
   logError,
   withRetry,
 } from '@/lib/errors';
-import { getMockData, shouldUseMockApi } from '@/lib/mock-api';
+import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
 
 type RequestConfig = {
