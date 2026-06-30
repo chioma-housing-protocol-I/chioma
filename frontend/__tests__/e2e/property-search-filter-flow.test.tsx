@@ -112,14 +112,16 @@ vi.mock('@/lib/query/hooks/use-properties', async (importOriginal) => {
 });
 
 vi.mock('@/lib/query/hooks', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/lib/query/hooks')>();
+  const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
   return {
     ...actual,
     useInfiniteProperties: vi.fn(() => mockHookReturnValue),
     useSearchSuggest: vi.fn(() => ({ data: undefined })),
     useFavoriteStatus: vi.fn(() => ({ data: undefined })),
-    useToggleFavorite: vi.fn(() => ({ isPending: false, toggleFavorite: vi.fn() })),
+    useToggleFavorite: vi.fn(() => ({
+      isPending: false,
+      toggleFavorite: vi.fn(),
+    })),
   };
 });
 
@@ -127,7 +129,13 @@ vi.mock('@/lib/query/hooks', async (importOriginal) => {
 function makeSuccessHook(properties = E2E_PROPERTIES) {
   return {
     data: {
-      pages: [{ ...E2E_PAGINATED_RESPONSE, data: properties, total: properties.length }],
+      pages: [
+        {
+          ...E2E_PAGINATED_RESPONSE,
+          data: properties,
+          total: properties.length,
+        },
+      ],
       pageParams: [1],
     },
     fetchNextPage: mockFetchNextPage,

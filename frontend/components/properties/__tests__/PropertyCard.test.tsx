@@ -15,7 +15,10 @@ vi.mock('@/lib/query/hooks', async (importOriginal) => {
   return {
     ...actual,
     useFavoriteStatus: vi.fn(() => ({ data: undefined })),
-    useToggleFavorite: vi.fn(() => ({ isPending: false, toggleFavorite: vi.fn() })),
+    useToggleFavorite: vi.fn(() => ({
+      isPending: false,
+      toggleFavorite: vi.fn(),
+    })),
   };
 });
 

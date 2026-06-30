@@ -1,4 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 
 // withRetry tests use vi.useFakeTimers + vi.advanceTimersByTimeAsync. When fake
 // timers fire and withRetry calls operation() for a retry, the rejected promise

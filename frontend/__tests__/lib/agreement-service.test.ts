@@ -33,7 +33,10 @@ describe('agreementService', () => {
 
   describe('create', () => {
     it('should POST to /agreements with the payload', async () => {
-      vi.mocked(apiClient.post).mockResolvedValue({ data: mockAgreement, status: 201 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: mockAgreement,
+        status: 201,
+      });
 
       const payload = {
         propertyId: 'prop-1',
@@ -87,7 +90,10 @@ describe('agreementService', () => {
 
   describe('getById', () => {
     it('should GET /agreements/:id', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({ data: mockAgreement, status: 200 });
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: mockAgreement,
+        status: 200,
+      });
 
       const result = await agreementService.getById('agr-1');
 
@@ -98,7 +104,10 @@ describe('agreementService', () => {
 
   describe('update', () => {
     it('should PATCH /agreements/:id with the payload', async () => {
-      vi.mocked(apiClient.patch).mockResolvedValue({ data: mockAgreement, status: 200 });
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: mockAgreement,
+        status: 200,
+      });
 
       const result = await agreementService.update('agr-1', {
         monthlyRent: 1400,
@@ -132,7 +141,10 @@ describe('agreementService', () => {
   describe('renew', () => {
     it('should POST /agreements/:id/renew with the payload', async () => {
       const renewed = { ...mockAgreement, endDate: '2028-01-01T00:00:00.000Z' };
-      vi.mocked(apiClient.post).mockResolvedValue({ data: renewed, status: 200 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: renewed,
+        status: 200,
+      });
 
       const result = await agreementService.renew('agr-1', {
         extendMonths: 12,
@@ -148,7 +160,10 @@ describe('agreementService', () => {
   describe('sign', () => {
     it('should PATCH /agreements/:id with status=signed and signature', async () => {
       const signed = { ...mockAgreement, status: 'signed' };
-      vi.mocked(apiClient.patch).mockResolvedValue({ data: signed, status: 200 });
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: signed,
+        status: 200,
+      });
 
       const result = await agreementService.sign('agr-1', {
         signature: 'data:image/png;base64,sig123',

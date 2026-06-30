@@ -49,9 +49,15 @@ describe('QueryClient global error handler', () => {
     });
 
     // Simulate mutation error trigger
-    mutationCache.config.onError?.(mockError, {}, {}, {
-      meta: {},
-    } as any, {} as any);
+    mutationCache.config.onError?.(
+      mockError,
+      {},
+      {},
+      {
+        meta: {},
+      } as any,
+      {} as any,
+    );
 
     const errors = useErrorStore.getState().errors;
     expect(errors).toHaveLength(1);

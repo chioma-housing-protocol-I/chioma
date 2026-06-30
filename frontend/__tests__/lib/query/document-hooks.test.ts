@@ -53,7 +53,6 @@ describe('document hooks API mapping', () => {
       updatedAt: '2026-01-15T10:00:00.000Z',
     };
 
-
     const mapped: DocumentRecord = {
       id: apiResponse.id,
       name: apiResponse.name,
@@ -100,7 +99,6 @@ describe('document hooks API mapping', () => {
       createdAt: '2026-02-01T10:00:00.000Z',
       updatedAt: '2026-02-01T10:00:00.000Z',
     };
-
 
     const mapped: DocumentRecord = {
       id: apiResponse.id,
