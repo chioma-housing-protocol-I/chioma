@@ -113,7 +113,8 @@ export function useCancellableMutation<
       const { signal } = cancellationManager.createSignal(cancellationKey);
       setState({ status: 'in-flight', cancelKey: cancellationKey });
       try {
-        if (typeof mutationFn !== 'function') throw new Error('mutationFn required');
+        if (typeof mutationFn !== 'function')
+          throw new Error('mutationFn required');
         const result = await mutationFn(variables, context);
         setState((prev) =>
           prev.status === 'in-flight' ? { status: 'idle' } : prev,

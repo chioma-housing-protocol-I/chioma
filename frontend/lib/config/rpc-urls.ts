@@ -18,8 +18,8 @@ export function checkRpcAndContracts(): EnvCheckResult[] {
       detail: isMissing
         ? 'NEXT_PUBLIC_SOROBAN_RPC_URL is not set.'
         : isDefault
-        ? `Default Stellar RPC: ${rawRpc}`
-        : `Custom RPC: ${rawRpc}`,
+          ? `Default Stellar RPC: ${rawRpc}`
+          : `Custom RPC: ${rawRpc}`,
     },
     {
       label: 'RPC URL placeholder check',
@@ -50,7 +50,9 @@ export function checkRpcAndContracts(): EnvCheckResult[] {
   }
 
   const network =
-    (process.env.NEXT_PUBLIC_STELLAR_NETWORK as string | undefined)?.toUpperCase() || '';
+    (
+      process.env.NEXT_PUBLIC_STELLAR_NETWORK as string | undefined
+    )?.toUpperCase() || '';
   const isPublic = network === 'PUBLIC';
 
   if (!isPublic) {
@@ -104,10 +106,10 @@ export function checkRpcAndContracts(): EnvCheckResult[] {
       detail: missing
         ? 'Missing env var.'
         : placeholder
-        ? 'Resembles a placeholder.'
-        : valid
-        ? `Valid ID ${id.value!.slice(0, 6)}…${id.value!.slice(-4)}`
-        : `Unusual format (expected 56-char base32).`,
+          ? 'Resembles a placeholder.'
+          : valid
+            ? `Valid ID ${id.value!.slice(0, 6)}…${id.value!.slice(-4)}`
+            : `Unusual format (expected 56-char base32).`,
     });
   }
 

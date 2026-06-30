@@ -16,7 +16,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import React from 'react';
 
 // ─── Deterministic fixture data ───────────────────────────────────────────────
@@ -30,14 +36,18 @@ import { toPropertyCardShape } from '@/lib/utils/property-adapter';
 const mockRouterReplace = vi.fn();
 const mockRouterPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({ replace: mockRouterReplace, push: mockRouterPush })),
+  useRouter: vi.fn(() => ({
+    replace: mockRouterReplace,
+    push: mockRouterPush,
+  })),
   useSearchParams: vi.fn(() => ({
     get: vi.fn((_key: string) => null),
   })),
 }));
 vi.mock('next/dynamic', () => ({
   default: (_fn: () => Promise<unknown>, _opts?: unknown) => {
-    const Stub = () => React.createElement('div', { 'data-testid': 'map-stub' }, 'Map');
+    const Stub = () =>
+      React.createElement('div', { 'data-testid': 'map-stub' }, 'Map');
     Stub.displayName = 'DynamicMapStub';
     return Stub;
   },
@@ -55,7 +65,11 @@ vi.mock('@/components/PropertyCardSkeleton', () => ({
 }));
 vi.mock('@/components/properties/PropertyListingHeader', () => ({
   PropertyListingHeader: ({ count }: { count: number }) =>
-    React.createElement('div', { 'data-testid': 'listing-header' }, `${count} listings`),
+    React.createElement(
+      'div',
+      { 'data-testid': 'listing-header' },
+      `${count} listings`,
+    ),
 }));
 vi.mock('@/components/loading', () => ({
   Spinner: () => React.createElement('div', { 'data-testid': 'spinner' }),
@@ -80,7 +94,8 @@ const mockFetchNextPage = vi.fn();
 let mockHookReturnValue: Record<string, unknown> = {};
 
 vi.mock('@/lib/query/hooks/use-properties', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/query/hooks/use-properties')>();
+  const actual =
+    await importOriginal<typeof import('@/lib/query/hooks/use-properties')>();
   return {
     ...actual,
     useInfiniteProperties: vi.fn(() => mockHookReturnValue),
@@ -172,7 +187,9 @@ describe('[E2E] PropertySearchFilters – stable selectors', () => {
     expect(screen.getByTestId('filter-tag-pets-allowed')).toBeInTheDocument();
     expect(screen.getByTestId('filter-tag-parking')).toBeInTheDocument();
     expect(screen.getByTestId('filter-tag-gym')).toBeInTheDocument();
-    expect(screen.getByTestId('filter-tag-internet-included')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('filter-tag-internet-included'),
+    ).toBeInTheDocument();
   });
 });
 
@@ -181,21 +198,27 @@ describe('[E2E] PropertySearchFilters – filter interactions', () => {
 
   it('accepts text input in the location search field', () => {
     render(React.createElement(PropertySearchFilters));
-    const input = screen.getByTestId('search-location-input') as HTMLInputElement;
+    const input = screen.getByTestId(
+      'search-location-input',
+    ) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'London' } });
     expect(input.value).toBe('London');
   });
 
   it('accepts selection in the property type dropdown', () => {
     render(React.createElement(PropertySearchFilters));
-    const select = screen.getByTestId('property-type-select') as HTMLSelectElement;
+    const select = screen.getByTestId(
+      'property-type-select',
+    ) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'studio_apartment' } });
     expect(select.value).toBe('studio_apartment');
   });
 
   it('accepts a date in the availability input', () => {
     render(React.createElement(PropertySearchFilters));
-    const date = screen.getByTestId('availability-date-input') as HTMLInputElement;
+    const date = screen.getByTestId(
+      'availability-date-input',
+    ) as HTMLInputElement;
     fireEvent.change(date, { target: { value: '2027-06-01' } });
     expect(date.value).toBe('2027-06-01');
   });
@@ -212,7 +235,9 @@ describe('[E2E] PropertySearchFilters – filter interactions', () => {
 
   it('opens the mobile drawer when the mobile toggle is clicked', () => {
     render(React.createElement(PropertySearchFilters));
-    expect(screen.queryByTestId('mobile-filters-drawer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('mobile-filters-drawer'),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
     expect(screen.getByTestId('mobile-filters-drawer')).toBeInTheDocument();
   });
@@ -221,28 +246,38 @@ describe('[E2E] PropertySearchFilters – filter interactions', () => {
     render(React.createElement(PropertySearchFilters));
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
     fireEvent.click(screen.getByTestId('mobile-filters-close-btn'));
-    expect(screen.queryByTestId('mobile-filters-drawer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('mobile-filters-drawer'),
+    ).not.toBeInTheDocument();
   });
 
   it('closes the mobile drawer when backdrop is clicked', () => {
     render(React.createElement(PropertySearchFilters));
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
     fireEvent.click(screen.getByTestId('mobile-filters-backdrop'));
-    expect(screen.queryByTestId('mobile-filters-drawer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('mobile-filters-drawer'),
+    ).not.toBeInTheDocument();
   });
 
   it('closes the mobile drawer when Apply Filters is clicked', () => {
     render(React.createElement(PropertySearchFilters));
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
     fireEvent.click(screen.getByTestId('mobile-filters-apply-btn'));
-    expect(screen.queryByTestId('mobile-filters-drawer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('mobile-filters-drawer'),
+    ).not.toBeInTheDocument();
   });
 
   it('accepts min/max budget in the mobile drawer', () => {
     render(React.createElement(PropertySearchFilters));
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
-    const mobileMin = screen.getByTestId('mobile-min-price-input') as HTMLInputElement;
-    const mobileMax = screen.getByTestId('mobile-max-price-input') as HTMLInputElement;
+    const mobileMin = screen.getByTestId(
+      'mobile-min-price-input',
+    ) as HTMLInputElement;
+    const mobileMax = screen.getByTestId(
+      'mobile-max-price-input',
+    ) as HTMLInputElement;
     fireEvent.change(mobileMin, { target: { value: '200' } });
     fireEvent.change(mobileMax, { target: { value: '1500' } });
     expect(mobileMin.value).toBe('200');
@@ -259,7 +294,9 @@ describe('[E2E] PropertyCard – deterministic fixture rendering', () => {
   const cardShape = toPropertyCardShape(E2E_PROPERTIES[0]); // prop-1: Manhattan Studio
 
   it('renders the card container with data-testid and property id', () => {
-    const { container } = render(React.createElement(PropertyCard, { property: cardShape }));
+    const { container } = render(
+      React.createElement(PropertyCard, { property: cardShape }),
+    );
     const card = container.querySelector('[data-testid="property-card"]');
     expect(card).toBeInTheDocument();
     expect(card).toHaveAttribute('data-property-id', 'prop-1');
@@ -280,7 +317,9 @@ describe('[E2E] PropertyCard – deterministic fixture rendering', () => {
   it('displays the location built from address parts', () => {
     render(React.createElement(PropertyCard, { property: cardShape }));
     // adapter builds "10 West 57th Street, New York, NY, USA"
-    expect(screen.getByText(/manhattan/i, { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText(/manhattan/i, { exact: false }),
+    ).toBeInTheDocument();
   });
 
   it('shows the Verified badge for a verified property', () => {
@@ -310,7 +349,10 @@ describe('[E2E] PropertyCard – deterministic fixture rendering', () => {
     const card = screen.getByTestId('property-card');
     fireEvent.click(card);
     expect(mockOpenModal).toHaveBeenCalledOnce();
-    const [modalType, modalData] = mockOpenModal.mock.calls[0] as [string, Record<string, unknown>];
+    const [modalType, modalData] = mockOpenModal.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
     expect(modalType).toBe('propertyDetail');
     expect((modalData.property as { id: string }).id).toBe('prop-1');
   });
@@ -340,7 +382,9 @@ describe('[E2E] Property listing page – renders all 6 fixture cards', () => {
   it('renders the listing header with the total fixture count', async () => {
     render(React.createElement(PropertyListing));
     await waitFor(() =>
-      expect(screen.getByTestId('listing-header')).toHaveTextContent('6 listings'),
+      expect(screen.getByTestId('listing-header')).toHaveTextContent(
+        '6 listings',
+      ),
     );
   });
 
@@ -471,7 +515,9 @@ describe('[E2E] Property listing page – price filter narrows results', () => {
   it('renders the correct count in the listing header', async () => {
     render(React.createElement(PropertyListing));
     await waitFor(() =>
-      expect(screen.getByTestId('listing-header')).toHaveTextContent('3 listings'),
+      expect(screen.getByTestId('listing-header')).toHaveTextContent(
+        '3 listings',
+      ),
     );
   });
 

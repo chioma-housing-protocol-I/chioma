@@ -88,7 +88,10 @@ function normalizeSearch(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function propertyMatchesSearch(property: Property, searchQuery: string): boolean {
+function propertyMatchesSearch(
+  property: Property,
+  searchQuery: string,
+): boolean {
   const query = normalizeSearch(searchQuery);
   if (!query) return true;
 
@@ -240,17 +243,15 @@ export function buildComparisonData(
     },
   ];
 
-  const amenityMatrix: ComparisonAmenityRow[] = amenityNames.map(
-    (amenity) => ({
-      amenity,
-      byPropertyId: Object.fromEntries(
-        selected.map((property) => [
-          property.id,
-          property.amenities.some((item) => item.name === amenity),
-        ]),
-      ),
-    }),
-  );
+  const amenityMatrix: ComparisonAmenityRow[] = amenityNames.map((amenity) => ({
+    amenity,
+    byPropertyId: Object.fromEntries(
+      selected.map((property) => [
+        property.id,
+        property.amenities.some((item) => item.name === amenity),
+      ]),
+    ),
+  }));
 
   return {
     properties: selected,
@@ -369,7 +370,9 @@ export function listSavedComparisons(): SavedComparison[] {
 }
 
 export function loadSavedComparison(id: string): SavedComparison | null {
-  return readSavedComparisons().find((comparison) => comparison.id === id) ?? null;
+  return (
+    readSavedComparisons().find((comparison) => comparison.id === id) ?? null
+  );
 }
 
 export function deleteSavedComparison(id: string): void {
@@ -388,7 +391,9 @@ export function encodeSharePayload(payload: ShareComparisonPayload): string {
   return encodeBase64Url(JSON.stringify(validated));
 }
 
-export function decodeSharePayload(encoded: string): ShareComparisonPayload | null {
+export function decodeSharePayload(
+  encoded: string,
+): ShareComparisonPayload | null {
   try {
     const json = decodeBase64Url(encoded);
     const parsed = sharePayloadSchema.safeParse(JSON.parse(json));

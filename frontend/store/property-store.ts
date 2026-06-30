@@ -22,7 +22,12 @@ export type PropertyFilter = {
   country?: string;
 };
 
-export type SortField = 'price' | 'createdAt' | 'title' | 'bedrooms' | 'updatedAt';
+export type SortField =
+  | 'price'
+  | 'createdAt'
+  | 'title'
+  | 'bedrooms'
+  | 'updatedAt';
 export type SortDirection = 'asc' | 'desc';
 
 export interface PaginationState {

@@ -133,7 +133,11 @@ describe('property comparison integration', () => {
       ]);
 
       selected = ['p1', 'p2', 'p3', 'p4'];
-      const overflow = addToComparison(selected, 'p5', MAX_COMPARISON_PROPERTIES);
+      const overflow = addToComparison(
+        selected,
+        'p5',
+        MAX_COMPARISON_PROPERTIES,
+      );
       expect(overflow.added).toBe(false);
       expect(overflow.error).toContain(String(MAX_COMPARISON_PROPERTIES));
     });
@@ -212,7 +216,9 @@ describe('property comparison integration', () => {
       const data = buildComparisonData(mockProperties, ['prop-1', 'prop-2']);
       const csv = buildComparisonCsv(data!);
 
-      expect(csv).toContain('"Field","Lagos Waterfront Apartment","Abuja Family House"');
+      expect(csv).toContain(
+        '"Field","Lagos Waterfront Apartment","Abuja Family House"',
+      );
       expect(csv).toContain('"Price","1200","2500"');
       expect(csv).toContain('"Pool","Yes","No"');
     });
@@ -263,7 +269,11 @@ describe('property comparison integration', () => {
 
   describe('sharing', () => {
     it('encodes and decodes share payloads consistently', () => {
-      const payload = { v: 1 as const, ids: ['prop-1', 'prop-2'], name: 'Share me' };
+      const payload = {
+        v: 1 as const,
+        ids: ['prop-1', 'prop-2'],
+        name: 'Share me',
+      };
       const encoded = encodeSharePayload(payload);
       const decoded = decodeSharePayload(encoded);
 
@@ -304,7 +314,9 @@ describe('property comparison integration', () => {
       }
 
       const comparison = buildComparisonData(mockProperties, selected);
-      expect(comparison?.properties[0]?.title).toBe('Lagos Waterfront Apartment');
+      expect(comparison?.properties[0]?.title).toBe(
+        'Lagos Waterfront Apartment',
+      );
 
       const csv = buildComparisonCsv(comparison!);
       const json = buildComparisonJson(comparison!);

@@ -10,7 +10,10 @@ import axe from 'axe-core';
 import FormErrorAlert from '@/components/forms/FormErrorAlert';
 import { StarRatingInput } from '@/components/reviews/StarRatingInput';
 import { ReviewCard, type Review } from '@/components/reviews/ReviewCard';
-import { RatingSummary, type RatingStats } from '@/components/reviews/RatingSummary';
+import {
+  RatingSummary,
+  type RatingStats,
+} from '@/components/reviews/RatingSummary';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -27,7 +30,12 @@ vi.mock('next/image', () => ({
 }));
 
 vi.mock('react-hot-toast', () => ({
-  default: { loading: vi.fn(), dismiss: vi.fn(), error: vi.fn(), success: vi.fn() },
+  default: {
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+  },
 }));
 
 vi.mock('@/store/authStore', () => ({

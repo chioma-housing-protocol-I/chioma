@@ -36,7 +36,14 @@ function handleGlobalError(error: unknown, source: string, action?: string) {
     action,
   });
 
-  let category: 'validation' | 'api' | 'network' | 'authentication' | 'authorization' | 'server' | 'unknown' = 'unknown';
+  let category:
+    | 'validation'
+    | 'api'
+    | 'network'
+    | 'authentication'
+    | 'authorization'
+    | 'server'
+    | 'unknown' = 'unknown';
   if (appError.category === 'network') category = 'network';
   else if (appError.category === 'validation') category = 'validation';
   else if (appError.category === 'authentication') category = 'authentication';

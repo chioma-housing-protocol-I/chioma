@@ -288,7 +288,9 @@ export function readDepositDeductions(payment: Payment): DepositDeduction[] {
 
       return {
         id: String(deduction.id ?? `${payment.id}-deduction-${index}`),
-        label: String(deduction.label ?? deduction.reason ?? 'Deposit deduction'),
+        label: String(
+          deduction.label ?? deduction.reason ?? 'Deposit deduction',
+        ),
         amount,
         reason:
           deduction.reason === undefined ? undefined : String(deduction.reason),
@@ -333,7 +335,8 @@ export function usePaymentMethods(params: { isDefault?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.paymentMethods.list(params),
     queryFn: async () => {
-      const qs = params.isDefault !== undefined ? `?isDefault=${params.isDefault}` : '';
+      const qs =
+        params.isDefault !== undefined ? `?isDefault=${params.isDefault}` : '';
       const { data } = await apiClient.get<PaymentMethod[]>(
         `/payment-methods${qs}`,
       );

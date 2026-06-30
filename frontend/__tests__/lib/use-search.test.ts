@@ -83,9 +83,7 @@ describe('buildSearchQueryString logic', () => {
       bedrooms: '2',
       furnished: 'true',
     });
-    expect(result).toBe(
-      '?q=modern+apartment&bedrooms=2&furnished=true',
-    );
+    expect(result).toBe('?q=modern+apartment&bedrooms=2&furnished=true');
   });
 });
 

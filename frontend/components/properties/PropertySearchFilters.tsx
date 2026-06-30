@@ -51,13 +51,8 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function PropertySearchFilters() {
-  const {
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilters,
-    resetFilters,
-  } = usePropertyStore();
+  const { searchQuery, setSearchQuery, filters, setFilters, resetFilters } =
+    usePropertyStore();
 
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -168,7 +163,10 @@ export default function PropertySearchFilters() {
     activeTags.size > 0;
 
   return (
-    <div className="w-full space-y-4 mb-6" data-testid="property-search-filters">
+    <div
+      className="w-full space-y-4 mb-6"
+      data-testid="property-search-filters"
+    >
       {/* Search Bar - Desktop & Mobile */}
       <form
         onSubmit={handleSearchSubmit}
@@ -191,26 +189,24 @@ export default function PropertySearchFilters() {
           />
 
           {/* Autocomplete Suggestions */}
-          {showSuggestions &&
-            suggestions &&
-            suggestions.length > 0 && (
-              <div
-                ref={suggestionsRef}
-                className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
-              >
-                {suggestions.map((suggestion, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left px-4 py-3 text-white hover:bg-slate-700 transition-colors text-sm flex items-center gap-2"
-                  >
-                    <Search className="w-3.5 h-3.5 text-blue-200/50 flex-shrink-0" />
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
+          {showSuggestions && suggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+            >
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="w-full text-left px-4 py-3 text-white hover:bg-slate-700 transition-colors text-sm flex items-center gap-2"
+                >
+                  <Search className="w-3.5 h-3.5 text-blue-200/50 flex-shrink-0" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-4 flex-1 w-full">
@@ -303,7 +299,10 @@ export default function PropertySearchFilters() {
       </form>
 
       {/* Advanced Filters (Facets) - Desktop Only */}
-      <div className="hidden md:flex flex-wrap items-center gap-3" data-testid="popular-filters">
+      <div
+        className="hidden md:flex flex-wrap items-center gap-3"
+        data-testid="popular-filters"
+      >
         <span className="text-blue-200/50 text-sm font-medium pr-2">
           Popular:
         </span>
@@ -325,7 +324,10 @@ export default function PropertySearchFilters() {
 
       {/* Mobile Filters Modal/Drawer */}
       {isMobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300" data-testid="mobile-filters-drawer">
+        <div
+          className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300"
+          data-testid="mobile-filters-drawer"
+        >
           <div
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
             onClick={() => setIsMobileFiltersOpen(false)}

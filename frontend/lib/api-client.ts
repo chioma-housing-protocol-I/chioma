@@ -12,10 +12,7 @@ import {
   withRetry,
   globalCircuitBreaker,
 } from '@/lib/errors';
-import {
-  cancellationManager,
-  isCancellationError,
-} from '@/lib/cancellation';
+import { cancellationManager, isCancellationError } from '@/lib/cancellation';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
 

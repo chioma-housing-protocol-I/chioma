@@ -20,7 +20,10 @@ import type {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type CacheableEntity =
-  Property | RentalAgreement | Payment | MaintenanceRequest;
+  | Property
+  | RentalAgreement
+  | Payment
+  | MaintenanceRequest;
 
 export interface CacheOptions {
   ttl?: number; // Time to live in milliseconds
