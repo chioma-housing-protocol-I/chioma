@@ -159,6 +159,12 @@ export const queryKeys = {
     all: ['analytics'] as const,
     landlordOverview: (days: number) =>
       [...queryKeys.analytics.all, 'landlord-overview', days] as const,
+    dashboardMetrics: () =>
+      [...queryKeys.analytics.all, 'dashboard-metrics'] as const,
+    paymentAnalytics: (days: number) =>
+      [...queryKeys.analytics.all, 'payment-analytics', days] as const,
+    userActivity: (days: number) =>
+      [...queryKeys.analytics.all, 'user-activity', days] as const,
   },
 
   search: {
