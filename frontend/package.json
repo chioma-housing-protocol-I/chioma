@@ -91,10 +91,6 @@
     "vitest>picomatch": "^4.0.4",
     "axios": "^1.15.2",
     "fast-uri": "^3.1.2",
-    "@trezor/protobuf": "^1.5.2",
-    "@trezor/protobuf>protobufjs": "^7.5.6",
-    "@trezor/blockchain-link-utils>@trezor/protobuf>protobufjs": "^7.5.6",
-    "@trezor/device-authenticity>@trezor/protobuf>protobufjs": "^7.5.6",
     "ajv>fast-uri": "^3.1.2",
     "ajv-keywords>ajv>fast-uri": "^3.1.2",
     "schema-utils>ajv>fast-uri": "^3.1.2"

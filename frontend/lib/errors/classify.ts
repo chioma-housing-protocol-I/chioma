@@ -47,6 +47,20 @@ export function createHttpError(
     });
   }
 
+  if (status === 429) {
+    const msg = getErrorMessage('NETWORK_RATE_LIMIT');
+    return new AppError({
+      code: 'NETWORK_RATE_LIMIT',
+      category: 'network',
+      severity: 'warning',
+      message: `HTTP 429 Too Many Requests`,
+      userMessage: msg.message,
+      recoverable: true,
+      status,
+      context,
+    });
+  }
+
   if (status >= 500) {
     const msg = getErrorMessage('SYSTEM_UNEXPECTED');
     return new AppError({

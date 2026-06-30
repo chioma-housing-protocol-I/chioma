@@ -12,6 +12,7 @@ import {
   withRetry,
 } from '@/lib/errors';
 import { getMockData, shouldUseMockApi } from '@/lib/mock-api';
+import { globalRateLimitTracker } from '@/lib/rate-limit';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -120,6 +121,16 @@ class ApiClient {
 
     const url = `${this.baseURL}${endpoint}`;
 
+    const waitTimeMs = globalRateLimitTracker.getWaitTimeMs();
+    if (waitTimeMs > 0) {
+      const error = createHttpError(429, {
+        source: 'lib/api-client.ts',
+        action: `${method} ${endpoint}`,
+        metadata: { waitTimeMs },
+      });
+      return Promise.reject(error);
+    }
+
     return withRetry(
       async () => {
         const controller = new AbortController();
@@ -140,6 +151,11 @@ class ApiClient {
             cache,
             signal: controller.signal,
           });
+
+          globalRateLimitTracker.updateFromHeaders(
+            response.headers,
+            response.status,
+          );
 
           if (!response.ok) {
             this.clearAuthAndRedirectIfNeeded(response.status);
@@ -190,6 +206,7 @@ class ApiClient {
             action: `retry-check ${method} ${endpoint}`,
           });
 
+          if (appError.code === 'NETWORK_RATE_LIMIT') return false;
           if (appError.category === 'network') return true;
           if (typeof appError.status === 'number' && appError.status >= 500) {
             return true;

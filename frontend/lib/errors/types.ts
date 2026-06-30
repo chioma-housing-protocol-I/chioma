@@ -19,6 +19,7 @@ export type ErrorCode =
   | 'VALIDATION_INVALID_INPUT'
   | 'BUSINESS_RULE_VIOLATION'
   | 'SYSTEM_UNEXPECTED'
+  | 'NETWORK_RATE_LIMIT'
   | 'UNKNOWN_ERROR';
 
 export interface ErrorContext {

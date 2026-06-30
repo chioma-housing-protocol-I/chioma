@@ -52,6 +52,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     message: 'Something unexpected happened in the application.',
     guidance: 'Retry now. If this continues, contact support.',
   },
+  NETWORK_RATE_LIMIT: {
+    title: 'Too many requests',
+    message: 'You have made too many requests in a short time.',
+    guidance: 'Please wait a moment before trying again.',
+  },
   UNKNOWN_ERROR: {
     title: 'Something went wrong',
     message: 'An unknown error occurred.',

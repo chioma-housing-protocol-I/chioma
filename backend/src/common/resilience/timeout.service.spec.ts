@@ -82,7 +82,9 @@ describe('TimeoutService', () => {
 
       const err = await race.catch((e: unknown) => e);
       expect(err).toBeInstanceOf(ExternalCallTimeoutError);
-      expect((err as ExternalCallTimeoutError).context).toBe('payment-status');
+      expect((err as ExternalCallTimeoutError).callContext).toBe(
+        'payment-status',
+      );
       expect((err as ExternalCallTimeoutError).timeoutMs).toBe(3_000);
 
       d.resolve('late');
@@ -91,7 +93,9 @@ describe('TimeoutService', () => {
     it('uses DEFAULT_TIMEOUT_MS when timeoutMs is omitted', async () => {
       const d = deferred<string>();
 
-      const race = service.execute(() => d.promise, { context: 'default-deadline' });
+      const race = service.execute(() => d.promise, {
+        context: 'default-deadline',
+      });
 
       // Just before default (10 000 ms): should still be pending.
       jest.advanceTimersByTime(9_999);
@@ -165,7 +169,10 @@ describe('TimeoutService', () => {
     it('times out the wrapped function when it is too slow', async () => {
       const d = deferred<string>();
       const slowFn = jest.fn().mockReturnValue(d.promise);
-      const safeFn = service.wrap(slowFn, { context: 'slow-wrap', timeoutMs: 100 });
+      const safeFn = service.wrap(slowFn, {
+        context: 'slow-wrap',
+        timeoutMs: 100,
+      });
 
       const race = safeFn();
       jest.advanceTimersByTime(101);
@@ -185,11 +192,17 @@ describe('TimeoutService', () => {
 
     it('tracks totalCalls correctly across successes and timeouts', async () => {
       // Successful call.
-      await service.execute(async () => 'ok', { context: 'svc', timeoutMs: 500 });
+      await service.execute(async () => 'ok', {
+        context: 'svc',
+        timeoutMs: 500,
+      });
 
       // Timed-out call.
       const d = deferred<string>();
-      const race = service.execute(() => d.promise, { context: 'svc', timeoutMs: 200 });
+      const race = service.execute(() => d.promise, {
+        context: 'svc',
+        timeoutMs: 200,
+      });
       jest.advanceTimersByTime(201);
       await race.catch(() => null);
 
@@ -210,7 +223,10 @@ describe('TimeoutService', () => {
     });
 
     it('returns a defensive snapshot — mutations do not affect stored state', async () => {
-      await service.execute(async () => 'ok', { context: 'snap', timeoutMs: 500 });
+      await service.execute(async () => 'ok', {
+        context: 'snap',
+        timeoutMs: 500,
+      });
 
       const snapshot = service.getMetrics('snap')!;
       snapshot.totalCalls = 999;
@@ -219,7 +235,10 @@ describe('TimeoutService', () => {
     });
 
     it('resetMetrics clears all accumulated data', async () => {
-      await service.execute(async () => 'ok', { context: 'to-clear', timeoutMs: 500 });
+      await service.execute(async () => 'ok', {
+        context: 'to-clear',
+        timeoutMs: 500,
+      });
       service.resetMetrics();
       expect(service.getMetrics('to-clear')).toBeUndefined();
       expect(service.getAllMetrics()).toHaveLength(0);

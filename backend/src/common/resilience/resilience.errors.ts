@@ -47,6 +47,7 @@ export class FeatureDisabledError extends BaseAppError {
  */
 export class ExternalCallTimeoutError extends BaseAppError {
   public readonly serviceContext: string;
+  public readonly callContext: string;
   public readonly timeoutMs: number;
 
   constructor(serviceContext: string, timeoutMs: number) {
@@ -58,6 +59,7 @@ export class ExternalCallTimeoutError extends BaseAppError {
       { serviceContext, timeoutMs },
     );
     this.serviceContext = serviceContext;
+    this.callContext = context;
     this.timeoutMs = timeoutMs;
   }
 }

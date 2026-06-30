@@ -4,6 +4,7 @@ import { QueryProvider } from '@/lib/query/provider';
 import { StoreHydrator } from '@/store/StoreHydrator';
 import ErrorMonitoringProvider from '@/components/error/ErrorMonitoringProvider';
 import NetworkStatusBanner from '@/components/error/NetworkStatusBanner';
+import RateLimitNotifier from '@/components/error/RateLimitNotifier';
 import { ErrorProvider } from '@/components/error/ErrorProvider';
 import PwaController from '@/components/pwa/PwaController';
 import { ModalProvider } from '@/contexts/ModalContext';
@@ -21,6 +22,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           <ErrorMonitoringProvider />
           <PwaController />
           <NetworkStatusBanner />
+          <RateLimitNotifier />
           <RouteAnnouncer />
 
           {/* Main content (a11y target) */}
