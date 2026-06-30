@@ -83,6 +83,7 @@ async function bootstrap() {
       'security.txt',
       '.well-known',
       'developer-portal',
+      'metrics',
     ],
   });
 

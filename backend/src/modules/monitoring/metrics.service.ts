@@ -113,6 +113,22 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  private readonly cacheOperations = new Counter({
+    name: 'cache_operations_total',
+    help: 'Total cache operations by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly cacheHitRatio = new Gauge({
+    name: 'cache_hit_ratio',
+    help: 'Cache hit ratio (hits / total operations)',
+    registers: [this.registry],
+  });
+
+  private cacheHits = 0;
+  private cacheTotal = 0;
+
   private readonly rentPayments = new Counter({
     name: 'rent_payments_total',
     help: 'Total rent payment attempts',
@@ -197,6 +213,16 @@ export class MetricsService implements OnModuleInit {
 
   recordDatabaseQuery(queryType: string, durationMs: number): void {
     this.dbQueryDuration.observe({ query_type: queryType }, durationMs);
+  }
+
+  recordCacheOperation(hit: boolean): void {
+    const result = hit ? 'hit' : 'miss';
+    this.cacheOperations.inc({ result });
+    this.cacheTotal++;
+    if (hit) this.cacheHits++;
+    this.cacheHitRatio.set(
+      this.cacheTotal > 0 ? this.cacheHits / this.cacheTotal : 0,
+    );
   }
 
   recordRentPayment(status: 'success' | 'failed'): void {
