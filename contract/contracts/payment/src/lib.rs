@@ -26,6 +26,9 @@ mod tests_recurring;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_property;
+
 // Re-export public APIs
 pub use errors::PaymentError;
 pub use payment_impl::{calculate_payment_split, calculate_rent_for_period, create_payment_record};
