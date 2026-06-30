@@ -64,6 +64,8 @@ import { TransactionModule } from './modules/transactions/transaction.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { CompressionMiddleware } from './common/middleware/compression.middleware';
+import { CompressionService } from './common/middleware/compression.service';
 
 const appLogger = new Logger('AppModule');
 
@@ -271,6 +273,7 @@ const appLogger = new Logger('AppModule');
   providers: [
     AppService,
     JobQueueService,
+    CompressionService,
     {
       provide: 'APP_PIPE',
       useClass: ValidationPipe,
@@ -295,6 +298,8 @@ const appLogger = new Logger('AppModule');
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CompressionMiddleware).forRoutes('*');
+
     consumer.apply(LocalizationMiddleware).forRoutes('*');
 
     // Security headers middleware (applied to all routes)
