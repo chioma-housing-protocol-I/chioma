@@ -38,7 +38,6 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-/** Browser calls same-origin `/api` (Next proxy); SSR hits backend directly. */
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
@@ -85,18 +84,12 @@ class ApiClient {
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
-
-    // DISABLED FOR DEVELOPMENT - Prevent aggressive redirect to home page
-    // if (window.location.pathname !== '/') {
-    //   window.location.assign('/');
-    // }
   }
 
   private async request<T>(
     endpoint: string,
     config: RequestConfig = {},
   ): Promise<ApiResponse<T>> {
-    // Use mock API if enabled
     if (shouldUseMockApi()) {
       const mockResponse = getMockData(endpoint);
       return {
@@ -114,7 +107,6 @@ class ApiClient {
       retries = 3,
       timeoutMs = 12000,
       signal,
-      cancellationKey,
     } = config;
 
     const token = this.getAuthToken();
@@ -161,8 +153,13 @@ class ApiClient {
             const response = await fetch(url, {
               method,
               headers: requestHeaders,
-              body: body ? JSON.stringify(body) : undefined,
+              body: isFormData
+                ? (body as FormData)
+                : body
+                  ? JSON.stringify(body)
+                  : undefined,
               cache,
+              credentials,
               signal: controller.signal,
             });
 
@@ -204,53 +201,6 @@ class ApiClient {
             };
           } catch (error) {
             const appError = classifyUnknownError(error, {
-    return withRetry(
-      async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        if (signal) {
-          if (signal.aborted) controller.abort();
-          signal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
-
-        if (cancellationKey) {
-          const cancelSignal =
-            cancellationManager.createSignal(cancellationKey).signal;
-          if (cancelSignal.aborted) controller.abort();
-          cancelSignal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
-
-        try {
-          const response = await fetch(url, {
-            method,
-            headers: requestHeaders,
-            body: isFormData
-              ? (body as FormData)
-              : body
-                ? JSON.stringify(body)
-                : undefined,
-            cache,
-            credentials,
-            signal: controller.signal,
-          });
-
-          globalRateLimitTracker.updateFromHeaders(
-            response.headers,
-            response.status,
-          );
-
-          if (!response.ok) {
-            this.clearAuthAndRedirectIfNeeded(response.status);
-
-            const errorBody = await response
-              .json()
-              .catch(() => ({ message: response.statusText }));
-            const baseError = createHttpError(response.status, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
             });
@@ -275,50 +225,6 @@ class ApiClient {
             if (typeof appError.status === 'number' && appError.status >= 500) {
               return true;
             }
-          const data = await this.parseResponse<T>(response);
-          return {
-            data,
-            status: response.status,
-            message:
-              data && typeof data === 'object' && 'message' in (data as object)
-                ? String((data as { message?: string }).message)
-                : undefined,
-          };
-        } catch (error) {
-          if (isCancellationError(error)) {
-            clearTimeout(timeoutId);
-            throw cancellationManager.classifyCancellationError(
-              error,
-              'lib/api-client.ts',
-            );
-          }
-
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `${method} ${endpoint}`,
-          });
-
-          logError(appError, appError.context);
-          throw appError;
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      {
-        maxAttempts: retries,
-        shouldRetry: (error) => {
-          if (isCancellationError(error)) return false;
-
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `retry-check ${method} ${endpoint}`,
-          });
-
-          if (appError.code === 'NETWORK_RATE_LIMIT') return false;
-          if (appError.category === 'network') return true;
-          if (typeof appError.status === 'number' && appError.status >= 500) {
-            return true;
-          }
 
             return false;
           },
