@@ -325,7 +325,7 @@ describe('Circuit Breaker Integration', () => {
 
       service.clear();
       expect(service.getMetricsForBreaker('search')).toBeNull();
-      expect(service.getMetrics()).toEqual([]);
+      expect(service.getMetrics()).toEqual({});
     });
   });
 });

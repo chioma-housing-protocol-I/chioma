@@ -205,7 +205,7 @@ describe('Scheduled Tasks Integration', () => {
       const dueReminder = buildReminder({
         id: 'rem-1',
         daysBefore: 1,
-        dueDate: futureDate(2),
+        dueDate: futureDate(-1),
       });
       reminderRepository.find.mockResolvedValue([dueReminder]);
       reminderRepository.save.mockImplementation(async (value) => value);
@@ -239,7 +239,7 @@ describe('Scheduled Tasks Integration', () => {
       const dueReminder = buildReminder({
         id: 'rem-2',
         daysBefore: 0,
-        dueDate: futureDate(1),
+        dueDate: futureDate(0),
       });
       reminderRepository.find.mockResolvedValue([dueReminder]);
       reminderRepository.save.mockImplementation(async (value) => value);

@@ -78,32 +78,26 @@ export class MockOAuth2Provider {
         return [400, { error: 'unsupported_grant_type' }];
       })
       .get('/oauth/userinfo')
-      .reply(
-        200,
-        ((revokedTokens, accessTokens) =>
-          function (this: any, _uri: string, _body: unknown) {
-            const authHeader =
-              (this.req?.headers?.['authorization'] as string | undefined) ??
-              '';
-            const token = authHeader.replace(/^Bearer\s+/i, '');
-            if (!token || revokedTokens.has(token)) {
-              return [401, { error: 'invalid_token' }];
-            }
+      .reply(200, (_uri: string, _body: unknown, headers: any) => {
+        const authHeader = headers?.authorization ?? '';
+        const token = authHeader.replace(/^Bearer\s+/i, '');
+        if (!token || this.revokedTokens.has(token)) {
+          return [401, { error: 'invalid_token' }];
+        }
 
-            const profile = accessTokens.get(token);
-            if (!profile) {
-              return [401, { error: 'invalid_token' }];
-            }
+        const profile = this.accessTokens.get(token);
+        if (!profile) {
+          return [401, { error: 'invalid_token' }];
+        }
 
-            return {
-              sub: profile.id,
-              email: profile.email,
-              given_name: profile.firstName,
-              family_name: profile.lastName,
-              picture: profile.avatarUrl,
-            };
-          })(this.revokedTokens, this.accessTokens),
-      )
+        return {
+          sub: profile.id,
+          email: profile.email,
+          given_name: profile.firstName,
+          family_name: profile.lastName,
+          picture: profile.avatarUrl,
+        };
+      })
       .post('/oauth/revoke')
       .reply(200, (_uri, body: unknown) => {
         const parsedBody = parseFormBody(body);
