@@ -164,7 +164,11 @@ describe('OAuth2 Integration (issue #1120)', () => {
     }),
   };
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    users.length = 0;
+    oauthLinks.length = 0;
+    jest.clearAllMocks();
+
     mockProvider = new MockOAuth2Provider(providerConfig);
     mockProvider.registerHttpMocks();
 
@@ -190,15 +194,8 @@ describe('OAuth2 Integration (issue #1120)', () => {
     oauth2Client = module.get<OAuth2ClientService>(OAuth2ClientService);
   });
 
-  afterAll(() => {
+  afterEach(() => {
     mockProvider.cleanup();
-  });
-
-  beforeEach(() => {
-    users.length = 0;
-    oauthLinks.length = 0;
-    jest.clearAllMocks();
-    mockProvider.registerHttpMocks();
   });
 
   describe('Authorization code flow', () => {
