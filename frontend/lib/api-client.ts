@@ -15,6 +15,7 @@ import {
 import { cancellationManager, isCancellationError } from '@/lib/cancellation';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
+import { getTimeoutForEndpoint } from '@/lib/config/timeouts';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -26,6 +27,7 @@ type RequestConfig = {
   timeoutMs?: number;
   signal?: AbortSignal;
   cancellationKey?: string;
+  disableTimeoutConfig?: boolean;
 };
 
 type ApiResponse<T> = {
@@ -113,10 +115,19 @@ class ApiClient {
       cache = 'no-cache',
       credentials = 'include',
       retries = 3,
-      timeoutMs = 12000,
+      timeoutMs,
       signal,
       cancellationKey,
+      disableTimeoutConfig = false,
     } = config;
+
+    // Calculate timeout based on endpoint if not explicitly provided
+    const calculatedTimeout =
+      timeoutMs ||
+      (disableTimeoutConfig ? 12000 : getTimeoutForEndpoint(endpoint));
+    const finalTimeout = disableTimeoutConfig
+      ? timeoutMs || 12000
+      : calculatedTimeout;
 
     const token = this.getAuthToken();
     const isFormData =
@@ -149,7 +160,7 @@ class ApiClient {
       withRetry(
         async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+          const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
 
           if (signal) {
             if (signal.aborted) controller.abort();
@@ -238,6 +249,7 @@ class ApiClient {
         },
         {
           maxAttempts: retries,
+          endpoint: `${method}:${endpoint}`,
           shouldRetry: (error) => {
             if (isCancellationError(error)) return false;
 
