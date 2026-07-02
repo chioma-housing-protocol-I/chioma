@@ -158,7 +158,7 @@ export class DatabaseReplicationService {
       `);
 
       return rows.map((row: Record<string, unknown>) => ({
-        replica: String(row.replica ?? 'replica'),
+        replica: typeof row.replica === 'string' ? row.replica : 'replica',
         inRecovery: Boolean(row.in_recovery),
         replayPaused: Boolean(row.replay_paused),
       }));
@@ -168,8 +168,8 @@ export class DatabaseReplicationService {
   }
 
   private toReplicaMetrics(row: Record<string, unknown>): ReplicaMetrics {
-    const replica = String(row.replica ?? 'replica');
-    const state = String(row.state ?? 'unknown');
+    const replica = typeof row.replica === 'string' ? row.replica : 'replica';
+    const state = typeof row.state === 'string' ? row.state : 'unknown';
     const lagSeconds = Number(row.replay_lag_seconds ?? 0);
     const lagBytes = Number(row.lag_bytes ?? 0);
     const healthy = state === 'streaming' && lagSeconds <= this.maxLagSeconds;
@@ -183,7 +183,8 @@ export class DatabaseReplicationService {
     return {
       replica,
       state,
-      syncState: String(row.sync_state ?? 'unknown'),
+      syncState:
+        typeof row.sync_state === 'string' ? row.sync_state : 'unknown',
       lagBytes,
       lagSeconds,
       healthy,

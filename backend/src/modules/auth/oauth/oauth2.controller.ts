@@ -40,7 +40,9 @@ export class OAuth2Controller {
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Complete OAuth2 callback and issue session tokens' })
+  @ApiOperation({
+    summary: 'Complete OAuth2 callback and issue session tokens',
+  })
   completeAuthorization(@Body() dto: OAuth2CallbackDto) {
     return this.oauth2Service.completeAuthorization(
       dto.provider,

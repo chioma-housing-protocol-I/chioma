@@ -8,6 +8,7 @@ import {
   type UseQueryOptions,
   type UseMutationOptions,
   type QueryKey,
+  type MutationFunctionContext,
 } from '@tanstack/react-query';
 import { cancellationManager, isCancellationError } from './manager';
 import { useCancellationMetricsStore } from '@/store/cancellation-metrics-store';
@@ -40,7 +41,8 @@ export function useCancellableQuery<
     signalRef.current = signal;
     setState({ status: 'in-flight', cancelKey: key });
     try {
-      const result = await queryFn!({ signal } as never);
+      if (typeof queryFn !== 'function') throw new Error('queryFn required');
+      const result = await queryFn({ signal } as never);
       signalRef.current = null;
       setState((prev) =>
         prev.status === 'in-flight' ? { status: 'idle' } : prev,
@@ -62,8 +64,8 @@ export function useCancellableQuery<
 
   const queryResult = useQuery({
     ...rest,
-    queryFn: wrappedQueryFn as UseQueryOptions['queryFn'],
-  });
+    queryFn: wrappedQueryFn,
+  } as UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>);
 
   const cancel = useCallback(() => {
     if (state.status === 'in-flight') {
@@ -107,11 +109,13 @@ export function useCancellableMutation<
   );
 
   const wrappedMutationFn = useCallback(
-    async (variables: TVariables) => {
+    async (variables: TVariables, context: MutationFunctionContext) => {
       const { signal } = cancellationManager.createSignal(cancellationKey);
       setState({ status: 'in-flight', cancelKey: cancellationKey });
       try {
-        const result = await mutationFn!(variables);
+        if (typeof mutationFn !== 'function')
+          throw new Error('mutationFn required');
+        const result = await mutationFn(variables, context);
         setState((prev) =>
           prev.status === 'in-flight' ? { status: 'idle' } : prev,
         );

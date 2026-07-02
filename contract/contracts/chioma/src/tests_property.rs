@@ -103,7 +103,10 @@ proptest! {
         prop_assert_eq!(
             landlord + agent,
             amount,
-            "landlord={landlord} + agent={agent} != amount={amount}"
+            "landlord={} + agent={} != amount={}",
+            landlord,
+            agent,
+            amount
         );
     }
 
@@ -203,8 +206,7 @@ fn compound_interest(balance: i128, rate_bps: u32, elapsed_periods: u64) -> i128
     let rate = rate_bps as i128;
     let mut result = balance;
     for _ in 0..elapsed_periods {
-        result =
-            result.saturating_add(result.saturating_mul(rate) / (n_per_year * 10_000));
+        result = result.saturating_add(result.saturating_mul(rate) / (n_per_year * 10_000));
     }
     result.saturating_sub(balance)
 }

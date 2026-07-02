@@ -1,7 +1,7 @@
 import { AppError } from '@/lib/errors/types';
 import { classifyUnknownError } from '@/lib/errors/classify';
 
-type CancellationReason = 'user' | 'timeout' | 'navigation' | 'stale';
+export type CancellationReason = 'user' | 'timeout' | 'navigation' | 'stale';
 
 interface CancellationEntry {
   controller: AbortController;
