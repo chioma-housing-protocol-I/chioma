@@ -10,8 +10,13 @@ interface TimeoutAlertProps {
   isRetrying?: boolean;
 }
 
-export function TimeoutAlert({ message, onRetry, isRetrying }: TimeoutAlertProps) {
-  const defaultMessage = 'The request took too long to complete. Please try again.';
+export function TimeoutAlert({
+  message,
+  onRetry,
+  isRetrying,
+}: TimeoutAlertProps) {
+  const defaultMessage =
+    'The request took too long to complete. Please try again.';
 
   return (
     <Alert variant="destructive">
@@ -27,7 +32,9 @@ export function TimeoutAlert({ message, onRetry, isRetrying }: TimeoutAlertProps
             disabled={isRetrying}
             className="shrink-0"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`}
+            />
             Retry
           </Button>
         )}

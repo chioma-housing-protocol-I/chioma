@@ -122,8 +122,12 @@ class ApiClient {
     } = config;
 
     // Calculate timeout based on endpoint if not explicitly provided
-    const calculatedTimeout = timeoutMs || (disableTimeoutConfig ? 12000 : getTimeoutForEndpoint(endpoint));
-    const finalTimeout = disableTimeoutConfig ? (timeoutMs || 12000) : calculatedTimeout;
+    const calculatedTimeout =
+      timeoutMs ||
+      (disableTimeoutConfig ? 12000 : getTimeoutForEndpoint(endpoint));
+    const finalTimeout = disableTimeoutConfig
+      ? timeoutMs || 12000
+      : calculatedTimeout;
 
     const token = this.getAuthToken();
     const isFormData =

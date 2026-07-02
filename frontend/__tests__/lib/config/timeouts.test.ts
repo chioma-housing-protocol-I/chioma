@@ -105,9 +105,15 @@ describe('Timeout Configuration', () => {
 
     it('should have reasonable timeout values', () => {
       expect(DEFAULT_TIMEOUTS.default).toBeGreaterThan(0);
-      expect(DEFAULT_TIMEOUTS.analytics).toBeGreaterThan(DEFAULT_TIMEOUTS.default);
-      expect(DEFAULT_TIMEOUTS.payments).toBeGreaterThan(DEFAULT_TIMEOUTS.default);
-      expect(DEFAULT_TIMEOUTS.uploads).toBeGreaterThan(DEFAULT_TIMEOUTS.payments);
+      expect(DEFAULT_TIMEOUTS.analytics).toBeGreaterThan(
+        DEFAULT_TIMEOUTS.default,
+      );
+      expect(DEFAULT_TIMEOUTS.payments).toBeGreaterThan(
+        DEFAULT_TIMEOUTS.default,
+      );
+      expect(DEFAULT_TIMEOUTS.uploads).toBeGreaterThan(
+        DEFAULT_TIMEOUTS.payments,
+      );
     });
   });
 });

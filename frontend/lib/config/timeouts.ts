@@ -28,23 +28,32 @@ export function getTimeoutForEndpoint(endpoint: string): number {
   if (lowerEndpoint.includes('/analytics/')) {
     return DEFAULT_TIMEOUTS.analytics;
   }
-  if (lowerEndpoint.includes('/payment') || lowerEndpoint.includes('/payments')) {
+  if (
+    lowerEndpoint.includes('/payment') ||
+    lowerEndpoint.includes('/payments')
+  ) {
     return DEFAULT_TIMEOUTS.payments;
   }
-  if (lowerEndpoint.includes('/properties') || lowerEndpoint.includes('/property')) {
+  if (
+    lowerEndpoint.includes('/properties') ||
+    lowerEndpoint.includes('/property')
+  ) {
     return DEFAULT_TIMEOUTS.properties;
   }
   if (lowerEndpoint.includes('/users') || lowerEndpoint.includes('/user')) {
     return DEFAULT_TIMEOUTS.users;
   }
-  if (lowerEndpoint.includes('/documents') || lowerEndpoint.includes('/document')) {
+  if (lowerEndpoint.includes('/upload')) {
+    return DEFAULT_TIMEOUTS.uploads;
+  }
+  if (
+    lowerEndpoint.includes('/documents') ||
+    lowerEndpoint.includes('/document')
+  ) {
     return DEFAULT_TIMEOUTS.documents;
   }
   if (lowerEndpoint.includes('/search')) {
     return DEFAULT_TIMEOUTS.search;
-  }
-  if (lowerEndpoint.includes('/upload')) {
-    return DEFAULT_TIMEOUTS.uploads;
   }
 
   // Default for mutations (POST, PUT, PATCH, DELETE)
