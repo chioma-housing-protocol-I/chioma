@@ -14,15 +14,13 @@ describe('Queue Processing Integration', () => {
 
   const makeQueueMock = (overrides: Partial<any> = {}) => ({
     add: jest.fn().mockResolvedValue({ id: 'job-1' }),
-    getJobCounts: jest
-      .fn()
-      .mockResolvedValue({
-        active: 0,
-        wait: 0,
-        delayed: 0,
-        failed: 0,
-        completed: 0,
-      }),
+    getJobCounts: jest.fn().mockResolvedValue({
+      active: 0,
+      wait: 0,
+      delayed: 0,
+      failed: 0,
+      completed: 0,
+    }),
     getFailed: jest.fn().mockResolvedValue([]),
     getDelayed: jest.fn().mockResolvedValue([]),
     isPaused: jest.fn().mockResolvedValue(false),
@@ -64,15 +62,13 @@ describe('Queue Processing Integration', () => {
 
     mockBlockchainQueue = makeQueueMock({
       add: jest.fn().mockResolvedValue({ id: 'bc-job-5' }),
-      getJobCounts: jest
-        .fn()
-        .mockResolvedValue({
-          active: 1,
-          wait: 3,
-          delayed: 2,
-          failed: 0,
-          completed: 10,
-        }),
+      getJobCounts: jest.fn().mockResolvedValue({
+        active: 1,
+        wait: 3,
+        delayed: 2,
+        failed: 0,
+        completed: 10,
+      }),
     });
 
     const module: TestingModule = await Test.createTestingModule({

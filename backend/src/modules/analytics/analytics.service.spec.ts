@@ -11,6 +11,14 @@ describe('AnalyticsService', () => {
     find: jest.fn(),
   };
 
+  const paymentRepository = {
+    find: jest.fn(),
+  };
+
+  const auditLogRepository = {
+    find: jest.fn(),
+  };
+
   let service: AnalyticsService;
 
   beforeEach(() => {
@@ -18,6 +26,8 @@ describe('AnalyticsService', () => {
     service = new AnalyticsService(
       propertyRepository as any,
       inquiryRepository as any,
+      paymentRepository as any,
+      auditLogRepository as any,
     );
   });
 

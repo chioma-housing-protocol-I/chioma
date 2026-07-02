@@ -25,16 +25,12 @@ function StatusIcon({ status }: { status: CheckStatus }) {
 }
 
 function statusColor(status: CheckStatus): string {
-  if (status === 'pass')
-    return 'border-emerald-400/20 bg-emerald-500/10';
-  if (status === 'warn')
-    return 'border-amber-400/20 bg-amber-500/10';
+  if (status === 'pass') return 'border-emerald-400/20 bg-emerald-500/10';
+  if (status === 'warn') return 'border-amber-400/20 bg-amber-500/10';
   return 'border-red-400/20 bg-red-500/10';
 }
 
-function statusBadge(
-  status: CheckStatus,
-): { label: string; cls: string } {
+function statusBadge(status: CheckStatus): { label: string; cls: string } {
   if (status === 'pass')
     return {
       label: 'Pass',
@@ -58,11 +54,7 @@ export default function EnvSelfCheck() {
   const appUrlChecks = checkAppUrls();
   const rpcChecks = checkRpcAndContracts();
 
-  const allChecks = [
-    ...networkChecks,
-    ...appUrlChecks,
-    ...rpcChecks,
-  ];
+  const allChecks = [...networkChecks, ...appUrlChecks, ...rpcChecks];
   const hasFail = allChecks.some((c) => c.status === 'fail');
   const hasWarn = allChecks.some((c) => c.status === 'warn');
 
@@ -83,7 +75,11 @@ export default function EnvSelfCheck() {
                   : 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
             }`}
           >
-            {hasFail ? 'Issues found' : hasWarn ? 'Warnings' : 'All checks passed'}
+            {hasFail
+              ? 'Issues found'
+              : hasWarn
+                ? 'Warnings'
+                : 'All checks passed'}
           </span>
         </div>
         <button
@@ -110,14 +106,18 @@ export default function EnvSelfCheck() {
                 <StatusIcon status={check.status} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-white">{check.label}</p>
+                    <p className="text-sm font-semibold text-white">
+                      {check.label}
+                    </p>
                     <span
                       className={`shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase ${badge.cls}`}
                     >
                       {badge.label}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5">{check.detail}</p>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    {check.detail}
+                  </p>
                 </div>
               </div>
             );

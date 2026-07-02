@@ -11,7 +11,10 @@ import { PropertiesModule } from '../src/modules/properties/properties.module';
 import { StorageModule } from '../src/modules/storage/storage.module';
 import { NotificationsModule } from '../src/modules/notifications/notifications.module';
 import { ReviewsModule } from '../src/modules/reviews/reviews.module';
-import { MaintenanceRequest, MaintenanceStatus } from '../src/modules/maintenance/maintenance-request.entity';
+import {
+  MaintenanceRequest,
+  MaintenanceStatus,
+} from '../src/modules/maintenance/maintenance-request.entity';
 import { User, UserRole } from '../src/modules/users/entities/user.entity';
 import { Property } from '../src/modules/properties/entities/property.entity';
 import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
@@ -39,7 +42,9 @@ describe('Maintenance E2E Tests', () => {
           isGlobal: true,
           envFilePath: '.env.test',
         }),
-        TypeOrmModule.forRoot(getTestDatabaseConfig([MaintenanceRequest, User, Property])),
+        TypeOrmModule.forRoot(
+          getTestDatabaseConfig([MaintenanceRequest, User, Property]),
+        ),
         MaintenanceModule,
         UsersModule,
         PropertiesModule,
@@ -61,21 +66,31 @@ describe('Maintenance E2E Tests', () => {
 
     await app.init();
 
-    maintenanceRepository = moduleFixture.get(getRepositoryToken(MaintenanceRequest));
+    maintenanceRepository = moduleFixture.get(
+      getRepositoryToken(MaintenanceRequest),
+    );
     userRepository = moduleFixture.get(getRepositoryToken(User));
     propertyRepository = moduleFixture.get(getRepositoryToken(Property));
     jwtService = moduleFixture.get(JwtService);
   }, 60000);
 
   afterAll(async () => {
-    await clearRepositories([maintenanceRepository, propertyRepository, userRepository]);
+    await clearRepositories([
+      maintenanceRepository,
+      propertyRepository,
+      userRepository,
+    ]);
     if (app) {
       await app.close();
     }
   }, 60000);
 
   beforeEach(async () => {
-    await clearRepositories([maintenanceRepository, propertyRepository, userRepository]);
+    await clearRepositories([
+      maintenanceRepository,
+      propertyRepository,
+      userRepository,
+    ]);
 
     const passwordHash = await bcrypt.hash(TEST_PASSWORD, SALT_ROUNDS);
     testTenant = await userRepository.save(
@@ -114,12 +129,19 @@ describe('Maintenance E2E Tests', () => {
       }),
     );
 
-    tenantToken = jwtService.sign({ sub: testTenant.id, role: testTenant.role });
+    tenantToken = jwtService.sign({
+      sub: testTenant.id,
+      role: testTenant.role,
+    });
     adminToken = jwtService.sign({ sub: testAdmin.id, role: testAdmin.role });
   }, 60000);
 
   afterEach(async () => {
-    await clearRepositories([maintenanceRepository, propertyRepository, userRepository]);
+    await clearRepositories([
+      maintenanceRepository,
+      propertyRepository,
+      userRepository,
+    ]);
   }, 60000);
 
   describe('POST /api/maintenance', () => {
@@ -254,7 +276,9 @@ describe('Maintenance E2E Tests', () => {
         .set('Authorization', `Bearer ${tenantToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.every((req: any) => req.status === MaintenanceStatus.OPEN)).toBe(true);
+          expect(
+            res.body.every((req: any) => req.status === MaintenanceStatus.OPEN),
+          ).toBe(true);
         });
     });
   });

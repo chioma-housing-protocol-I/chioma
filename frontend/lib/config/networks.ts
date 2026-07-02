@@ -37,10 +37,10 @@ export function checkNetworkConfig(): EnvCheckResult[] {
       detail: isPublic
         ? 'Configured for PUBLIC mainnet.'
         : isTestnet
-        ? 'Running on TESTNET.'
-        : isUnknown
-        ? `Unknown network value: "${network}"`
-        : 'Not configured — defaults to TESTNET.',
+          ? 'Running on TESTNET.'
+          : isUnknown
+            ? `Unknown network value: "${network}"`
+            : 'Not configured — defaults to TESTNET.',
     },
     {
       label: 'Mainnet flag',
@@ -51,19 +51,18 @@ export function checkNetworkConfig(): EnvCheckResult[] {
     },
     {
       label: 'Explorer base URL',
-      status: (isPublic || isTestnet) ? 'pass' : 'fail',
+      status: isPublic || isTestnet ? 'pass' : 'fail',
       detail: isPublic
         ? 'Public Stellar Expert explorer configured.'
         : isTestnet
-        ? 'Testnet Stellar Expert explorer configured.'
-        : 'Explorer configuration unavailable for unknown network.',
+          ? 'Testnet Stellar Expert explorer configured.'
+          : 'Explorer configuration unavailable for unknown network.',
     },
   ];
 }
 
 export function checkAppUrls(): EnvCheckResult[] {
-  const apiUrl =
-    (process.env.NEXT_PUBLIC_API_URL as string | undefined) ?? '';
+  const apiUrl = (process.env.NEXT_PUBLIC_API_URL as string | undefined) ?? '';
   const backendUrl =
     (process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL as string | undefined) ?? '';
 
@@ -80,12 +79,14 @@ export function checkAppUrls(): EnvCheckResult[] {
     },
     {
       label: 'API URL',
-      status: apiUrl === '/api' ? 'pass' : isPlaceholder(apiUrl) ? 'warn' : 'pass',
-      detail: apiUrl === '/api'
-        ? 'Browser requests use Next.js same-origin proxy.'
-        : apiUrl
-        ? `Browser API base: ${apiUrl}`
-        : 'NEXT_PUBLIC_API_URL is not set.',
+      status:
+        apiUrl === '/api' ? 'pass' : isPlaceholder(apiUrl) ? 'warn' : 'pass',
+      detail:
+        apiUrl === '/api'
+          ? 'Browser requests use Next.js same-origin proxy.'
+          : apiUrl
+            ? `Browser API base: ${apiUrl}`
+            : 'NEXT_PUBLIC_API_URL is not set.',
     },
     {
       label: 'Backend proxy URL',
@@ -93,8 +94,8 @@ export function checkAppUrls(): EnvCheckResult[] {
       detail: isPlaceholder(backendUrl)
         ? 'Backend proxy URL resembles localhost or placeholder.'
         : backendUrl
-        ? `SSR backend: ${backendUrl}`
-        : 'NEXT_PUBLIC_BACKEND_API_BASE_URL is not set.',
+          ? `SSR backend: ${backendUrl}`
+          : 'NEXT_PUBLIC_BACKEND_API_BASE_URL is not set.',
     },
   ];
 }

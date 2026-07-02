@@ -28,11 +28,14 @@ class PropertyWizardService {
     if (!draft.draftId) return;
 
     try {
-      await apiClient.patch(`/properties/property-listings/wizard/${draft.draftId}/step`, {
-        currentStep: draft.currentStep,
-        completedSteps: draft.completedSteps,
-        data: draft.propertyData,
-      });
+      await apiClient.patch(
+        `/properties/property-listings/wizard/${draft.draftId}/step`,
+        {
+          currentStep: draft.currentStep,
+          completedSteps: draft.completedSteps,
+          data: draft.propertyData,
+        },
+      );
     } catch {
       // Draft endpoint not yet available in all environments.
     }
