@@ -161,7 +161,6 @@ export function createQueryClient(): QueryClient {
         refetchOnReconnect: true,
         retryOnMount: false,
         refetchInterval: false,
-        cacheTime: GC_TIME_MS,
       },
       mutations: {
         retry: false,
