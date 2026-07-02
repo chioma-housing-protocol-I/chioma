@@ -51,11 +51,15 @@ if (!process.env.ENCRYPTION_KEY_BASE64) {
 }
 
 // OAuth2 provider configuration for integration tests
-process.env.OAUTH2_PROVIDER_URL = process.env.OAUTH2_PROVIDER_URL ?? 'https://mock-oauth.test';
-process.env.OAUTH2_CLIENT_ID = process.env.OAUTH2_CLIENT_ID ?? 'chioma-test-client';
-process.env.OAUTH2_CLIENT_SECRET = process.env.OAUTH2_CLIENT_SECRET ?? 'chioma-test-secret';
+process.env.OAUTH2_PROVIDER_URL =
+  process.env.OAUTH2_PROVIDER_URL ?? 'https://mock-oauth.test';
+process.env.OAUTH2_CLIENT_ID =
+  process.env.OAUTH2_CLIENT_ID ?? 'chioma-test-client';
+process.env.OAUTH2_CLIENT_SECRET =
+  process.env.OAUTH2_CLIENT_SECRET ?? 'chioma-test-secret';
 process.env.OAUTH2_REDIRECT_URI =
-  process.env.OAUTH2_REDIRECT_URI ?? 'http://localhost:3001/auth/oauth/callback';
+  process.env.OAUTH2_REDIRECT_URI ??
+  'http://localhost:3001/auth/oauth/callback';
 
 // Use PostgreSQL for E2E tests
 // The GitHub Actions workflow provides a PostgreSQL service

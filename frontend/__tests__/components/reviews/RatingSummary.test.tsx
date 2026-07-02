@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { RatingSummary, type RatingStats } from '@/components/reviews/RatingSummary';
+import {
+  RatingSummary,
+  type RatingStats,
+} from '@/components/reviews/RatingSummary';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

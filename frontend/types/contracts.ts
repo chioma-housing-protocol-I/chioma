@@ -1,5 +1,8 @@
 export type ContractStage =
-  'DRAFTED' | 'TENANT_SIGNED' | 'LANDLORD_SIGNED' | 'DEPOSIT_LOCKED';
+  | 'DRAFTED'
+  | 'TENANT_SIGNED'
+  | 'LANDLORD_SIGNED'
+  | 'DEPOSIT_LOCKED';
 
 export type ContractStatus = 'ACTIVE' | 'PENDING' | 'EXPIRED';
 

@@ -97,13 +97,14 @@ export default function PropertyListingForm() {
       nextStep(); // Move to success step
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Failed to create listing. Please try again.';
+        err instanceof Error
+          ? err.message
+          : 'Failed to create listing. Please try again.';
       setUploadError(message);
     }
   };
 
-  const isSubmitting =
-    createProperty.isPending || uploadImage.isPending;
+  const isSubmitting = createProperty.isPending || uploadImage.isPending;
 
   const renderStep = () => {
     switch (step) {
@@ -376,8 +377,9 @@ export default function PropertyListingForm() {
                 Listing Created!
               </h2>
               <p className="text-blue-200/50 max-w-sm mx-auto">
-                Your property listing has been successfully submitted as a draft.
-                Publish it from your dashboard to make it visible to tenants.
+                Your property listing has been successfully submitted as a
+                draft. Publish it from your dashboard to make it visible to
+                tenants.
               </p>
             </div>
             <button

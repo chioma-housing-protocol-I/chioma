@@ -190,21 +190,28 @@ export default function PropertyListing() {
                       : 'Property Type'}
                   </button>
                   <div className="absolute top-full left-0 mt-2 min-w-[180px] bg-slate-900 border border-white/10 rounded-xl p-2 hidden group-hover:block z-50 shadow-2xl">
-                    {['', 'apartment', 'house', 'commercial', 'land', 'other'].map(
-                      (t) => (
-                        <div
-                          key={t}
-                          onClick={() => setSelectedType(t)}
-                          className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
-                            selectedType === t
-                              ? 'bg-blue-600 text-white'
-                              : 'text-blue-100/80 hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          {t === '' ? 'All Types' : t.charAt(0).toUpperCase() + t.slice(1)}
-                        </div>
-                      ),
-                    )}
+                    {[
+                      '',
+                      'apartment',
+                      'house',
+                      'commercial',
+                      'land',
+                      'other',
+                    ].map((t) => (
+                      <div
+                        key={t}
+                        onClick={() => setSelectedType(t)}
+                        className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
+                          selectedType === t
+                            ? 'bg-blue-600 text-white'
+                            : 'text-blue-100/80 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {t === ''
+                          ? 'All Types'
+                          : t.charAt(0).toUpperCase() + t.slice(1)}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -239,7 +246,10 @@ export default function PropertyListing() {
 
               {/* View & Actions */}
               <div className="flex items-center gap-3">
-                <div className="flex items-center p-1 glass-dark rounded-xl border border-white/5 shadow-inner" data-testid="view-toggle">
+                <div
+                  className="flex items-center p-1 glass-dark rounded-xl border border-white/5 shadow-inner"
+                  data-testid="view-toggle"
+                >
                   <button
                     onClick={() => {
                       setViewMode('list');
@@ -329,7 +339,9 @@ export default function PropertyListing() {
                   >
                     <p className="text-red-400 font-medium">
                       Failed to load listings.{' '}
-                      {error instanceof Error ? error.message : 'Please try again.'}
+                      {error instanceof Error
+                        ? error.message
+                        : 'Please try again.'}
                     </p>
                   </div>
                 )}
@@ -339,29 +351,27 @@ export default function PropertyListing() {
                   className="grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
                   data-testid="property-grid"
                 >
-                  {isLoading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
-                      <PropertyCardSkeleton key={i} />
-                    ))
-                  ) : allProperties.length > 0 ? (
-                    allProperties.map((property) => (
-                      <PropertyCard
-                        key={property.id}
-                        property={toPropertyCardShape(property)}
-                      />
-                    ))
-                  ) : (
-                    !isError && (
-                      <div
-                        className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed"
-                        data-testid="empty-state"
-                      >
-                        <div className="text-blue-200/30 text-lg font-medium">
-                          No properties match your current filters
-                        </div>
-                      </div>
-                    )
-                  )}
+                  {isLoading
+                    ? Array.from({ length: 8 }).map((_, i) => (
+                        <PropertyCardSkeleton key={i} />
+                      ))
+                    : allProperties.length > 0
+                      ? allProperties.map((property) => (
+                          <PropertyCard
+                            key={property.id}
+                            property={toPropertyCardShape(property)}
+                          />
+                        ))
+                      : !isError && (
+                          <div
+                            className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed"
+                            data-testid="empty-state"
+                          >
+                            <div className="text-blue-200/30 text-lg font-medium">
+                              No properties match your current filters
+                            </div>
+                          </div>
+                        )}
 
                   {/* Skeleton rows while fetching next page */}
                   {isFetchingNextPage &&

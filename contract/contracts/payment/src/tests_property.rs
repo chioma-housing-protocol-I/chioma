@@ -23,7 +23,10 @@ proptest! {
         prop_assert_eq!(
             landlord + agent,
             amount,
-            "landlord={landlord} + agent={agent} != amount={amount}"
+            "landlord={} + agent={} != amount={}",
+            landlord,
+            agent,
+            amount
         );
     }
 
@@ -117,7 +120,9 @@ proptest! {
         prop_assert_eq!(
             rent,
             base_rent,
-            "None escalation: rent={rent} must equal base_rent={base_rent}"
+            "None escalation: rent={} must equal base_rent={}",
+            rent,
+            base_rent
         );
     }
 

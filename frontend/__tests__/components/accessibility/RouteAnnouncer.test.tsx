@@ -68,9 +68,9 @@ describe('RouteAnnouncer', () => {
     await act(async () => {
       vi.advanceTimersByTime(60);
     });
-    expect(
-      document.querySelector('.sr-only')?.textContent,
-    ).toBe('Navigated to Property Search');
+    expect(document.querySelector('.sr-only')?.textContent).toBe(
+      'Navigated to Property Search',
+    );
   });
 
   it('falls back to "Page loaded" when document.title is empty', async () => {
@@ -79,9 +79,9 @@ describe('RouteAnnouncer', () => {
     await act(async () => {
       vi.advanceTimersByTime(60);
     });
-    expect(
-      document.querySelector('.sr-only')?.textContent,
-    ).toBe('Navigated to Page loaded');
+    expect(document.querySelector('.sr-only')?.textContent).toBe(
+      'Navigated to Page loaded',
+    );
   });
 
   it('does not announce before the 60ms timeout fires', async () => {

@@ -79,7 +79,7 @@ export default function GuestFavoritesPage() {
                     <p>${property.price.toLocaleString()} /mo</p>
                     <p>
                       {property.bedrooms} beds · {property.bathrooms} baths ·{' '}
-                      {property.squareFeet.toLocaleString()} sqft
+                      {property.squareFeet?.toLocaleString()} sqft
                     </p>
                   </div>
                 ) : (

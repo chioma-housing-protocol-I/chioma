@@ -165,7 +165,7 @@ class CircuitBreaker {
     this.successCount++;
 
     if (this.state === 'HALF_OPEN') {
-      const threshold = Math.ceil(this.windowSize * this.successThreshold);
+      const threshold = Math.max(1, Math.ceil(this.successThreshold));
       if (this.successCount >= threshold) {
         this.close();
       }
@@ -183,7 +183,7 @@ class CircuitBreaker {
 
     if (this.state === 'CLOSED') {
       const threshold = Math.ceil(this.windowSize * this.failureThreshold);
-      if (this.failureCount >= threshold) {
+      if (this.failureCount > threshold) {
         this.open();
       }
     } else if (this.state === 'HALF_OPEN') {

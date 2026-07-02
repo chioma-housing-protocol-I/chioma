@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ReviewForm, type ReviewFormData } from '@/components/reviews/ReviewForm';
+import {
+  ReviewForm,
+  type ReviewFormData,
+} from '@/components/reviews/ReviewForm';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -33,7 +36,8 @@ function getStarButton(n: number) {
 describe('ReviewForm', () => {
   // Spy stored separately so we can assert against it while props use typed wrapper
   let onSubmitSpy = vi.fn();
-  const onSubmit = async (data: ReviewFormData) => onSubmitSpy(data) as Promise<void>;
+  const onSubmit = async (data: ReviewFormData) =>
+    onSubmitSpy(data) as Promise<void>;
 
   beforeEach(() => {
     onSubmitSpy = vi.fn().mockResolvedValue(undefined);
@@ -60,7 +64,9 @@ describe('ReviewForm', () => {
 
   it('shows rating validation error when submitting without a rating', async () => {
     render(<ReviewForm onSubmit={onSubmit} />);
-    const form = screen.getByRole('button', { name: /mint nft rating/i }).closest('form')!;
+    const form = screen
+      .getByRole('button', { name: /mint nft rating/i })
+      .closest('form')!;
     // Manually fire submit even though button is disabled
     fireEvent.submit(form);
     await waitFor(() => {
@@ -88,9 +94,7 @@ describe('ReviewForm', () => {
     fireEvent.change(getCommentTextarea(), {
       target: { value: 'a'.repeat(501) },
     });
-    fireEvent.submit(
-      getSubmitButton().closest('form')!,
-    );
+    fireEvent.submit(getSubmitButton().closest('form')!);
     await waitFor(() => {
       expect(
         screen.getByText('Review cannot exceed 500 characters'),
@@ -128,7 +132,9 @@ describe('ReviewForm', () => {
   });
 
   it('disables the submit button when isSubmitting is true', () => {
-    const { container } = render(<ReviewForm onSubmit={onSubmit} isSubmitting />);
+    const { container } = render(
+      <ReviewForm onSubmit={onSubmit} isSubmitting />,
+    );
     // When isSubmitting, the button renders a spinner icon instead of text
     const submitBtn = container.querySelector('button[type="submit"]');
     expect(submitBtn).not.toBeNull();

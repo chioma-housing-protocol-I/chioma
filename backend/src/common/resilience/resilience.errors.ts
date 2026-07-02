@@ -58,21 +58,6 @@ export class ExternalCallTimeoutError extends BaseAppError {
       { operationContext, timeoutMs },
     );
     this.operationContext = operationContext;
-  public readonly serviceContext: string;
-  public readonly callContext: string;
-  public readonly timeoutMs: number;
-
-  constructor(serviceContext: string, timeoutMs: number) {
-    super(
-      ErrorCode.EXTERNAL_SERVICE_TIMEOUT,
-      HttpStatus.REQUEST_TIMEOUT,
-      `External call "${serviceContext}" timed out after ${timeoutMs} ms`,
-      true,
-      { serviceContext, timeoutMs },
-    );
-    this.callContext = context;
-    this.serviceContext = serviceContext;
-    this.callContext = serviceContext;
     this.timeoutMs = timeoutMs;
   }
 }

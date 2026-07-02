@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import * as nock from 'nock';
-import { OAuth2ClientService } from '../oauth2-client.service';
-import { OAuth2Provider } from '../oauth2.types';
+import { OAuth2ClientService } from './oauth2-client.service';
+import { OAuth2Provider } from './oauth2.types';
 
 describe('OAuth2ClientService', () => {
   let service: OAuth2ClientService;
@@ -50,14 +50,12 @@ describe('OAuth2ClientService', () => {
   });
 
   it('exchanges authorization code for tokens', async () => {
-    nock(baseUrl)
-      .post('/oauth/token')
-      .reply(200, {
-        access_token: 'access-123',
-        refresh_token: 'refresh-123',
-        token_type: 'Bearer',
-        expires_in: 3600,
-      });
+    nock(baseUrl).post('/oauth/token').reply(200, {
+      access_token: 'access-123',
+      refresh_token: 'refresh-123',
+      token_type: 'Bearer',
+      expires_in: 3600,
+    });
 
     const tokens = await service.exchangeAuthorizationCode(
       OAuth2Provider.GOOGLE,

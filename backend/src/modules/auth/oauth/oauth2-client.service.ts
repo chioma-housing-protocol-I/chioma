@@ -104,10 +104,7 @@ export class OAuth2ClientService {
     };
   }
 
-  async revokeToken(
-    provider: OAuth2Provider,
-    token: string,
-  ): Promise<void> {
+  async revokeToken(provider: OAuth2Provider, token: string): Promise<void> {
     const config = this.getProviderConfig(provider);
     await this.http.post(
       `${config.baseUrl}/oauth/revoke`,
@@ -121,7 +118,8 @@ export class OAuth2ClientService {
       this.configService.get<string>('OAUTH2_PROVIDER_URL') ??
       'https://mock-oauth.test';
     const clientId =
-      this.configService.get<string>('OAUTH2_CLIENT_ID') ?? 'chioma-test-client';
+      this.configService.get<string>('OAUTH2_CLIENT_ID') ??
+      'chioma-test-client';
     const clientSecret =
       this.configService.get<string>('OAUTH2_CLIENT_SECRET') ??
       'chioma-test-secret';
