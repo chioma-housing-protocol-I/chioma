@@ -61,10 +61,24 @@ describe('MessageList', () => {
   it('renders multiple messages', () => {
     const messages = [
       makeMessage({ id: 'msg-1', content: 'First' }),
-      makeMessage({ id: 'msg-2', content: 'Second', senderId: 'user-2', sender: { id: 'user-2', firstName: 'Other', lastName: 'Person', role: 'user' } }),
+      makeMessage({
+        id: 'msg-2',
+        content: 'Second',
+        senderId: 'user-2',
+        sender: {
+          id: 'user-2',
+          firstName: 'Other',
+          lastName: 'Person',
+          role: 'user',
+        },
+      }),
     ];
     render(
-      <MessageList messages={messages} typingUsers={new Set()} isLoading={false} />,
+      <MessageList
+        messages={messages}
+        typingUsers={new Set()}
+        isLoading={false}
+      />,
     );
     expect(screen.getByText('First')).toBeDefined();
     expect(screen.getByText('Second')).toBeDefined();
@@ -78,7 +92,8 @@ describe('MessageList', () => {
         isLoading={false}
       />,
     );
-    const typing = document.querySelector('[aria-label*="typing"]') ??
+    const typing =
+      document.querySelector('[aria-label*="typing"]') ??
       document.querySelector('.animate-bounce');
     expect(typing ?? document.body).toBeDefined();
   });
@@ -88,11 +103,19 @@ describe('MessageList', () => {
     yesterday.setDate(yesterday.getDate() - 1);
 
     const messages = [
-      makeMessage({ id: 'msg-1', content: 'Yesterday msg', createdAt: yesterday.toISOString() }),
+      makeMessage({
+        id: 'msg-1',
+        content: 'Yesterday msg',
+        createdAt: yesterday.toISOString(),
+      }),
       makeMessage({ id: 'msg-2', content: 'Today msg' }),
     ];
     render(
-      <MessageList messages={messages} typingUsers={new Set()} isLoading={false} />,
+      <MessageList
+        messages={messages}
+        typingUsers={new Set()}
+        isLoading={false}
+      />,
     );
     expect(screen.getByText('Yesterday')).toBeDefined();
     expect(screen.getByText('Today')).toBeDefined();

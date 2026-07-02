@@ -5,41 +5,69 @@
  * Issue: #1248
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import React from 'react';
 
 // ── Socket.io mock ─────────────────────────────────────────────────────────
-const mockSocket = {
-  on: vi.fn(),
-  off: vi.fn(),
-  emit: vi.fn(),
-  disconnect: vi.fn(),
-};
+const { mockSocket, socketHandlers, simulateConnect } = vi.hoisted(() => {
+  const handlers: Record<string, (...args: any[]) => void> = {};
+  return {
+    socketHandlers: handlers,
+    mockSocket: {
+      on: vi.fn((event: string, cb: (...args: any[]) => void) => {
+        handlers[event] = cb;
+      }),
+      off: vi.fn(),
+      emit: vi.fn(),
+      disconnect: vi.fn(),
+    },
+    simulateConnect: () => handlers['connect']?.(),
+  };
+});
 vi.mock('socket.io-client', () => ({ io: vi.fn(() => mockSocket) }));
 
 // ── apiClient mock ─────────────────────────────────────────────────────────
-const mockGet = vi.fn();
-const mockPatch = vi.fn();
-const mockPost = vi.fn();
+const { mockGet, mockPatch, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPatch: vi.fn(),
+  mockPost: vi.fn(),
+}));
 vi.mock('@/lib/api-client', () => ({
   apiClient: { get: mockGet, patch: mockPatch, post: mockPost },
 }));
 
 // ── Auth store mock ────────────────────────────────────────────────────────
-vi.mock('@/store/authStore', () => ({
-  useAuthStore: vi.fn(() => ({
+// Stable object reference across renders, matching real Zustand selector
+// behavior — a fresh literal per call would retrigger effects keyed on `user`.
+const { mockAuthState } = vi.hoisted(() => ({
+  mockAuthState: {
     user: { id: 'user-1', firstName: 'Alice', lastName: 'Doe', role: 'user' },
     accessToken: 'tok-123',
-  })),
+  },
+}));
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: vi.fn(() => mockAuthState),
 }));
 
 // ── React Query mock ───────────────────────────────────────────────────────
-const mockUseQuery = vi.fn(() => ({ data: [] }));
-vi.mock('@tanstack/react-query', () => ({ useQuery: (...args: unknown[]) => mockUseQuery(...args) }));
+const { mockUseQuery } = vi.hoisted(() => ({
+  mockUseQuery: vi.fn(() => ({ data: [] })),
+}));
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: (...args: unknown[]) => mockUseQuery(...args),
+}));
 
 // ── Next.js mocks ──────────────────────────────────────────────────────────
 vi.mock('next/navigation', () => ({ usePathname: vi.fn(() => '/messages') }));
-vi.mock('@/lib/query/keys', () => ({ queryKeys: { notifications: { all: ['notif'] } } }));
+vi.mock('@/lib/query/keys', () => ({
+  queryKeys: { notifications: { all: ['notif'] } },
+}));
 
 // ── Component imports ──────────────────────────────────────────────────────
 import { MessagingHub } from '@/components/messaging/MessagingHub';
@@ -48,8 +76,32 @@ const BOB_ROOM = {
   id: 'room-1',
   name: null,
   participants: [
-    { id: 'p1', userId: 'user-1', roomId: 'room-1', joinedAt: '', user: { id: 'user-1', firstName: 'Alice', lastName: 'Doe', email: '', role: 'user' as const } },
-    { id: 'p2', userId: 'user-2', roomId: 'room-1', joinedAt: '', user: { id: 'user-2', firstName: 'Bob', lastName: 'Smith', email: '', role: 'user' as const } },
+    {
+      id: 'p1',
+      userId: 'user-1',
+      roomId: 'room-1',
+      joinedAt: '',
+      user: {
+        id: 'user-1',
+        firstName: 'Alice',
+        lastName: 'Doe',
+        email: '',
+        role: 'user' as const,
+      },
+    },
+    {
+      id: 'p2',
+      userId: 'user-2',
+      roomId: 'room-1',
+      joinedAt: '',
+      user: {
+        id: 'user-2',
+        firstName: 'Bob',
+        lastName: 'Smith',
+        email: '',
+        role: 'user' as const,
+      },
+    },
   ],
   messages: [],
   createdAt: new Date().toISOString(),
@@ -60,7 +112,7 @@ const BOB_ROOM = {
 describe('[E2E] Messaging / chat flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSocket.on.mockImplementation(() => mockSocket);
+    for (const key of Object.keys(socketHandlers)) delete socketHandlers[key];
     mockGet.mockResolvedValue({ data: [BOB_ROOM] });
     mockPatch.mockResolvedValue({ data: {} });
   });
@@ -91,7 +143,23 @@ describe('[E2E] Messaging / chat flow', () => {
   it('selecting a room fetches messages', async () => {
     mockGet
       .mockResolvedValueOnce({ data: [BOB_ROOM] }) // rooms
-      .mockResolvedValueOnce({ data: [{ id: 'msg-1', content: 'Hey!', senderId: 'user-2', roomId: 'room-1', createdAt: new Date().toISOString(), sender: { id: 'user-2', firstName: 'Bob', lastName: 'Smith', role: 'user' } }] }); // messages
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'msg-1',
+            content: 'Hey!',
+            senderId: 'user-2',
+            roomId: 'room-1',
+            createdAt: new Date().toISOString(),
+            sender: {
+              id: 'user-2',
+              firstName: 'Bob',
+              lastName: 'Smith',
+              role: 'user',
+            },
+          },
+        ],
+      }); // messages
 
     render(<MessagingHub />);
     await waitFor(() => screen.queryByText('Bob Smith'));
@@ -103,6 +171,10 @@ describe('[E2E] Messaging / chat flow', () => {
   });
 
   it('marks room as read after selection', async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: [BOB_ROOM] }) // rooms
+      .mockResolvedValueOnce({ data: [] }); // messages
+
     render(<MessagingHub />);
     await waitFor(() => screen.queryByText('Bob Smith'));
     fireEvent.click(screen.getByText('Bob Smith'));
@@ -117,11 +189,14 @@ describe('[E2E] Messaging / chat flow', () => {
       .mockResolvedValueOnce({ data: [] });
 
     render(<MessagingHub />);
+    act(() => simulateConnect());
     await waitFor(() => screen.queryByText('Bob Smith'));
     fireEvent.click(screen.getByText('Bob Smith'));
 
     await waitFor(() => screen.getByRole('textbox'));
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello Bob' } });
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Hello Bob' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
     expect(mockSocket.emit).toHaveBeenCalledWith(
@@ -136,6 +211,7 @@ describe('[E2E] Messaging / chat flow', () => {
       .mockResolvedValueOnce({ data: [] });
 
     render(<MessagingHub />);
+    act(() => simulateConnect());
     await waitFor(() => screen.queryByText('Bob Smith'));
     fireEvent.click(screen.getByText('Bob Smith'));
 

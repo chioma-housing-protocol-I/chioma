@@ -9,13 +9,17 @@ import React from 'react';
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockUseQuery = vi.fn();
-vi.mock('@tanstack/react-query', () => ({ useQuery: (...args: unknown[]) => mockUseQuery(...args) }));
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: (...args: unknown[]) => mockUseQuery(...args),
+}));
 
 const mockPathname = vi.fn(() => '/dashboard');
 vi.mock('next/navigation', () => ({ usePathname: () => mockPathname() }));
 
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn() } }));
-vi.mock('@/lib/query/keys', () => ({ queryKeys: { notifications: { all: ['notifications'] } } }));
+vi.mock('@/lib/query/keys', () => ({
+  queryKeys: { notifications: { all: ['notifications'] } },
+}));
 
 import { useMessagingUnreadCount } from '@/components/messaging/useMessagingUnreadCount';
 

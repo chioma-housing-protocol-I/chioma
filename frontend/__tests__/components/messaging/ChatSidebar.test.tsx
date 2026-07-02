@@ -23,14 +23,26 @@ const makeRoom = (overrides: Partial<ChatRoom> = {}): ChatRoom => ({
       userId: 'user-1',
       roomId: 'room-1',
       joinedAt: new Date().toISOString(),
-      user: { id: 'user-1', firstName: 'Alice', lastName: 'Doe', email: 'alice@test.com', role: 'user' },
+      user: {
+        id: 'user-1',
+        firstName: 'Alice',
+        lastName: 'Doe',
+        email: 'alice@test.com',
+        role: 'user',
+      },
     },
     {
       id: 'part-2',
       userId: 'user-2',
       roomId: 'room-1',
       joinedAt: new Date().toISOString(),
-      user: { id: 'user-2', firstName: 'Bob', lastName: 'Smith', email: 'bob@test.com', role: 'user' },
+      user: {
+        id: 'user-2',
+        firstName: 'Bob',
+        lastName: 'Smith',
+        email: 'bob@test.com',
+        role: 'user',
+      },
     },
   ],
   messages: [],
@@ -97,10 +109,40 @@ describe('ChatSidebar', () => {
   });
 
   it('renders a list of rooms', () => {
-    const rooms = [makeRoom(), makeRoom({ id: 'room-2', participants: [
-      { id: 'p3', userId: 'user-1', roomId: 'room-2', joinedAt: new Date().toISOString(), user: { id: 'user-1', firstName: 'Alice', lastName: 'Doe', email: '', role: 'user' } },
-      { id: 'p4', userId: 'user-3', roomId: 'room-2', joinedAt: new Date().toISOString(), user: { id: 'user-3', firstName: 'Carol', lastName: 'Jones', email: '', role: 'user' } },
-    ] })];
+    const rooms = [
+      makeRoom(),
+      makeRoom({
+        id: 'room-2',
+        participants: [
+          {
+            id: 'p3',
+            userId: 'user-1',
+            roomId: 'room-2',
+            joinedAt: new Date().toISOString(),
+            user: {
+              id: 'user-1',
+              firstName: 'Alice',
+              lastName: 'Doe',
+              email: '',
+              role: 'user',
+            },
+          },
+          {
+            id: 'p4',
+            userId: 'user-3',
+            roomId: 'room-2',
+            joinedAt: new Date().toISOString(),
+            user: {
+              id: 'user-3',
+              firstName: 'Carol',
+              lastName: 'Jones',
+              email: '',
+              role: 'user',
+            },
+          },
+        ],
+      }),
+    ];
     render(
       <ChatSidebar
         rooms={rooms}
@@ -130,10 +172,37 @@ describe('ChatSidebar', () => {
   it('filters rooms by search query', () => {
     const rooms = [
       makeRoom(),
-      makeRoom({ id: 'room-2', participants: [
-        { id: 'p3', userId: 'user-1', roomId: 'room-2', joinedAt: new Date().toISOString(), user: { id: 'user-1', firstName: 'Alice', lastName: 'Doe', email: '', role: 'user' } },
-        { id: 'p4', userId: 'user-3', roomId: 'room-2', joinedAt: new Date().toISOString(), user: { id: 'user-3', firstName: 'Zach', lastName: 'Morris', email: '', role: 'user' } },
-      ] }),
+      makeRoom({
+        id: 'room-2',
+        participants: [
+          {
+            id: 'p3',
+            userId: 'user-1',
+            roomId: 'room-2',
+            joinedAt: new Date().toISOString(),
+            user: {
+              id: 'user-1',
+              firstName: 'Alice',
+              lastName: 'Doe',
+              email: '',
+              role: 'user',
+            },
+          },
+          {
+            id: 'p4',
+            userId: 'user-3',
+            roomId: 'room-2',
+            joinedAt: new Date().toISOString(),
+            user: {
+              id: 'user-3',
+              firstName: 'Zach',
+              lastName: 'Morris',
+              email: '',
+              role: 'user',
+            },
+          },
+        ],
+      }),
     ];
     render(
       <ChatSidebar
@@ -143,7 +212,9 @@ describe('ChatSidebar', () => {
         onSelectRoom={onSelectRoom}
       />,
     );
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Zach' } });
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'Zach' },
+    });
     expect(screen.getByText('Zach Morris')).toBeDefined();
     expect(screen.queryByText('Bob Smith')).toBeNull();
   });

@@ -21,7 +21,7 @@ vi.mock('next/navigation', () => ({
 
 // ── Component imports ──────────────────────────────────────────────────────
 import MaintenanceRequestForm from '@/components/maintenance/MaintenanceRequestForm';
-import { TenantMaintenanceTracker } from '@/components/maintenance/TenantMaintenanceTracker';
+import TenantMaintenanceTracker from '@/components/maintenance/TenantMaintenanceTracker';
 
 describe('[E2E] Maintenance request flow', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -39,7 +39,10 @@ describe('[E2E] Maintenance request flow', () => {
       render(
         <MaintenanceRequestForm isSubmitting={false} onSubmit={vi.fn()} />,
       );
-      expect(screen.getByLabelText(/target property/i) ?? screen.getAllByRole('combobox')[0]).toBeDefined();
+      expect(
+        screen.getByLabelText(/target property/i) ??
+          screen.getAllByRole('combobox')[0],
+      ).toBeDefined();
       expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByRole('textbox')).toBeDefined();
     });
@@ -58,8 +61,10 @@ describe('[E2E] Maintenance request flow', () => {
       );
 
       const textarea = screen.getByRole('textbox');
-      fireEvent.change(textarea, { target: { value: 'Leaking faucet in kitchen' } });
-      fireEvent.submit(screen.getByRole('form') ?? textarea.closest('form')!);
+      fireEvent.change(textarea, {
+        target: { value: 'Leaking faucet in kitchen' },
+      });
+      fireEvent.submit(screen.queryByRole('form') ?? textarea.closest('form')!);
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledWith(
@@ -89,7 +94,9 @@ describe('[E2E] Maintenance request flow', () => {
         <MaintenanceRequestForm isSubmitting={false} onSubmit={onSubmit} />,
       );
 
-      const file = new File(['image data'], 'damage.jpg', { type: 'image/jpeg' });
+      const file = new File(['image data'], 'damage.jpg', {
+        type: 'image/jpeg',
+      });
       const fileInput = container.querySelector(
         'input[type="file"]',
       ) as HTMLInputElement;
@@ -109,43 +116,63 @@ describe('[E2E] Maintenance request flow', () => {
   });
 
   // ── TenantMaintenanceTracker ─────────────────────────────────────────────
+  // The tracker shows a loading skeleton for ~400ms (simulated fetch) before
+  // rendering real content, so assertions must wait for that to resolve.
   describe('Status tracking and filtering', () => {
-    it('renders TenantMaintenanceTracker with request list', () => {
+    it('renders TenantMaintenanceTracker with request list', async () => {
       render(<TenantMaintenanceTracker />);
-      expect(screen.getByText(/maintenance/i)).toBeDefined();
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /maintenance requests/i }),
+        ).toBeDefined();
+      });
     });
 
-    it('shows filter/sort controls', () => {
+    it('shows filter/sort controls', async () => {
       render(<TenantMaintenanceTracker />);
-      const filterBtn = screen.queryByRole('button', { name: /filter/i });
-      expect(filterBtn ?? screen.getByText(/filter/i)).toBeDefined();
+      await waitFor(() => {
+        expect(
+          screen.getByRole('combobox', { name: /filter by status/i }),
+        ).toBeDefined();
+      });
     });
 
-    it('renders existing mock requests', () => {
+    it('renders existing mock requests', async () => {
       render(<TenantMaintenanceTracker />);
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /maintenance requests/i }),
+        ).toBeDefined();
+      });
       // The component uses mock data; at least one entry should be visible.
-      const cards = document.querySelectorAll('[data-testid="maintenance-card"]');
+      const cards = document.querySelectorAll(
+        '[data-testid="maintenance-card"]',
+      );
       expect(cards.length >= 0).toBe(true); // At least renders without crash
     });
 
     it('opens the submission form on New Request click', async () => {
       render(<TenantMaintenanceTracker />);
-      const newBtn = screen.queryByRole('button', { name: /new request/i });
-      if (newBtn) {
-        fireEvent.click(newBtn);
-        await waitFor(() => {
-          expect(screen.queryByText(/submit maintenance request/i)).not.toBeNull();
-        });
-      }
+      const newBtn = await screen.findByRole('button', {
+        name: /new request/i,
+      });
+      fireEvent.click(newBtn);
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/submit maintenance request/i),
+        ).not.toBeNull();
+      });
     });
 
-    it('shows status labels for requests', () => {
+    it('shows status labels for requests', async () => {
       render(<TenantMaintenanceTracker />);
-      const statusLabels = ['Open', 'In Progress', 'Completed', 'Closed'];
-      const anyVisible = statusLabels.some((s) =>
-        screen.queryByText(new RegExp(s, 'i')),
-      );
-      expect(anyVisible).toBe(true);
+      const statusLabels = ['Open', 'In Progress', 'Resolved'];
+      await waitFor(() => {
+        const anyVisible = statusLabels.some(
+          (s) => screen.queryAllByText(new RegExp(s, 'i')).length > 0,
+        );
+        expect(anyVisible).toBe(true);
+      });
     });
   });
 });

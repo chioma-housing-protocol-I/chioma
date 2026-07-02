@@ -238,8 +238,9 @@ export default function TenantMaintenanceTracker({
 
       {/* Filter */}
       <div className="flex items-center gap-2">
-        <Filter size={14} className="text-blue-300/40" />
+        <Filter size={14} className="text-blue-300/40" aria-hidden="true" />
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) =>
             setStatusFilter(

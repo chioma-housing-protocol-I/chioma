@@ -14,7 +14,9 @@ describe('UserAvatar', () => {
   });
 
   it('has an accessible aria-label with full name', () => {
-    const { container } = render(<UserAvatar firstName="Alice" lastName="Smith" />);
+    const { container } = render(
+      <UserAvatar firstName="Alice" lastName="Smith" />,
+    );
     const el = container.querySelector('[aria-label="Alice Smith"]');
     expect(el).not.toBeNull();
   });
@@ -29,7 +31,9 @@ describe('UserAvatar', () => {
   });
 
   it('applies user role colour class by default', () => {
-    const { container } = render(<UserAvatar firstName="Reg" lastName="User" />);
+    const { container } = render(
+      <UserAvatar firstName="Reg" lastName="User" />,
+    );
     const el = container.firstElementChild;
     expect(el?.className).toContain('blue');
   });

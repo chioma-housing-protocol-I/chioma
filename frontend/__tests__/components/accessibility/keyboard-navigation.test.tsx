@@ -16,18 +16,32 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: { src: string; alt: string; [k: string]: unknown }) =>
-    React.createElement('img', { src, alt, ...props }),
+  default: ({
+    src,
+    alt,
+    ...props
+  }: {
+    src: string;
+    alt: string;
+    [k: string]: unknown;
+  }) => React.createElement('img', { src, alt, ...props }),
 }));
 
 vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+  },
 }));
 
 vi.mock('@/store/authStore', () => ({
   useAuth: vi.fn(() => ({ isAuthenticated: false, loading: false })),
   useAuthStore: vi.fn(() => ({
-    user: { id: 'u1', firstName: 'Test', lastName: 'User', role: 'user' },
+    // id matches the "self" participant in the ChatSidebar test room below,
+    // so getOtherParticipant() correctly resolves to the other participant.
+    user: { id: 'user-1', firstName: 'Test', lastName: 'User', role: 'user' },
     accessToken: null,
   })),
 }));
@@ -42,9 +56,10 @@ import { ChatSidebar } from '@/components/messaging/ChatSidebar';
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function queryFocusableElements(container: HTMLElement) {
-  return container.querySelectorAll<HTMLElement>(
-    'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  const candidates = container.querySelectorAll<HTMLElement>(
+    'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]',
   );
+  return Array.from(candidates).filter((el) => el.tabIndex !== -1);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -89,12 +104,17 @@ describe('[A11Y] Keyboard navigation and focus management', () => {
       expect(focusable.length).toBeGreaterThan(0);
     });
 
-    it('textarea is the first focusable element in the input area', () => {
+    it('tab order matches the visual left-to-right layout: attach, textarea', () => {
+      // Send button is disabled (and excluded from tab order) until there's
+      // content to send.
       const { container } = render(
         <MessageInput onSend={vi.fn()} onTyping={vi.fn()} />,
       );
       const focusable = queryFocusableElements(container as HTMLElement);
-      expect(focusable[0].tagName.toLowerCase()).toBe('textarea');
+      expect(focusable.map((el) => el.tagName.toLowerCase())).toEqual([
+        'button',
+        'textarea',
+      ]);
     });
 
     it('Enter key activates send without needing mouse', () => {
@@ -148,8 +168,32 @@ describe('[A11Y] Keyboard navigation and focus management', () => {
         id: 'r1',
         name: null,
         participants: [
-          { id: 'p1', userId: 'user-1', roomId: 'r1', joinedAt: '', user: { id: 'user-1', firstName: 'Test', lastName: 'User', email: '', role: 'user' as const } },
-          { id: 'p2', userId: 'user-2', roomId: 'r1', joinedAt: '', user: { id: 'user-2', firstName: 'Keyboard', lastName: 'User', email: '', role: 'user' as const } },
+          {
+            id: 'p1',
+            userId: 'user-1',
+            roomId: 'r1',
+            joinedAt: '',
+            user: {
+              id: 'user-1',
+              firstName: 'Test',
+              lastName: 'User',
+              email: '',
+              role: 'user' as const,
+            },
+          },
+          {
+            id: 'p2',
+            userId: 'user-2',
+            roomId: 'r1',
+            joinedAt: '',
+            user: {
+              id: 'user-2',
+              firstName: 'Keyboard',
+              lastName: 'User',
+              email: '',
+              role: 'user' as const,
+            },
+          },
         ],
         messages: [],
         createdAt: new Date().toISOString(),
