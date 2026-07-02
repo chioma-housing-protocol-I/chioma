@@ -347,7 +347,8 @@ export async function getMetadata<T>(key: string): Promise<T | null> {
 
     request.onsuccess = () => {
       const result = request.result as
-        { key: string; value: T; timestamp: number } | undefined;
+        | { key: string; value: T; timestamp: number }
+        | undefined;
       resolve(result ? result.value : null);
     };
     request.onerror = () => reject(request.error);

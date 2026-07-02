@@ -12,6 +12,7 @@ import {
   withRetry,
   globalCircuitBreaker,
 } from '@/lib/errors';
+import { cancellationManager, isCancellationError } from '@/lib/cancellation';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
 import { getTimeoutForEndpoint } from '@/lib/config/timeouts';
@@ -164,12 +165,26 @@ class ApiClient {
             });
           }
 
+          if (cancellationKey) {
+            const cancelSignal =
+              cancellationManager.createSignal(cancellationKey).signal;
+            if (cancelSignal.aborted) controller.abort();
+            cancelSignal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
+
           try {
             const response = await fetch(url, {
               method,
               headers: requestHeaders,
-              body: body ? JSON.stringify(body) : undefined,
+              body: isFormData
+                ? (body as FormData)
+                : body
+                  ? JSON.stringify(body)
+                  : undefined,
               cache,
+              credentials,
               signal: controller.signal,
             });
 
@@ -187,7 +202,6 @@ class ApiClient {
               const baseError = createHttpError(response.status, {
                 source: 'lib/api-client.ts',
                 action: `${method} ${endpoint}`,
-                metadata: { responseBody: errorBody },
               });
 
               throw new AppError({
@@ -210,6 +224,14 @@ class ApiClient {
                   : undefined,
             };
           } catch (error) {
+            if (isCancellationError(error)) {
+              clearTimeout(timeoutId);
+              throw cancellationManager.classifyCancellationError(
+                error,
+                'lib/api-client.ts',
+              );
+            }
+
             const appError = classifyUnknownError(error, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
@@ -224,7 +246,9 @@ class ApiClient {
         {
           maxAttempts: retries,
           endpoint: `${method}:${endpoint}`,
-          shouldRetry: (error: any) => {
+          shouldRetry: (error) => {
+            if (isCancellationError(error)) return false;
+
             const appError = classifyUnknownError(error, {
               source: 'lib/api-client.ts',
               action: `retry-check ${method} ${endpoint}`,

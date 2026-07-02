@@ -118,6 +118,7 @@ export {
   useSearchSuggest,
 } from './use-properties';
 export type { PropertySearchParams } from './use-properties';
+export {
   useLandlordDocuments,
   useSharedDocuments,
   useDocument,

@@ -18,6 +18,8 @@ import { MockOAuth2Provider } from '../providers/mock-oauth2.provider';
 import { OAuth2Provider } from '../oauth2.types';
 
 describe('OAuth2 Integration (issue #1120)', () => {
+  jest.setTimeout(30000);
+
   let oauth2Service: OAuth2Service;
   let oauth2Client: OAuth2ClientService;
   let mockProvider: MockOAuth2Provider;
@@ -53,16 +55,21 @@ describe('OAuth2 Integration (issue #1120)', () => {
   const oauthLinks: OAuthAccount[] = [];
 
   const mockUserRepository = {
-    findOne: jest.fn(async ({ where }: { where: { email?: string; id?: string } }) => {
-      if (where.email) {
-        return users.find((u) => u.email === where.email) ?? null;
-      }
-      if (where.id) {
-        return users.find((u) => u.id === where.id) ?? null;
-      }
-      return null;
-    }),
-    create: jest.fn((data: Partial<User>) => ({ id: `user-${Date.now()}`, ...data })),
+    findOne: jest.fn(
+      async ({ where }: { where: { email?: string; id?: string } }) => {
+        if (where.email) {
+          return users.find((u) => u.email === where.email) ?? null;
+        }
+        if (where.id) {
+          return users.find((u) => u.id === where.id) ?? null;
+        }
+        return null;
+      },
+    ),
+    create: jest.fn((data: Partial<User>) => ({
+      id: `user-${Date.now()}`,
+      ...data,
+    })),
     save: jest.fn(async (user: User) => {
       const idx = users.findIndex((u) => u.id === user.id);
       if (idx >= 0) {
@@ -94,7 +101,8 @@ describe('OAuth2 Integration (issue #1120)', () => {
         return (
           oauthLinks.find((link) => {
             if (where.userId && link.userId !== where.userId) return false;
-            if (where.provider && link.provider !== where.provider) return false;
+            if (where.provider && link.provider !== where.provider)
+              return false;
             if (
               where.providerUserId &&
               link.providerUserId !== where.providerUserId
@@ -126,7 +134,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
   };
 
   const mockAuthService = {
-    generateTokens: jest.fn((userId: string, email: string, role: string) => ({
+    generateTokens: jest.fn((userId: string) => ({
       accessToken: `jwt-access-${userId}`,
       refreshToken: `jwt-refresh-${userId}`,
     })),
@@ -156,7 +164,11 @@ describe('OAuth2 Integration (issue #1120)', () => {
     }),
   };
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    users.length = 0;
+    oauthLinks.length = 0;
+    jest.clearAllMocks();
+
     mockProvider = new MockOAuth2Provider(providerConfig);
     mockProvider.registerHttpMocks();
 
@@ -182,15 +194,8 @@ describe('OAuth2 Integration (issue #1120)', () => {
     oauth2Client = module.get<OAuth2ClientService>(OAuth2ClientService);
   });
 
-  afterAll(() => {
+  afterEach(() => {
     mockProvider.cleanup();
-  });
-
-  beforeEach(() => {
-    users.length = 0;
-    oauthLinks.length = 0;
-    jest.clearAllMocks();
-    mockProvider.registerHttpMocks();
   });
 
   describe('Authorization code flow', () => {

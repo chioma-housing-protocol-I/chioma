@@ -28,11 +28,16 @@ describe('MockOAuth2Provider', () => {
   });
 
   it('builds authorization URLs with state and redirect URI', () => {
-    const url = provider.buildAuthorizationUrl('state-123', config.defaultRedirectUri);
+    const url = provider.buildAuthorizationUrl(
+      'state-123',
+      config.defaultRedirectUri,
+    );
 
     expect(url).toContain('/oauth/authorize');
     expect(url).toContain('state=state-123');
-    expect(url).toContain(`redirect_uri=${encodeURIComponent(config.defaultRedirectUri)}`);
+    expect(url).toContain(
+      `redirect_uri=${encodeURIComponent(config.defaultRedirectUri)}`,
+    );
   });
 
   it('tracks revoked tokens', () => {

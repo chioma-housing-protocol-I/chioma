@@ -4,7 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 
 export type MaintenanceStatus =
-  'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
 export type MaintenancePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export interface MaintenanceFilters {

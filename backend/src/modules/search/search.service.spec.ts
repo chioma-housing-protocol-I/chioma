@@ -596,10 +596,9 @@ describe('SearchService', () => {
 
       await service.searchUsers({ isActive: false });
 
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'user.isActive = :isActive',
-        { isActive: false },
-      );
+      expect(qb.andWhere).toHaveBeenCalledWith('user.isActive = :isActive', {
+        isActive: false,
+      });
     });
 
     it('filters by kycVerified', async () => {
@@ -683,10 +682,9 @@ describe('SearchService', () => {
 
       await service.searchDocuments({ status: AgreementStatus.ACTIVE });
 
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'agreement.status = :status',
-        { status: AgreementStatus.ACTIVE },
-      );
+      expect(qb.andWhere).toHaveBeenCalledWith('agreement.status = :status', {
+        status: AgreementStatus.ACTIVE,
+      });
     });
 
     it('filters by propertyId', async () => {
@@ -705,10 +703,9 @@ describe('SearchService', () => {
 
       await service.searchDocuments({ userId: 'user-1' });
 
-      expect(qb.andWhere).toHaveBeenCalledWith(
-        'agreement.userId = :userId',
-        { userId: 'user-1' },
-      );
+      expect(qb.andWhere).toHaveBeenCalledWith('agreement.userId = :userId', {
+        userId: 'user-1',
+      });
     });
 
     it('filters by minRent and maxRent', async () => {

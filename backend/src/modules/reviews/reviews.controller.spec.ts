@@ -158,7 +158,11 @@ describe('ReviewsController', () => {
 
   it('delegates reputation lookup to the service', async () => {
     const reputation = {
-      asHost: { averageRating: 4.5, reviewCount: 2, wouldHostAgainPercentage: 50 },
+      asHost: {
+        averageRating: 4.5,
+        reviewCount: 2,
+        wouldHostAgainPercentage: 50,
+      },
       asGuest: { averageRating: 4, reviewCount: 1 },
     };
     service.getReputation.mockResolvedValue(reputation as never);
@@ -174,9 +178,13 @@ describe('ReviewsController', () => {
     service.updateReview.mockResolvedValue(updated as never);
 
     await expect(
-      controller.updateReview('review-1', { comment: 'Updated' }, {
-        user: { id: 'host-1' },
-      }),
+      controller.updateReview(
+        'review-1',
+        { comment: 'Updated' },
+        {
+          user: { id: 'host-1' },
+        },
+      ),
     ).resolves.toEqual(updated);
     expect(service.updateReview).toHaveBeenCalledWith(
       'review-1',

@@ -387,8 +387,16 @@ export class SearchService {
 
     const sortBy = filters.sortBy || 'createdAt';
     const sortOrder = filters.sortOrder || 'desc';
-    const allowedSortFields = ['createdAt', 'firstName', 'lastName', 'email', 'role'];
-    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const allowedSortFields = [
+      'createdAt',
+      'firstName',
+      'lastName',
+      'email',
+      'role',
+    ];
+    const safeSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'createdAt';
     qb.orderBy(`user.${safeSortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC');
 
     const [items, total] = await qb.getManyAndCount();
@@ -396,9 +404,7 @@ export class SearchService {
     return { items, total, page, limit };
   }
 
-  private buildUserQuery(
-    filters: UserSearchFilters,
-  ): SelectQueryBuilder<User> {
+  private buildUserQuery(filters: UserSearchFilters): SelectQueryBuilder<User> {
     const qb = this.userRepo.createQueryBuilder('user');
 
     if (filters.query) {
@@ -452,8 +458,13 @@ export class SearchService {
       'monthlyRent',
       'status',
     ];
-    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
-    qb.orderBy(`agreement.${safeSortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+    const safeSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'createdAt';
+    qb.orderBy(
+      `agreement.${safeSortBy}`,
+      sortOrder.toUpperCase() as 'ASC' | 'DESC',
+    );
 
     const [items, total] = await qb.getManyAndCount();
 
