@@ -65,9 +65,8 @@ export function useUserActivityAnalytics(days = 30) {
   return useQuery({
     queryKey: queryKeys.analytics.userActivity(normalizedDays),
     queryFn: async () => {
-      const { data } = await analyticsApi.getUserActivityAnalytics(
-        normalizedDays,
-      );
+      const { data } =
+        await analyticsApi.getUserActivityAnalytics(normalizedDays);
       return data;
     },
     refetchInterval: LIVE_REFRESH_MS,

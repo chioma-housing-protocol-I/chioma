@@ -23,11 +23,16 @@ describe('analyticsApi', () => {
         completedPayments: 25,
       };
 
-      vi.mocked(apiClient.get).mockResolvedValue({ data: mockData, status: 200 });
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: mockData,
+        status: 200,
+      });
 
       const result = await analyticsApi.getDashboardMetrics();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/analytics/dashboard/metrics');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/analytics/dashboard/metrics',
+      );
       expect(result.data).toEqual(mockData);
     });
   });
@@ -54,11 +59,16 @@ describe('analyticsApi', () => {
         },
       };
 
-      vi.mocked(apiClient.get).mockResolvedValue({ data: mockData, status: 200 });
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: mockData,
+        status: 200,
+      });
 
       const result = await analyticsApi.getPaymentAnalytics(30);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/analytics/payment/analytics?days=30');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/analytics/payment/analytics?days=30',
+      );
       expect(result.data).toEqual(mockData);
     });
   });
@@ -81,11 +91,16 @@ describe('analyticsApi', () => {
         },
       };
 
-      vi.mocked(apiClient.get).mockResolvedValue({ data: mockData, status: 200 });
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: mockData,
+        status: 200,
+      });
 
       const result = await analyticsApi.getUserActivityAnalytics(30);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/analytics/user/activity?days=30');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/analytics/user/activity?days=30',
+      );
       expect(result.data).toEqual(mockData);
     });
   });
@@ -107,11 +122,17 @@ describe('analyticsApi', () => {
         data: {},
       };
 
-      vi.mocked(apiClient.post).mockResolvedValue({ data: mockData, status: 200 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: mockData,
+        status: 200,
+      });
 
       const result = await analyticsApi.generateReport(mockDto);
 
-      expect(apiClient.post).toHaveBeenCalledWith('/analytics/reports/generate', mockDto);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/analytics/reports/generate',
+        mockDto,
+      );
       expect(result.data).toEqual(mockData);
     });
   });
@@ -133,7 +154,10 @@ describe('analyticsApi', () => {
         data: {},
       };
 
-      vi.mocked(apiClient.post).mockResolvedValue({ data: mockData, status: 200 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: mockData,
+        status: 200,
+      });
 
       const result = await analyticsApi.exportAnalytics(mockDto);
 

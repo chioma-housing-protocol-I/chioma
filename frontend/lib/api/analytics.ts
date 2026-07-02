@@ -32,8 +32,16 @@ export interface PaymentAnalytics {
   };
   trends: {
     paymentTrend: Array<{ date: string; count: number; amount: number }>;
-    statusDistribution: Array<{ status: string; count: number; percentage: number }>;
-    methodDistribution: Array<{ method: string; count: number; percentage: number }>;
+    statusDistribution: Array<{
+      status: string;
+      count: number;
+      percentage: number;
+    }>;
+    methodDistribution: Array<{
+      method: string;
+      count: number;
+      percentage: number;
+    }>;
   };
 }
 
@@ -52,8 +60,16 @@ export interface UserActivityAnalytics {
   };
   trends: {
     activityTrend: Array<{ date: string; count: number }>;
-    actionDistribution: Array<{ action: string; count: number; percentage: number }>;
-    entityTypeDistribution: Array<{ entityType: string; count: number; percentage: number }>;
+    actionDistribution: Array<{
+      action: string;
+      count: number;
+      percentage: number;
+    }>;
+    entityTypeDistribution: Array<{
+      entityType: string;
+      count: number;
+      percentage: number;
+    }>;
   };
 }
 
@@ -130,10 +146,14 @@ export const analyticsApi = {
     apiClient.get<DashboardMetrics>('/analytics/dashboard/metrics'),
 
   getPaymentAnalytics: (days: number) =>
-    apiClient.get<PaymentAnalytics>(`/analytics/payment/analytics?days=${days}`),
+    apiClient.get<PaymentAnalytics>(
+      `/analytics/payment/analytics?days=${days}`,
+    ),
 
   getUserActivityAnalytics: (days: number) =>
-    apiClient.get<UserActivityAnalytics>(`/analytics/user/activity?days=${days}`),
+    apiClient.get<UserActivityAnalytics>(
+      `/analytics/user/activity?days=${days}`,
+    ),
 
   generateReport: (dto: GenerateReportDto) =>
     apiClient.post<GeneratedReport>('/analytics/reports/generate', dto),
