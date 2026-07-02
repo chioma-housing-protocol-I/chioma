@@ -105,7 +105,9 @@ export class OAuth2Service {
     this.storeProviderTokens(user.id, provider, tokenResponse);
     this.pendingStates.delete(state);
 
-    this.logger.log(`OAuth2 login completed for user ${user.id} via ${provider}`);
+    this.logger.log(
+      `OAuth2 login completed for user ${user.id} via ${provider}`,
+    );
 
     return {
       user: this.authService.sanitizeUser(user) as OAuth2AuthResult['user'],
@@ -131,7 +133,9 @@ export class OAuth2Service {
   ): Promise<OAuth2LinkResult> {
     const pending = this.validateState(state, provider);
     if (pending.userId && pending.userId !== userId) {
-      throw new UnauthorizedException('OAuth state does not match the current user');
+      throw new UnauthorizedException(
+        'OAuth state does not match the current user',
+      );
     }
 
     const resolvedRedirectUri = redirectUri ?? pending.redirectUri;
@@ -270,7 +274,7 @@ export class OAuth2Service {
         role: UserRole.USER,
         emailVerified: true,
         isActive: true,
-        password: null,
+        password: undefined,
       });
       user = await this.userRepository.save(user);
       this.logger.log(`Created user via OAuth2: ${user.id}`);

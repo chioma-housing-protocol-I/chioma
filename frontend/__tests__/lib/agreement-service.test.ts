@@ -33,7 +33,10 @@ describe('agreementService', () => {
 
   describe('create', () => {
     it('should POST to /agreements with the payload', async () => {
-      apiClient.post.mockResolvedValue({ data: mockAgreement, status: 201 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: mockAgreement,
+        status: 201,
+      });
 
       const payload = {
         propertyId: 'prop-1',
@@ -56,7 +59,7 @@ describe('agreementService', () => {
 
   describe('getAll', () => {
     it('should GET /agreements with query string from filters', async () => {
-      apiClient.get.mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValue({
         data: { data: [mockAgreement], meta: { total: 1 } },
         status: 200,
       });
@@ -74,7 +77,7 @@ describe('agreementService', () => {
     });
 
     it('should omit filters that are undefined', async () => {
-      apiClient.get.mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValue({
         data: { data: [], meta: { total: 0 } },
         status: 200,
       });
@@ -87,7 +90,10 @@ describe('agreementService', () => {
 
   describe('getById', () => {
     it('should GET /agreements/:id', async () => {
-      apiClient.get.mockResolvedValue({ data: mockAgreement, status: 200 });
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: mockAgreement,
+        status: 200,
+      });
 
       const result = await agreementService.getById('agr-1');
 
@@ -98,7 +104,10 @@ describe('agreementService', () => {
 
   describe('update', () => {
     it('should PATCH /agreements/:id with the payload', async () => {
-      apiClient.patch.mockResolvedValue({ data: mockAgreement, status: 200 });
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: mockAgreement,
+        status: 200,
+      });
 
       const result = await agreementService.update('agr-1', {
         monthlyRent: 1400,
@@ -113,7 +122,7 @@ describe('agreementService', () => {
 
   describe('terminate', () => {
     it('should DELETE /agreements/:id with body payload', async () => {
-      apiClient.delete.mockResolvedValue({
+      vi.mocked(apiClient.delete).mockResolvedValue({
         data: { ...mockAgreement, status: 'terminated' },
         status: 200,
       });
@@ -132,7 +141,10 @@ describe('agreementService', () => {
   describe('renew', () => {
     it('should POST /agreements/:id/renew with the payload', async () => {
       const renewed = { ...mockAgreement, endDate: '2028-01-01T00:00:00.000Z' };
-      apiClient.post.mockResolvedValue({ data: renewed, status: 200 });
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: renewed,
+        status: 200,
+      });
 
       const result = await agreementService.renew('agr-1', {
         extendMonths: 12,
@@ -148,7 +160,10 @@ describe('agreementService', () => {
   describe('sign', () => {
     it('should PATCH /agreements/:id with status=signed and signature', async () => {
       const signed = { ...mockAgreement, status: 'signed' };
-      apiClient.patch.mockResolvedValue({ data: signed, status: 200 });
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: signed,
+        status: 200,
+      });
 
       const result = await agreementService.sign('agr-1', {
         signature: 'data:image/png;base64,sig123',
@@ -196,7 +211,7 @@ describe('agreementService', () => {
 
   describe('getFees', () => {
     it('should GET /agreements/:id/fees', async () => {
-      apiClient.get.mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValue({
         data: {
           monthlyRent: 1200,
           earlyTerminationFee: 1200,
@@ -213,7 +228,7 @@ describe('agreementService', () => {
     });
 
     it('should include daysPastDue when provided', async () => {
-      apiClient.get.mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValue({
         data: {
           monthlyRent: 1200,
           earlyTerminationFee: 1200,
@@ -233,7 +248,7 @@ describe('agreementService', () => {
 
   describe('recordPayment', () => {
     it('should POST /agreements/:id/pay', async () => {
-      apiClient.post.mockResolvedValue({ data: null, status: 201 });
+      vi.mocked(apiClient.post).mockResolvedValue({ data: null, status: 201 });
 
       await agreementService.recordPayment('agr-1', {
         amount: 1200,
@@ -249,7 +264,7 @@ describe('agreementService', () => {
 
   describe('getPayments', () => {
     it('should GET /agreements/:id/payments', async () => {
-      apiClient.get.mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValue({
         data: [{ id: 'pmt-1', amount: 1200 }],
         status: 200,
       });

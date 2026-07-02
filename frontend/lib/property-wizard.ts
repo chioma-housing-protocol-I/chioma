@@ -12,7 +12,12 @@ export const WIZARD_STEPS = [
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export type PropertyTypeOption =
-  'apartment' | 'house' | 'room' | 'commercial' | 'land' | 'other';
+  | 'apartment'
+  | 'house'
+  | 'room'
+  | 'commercial'
+  | 'land'
+  | 'other';
 
 export interface BasicInfo {
   title: string;

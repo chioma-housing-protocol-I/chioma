@@ -33,7 +33,10 @@ export interface AdminDisputeEvidenceItem {
 }
 
 export type AdminResolutionDecision =
-  'approve' | 'reject' | 'partial' | 'withdrawn';
+  | 'approve'
+  | 'reject'
+  | 'partial'
+  | 'withdrawn';
 
 export interface AdminDisputeResolutionEntry {
   id: string;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { queryKeys } from '@/lib/query/keys';
+import type { DocumentRecord } from '@/lib/query/hooks/use-landlord-documents';
 
 describe('document query keys', () => {
   it('all is a stable tuple', () => {
@@ -52,9 +53,6 @@ describe('document hooks API mapping', () => {
       updatedAt: '2026-01-15T10:00:00.000Z',
     };
 
-    const { DocumentRecord } =
-      await import('@/lib/query/hooks/use-landlord-documents');
-
     const mapped: DocumentRecord = {
       id: apiResponse.id,
       name: apiResponse.name,
@@ -101,9 +99,6 @@ describe('document hooks API mapping', () => {
       createdAt: '2026-02-01T10:00:00.000Z',
       updatedAt: '2026-02-01T10:00:00.000Z',
     };
-
-    const { DocumentRecord } =
-      await import('@/lib/query/hooks/use-landlord-documents');
 
     const mapped: DocumentRecord = {
       id: apiResponse.id,

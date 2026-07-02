@@ -41,7 +41,11 @@ interface DisputeData {
   description: string;
   priority: 'low' | 'medium' | 'high';
   category:
-    'payment' | 'property_damage' | 'lease_violation' | 'maintenance' | 'other';
+    | 'payment'
+    | 'property_damage'
+    | 'lease_violation'
+    | 'maintenance'
+    | 'other';
   evidence?: File[];
 }
 

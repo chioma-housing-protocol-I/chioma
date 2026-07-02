@@ -117,7 +117,11 @@ describe('ReviewList', () => {
     render(
       <ReviewList
         reviews={[]}
-        stats={{ average: 0, total: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } }}
+        stats={{
+          average: 0,
+          total: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        }}
         onSubmitReview={onSubmitReview}
       />,
     );

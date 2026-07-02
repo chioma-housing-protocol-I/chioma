@@ -177,6 +177,8 @@ export const queryKeys = {
       [...queryKeys.search.all, 'documents', filters] as const,
     suggest: (query: string) =>
       [...queryKeys.search.all, 'suggest', query] as const,
+  },
+
   documents: {
     all: ['documents'] as const,
     lists: () => [...queryKeys.documents.all, 'list'] as const,

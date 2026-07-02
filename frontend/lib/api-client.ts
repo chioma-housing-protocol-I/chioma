@@ -12,6 +12,7 @@ import {
   withRetry,
   globalCircuitBreaker,
 } from '@/lib/errors';
+import { cancellationManager, isCancellationError } from '@/lib/cancellation';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
 
@@ -157,12 +158,26 @@ class ApiClient {
             });
           }
 
+          if (cancellationKey) {
+            const cancelSignal =
+              cancellationManager.createSignal(cancellationKey).signal;
+            if (cancelSignal.aborted) controller.abort();
+            cancelSignal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
+
           try {
             const response = await fetch(url, {
               method,
               headers: requestHeaders,
-              body: body ? JSON.stringify(body) : undefined,
+              body: isFormData
+                ? (body as FormData)
+                : body
+                  ? JSON.stringify(body)
+                  : undefined,
               cache,
+              credentials,
               signal: controller.signal,
             });
 
@@ -180,7 +195,6 @@ class ApiClient {
               const baseError = createHttpError(response.status, {
                 source: 'lib/api-client.ts',
                 action: `${method} ${endpoint}`,
-                metadata: { responseBody: errorBody },
               });
 
               throw new AppError({
@@ -203,54 +217,15 @@ class ApiClient {
                   : undefined,
             };
           } catch (error) {
+            if (isCancellationError(error)) {
+              clearTimeout(timeoutId);
+              throw cancellationManager.classifyCancellationError(
+                error,
+                'lib/api-client.ts',
+              );
+            }
+
             const appError = classifyUnknownError(error, {
-    return withRetry(
-      async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        if (signal) {
-          if (signal.aborted) controller.abort();
-          signal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
-
-        if (cancellationKey) {
-          const cancelSignal =
-            cancellationManager.createSignal(cancellationKey).signal;
-          if (cancelSignal.aborted) controller.abort();
-          cancelSignal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
-
-        try {
-          const response = await fetch(url, {
-            method,
-            headers: requestHeaders,
-            body: isFormData
-              ? (body as FormData)
-              : body
-                ? JSON.stringify(body)
-                : undefined,
-            cache,
-            credentials,
-            signal: controller.signal,
-          });
-
-          globalRateLimitTracker.updateFromHeaders(
-            response.headers,
-            response.status,
-          );
-
-          if (!response.ok) {
-            this.clearAuthAndRedirectIfNeeded(response.status);
-
-            const errorBody = await response
-              .json()
-              .catch(() => ({ message: response.statusText }));
-            const baseError = createHttpError(response.status, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
             });
@@ -263,8 +238,9 @@ class ApiClient {
         },
         {
           maxAttempts: retries,
-          endpoint: `${method}:${endpoint}`,
           shouldRetry: (error) => {
+            if (isCancellationError(error)) return false;
+
             const appError = classifyUnknownError(error, {
               source: 'lib/api-client.ts',
               action: `retry-check ${method} ${endpoint}`,
@@ -275,50 +251,6 @@ class ApiClient {
             if (typeof appError.status === 'number' && appError.status >= 500) {
               return true;
             }
-          const data = await this.parseResponse<T>(response);
-          return {
-            data,
-            status: response.status,
-            message:
-              data && typeof data === 'object' && 'message' in (data as object)
-                ? String((data as { message?: string }).message)
-                : undefined,
-          };
-        } catch (error) {
-          if (isCancellationError(error)) {
-            clearTimeout(timeoutId);
-            throw cancellationManager.classifyCancellationError(
-              error,
-              'lib/api-client.ts',
-            );
-          }
-
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `${method} ${endpoint}`,
-          });
-
-          logError(appError, appError.context);
-          throw appError;
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      {
-        maxAttempts: retries,
-        shouldRetry: (error) => {
-          if (isCancellationError(error)) return false;
-
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `retry-check ${method} ${endpoint}`,
-          });
-
-          if (appError.code === 'NETWORK_RATE_LIMIT') return false;
-          if (appError.category === 'network') return true;
-          if (typeof appError.status === 'number' && appError.status >= 500) {
-            return true;
-          }
 
             return false;
           },

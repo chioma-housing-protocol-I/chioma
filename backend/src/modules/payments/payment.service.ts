@@ -90,6 +90,10 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
+    if (!(dto.amount > 0)) {
+      throw new BadRequestException('Payment amount must be greater than 0');
+    }
+
     const idempotencyKey = getIdempotencyKey(dto);
 
     if (idempotencyKey) {
@@ -204,11 +208,17 @@ export class PaymentService {
     ensureUserId(userId);
 
     // Wrap in a transaction with a pessimistic write lock to prevent
-    // concurrent refunds from double-spending the same payment.
+    // concurrent refunds from double-spending the same payment. SQLite has
+    // no row-level locking support (used by in-memory test databases), so
+    // the lock is skipped there rather than failing the query outright.
+    const supportsRowLocking = this.dataSource.options?.type !== 'sqlite';
+
     return this.dataSource.transaction(async (manager) => {
       const payment = await manager.findOne(Payment, {
         where: { id: paymentId, userId },
-        lock: { mode: 'pessimistic_write' },
+        ...(supportsRowLocking
+          ? { lock: { mode: 'pessimistic_write' as const } }
+          : {}),
       });
 
       if (!payment) {

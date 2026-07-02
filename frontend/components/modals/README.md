@@ -441,7 +441,9 @@ case 'myCustomModal':
 
 ```tsx
 openModal('myCustomModal', {
-  myData: {/* ... */},
+  myData: {
+    /* ... */
+  },
   onSubmit: async (data) => {
     // Handle submission
   },
