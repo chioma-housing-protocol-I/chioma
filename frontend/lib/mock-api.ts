@@ -268,6 +268,9 @@ const dynamicPatterns: Array<{
             createdAt: '2026-03-25T10:10:00Z',
           },
         ],
+      },
+    }),
+  },
   {
     pattern: /^\/payments\/(.+)\/receipt$/,
     handler: (match) => ({
@@ -367,4 +370,3 @@ export function shouldUseMockApi(): boolean {
   if (typeof process === 'undefined') return false;
   return process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
 }
-

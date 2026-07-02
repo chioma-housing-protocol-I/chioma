@@ -1,7 +1,10 @@
 'use client';
 
 export type LandlordNotificationType =
-  'payment' | 'maintenance' | 'tenant' | 'system';
+  | 'payment'
+  | 'maintenance'
+  | 'tenant'
+  | 'system';
 
 export type NotificationReadFilter = 'all' | 'read' | 'unread';
 export type NotificationSortOrder = 'newest' | 'oldest';

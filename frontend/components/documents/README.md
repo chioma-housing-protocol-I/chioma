@@ -164,7 +164,12 @@ import { DocumentPreview } from '@/components/documents';
 type DocumentType = 'pdf' | 'image' | 'docx' | 'xlsx' | 'txt';
 
 type DocumentCategory =
-  'lease' | 'identity' | 'payment' | 'maintenance' | 'inspection' | 'other';
+  | 'lease'
+  | 'identity'
+  | 'payment'
+  | 'maintenance'
+  | 'inspection'
+  | 'other';
 
 interface Document {
   id: string;

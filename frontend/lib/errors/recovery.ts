@@ -118,7 +118,9 @@ export async function withRetry<T>(
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const result = await operation();
+      const p = operation();
+      p.catch(() => {}); // prevent unhandled-rejection warnings when timers fire between creation and await
+      const result = await p;
       globalRetryMetrics.recordEvent({
         type: 'success',
         endpoint,

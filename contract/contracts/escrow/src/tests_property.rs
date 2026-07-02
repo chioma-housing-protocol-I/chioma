@@ -62,8 +62,14 @@ proptest! {
         if damage <= total {
             let landlord = damage;
             let tenant = total - damage;
-            prop_assert_eq!(landlord + tenant, total,
-                "landlord={landlord} + tenant={tenant} must equal total={total}");
+            prop_assert_eq!(
+                landlord + tenant,
+                total,
+                "landlord={} + tenant={} must equal total={}",
+                landlord,
+                tenant,
+                total
+            );
             prop_assert!(landlord >= 0);
             prop_assert!(tenant >= 0);
         }
@@ -101,8 +107,12 @@ proptest! {
         let beneficiary = amount * 90 / 100;
         let platform = amount * 5 / 100;
         let agent = amount - beneficiary - platform;
-        prop_assert_eq!(beneficiary + platform + agent, amount,
-            "splits must sum to amount={amount}");
+        prop_assert_eq!(
+            beneficiary + platform + agent,
+            amount,
+            "splits must sum to amount={}",
+            amount
+        );
         prop_assert!(beneficiary >= 0);
         prop_assert!(platform >= 0);
         prop_assert!(agent >= 0);

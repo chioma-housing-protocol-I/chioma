@@ -19,7 +19,9 @@ describe('Deposit calculations and helpers', () => {
   describe('readDepositDeductions', () => {
     it('returns empty array when deductions is missing or not an array', () => {
       expect(readDepositDeductions({ metadata: {} } as any)).toEqual([]);
-      expect(readDepositDeductions({ metadata: { deductions: 'not-array' } } as any)).toEqual([]);
+      expect(
+        readDepositDeductions({ metadata: { deductions: 'not-array' } } as any),
+      ).toEqual([]);
     });
 
     it('correctly maps and filters valid deductions', () => {
@@ -27,7 +29,13 @@ describe('Deposit calculations and helpers', () => {
         id: 'pay-1',
         metadata: {
           deductions: [
-            { id: 'd-1', label: 'Cleaning', amount: 150, reason: 'Dirty kitchen', createdAt: '2025-05-01' },
+            {
+              id: 'd-1',
+              label: 'Cleaning',
+              amount: 150,
+              reason: 'Dirty kitchen',
+              createdAt: '2025-05-01',
+            },
             { label: 'Repairs', amount: 250 }, // missing ID (will be auto-generated)
             { label: 'Free', amount: 0 }, // invalid amount (<= 0)
             { label: 'Invalid', amount: 'abc' }, // invalid amount (not a number)

@@ -89,18 +89,27 @@ function buildQueryString(params: PropertyListParams): string {
   if (params.city) qs.append('city', params.city);
   if (params.state) qs.append('state', params.state);
   if (params.country) qs.append('country', params.country);
-  if (params.minPrice !== undefined) qs.append('minPrice', String(params.minPrice));
-  if (params.maxPrice !== undefined) qs.append('maxPrice', String(params.maxPrice));
-  if (params.minBedrooms !== undefined) qs.append('minBedrooms', String(params.minBedrooms));
-  if (params.maxBedrooms !== undefined) qs.append('maxBedrooms', String(params.maxBedrooms));
-  if (params.minBathrooms !== undefined) qs.append('minBathrooms', String(params.minBathrooms));
-  if (params.maxBathrooms !== undefined) qs.append('maxBathrooms', String(params.maxBathrooms));
+  if (params.minPrice !== undefined)
+    qs.append('minPrice', String(params.minPrice));
+  if (params.maxPrice !== undefined)
+    qs.append('maxPrice', String(params.maxPrice));
+  if (params.minBedrooms !== undefined)
+    qs.append('minBedrooms', String(params.minBedrooms));
+  if (params.maxBedrooms !== undefined)
+    qs.append('maxBedrooms', String(params.maxBedrooms));
+  if (params.minBathrooms !== undefined)
+    qs.append('minBathrooms', String(params.minBathrooms));
+  if (params.maxBathrooms !== undefined)
+    qs.append('maxBathrooms', String(params.maxBathrooms));
   if (params.type) qs.append('type', params.type);
   if (params.status) qs.append('status', params.status);
   if (params.search) qs.append('search', params.search);
-  if (params.isFurnished !== undefined) qs.append('isFurnished', String(params.isFurnished));
-  if (params.hasParking !== undefined) qs.append('hasParking', String(params.hasParking));
-  if (params.petsAllowed !== undefined) qs.append('petsAllowed', String(params.petsAllowed));
+  if (params.isFurnished !== undefined)
+    qs.append('isFurnished', String(params.isFurnished));
+  if (params.hasParking !== undefined)
+    qs.append('hasParking', String(params.hasParking));
+  if (params.petsAllowed !== undefined)
+    qs.append('petsAllowed', String(params.petsAllowed));
   if (params.sortBy) qs.append('sortBy', params.sortBy);
   if (params.sortOrder) qs.append('sortOrder', params.sortOrder);
   const str = qs.toString();
@@ -213,9 +222,10 @@ export interface PropertySearchParams {
   limit?: string;
   sortBy?: string;
   sortOrder?: string;
+  [key: string]: string | undefined;
 }
 
-function buildSearchQueryString(params: Record<string, string | undefined>): string {
+function buildSearchQueryString(params: PropertySearchParams): string {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => {
     if (val !== undefined && val !== '' && val !== null) {

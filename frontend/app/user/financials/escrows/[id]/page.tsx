@@ -29,7 +29,8 @@ const fallbackImage =
 
 export default function EscrowDetailPage() {
   const params = useParams();
-  const id = typeof params?.id === 'string' ? decodeURIComponent(params.id) : '';
+  const id =
+    typeof params?.id === 'string' ? decodeURIComponent(params.id) : '';
 
   const { data: deposit, isLoading, error, refetch } = useDepositStatus(id);
   const { data: deductions = [] } = useDepositDeductions(id);
@@ -50,7 +51,9 @@ export default function EscrowDetailPage() {
       toast.success('Deposit payment submitted successfully');
       refetch();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit deposit payment');
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to submit deposit payment',
+      );
     }
   };
 
@@ -72,7 +75,9 @@ export default function EscrowDetailPage() {
       toast.success('Refund request submitted successfully');
       refetch();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit refund request');
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to submit refund request',
+      );
     }
   };
 
@@ -82,7 +87,9 @@ export default function EscrowDetailPage() {
       await downloadReceiptMutation.mutateAsync(id);
       toast.success('Receipt download started');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to download receipt');
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to download receipt',
+      );
     }
   };
 
@@ -107,9 +114,13 @@ export default function EscrowDetailPage() {
         </Link>
         <div className="rounded-3xl border border-rose-500/20 bg-rose-500/5 p-6 text-center space-y-4 max-w-lg mx-auto">
           <AlertTriangle className="mx-auto text-rose-400" size={40} />
-          <h2 className="text-lg font-bold text-white">Failed to Load Deposit</h2>
+          <h2 className="text-lg font-bold text-white">
+            Failed to Load Deposit
+          </h2>
           <p className="text-sm text-blue-200/60">
-            {error instanceof Error ? error.message : 'The requested deposit could not be found or loaded.'}
+            {error instanceof Error
+              ? error.message
+              : 'The requested deposit could not be found or loaded.'}
           </p>
         </div>
       </div>
@@ -120,12 +131,21 @@ export default function EscrowDetailPage() {
   const totalAmount = deposit.amount || 0;
   const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
   const refundedAmount = deposit.refundAmount || 0;
-  const netHeldAmount = Math.max(0, totalAmount - totalDeductions - refundedAmount);
+  const netHeldAmount = Math.max(
+    0,
+    totalAmount - totalDeductions - refundedAmount,
+  );
 
   const metadata = deposit.metadata || {};
-  const propertyName = deposit.agreement?.property?.title || String(metadata.description || 'Rental Property');
+  const propertyName =
+    deposit.agreement?.property?.title ||
+    String(metadata.description || 'Rental Property');
   const typeDisplay = String(metadata.type || 'Security Deposit');
-  const dateDisplay = deposit.createdAt ? new Date(deposit.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+  const dateDisplay = deposit.createdAt
+    ? new Date(deposit.createdAt).toLocaleDateString(undefined, {
+        dateStyle: 'medium',
+      })
+    : '—';
   const statusDisplay = deposit.status;
 
   return (
@@ -182,7 +202,9 @@ export default function EscrowDetailPage() {
                 Status
               </span>
             </div>
-            <p className="text-xl font-bold text-white capitalize">{statusDisplay}</p>
+            <p className="text-xl font-bold text-white capitalize">
+              {statusDisplay}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <div className="mb-3 flex items-center gap-2 text-blue-200/60">
@@ -213,20 +235,23 @@ export default function EscrowDetailPage() {
               </button>
             )}
 
-            {['completed', 'held', 'pending', 'partial_refund'].includes(statusDisplay.toLowerCase()) && refundedAmount < totalAmount && (
-              <button
-                onClick={handleRequestRefund}
-                disabled={requestRefundMutation.isPending}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-md transition-colors disabled:opacity-50 text-xs uppercase tracking-wider"
-              >
-                {requestRefundMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText size={16} />
-                )}
-                Request Refund
-              </button>
-            )}
+            {['completed', 'held', 'pending', 'partial_refund'].includes(
+              statusDisplay.toLowerCase(),
+            ) &&
+              refundedAmount < totalAmount && (
+                <button
+                  onClick={handleRequestRefund}
+                  disabled={requestRefundMutation.isPending}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-md transition-colors disabled:opacity-50 text-xs uppercase tracking-wider"
+                >
+                  {requestRefundMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileText size={16} />
+                  )}
+                  Request Refund
+                </button>
+              )}
 
             {statusDisplay === 'completed' && (
               <button
@@ -251,44 +276,69 @@ export default function EscrowDetailPage() {
 
         {/* Calculations Verification / Deductions Section */}
         <div className="border-t border-white/10 p-6 sm:p-8 space-y-6 bg-slate-950/20">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Calculation &amp; Verification Ledger</h3>
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Calculation &amp; Verification Ledger
+          </h3>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
               <div className="flex justify-between text-sm text-blue-200/60">
                 <span>Original Deposit Amount:</span>
-                <span className="font-bold text-white">${totalAmount.toLocaleString()} USDC</span>
+                <span className="font-bold text-white">
+                  ${totalAmount.toLocaleString()} USDC
+                </span>
               </div>
               <div className="flex justify-between text-sm text-blue-200/60">
                 <span>Deductions:</span>
-                <span className="font-bold text-rose-400">-${totalDeductions.toLocaleString()} USDC</span>
+                <span className="font-bold text-rose-400">
+                  -${totalDeductions.toLocaleString()} USDC
+                </span>
               </div>
               <div className="flex justify-between text-sm text-blue-200/60">
                 <span>Refunded Amount:</span>
-                <span className="font-bold text-rose-400">-${refundedAmount.toLocaleString()} USDC</span>
+                <span className="font-bold text-rose-400">
+                  -${refundedAmount.toLocaleString()} USDC
+                </span>
               </div>
               <div className="border-t border-white/10 pt-3 flex justify-between text-base font-bold text-white">
                 <span>Net Verified Held Balance:</span>
-                <span className="text-emerald-400">${netHeldAmount.toLocaleString()} USDC</span>
+                <span className="text-emerald-400">
+                  ${netHeldAmount.toLocaleString()} USDC
+                </span>
               </div>
             </div>
 
             <div className="space-y-4 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-blue-300/40 uppercase tracking-widest">Deductions Breakdown</h4>
+                <h4 className="text-xs font-bold text-blue-300/40 uppercase tracking-widest">
+                  Deductions Breakdown
+                </h4>
                 <ListFilter size={14} className="text-blue-300/40" />
               </div>
 
               {deductions.length === 0 ? (
-                <p className="text-xs text-blue-200/40 italic">No deductions applied to this security deposit.</p>
+                <p className="text-xs text-blue-200/40 italic">
+                  No deductions applied to this security deposit.
+                </p>
               ) : (
                 <div className="space-y-2 max-h-36 overflow-y-auto pr-2">
                   {deductions.map((deduction) => (
-                    <div key={deduction.id} className="flex justify-between text-xs py-1.5 border-b border-white/5">
+                    <div
+                      key={deduction.id}
+                      className="flex justify-between text-xs py-1.5 border-b border-white/5"
+                    >
                       <div className="flex flex-col">
-                        <span className="font-bold text-white">{deduction.label}</span>
-                        {deduction.reason && <span className="text-[10px] text-blue-200/40 mt-0.5">{deduction.reason}</span>}
+                        <span className="font-bold text-white">
+                          {deduction.label}
+                        </span>
+                        {deduction.reason && (
+                          <span className="text-[10px] text-blue-200/40 mt-0.5">
+                            {deduction.reason}
+                          </span>
+                        )}
                       </div>
-                      <span className="font-bold text-rose-400">-${deduction.amount.toLocaleString()} USDC</span>
+                      <span className="font-bold text-rose-400">
+                        -${deduction.amount.toLocaleString()} USDC
+                      </span>
                     </div>
                   ))}
                 </div>
