@@ -9,10 +9,18 @@ import {
   PropertyInquiry,
   PropertyInquiryStatus,
 } from '../inquiries/entities/property-inquiry.entity';
-import { Payment } from '../payments/entities/payment.entity';
+import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
-import { GenerateReportDto, ReportType, ReportFormat } from './dto/generate-report.dto';
-import { ExportAnalyticsDto, ExportType, ExportFormat } from './dto/export-analytics.dto';
+import {
+  GenerateReportDto,
+  ReportType,
+  ReportFormat,
+} from './dto/generate-report.dto';
+import {
+  ExportAnalyticsDto,
+  ExportType,
+  ExportFormat,
+} from './dto/export-analytics.dto';
 
 export interface CityAggregate {
   city: string;
@@ -311,11 +319,18 @@ export class AnalyticsService {
       ).length,
       totalInquiries: inquiries.length,
       totalViews: properties.reduce((sum, p) => sum + (p.viewCount || 0), 0),
-      totalFavorites: properties.reduce((sum, p) => sum + (p.favoriteCount || 0), 0),
+      totalFavorites: properties.reduce(
+        (sum, p) => sum + (p.favoriteCount || 0),
+        0,
+      ),
       totalPayments: payments.length,
       totalRevenue: payments.reduce((sum, p) => sum + Number(p.amount || 0), 0),
-      pendingPayments: payments.filter((p) => p.status === 'pending').length,
-      completedPayments: payments.filter((p) => p.status === 'completed').length,
+      pendingPayments: payments.filter(
+        (p) => p.status === PaymentStatus.PENDING,
+      ).length,
+      completedPayments: payments.filter(
+        (p) => p.status === PaymentStatus.COMPLETED,
+      ).length,
     };
   }
 
@@ -334,14 +349,24 @@ export class AnalyticsService {
       order: { createdAt: 'ASC' },
     });
 
-    const totalAmount = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    const completedPayments = payments.filter((p) => p.status === 'completed');
+    const totalAmount = payments.reduce(
+      (sum, p) => sum + Number(p.amount || 0),
+      0,
+    );
+    const completedPayments = payments.filter(
+      (p) => p.status === PaymentStatus.COMPLETED,
+    );
     const completedAmount = completedPayments.reduce(
       (sum, p) => sum + Number(p.amount || 0),
       0,
     );
 
-    const paymentTrend = this.buildPaymentTrend(payments, normalizedDays, startDate, endDate);
+    const paymentTrend = this.buildPaymentTrend(
+      payments,
+      normalizedDays,
+      startDate,
+      endDate,
+    );
     const statusDistribution = this.buildPaymentStatusDistribution(payments);
     const methodDistribution = this.buildPaymentMethodDistribution(payments);
 
@@ -357,10 +382,17 @@ export class AnalyticsService {
         totalAmount,
         completedPayments: completedPayments.length,
         completedAmount,
-        pendingPayments: payments.filter((p) => p.status === 'pending').length,
-        failedPayments: payments.filter((p) => p.status === 'failed').length,
+        pendingPayments: payments.filter(
+          (p) => p.status === PaymentStatus.PENDING,
+        ).length,
+        failedPayments: payments.filter(
+          (p) => p.status === PaymentStatus.FAILED,
+        ).length,
         averagePaymentAmount: this.safeDivide(totalAmount, payments.length),
-        completionRate: this.toPercent(completedPayments.length, payments.length),
+        completionRate: this.toPercent(
+          completedPayments.length,
+          payments.length,
+        ),
       },
       trends: {
         paymentTrend,
@@ -378,14 +410,19 @@ export class AnalyticsService {
 
     const activities = await this.auditLogRepository.find({
       where: {
-        userId,
-        createdAt: Between(startDate, endDate),
+        performed_by: userId,
+        performed_at: Between(startDate, endDate),
       },
-      select: ['id', 'action', 'entityType', 'createdAt'],
-      order: { createdAt: 'ASC' },
+      select: ['id', 'action', 'entity_type', 'performed_at'],
+      order: { performed_at: 'ASC' },
     });
 
-    const activityTrend = this.buildActivityTrend(activities, normalizedDays, startDate, endDate);
+    const activityTrend = this.buildActivityTrend(
+      activities,
+      normalizedDays,
+      startDate,
+      endDate,
+    );
     const actionDistribution = this.buildActionDistribution(activities);
     const entityTypeDistribution = this.buildEntityTypeDistribution(activities);
 
@@ -399,8 +436,11 @@ export class AnalyticsService {
       summary: {
         totalActivities: activities.length,
         uniqueActions: new Set(activities.map((a) => a.action)).size,
-        uniqueEntityTypes: new Set(activities.map((a) => a.entityType)).size,
-        averageActivitiesPerDay: this.safeDivide(activities.length, normalizedDays),
+        uniqueEntityTypes: new Set(activities.map((a) => a.entity_type)).size,
+        averageActivitiesPerDay: this.safeDivide(
+          activities.length,
+          normalizedDays,
+        ),
       },
       trends: {
         activityTrend,
@@ -542,7 +582,9 @@ export class AnalyticsService {
     }));
   }
 
-  private buildPaymentMethodDistribution(payments: Array<{ paymentMethod?: string }>) {
+  private buildPaymentMethodDistribution(
+    payments: Array<{ paymentMethod?: string }>,
+  ) {
     const counts = new Map<string, number>();
     payments.forEach((payment) => {
       const method = payment.paymentMethod || 'unknown';
@@ -557,7 +599,7 @@ export class AnalyticsService {
   }
 
   private buildActivityTrend(
-    activities: Array<{ createdAt: Date }>,
+    activities: Array<{ performed_at: Date }>,
     days: number,
     startDate: Date,
     endDate: Date,
@@ -572,15 +614,21 @@ export class AnalyticsService {
     }
 
     activities.forEach((activity) => {
-      if (activity.createdAt < startDate || activity.createdAt > endDate) {
+      if (
+        activity.performed_at < startDate ||
+        activity.performed_at > endDate
+      ) {
         return;
       }
 
-      const key = this.toDateKey(activity.createdAt);
+      const key = this.toDateKey(activity.performed_at);
       buckets.set(key, (buckets.get(key) ?? 0) + 1);
     });
 
-    return Array.from(buckets.entries()).map(([date, count]) => ({ date, count }));
+    return Array.from(buckets.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
   }
 
   private buildActionDistribution(activities: Array<{ action?: string }>) {
@@ -597,10 +645,12 @@ export class AnalyticsService {
     }));
   }
 
-  private buildEntityTypeDistribution(activities: Array<{ entityType?: string }>) {
+  private buildEntityTypeDistribution(
+    activities: Array<{ entity_type?: string }>,
+  ) {
     const counts = new Map<string, number>();
     activities.forEach((activity) => {
-      const entityType = activity.entityType || 'unknown';
+      const entityType = activity.entity_type || 'unknown';
       counts.set(entityType, (counts.get(entityType) ?? 0) + 1);
     });
 

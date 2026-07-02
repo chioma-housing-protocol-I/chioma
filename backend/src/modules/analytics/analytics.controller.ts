@@ -56,10 +56,7 @@ export class AnalyticsController {
     @CurrentUser() user: User,
     @Query() query: LandlordAnalyticsQueryDto,
   ) {
-    return this.analyticsService.getPaymentAnalytics(
-      user.id,
-      query.days ?? 30,
-    );
+    return this.analyticsService.getPaymentAnalytics(user.id, query.days ?? 30);
   }
 
   @Get('user/activity')
