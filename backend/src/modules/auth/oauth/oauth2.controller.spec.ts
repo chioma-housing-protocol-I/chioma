@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OAuth2Controller } from '../oauth2.controller';
-import { OAuth2Service } from '../oauth2.service';
-import { OAuth2Provider } from '../oauth2.types';
-import { User, UserRole } from '../../../users/entities/user.entity';
+import { OAuth2Controller } from './oauth2.controller';
+import { OAuth2Service } from './oauth2.service';
+import { OAuth2Provider } from './oauth2.types';
+import { User, UserRole } from '../../users/entities/user.entity';
 
 describe('OAuth2Controller', () => {
   let controller: OAuth2Controller;

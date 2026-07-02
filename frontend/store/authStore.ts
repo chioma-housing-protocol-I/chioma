@@ -231,7 +231,11 @@ export const useAuthStore = create<AuthStore>()(
         });
       },
 
-      setTokens: (accessToken: string, refreshToken: string | null, user: User) => {
+      setTokens: (
+        accessToken: string,
+        refreshToken: string | null,
+        user: User,
+      ) => {
         persistAuth(accessToken, refreshToken, user);
         set((state) => {
           state.user = user;
@@ -358,7 +362,11 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: async () => {
         try {
-          await apiClient.post<MessageResponse>('/auth/logout', {}, { retries: 0 });
+          await apiClient.post<MessageResponse>(
+            '/auth/logout',
+            {},
+            { retries: 0 },
+          );
         } catch {
           // Best-effort logout: always clear the local session.
         }

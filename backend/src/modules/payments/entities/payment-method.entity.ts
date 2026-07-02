@@ -36,7 +36,7 @@ export class PaymentMethod {
   isDefault: boolean;
 
   @Column({
-    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-json' : 'jsonb',
     nullable: true,
   })
   metadata: PaymentMethodMetadata | null;

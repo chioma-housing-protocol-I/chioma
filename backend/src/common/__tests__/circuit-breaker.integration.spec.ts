@@ -2,20 +2,7 @@ import { Logger } from '@nestjs/common';
 import {
   CircuitBreakerOpenError,
   CircuitBreakerService,
-  type CircuitBreakerMetrics,
 } from '../resilience/circuit-breaker.service';
-
-function deferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return { promise, resolve, reject };
-}
 
 describe('Circuit Breaker Integration', () => {
   let service: CircuitBreakerService;
@@ -266,7 +253,7 @@ describe('Circuit Breaker Integration', () => {
       ).rejects.toThrow('monitoring-failure');
 
       const snapshot = service.getMetrics();
-      const metrics = snapshot.notifications as CircuitBreakerMetrics;
+      const metrics = snapshot.notifications;
 
       expect(metrics).toMatchObject({
         state: 'CLOSED',
@@ -325,7 +312,7 @@ describe('Circuit Breaker Integration', () => {
 
       service.clear();
       expect(service.getMetricsForBreaker('search')).toBeNull();
-      expect(service.getMetrics()).toEqual([]);
+      expect(service.getMetrics()).toEqual({});
     });
   });
 });

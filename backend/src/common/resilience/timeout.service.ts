@@ -49,7 +49,10 @@ export class TimeoutService {
    * long-running `fn` promises that eventually settle do not keep the event
    * loop alive.
    */
-  async execute<T>(fn: () => Promise<T>, options: TimeoutOptions = {}): Promise<T> {
+  async execute<T>(
+    fn: () => Promise<T>,
+    options: TimeoutOptions = {},
+  ): Promise<T> {
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const context = options.context ?? 'external-call';
 

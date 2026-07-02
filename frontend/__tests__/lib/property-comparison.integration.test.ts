@@ -32,14 +32,17 @@ const mockProperties: Property[] = [
     price: 1200,
     bedrooms: 2,
     bathrooms: 1,
+    area: 900,
     squareFeet: 900,
+    type: 'apartment',
     propertyType: 'apartment',
-    status: 'available',
+    status: 'published',
     images: [],
     amenities: [
       { id: 'a1', name: 'Pool' },
       { id: 'a2', name: 'Gym' },
     ],
+    ownerId: 'landlord-1',
     landlordId: 'landlord-1',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -55,14 +58,17 @@ const mockProperties: Property[] = [
     price: 2500,
     bedrooms: 3,
     bathrooms: 2,
+    area: 1800,
     squareFeet: 1800,
+    type: 'house',
     propertyType: 'house',
-    status: 'available',
+    status: 'published',
     images: [],
     amenities: [
       { id: 'a3', name: 'Parking' },
       { id: 'a4', name: 'Garden' },
     ],
+    ownerId: 'landlord-2',
     landlordId: 'landlord-2',
     createdAt: '2026-01-02T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
@@ -78,11 +84,14 @@ const mockProperties: Property[] = [
     price: 800,
     bedrooms: 1,
     bathrooms: 1,
+    area: 450,
     squareFeet: 450,
-    propertyType: 'studio',
+    type: 'other',
+    propertyType: 'other',
     status: 'rented',
     images: [],
     amenities: [{ id: 'a5', name: 'Gym' }],
+    ownerId: 'landlord-3',
     landlordId: 'landlord-3',
     createdAt: '2026-01-03T00:00:00.000Z',
     updatedAt: '2026-01-03T00:00:00.000Z',
@@ -103,7 +112,7 @@ describe('property comparison integration', () => {
           minPrice: 700,
           maxPrice: 1300,
           bedrooms: 2,
-          status: 'available',
+          status: 'published',
         },
         'waterfront',
       );
@@ -133,7 +142,11 @@ describe('property comparison integration', () => {
       ]);
 
       selected = ['p1', 'p2', 'p3', 'p4'];
-      const overflow = addToComparison(selected, 'p5', MAX_COMPARISON_PROPERTIES);
+      const overflow = addToComparison(
+        selected,
+        'p5',
+        MAX_COMPARISON_PROPERTIES,
+      );
       expect(overflow.added).toBe(false);
       expect(overflow.error).toContain(String(MAX_COMPARISON_PROPERTIES));
     });
@@ -212,7 +225,9 @@ describe('property comparison integration', () => {
       const data = buildComparisonData(mockProperties, ['prop-1', 'prop-2']);
       const csv = buildComparisonCsv(data!);
 
-      expect(csv).toContain('"Field","Lagos Waterfront Apartment","Abuja Family House"');
+      expect(csv).toContain(
+        '"Field","Lagos Waterfront Apartment","Abuja Family House"',
+      );
       expect(csv).toContain('"Price","1200","2500"');
       expect(csv).toContain('"Pool","Yes","No"');
     });
@@ -263,7 +278,11 @@ describe('property comparison integration', () => {
 
   describe('sharing', () => {
     it('encodes and decodes share payloads consistently', () => {
-      const payload = { v: 1 as const, ids: ['prop-1', 'prop-2'], name: 'Share me' };
+      const payload = {
+        v: 1 as const,
+        ids: ['prop-1', 'prop-2'],
+        name: 'Share me',
+      };
       const encoded = encodeSharePayload(payload);
       const decoded = decodeSharePayload(encoded);
 
@@ -292,7 +311,7 @@ describe('property comparison integration', () => {
     it('filters, selects, exports, saves, and shares a comparison', () => {
       const filtered = filterProperties(
         mockProperties,
-        { city: 'Lagos', status: 'available' },
+        { city: 'Lagos', status: 'published' },
         '',
       );
       expect(filtered.map((property) => property.id)).toEqual(['prop-1']);
@@ -304,7 +323,9 @@ describe('property comparison integration', () => {
       }
 
       const comparison = buildComparisonData(mockProperties, selected);
-      expect(comparison?.properties[0]?.title).toBe('Lagos Waterfront Apartment');
+      expect(comparison?.properties[0]?.title).toBe(
+        'Lagos Waterfront Apartment',
+      );
 
       const csv = buildComparisonCsv(comparison!);
       const json = buildComparisonJson(comparison!);

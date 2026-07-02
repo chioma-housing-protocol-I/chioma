@@ -43,9 +43,7 @@ describe('ProtectedRoute', () => {
         <div>Protected content</div>
       </ProtectedRoute>,
     );
-    expect(
-      screen.getByText('Verifying authentication…'),
-    ).toBeDefined();
+    expect(screen.getByText('Verifying authentication…')).toBeDefined();
     expect(screen.queryByText('Protected content')).toBeNull();
   });
 

@@ -58,8 +58,6 @@ describe('FormErrorAlert', () => {
 
   it('renders special characters in the message safely', () => {
     render(<FormErrorAlert message="Error: invalid <input> & value" />);
-    expect(
-      screen.getByText('Error: invalid <input> & value'),
-    ).toBeDefined();
+    expect(screen.getByText('Error: invalid <input> & value')).toBeDefined();
   });
 });

@@ -5,7 +5,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Queue } from 'bull';
 import { PropertyCacheWarmingService } from '../../properties/property-cache-warming.service';
-import { Property, ListingStatus } from '../../properties/entities/property.entity';
+import {
+  Property,
+  ListingStatus,
+} from '../../properties/entities/property.entity';
 import { CacheService } from '../../../common/cache/cache.service';
 import { RentReminderService } from '../../rent/rent-reminder.service';
 import {
@@ -202,7 +205,7 @@ describe('Scheduled Tasks Integration', () => {
       const dueReminder = buildReminder({
         id: 'rem-1',
         daysBefore: 1,
-        dueDate: futureDate(2),
+        dueDate: futureDate(-1),
       });
       reminderRepository.find.mockResolvedValue([dueReminder]);
       reminderRepository.save.mockImplementation(async (value) => value);
@@ -236,7 +239,7 @@ describe('Scheduled Tasks Integration', () => {
       const dueReminder = buildReminder({
         id: 'rem-2',
         daysBefore: 0,
-        dueDate: futureDate(1),
+        dueDate: futureDate(0),
       });
       reminderRepository.find.mockResolvedValue([dueReminder]);
       reminderRepository.save.mockImplementation(async (value) => value);
@@ -312,7 +315,10 @@ describe('Scheduled Tasks Integration', () => {
       const failingModule = await Test.createTestingModule({
         providers: [
           QueueMonitoringService,
-          { provide: getQueueToken('email'), useValue: queueFactory({ failed: 21 }) },
+          {
+            provide: getQueueToken('email'),
+            useValue: queueFactory({ failed: 21 }),
+          },
           { provide: getQueueToken('documents'), useValue: queueFactory() },
           { provide: getQueueToken('blockchain'), useValue: queueFactory() },
           { provide: getQueueToken('data-sync'), useValue: queueFactory() },
@@ -390,7 +396,9 @@ describe('Scheduled Tasks Integration', () => {
     it('purges expired dead letter jobs on schedule', async () => {
       const expiredJob = {
         data: {
-          failedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+          failedAt: new Date(
+            Date.now() - 40 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
         },
         remove: jest.fn().mockResolvedValue(undefined),
       };
@@ -417,9 +425,9 @@ describe('Scheduled Tasks Integration', () => {
   describe('security patch scheduling', () => {
     it('reports that no patch is needed when audit returns zero vulnerabilities', async () => {
       const auditService = moduleRef.get(SecurityPatchManagementService);
-      jest.spyOn(auditService as any, 'detectPackageManager').mockReturnValue(
-        'pnpm',
-      );
+      jest
+        .spyOn(auditService as any, 'detectPackageManager')
+        .mockReturnValue('pnpm');
       jest.spyOn(auditService as any, 'runAudit').mockResolvedValue({
         metadata: {
           vulnerabilities: {
@@ -433,9 +441,7 @@ describe('Scheduled Tasks Integration', () => {
         },
       });
 
-      const summary = await auditService.checkForSecurityPatches(
-        process.cwd(),
-      );
+      const summary = await auditService.checkForSecurityPatches(process.cwd());
 
       expect(summary.recommendedAction).toBe('none');
       expect(summary.packageManager).toBe('pnpm');
@@ -443,21 +449,19 @@ describe('Scheduled Tasks Integration', () => {
 
     it('logs a warning when urgent patching is required', async () => {
       const auditService = moduleRef.get(SecurityPatchManagementService);
-      jest
-        .spyOn(auditService, 'checkForSecurityPatches')
-        .mockResolvedValue({
-          packageManager: 'pnpm',
-          checkedAt: new Date().toISOString(),
-          vulnerabilities: {
-            critical: 1,
-            high: 0,
-            moderate: 0,
-            low: 0,
-            info: 0,
-            total: 1,
-          },
-          recommendedAction: 'urgent_patch',
-        });
+      jest.spyOn(auditService, 'checkForSecurityPatches').mockResolvedValue({
+        packageManager: 'pnpm',
+        checkedAt: new Date().toISOString(),
+        vulnerabilities: {
+          critical: 1,
+          high: 0,
+          moderate: 0,
+          low: 0,
+          info: 0,
+          total: 1,
+        },
+        recommendedAction: 'urgent_patch',
+      });
 
       await auditService.runScheduledSecurityPatchCheck();
 
@@ -468,21 +472,19 @@ describe('Scheduled Tasks Integration', () => {
 
     it('logs a warning when a scheduled patch is enough', async () => {
       const auditService = moduleRef.get(SecurityPatchManagementService);
-      jest
-        .spyOn(auditService, 'checkForSecurityPatches')
-        .mockResolvedValue({
-          packageManager: 'pnpm',
-          checkedAt: new Date().toISOString(),
-          vulnerabilities: {
-            critical: 0,
-            high: 0,
-            moderate: 2,
-            low: 0,
-            info: 0,
-            total: 2,
-          },
-          recommendedAction: 'scheduled_patch',
-        });
+      jest.spyOn(auditService, 'checkForSecurityPatches').mockResolvedValue({
+        packageManager: 'pnpm',
+        checkedAt: new Date().toISOString(),
+        vulnerabilities: {
+          critical: 0,
+          high: 0,
+          moderate: 2,
+          low: 0,
+          info: 0,
+          total: 2,
+        },
+        recommendedAction: 'scheduled_patch',
+      });
 
       await auditService.runScheduledSecurityPatchCheck();
 

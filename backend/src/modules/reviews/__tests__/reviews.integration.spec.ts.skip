@@ -10,6 +10,9 @@ import {
   AgreementStatus,
   RentAgreement,
 } from '../../rent/entities/rent-contract.entity';
+import { Payment } from '../../rent/entities/payment.entity';
+import { RentObligationNft } from '../../agreements/entities/rent-obligation-nft.entity';
+import { NFTTransfer } from '../../agreements/entities/nft-transfer.entity';
 import { PostGuestReviewDto } from '../dto/post-guest-review.dto';
 import { PostHostReviewDto } from '../dto/post-host-review.dto';
 import {
@@ -48,7 +51,7 @@ describe('ReviewsService - Integration Tests', () => {
         TypeOrmModule.forRoot({
           type: 'sqlite',
           database: ':memory:',
-          entities: [Review, GuestReview, HostReview, RentAgreement],
+          entities: [Review, GuestReview, HostReview, RentAgreement, Payment, RentObligationNft, NFTTransfer],
           synchronize: true,
           dropSchema: true,
         }),
@@ -57,6 +60,9 @@ describe('ReviewsService - Integration Tests', () => {
           GuestReview,
           HostReview,
           RentAgreement,
+          Payment,
+          RentObligationNft,
+          NFTTransfer,
         ]),
       ],
       providers: [ReviewsService],
@@ -364,9 +370,9 @@ describe('ReviewsService - Integration Tests', () => {
         wouldHostAgain: false,
       };
 
-      await expect(
-        service.postGuestReview(dto, otherUserId),
-      ).rejects.toThrow(AuthorizationError);
+      await expect(service.postGuestReview(dto, otherUserId)).rejects.toThrow(
+        AuthorizationError,
+      );
     });
 
     it('rejects unauthorized host review submissions', async () => {
@@ -381,9 +387,9 @@ describe('ReviewsService - Integration Tests', () => {
         comment: 'Unauthorized host review',
       };
 
-      await expect(
-        service.postHostReview(dto, otherUserId),
-      ).rejects.toThrow(AuthorizationError);
+      await expect(service.postHostReview(dto, otherUserId)).rejects.toThrow(
+        AuthorizationError,
+      );
     });
 
     it('rejects duplicate host reviews for the same booking', async () => {
@@ -530,7 +536,7 @@ describe('ReviewsService - Integration Tests', () => {
       );
 
       expect(updated.comment).toBe('Updated guest review');
-      expect(updated.cleanliness).toBe(5);
+      expect((updated as GuestReview).cleanliness).toBe(5);
     });
 
     it('allows the author to update a host review', async () => {
@@ -555,7 +561,7 @@ describe('ReviewsService - Integration Tests', () => {
       );
 
       expect(updated.comment).toBe('Updated host review');
-      expect(updated.cleanliness).toBe(5);
+      expect((updated as GuestReview).cleanliness).toBe(5);
     });
 
     it('rejects review updates from unauthorized users', async () => {

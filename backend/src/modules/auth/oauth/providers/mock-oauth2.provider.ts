@@ -12,6 +12,10 @@ interface StoredAuthorizationCode {
   used: boolean;
 }
 
+function toReplyTuple<T>(result: T | [number, unknown]): [number, unknown] {
+  return Array.isArray(result) ? result : [200, result];
+}
+
 function parseFormBody(body: unknown): Record<string, string> {
   if (typeof body === 'string') {
     return Object.fromEntries(new URLSearchParams(body));
@@ -32,6 +36,7 @@ export class MockOAuth2Provider {
   private readonly refreshTokens = new Map<string, string>();
   private readonly revokedTokens = new Set<string>();
   private nockScope: nock.Scope | null = null;
+  private codeSequence = 0;
 
   constructor(readonly config: OAuth2ProviderConfig) {}
 
@@ -40,7 +45,7 @@ export class MockOAuth2Provider {
     redirectUri: string,
     state: string,
   ): string {
-    const code = `mock_code_${profile.id}_${Date.now()}`;
+    const code = `mock_code_${profile.id}_${Date.now()}_${this.codeSequence++}`;
     this.codes.set(code, { profile, redirectUri, state, used: false });
     return code;
   }
@@ -60,53 +65,63 @@ export class MockOAuth2Provider {
     this.nockScope?.persist(false);
     nock.cleanAll();
 
+    // Nock rebinds `this` in the userinfo reply function below (needed to read
+    // `this.req.headers`), so the class instance must be captured separately.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+
     this.nockScope = nock(this.config.baseUrl)
       .persist()
       .post('/oauth/token')
-      .reply(200, (_uri, body: unknown) => {
+      .reply((_uri, body: unknown) => {
         const parsedBody = parseFormBody(body);
         const grantType = parsedBody.grant_type;
 
         if (grantType === 'authorization_code') {
-          return this.exchangeAuthorizationCode(parsedBody);
+          return toReplyTuple(this.exchangeAuthorizationCode(parsedBody));
         }
 
         if (grantType === 'refresh_token') {
-          return this.refreshAccessToken(parsedBody.refresh_token);
+          return toReplyTuple(
+            this.refreshAccessToken(parsedBody.refresh_token),
+          );
         }
 
         return [400, { error: 'unsupported_grant_type' }];
       })
       .get('/oauth/userinfo')
-      .reply(200, (_uri, _body, headers) => {
-        const authHeader = headers.authorization ?? '';
+      .reply(function (this: { req: { headers: Record<string, string> } }) {
+        const authHeader = this.req.headers?.authorization ?? '';
         const token = authHeader.replace(/^Bearer\s+/i, '');
-        if (!token || this.revokedTokens.has(token)) {
+        if (!token || self.revokedTokens.has(token)) {
           return [401, { error: 'invalid_token' }];
         }
 
-        const profile = this.accessTokens.get(token);
+        const profile = self.accessTokens.get(token);
         if (!profile) {
           return [401, { error: 'invalid_token' }];
         }
 
-        return {
-          sub: profile.id,
-          email: profile.email,
-          given_name: profile.firstName,
-          family_name: profile.lastName,
-          picture: profile.avatarUrl,
-        };
+        return [
+          200,
+          {
+            sub: profile.id,
+            email: profile.email,
+            given_name: profile.firstName,
+            family_name: profile.lastName,
+            picture: profile.avatarUrl,
+          },
+        ];
       })
       .post('/oauth/revoke')
-      .reply(200, (_uri, body: unknown) => {
+      .reply((_uri, body: unknown) => {
         const parsedBody = parseFormBody(body);
         const token = parsedBody.token;
         if (token) {
           this.revokedTokens.add(token);
           this.accessTokens.delete(token);
         }
-        return {};
+        return [200, {}];
       });
   }
 

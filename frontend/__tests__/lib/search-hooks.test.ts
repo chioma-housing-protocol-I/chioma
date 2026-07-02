@@ -367,9 +367,7 @@ describe('useSearchSuggest', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(apiClient.get).toHaveBeenCalledWith(
-      '/search/suggest?q=lagos',
-    );
+    expect(apiClient.get).toHaveBeenCalledWith('/search/suggest?q=lagos');
     expect(result.current.data).toEqual([
       'Lagos Apartment',
       'Lagos Villa',
@@ -398,9 +396,7 @@ describe('useSearchSuggest', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(apiClient.get).toHaveBeenCalledWith(
-      '/search/suggest?q=la',
-    );
+    expect(apiClient.get).toHaveBeenCalledWith('/search/suggest?q=la');
   });
 
   it('encodes special characters in query', async () => {
@@ -409,10 +405,9 @@ describe('useSearchSuggest', () => {
       status: 200,
     });
 
-    const { result } = renderHook(
-      () => useSearchSuggest('apartment & villa'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useSearchSuggest('apartment & villa'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -507,9 +502,7 @@ describe('buildSearchQueryString - filter combinations', () => {
       parking: 'false',
       petsAllowed: 'true',
     });
-    expect(result).toBe(
-      '?furnished=true&parking=false&petsAllowed=true',
-    );
+    expect(result).toBe('?furnished=true&parking=false&petsAllowed=true');
   });
 
   it('handles user search filters', () => {
@@ -555,12 +548,12 @@ describe('buildSearchQueryString - filter combinations', () => {
   });
 
   it('handles numeric page/limit boundaries', () => {
-    expect(
-      buildSearchQueryString({ page: '0', limit: '0' }),
-    ).toBe('?page=0&limit=0');
-    expect(
-      buildSearchQueryString({ page: '999', limit: '999' }),
-    ).toBe('?page=999&limit=999');
+    expect(buildSearchQueryString({ page: '0', limit: '0' })).toBe(
+      '?page=0&limit=0',
+    );
+    expect(buildSearchQueryString({ page: '999', limit: '999' })).toBe(
+      '?page=999&limit=999',
+    );
   });
 
   it('handles amenity empty string edge case', () => {

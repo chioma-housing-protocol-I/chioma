@@ -56,9 +56,7 @@ describe('ReviewCard', () => {
   it('renders the correct dateTime attribute on the time element', () => {
     render(<ReviewCard review={baseReview} />);
     const timeEl = document.querySelector('time');
-    expect(timeEl?.getAttribute('dateTime')).toBe(
-      '2024-01-15T12:00:00.000Z',
-    );
+    expect(timeEl?.getAttribute('dateTime')).toBe('2024-01-15T12:00:00.000Z');
   });
 
   it('accepts createdAt as a string', () => {

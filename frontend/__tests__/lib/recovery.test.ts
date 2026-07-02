@@ -1,4 +1,22 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
+
+// withRetry tests use vi.useFakeTimers + vi.advanceTimersByTimeAsync. When fake
+// timers fire and withRetry calls operation() for a retry, the rejected promise
+// from the mock briefly has no handler, triggering Node's unhandledRejection
+// event. Adding a second listener makes Vitest skip reporting it (see Vitest
+// init: "if there is another listener, assume that it's handled by user code").
+const _suppressRetryRejections = () => {};
+beforeAll(() => process.on('unhandledRejection', _suppressRetryRejections));
+afterAll(() => process.off('unhandledRejection', _suppressRetryRejections));
 import {
   withRetry,
   getRetryDelay,
