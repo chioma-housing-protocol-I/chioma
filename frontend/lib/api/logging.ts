@@ -45,7 +45,13 @@ export interface DebugReport {
   topErrors: Array<{ statusCode: number; count: number }>;
 }
 
-const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'authorization', 'creditCard'];
+const SENSITIVE_FIELDS = [
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'creditCard',
+];
 
 export function maskSensitiveFields<T extends Record<string, unknown>>(
   data: T,
@@ -53,9 +59,7 @@ export function maskSensitiveFields<T extends Record<string, unknown>>(
   return Object.fromEntries(
     Object.entries(data).map(([k, v]) => [
       k,
-      SENSITIVE_FIELDS.some((f) => k.toLowerCase().includes(f))
-        ? '***'
-        : v,
+      SENSITIVE_FIELDS.some((f) => k.toLowerCase().includes(f)) ? '***' : v,
     ]),
   ) as T;
 }
