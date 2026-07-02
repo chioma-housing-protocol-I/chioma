@@ -41,7 +41,6 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-/** Browser calls same-origin `/api` (Next proxy); SSR hits backend directly. */
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
@@ -88,18 +87,12 @@ class ApiClient {
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
-
-    // DISABLED FOR DEVELOPMENT - Prevent aggressive redirect to home page
-    // if (window.location.pathname !== '/') {
-    //   window.location.assign('/');
-    // }
   }
 
   private async request<T>(
     endpoint: string,
     config: RequestConfig = {},
   ): Promise<ApiResponse<T>> {
-    // Use mock API if enabled
     if (shouldUseMockApi()) {
       const mockResponse = getMockData(endpoint);
       return {
