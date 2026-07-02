@@ -42,6 +42,14 @@ export function getCacheHitRate(): number {
   return (cacheMetrics.hits / total) * 100;
 }
 
+export function recordCacheHit(): void {
+  cacheMetrics.hits++;
+}
+
+export function recordCacheMiss(): void {
+  cacheMetrics.misses++;
+}
+
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 const STALE_TIME_MS = 30_000; // 30 s — data considered fresh
@@ -81,7 +89,7 @@ function manageCacheSize(queryCache: QueryCache): void {
       queryCache.remove(query.queryKey);
       cacheMetrics.evictions++;
     });
-    
+
     cacheMetrics.size = queryCache.getAll().length;
   }
 }
@@ -125,11 +133,12 @@ function handleGlobalError(error: unknown, source: string, action?: string) {
 export function createQueryClient(): QueryClient {
   const queryCache = new QueryCache({
     onError: (error: any, query: any) => {
+      recordCacheMiss();
       if (query.meta?.disableGlobalError) return;
       handleGlobalError(error, 'QueryCache', query.queryKey.join(' / '));
     },
     onSuccess: () => {
-      cacheMetrics.hits++;
+      recordCacheHit();
     },
   });
 

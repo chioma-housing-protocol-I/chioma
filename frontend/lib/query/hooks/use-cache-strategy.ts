@@ -27,7 +27,11 @@ export function useCacheStrategy() {
   }, [queryClient]);
 
   const prefetchQuery = useCallback(
-    (keyFactory: (...args: any[]) => readonly any[], queryFn: () => Promise<any>, ...args: any[]) => {
+    (
+      keyFactory: (...args: any[]) => readonly any[],
+      queryFn: () => Promise<any>,
+      ...args: any[]
+    ) => {
       queryClient.prefetchQuery({
         queryKey: keyFactory(...args),
         queryFn,
@@ -37,7 +41,9 @@ export function useCacheStrategy() {
   );
 
   const warmCache = useCallback(
-    async (queries: Array<{ key: readonly any[]; queryFn: () => Promise<any> }>) => {
+    async (
+      queries: Array<{ key: readonly any[]; queryFn: () => Promise<any> }>,
+    ) => {
       await Promise.all(
         queries.map(({ key, queryFn }) =>
           queryClient.prefetchQuery({
@@ -78,19 +84,32 @@ export function useCacheInvalidation() {
 
   return {
     invalidateProperties: (id?: string) =>
-      invalidateCache(id ? queryKeys.properties.detail : queryKeys.properties.lists, id),
+      invalidateCache(
+        id ? queryKeys.properties.detail : queryKeys.properties.lists,
+        id,
+      ),
     invalidatePayments: (id?: string) =>
-      invalidateCache(id ? queryKeys.payments.detail : queryKeys.payments.lists, id),
+      invalidateCache(
+        id ? queryKeys.payments.detail : queryKeys.payments.lists,
+        id,
+      ),
     invalidateAgreements: (id?: string) =>
-      invalidateCache(id ? queryKeys.agreements.detail : queryKeys.agreements.lists, id),
-    invalidateNotifications: () => invalidateCache(queryKeys.notifications.list),
+      invalidateCache(
+        id ? queryKeys.agreements.detail : queryKeys.agreements.lists,
+        id,
+      ),
+    invalidateNotifications: () =>
+      invalidateCache(queryKeys.notifications.list),
     invalidateFavorites: (propertyId?: string) =>
       invalidateCache(
         propertyId ? queryKeys.favorites.status : queryKeys.favorites.list,
         propertyId,
       ),
     invalidateMaintenance: (id?: string) =>
-      invalidateCache(id ? queryKeys.maintenance.detail : queryKeys.maintenance.lists, id),
+      invalidateCache(
+        id ? queryKeys.maintenance.detail : queryKeys.maintenance.lists,
+        id,
+      ),
     invalidateAnalytics: (days?: number) =>
       invalidateCache(queryKeys.analytics.landlordOverview, days ?? 30),
   };

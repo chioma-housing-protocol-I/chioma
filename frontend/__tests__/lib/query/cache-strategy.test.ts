@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useCacheStrategy, useCacheInvalidation } from '@/lib/query/hooks/use-cache-strategy';
-import { QueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query/keys';
-import { getCacheMetrics, getCacheHitRate, resetCacheMetrics } from '@/lib/query/client';
+import { renderHook } from '@testing-library/react';
+import { useCacheInvalidation } from '@/lib/query/hooks/use-cache-strategy';
+import {
+  getCacheMetrics,
+  getCacheHitRate,
+  resetCacheMetrics,
+  recordCacheHit,
+  recordCacheMiss,
+} from '@/lib/query/client';
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: vi.fn(),
@@ -42,10 +47,8 @@ describe('Cache Strategy', () => {
     });
 
     it('should calculate hit rate correctly', () => {
-      // Simulate cache hits and misses
-      const metrics = getCacheMetrics();
-      (metrics as any).hits = 80;
-      (metrics as any).misses = 20;
+      for (let i = 0; i < 80; i += 1) recordCacheHit();
+      for (let i = 0; i < 20; i += 1) recordCacheMiss();
       const hitRate = getCacheHitRate();
       expect(hitRate).toBe(80);
     });
@@ -70,8 +73,9 @@ describe('Cache Strategy', () => {
 
   describe('useCacheInvalidation', () => {
     it('should provide invalidation methods for different entities', () => {
+      const { result } = renderHook(() => useCacheInvalidation());
       const { invalidateProperties, invalidatePayments, invalidateAgreements } =
-        useCacheInvalidation();
+        result.current;
 
       expect(typeof invalidateProperties).toBe('function');
       expect(typeof invalidatePayments).toBe('function');
