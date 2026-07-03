@@ -90,7 +90,6 @@ export default function MyRentalsPage() {
 
   useEffect(() => {
     void fetchRentals();
-     
   }, []);
 
   if (loading) {

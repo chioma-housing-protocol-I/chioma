@@ -106,7 +106,6 @@ export default function MyContactsPage() {
 
   useEffect(() => {
     void fetchContacts();
-     
   }, []);
 
   const getInitials = (name: string) =>
