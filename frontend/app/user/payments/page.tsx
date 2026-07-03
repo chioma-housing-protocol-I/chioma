@@ -182,10 +182,15 @@ export default function TenantPaymentsPage() {
         return ts < earliest ? ts : earliest;
       }, Number.MAX_SAFE_INTEGER)
     : Date.now();
-  const activeLeaseStart = startOfMonth(
-    outgoingCompleted.length > 0
-      ? new Date(firstPaymentDate)
-      : subMonths(new Date(), 5),
+  const hasCompletedPayments = outgoingCompleted.length > 0;
+  const activeLeaseStart = useMemo(
+    () =>
+      startOfMonth(
+        hasCompletedPayments
+          ? new Date(firstPaymentDate)
+          : subMonths(new Date(), 5),
+      ),
+    [hasCompletedPayments, firstPaymentDate],
   );
   const cycleDates = useMemo(() => {
     const dates: Date[] = [];

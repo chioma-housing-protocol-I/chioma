@@ -48,10 +48,6 @@ export default function MyRentalsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void fetchRentals();
-  }, []);
-
   const fetchRentals = async () => {
     try {
       setLoading(true);
@@ -91,6 +87,11 @@ export default function MyRentalsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchRentals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
 
   if (loading) {
     return (

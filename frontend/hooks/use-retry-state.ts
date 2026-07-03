@@ -96,7 +96,7 @@ export function useRetryState(): RetryState {
   return useSyncExternalStore(subscribe, getCachedSnapshot, getCachedSnapshot);
 }
 
-let cachedEndpointMetrics: Map<string, RetryEndpointMetrics | null> = new Map();
+const cachedEndpointMetrics: Map<string, RetryEndpointMetrics | null> = new Map();
 
 export function useEndpointRetryMetrics(
   endpoint: string,
@@ -127,7 +127,7 @@ export function useEndpointRetryMetrics(
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-let cachedBreakerStates = new Map<string, CircuitBreakerState>();
+const cachedBreakerStates = new Map<string, CircuitBreakerState>();
 
 export function useCircuitBreakerState(
   breakerName: string,

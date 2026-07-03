@@ -30,14 +30,11 @@ const noop = () => {};
 function renderModal(
   props: Partial<React.ComponentProps<typeof BaseModal>> = {},
 ) {
+  const { children, ...rest } = props;
   return render(
-    React.createElement(BaseModal, {
-      isOpen: true,
-      onClose: noop,
-      title: 'Test Modal',
-      children: React.createElement('p', null, 'Modal content'),
-      ...props,
-    }),
+    <BaseModal isOpen onClose={noop} title="Test Modal" {...rest}>
+      {children ?? <p>Modal content</p>}
+    </BaseModal>,
   );
 }
 

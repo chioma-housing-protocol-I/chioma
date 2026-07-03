@@ -448,13 +448,13 @@ export function NegotiationSidebar({
 
                           {offer.message && (
                             <p className="text-xs text-neutral-600 bg-neutral-50 p-2 rounded-lg italic">
-                              "{offer.message}"
+                              &ldquo;{offer.message}&rdquo;
                             </p>
                           )}
 
                           {offer.message && (
                             <p className="text-xs text-neutral-600 bg-neutral-50 p-2 rounded-lg italic">
-                              "{offer.message}"
+                              &ldquo;{offer.message}&rdquo;
                             </p>
                           )}
 
