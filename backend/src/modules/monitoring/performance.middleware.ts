@@ -21,11 +21,8 @@ export class PerformanceMiddleware implements NestMiddleware {
     // Capture the original end method
     const originalEnd = res.end;
     const originalSend = res.send;
-
-    // `.bind(res)` below makes `this` resolve to the Express response object
-    // (needed to call originalEnd/originalSend with the right receiver) — so
-    // class members must be reached through this closure instead of `this`.
-    const middleware = this;
+    const performanceMonitor = this.performanceMonitor;
+    const logger = this.logger;
 
     // Override res.end to capture timing
     res.end = function (chunk?: any, encoding?: any) {
@@ -50,17 +47,17 @@ export class PerformanceMiddleware implements NestMiddleware {
 
         // Only record metrics for API endpoints (not static files)
         if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-          middleware.performanceMonitor.recordRequestMetrics(performanceMetrics);
+          performanceMonitor.recordRequestMetrics(performanceMetrics);
         }
 
         // Log errors
         if (res.statusCode >= 400) {
-          middleware.logger.warn(
+          logger.warn(
             `Error response: ${req.method} ${req.path} - ${responseTime}ms (Status: ${res.statusCode})`,
           );
         }
       } catch (error) {
-        middleware.logger.error('Failed to record performance metrics:', error);
+        logger.error('Failed to record performance metrics:', error);
       }
 
       // Call the original end method
@@ -89,16 +86,16 @@ export class PerformanceMiddleware implements NestMiddleware {
         };
 
         if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-          middleware.performanceMonitor.recordRequestMetrics(performanceMetrics);
+          performanceMonitor.recordRequestMetrics(performanceMetrics);
         }
 
         if (res.statusCode >= 400) {
-          middleware.logger.warn(
+          logger.warn(
             `Error response: ${req.method} ${req.path} - ${responseTime}ms (Status: ${res.statusCode})`,
           );
         }
       } catch (error) {
-        middleware.logger.error('Failed to record performance metrics:', error);
+        logger.error('Failed to record performance metrics:', error);
       }
 
       // Call the original send method

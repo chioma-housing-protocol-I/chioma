@@ -106,7 +106,7 @@ export default function MyContactsPage() {
 
   useEffect(() => {
     void fetchContacts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+     
   }, []);
 
   const getInitials = (name: string) =>

@@ -51,7 +51,10 @@ export default function Hero() {
             >
               Come home
               <br />
-              to <em className="text-brass-300 not-italic border-b-4 border-brass-500/40">certainty.</em>
+              to{' '}
+              <em className="text-brass-300 not-italic border-b-4 border-brass-500/40">
+                certainty.
+              </em>
             </motion.h1>
 
             <motion.p

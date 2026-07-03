@@ -16,7 +16,8 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -72,7 +73,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
 
-      <body suppressHydrationWarning className="font-sans bg-ink-900 text-cream">
+      <body
+        suppressHydrationWarning
+        className="font-sans bg-ink-900 text-cream"
+      >
         {/* Accessibility: skip link */}
         <a href="#main-content" className="skip-link">
           Skip to main content

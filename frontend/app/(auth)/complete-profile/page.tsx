@@ -38,7 +38,7 @@ export default function CompleteProfilePage() {
     if (user?.firstName) setFirstName(user.firstName);
     if (user?.lastName) setLastName(user.lastName);
     if (user?.email) setEmail(user.email);
-  }, [user]);
+  }, [user?.firstName, user?.lastName, user?.email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,9 +70,9 @@ export default function CompleteProfilePage() {
           Check your inbox
         </h1>
         <p className="text-cream-dim text-sm mb-8 max-w-sm mx-auto leading-relaxed">
-          We sent a verification link to <strong className="text-cream">{email}</strong>.
-          Click it whenever you get a moment — you can keep using Chioma in
-          the meantime.
+          We sent a verification link to{' '}
+          <strong className="text-cream">{email}</strong>. Click it whenever you
+          get a moment — you can keep using Chioma in the meantime.
         </p>
         <button
           type="button"
@@ -89,12 +89,10 @@ export default function CompleteProfilePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-display text-3xl text-cream">
-          One last thing
-        </h1>
+        <h1 className="font-display text-3xl text-cream">One last thing</h1>
         <p className="text-cream-dim text-sm mt-2 leading-relaxed">
-          Your wallet is connected. Add an email so we can send receipts,
-          lease updates, and let you recover your account.
+          Your wallet is connected. Add an email so we can send receipts, lease
+          updates, and let you recover your account.
         </p>
       </div>
 

@@ -42,9 +42,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (!loading && isAuthenticated && user) {
-      router.replace(
-        nextPath ?? (user.role === 'admin' ? '/admin' : '/user'),
-      );
+      router.replace(nextPath ?? (user.role === 'admin' ? '/admin' : '/user'));
     }
   }, [isAuthenticated, user, loading, router, nextPath]);
 

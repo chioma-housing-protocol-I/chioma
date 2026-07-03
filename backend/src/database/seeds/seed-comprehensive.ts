@@ -16,7 +16,10 @@ import {
   AgreementStatus,
   RentAgreement,
 } from '../../modules/rent/entities/rent-contract.entity';
-import { Payment, PaymentStatus } from '../../modules/payments/entities/payment.entity';
+import {
+  Payment,
+  PaymentStatus,
+} from '../../modules/payments/entities/payment.entity';
 import { GuestReview } from '../../modules/reviews/entities/guest-review.entity';
 import { HostReview } from '../../modules/reviews/entities/host-review.entity';
 import {
@@ -663,18 +666,17 @@ export async function seedComprehensiveData(
     (a) => a.status !== AgreementStatus.DRAFT,
   );
   for (const agreement of nonDraftAgreements) {
-    const scenarios: Array<{ offsetMonths: number; status: PaymentStatus }> =
-      [
-        { offsetMonths: -2, status: PaymentStatus.COMPLETED },
-        { offsetMonths: -1, status: PaymentStatus.COMPLETED },
-        {
-          offsetMonths: 0,
-          status:
-            agreement.status === AgreementStatus.ACTIVE
-              ? PaymentStatus.PENDING
-              : PaymentStatus.COMPLETED,
-        },
-      ];
+    const scenarios: Array<{ offsetMonths: number; status: PaymentStatus }> = [
+      { offsetMonths: -2, status: PaymentStatus.COMPLETED },
+      { offsetMonths: -1, status: PaymentStatus.COMPLETED },
+      {
+        offsetMonths: 0,
+        status:
+          agreement.status === AgreementStatus.ACTIVE
+            ? PaymentStatus.PENDING
+            : PaymentStatus.COMPLETED,
+      },
+    ];
 
     for (let i = 0; i < scenarios.length; i++) {
       const idempotencyKey = `SEED-PAY-${agreement.agreementNumber}-${i + 1}`;
@@ -749,7 +751,7 @@ export async function seedComprehensiveData(
     const existingHostReview = await hostReviewRepo.findOne({
       where: { bookingId, guestId: agreement.userId },
     });
-    
+
     if (!existingHostReview) {
       await hostReviewRepo.save(
         hostReviewRepo.create({
@@ -929,7 +931,8 @@ export async function seedComprehensiveData(
       documentRepo.create({
         name,
         type: 'LEASE',
-        status: agreement.status === AgreementStatus.EXPIRED ? 'ARCHIVED' : 'ACTIVE',
+        status:
+          agreement.status === AgreementStatus.EXPIRED ? 'ARCHIVED' : 'ACTIVE',
         category: 'lease',
         fileKey: `seed/leases/${agreement.agreementNumber}.pdf`,
         fileSize: 245_760,
@@ -992,9 +995,7 @@ export async function seedComprehensiveData(
 
   // 11. Seed property inquiries for published properties without an agreement
   logger.log('Seeding property inquiries...');
-  const propertiesWithAgreements = new Set(
-    agreements.map((a) => a.propertyId),
-  );
+  const propertiesWithAgreements = new Set(agreements.map((a) => a.propertyId));
   const availableProperties = properties.filter(
     (p) => !propertiesWithAgreements.has(p.id),
   );

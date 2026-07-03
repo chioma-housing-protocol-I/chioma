@@ -36,7 +36,12 @@ export default function HeroFamilyScene() {
       <motion.div
         className="absolute top-[16%] right-[-15%] w-48 h-16 bg-white/15 rounded-full blur-2xl"
         animate={{ x: ['0%', '-16%', '0%'] }}
-        transition={{ duration: 50, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        transition={{
+          duration: 50,
+          repeat: Infinity,
+          ease: 'easeInOut',
+          delay: 2,
+        }}
       />
 
       {/* Scene: house + family, bold silhouettes filling the card */}
@@ -67,16 +72,29 @@ export default function HeroFamilyScene() {
           <rect x="-35" y="290" width="70" height="120" rx="4" fill="#05070c" />
           {/* Windows, gently pulsing like warm interior light */}
           <motion.rect
-            x="-135" y="190" width="55" height="55" rx="3"
+            x="-135"
+            y="190"
+            width="55"
+            height="55"
+            rx="3"
             fill="url(#windowGlow)"
             animate={{ opacity: [0.75, 1, 0.75] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.rect
-            x="80" y="190" width="55" height="55" rx="3"
+            x="80"
+            y="190"
+            width="55"
+            height="55"
+            rx="3"
             fill="url(#windowGlow)"
             animate={{ opacity: [0.75, 1, 0.75] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: 1.2,
+            }}
           />
         </g>
 
@@ -86,7 +104,10 @@ export default function HeroFamilyScene() {
         <g
           transform="translate(240,610)"
           fill="#0b0f19"
-          style={{ filter: 'drop-shadow(0 0 3px #fdba74) drop-shadow(0 0 10px rgba(251,191,36,0.55))' }}
+          style={{
+            filter:
+              'drop-shadow(0 0 3px #fdba74) drop-shadow(0 0 10px rgba(251,191,36,0.55))',
+          }}
         >
           {/* Parent 1 */}
           <g transform="translate(0,0)">
@@ -104,8 +125,20 @@ export default function HeroFamilyScene() {
             <path d="M-42,225 Q-42,60 0,49 Q42,60 42,225 Z" />
           </g>
           {/* Joined hands (connecting arcs) */}
-          <path d="M33,72 Q68,104 71,110" stroke="#05070c" strokeWidth="11" strokeLinecap="round" fill="none" />
-          <path d="M163,72 Q128,104 125,110" stroke="#05070c" strokeWidth="11" strokeLinecap="round" fill="none" />
+          <path
+            d="M33,72 Q68,104 71,110"
+            stroke="#05070c"
+            strokeWidth="11"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d="M163,72 Q128,104 125,110"
+            stroke="#05070c"
+            strokeWidth="11"
+            strokeLinecap="round"
+            fill="none"
+          />
         </g>
       </svg>
     </div>

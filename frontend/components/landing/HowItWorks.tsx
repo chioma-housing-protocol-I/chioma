@@ -30,7 +30,10 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="relative py-28 bg-ink-800/60 border-y border-cream/8">
+    <section
+      id="how-it-works"
+      className="relative py-28 bg-ink-800/60 border-y border-cream/8"
+    >
       <div className="container mx-auto px-4 sm:px-6">
         <div className="grid lg:grid-cols-[1fr_2fr] gap-12 lg:gap-20">
           <motion.div
@@ -48,8 +51,8 @@ export default function HowItWorks() {
               No paperwork.
             </h2>
             <p className="mt-6 text-cream-dim leading-relaxed max-w-sm">
-              From first search to first rent payment, everything happens in
-              one place — and settles on one ledger.
+              From first search to first rent payment, everything happens in one
+              place — and settles on one ledger.
             </p>
           </motion.div>
 
@@ -68,7 +71,10 @@ export default function HowItWorks() {
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <step.icon className="w-5 h-5 text-brass-400" strokeWidth={1.75} />
+                    <step.icon
+                      className="w-5 h-5 text-brass-400"
+                      strokeWidth={1.75}
+                    />
                     <h3 className="text-xl font-semibold text-cream">
                       {step.title}
                     </h3>

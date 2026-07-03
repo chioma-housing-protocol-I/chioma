@@ -19,9 +19,7 @@ export function useAdminRoles() {
   return useQuery({
     queryKey: queryKeys.roles.list(),
     queryFn: async () => {
-      const { data } = await apiClient.get<Role[]>(
-        '/security/rbac/roles',
-      );
+      const { data } = await apiClient.get<Role[]>('/security/rbac/roles');
       return data;
     },
   });
@@ -186,9 +184,7 @@ export function useDeletePermission() {
 
   return useMutation({
     mutationFn: async (permissionId: string) => {
-      await apiClient.delete(
-        `/security/rbac/permissions/${permissionId}`,
-      );
+      await apiClient.delete(`/security/rbac/permissions/${permissionId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

@@ -50,8 +50,8 @@ async function bootstrap() {
     .get<string>('CORS_ORIGINS')
     ?.split(',')
     .map((origin) => origin.trim()) || [
-      configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
-    ];
+    configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
+  ];
 
   app.enableCors({
     origin: corsOrigins,
@@ -156,8 +156,8 @@ async function bootstrap() {
     .setTitle('Chioma API')
     .setDescription(
       'REST API for Chioma — a Stellar blockchain-based rental payment platform. ' +
-      'Supports landlords, agents, and tenants with JWT and Stellar (SEP-0010) authentication, ' +
-      'rent agreements, payments, escrow, disputes, and KYC.',
+        'Supports landlords, agents, and tenants with JWT and Stellar (SEP-0010) authentication, ' +
+        'rent agreements, payments, escrow, disputes, and KYC.',
     )
     .setVersion('1.0')
     .setContact('Chioma', 'https://chioma.app', 'support@chioma.app')

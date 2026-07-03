@@ -52,9 +52,9 @@ export async function completeOAuth(
   code: string,
   state: string,
 ): Promise<OAuthCallbackResult> {
-  const provider = sessionStorage.getItem(OAUTH_PROVIDER_KEY) as
-    | OAuthProvider
-    | null;
+  const provider = sessionStorage.getItem(
+    OAUTH_PROVIDER_KEY,
+  ) as OAuthProvider | null;
   const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
 
   if (!provider) {
