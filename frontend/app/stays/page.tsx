@@ -1,6 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, MapPin } from 'lucide-react';
 import Link from 'next/link';
@@ -42,9 +45,10 @@ async function fetchStays(filters: Filters): Promise<StayProperty[]> {
 }
 
 export default function StaysPage() {
+  const searchParams = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
-    location: '',
+    location: searchParams.get('city') ?? '',
     checkIn: '',
     checkOut: '',
     guests: 1,

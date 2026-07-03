@@ -21,6 +21,31 @@ export default function HostDashboardPage() {
     },
   });
 
+  const { data: pendingBookings } = useQuery({
+    queryKey: ['host-pending-bookings'],
+    queryFn: async () => {
+      const res = await fetch('/api/bookings?role=host&status=pending');
+      if (!res.ok) throw new Error('Bookings unavailable');
+      const data = await res.json();
+      return ((data.data ?? data) as unknown[]).length;
+    },
+    retry: false,
+  });
+
+  const { data: avgRating } = useQuery({
+    queryKey: ['host-avg-rating'],
+    queryFn: async () => {
+      const res = await fetch('/api/reviews?role=host');
+      if (!res.ok) throw new Error('Reviews unavailable');
+      const data = await res.json();
+      const reviews = (data.data ?? data) as { rating?: number }[];
+      if (!Array.isArray(reviews) || reviews.length === 0) return null;
+      const sum = reviews.reduce((s, r) => s + (r.rating ?? 0), 0);
+      return (sum / reviews.length).toFixed(1);
+    },
+    retry: false,
+  });
+
   const kpis = [
     {
       label: 'Active Listings',
@@ -31,21 +56,21 @@ export default function HostDashboardPage() {
     },
     {
       label: 'Pending Bookings',
-      value: '—',
+      value: pendingBookings ?? '—',
       icon: BookOpen,
       color: 'from-amber-500 to-orange-600',
       href: '/host/bookings',
     },
     {
       label: 'This Month',
-      value: '—',
+      value: '—', // Needs a host-earnings backend; /host/earnings is mock-only
       icon: DollarSign,
       color: 'from-emerald-500 to-teal-600',
       href: '/host/earnings',
     },
     {
       label: 'Avg Rating',
-      value: '—',
+      value: avgRating ?? '—',
       icon: Star,
       color: 'from-purple-500 to-pink-600',
       href: '/host/reviews',
