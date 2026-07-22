@@ -7,8 +7,10 @@ export const CORE_WEB_VITAL_NAMES = ['LCP', 'CLS', 'INP'] as const;
 
 export type CoreWebVitalName = (typeof CORE_WEB_VITAL_NAMES)[number];
 
-export type WebVitalName =
-  CoreWebVitalName | 'FCP' | 'TTFB' | 'FID' | (string & {});
+type KnownWebVitalName = CoreWebVitalName | 'FCP' | 'TTFB' | 'FID';
+
+/** Known vitals plus open string for forward-compat with next/web-vitals. */
+export type WebVitalName = KnownWebVitalName | (string & {});
 
 export type WebVitalRating = 'good' | 'needs-improvement' | 'poor';
 
