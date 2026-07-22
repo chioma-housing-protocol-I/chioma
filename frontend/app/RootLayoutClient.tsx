@@ -12,6 +12,7 @@ import { ModalManager } from '@/components/modals';
 import { OfflineIndicator } from '@/components/offline';
 import { ToastProvider } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
+import { WebVitalsReporter } from '@/components/web-vitals';
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         <ErrorProvider>
           <StoreHydrator />
           <ErrorMonitoringProvider />
+          <WebVitalsReporter />
           <PwaController />
           <NetworkStatusBanner />
           <RateLimitNotifier />
