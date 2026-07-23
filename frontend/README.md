@@ -74,6 +74,22 @@ window.__CHIOMA_ERROR_REPORTER__ = (payload) => {
 };
 ```
 
+### Real-user Web Vitals
+
+Core Web Vitals (LCP, CLS, INP) are collected via `useReportWebVitals` from `next/web-vitals`:
+
+- Client reporter: `components/web-vitals/WebVitalsReporter.tsx` (mounted in `RootLayoutClient`)
+- Anonymized sink: `POST /api/web-vitals` (pathname-only route, no query/PII)
+- Viewable dashboard: [`/vitals`](http://localhost:3000/vitals)
+
+Optional external hook:
+
+```ts
+window.__CHIOMA_WEB_VITALS_REPORTER__ = (payload) => {
+  // Forward { name, value, rating, route, ... } to your RUM vendor
+};
+```
+
 ## Pipeline Validation with Makefile
 
 ### Frontend Pipeline Checks
