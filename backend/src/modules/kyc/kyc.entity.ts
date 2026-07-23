@@ -30,6 +30,9 @@ export class Kyc {
   @Column({ type: 'text', nullable: true })
   providerReference: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  reason: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

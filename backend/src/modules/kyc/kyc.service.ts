@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Kyc } from './kyc.entity';
-import { SubmitKycDto, KycWebhookDto } from './kyc.dto';
+import { SubmitKycDto, KycWebhookDto, AdminKycQueryDto } from './kyc.dto';
 import { EncryptionService } from '../security/encryption.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -17,6 +17,36 @@ import {
 import { UserKycStatusService } from '../users/user-kyc-status.service';
 import { KycStatus } from './kyc-status.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { User } from '../users/entities/user.entity';
+
+export interface AdminKycUserView {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+}
+
+export interface AdminKycView {
+  id: string;
+  userId: string;
+  status: KycStatus;
+  reason?: string;
+  providerReference?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user?: AdminKycUserView;
+  kycData?: Record<string, unknown>;
+  documents: [];
+}
+
+export interface PaginatedAdminKycResult {
+  data: AdminKycView[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Injectable()
 export class KycService {
@@ -25,6 +55,8 @@ export class KycService {
   constructor(
     @InjectRepository(Kyc)
     private readonly kycRepository: Repository<Kyc>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly userKycStatusService: UserKycStatusService,
     private readonly encryptionService: EncryptionService,
     private readonly auditService: AuditService,
@@ -124,6 +156,211 @@ export class KycService {
       `Your KYC status is now ${dto.status}.`,
       'KYC_UPDATED',
     );
+  }
+
+  async findPendingForAdmin(
+    query: AdminKycQueryDto,
+  ): Promise<PaginatedAdminKycResult> {
+    return this.findByStatusForAdmin(KycStatus.PENDING, query);
+  }
+
+  async findRejectedForAdmin(
+    query: AdminKycQueryDto,
+  ): Promise<PaginatedAdminKycResult> {
+    return this.findByStatusForAdmin(KycStatus.REJECTED, query);
+  }
+
+  async findByIdForAdmin(id: string): Promise<AdminKycView> {
+    const kyc = await this.kycRepository.findOne({ where: { id } });
+    if (!kyc) {
+      throw new NotFoundException('KYC verification not found');
+    }
+    const user = await this.userRepository.findOne({
+      where: { id: kyc.userId },
+    });
+    return this.toAdminView(kyc, user ?? undefined);
+  }
+
+  async approveKyc(
+    id: string,
+    adminId: string,
+    reason?: string,
+  ): Promise<AdminKycView> {
+    const kyc = await this.kycRepository.findOne({ where: { id } });
+    if (!kyc) {
+      throw new NotFoundException('KYC verification not found');
+    }
+
+    if (kyc.status === KycStatus.APPROVED) {
+      const user = await this.userRepository.findOne({
+        where: { id: kyc.userId },
+      });
+      return this.toAdminView(kyc, user ?? undefined);
+    }
+
+    const previousStatus = kyc.status;
+    kyc.status = KycStatus.APPROVED;
+    kyc.reason = reason ?? null;
+    const saved = await this.kycRepository.save(kyc);
+
+    await this.userKycStatusService.setStatus(kyc.userId, KycStatus.APPROVED);
+
+    await this.auditService.log({
+      action: AuditAction.KYC_APPROVED,
+      entityType: 'Kyc',
+      entityId: saved.id,
+      performedBy: adminId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      oldValues: { status: previousStatus },
+      newValues: { status: KycStatus.APPROVED },
+      metadata: { userId: kyc.userId },
+    });
+
+    await this.notificationsService.notify(
+      kyc.userId,
+      'KYC approved',
+      'Your identity verification has been approved.',
+      'KYC_APPROVED',
+    );
+
+    const user = await this.userRepository.findOne({
+      where: { id: kyc.userId },
+    });
+    return this.toAdminView(saved, user ?? undefined);
+  }
+
+  async rejectKyc(
+    id: string,
+    adminId: string,
+    reason?: string,
+  ): Promise<AdminKycView> {
+    const kyc = await this.kycRepository.findOne({ where: { id } });
+    if (!kyc) {
+      throw new NotFoundException('KYC verification not found');
+    }
+
+    if (kyc.status === KycStatus.REJECTED) {
+      const user = await this.userRepository.findOne({
+        where: { id: kyc.userId },
+      });
+      return this.toAdminView(kyc, user ?? undefined);
+    }
+
+    const previousStatus = kyc.status;
+    kyc.status = KycStatus.REJECTED;
+    kyc.reason = reason ?? null;
+    const saved = await this.kycRepository.save(kyc);
+
+    await this.userKycStatusService.setStatus(kyc.userId, KycStatus.REJECTED);
+
+    await this.auditService.log({
+      action: AuditAction.KYC_REJECTED,
+      entityType: 'Kyc',
+      entityId: saved.id,
+      performedBy: adminId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      oldValues: { status: previousStatus },
+      newValues: { status: KycStatus.REJECTED, reason: saved.reason },
+      metadata: { userId: kyc.userId },
+    });
+
+    await this.notificationsService.notify(
+      kyc.userId,
+      'KYC rejected',
+      reason
+        ? `Your verification was rejected: ${reason}`
+        : 'Your verification was rejected. Please review and resubmit.',
+      'KYC_REJECTED',
+    );
+
+    const user = await this.userRepository.findOne({
+      where: { id: kyc.userId },
+    });
+    return this.toAdminView(saved, user ?? undefined);
+  }
+
+  private async findByStatusForAdmin(
+    status: KycStatus,
+    query: AdminKycQueryDto,
+  ): Promise<PaginatedAdminKycResult> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const sortBy = query.sortBy ?? 'createdAt';
+    const sortOrder = (query.sortOrder ?? 'desc').toUpperCase() as
+      | 'ASC'
+      | 'DESC';
+
+    const qb = this.kycRepository
+      .createQueryBuilder('kyc')
+      .leftJoin(User, 'user', 'user.id = kyc.userId')
+      .where('kyc.status = :status', { status });
+
+    if (query.search) {
+      qb.andWhere(
+        '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search OR CAST(kyc.userId AS TEXT) ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+
+    qb.orderBy(`kyc.${sortBy}`, sortOrder)
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [rows, total] = await qb.getManyAndCount();
+    const data = await this.toAdminViewList(rows);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(Math.ceil(total / limit), 1),
+    };
+  }
+
+  private async toAdminViewList(rows: Kyc[]): Promise<AdminKycView[]> {
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const users = await this.userRepository.find({
+      where: { id: In(userIds) },
+    });
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    return rows.map((row) => this.toAdminView(row, usersById.get(row.userId)));
+  }
+
+  private toAdminView(kyc: Kyc, user?: User): AdminKycView {
+    const kycData = kyc.encryptedKycData
+      ? this.decryptKycData(kyc.userId, kyc.encryptedKycData)
+      : undefined;
+
+    return {
+      id: kyc.id,
+      userId: kyc.userId,
+      status: kyc.status,
+      reason: kyc.reason ?? undefined,
+      providerReference: kyc.providerReference ?? undefined,
+      createdAt: kyc.createdAt,
+      updatedAt: kyc.updatedAt,
+      user: user
+        ? {
+            id: user.id,
+            name:
+              [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+              undefined,
+            email: user.email ?? undefined,
+            phone: user.phoneNumber ?? undefined,
+            role: user.role,
+          }
+        : undefined,
+      kycData,
+      documents: [],
+    };
   }
 
   private encryptKycData(

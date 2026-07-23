@@ -7,6 +7,7 @@ import { EncryptionService } from '../src/modules/security/encryption.service';
 import { UserKycStatusService } from '../src/modules/users/user-kyc-status.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
+import { User } from '../src/modules/users/entities/user.entity';
 
 describe('KYC Verification Integration', () => {
   let service: KycService;
@@ -50,6 +51,10 @@ describe('KYC Verification Integration', () => {
       providers: [
         KycService,
         { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+        {
+          provide: getRepositoryToken(User),
+          useValue: { find: jest.fn(), findOne: jest.fn() },
+        },
         { provide: EncryptionService, useValue: mockEncryptionService },
         { provide: UserKycStatusService, useValue: mockUserKycStatusService },
         { provide: AuditService, useValue: mockAuditService },
