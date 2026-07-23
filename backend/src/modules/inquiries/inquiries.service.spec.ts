@@ -11,6 +11,11 @@ describe('InquiriesService', () => {
 
   const propertyRepository = {
     findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const userRepository = {
+    find: jest.fn(),
   };
 
   const notificationsService = {
@@ -21,9 +26,12 @@ describe('InquiriesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    propertyRepository.find.mockResolvedValue([]);
+    userRepository.find.mockResolvedValue([]);
     service = new InquiriesService(
       inquiryRepository as any,
       propertyRepository as any,
+      userRepository as any,
       notificationsService as any,
     );
   });
@@ -82,5 +90,99 @@ describe('InquiriesService', () => {
         message: 'hello',
       } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('enriches incoming inquiries with property details and sender contact', async () => {
+    inquiryRepository.find.mockResolvedValue([
+      {
+        id: 'inq-1',
+        propertyId: 'property-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        senderName: 'Jane',
+        senderEmail: 'jane@example.com',
+        senderPhone: '+2340000000',
+      },
+    ]);
+    propertyRepository.find.mockResolvedValue([
+      {
+        id: 'property-1',
+        title: 'Lekki Apartment',
+        address: '1 Admiralty Way',
+        city: 'Lagos',
+        images: [{ url: 'https://img/1.png', isPrimary: true }],
+      },
+    ]);
+
+    const result = await service.listIncoming('owner-1');
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'inq-1',
+        property: {
+          id: 'property-1',
+          title: 'Lekki Apartment',
+          address: '1 Admiralty Way',
+          city: 'Lagos',
+          coverImageUrl: 'https://img/1.png',
+        },
+        counterparty: {
+          id: 'tenant-1',
+          name: 'Jane',
+          email: 'jane@example.com',
+          phone: '+2340000000',
+        },
+      }),
+    ]);
+  });
+
+  it('enriches outgoing inquiries with property details and landlord contact', async () => {
+    inquiryRepository.find.mockResolvedValue([
+      {
+        id: 'inq-1',
+        propertyId: 'property-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+      },
+    ]);
+    propertyRepository.find.mockResolvedValue([
+      {
+        id: 'property-1',
+        title: 'Lekki Apartment',
+        address: null,
+        city: null,
+        images: [],
+      },
+    ]);
+    userRepository.find.mockResolvedValue([
+      {
+        id: 'owner-1',
+        firstName: 'Ada',
+        lastName: 'Obi',
+        email: 'ada@example.com',
+        phoneNumber: null,
+      },
+    ]);
+
+    const result = await service.listOutgoing('tenant-1');
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'inq-1',
+        property: {
+          id: 'property-1',
+          title: 'Lekki Apartment',
+          address: null,
+          city: null,
+          coverImageUrl: null,
+        },
+        counterparty: {
+          id: 'owner-1',
+          name: 'Ada Obi',
+          email: 'ada@example.com',
+          phone: null,
+        },
+      }),
+    ]);
   });
 });

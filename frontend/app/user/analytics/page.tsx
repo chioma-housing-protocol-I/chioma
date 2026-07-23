@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Eye,
   MessageSquare,
@@ -33,14 +34,18 @@ function MetricCard({
   value,
   subtitle,
   icon: Icon,
+  href,
 }: {
   title: string;
   value: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
+  href?: string;
 }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
+  const content = (
+    <div
+      className={`rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 h-full ${href ? 'transition-colors hover:bg-white/10' : ''}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-blue-200/70 text-sm">{title}</p>
@@ -52,6 +57,14 @@ function MetricCard({
         </div>
       </div>
     </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block">
+      {content}
+    </Link>
+  ) : (
+    content
   );
 }
 
@@ -135,6 +148,7 @@ export default function UserAnalyticsPage() {
           value={summary.totalInquiries.toLocaleString()}
           subtitle={`${performance.averageInquiriesPerProperty} avg per property`}
           icon={MessageSquare}
+          href="/user/inquiries"
         />
         <MetricCard
           title="Conversion Rate"
