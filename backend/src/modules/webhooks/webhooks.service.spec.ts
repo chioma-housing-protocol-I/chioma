@@ -42,6 +42,13 @@ describe('WebhooksService', () => {
     endpointRepository = {
       find: jest.fn(),
       findOne: jest.fn(),
+      create: jest.fn().mockImplementation((dto) => ({ ...dto })),
+      save: jest
+        .fn()
+        .mockImplementation((e) =>
+          Promise.resolve({ ...e, id: e.id ?? 'endpoint-1' }),
+        ),
+      remove: jest.fn().mockImplementation((e) => Promise.resolve(e)),
     };
 
     deliveryRepository = {
@@ -49,6 +56,8 @@ describe('WebhooksService', () => {
       save: jest
         .fn()
         .mockImplementation((d) => Promise.resolve({ ...d, id: 'delivery-1' })),
+      findOne: jest.fn(),
+      find: jest.fn(),
     };
 
     configService = {
@@ -304,6 +313,248 @@ describe('WebhooksService', () => {
       endpointRepository.find.mockResolvedValue([]);
       const result = await service.findEndpoints(['unknown-id']);
       expect(result).toEqual([]);
+    });
+  });
+
+  // ── createEndpoint ─────────────────────────────────────────────────────────
+
+  describe('createEndpoint', () => {
+    it('creates an endpoint scoped to the given user with defaults applied', async () => {
+      const result = await service.createEndpoint('user-1', {
+        url: 'https://example.com/webhook',
+        events: ['payment.received'],
+      });
+
+      expect(endpointRepository.create).toHaveBeenCalledWith({
+        userId: 'user-1',
+        url: 'https://example.com/webhook',
+        events: ['payment.received'],
+        secret: null,
+        isActive: true,
+      });
+      expect(endpointRepository.save).toHaveBeenCalled();
+      expect(result.userId).toBe('user-1');
+    });
+
+    it('respects an explicit secret and isActive value', async () => {
+      await service.createEndpoint('user-1', {
+        url: 'https://example.com/webhook',
+        events: ['payment.received'],
+        secret: 'my-secret',
+        isActive: false,
+      });
+
+      expect(endpointRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ secret: 'my-secret', isActive: false }),
+      );
+    });
+  });
+
+  // ── listEndpointsForUser ───────────────────────────────────────────────────
+
+  describe('listEndpointsForUser', () => {
+    it('lists only endpoints belonging to the user, newest first', async () => {
+      endpointRepository.find.mockResolvedValue([mockEndpoint()]);
+
+      const result = await service.listEndpointsForUser('user-1');
+
+      expect(endpointRepository.find).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        order: { createdAt: 'DESC' },
+      });
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  // ── getEndpointForUser ─────────────────────────────────────────────────────
+
+  describe('getEndpointForUser', () => {
+    it('returns the endpoint when owned by the user', async () => {
+      const endpoint = mockEndpoint();
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+
+      await expect(
+        service.getEndpointForUser('user-1', 'endpoint-1'),
+      ).resolves.toBe(endpoint);
+      expect(endpointRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'endpoint-1', userId: 'user-1' },
+      });
+    });
+
+    it('throws NotFoundException when the endpoint does not exist or is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getEndpointForUser('user-1', 'missing'),
+      ).rejects.toThrow('Webhook endpoint not found');
+    });
+  });
+
+  // ── updateEndpoint ─────────────────────────────────────────────────────────
+
+  describe('updateEndpoint', () => {
+    it('applies only the provided fields', async () => {
+      const endpoint = mockEndpoint({ url: 'https://old.example.com' });
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+
+      const result = await service.updateEndpoint('user-1', 'endpoint-1', {
+        url: 'https://new.example.com',
+      });
+
+      expect(result.url).toBe('https://new.example.com');
+      expect(result.events).toEqual(endpoint.events);
+    });
+
+    it('throws NotFoundException when the endpoint is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateEndpoint('user-1', 'missing', { url: 'https://x.com' }),
+      ).rejects.toThrow('Webhook endpoint not found');
+    });
+  });
+
+  // ── deleteEndpoint ─────────────────────────────────────────────────────────
+
+  describe('deleteEndpoint', () => {
+    it('removes the endpoint when owned by the user', async () => {
+      const endpoint = mockEndpoint();
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+
+      await service.deleteEndpoint('user-1', 'endpoint-1');
+
+      expect(endpointRepository.remove).toHaveBeenCalledWith(endpoint);
+    });
+
+    it('throws NotFoundException when the endpoint is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.deleteEndpoint('user-1', 'missing')).rejects.toThrow(
+        'Webhook endpoint not found',
+      );
+    });
+  });
+
+  // ── listDeliveriesForUser ──────────────────────────────────────────────────
+
+  describe('listDeliveriesForUser', () => {
+    it('lists deliveries for an endpoint owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(mockEndpoint());
+      deliveryRepository.find.mockResolvedValue([mockDelivery()]);
+
+      const result = await service.listDeliveriesForUser(
+        'user-1',
+        'endpoint-1',
+      );
+
+      expect(deliveryRepository.find).toHaveBeenCalledWith({
+        where: { endpointId: 'endpoint-1' },
+        order: { createdAt: 'DESC' },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('throws NotFoundException when the endpoint is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.listDeliveriesForUser('user-1', 'missing'),
+      ).rejects.toThrow('Webhook endpoint not found');
+    });
+  });
+
+  // ── triggerTestEvent ───────────────────────────────────────────────────────
+
+  describe('triggerTestEvent', () => {
+    it('delivers a test event to an endpoint owned by the user', async () => {
+      const endpoint = mockEndpoint();
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'ok',
+      });
+
+      const result = await service.triggerTestEvent(
+        'user-1',
+        'endpoint-1',
+        'payment.received',
+        { amount: 10 },
+      );
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        endpoint.url,
+        expect.any(String),
+        expect.any(Object),
+      );
+      expect(result.successful).toBe(true);
+    });
+
+    it('throws NotFoundException when the endpoint is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.triggerTestEvent('user-1', 'missing', 'payment.received', {}),
+      ).rejects.toThrow('Webhook endpoint not found');
+    });
+  });
+
+  // ── retryDelivery ──────────────────────────────────────────────────────────
+
+  describe('retryDelivery', () => {
+    it('redelivers an existing delivery using its original event and payload', async () => {
+      const endpoint = mockEndpoint();
+      const delivery = mockDelivery({
+        event: 'payment.failed',
+        payload: { amount: 20 },
+      });
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+      deliveryRepository.findOne.mockResolvedValue(delivery);
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'ok',
+      });
+
+      await service.retryDelivery('user-1', 'endpoint-1', {
+        deliveryId: 'delivery-1',
+      });
+
+      const rawBody = (mockedAxios.post as jest.Mock).mock.calls[0][1];
+      expect(JSON.parse(rawBody).event).toBe('payment.failed');
+    });
+
+    it('throws NotFoundException when the delivery does not belong to the endpoint', async () => {
+      endpointRepository.findOne.mockResolvedValue(mockEndpoint());
+      deliveryRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.retryDelivery('user-1', 'endpoint-1', {
+          deliveryId: 'missing',
+        }),
+      ).rejects.toThrow('Webhook delivery not found');
+    });
+
+    it('triggers a new delivery when an event is provided without a deliveryId', async () => {
+      endpointRepository.findOne.mockResolvedValue(mockEndpoint());
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'ok',
+      });
+
+      await service.retryDelivery('user-1', 'endpoint-1', {
+        event: 'payment.received',
+        payload: { amount: 5 },
+      });
+
+      expect(deliveryRepository.findOne).not.toHaveBeenCalled();
+      expect(mockedAxios.post).toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when neither deliveryId nor event is provided', async () => {
+      endpointRepository.findOne.mockResolvedValue(mockEndpoint());
+
+      await expect(
+        service.retryDelivery('user-1', 'endpoint-1', {}),
+      ).rejects.toThrow('event is required when deliveryId is not provided');
     });
   });
 });
