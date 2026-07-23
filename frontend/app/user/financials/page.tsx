@@ -380,9 +380,7 @@ export default function FinancialsPage() {
   }, [txPage]);
   const revenueData = useMemo(() => {
     const items = txPage?.data ?? [];
-    return items.length === 0
-      ? MOCK_REVENUE_DATA
-      : deriveMonthlyRevenue(items);
+    return items.length === 0 ? MOCK_REVENUE_DATA : deriveMonthlyRevenue(items);
   }, [txPage]);
 
   const xlmBalance = readAssetBalance(networkAccount, 'XLM');
