@@ -93,14 +93,14 @@ export default function PropertySummaryCard({
       {/* Content */}
       <div className="p-4">
         {/* Price */}
-        <p className="text-blue-600 font-bold text-xl mb-2">
+        <p className="text-blue-800 font-bold text-xl mb-2">
           {property.price}{' '}
           <span className="text-gray-500 font-normal text-sm">/yr</span>
         </p>
 
         {/* Title */}
         <Link href={`/properties/${property.id}`}>
-          <h3 className="font-bold text-gray-900 mb-2 text-base hover:text-blue-600 transition">
+          <h3 className="font-bold text-gray-900 mb-2 text-base hover:text-blue-800 transition">
             {property.title}
           </h3>
         </Link>

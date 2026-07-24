@@ -143,7 +143,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       >
         {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 rounded-2xl p-4 flex items-start gap-3">
-          <Info className="text-blue-600 shrink-0 mt-0.5" size={18} />
+          <Info className="text-blue-800 shrink-0 mt-0.5" size={18} />
           <p className="text-sm text-blue-900 dark:text-blue-100">
             Upload photos, receipts, or documents that support your case. All
             parties will be able to view submitted evidence.

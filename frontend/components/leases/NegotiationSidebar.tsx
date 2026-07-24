@@ -155,7 +155,7 @@ export function NegotiationSidebar({
             onClick={() => setActiveTab('chat')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'chat'
-                ? 'bg-white text-blue-600 shadow-sm'
+                ? 'bg-white text-blue-800 shadow-sm'
                 : 'text-neutral-500 hover:text-neutral-700'
             }`}
           >
@@ -166,14 +166,14 @@ export function NegotiationSidebar({
             onClick={() => setActiveTab('offers')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'offers'
-                ? 'bg-white text-blue-600 shadow-sm'
+                ? 'bg-white text-blue-800 shadow-sm'
                 : 'text-neutral-500 hover:text-neutral-700'
             }`}
           >
             <History size={16} />
             Offers
             {offers.length > 0 && (
-              <span className="ml-1 w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-[10px] flex items-center justify-center font-bold">
+              <span className="ml-1 w-5 h-5 rounded-full bg-blue-100 text-blue-800 text-[10px] flex items-center justify-center font-bold">
                 {offers.length}
               </span>
             )}
@@ -320,7 +320,7 @@ export function NegotiationSidebar({
                     <Button
                       variant="outline"
                       onClick={() => setIsProposing(false)}
-                      className="flex-1 h-9 rounded-lg border-blue-200 bg-white text-blue-600 hover:bg-blue-100"
+                      className="flex-1 h-9 rounded-lg border-blue-200 bg-white text-blue-800 hover:bg-blue-100"
                     >
                       Cancel
                     </Button>
@@ -335,7 +335,7 @@ export function NegotiationSidebar({
               ) : (
                 <Button
                   onClick={() => setIsProposing(true)}
-                  className="w-full py-6 rounded-2xl border-2 border-dashed border-neutral-200 hover:border-blue-400 hover:bg-blue-50 text-neutral-500 hover:text-blue-600 transition-all bg-transparent font-semibold flex items-center gap-2"
+                  className="w-full py-6 rounded-2xl border-2 border-dashed border-neutral-200 hover:border-blue-400 hover:bg-blue-50 text-neutral-500 hover:text-blue-800 transition-all bg-transparent font-semibold flex items-center gap-2"
                 >
                   <ArrowRight size={18} />
                   Make a Counter-Offer
@@ -386,7 +386,7 @@ export function NegotiationSidebar({
                               <div
                                 className={`p-1.5 rounded-lg ${
                                   offer.proposerRole === userRole
-                                    ? 'bg-blue-100 text-blue-600'
+                                    ? 'bg-blue-100 text-blue-800'
                                     : 'bg-neutral-100 text-neutral-600'
                                 }`}
                               >

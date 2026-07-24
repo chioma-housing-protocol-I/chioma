@@ -141,7 +141,7 @@ export function ChatSidebar({
                   <div className="flex items-center justify-between mb-0.5">
                     <span
                       className={`text-sm font-semibold truncate ${
-                        isActive ? 'text-blue-700' : 'text-neutral-900'
+                        isActive ? 'text-blue-900' : 'text-neutral-900'
                       }`}
                     >
                       {other
@@ -174,8 +174,8 @@ export function ChatSidebar({
                     <span
                       className={`inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${
                         other.role === 'admin'
-                          ? 'bg-red-50 text-red-600'
-                          : 'bg-blue-50 text-blue-600'
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-blue-50 text-blue-800'
                       }`}
                     >
                       {other.role}
