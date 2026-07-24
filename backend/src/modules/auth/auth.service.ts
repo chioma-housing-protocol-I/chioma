@@ -505,8 +505,6 @@ export class AuthService {
   }
 
   private async handleFailedLogin(user: User): Promise<void> {
-    user.failedLoginAttempts += 1;
-
     if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
       user.accountLockedUntil = new Date(
         Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000,
@@ -514,6 +512,7 @@ export class AuthService {
       this.logger.warn(`Account locked due to failed attempts: ${user.email}`);
     }
 
+    user.failedLoginAttempts += 1;
     await this.userRepository.save(user);
   }
 

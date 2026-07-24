@@ -383,11 +383,14 @@ describe('AuthService — comprehensive coverage', () => {
       ).rejects.toThrow(AuthenticationError);
 
       expect(mockUserRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ failedLoginAttempts: 4 }),
+        expect.objectContaining({
+          failedLoginAttempts: 4,
+          accountLockedUntil: null,
+        }),
       );
     });
 
-    it('sets accountLockedUntil when failedLoginAttempts reaches 5', async () => {
+    it('does not set accountLockedUntil on the 5th failed attempt (starting at 4)', async () => {
       const user = { ...mockUser, failedLoginAttempts: 4 };
       mockUserRepository.findOne.mockResolvedValue(user);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
@@ -400,6 +403,24 @@ describe('AuthService — comprehensive coverage', () => {
       expect(mockUserRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           failedLoginAttempts: 5,
+          accountLockedUntil: null,
+        }),
+      );
+    });
+
+    it('sets accountLockedUntil on the 6th failed attempt (starting at 5)', async () => {
+      const user = { ...mockUser, failedLoginAttempts: 5 };
+      mockUserRepository.findOne.mockResolvedValue(user);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      mockUserRepository.save.mockImplementation(async (u: typeof user) => u);
+
+      await expect(
+        service.login({ email: 'user@example.com', password: 'wrong' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failedLoginAttempts: 6,
           accountLockedUntil: expect.any(Date),
         }),
       );
