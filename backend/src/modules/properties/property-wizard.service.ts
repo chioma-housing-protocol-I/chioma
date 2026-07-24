@@ -14,6 +14,7 @@ import {
 import { PropertiesService } from './properties.service';
 import { PropertyType } from './entities/property.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { PROPERTY_DRAFT_EXPIRY_DAYS } from '../../common/constants/business-rules.constants';
 
 @Injectable()
 export class PropertyWizardService {
@@ -25,7 +26,7 @@ export class PropertyWizardService {
 
   async start(landlordId: string) {
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    expiresAt.setDate(expiresAt.getDate() + PROPERTY_DRAFT_EXPIRY_DAYS);
 
     const draft = this.draftRepository.create({
       landlordId,
