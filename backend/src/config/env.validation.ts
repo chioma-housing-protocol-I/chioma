@@ -214,6 +214,10 @@ export function validateEnvironment(
     validateEncryptionKeys(config, errors);
     validateSecurityEncryptionKey(config.SECURITY_ENCRYPTION_KEY, errors, true);
 
+    if (!isNonEmpty(config.PAYMENT_WEBHOOK_SECRET)) {
+      errors.push('PAYMENT_WEBHOOK_SECRET is required in staging/production');
+    }
+
     if (
       nodeEnv === 'production' &&
       config.DB_SSL !== 'true' &&

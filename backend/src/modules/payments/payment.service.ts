@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, LessThanOrEqual } from 'typeorm';
@@ -946,15 +945,7 @@ export class PaymentService {
     };
   }
 
-  async handlePaymentGatewayWebhook(
-    dto: PaymentGatewayWebhookDto,
-    secretHeader?: string,
-  ) {
-    const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
-    if (configuredSecret && secretHeader !== configuredSecret) {
-      throw new UnauthorizedException('Invalid payment webhook secret');
-    }
-
+  async handlePaymentGatewayWebhook(dto: PaymentGatewayWebhookDto) {
     const payment = dto.paymentId
       ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
       : dto.referenceNumber

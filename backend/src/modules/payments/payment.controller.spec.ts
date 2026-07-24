@@ -231,10 +231,9 @@ describe('Payment Controllers', () => {
       paymentId: 'pay_1',
       status: 'completed',
     };
-    await paymentWebhookController.handleGatewayWebhook(dto, 'secret');
+    await paymentWebhookController.handleGatewayWebhook(dto);
     expect(mockPaymentService.handlePaymentGatewayWebhook).toHaveBeenCalledWith(
       dto,
-      'secret',
     );
   });
 });
