@@ -9,6 +9,8 @@
  * hashes) stay as plain constants so they can't drift accidentally.
  */
 
+import type { StringValue } from 'ms';
+
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === '') {
@@ -53,12 +55,13 @@ export const STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES = envInt(
  * instead of reading the already-documented JWT_EXPIRATION/
  * JWT_REFRESH_EXPIRATION env vars.
  */
-export const JWT_ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRATION?.trim() || '15m';
-export const JWT_REFRESH_TOKEN_EXPIRY =
-  process.env.JWT_REFRESH_EXPIRATION?.trim() || '7d';
+export const JWT_ACCESS_TOKEN_EXPIRY = (process.env.JWT_EXPIRATION?.trim() ||
+  '15m') as StringValue;
+export const JWT_REFRESH_TOKEN_EXPIRY = (process.env.JWT_REFRESH_EXPIRATION?.trim() ||
+  '7d') as StringValue;
 
 /** MFA short-lived verification token validity window (jsonwebtoken duration string). */
-export const MFA_TOKEN_EXPIRY = '5m';
+export const MFA_TOKEN_EXPIRY: StringValue = '5m';
 
 /** TOTP verification tolerance window, in 30s steps either side of "now". */
 export const MFA_TOTP_WINDOW_STEPS = 2;

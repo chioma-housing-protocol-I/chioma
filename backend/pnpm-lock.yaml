@@ -289,6 +289,9 @@ importers:
       '@types/jest-json-schema':
         specifier: ^6.1.5
         version: 6.1.5
+      '@types/ms':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^22.10.7
         version: 22.19.7
