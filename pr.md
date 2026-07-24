@@ -14,7 +14,7 @@ This PR synchronizes the local repository with the upstream `chioma` branch and 
 
 ## 🔗 Related Issues
 
-Closes #1416, #1415, #1414, #1413, #416, #744, #771, #772
+Closes #1416, Closes #1415, Closes #1414, Closes #1413, 
 
 ## 📋 Changes Made
 
