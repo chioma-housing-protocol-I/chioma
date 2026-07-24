@@ -1,7 +1,7 @@
 'use client';
 
 import { AppError } from '@/lib/errors';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, setApiClientToken } from '@/lib/api-client';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
 
@@ -123,7 +123,30 @@ function removeAuthCookie() {
 
 // --- Storage Helpers ---------------------------------------------------------
 
+/**
+ * Module-level closure cache for localStorage auth values.
+ * Populated once by readStoredAuth() / persistAuth(), cleared by clearStorage().
+ * Avoids synchronous localStorage I/O on every store access and every HTTP
+ * request (api-client reads the token on each fetch).
+ */
+let _cache: (Omit<AuthState, 'loading'> & { hydrated: boolean }) | null = null;
+
+function invalidateCache(): void {
+  _cache = null;
+}
+
 function readStoredAuth(): Omit<AuthState, 'loading'> {
+  // Return in-memory cache when already hydrated (avoids repeated localStorage reads)
+  if (_cache?.hydrated) {
+    return {
+      user: _cache.user,
+      accessToken: _cache.accessToken,
+      refreshToken: _cache.refreshToken,
+      isAuthenticated: _cache.isAuthenticated,
+      walletAddress: _cache.walletAddress,
+    };
+  }
+
   if (typeof window === 'undefined') {
     return {
       user: null,
@@ -147,13 +170,15 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     );
 
     if (storedAccessToken && storedUser) {
-      return {
+      const result: Omit<AuthState, 'loading'> = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
         isAuthenticated: true,
         walletAddress: storedWalletAddress,
       };
+      _cache = { ...result, hydrated: true };
+      return result;
     }
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
@@ -163,13 +188,15 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     removeAuthCookie();
   }
 
-  return {
+  const empty: Omit<AuthState, 'loading'> = {
     user: null,
     accessToken: null,
     refreshToken: null,
     isAuthenticated: false,
     walletAddress: null,
   };
+  _cache = { ...empty, hydrated: true };
+  return empty;
 }
 
 function clearStorage() {
@@ -180,6 +207,7 @@ function clearStorage() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
+  invalidateCache();
 }
 
 function persistAuth(
@@ -197,6 +225,16 @@ function persistAuth(
 
   localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
   setAuthCookie(accessToken);
+
+  // Keep the closure cache in sync so subsequent reads skip localStorage
+  _cache = {
+    user,
+    accessToken,
+    refreshToken,
+    isAuthenticated: true,
+    walletAddress: _cache?.walletAddress ?? null,
+    hydrated: true,
+  };
 }
 
 function normalizeUser(user: AuthApiUser): User {
@@ -257,6 +295,7 @@ export const useAuthStore = create<AuthStore>()(
         user: User,
       ) => {
         persistAuth(accessToken, refreshToken, user);
+        setApiClientToken(accessToken);
         set((state) => {
           state.user = user;
           state.accessToken = accessToken;
@@ -271,6 +310,11 @@ export const useAuthStore = create<AuthStore>()(
           localStorage.setItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS, address);
         } else {
           localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+        }
+
+        // Keep closure cache in sync
+        if (_cache) {
+          _cache = { ..._cache, walletAddress: address };
         }
 
         set((state) => {
@@ -429,6 +473,7 @@ export const useAuthStore = create<AuthStore>()(
         }
 
         clearStorage();
+        setApiClientToken(null);
 
         set((state) => {
           state.user = null;
