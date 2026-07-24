@@ -13,6 +13,15 @@ import {
 } from 'lucide-react';
 import { useLandlordPropertyAnalytics } from '@/lib/query/hooks/use-property-analytics';
 import dynamic from 'next/dynamic';
+import {
+  ResponsiveContainer,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Bar,
+} from 'recharts';
 
 const LineChartWrapper = dynamic(() => import('@/components/charts/LineChartWrapper'), {
   loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
