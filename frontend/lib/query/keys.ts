@@ -28,6 +28,19 @@ export const queryKeys = {
       [...queryKeys.payments.deposits(), 'detail', id] as const,
     depositDeductions: (id: string) =>
       [...queryKeys.payments.deposit(id), 'deductions'] as const,
+    rentSchedule: (agreementId: string) =>
+      [...queryKeys.payments.all, 'rentSchedule', agreementId] as const,
+    rentHistory: (agreementId: string) =>
+      [...queryKeys.payments.all, 'rentHistory', agreementId] as const,
+    schedules: {
+      all: ['payment-schedules'] as const,
+      lists: () => [...queryKeys.payments.schedules.all, 'list'] as const,
+      list: (filters: object) =>
+        [...queryKeys.payments.schedules.lists(), filters] as const,
+      detail: (id: string) =>
+        [...queryKeys.payments.schedules.all, 'detail', id] as const,
+    },
+    lateFee: () => [...queryKeys.payments.all, 'lateFee'] as const,
   },
 
   paymentMethods: {

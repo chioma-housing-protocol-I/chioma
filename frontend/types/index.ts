@@ -174,6 +174,40 @@ export interface PaymentMethod {
   updatedAt: string;
 }
 
+export type PaymentInterval = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export type PaymentScheduleStatus = 'active' | 'paused' | 'canceled' | 'failed';
+
+export interface PaymentSchedule {
+  id: string;
+  userId: string;
+  agreementId: string | null;
+  paymentMethod: PaymentMethod | null;
+  paymentMethodId: number | null;
+  amount: number;
+  currency: string;
+  interval: PaymentInterval;
+  nextRunAt: string;
+  status: PaymentScheduleStatus;
+  retries: number;
+  maxRetries: number;
+  lastError: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentScheduleEntry {
+  paymentNumber: number;
+  dueDate: string;
+  amount: number;
+  agreementId: string;
+}
+
+export interface LateFeeCalculation {
+  lateFee: number;
+}
+
 // Maintenance Types
 export interface MaintenanceRequest {
   id: string;

@@ -90,8 +90,19 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
-    if (!(dto.amount > 0)) {
+    // Validate payment amount with proper bounds checking
+    if (!Number.isFinite(dto.amount) || Number.isNaN(dto.amount)) {
+      throw new BadRequestException('Payment amount must be a valid number');
+    }
+    if (dto.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than 0');
+    }
+    if (dto.amount > 999999999.99) {
+      throw new BadRequestException('Payment amount cannot exceed 999,999,999.99');
+    }
+    // Check for decimal precision (max 2 decimal places for currency)
+    if (!Number.isInteger(dto.amount * 100)) {
+      throw new BadRequestException('Payment amount can have at most 2 decimal places');
     }
 
     const idempotencyKey = getIdempotencyKey(dto);
@@ -231,13 +242,19 @@ export class PaymentService {
         );
       }
 
-      if (dto.amount > payment.amount - payment.refundAmount) {
-        throw new BadRequestException('Refund amount exceeds available amount');
+      // Assert the gateway charge reference exists before any refund work.
+      // Without it we cannot tell the gateway which charge to reverse, and
+      // proceeding with an undefined chargeId risks crashing the gateway call
+      // or refunding against the wrong charge.
+      const chargeId = payment.metadata?.chargeId?.trim();
+      if (!chargeId) {
+        throw new BadRequestException(
+          `Cannot process refund: payment ${paymentId} has no gateway charge ID recorded in its metadata`,
+        );
       }
 
-      const chargeId = payment.metadata?.chargeId;
-      if (!chargeId) {
-        throw new BadRequestException('No charge ID found for refund');
+      if (dto.amount > payment.amount - payment.refundAmount) {
+        throw new BadRequestException('Refund amount exceeds available amount');
       }
 
       const refundResult = await Promise.resolve(

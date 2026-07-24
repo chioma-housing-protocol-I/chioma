@@ -58,7 +58,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           fallbackTitle="Admin panel failed"
           fallbackDescription="This admin panel encountered an error. Retry to continue."
         >
-          <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 overflow-auto p-4 sm:p-6"
+          >
             {loading ? (
               <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
                 <div className="flex flex-col items-center space-y-4">

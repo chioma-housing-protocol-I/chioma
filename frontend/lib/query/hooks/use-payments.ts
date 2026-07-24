@@ -3,7 +3,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
-import type { Payment, PaginatedResponse, PaymentMethod } from '@/types';
+import type {
+  Payment,
+  PaginatedResponse,
+  PaymentMethod,
+  PaymentSchedule,
+  PaymentScheduleEntry,
+  PaymentScheduleStatus,
+  LateFeeCalculation,
+} from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +119,284 @@ export function usePaymentsByAgreement(agreementId: string | null) {
       return data;
     },
     enabled: Boolean(agreementId),
+  });
+}
+
+// ─── Rent Payment Schedule ─────────────────────────────────────────────────
+
+/**
+ * Fetch the rent payment schedule for an agreement.
+ * GET /rent/agreements/:id/schedule
+ */
+export function useRentPaymentSchedule(agreementId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.payments.rentSchedule(agreementId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get<PaymentScheduleEntry[]>(
+        `/rent/agreements/${agreementId}/schedule`,
+      );
+      return data;
+    },
+    enabled: Boolean(agreementId),
+  });
+}
+
+/**
+ * Fetch the rent payment history for an agreement.
+ * GET /rent/agreements/:id/history
+ */
+export function useRentPaymentHistory(agreementId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.payments.rentHistory(agreementId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get<Payment[]>(
+        `/rent/agreements/${agreementId}/history`,
+      );
+      return data;
+    },
+    enabled: Boolean(agreementId),
+  });
+}
+
+// ─── Submit Stellar Rent Payment ───────────────────────────────────────────────
+
+export interface SubmitRentPaymentPayload {
+  userAddress: string;
+  userSecret: string;
+  agreementId: string;
+  amount: string;
+  idempotencyKey?: string;
+}
+
+/**
+ * Submit a rent payment via Stellar blockchain.
+ * POST /payments/stellar/rent
+ */
+export function useSubmitRentPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: SubmitRentPaymentPayload) => {
+      const { data } = await apiClient.post<Payment>(
+        '/payments/stellar/rent',
+        payload,
+      );
+      return data;
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      if (created.agreementId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.payments.rentHistory(created.agreementId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.payments.rentSchedule(created.agreementId),
+        });
+      }
+    },
+  });
+}
+
+// ─── Download Payment Receipt ──────────────────────────────────────────────────
+
+export interface DownloadReceiptPayload {
+  paymentId: string;
+}
+
+/**
+ * Download a receipt for any completed payment.
+ * GET /payments/:id/receipt
+ */
+export function useDownloadPaymentReceipt() {
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { data } = await apiClient.get<{
+        receipt: unknown;
+        fileName?: string;
+        data?: string;
+      }>(`/payments/${paymentId}/receipt`);
+      downloadPaymentReceiptFile(paymentId, data);
+      return data;
+    },
+  });
+}
+
+function downloadPaymentReceiptFile(
+  paymentId: string,
+  receipt: { receipt?: unknown; fileName?: string; data?: string },
+) {
+  if (typeof window === 'undefined') return;
+
+  const fileName =
+    typeof receipt.fileName === 'string'
+      ? receipt.fileName
+      : `receipt-${paymentId}.txt`;
+
+  if (receipt.data && typeof receipt.data === 'string') {
+    const binaryStr = atob(receipt.data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  } else {
+    const blob = new Blob(
+      [JSON.stringify(receipt.receipt ?? receipt, null, 2)],
+      { type: 'application/json' },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ─── Handle Late Payments ──────────────────────────────────────────────────────
+
+export interface CalculateLateFeePayload {
+  monthlyRent: number;
+  daysLate: number;
+  gracePeriodDays?: number;
+  lateFeeRate?: number;
+}
+
+/**
+ * Calculate a late fee for overdue payments.
+ * POST /rent/calculate/late-fee
+ */
+export function useCalculateLateFee() {
+  return useMutation({
+    mutationFn: async (payload: CalculateLateFeePayload) => {
+      const { data } = await apiClient.post<LateFeeCalculation>(
+        '/rent/calculate/late-fee',
+        payload,
+      );
+      return data;
+    },
+  });
+}
+
+// ─── Automatic Payments (Payment Schedules) ────────────────────────────────────
+
+export interface PaymentScheduleListParams {
+  agreementId?: string;
+  status?: PaymentScheduleStatus;
+}
+
+export interface CreatePaymentSchedulePayload {
+  agreementId?: string;
+  amount: number;
+  paymentMethodId: string;
+  currency?: string;
+  interval: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  startDate?: string;
+  maxRetries?: number;
+}
+
+export interface UpdatePaymentSchedulePayload {
+  status?: PaymentScheduleStatus;
+  nextRunAt?: string;
+  maxRetries?: number;
+}
+
+/**
+ * Fetch payment schedules with optional filters.
+ * GET /payments/schedules
+ */
+export function usePaymentSchedules(filters: PaymentScheduleListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.payments.schedules.list(filters),
+    queryFn: async () => {
+      const qs = new URLSearchParams();
+      if (filters.agreementId) qs.append('agreementId', filters.agreementId);
+      if (filters.status) qs.append('status', filters.status);
+      const str = qs.toString();
+      const { data } = await apiClient.get<PaymentSchedule[]>(
+        `/payments/schedules${str ? `?${str}` : ''}`,
+      );
+      return data;
+    },
+  });
+}
+
+/**
+ * Create a new automatic payment schedule.
+ * POST /payments/schedules
+ */
+export function useCreatePaymentSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: CreatePaymentSchedulePayload) => {
+      const { data } = await apiClient.post<PaymentSchedule>(
+        '/payments/schedules',
+        payload,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.payments.schedules.all,
+      });
+    },
+  });
+}
+
+/**
+ * Update an existing payment schedule (pause, cancel, modify).
+ * PATCH /payments/schedules/:id
+ */
+export function useUpdatePaymentSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...payload
+    }: UpdatePaymentSchedulePayload & { id: string }) => {
+      const { data } = await apiClient.patch<PaymentSchedule>(
+        `/payments/schedules/${id}`,
+        payload,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.payments.schedules.all,
+      });
+    },
+  });
+}
+
+/**
+ * Manually trigger a payment schedule run.
+ * POST /payments/schedules/:id/run
+ */
+export function useRunPaymentSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.post<Payment>(
+        `/payments/schedules/${id}/run`,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.payments.schedules.all,
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+    },
   });
 }
 

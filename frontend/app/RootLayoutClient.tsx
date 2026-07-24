@@ -27,10 +27,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           <RateLimitNotifier />
           <RouteAnnouncer />
 
-          {/* Main content (a11y target) */}
-          <div id="main-content" tabIndex={-1}>
-            {children}
-          </div>
+          {/* Page content - individual pages provide their own #main-content landmark */}
+          {children}
 
           <ModalManager />
           <OfflineIndicator />
