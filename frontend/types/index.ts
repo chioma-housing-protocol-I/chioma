@@ -40,7 +40,11 @@ export interface UserActivity {
 
 // Property Types — aligned with backend entity (ListingStatus / PropertyType enums)
 export type PropertyType =
-  'apartment' | 'house' | 'commercial' | 'land' | 'other';
+  | 'apartment'
+  | 'house'
+  | 'commercial'
+  | 'land'
+  | 'other';
 export type ListingStatus = 'draft' | 'published' | 'rented' | 'archived';
 
 export interface Property {
@@ -275,7 +279,11 @@ export interface Transaction {
 
 export type AnchorTransactionType = 'deposit' | 'withdrawal';
 export type AnchorTransactionStatus =
-  'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'refunded';
 
 export interface AnchorTransaction {
   id: string;
@@ -306,10 +314,15 @@ export interface AnchorTransactionStats {
 }
 
 export type IndexedTransactionStatus =
-  'pending' | 'indexed' | 'confirmed' | 'failed';
+  | 'pending'
+  | 'indexed'
+  | 'confirmed'
+  | 'failed';
 
 export type IndexedTransactionBlockchainConfirmation =
-  'confirmed' | 'unconfirmed' | 'failed';
+  | 'confirmed'
+  | 'unconfirmed'
+  | 'failed';
 
 export interface IndexedTransaction {
   id: string;
@@ -514,7 +527,12 @@ export interface ApiError {
 // Document Types
 export type DocumentType = 'pdf' | 'image' | 'docx' | 'xlsx' | 'txt';
 export type DocumentCategory =
-  'lease' | 'identity' | 'payment' | 'maintenance' | 'inspection' | 'other';
+  | 'lease'
+  | 'identity'
+  | 'payment'
+  | 'maintenance'
+  | 'inspection'
+  | 'other';
 
 export interface Document {
   id: string;

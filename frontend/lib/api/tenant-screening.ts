@@ -1,7 +1,11 @@
 import { apiClient } from '../api-client';
 
 export type ScreeningStatus =
-  'pending' | 'in_progress' | 'completed' | 'failed' | 'error';
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+  | 'error';
 
 export interface ScreeningRequest {
   tenantId: string;

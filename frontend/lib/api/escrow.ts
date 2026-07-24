@@ -1,7 +1,12 @@
 import { apiClient } from '../api-client';
 
 export type EscrowStatus =
-  'created' | 'funded' | 'released' | 'refunded' | 'disputed' | 'resolved';
+  | 'created'
+  | 'funded'
+  | 'released'
+  | 'refunded'
+  | 'disputed'
+  | 'resolved';
 
 export interface Escrow {
   id: string;

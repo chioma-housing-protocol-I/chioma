@@ -23,7 +23,11 @@ export type PropertyFilter = {
 };
 
 export type SortField =
-  'price' | 'createdAt' | 'title' | 'bedrooms' | 'updatedAt';
+  | 'price'
+  | 'createdAt'
+  | 'title'
+  | 'bedrooms'
+  | 'updatedAt';
 export type SortDirection = 'asc' | 'desc';
 
 export interface PaginationState {
