@@ -12,15 +12,25 @@ import {
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 
-const MultiLineChartWrapper = dynamic(() => import('@/components/charts/MultiLineChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const MultiLineChartWrapper = dynamic(
+  () => import('@/components/charts/MultiLineChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
-const MultiBarChartWrapper = dynamic(() => import('@/components/charts/MultiBarChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const MultiBarChartWrapper = dynamic(
+  () => import('@/components/charts/MultiBarChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 // Types for auth metrics data
 interface AuthStats {

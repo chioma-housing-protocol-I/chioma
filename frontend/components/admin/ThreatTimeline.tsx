@@ -4,10 +4,15 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import type { ThreatStats } from '@/types/security';
 
-const AreaChartWrapper = dynamic(() => import('@/components/charts/AreaChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const AreaChartWrapper = dynamic(
+  () => import('@/components/charts/AreaChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 interface ThreatTimelineProps {
   stats: ThreatStats | null;

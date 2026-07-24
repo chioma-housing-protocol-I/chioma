@@ -23,15 +23,25 @@ import {
   Bar,
 } from 'recharts';
 
-const LineChartWrapper = dynamic(() => import('@/components/charts/LineChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const LineChartWrapper = dynamic(
+  () => import('@/components/charts/LineChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
-const PieChartWrapper = dynamic(() => import('@/components/charts/PieChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const PieChartWrapper = dynamic(
+  () => import('@/components/charts/PieChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 const PIE_COLORS = ['#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#2563eb'];
 

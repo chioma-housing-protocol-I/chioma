@@ -3,10 +3,15 @@
 import { DollarSign, TrendingUp, Calendar, ArrowUpRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-const BarChartWrapper = dynamic(() => import('@/components/charts/BarChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const BarChartWrapper = dynamic(
+  () => import('@/components/charts/BarChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 const mockMonthly = [
   { month: 'Jan', earnings: 1200 },

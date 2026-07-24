@@ -4,7 +4,10 @@ import React, { use } from 'react';
 import dynamic from 'next/dynamic';
 
 const PropertyListingWizard = dynamic(
-  () => import('@/components/wizard/PropertyListingWizard').then((m) => m.PropertyListingWizard),
+  () =>
+    import('@/components/wizard/PropertyListingWizard').then(
+      (m) => m.PropertyListingWizard,
+    ),
   {
     loading: () => (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -12,7 +15,7 @@ const PropertyListingWizard = dynamic(
       </div>
     ),
     ssr: false,
-  }
+  },
 );
 
 export default function ResumeWizardPage({

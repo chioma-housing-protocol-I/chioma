@@ -14,67 +14,69 @@ import dynamic from 'next/dynamic';
 // Dynamically import all modals to keep them out of the initial bundle load
 const PropertyDetailModal = dynamic(
   () => import('./PropertyDetailModal').then((m) => m.PropertyDetailModal),
-  { ssr: false }
+  { ssr: false },
 );
 const PropertyInquiryModal = dynamic(
   () => import('./PropertyInquiryModal').then((m) => m.PropertyInquiryModal),
-  { ssr: false }
+  { ssr: false },
 );
 const PropertyAgreementModal = dynamic(
-  () => import('./PropertyAgreementModal').then((m) => m.PropertyAgreementModal),
-  { ssr: false }
+  () =>
+    import('./PropertyAgreementModal').then((m) => m.PropertyAgreementModal),
+  { ssr: false },
 );
 const AgreementViewModal = dynamic(
   () => import('./AgreementViewModal').then((m) => m.AgreementViewModal),
-  { ssr: false }
+  { ssr: false },
 );
 const AgreementSigningModal = dynamic(
   () => import('./AgreementSigningModal').then((m) => m.AgreementSigningModal),
-  { ssr: false }
+  { ssr: false },
 );
 const DisputeModal = dynamic(
   () => import('./DisputeModal').then((m) => m.DisputeModal),
-  { ssr: false }
+  { ssr: false },
 );
 const DisputeFilingModal = dynamic(
   () => import('./DisputeFilingModal').then((m) => m.DisputeFilingModal),
-  { ssr: false }
+  { ssr: false },
 );
 const DisputeResolutionModal = dynamic(
-  () => import('./DisputeResolutionModal').then((m) => m.DisputeResolutionModal),
-  { ssr: false }
+  () =>
+    import('./DisputeResolutionModal').then((m) => m.DisputeResolutionModal),
+  { ssr: false },
 );
 const DisputeDetailModal = dynamic(
   () => import('./DisputeDetailModal').then((m) => m.DisputeDetailModal),
-  { ssr: false }
+  { ssr: false },
 );
 const EvidenceUploadModal = dynamic(
   () => import('./EvidenceUploadModal').then((m) => m.EvidenceUploadModal),
-  { ssr: false }
+  { ssr: false },
 );
 const PaymentModal = dynamic(
   () => import('./PaymentModal').then((m) => m.PaymentModal),
-  { ssr: false }
+  { ssr: false },
 );
 const RefundModal = dynamic(
   () => import('./RefundModal').then((m) => m.RefundModal),
-  { ssr: false }
+  { ssr: false },
 );
 const UserManagementModal = dynamic(
   () => import('./UserManagementModal').then((m) => m.UserManagementModal),
-  { ssr: false }
+  { ssr: false },
 );
 const RefundRequestModal = dynamic(
   () => import('./RefundRequestModal').then((m) => m.RefundRequestModal),
-  { ssr: false }
+  { ssr: false },
 );
 const UserProfileEditModal = dynamic(
   () => import('./UserProfileEditModal').then((m) => m.UserProfileEditModal),
-  { ssr: false }
+  { ssr: false },
 );
 const AccountSettingsModal = dynamic(
   () => import('./AccountSettingsModal').then((m) => m.AccountSettingsModal),
-  { ssr: false }
+  { ssr: false },
 );
 import type { Document, DocumentMetadata } from '@/components/documents';
 import type {

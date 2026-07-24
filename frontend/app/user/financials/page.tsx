@@ -7,10 +7,15 @@ import { Eye, ShieldCheck } from 'lucide-react';
 import { useTransactions } from '@/lib/query/hooks/use-transactions';
 import dynamic from 'next/dynamic';
 
-const AreaChartWrapper = dynamic(() => import('@/components/charts/AreaChartWrapper'), {
-  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
-  ssr: false,
-});
+const AreaChartWrapper = dynamic(
+  () => import('@/components/charts/AreaChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 import {
   useStellarNetworkAccount,
   readAssetBalance,
