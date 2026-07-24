@@ -19,7 +19,7 @@ export class CompressionMiddleware implements NestMiddleware {
 
     const originalEnd = res.end.bind(res);
 
-    (res as any).end = (
+    (res as unknown as { end: typeof originalEnd }).end = (
       chunk?: Buffer | string,
       encodingOrCb?: BufferEncoding | (() => void),
       cb?: () => void,

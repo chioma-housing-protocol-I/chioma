@@ -23,6 +23,11 @@ import { BlockDatesDto } from './dto/block-dates.dto';
 import { SetPriceDto } from './dto/set-price.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+/** Express Request extended with the user object populated by Passport/JWT. */
+interface AuthenticatedRequest extends Request {
+  user: { id: string };
+}
+
 @ApiTags('Property Availability')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -50,12 +55,12 @@ export class AvailabilityController {
   async updateAvailability(
     @Param('propertyId') propertyId: string,
     @Body() dto: UpdateAvailabilityDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.availabilityService.updateAvailability(
       propertyId,
       dto,
-      (req.user as any).id,
+      req.user.id,
     );
   }
 
@@ -65,13 +70,9 @@ export class AvailabilityController {
   async blockDates(
     @Param('propertyId') propertyId: string,
     @Body() dto: BlockDatesDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    await this.availabilityService.blockDates(
-      propertyId,
-      dto,
-      (req.user as any).id,
-    );
+    await this.availabilityService.blockDates(propertyId, dto, req.user.id);
     return { success: true };
   }
 
@@ -81,13 +82,9 @@ export class AvailabilityController {
   async unblockDates(
     @Param('propertyId') propertyId: string,
     @Body() dto: BlockDatesDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    await this.availabilityService.unblockDates(
-      propertyId,
-      dto,
-      (req.user as any).id,
-    );
+    await this.availabilityService.unblockDates(propertyId, dto, req.user.id);
     return { success: true };
   }
 
@@ -97,12 +94,8 @@ export class AvailabilityController {
   async setPrice(
     @Param('propertyId') propertyId: string,
     @Body() dto: SetPriceDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.availabilityService.setPrice(
-      propertyId,
-      dto,
-      (req.user as any).id,
-    );
+    return this.availabilityService.setPrice(propertyId, dto, req.user.id);
   }
 }

@@ -311,7 +311,11 @@ export class AgreementsService {
   }
 
   async getPayments(id: string) {
-    return await this.paymentRepository.find({ where: { agreementId: id } });
+    return await this.paymentRepository.find({
+      where: { agreementId: id },
+      relations: ['user', 'paymentMethodRelation'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
   /**
