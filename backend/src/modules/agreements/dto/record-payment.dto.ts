@@ -5,7 +5,9 @@ import {
   IsOptional,
   IsString,
   Min,
+  Max,
   MaxLength,
+  IsFinite,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -14,10 +16,13 @@ export class RecordPaymentDto {
     description: 'Payment amount in USD',
     example: 1500.0,
     minimum: 0.01,
+    maximum: 999999999.99,
   })
   @IsNotEmpty()
   @IsNumber()
-  @Min(0.01)
+  @IsFinite({ message: 'Amount must be a finite number' })
+  @Min(0.01, { message: 'Amount must be at least 0.01' })
+  @Max(999999999.99, { message: 'Amount must not exceed 999,999,999.99' })
   amount: number;
 
   @ApiProperty({

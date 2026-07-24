@@ -186,15 +186,15 @@ const appLogger = new Logger('AppModule');
           entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
           migrations: isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: isTest,
-          logging: process.env.NODE_ENV === 'development',
+          logging: false, // Disable query logging to prevent credential exposure
         };
         appLogger.log('[TypeORM Config] PostgreSQL config');
         appLogger.debug({
           type: config.type,
           host: config.host,
           port: config.port,
-          username: config.username,
           database: config.database,
+          // Removed username to prevent credential exposure in logs
         });
         return config;
       },

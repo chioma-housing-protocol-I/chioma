@@ -108,11 +108,13 @@ export class RateLimitGuard implements CanActivate {
           ? Math.ceil((abuseResult.blockUntil.getTime() - Date.now()) / 1000)
           : 3600;
 
+        // Set Retry-After header
+        request.res?.setHeader('Retry-After', retryAfter);
+
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
             message: 'Too many requests - abuse detected',
-            retryAfter,
             violations: abuseResult.violations,
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -136,11 +138,14 @@ export class RateLimitGuard implements CanActivate {
         );
 
         const retryAfter = Math.ceil(result.msBeforeNext / 1000);
+        
+        // Set Retry-After header
+        request.res?.setHeader('Retry-After', retryAfter);
+        
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
             message: 'Too many requests',
-            retryAfter,
             remainingPoints: result.remainingPoints,
           },
           HttpStatus.TOO_MANY_REQUESTS,

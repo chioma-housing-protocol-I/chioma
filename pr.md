@@ -14,10 +14,17 @@ This PR synchronizes the local repository with the upstream `chioma` branch and 
 
 ## 🔗 Related Issues
 
-Closes #416, #744, #771, #772
+Closes #1416, #1415, #1414, #1413, #416, #744, #771, #772
 
 ## 📋 Changes Made
 
+### Security Fixes (Issues #1416, #1415, #1414, #1413)
+- **Payment Validation (#1416):** Added `@IsFinite()` and `@Max()` validators to prevent Infinity and integer overflow in payment amounts
+- **Database Logging (#1415):** Disabled query logging to prevent database credentials from appearing in debug console and CI/CD logs
+- **Rate Limiting (#1414):** Moved `retryAfter` from JSON response body to HTTP `Retry-After` header per RFC standards
+- **PII Encryption (#1413):** Documented field-level encryption implementation for emails, phone numbers, and other PII at rest using AES-256-GCM
+
+### Previous Changes
 - **Upstream Sync:** Merged `upstream/main` to align with the latest protocol updates.
 - **User Activity Timeline (#416):** Integrated `ActivityTimeline` into `AdminUserDetailView` with filtering, pagination (10/page), and chronological sorting.
 - **Contract Error Reference (#744):** Created [ERROR-REFERENCE.md](file:///home/solodev/Documents/dripsNetwork/chioma/contract/docs/reference/ERROR-REFERENCE.md) documenting core protocol error codes.

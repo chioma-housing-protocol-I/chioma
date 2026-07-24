@@ -44,9 +44,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? exceptionResponse
             : ((exceptionResponse as Record<string, unknown>)
                 .message as string) || 'Too Many Requests';
+        
+        // Set Retry-After header
+        response.setHeader('Retry-After', '60');
+        
         return {
           status,
-          body: { statusCode: status, message, retryAfter: 60 },
+          body: { statusCode: status, message },
         };
       }
 

@@ -51,5 +51,5 @@ export const AppDataSource = new DataSource({
   migrationsTableName: 'migrations',
   migrationsTransactionMode: 'each',
   synchronize: false,
-  logging: process.env.TYPEORM_LOGGING === 'true',
+  logging: false, // Disable query logging to prevent credential exposure in debug output
 });
