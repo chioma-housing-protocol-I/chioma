@@ -82,7 +82,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
             </nav>
           </header>
 
-          <main className="py-6">
+          <main id="main-content" tabIndex={-1} className="py-6">
             {loading ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-slate-200">
                 Loading developer portal...
