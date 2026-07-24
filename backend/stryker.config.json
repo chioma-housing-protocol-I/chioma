@@ -1,11 +1,7 @@
 {
   "$schema": "https://schema.stryker-mutator.io/stryker-config.schema.json",
   "packageManager": "pnpm",
-  "reporters": [
-    "html",
-    "clear-text",
-    "progress"
-  ],
+  "reporters": ["html", "clear-text", "progress"],
   "testRunner": "jest",
   "plugins": [
     "@stryker-mutator/jest-runner",
@@ -17,9 +13,7 @@
     "enableFindRelatedTests": true
   },
   "coverageAnalysis": "perTest",
-  "checkers": [
-    "typescript"
-  ],
+  "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.json",
   "mutate": [
     "src/**/*.ts",

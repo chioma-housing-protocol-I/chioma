@@ -5,13 +5,13 @@ The backend ships a small set of resilience primitives under
 responsive when a downstream dependency slows down or fails, and they make
 "production readiness" behaviours testable and reusable across feature modules.
 
-| Pattern              | Service                | Purpose                                                       |
-| -------------------- | ---------------------- | ------------------------------------------------------------- |
-| Bulkhead isolation   | `BulkheadService`      | Cap concurrency per dependency so one can't starve the others |
-| Fallback             | `FallbackService`      | Serve a substitute result when the primary call fails         |
-| Graceful degradation | `DegradationService`   | Shed non-essential features as health worsens                 |
-| Incident tracking    | `IncidentService`      | Track incidents and drive degradation (see INCIDENT_RESPONSE) |
-| Timeout enforcement  | `TimeoutService`       | Abort external calls that exceed a configurable deadline      |
+| Pattern              | Service              | Purpose                                                       |
+| -------------------- | -------------------- | ------------------------------------------------------------- |
+| Bulkhead isolation   | `BulkheadService`    | Cap concurrency per dependency so one can't starve the others |
+| Fallback             | `FallbackService`    | Serve a substitute result when the primary call fails         |
+| Graceful degradation | `DegradationService` | Shed non-essential features as health worsens                 |
+| Incident tracking    | `IncidentService`    | Track incidents and drive degradation (see INCIDENT_RESPONSE) |
+| Timeout enforcement  | `TimeoutService`     | Abort external calls that exceed a configurable deadline      |
 
 All five are provided by a `@Global()` module, so any feature module can inject
 them directly without re-importing.
@@ -115,11 +115,11 @@ On failure the service uses `fallbackFn(error)` if present, otherwise
 Holds an overall `DegradationLevel` (`NORMAL` → `PARTIAL` → `SEVERE`) and a
 registry of features tagged by `FeaturePriority`:
 
-| Level     | Enabled features                  |
-| --------- | --------------------------------- |
-| `NORMAL`  | essential + standard + optional   |
-| `PARTIAL` | essential + standard              |
-| `SEVERE`  | essential only                    |
+| Level     | Enabled features                |
+| --------- | ------------------------------- |
+| `NORMAL`  | essential + standard + optional |
+| `PARTIAL` | essential + standard            |
+| `SEVERE`  | essential only                  |
 
 ```ts
 // At startup, declare what's optional.
