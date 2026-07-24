@@ -134,7 +134,7 @@ export class DisputesService {
         metadata: createDisputeDto.metadata
           ? JSON.parse(createDisputeDto.metadata)
           : null,
-      } as any);
+      });
 
       const savedDispute = await queryRunner.manager.save(dispute);
 

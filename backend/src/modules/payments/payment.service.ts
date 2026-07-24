@@ -90,8 +90,19 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
-    if (!(dto.amount > 0)) {
+    // Validate payment amount with proper bounds checking
+    if (!Number.isFinite(dto.amount) || Number.isNaN(dto.amount)) {
+      throw new BadRequestException('Payment amount must be a valid number');
+    }
+    if (dto.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than 0');
+    }
+    if (dto.amount > 999999999.99) {
+      throw new BadRequestException('Payment amount cannot exceed 999,999,999.99');
+    }
+    // Check for decimal precision (max 2 decimal places for currency)
+    if (!Number.isInteger(dto.amount * 100)) {
+      throw new BadRequestException('Payment amount can have at most 2 decimal places');
     }
 
     const idempotencyKey = getIdempotencyKey(dto);

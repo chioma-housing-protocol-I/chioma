@@ -183,6 +183,116 @@ describe('PaymentService', () => {
   });
 
   describe('recordPayment', () => {
+    it('rejects payment amount that is Infinity', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: Infinity,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be a valid number',
+      );
+    });
+
+    it('rejects payment amount that is NaN', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: NaN,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be a valid number',
+      );
+    });
+
+    it('rejects payment amount that is zero or negative', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 0,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be greater than 0',
+      );
+    });
+
+    it('rejects payment amount exceeding maximum (999,999,999.99)', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 1000000000,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount cannot exceed 999,999,999.99',
+      );
+    });
+
+    it('rejects payment amount with more than 2 decimal places', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 100.123,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount can have at most 2 decimal places',
+      );
+    });
+
+    it('accepts payment amount with exactly 2 decimal places', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_1',
+      });
+
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        amount: 100.99,
+        currency: 'NGN',
+        paymentMethod: 'card',
+      });
+
+      const dto: CreatePaymentRecordDto = {
+        agreementId: 'agreement_1',
+        amount: 100.99,
+        paymentMethodId: '1',
+      };
+
+      const result = await service.recordPayment(dto, 'user_1');
+      expect(result.id).toBe('pay_1');
+    });
+
     it('returns existing payment when idempotency key matches', async () => {
       const existingPayment = { id: 'pay_1' } as Payment;
       (paymentRepository.findOne as jest.Mock).mockResolvedValue(
