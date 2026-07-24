@@ -166,6 +166,14 @@ function validateProductionSecrets(
   if (isNonEmpty(paymentMeta) && isPlaceholderSecret(paymentMeta)) {
     errors.push('PAYMENT_METADATA_SECRET must not use a placeholder value');
   }
+
+  // Require PAYMENT_WEBHOOK_SECRET in production/staging
+  const webhookSecret = config.PAYMENT_WEBHOOK_SECRET;
+  if (!isNonEmpty(webhookSecret)) {
+    errors.push('PAYMENT_WEBHOOK_SECRET is required in production/staging');
+  } else if (isPlaceholderSecret(webhookSecret)) {
+    errors.push('PAYMENT_WEBHOOK_SECRET must not use a placeholder value');
+  }
 }
 
 /**
