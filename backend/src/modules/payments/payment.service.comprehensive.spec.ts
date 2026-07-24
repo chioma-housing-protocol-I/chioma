@@ -397,6 +397,213 @@ describe('PaymentService – edge cases & isolation', () => {
     });
   });
 
+  // ─── deposit management integration flow ───────────────────────────────
+
+  describe('deposit management integration flow', () => {
+    it('records a security deposit escrow, releases it, and marks the payment complete', async () => {
+      const escrowPayload = {
+        sourcePublicKey: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        destinationPublicKey:
+          'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+        amount: '3000.0000000',
+        agreementId: 'agr-1',
+      };
+
+      mockStellar.createEscrow.mockResolvedValue({
+        id: 42,
+        status: 'ACTIVE',
+      });
+
+      const escrowPayment = {
+        id: 'pay-escrow-1',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        currency: 'XLM',
+        status: PaymentStatus.PENDING,
+        referenceNumber: 'escrow:42',
+        metadata: {
+          gateway: 'stellar',
+          flow: 'escrow_deposit',
+          escrowId: 42,
+        },
+      } as Payment;
+
+      paymentRepo.create.mockImplementation(
+        (d: Partial<Payment>) => d as Payment,
+      );
+      paymentRepo.save.mockResolvedValue(escrowPayment);
+
+      const created = await service.createEscrowDeposit(
+        escrowPayload as any,
+        'user-1',
+      );
+
+      expect(mockStellar.createEscrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: '3000.0000000',
+          rentAgreementId: 'agr-1',
+        }),
+      );
+      expect(created.status).toBe(PaymentStatus.PENDING);
+      expect(created.referenceNumber).toBe('escrow:42');
+
+      mockStellar.releaseEscrow.mockResolvedValue({
+        id: 42,
+        status: 'released',
+        releaseTransactionHash: 'release-hash-1',
+      });
+      paymentRepo.findOne.mockResolvedValue(escrowPayment);
+      paymentRepo.save.mockResolvedValue({
+        ...escrowPayment,
+        status: PaymentStatus.COMPLETED,
+      } as Payment);
+
+      const released = await service.releaseEscrowDeposit(
+        42,
+        { memo: 'Deposit released' } as any,
+        'user-1',
+      );
+
+      expect(mockStellar.releaseEscrow).toHaveBeenCalledWith({
+        escrowId: 42,
+        memo: 'Deposit released',
+      });
+      expect(released?.status).toBe(PaymentStatus.COMPLETED);
+    });
+
+    it('processes a partial security deposit refund for damage deductions', async () => {
+      const depositPayment = {
+        id: 'pay-deposit-1',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        refundAmount: 0,
+        currency: 'XLM',
+        status: PaymentStatus.COMPLETED,
+        metadata: {
+          chargeId: 'ch-deposit-1',
+        },
+      } as Payment;
+
+      entityManager.findOne.mockResolvedValue(depositPayment);
+      entityManager.save.mockImplementation(
+        async (_entityClass: unknown, entity?: Payment) =>
+          ({
+            ...entity,
+            refundAmount: 500,
+            refundStatus: 'completed',
+            status: PaymentStatus.PARTIAL_REFUND,
+          }) as Payment,
+      );
+
+      mockGateway.processRefund.mockResolvedValue({
+        success: true,
+        refundId: 'refund-1',
+      });
+
+      const partialRefund = await service.processRefund(
+        'pay-deposit-1',
+        { amount: 500, reason: 'Minor damage assessment' } as ProcessRefundDto,
+        'user-1',
+      );
+
+      expect(mockGateway.processRefund).toHaveBeenCalledWith(
+        'ch-deposit-1',
+        500,
+      );
+      expect(partialRefund.status).toBe(PaymentStatus.PARTIAL_REFUND);
+      expect(partialRefund.refundAmount).toBe(500);
+    });
+
+    it('processes a full security deposit refund when no deductions remain', async () => {
+      const depositPayment = {
+        id: 'pay-deposit-2',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        refundAmount: 0,
+        currency: 'XLM',
+        status: PaymentStatus.COMPLETED,
+        metadata: {
+          chargeId: 'ch-deposit-2',
+        },
+      } as Payment;
+
+      entityManager.findOne.mockResolvedValue(depositPayment);
+      entityManager.save.mockImplementation(
+        async (_entityClass: unknown, entity?: Payment) =>
+          ({
+            ...entity,
+            refundAmount: 3000,
+            refundStatus: 'completed',
+            status: PaymentStatus.REFUNDED,
+          }) as Payment,
+      );
+
+      mockGateway.processRefund.mockResolvedValue({
+        success: true,
+        refundId: 'refund-2',
+      });
+
+      const finalRefund = await service.processRefund(
+        'pay-deposit-2',
+        {
+          amount: 3000,
+          reason: 'Full deposit refund after move-out',
+        } as ProcessRefundDto,
+        'user-1',
+      );
+
+      expect(mockGateway.processRefund).toHaveBeenCalledWith(
+        'ch-deposit-2',
+        3000,
+      );
+      expect(finalRefund.status).toBe(PaymentStatus.REFUNDED);
+      expect(finalRefund.refundAmount).toBe(3000);
+    });
+
+    it('refunds a held escrow deposit when the security deposit is returned', async () => {
+      const escrowPayment = {
+        id: 'pay-escrow-2',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        currency: 'XLM',
+        status: PaymentStatus.PENDING,
+        referenceNumber: 'escrow:88',
+        metadata: {
+          gateway: 'stellar',
+          flow: 'escrow_deposit',
+          escrowId: 88,
+        },
+      } as Payment;
+
+      paymentRepo.findOne.mockResolvedValue(escrowPayment);
+      mockStellar.refundEscrow.mockResolvedValue({
+        id: 88,
+        status: 'refunded',
+        refundTransactionHash: 'refund-hash-2',
+      });
+      paymentRepo.save.mockResolvedValue({
+        ...escrowPayment,
+        status: PaymentStatus.REFUNDED,
+      } as Payment);
+
+      const result = await service.refundEscrowDeposit(
+        88,
+        { reason: 'Normal move-out refund' } as any,
+        'user-1',
+      );
+
+      expect(mockStellar.refundEscrow).toHaveBeenCalledWith({
+        escrowId: 88,
+        reason: 'Normal move-out refund',
+      });
+      expect(result?.status).toBe(PaymentStatus.REFUNDED);
+    });
+  });
+
   // ─── getPaymentAnalytics edge cases ─────────────────────────────────────
 
   describe('getPaymentAnalytics – edge cases', () => {

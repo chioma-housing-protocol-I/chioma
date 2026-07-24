@@ -21,8 +21,8 @@ export class DisputeEvidence {
   @JoinColumn({ name: 'dispute_id' })
   dispute: Dispute;
 
-  @Column({ name: 'uploaded_by' })
-  uploadedBy: number;
+  @Column({ name: 'uploaded_by', type: 'uuid' })
+  uploadedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'uploaded_by' })

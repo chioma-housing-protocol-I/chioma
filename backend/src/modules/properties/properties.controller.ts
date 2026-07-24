@@ -19,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -36,31 +37,23 @@ import { ListingStatus } from './entities/property.entity';
 
 @ApiTags('Properties')
 @Controller('properties')
+@ApiStandardErrors()
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new property listing',
     description:
-      'Creates a new property listing. Only landlords and admins can create properties.',
+      'Creates a new property listing. Only agents (landlords) and admins can create properties.',
   })
   @ApiResponse({
     status: 201,
     description: 'Property created successfully',
-  })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token required',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - insufficient permissions',
   })
   async create(
     @Body() createPropertyDto: CreatePropertyDto,
@@ -102,10 +95,6 @@ export class PropertiesController {
     status: 200,
     description: 'User properties retrieved successfully',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token required',
-  })
   async findMyProperties(
     @Query() query: QueryPropertyDto,
     @CurrentUser() user: User,
@@ -130,7 +119,6 @@ export class PropertiesController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({ status: 200, description: 'View recorded' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
   async recordView(@Param('id', ParseUUIDPipe) id: string) {
     return await this.propertiesService.recordView(id);
   }
@@ -340,7 +328,7 @@ export class PropertiesController {
 
   @Post('/property-listings/wizard/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -356,7 +344,7 @@ export class PropertiesController {
 
   @Patch('/property-listings/wizard/:id/step')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -373,7 +361,7 @@ export class PropertiesController {
 
   @Get('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get wizard draft',
@@ -388,12 +376,12 @@ export class PropertiesController {
 
   @Delete('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete wizard draft',
-    description: 'Deletes a wizard draft for the current landlord.',
+    description: 'Deletes a wizard draft for the current user.',
   })
   async deleteListingWizardDraft(
     @Param('id', ParseUUIDPipe) id: string,
@@ -404,7 +392,7 @@ export class PropertiesController {
 
   @Post('/property-listings/wizard/:id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

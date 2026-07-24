@@ -89,18 +89,14 @@ export function WebhooksList({
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // Reset to page 1 when filters change
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [query, sortBy, statusFilter]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // Adjust current page if it exceeds total pages
     if (page > totalPages && totalPages > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPage(totalPages);
     }
   }, [totalPages]);

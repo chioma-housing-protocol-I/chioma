@@ -33,6 +33,7 @@ import { useAuth } from '@/store/authStore';
 import { apiClient } from '@/lib/api-client';
 import { useModal } from '@/contexts/ModalContext';
 import { processStellarRentPayment } from '@/lib/contracts/soroban-client';
+import toast from 'react-hot-toast';
 import {
   type DashboardPayment,
   loadTenantPayments,
@@ -110,20 +111,21 @@ export default function TenantPaymentsPage() {
     null,
   );
 
+  const refreshPayments = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const nextPayments = await loadTenantPayments(user.id);
+      setPayments(nextPayments);
+    } catch {
+      toast.error('Failed to load payments history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let active = true;
-    const run = async () => {
-      setLoading(true);
-      const nextPayments = await loadTenantPayments(user?.id);
-      if (active) {
-        setPayments(nextPayments);
-        setLoading(false);
-      }
-    };
-    void run();
-    return () => {
-      active = false;
-    };
+    void refreshPayments();
   }, [user?.id]);
 
   const sortedPayments = useMemo(
@@ -180,10 +182,15 @@ export default function TenantPaymentsPage() {
         return ts < earliest ? ts : earliest;
       }, Number.MAX_SAFE_INTEGER)
     : Date.now();
-  const activeLeaseStart = startOfMonth(
-    outgoingCompleted.length > 0
-      ? new Date(firstPaymentDate)
-      : subMonths(new Date(), 5),
+  const hasCompletedPayments = outgoingCompleted.length > 0;
+  const activeLeaseStart = useMemo(
+    () =>
+      startOfMonth(
+        hasCompletedPayments
+          ? new Date(firstPaymentDate)
+          : subMonths(new Date(), 5),
+      ),
+    [hasCompletedPayments, firstPaymentDate],
   );
   const cycleDates = useMemo(() => {
     const dates: Date[] = [];
@@ -260,19 +267,23 @@ export default function TenantPaymentsPage() {
         agreementId: string;
         amount: number;
         paymentMethod: string;
+        paymentMethodId?: string;
       }) => {
         if (data.paymentMethod === 'crypto') {
-          await processStellarRentPayment({
-            agreementId: data.agreementId,
-            amount: data.amount,
-          });
-        } else {
-          await apiClient.post('/payments', {
-            agreementId: data.agreementId,
-            amount: data.amount,
-            paymentMethod: data.paymentMethod,
-          });
+          throw new Error('Cryptocurrency payments are currently disabled.');
         }
+
+        if (!data.paymentMethodId) {
+          throw new Error('Please select or add a payment method first.');
+        }
+
+        await apiClient.post('/payments', {
+          agreementId: data.agreementId,
+          amount: data.amount,
+          paymentMethodId: data.paymentMethodId,
+        });
+
+        void refreshPayments();
       },
     });
   };

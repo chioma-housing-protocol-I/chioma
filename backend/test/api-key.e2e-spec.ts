@@ -1,18 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DeveloperModule } from '../src/modules/developer/developer.module';
+import { DeveloperService } from '../src/modules/developer/developer.service';
 import { ApiKey } from '../src/modules/developer/entities/api-key.entity';
 import { ApiKeyRotationHistory } from '../src/modules/developer/entities/api-key-rotation-history.entity';
 import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
+import { JwtAuthGuard } from '../src/modules/auth/guards/jwt-auth.guard';
 
 describe('API Key E2E Tests', () => {
   let app: INestApplication;
   let apiKeyRepository: any;
   let rotationHistoryRepository: any;
+  let developerService: DeveloperService;
   let jwtToken: string;
 
   beforeAll(async () => {
@@ -27,9 +34,23 @@ describe('API Key E2E Tests', () => {
         ),
         DeveloperModule,
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: any) => {
+          const req = context.switchToHttp().getRequest();
+          const authHeader = req.headers.authorization;
+          if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new UnauthorizedException();
+          }
+          req.user = { id: 'test-user-id' };
+          return true;
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
+    app.useLogger(['log', 'error', 'warn', 'debug', 'verbose']);
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -45,6 +66,7 @@ describe('API Key E2E Tests', () => {
     rotationHistoryRepository = moduleFixture.get(
       getRepositoryToken(ApiKeyRotationHistory),
     );
+    developerService = moduleFixture.get<DeveloperService>(DeveloperService);
 
     // Get a JWT token for testing (would normally come from auth)
     // For now, we'll test without JWT by making the endpoints accessible or
@@ -123,7 +145,7 @@ describe('API Key E2E Tests', () => {
   });
 
   describe('POST /developer/api-keys/:id/rotate', () => {
-    it('should rotate an API key', async () => {
+    it('should rotate an active API key and transition validity', async () => {
       // First create a key
       const createResponse = await request(app.getHttpServer())
         .post('/developer/api-keys')
@@ -131,6 +153,12 @@ describe('API Key E2E Tests', () => {
         .send({ name: 'Rotate Test Key' });
 
       const keyId = createResponse.body.id;
+      const oldRawKey = createResponse.body.key;
+
+      // Old key should be valid initially
+      const validatedOldBefore = await developerService.validateKey(oldRawKey);
+      expect(validatedOldBefore).not.toBeNull();
+      expect(validatedOldBefore!.id).toBe(keyId);
 
       const response = await request(app.getHttpServer())
         .post(`/developer/api-keys/${keyId}/rotate`)
@@ -140,6 +168,18 @@ describe('API Key E2E Tests', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('key');
       expect(response.body.id).not.toBe(keyId);
+
+      const newKeyId = response.body.id;
+      const newRawKey = response.body.key;
+
+      // New key should be valid
+      const validatedNew = await developerService.validateKey(newRawKey);
+      expect(validatedNew).not.toBeNull();
+      expect(validatedNew!.id).toBe(newKeyId);
+
+      // Old key should now be invalid/expired
+      const validatedOldAfter = await developerService.validateKey(oldRawKey);
+      expect(validatedOldAfter).toBeNull();
     });
 
     it('should reject rotation for non-existent key', async () => {
@@ -147,6 +187,48 @@ describe('API Key E2E Tests', () => {
         .post('/developer/api-keys/non-existent-id/rotate')
         .set('Authorization', `Bearer ${jwtToken}`)
         .expect(404);
+    });
+
+    it('should reject rotation for revoked key', async () => {
+      // Create a key
+      const createResponse = await request(app.getHttpServer())
+        .post('/developer/api-keys')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .send({ name: 'Revoke Then Rotate Key' });
+
+      const keyId = createResponse.body.id;
+
+      // Revoke the key
+      await request(app.getHttpServer())
+        .delete(`/developer/api-keys/${keyId}`)
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .expect(200);
+
+      // Try rotating it
+      await request(app.getHttpServer())
+        .post(`/developer/api-keys/${keyId}/rotate`)
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .expect(400);
+    });
+
+    it('should reject rotation for expired key', async () => {
+      // Create a key
+      const createResponse = await request(app.getHttpServer())
+        .post('/developer/api-keys')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .send({ name: 'Expire Then Rotate Key' });
+
+      const keyId = createResponse.body.id;
+
+      // Force make the key expired in DB
+      const pastDate = new Date(Date.now() - 10000);
+      await apiKeyRepository.update(keyId, { expiresAt: pastDate });
+
+      // Try rotating it
+      await request(app.getHttpServer())
+        .post(`/developer/api-keys/${keyId}/rotate`)
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .expect(400);
     });
   });
 

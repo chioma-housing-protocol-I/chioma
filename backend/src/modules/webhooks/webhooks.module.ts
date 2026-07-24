@@ -6,12 +6,14 @@ import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookSignatureService } from './webhook-signature.service';
 import { WebhooksService } from './webhooks.service';
 import { WebhookSignatureGuard } from './guards/webhook-signature.guard';
+import { WebhooksController } from './webhooks.controller';
 
 @Module({
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([WebhookEndpoint, WebhookDelivery]),
   ],
+  controllers: [WebhooksController],
   providers: [WebhookSignatureService, WebhooksService, WebhookSignatureGuard],
   exports: [WebhookSignatureService, WebhooksService, WebhookSignatureGuard],
 })

@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import nextDynamic from 'next/dynamic';
-import Footer from '@/components/Footer';
+import Footer from '@/components/landing/Footer';
 import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
@@ -11,9 +11,13 @@ import { PropertyListingHeader } from '@/components/properties/PropertyListingHe
 import { Filter, Bell, List, Map, ChevronLeft } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { LOADING_KEYS, useLoading } from '@/store';
 import { Spinner } from '@/components/loading';
-import { MOCK_PROPERTIES } from '@/mocks/entities/properties';
+import {
+  useInfiniteProperties,
+  type PropertyListParams,
+} from '@/lib/query/hooks/use-properties';
+import { toPropertyCardShape } from '@/lib/utils/property-adapter';
+import type { Property } from '@/types';
 
 const PropertyMapView = nextDynamic(
   () => import('@/components/properties/PropertyMapView'),
@@ -34,18 +38,43 @@ export default function PropertyListing() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchAsIMove, setSearchAsIMove] = useState(true);
-  const { isLoading, setLoading } = useLoading(LOADING_KEYS.pageProperties);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [mapWidth, setMapWidth] = useState<number>(50);
   const [isMapCollapsed, setIsMapCollapsed] = useState(true);
-  const [properties] = useState(MOCK_PROPERTIES);
-  const [displayedCount, setDisplayedCount] = useState(12);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+
+  // ── Filter state (drives API query) ─────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState(
     () => searchParams.get('q') ?? '',
   );
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Build API filter params from local state
+  const filterParams: Omit<PropertyListParams, 'page'> = {
+    search: searchQuery.trim() || undefined,
+    type: (selectedType || undefined) as PropertyListParams['type'],
+    minPrice: minPrice ? Number(minPrice) : undefined,
+    maxPrice: maxPrice ? Number(maxPrice) : undefined,
+    limit: 12,
+  };
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+  } = useInfiniteProperties(filterParams);
+
+  // Flatten all pages into a single array
+  const allProperties: Property[] = data?.pages.flatMap((p) => p.data) ?? [];
 
   useEffect(() => {
     setSearchQuery(searchParams.get('q') ?? '');
@@ -62,21 +91,12 @@ export default function PropertyListing() {
     [router],
   );
 
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => setLoading(false), 2000);
-    return () => {
-      clearTimeout(timer);
-      setLoading(false);
-    };
-  }, [setLoading]);
-
-  // Infinite scroll observer
+  // Infinite scroll observer — calls API's next page
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && displayedCount < properties.length) {
-          setDisplayedCount((prev) => Math.min(prev + 12, properties.length));
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
       { threshold: 0.1 },
@@ -87,21 +107,13 @@ export default function PropertyListing() {
     }
 
     return () => observer.disconnect();
-  }, [displayedCount, properties.length]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Scroll detection for header visibility
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-
-      if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide immediately
-        setIsHeaderVisible(false);
-      } else {
-        // Scrolling up - show immediately
-        setIsHeaderVisible(true);
-      }
-
+      setIsHeaderVisible(currentScrollY <= lastScrollY);
       setLastScrollY(currentScrollY);
     };
 
@@ -116,7 +128,9 @@ export default function PropertyListing() {
     west: number;
   }) => {
     if (!searchAsIMove) return;
-    const _filtered = properties.filter((p) => {
+    // Map bounds filtering is handled server-side via lat/lng/radiusKm params;
+    // client-side fallback for already-loaded data:
+    allProperties.filter((p) => {
       if (!p.latitude || !p.longitude) return false;
       return (
         p.latitude >= bounds.south &&
@@ -127,29 +141,19 @@ export default function PropertyListing() {
     });
   };
 
-  const qLower = searchQuery.trim().toLowerCase();
-  const filteredProperties = qLower
-    ? properties.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(qLower) ||
-          p.location?.toLowerCase().includes(qLower) ||
-          p.category?.toLowerCase().includes(qLower),
-      )
-    : properties;
-
-  const toggleMapCollapse = () => {
-    setIsMapCollapsed(!isMapCollapsed);
-  };
-
-  const adjustMapWidth = (delta: number) => {
+  const toggleMapCollapse = () => setIsMapCollapsed((v) => !v);
+  const adjustMapWidth = (delta: number) =>
     setMapWidth((prev) => Math.min(Math.max(prev + delta, 20), 80));
-  };
+
+  // Total count: use first page metadata if available
+  const totalCount = data?.pages[0]?.total ?? allProperties.length;
 
   return (
     <>
       <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
         <Navbar theme="dark" />
-        {/* Header/Search Bar */}
+
+        {/* Header / Search bar */}
         <header
           className={`sticky top-0 z-40 glass-dark border-b border-white/10 shadow-lg transition-all duration-300 ${
             isHeaderVisible
@@ -159,7 +163,7 @@ export default function PropertyListing() {
         >
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Filter Buttons & Advanced Filters Merge */}
+              {/* Filter controls */}
               <div className="flex flex-wrap items-center gap-2 relative">
                 <input
                   type="search"
@@ -172,45 +176,46 @@ export default function PropertyListing() {
                     }
                   }}
                   placeholder="Search by location or property type..."
+                  data-testid="property-search-input"
                   className="px-4 py-2 text-sm bg-slate-900/50 border border-white/10 rounded-xl text-white placeholder:text-blue-200/30 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
                   aria-label="Search properties"
                 />
 
-                {/* Dropdown Filters Mimicking original styling */}
+                {/* Property Type dropdown */}
                 <div className="relative group">
                   <button className="px-4 py-2 text-sm glass-card rounded-xl text-blue-100/80 hover:text-white font-medium">
-                    Property Type
+                    {selectedType
+                      ? selectedType.charAt(0).toUpperCase() +
+                        selectedType.slice(1)
+                      : 'Property Type'}
                   </button>
-                  <div className="absolute top-full left-0 mt-2 min-w-[200px] bg-slate-900 border border-white/10 rounded-xl p-2 hidden group-hover:block z-50 shadow-2xl">
+                  <div className="absolute top-full left-0 mt-2 min-w-[180px] bg-slate-900 border border-white/10 rounded-xl p-2 hidden group-hover:block z-50 shadow-2xl">
                     {[
-                      'Hotel',
-                      'Studio apartment',
-                      'Student residence',
-                      'Airbnb',
-                      'Apartment',
-                    ].map((category) => (
+                      '',
+                      'apartment',
+                      'house',
+                      'commercial',
+                      'land',
+                      'other',
+                    ].map((t) => (
                       <div
-                        key={category}
-                        className="px-3 py-2 text-sm text-blue-100/80 hover:text-white hover:bg-white/5 rounded-lg cursor-pointer"
+                        key={t}
+                        onClick={() => setSelectedType(t)}
+                        className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
+                          selectedType === t
+                            ? 'bg-blue-600 text-white'
+                            : 'text-blue-100/80 hover:text-white hover:bg-white/5'
+                        }`}
                       >
-                        {category}
+                        {t === ''
+                          ? 'All Types'
+                          : t.charAt(0).toUpperCase() + t.slice(1)}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="relative group hidden sm:block">
-                  <button className="px-4 py-2 text-sm glass-card rounded-xl text-blue-100/80 hover:text-white font-medium">
-                    Availability
-                  </button>
-                  <div className="absolute top-full left-0 mt-2 bg-slate-900 border border-white/10 rounded-xl p-3 hidden group-hover:block z-50 shadow-2xl">
-                    <input
-                      type="date"
-                      className="bg-slate-800 text-sm text-white px-3 py-2 rounded-lg border border-white/5 focus:outline-none w-full"
-                    />
-                  </div>
-                </div>
-
+                {/* Price Range */}
                 <div className="relative group hidden md:block">
                   <button className="px-4 py-2 text-sm glass-card rounded-xl text-blue-100/80 hover:text-white font-medium">
                     Price Range
@@ -220,12 +225,18 @@ export default function PropertyListing() {
                       <input
                         type="number"
                         placeholder="Min"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        data-testid="page-min-price-input"
                         className="w-1/2 bg-slate-800 text-sm text-white px-3 py-2 rounded-lg border border-white/5 focus:outline-none"
                       />
                       <span className="text-white/30">-</span>
                       <input
                         type="number"
                         placeholder="Max"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        data-testid="page-max-price-input"
                         className="w-1/2 bg-slate-800 text-sm text-white px-3 py-2 rounded-lg border border-white/5 focus:outline-none"
                       />
                     </div>
@@ -235,12 +246,16 @@ export default function PropertyListing() {
 
               {/* View & Actions */}
               <div className="flex items-center gap-3">
-                <div className="flex items-center p-1 glass-dark rounded-xl border border-white/5 shadow-inner">
+                <div
+                  className="flex items-center p-1 glass-dark rounded-xl border border-white/5 shadow-inner"
+                  data-testid="view-toggle"
+                >
                   <button
                     onClick={() => {
                       setViewMode('list');
                       setIsMapCollapsed(true);
                     }}
+                    data-testid="view-toggle-list"
                     className={`p-2 rounded-lg transition-all ${
                       viewMode === 'list'
                         ? 'bg-blue-600 text-white shadow-md'
@@ -256,6 +271,7 @@ export default function PropertyListing() {
                       setIsMapCollapsed(false);
                       setMapWidth(50);
                     }}
+                    data-testid="view-toggle-split"
                     className={`p-2 rounded-lg transition-all ${
                       viewMode === 'split' && !isMapCollapsed
                         ? 'bg-blue-600 text-white shadow-md'
@@ -274,6 +290,7 @@ export default function PropertyListing() {
                       setIsMapCollapsed(false);
                       setMapWidth(100);
                     }}
+                    data-testid="view-toggle-map"
                     className={`p-2 rounded-lg transition-all ${
                       viewMode === 'map'
                         ? 'bg-blue-600 text-white shadow-md'
@@ -312,33 +329,66 @@ export default function PropertyListing() {
           >
             <div className="mx-auto px-2 sm:px-3 lg:px-4 py-8">
               <div className="max-w-[1600px] mx-auto">
-                <PropertyListingHeader count={filteredProperties.length} />
+                <PropertyListingHeader count={totalCount} />
+
+                {/* Error state */}
+                {isError && (
+                  <div
+                    className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
+                    data-testid="error-state"
+                  >
+                    <p className="text-red-400 font-medium">
+                      Failed to load listings.{' '}
+                      {error instanceof Error
+                        ? error.message
+                        : 'Please try again.'}
+                    </p>
+                  </div>
+                )}
 
                 {/* Property Cards Grid */}
-                <div className="grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  {isLoading ? (
-                    <>
-                      {Array.from({ length: 6 }).map((_, index) => (
-                        <PropertyCardSkeleton key={index} />
-                      ))}
-                    </>
-                  ) : filteredProperties.length > 0 ? (
-                    filteredProperties
-                      .slice(0, displayedCount)
-                      .map((property) => (
-                        <PropertyCard key={property.id} property={property} />
+                <div
+                  className="grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                  data-testid="property-grid"
+                >
+                  {isLoading
+                    ? Array.from({ length: 8 }).map((_, i) => (
+                        <PropertyCardSkeleton key={i} />
                       ))
-                  ) : (
-                    <div className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed">
-                      <div className="text-blue-200/30 text-lg font-medium">
-                        No properties match your current filters
-                      </div>
-                    </div>
-                  )}
+                    : allProperties.length > 0
+                      ? allProperties.map((property) => (
+                          <PropertyCard
+                            key={property.id}
+                            property={toPropertyCardShape(property)}
+                          />
+                        ))
+                      : !isError && (
+                          <div
+                            className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed"
+                            data-testid="empty-state"
+                          >
+                            <div className="text-blue-200/30 text-lg font-medium">
+                              No properties match your current filters
+                            </div>
+                          </div>
+                        )}
+
+                  {/* Skeleton rows while fetching next page */}
+                  {isFetchingNextPage &&
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <PropertyCardSkeleton key={`next-${i}`} />
+                    ))}
                 </div>
 
                 {/* Infinite scroll trigger */}
                 <div ref={observerTarget} className="h-4" />
+
+                {/* End of results indicator */}
+                {!hasNextPage && allProperties.length > 0 && (
+                  <p className="text-center text-blue-200/30 text-sm pb-8">
+                    Showing all {totalCount} listings
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -352,7 +402,6 @@ export default function PropertyListing() {
               pointerEvents: isMapCollapsed ? 'none' : 'auto',
             }}
           >
-            {/* Map Controls */}
             {!isMapCollapsed && (
               <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
                 <div className="glass-dark rounded-xl p-1 shadow-2xl border border-white/10 flex items-center gap-1">
@@ -375,7 +424,6 @@ export default function PropertyListing() {
               </div>
             )}
 
-            {/* Collapse Toggle */}
             <button
               onClick={toggleMapCollapse}
               className={`absolute top-1/2 -left-4 z-20 flex h-12 w-8 -translate-y-1/2 items-center justify-center glass-dark border border-white/10 rounded-l-xl transition-all hover:scale-105 active:scale-95 shadow-2xl ${
@@ -391,7 +439,6 @@ export default function PropertyListing() {
               </div>
             </button>
 
-            {/* Search as I Move Checkbox Overlay */}
             <div className="absolute top-6 right-6 backdrop-blur-2xl bg-slate-900/40 rounded-2xl px-5 py-3 flex items-center gap-3 shadow-2xl z-10 border border-white/10 group cursor-pointer hover:bg-slate-900/60 transition-all">
               <input
                 type="checkbox"
@@ -410,7 +457,7 @@ export default function PropertyListing() {
 
             <div className="h-full w-full">
               <PropertyMapView
-                properties={filteredProperties}
+                properties={allProperties.map(toPropertyCardShape)}
                 onBoundsChange={handleBoundsChange}
                 searchAsIMove={searchAsIMove}
                 initialViewState={{

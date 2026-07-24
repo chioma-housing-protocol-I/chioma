@@ -6,6 +6,11 @@ import {
   PropertyType,
   ListingStatus,
 } from '../properties/entities/property.entity';
+import { User, UserRole } from '../users/entities/user.entity';
+import {
+  RentAgreement,
+  AgreementStatus,
+} from '../rent/entities/rent-contract.entity';
 import { CacheService } from '../../common/cache/cache.service';
 
 /**
@@ -30,6 +35,7 @@ function buildMockQb(overrides: Record<string, jest.Mock> = {}) {
     from: jest.fn().mockReturnThis(),
     getQuery: jest.fn().mockReturnValue('subquery'),
     getMany: jest.fn().mockResolvedValue([]),
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
     getCount: jest.fn().mockResolvedValue(0),
     getRawMany: jest.fn().mockResolvedValue([]),
     getRawOne: jest.fn().mockResolvedValue(null),
@@ -41,6 +47,8 @@ function buildMockQb(overrides: Record<string, jest.Mock> = {}) {
 describe('SearchService', () => {
   let service: SearchService;
   let mockPropertyRepo: { createQueryBuilder: jest.Mock };
+  let mockUserRepo: { createQueryBuilder: jest.Mock };
+  let mockAgreementRepo: { createQueryBuilder: jest.Mock };
   let mockCacheService: {
     getOrSet: jest.Mock;
   };
@@ -66,6 +74,14 @@ describe('SearchService', () => {
       createQueryBuilder: jest.fn(),
     };
 
+    mockUserRepo = {
+      createQueryBuilder: jest.fn(),
+    };
+
+    mockAgreementRepo = {
+      createQueryBuilder: jest.fn(),
+    };
+
     mockCacheService = {
       getOrSet: jest.fn(async (_key: string, factory: () => Promise<unknown>) =>
         factory(),
@@ -78,6 +94,14 @@ describe('SearchService', () => {
         {
           provide: getRepositoryToken(Property),
           useValue: mockPropertyRepo,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepo,
+        },
+        {
+          provide: getRepositoryToken(RentAgreement),
+          useValue: mockAgreementRepo,
         },
         {
           provide: CacheService,
@@ -503,6 +527,226 @@ describe('SearchService', () => {
       await service.suggest('mo');
 
       expect(mockCacheService.getOrSet).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── searchUsers ──────────────────────────────────────────────────────────────
+
+  describe('searchUsers', () => {
+    function setupQbForUsers(items: Partial<User>[], total: number) {
+      const qb = buildMockQb({
+        getManyAndCount: jest.fn().mockResolvedValue([items, total]),
+      });
+      mockUserRepo.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    }
+
+    const sampleUser: Partial<User> = {
+      id: 'user-1',
+      email: 'test@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: UserRole.USER,
+      isActive: true,
+    };
+
+    it('returns paginated user results', async () => {
+      setupQbForUsers([sampleUser], 1);
+
+      const result = await service.searchUsers({}, 1, 10);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+
+    it('applies skip and take for pagination', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({}, 3, 15);
+
+      expect(qb.skip).toHaveBeenCalledWith(30);
+      expect(qb.take).toHaveBeenCalledWith(15);
+    });
+
+    it('filters by query on name and email', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({ query: 'john' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('firstName'),
+        expect.objectContaining({ query: '%john%' }),
+      );
+    });
+
+    it('filters by role', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({ role: UserRole.ADMIN });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('user.role = :role', {
+        role: UserRole.ADMIN,
+      });
+    });
+
+    it('filters by isActive', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({ isActive: false });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('user.isActive = :isActive', {
+        isActive: false,
+      });
+    });
+
+    it('filters by kycVerified', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({ kycVerified: true });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('APPROVED'),
+      );
+    });
+
+    it('orders by createdAt desc by default', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({});
+
+      expect(qb.orderBy).toHaveBeenCalledWith('user.createdAt', 'DESC');
+    });
+
+    it('sanitizes sortBy to prevent injection', async () => {
+      const qb = setupQbForUsers([], 0);
+
+      await service.searchUsers({ sortBy: 'injection()', sortOrder: 'asc' });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('user.createdAt', 'ASC');
+    });
+  });
+
+  // ─── searchDocuments ─────────────────────────────────────────────────────────
+
+  describe('searchDocuments', () => {
+    function setupQbForDocs(items: Partial<RentAgreement>[], total: number) {
+      const qb = buildMockQb({
+        getManyAndCount: jest.fn().mockResolvedValue([items, total]),
+      });
+      mockAgreementRepo.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    }
+
+    const sampleDoc: Partial<RentAgreement> = {
+      id: 'agreement-1',
+      agreementNumber: 'AGR-001',
+      monthlyRent: 1200,
+      status: AgreementStatus.ACTIVE,
+    };
+
+    it('returns paginated document results', async () => {
+      setupQbForDocs([sampleDoc], 1);
+
+      const result = await service.searchDocuments({}, 1, 10);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+
+    it('applies skip and take for pagination', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({}, 3, 15);
+
+      expect(qb.skip).toHaveBeenCalledWith(30);
+      expect(qb.take).toHaveBeenCalledWith(15);
+    });
+
+    it('filters by query on agreement number', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ query: 'AGR' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('agreementNumber'),
+        expect.objectContaining({ query: '%agr%' }),
+      );
+    });
+
+    it('filters by status', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ status: AgreementStatus.ACTIVE });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('agreement.status = :status', {
+        status: AgreementStatus.ACTIVE,
+      });
+    });
+
+    it('filters by propertyId', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ propertyId: 'prop-1' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'agreement.propertyId = :propertyId',
+        { propertyId: 'prop-1' },
+      );
+    });
+
+    it('filters by userId', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ userId: 'user-1' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('agreement.userId = :userId', {
+        userId: 'user-1',
+      });
+    });
+
+    it('filters by minRent and maxRent', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ minRent: 500, maxRent: 2000 });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('minRent'),
+        { minRent: 500 },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('maxRent'),
+        { maxRent: 2000 },
+      );
+    });
+
+    it('filters by date range', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({
+        dateFrom: '2024-01-01',
+        dateTo: '2024-12-31',
+      });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('dateFrom'),
+        expect.objectContaining({ dateFrom: new Date('2024-01-01') }),
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('dateTo'),
+        expect.objectContaining({ dateTo: new Date('2024-12-31') }),
+      );
+    });
+
+    it('sanitizes sortBy to prevent injection', async () => {
+      const qb = setupQbForDocs([], 0);
+
+      await service.searchDocuments({ sortBy: 'DROP TABLE' });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('agreement.createdAt', 'DESC');
     });
   });
 });

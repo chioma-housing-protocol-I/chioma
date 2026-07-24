@@ -10,6 +10,7 @@ import {
   Res,
   Req,
   UnauthorizedException,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -42,10 +44,14 @@ import {
 import { CompleteMfaLoginDto } from './dto/complete-mfa-login.dto';
 import { Request, Response } from 'express';
 import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Authentication')
 @Controller('auth')
 @RateLimitCategory(EndpointCategory.AUTH)
+@UseInterceptors(AuditLogInterceptor)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -56,6 +62,12 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @AuditLog({
+    action: AuditAction.USER_REGISTERED,
+    entityType: 'User',
+    level: AuditLevel.SECURITY,
+    sensitive: true,
+  })
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -124,6 +136,12 @@ export class AuthController {
   }
 
   @Post('login')
+  @AuditLog({
+    action: AuditAction.LOGIN,
+    entityType: 'User',
+    level: AuditLevel.INFO,
+    sensitive: true,
+  })
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -208,6 +226,11 @@ export class AuthController {
   }
 
   @Post('login/mfa/complete')
+  @AuditLog({
+    action: AuditAction.LOGIN,
+    entityType: 'User',
+    level: AuditLevel.INFO,
+  })
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -330,6 +353,11 @@ export class AuthController {
   }
 
   @Post('logout')
+  @AuditLog({
+    action: AuditAction.LOGOUT,
+    entityType: 'User',
+    level: AuditLevel.INFO,
+  })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
@@ -448,6 +476,33 @@ export class AuthController {
     @Query() verifyEmailDto: VerifyEmailDto,
   ): Promise<MessageResponseDto> {
     return this.authService.verifyEmail(verifyEmailDto.token);
+  }
+
+  @Post('complete-profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Attach an email to a wallet-only account',
+    description:
+      'Completes onboarding for wallet-based sign-ins by adding an email address and sending a verification link.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile saved, verification email sent',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already registered to another account',
+    type: ErrorResponseDto,
+  })
+  async completeProfile(
+    @CurrentUser() user: User,
+    @Body() completeProfileDto: CompleteProfileDto,
+  ): Promise<MessageResponseDto> {
+    return this.authService.completeProfile(user.id, completeProfileDto);
   }
 
   @Post('mfa/enable')

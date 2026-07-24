@@ -33,6 +33,7 @@ Deploy to Production (main branch)
 All CI/CD workflows are defined in `.github/workflows/`:
 
 - `backend-ci-cd.yml` - Backend (NestJS) pipeline
+- `backend-tests.yml` - Backend continuous testing pipeline (PR/push + every 6 hours)
 - `frontend-ci-cd.yml` - Frontend (Next.js) pipeline
 - `contract-ci-cd.yml` - Smart Contracts (Soroban) pipeline
 
@@ -304,6 +305,13 @@ npm run test:debug            # Debug mode
     files: ./coverage/coverage-final.json
 ```
 
+**Continuous Testing Workflow**:
+
+- Workflow: `.github/workflows/backend-tests.yml`
+- Triggers: push/pull request on `main` and `develop`, manual dispatch, and scheduled runs every 6 hours
+- Node versions: 20 and 22 for unit-test compatibility checks
+- Readiness checks: format, lint, typecheck, coverage, and build verification
+
 ### Frontend Testing
 
 **Framework**: Vitest
@@ -527,7 +535,7 @@ curl -X GET http://localhost:3000/health
 **Frontend Health Check**:
 
 ```bash
-curl -X GET http://localhost:3001/api/health
+curl -X GET http://localhost:5000/api/health
 # Response: { "status": "ok" }
 ```
 

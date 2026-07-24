@@ -57,7 +57,11 @@ export class ResourceNotFoundError extends BaseAppError {
 
 export class UserNotFoundError extends ResourceNotFoundError {
   constructor(userId?: string) {
-    super(ErrorCode.USER_NOT_FOUND, undefined, userId ? { userId } : undefined);
+    super(
+      ErrorCode.USER_NOT_FOUND,
+      userId ? `User with ID ${userId} not found` : undefined,
+      userId ? { userId } : undefined,
+    );
   }
 }
 
@@ -65,7 +69,7 @@ export class PropertyNotFoundError extends ResourceNotFoundError {
   constructor(propertyId?: string) {
     super(
       ErrorCode.PROPERTY_NOT_FOUND,
-      undefined,
+      propertyId ? `Property with ID ${propertyId} not found` : undefined,
       propertyId ? { propertyId } : undefined,
     );
   }
@@ -75,7 +79,7 @@ export class AgreementNotFoundError extends ResourceNotFoundError {
   constructor(agreementId?: string) {
     super(
       ErrorCode.AGREEMENT_NOT_FOUND,
-      undefined,
+      agreementId ? `Agreement with ID ${agreementId} not found` : undefined,
       agreementId ? { agreementId } : undefined,
     );
   }
@@ -85,7 +89,9 @@ export class MaintenanceNotFoundError extends ResourceNotFoundError {
   constructor(maintenanceId?: string) {
     super(
       ErrorCode.MAINTENANCE_NOT_FOUND,
-      undefined,
+      maintenanceId
+        ? `Maintenance request with ID ${maintenanceId} not found`
+        : undefined,
       maintenanceId ? { maintenanceId } : undefined,
     );
   }
@@ -95,7 +101,7 @@ export class ReviewNotFoundError extends ResourceNotFoundError {
   constructor(reviewId?: string) {
     super(
       ErrorCode.REVIEW_NOT_FOUND,
-      undefined,
+      reviewId ? `Review with ID ${reviewId} not found` : undefined,
       reviewId ? { reviewId } : undefined,
     );
   }
@@ -105,8 +111,30 @@ export class NotificationNotFoundError extends ResourceNotFoundError {
   constructor(notificationId?: string) {
     super(
       ErrorCode.NOTIFICATION_NOT_FOUND,
-      undefined,
+      notificationId
+        ? `Notification with ID ${notificationId} not found`
+        : undefined,
       notificationId ? { notificationId } : undefined,
+    );
+  }
+}
+
+export class DisputeNotFoundError extends ResourceNotFoundError {
+  constructor(disputeId?: string) {
+    super(
+      ErrorCode.DISPUTE_NOT_FOUND,
+      disputeId ? `Dispute with ID ${disputeId} not found` : undefined,
+      disputeId ? { disputeId } : undefined,
+    );
+  }
+}
+
+export class BookingNotFoundError extends ResourceNotFoundError {
+  constructor(bookingId?: string) {
+    super(
+      ErrorCode.BOOKING_NOT_FOUND,
+      bookingId ? `Booking with ID ${bookingId} not found` : undefined,
+      bookingId ? { bookingId } : undefined,
     );
   }
 }

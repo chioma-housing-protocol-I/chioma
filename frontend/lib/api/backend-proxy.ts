@@ -4,7 +4,7 @@ export function getBackendApiBase(): string {
   return (
     process.env.BACKEND_API_BASE_URL ??
     process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
-    'http://localhost:5000/api'
+    'http://localhost:5000/api/v1'
   ).replace(/\/$/, '');
 }
 
@@ -19,6 +19,27 @@ function forwardHeaders(request: NextRequest): HeadersInit {
   const idempotencyKey = request.headers.get('idempotency-key');
   if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
   return headers;
+}
+
+function appendSetCookieHeaders(
+  sourceHeaders: Headers,
+  targetHeaders: Headers,
+): void {
+  const headersWithGetSetCookie = sourceHeaders as Headers & {
+    getSetCookie?: () => string[];
+  };
+
+  if (typeof headersWithGetSetCookie.getSetCookie === 'function') {
+    for (const cookie of headersWithGetSetCookie.getSetCookie()) {
+      targetHeaders.append('set-cookie', cookie);
+    }
+    return;
+  }
+
+  const setCookie = sourceHeaders.get('set-cookie');
+  if (setCookie) {
+    targetHeaders.append('set-cookie', setCookie);
+  }
 }
 
 export async function proxyToBackend(
@@ -55,6 +76,7 @@ export async function proxyToBackend(
     if (responseContentType) {
       responseHeaders.set('content-type', responseContentType);
     }
+    appendSetCookieHeaders(response.headers, responseHeaders);
 
     if (!text) {
       return new NextResponse(null, {

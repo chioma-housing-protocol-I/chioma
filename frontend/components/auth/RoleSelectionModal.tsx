@@ -56,6 +56,7 @@ export default function RoleSelectionModal({
       const mockUser = {
         id: 'user-' + Date.now(),
         email: walletAddress,
+        emailVerified: false,
         firstName: 'User',
         lastName: 'Account',
         role: role as any,

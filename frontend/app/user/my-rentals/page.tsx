@@ -48,10 +48,6 @@ export default function MyRentalsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void fetchRentals();
-  }, []);
-
   const fetchRentals = async () => {
     try {
       setLoading(true);
@@ -91,6 +87,10 @@ export default function MyRentalsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchRentals();
+  }, []);
 
   if (loading) {
     return (

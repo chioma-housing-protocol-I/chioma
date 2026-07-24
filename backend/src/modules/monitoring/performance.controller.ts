@@ -46,6 +46,25 @@ export class PerformanceController {
     };
   }
 
+  @Get('database')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Get database query performance statistics',
+    description:
+      'Per-operation query timings (avg/p95), the slowest operations, and recent slow queries.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Database query performance statistics retrieved successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  async getDatabaseStats() {
+    return {
+      timestamp: new Date().toISOString(),
+      database: this.performanceMonitor.getDatabaseStats(),
+    };
+  }
+
   @Get('endpoints')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get performance statistics for all endpoints' })
@@ -230,6 +249,145 @@ export class PerformanceController {
           },
         ],
       },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('response-times')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Per-route response-time summary for a sliding window',
+  })
+  @ApiQuery({
+    name: 'window',
+    description: 'Sliding window in seconds',
+    required: false,
+    example: 60,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Response-time stats retrieved successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  getResponseTimes(@Query('window') window?: string) {
+    const windowSeconds = window ? parseInt(window, 10) : 60;
+    const {
+      generatedAt,
+      windowSeconds: ws,
+      routes,
+    } = this.performanceMonitor.getResponseTimeStats(windowSeconds);
+
+    return {
+      generated_at: generatedAt.toISOString(),
+      window_seconds: ws,
+      routes: routes.map((r) => ({
+        route: r.route,
+        count: r.count,
+        rps: r.rps,
+        p50_ms: r.p50Ms,
+        p95_ms: r.p95Ms,
+        p99_ms: r.p99Ms,
+        slow_count: r.slowCount,
+      })),
+    };
+  }
+
+  @Get('slow-endpoints')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Get the slowest API endpoints by average response time',
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Maximum number of endpoints to return',
+    required: false,
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'threshold',
+    description: 'Minimum average response time in ms to include',
+    required: false,
+    example: 500,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Slow endpoints retrieved successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  async getSlowEndpoints(
+    @Query('limit') limit?: string,
+    @Query('threshold') threshold?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    const parsedThreshold = threshold ? parseInt(threshold, 10) : 0;
+
+    const endpoints = this.performanceMonitor.getSlowEndpoints(
+      parsedLimit,
+      parsedThreshold,
+    );
+
+    return {
+      endpoints,
+      count: endpoints.length,
+      thresholdMs: parsedThreshold,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('percentiles')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Get response-time percentile breakdown for all endpoints, or a specific one',
+  })
+  @ApiQuery({
+    name: 'method',
+    description: 'HTTP method (omit for all endpoints)',
+    required: false,
+    example: 'GET',
+  })
+  @ApiQuery({
+    name: 'path',
+    description: 'Endpoint path (omit for all endpoints)',
+    required: false,
+    example: '/api/properties',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Percentile data retrieved successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  async getPercentiles(
+    @Query('method') method?: string,
+    @Query('path') path?: string,
+  ) {
+    if (method && path) {
+      const percentiles = this.performanceMonitor.getEndpointPercentiles(
+        method,
+        path,
+      );
+
+      if (!percentiles) {
+        return {
+          message: 'No performance data found for this endpoint',
+          endpoint: path,
+          method,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return {
+        method,
+        endpoint: path,
+        percentiles,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    const all = this.performanceMonitor.getAllEndpointPercentiles();
+    return {
+      endpoints: all,
+      count: all.length,
       timestamp: new Date().toISOString(),
     };
   }

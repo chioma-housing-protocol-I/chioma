@@ -10,6 +10,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UserRole } from '../users/entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -68,6 +69,10 @@ describe('AuthController', () => {
         {
           provide: JwtService,
           useValue: { sign: jest.fn(), verify: jest.fn() },
+        },
+        {
+          provide: AuditService,
+          useValue: { log: jest.fn() },
         },
       ],
     }).compile();

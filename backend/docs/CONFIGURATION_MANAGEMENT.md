@@ -176,31 +176,16 @@ Variables are accessed via `ConfigService.get<T>('VARIABLE_NAME')` or directly v
 
 ### Startup Validation
 
-`AppModule` validates rate-limit variables at construction time. If any are missing the application throws and refuses to start:
+`ConfigModule` uses `validateEnvironment` from `src/config/env.validation.ts` at boot time. The application refuses to start when required variables are missing or unsafe for the current `NODE_ENV`.
 
-```typescript
-private validateRateLimitConfig(): void {
-  const required = [
-    'RATE_LIMIT_TTL',
-    'RATE_LIMIT_MAX',
-    'RATE_LIMIT_AUTH_TTL',
-    'RATE_LIMIT_AUTH_MAX',
-    'RATE_LIMIT_STRICT_TTL',
-    'RATE_LIMIT_STRICT_MAX',
-  ];
+- **All environments (except relaxed test):** rate limits, JWT secrets (development+)
+- **Staging / production:** database URL or `DB_*` set, Redis (Upstash or host/port), encryption keys, non-placeholder secrets
 
-  const missing = required.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`,
-    );
-  }
-}
-```
+See [deployment/PRODUCTION_READINESS.md](./deployment/PRODUCTION_READINESS.md) for the operational checklist.
 
 ### Adding Validation for New Variables
 
-To add startup validation for a new required variable, extend the `required` array in `validateRateLimitConfig` or create a dedicated validation method in `AppModule`. For complex validation (type checking, range checks), use a Joi or `class-validator` schema loaded via `ConfigModule.forRoot({ validationSchema })`.
+Extend `validateEnvironment` in `src/config/env.validation.ts` and add cases to `src/config/env.validation.spec.ts`.
 
 Example using Joi:
 

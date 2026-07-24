@@ -1,8 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RentAgreement } from './entities/rent-contract.entity';
 import { Payment } from './entities/payment.entity';
+import { AgreementNotFoundError } from '../../common/errors/domain-errors';
 
 /** Represents a single entry in a generated payment schedule. */
 export interface PaymentScheduleEntry {
@@ -152,9 +153,7 @@ export class RentService {
     });
 
     if (!agreement) {
-      throw new NotFoundException(
-        `Rent agreement with id ${agreementId} not found`,
-      );
+      throw new AgreementNotFoundError(agreementId);
     }
 
     const payments = await this.paymentRepository.find({

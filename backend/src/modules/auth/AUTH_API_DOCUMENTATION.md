@@ -8,21 +8,21 @@ HTTP endpoints under `/api/auth` for user registration, login, token refresh, pa
 
 ## Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/register` | Public | Create a new user account |
-| POST | `/login` | Public | Authenticate with email/password |
-| POST | `/login/mfa/complete` | Public | Complete login when MFA is required |
-| POST | `/refresh` | Public / cookie | Issue new access token |
-| POST | `/logout` | JWT | Invalidate session |
-| POST | `/forgot-password` | Public | Request password reset email |
-| POST | `/reset-password` | Public | Reset password with token |
-| GET | `/verify-email` | Public | Verify email via query token |
-| POST | `/mfa/enable` | JWT | Start MFA enrollment |
-| POST | `/mfa/verify` | JWT | Confirm MFA setup |
-| POST | `/mfa/disable` | JWT | Disable MFA |
-| POST | `/mfa/backup-codes` | JWT | Regenerate backup codes |
-| GET | `/mfa/status` | JWT | Check MFA enrollment status |
+| Method | Path                  | Auth            | Description                         |
+| ------ | --------------------- | --------------- | ----------------------------------- |
+| POST   | `/register`           | Public          | Create a new user account           |
+| POST   | `/login`              | Public          | Authenticate with email/password    |
+| POST   | `/login/mfa/complete` | Public          | Complete login when MFA is required |
+| POST   | `/refresh`            | Public / cookie | Issue new access token              |
+| POST   | `/logout`             | JWT             | Invalidate session                  |
+| POST   | `/forgot-password`    | Public          | Request password reset email        |
+| POST   | `/reset-password`     | Public          | Reset password with token           |
+| GET    | `/verify-email`       | Public          | Verify email via query token        |
+| POST   | `/mfa/enable`         | JWT             | Start MFA enrollment                |
+| POST   | `/mfa/verify`         | JWT             | Confirm MFA setup                   |
+| POST   | `/mfa/disable`        | JWT             | Disable MFA                         |
+| POST   | `/mfa/backup-codes`   | JWT             | Regenerate backup codes             |
+| GET    | `/mfa/status`         | JWT             | Check MFA enrollment status         |
 
 Stellar wallet authentication lives under `/api/auth/stellar` — see **Stellar Authentication** in Swagger.
 

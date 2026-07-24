@@ -1,0 +1,246 @@
+groups:
+  - name: resilience.rules
+    interval: 30s
+    rules:
+      # Circuit Breaker Alerts
+      - alert: CircuitBreakerOpen
+        expr: |
+          circuit_breaker_state{state="OPEN"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "Circuit Breaker Open: {{ $labels.breaker_name }}"
+          description: "Circuit breaker for {{ $labels.breaker_name }} has been open for 2 minutes. Service may be degraded."
+
+      - alert: CircuitBreakerHighFailureRate
+        expr: |
+          (rate(circuit_breaker_failures_total[5m]) / (rate(circuit_breaker_requests_total[5m]) + 1)) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "High Failure Rate: {{ $labels.breaker_name }}"
+          description: "{{ $labels.breaker_name }} has >50% failure rate in the last 5 minutes. Immediate investigation required."
+
+      # Bulkhead Alerts
+      - alert: BulkheadNearCapacity
+        expr: |
+          (bulkhead_active_tasks / bulkhead_max_concurrent) > 0.85
+        for: 2m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "Bulkhead Near Capacity: {{ $labels.compartment }}"
+          description: "{{ $labels.compartment }} bulkhead is at {{ $value | humanizePercentage }} capacity."
+
+      - alert: BulkheadQueueBacklog
+        expr: |
+          bulkhead_queued_tasks > 50
+        for: 3m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Bulkhead Queue Backlog: {{ $labels.compartment }}"
+          description: "{{ $labels.compartment }} has {{ $value }} queued tasks. Processing is severely delayed."
+
+      # Fallback Alerts
+      - alert: HighFallbackRate
+        expr: |
+          (rate(fallback_invocations_total[5m]) / (rate(fallback_primary_calls_total[5m]) + 1)) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "High Fallback Rate: {{ $labels.operation }}"
+          description: "{{ $labels.operation }} is using fallback for >30% of requests. Primary service may be degraded."
+
+      # Degradation Alerts
+      - alert: SystemDegraded
+        expr: |
+          system_degradation_level > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "System Degradation Level: {{ $value }}"
+          description: "System is operating in degraded mode. Level={{ $value }}"
+
+      - alert: SystemSeverelyDegraded
+        expr: |
+          system_degradation_level >= 2
+        for: 1m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "System Severely Degraded"
+          description: "System is operating in SEVERE degradation mode. Immediate action required."
+
+      # Cascade Detection Alerts
+      - alert: CascadingFailureDetected
+        expr: |
+          cascade_active == 1
+        for: 1m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Cascading Failure Detected"
+          description: "Multiple interconnected services are failing. This may indicate a cascading failure."
+
+      - alert: CascadingFailureHighDepth
+        expr: |
+          cascade_depth >= 3
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Deep Cascading Failure: Depth={{ $value }}"
+          description: "Cascading failure has propagated through {{ $value }} service layers."
+
+      # Incident Alerts
+      - alert: HighIncidentRate
+        expr: |
+          rate(incident_declared_total[1h]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "High Incident Declaration Rate"
+          description: "More than 5 incidents declared in the last hour. System stability at risk."
+
+      - alert: UnresolvedIncidents
+        expr: |
+          incident_active_count > 3
+        for: 15m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "Multiple Unresolved Incidents: {{ $value }}"
+          description: "{{ $value }} incidents remain unresolved. Incident response may be overwhelmed."
+
+      # Retry Alerts
+      - alert: HighRetryRate
+        expr: |
+          (rate(retry_attempts_total[5m]) / (rate(retry_successful_total[5m]) + 1)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "High Retry Rate: {{ $labels.operation }}"
+          description: "{{ $labels.operation }} requires >2 attempts on average. Service may be unstable."
+
+      - alert: RetryExhausted
+        expr: |
+          increase(retry_exhausted_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Retry Exhaustion: {{ $labels.operation }}"
+          description: "{{ $labels.operation }} exceeded max retries. Requests are being rejected."
+
+      # Dead Letter Queue Alerts
+      - alert: DeadLetterQueueBacklog
+        expr: |
+          dlq_size > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: queues
+        annotations:
+          summary: "Dead Letter Queue Backlog"
+          description: "DLQ has {{ $value }} jobs awaiting processing. Job processing may be impaired."
+
+      - alert: DLQHighFailureRate
+        expr: |
+          (rate(dlq_failed_recoveries_total[1h]) / (rate(dlq_processed_total[1h]) + 1)) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+          component: queues
+        annotations:
+          summary: "High DLQ Failure Rate"
+          description: "DLQ recovery failure rate exceeds 20%. Job recovery strategy may need review."
+
+      # Memory Pressure Alerts
+      - alert: HighMemoryUsage
+        expr: |
+          (process_resident_memory_bytes / 1e9) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "High Memory Usage: {{ $value | humanize }}GB"
+          description: "Process is using {{ $value | humanize }}GB of memory. Potential memory leak."
+
+      # Request Timeout Alerts
+      - alert: HighTimeoutRate
+        expr: |
+          (rate(http_request_timeout_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: http
+        annotations:
+          summary: "High Request Timeout Rate"
+          description: "More than 10% of requests are timing out. Service may be overloaded."
+
+      # Auto-Recovery Alerts
+      - alert: AutoRecoveryFailures
+        expr: |
+          increase(auto_recovery_failures_total[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: maintenance
+        annotations:
+          summary: "Auto-Recovery Failures"
+          description: "Auto-recovery has failed {{ $value }} times in the last 10 minutes."
+
+      # Health Recovery Alerts
+      - alert: HealthRecoveryDisabled
+        expr: |
+          health_recovery_enabled == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: maintenance
+        annotations:
+          summary: "Health Recovery Disabled"
+          description: "Health recovery service is disabled. Proactive healing is not running."
+
+      # Service Health Alerts
+      - alert: ServiceHealthDegraded
+        expr: |
+          health_check_status{status="warning"} == 1
+        for: 3m
+        labels:
+          severity: warning
+          component: health
+        annotations:
+          summary: "Service Health Degraded"
+          description: "Health check shows warning status. At least one service is degraded."
+
+      - alert: ServiceHealthCritical
+        expr: |
+          health_check_status{status="error"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          component: health
+        annotations:
+          summary: "Service Health Critical"
+          description: "Health check shows error status. Services are critical."

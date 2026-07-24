@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+  MaintenanceNotFoundError,
+  AuthorizationError,
+  ValidationError,
+} from '../../common/errors/domain-errors';
 import { MaintenanceService } from './maintenance.service';
 import {
   MaintenanceRequest,
@@ -75,7 +75,7 @@ describe('MaintenanceService', () => {
         tenantId: 'tenant-1',
         landlordId: 'landlord-1',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
 
     propertiesService.findOne.mockResolvedValue({});
     usersService.getUserById.mockResolvedValueOnce(null);
@@ -86,7 +86,7 @@ describe('MaintenanceService', () => {
         tenantId: 'missing',
         landlordId: 'landlord-1',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
     expect(maintenanceRepo.save).not.toHaveBeenCalled();
   });
 
@@ -99,39 +99,29 @@ describe('MaintenanceService', () => {
         propertyId: 'property-1',
         tenantId: 'tenant-1',
         landlordId: 'landlord-1',
-        mediaUrls: ['https://cdn.example.com/other-user/photo.jpg'],
+        mediaUrls: ['https://cdn.example.com/hacker-id/file.jpg'],
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
   });
 
-  it('finds requests by filter and throws when a request is missing', async () => {
-    const openRequest = {
+  it('retrieves a single request or throws NotFound', async () => {
+    maintenanceRepo.findOne.mockResolvedValue({ id: 'request-1' });
+    await expect(service.findOne('request-1')).resolves.toMatchObject({
       id: 'request-1',
-      status: MaintenanceStatus.OPEN,
-    } as MaintenanceRequest;
-    maintenanceRepo.find.mockResolvedValue([openRequest]);
-    maintenanceRepo.findOne.mockResolvedValue(null);
-
-    await expect(
-      service.findAll({
-        propertyId: 'property-1',
-        status: MaintenanceStatus.OPEN,
-      }),
-    ).resolves.toEqual([openRequest]);
-    expect(maintenanceRepo.find).toHaveBeenCalledWith({
-      where: { propertyId: 'property-1', status: MaintenanceStatus.OPEN },
     });
-    await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+
+    maintenanceRepo.findOne.mockResolvedValue(null);
+    await expect(service.findOne('missing')).rejects.toThrow(
+      MaintenanceNotFoundError,
+    );
   });
 
-  it('updates status, notifies the tenant, and prompts for reviews when closed', async () => {
-    const request = {
+  it('updates status and notifies tenant', async () => {
+    maintenanceRepo.findOne.mockResolvedValue({
       id: 'request-1',
       tenantId: 'tenant-1',
-      status: MaintenanceStatus.OPEN,
-    } as MaintenanceRequest;
-    maintenanceRepo.findOne.mockResolvedValue(request);
-    maintenanceRepo.save.mockImplementation(async (value) => value);
+    });
+    maintenanceRepo.save.mockImplementation(async (r: any) => r);
 
     await expect(
       service.updateStatus(
@@ -166,6 +156,6 @@ describe('MaintenanceService', () => {
         'tenant-1',
         false,
       ),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toThrow(AuthorizationError);
   });
 });

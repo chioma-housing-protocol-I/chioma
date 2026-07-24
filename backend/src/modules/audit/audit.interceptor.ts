@@ -5,18 +5,31 @@ import {
   CallHandler,
   Logger,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { AuditService } from './audit.service';
 import { AuditAction, AuditStatus } from './entities/audit-log.entity';
+import { AUDIT_LOG_KEY } from './decorators/audit-log.decorator';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
 
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly reflector: Reflector,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    // Skip if AuditLog decorator is present to avoid double logging
+    const hasAuditLogDecorator = this.reflector.get(
+      AUDIT_LOG_KEY,
+      context.getHandler(),
+    );
+    if (hasAuditLogDecorator) {
+      return next.handle();
+    }
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 

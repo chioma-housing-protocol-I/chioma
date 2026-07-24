@@ -247,7 +247,7 @@ export function SystemAnalytics() {
     ).length;
     const activeListings = filteredProperties.filter(
       (property) =>
-        property.status === 'available' || property.status === 'rented',
+        property.status === 'published' || property.status === 'rented',
     ).length;
 
     const successRate = percentage(successfulTx, filteredTransactions.length);

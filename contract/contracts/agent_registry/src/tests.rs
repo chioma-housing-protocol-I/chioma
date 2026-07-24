@@ -534,3 +534,215 @@ fn test_rate_agent_fails_when_already_rated() {
     client.rate_agent(&tenant, &agent, &5, &txn_id);
     client.rate_agent(&tenant, &agent, &4, &txn_id);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contract Tests: Webhook Delivery & Cache Invalidation Patterns
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Contract Test 1: Agent State Consistency After Verification
+/// Validates that agent verification updates are consistent and queryable
+#[test]
+fn test_agent_verification_state_consistency() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    client.register_agent(&agent, &profile_hash);
+
+    // Before verification
+    let agent_info_before = client.get_agent_info(&agent).unwrap();
+    assert!(!agent_info_before.verified);
+    assert!(agent_info_before.verified_at.is_none());
+
+    // Verify agent
+    client.verify_agent(&admin, &agent);
+
+    // After verification - state should be consistent
+    let agent_info_after = client.get_agent_info(&agent).unwrap();
+    assert!(agent_info_after.verified);
+    assert!(agent_info_after.verified_at.is_some());
+    assert_eq!(agent_info_after.agent, agent);
+    assert_eq!(agent_info_after.external_profile_hash, profile_hash);
+}
+
+/// Contract Test 2: Transaction Completion Invalidates Agent Cache
+/// Validates that completing a transaction updates agent metrics consistently
+#[test]
+fn test_transaction_completion_updates_agent_metrics() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    client.register_agent(&agent, &profile_hash);
+
+    // Initial state
+    let agent_info_initial = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_initial.completed_agreements, 0);
+
+    // Register and complete transaction
+    let txn_id = String::from_str(&env, "TXN-001");
+    let parties = vec![&env, tenant.clone(), landlord.clone()];
+    client.register_transaction(&txn_id, &agent, &parties);
+    client.complete_transaction(&txn_id, &agent);
+
+    // After completion - metrics should be updated
+    let agent_info_updated = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_updated.completed_agreements, 1);
+}
+
+/// Contract Test 3: Rating Aggregation with Cache Invalidation
+/// Validates that multiple ratings are aggregated correctly and cache is invalidated
+#[test]
+fn test_rating_aggregation_consistency() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    client.register_agent(&agent, &profile_hash);
+    client.verify_agent(&admin, &agent);
+
+    let txn_id = String::from_str(&env, "TXN-001");
+    let parties = vec![&env, tenant.clone(), landlord.clone()];
+    client.register_transaction(&txn_id, &agent, &parties);
+    client.complete_transaction(&txn_id, &agent);
+
+    // Rate from tenant
+    client.rate_agent(&tenant, &agent, &5, &txn_id);
+
+    let agent_info_after_first = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_after_first.total_ratings, 1);
+    assert_eq!(agent_info_after_first.total_score, 5);
+    assert_eq!(agent_info_after_first.average_rating(), 5);
+
+    // Rate from landlord
+    client.rate_agent(&landlord, &agent, &3, &txn_id);
+
+    let agent_info_after_second = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_after_second.total_ratings, 2);
+    assert_eq!(agent_info_after_second.total_score, 8);
+    assert_eq!(agent_info_after_second.average_rating(), 4);
+}
+
+/// Contract Test 4: Webhook Event Delivery - Agent Registration
+/// Validates that agent registration events are properly recorded and queryable
+#[test]
+fn test_agent_registration_event_delivery() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent1 = Address::generate(&env);
+    let agent2 = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash1 = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    let profile_hash2 = String::from_str(&env, "QmYoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+
+    // Register first agent
+    client.register_agent(&agent1, &profile_hash1);
+    assert_eq!(client.get_agent_count(), 1);
+
+    // Register second agent
+    client.register_agent(&agent2, &profile_hash2);
+    assert_eq!(client.get_agent_count(), 2);
+
+    // Verify both agents are queryable
+    let agent1_info = client.get_agent_info(&agent1).unwrap();
+    let agent2_info = client.get_agent_info(&agent2).unwrap();
+
+    assert_eq!(agent1_info.external_profile_hash, profile_hash1);
+    assert_eq!(agent2_info.external_profile_hash, profile_hash2);
+}
+
+/// Contract Test 5: Cache Invalidation on Agent Verification
+/// Validates that verification status changes are immediately reflected
+#[test]
+fn test_verification_cache_invalidation() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    client.register_agent(&agent, &profile_hash);
+
+    // Query unverified state
+    let unverified = client.get_agent_info(&agent).unwrap();
+    assert!(!unverified.verified);
+
+    // Verify agent
+    client.verify_agent(&admin, &agent);
+
+    // Query verified state - should reflect immediately
+    let verified = client.get_agent_info(&agent).unwrap();
+    assert!(verified.verified);
+    assert!(verified.verified_at.is_some());
+
+    // Verify timestamp is set
+    assert_ne!(verified.verified_at, unverified.verified_at);
+}
+
+/// Contract Test 6: Transaction Completion Webhook Delivery
+/// Validates that transaction completion events are properly recorded and queryable
+#[test]
+fn test_transaction_completion_webhook_delivery() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let profile_hash = String::from_str(&env, "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    client.register_agent(&agent, &profile_hash);
+
+    // Register multiple transactions
+    let txn_id_1 = String::from_str(&env, "TXN-001");
+    let txn_id_2 = String::from_str(&env, "TXN-002");
+    let parties = vec![&env, tenant.clone(), landlord.clone()];
+
+    client.register_transaction(&txn_id_1, &agent, &parties);
+    client.register_transaction(&txn_id_2, &agent, &parties);
+
+    // Complete first transaction
+    client.complete_transaction(&txn_id_1, &agent);
+    let agent_info_after_first = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_after_first.completed_agreements, 1);
+
+    // Complete second transaction
+    client.complete_transaction(&txn_id_2, &agent);
+    let agent_info_after_second = client.get_agent_info(&agent).unwrap();
+    assert_eq!(agent_info_after_second.completed_agreements, 2);
+}

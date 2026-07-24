@@ -7,8 +7,7 @@ import { useAuth } from '@/store/authStore';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
 
 export default function AdminHomePage() {
-  // AUTH DISABLED - useRoleRedirect commented out for development
-  // useRoleRedirect(['admin', 'support', 'auditor']);
+  useRoleRedirect(['admin']);
 
   const { user, loading } = useAuth();
   const navItems = getAdminNavItems(user?.role);

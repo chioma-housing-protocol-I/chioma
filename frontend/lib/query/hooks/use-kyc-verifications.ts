@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
-import type { KycVerification, PaginatedResponse } from '@/types';
+import type { KycStatus, KycVerification, PaginatedResponse } from '@/types';
 
 export interface KycVerificationListParams {
   page?: number;
@@ -131,6 +131,34 @@ export function useRejectKycVerification() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.kyc.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+export function useKycStatus() {
+  return useQuery({
+    queryKey: [...queryKeys.kyc.all, 'status'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        status: KycStatus;
+        reason?: string;
+      }>('/kyc/status');
+      return data;
+    },
+  });
+}
+
+export function useSubmitKyc() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (kycData: Record<string, unknown>) => {
+      const { data } = await apiClient.post('/kyc/submit', { kycData });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.kyc.all, 'status'],
+      });
     },
   });
 }

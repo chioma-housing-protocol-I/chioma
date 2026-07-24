@@ -1,0 +1,25 @@
+packages:
+  - .
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@scarf/scarf'
+  - '@swc/core'
+  - sqlite3
+
+packageExtensions:
+  '@mapbox/node-pre-gyp':
+    dependencies:
+      minimist: ^1.2.8
+      nopt: ^5.0.0
+
+overrides:
+  axios: ^1.15.2
+  tar: ^7.5.10
+  '@isaacs/brace-expansion': 5.0.1
+  minimatch: ^9.0.8
+  serialize-javascript: ^7.0.3
+  multer: ^2.1.1
+  fast-xml-parser: ^5.5.6
+  picomatch@<2.3.2: ^2.3.2
+  picomatch@>=4.0.0 <4.0.4: ^4.0.4

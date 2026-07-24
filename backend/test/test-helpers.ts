@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { TestSeeder } from './test-seeder';
 
 /**
  * Get TypeORM configuration for e2e tests using SQLite in-memory
@@ -13,6 +14,14 @@ export function getTestDatabaseConfig(entities: any[]): TypeOrmModuleOptions {
     dropSchema: false,
     logging: false,
   };
+}
+
+/**
+ * Seed the database with test data.
+ */
+export async function seedDatabase(dataSource: DataSource): Promise<void> {
+  const seeder = new TestSeeder(dataSource);
+  await seeder.seedAll();
 }
 
 /**

@@ -14,14 +14,14 @@ Operational guide for tuning the Chioma NestJS backend in development, staging, 
 
 ## 1. Performance targets (SLAs)
 
-| Metric | Target | How to measure |
-|--------|--------|----------------|
-| API latency (P95) | < 200 ms | Prometheus `http_request_duration_seconds`, APM |
-| API latency (P99) | < 500 ms | Same; investigate outliers above 1 s |
-| Database query (P95) | < 50 ms | Slow-query logs, `LOG_SLOW_REQUEST_THRESHOLD` |
-| Background job latency | < 2 s (critical paths) | Bull queue metrics, `/api/v1/queues` admin |
-| Error rate (5xx) | < 0.1% | Prometheus `http_requests_total{status=~"5.."}` |
-| Cache hit ratio (read-heavy) | > 80% | Redis/cache stats, custom metrics |
+| Metric                       | Target                 | How to measure                                  |
+| ---------------------------- | ---------------------- | ----------------------------------------------- |
+| API latency (P95)            | < 200 ms               | Prometheus `http_request_duration_seconds`, APM |
+| API latency (P99)            | < 500 ms               | Same; investigate outliers above 1 s            |
+| Database query (P95)         | < 50 ms                | Slow-query logs, `LOG_SLOW_REQUEST_THRESHOLD`   |
+| Background job latency       | < 2 s (critical paths) | Bull queue metrics, `/api/v1/queues` admin      |
+| Error rate (5xx)             | < 0.1%                 | Prometheus `http_requests_total{status=~"5.."}` |
+| Cache hit ratio (read-heavy) | > 80%                  | Redis/cache stats, custom metrics               |
 
 Run the local benchmark script before releases:
 
@@ -37,21 +37,21 @@ pnpm run perf        # autocannon against /health, /api/docs-json, etc.
 
 ### Production runtime
 
-| Setting | Recommendation | Notes |
-|---------|----------------|-------|
-| `NODE_ENV` | `production` | Enables optimized builds, disables verbose errors |
-| Process memory | 512 MB–1 GB per API pod (baseline) | Scale with heap monitoring; OOM → increase or fix leaks |
-| `UV_THREADPOOL_SIZE` | `16` (if heavy crypto/fs) | Only when profiling shows thread-pool starvation |
-| Clustering | Multiple pods behind LB | Prefer horizontal scale over single large Node process |
+| Setting              | Recommendation                     | Notes                                                   |
+| -------------------- | ---------------------------------- | ------------------------------------------------------- |
+| `NODE_ENV`           | `production`                       | Enables optimized builds, disables verbose errors       |
+| Process memory       | 512 MB–1 GB per API pod (baseline) | Scale with heap monitoring; OOM → increase or fix leaks |
+| `UV_THREADPOOL_SIZE` | `16` (if heavy crypto/fs)          | Only when profiling shows thread-pool starvation        |
+| Clustering           | Multiple pods behind LB            | Prefer horizontal scale over single large Node process  |
 
 ### Application configuration
 
-| Variable | Purpose | Tuning guidance |
-|----------|---------|-----------------|
-| `LOG_SLOW_REQUEST_THRESHOLD` | Log requests slower than N ms | Start at `500`; lower to `300` when optimizing hot paths |
-| `LOG_SKIP_PATHS` | Exclude noisy paths from timing | Keep `/health`, `/metrics` excluded |
-| `REQUEST_SIZE_LIMIT_JSON` | Max JSON body size | Default `1mb`; increase only for upload endpoints |
-| `METRICS_ENABLED` | Prometheus metrics | Keep `true` in staging/production |
+| Variable                     | Purpose                         | Tuning guidance                                          |
+| ---------------------------- | ------------------------------- | -------------------------------------------------------- |
+| `LOG_SLOW_REQUEST_THRESHOLD` | Log requests slower than N ms   | Start at `500`; lower to `300` when optimizing hot paths |
+| `LOG_SKIP_PATHS`             | Exclude noisy paths from timing | Keep `/health`, `/metrics` excluded                      |
+| `REQUEST_SIZE_LIMIT_JSON`    | Max JSON body size              | Default `1mb`; increase only for upload endpoints        |
+| `METRICS_ENABLED`            | Prometheus metrics              | Keep `true` in staging/production                        |
 
 ### Code-level practices
 
@@ -85,17 +85,33 @@ pnpm run perf        # autocannon against /health, /api/docs-json, etc.
 - Route read-heavy, eventually-consistent endpoints to replicas when configured.
 - Never route payment or escrow writes to replicas.
 
+### Database Performance Analysis
+
+We have built-in tools to monitor and analyze database performance:
+
+1.  **API Endpoints (Admin/Super Admin only):**
+    - `GET /database-performance/report`: Returns a comprehensive report including index usage, sizes, and slow queries.
+    - `GET /database-performance/slow-queries`: Returns statistics from `pg_stat_statements`.
+    - `GET /database-performance/indexes/usage`: Returns index scan statistics.
+
+2.  **CLI Report Script:**
+    You can run a local performance report against the database using:
+    ```bash
+    pnpm run db:perf-report
+    ```
+    This script provides a terminal-friendly output of slow queries, unused indexes, largest tables, and cache hit ratios. Note: `pg_stat_statements` must be enabled (via migration `1900000000000` and `shared_preload_libraries=pg_stat_statements` in the database configuration, which is configured in `docker-compose.yml`) for slow query analysis to work.
+
 ---
 
 ## 4. Redis and caching
 
 See [CACHING_STRATEGY.md](./caching/CACHING_STRATEGY.md) for architecture.
 
-| Variable | Tuning guidance |
-|----------|-----------------|
-| `REDIS_URL` / `REDIS_TOKEN` | Upstash for serverless; ensure region matches API |
-| `REDIS_HOST` / `REDIS_PORT` | Dedicated Redis for staging/production under load |
-| TTL policies | Shorter TTL for frequently changing data (listings); longer for static reference data |
+| Variable                    | Tuning guidance                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| `REDIS_URL` / `REDIS_TOKEN` | Upstash for serverless; ensure region matches API                                     |
+| `REDIS_HOST` / `REDIS_PORT` | Dedicated Redis for staging/production under load                                     |
+| TTL policies                | Shorter TTL for frequently changing data (listings); longer for static reference data |
 
 **Tuning checklist:**
 
@@ -110,11 +126,11 @@ See [CACHING_STRATEGY.md](./caching/CACHING_STRATEGY.md) for architecture.
 
 Queues: `email`, `documents`, `blockchain`, `data-sync`.
 
-| Variable | Default (example) | Tuning |
-|----------|-------------------|--------|
-| `BULL_QUEUE_EMAIL_ATTEMPTS` | `3` | Increase only for transient SMTP failures |
-| `BULL_QUEUE_BLOCKCHAIN_ATTEMPTS` | `5` | Stellar/network flakiness; monitor failed count |
-| `BULL_QUEUE_*_BACKOFF_DELAY` | `2000–5000` ms | Exponential backoff is configured in code |
+| Variable                         | Default (example) | Tuning                                          |
+| -------------------------------- | ----------------- | ----------------------------------------------- |
+| `BULL_QUEUE_EMAIL_ATTEMPTS`      | `3`               | Increase only for transient SMTP failures       |
+| `BULL_QUEUE_BLOCKCHAIN_ATTEMPTS` | `5`               | Stellar/network flakiness; monitor failed count |
+| `BULL_QUEUE_*_BACKOFF_DELAY`     | `2000–5000` ms    | Exponential backoff is configured in code       |
 
 **Operations:**
 
@@ -128,11 +144,11 @@ Queues: `email`, `documents`, `blockchain`, `data-sync`.
 
 Protects auth and expensive endpoints. See [RATE-LIMITING.md](./api/RATE-LIMITING.md).
 
-| Variable | Purpose |
-|----------|---------|
-| `RATE_LIMIT_MAX` | General API requests per window |
-| `RATE_LIMIT_AUTH_MAX` | Stricter limit for `/auth/*` |
-| `RATE_LIMIT_STRICT_MAX` | High-cost endpoints |
+| Variable                | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `RATE_LIMIT_MAX`        | General API requests per window |
+| `RATE_LIMIT_AUTH_MAX`   | Stricter limit for `/auth/*`    |
+| `RATE_LIMIT_STRICT_MAX` | High-cost endpoints             |
 
 Increase limits only after load testing proves capacity; prefer CDN/edge caching for public reads instead of raising global limits.
 
@@ -140,11 +156,11 @@ Increase limits only after load testing proves capacity; prefer CDN/edge caching
 
 ## 7. Stellar and external APIs
 
-| Area | Guidance |
-|------|----------|
-| Horizon / Soroban RPC | Set `STELLAR_HORIZON_URL`, `SOROBAN_RPC_URL` to nearest region |
-| Timeouts | `HEALTH_CHECK_TIMEOUT`, `PAYMENT_GATEWAY_TIMEOUT_MS` — fail fast, retry via queue |
-| Circuit breaking | Use existing retry decorators; do not block HTTP threads on chain calls |
+| Area                  | Guidance                                                                          |
+| --------------------- | --------------------------------------------------------------------------------- |
+| Horizon / Soroban RPC | Set `STELLAR_HORIZON_URL`, `SOROBAN_RPC_URL` to nearest region                    |
+| Timeouts              | `HEALTH_CHECK_TIMEOUT`, `PAYMENT_GATEWAY_TIMEOUT_MS` — fail fast, retry via queue |
+| Circuit breaking      | Use existing retry decorators; do not block HTTP threads on chain calls           |
 
 ---
 
@@ -207,23 +223,23 @@ Increase limits only after load testing proves capacity; prefer CDN/edge caching
 
 ## 11. Troubleshooting quick reference
 
-| Symptom | Likely cause | Action |
-|---------|--------------|--------|
-| High P95 latency, low CPU | Database or Redis wait | Check slow queries, connection pool, cache miss rate |
-| High CPU, normal latency | JSON serialization / validation | Profile hot endpoints; add caching |
-| Memory climbing over days | Event listener leak | Heap snapshot; restart pods; fix leak |
-| 503 under load | Pool exhaustion or LB timeout | Increase pool carefully; scale replicas |
-| Queue backlog | Insufficient workers | Scale workers; check failed jobs |
-| Spiky auth latency | Rate limit or bcrypt cost | Expected; ensure bcrypt rounds = 12 |
+| Symptom                   | Likely cause                    | Action                                               |
+| ------------------------- | ------------------------------- | ---------------------------------------------------- |
+| High P95 latency, low CPU | Database or Redis wait          | Check slow queries, connection pool, cache miss rate |
+| High CPU, normal latency  | JSON serialization / validation | Profile hot endpoints; add caching                   |
+| Memory climbing over days | Event listener leak             | Heap snapshot; restart pods; fix leak                |
+| 503 under load            | Pool exhaustion or LB timeout   | Increase pool carefully; scale replicas              |
+| Queue backlog             | Insufficient workers            | Scale workers; check failed jobs                     |
+| Spiky auth latency        | Rate limit or bcrypt cost       | Expected; ensure bcrypt rounds = 12                  |
 
 ---
 
 ## 12. Further reading
 
-| Document | Topic |
-|----------|-------|
+| Document                                                                   | Topic                            |
+| -------------------------------------------------------------------------- | -------------------------------- |
 | [Scalability & Performance](./architecture/scalability-and-performance.md) | Horizontal scaling, load testing |
-| [PERFORMANCE_INDEXES.md](./database/PERFORMANCE_INDEXES.md) | Index catalog |
-| [CACHING_STRATEGY.md](./caching/CACHING_STRATEGY.md) | Cache layers |
-| [QUEUE_TROUBLESHOOTING.md](./queues/QUEUE_TROUBLESHOOTING.md) | Bull queue issues |
-| [COMPREHENSIVE_MONITORING.md](./COMPREHENSIVE_MONITORING.md) | Full observability stack |
+| [PERFORMANCE_INDEXES.md](./database/PERFORMANCE_INDEXES.md)                | Index catalog                    |
+| [CACHING_STRATEGY.md](./caching/CACHING_STRATEGY.md)                       | Cache layers                     |
+| [QUEUE_TROUBLESHOOTING.md](./queues/QUEUE_TROUBLESHOOTING.md)              | Bull queue issues                |
+| [COMPREHENSIVE_MONITORING.md](./COMPREHENSIVE_MONITORING.md)               | Full observability stack         |

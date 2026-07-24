@@ -5,14 +5,15 @@ The backend ships a small set of resilience primitives under
 responsive when a downstream dependency slows down or fails, and they make
 "production readiness" behaviours testable and reusable across feature modules.
 
-| Pattern              | Service                | Purpose                                                       |
-| -------------------- | ---------------------- | ------------------------------------------------------------- |
-| Bulkhead isolation   | `BulkheadService`      | Cap concurrency per dependency so one can't starve the others |
-| Fallback             | `FallbackService`      | Serve a substitute result when the primary call fails         |
-| Graceful degradation | `DegradationService`   | Shed non-essential features as health worsens                 |
-| Incident tracking    | `IncidentService`      | Track incidents and drive degradation (see INCIDENT_RESPONSE) |
+| Pattern              | Service              | Purpose                                                       |
+| -------------------- | -------------------- | ------------------------------------------------------------- |
+| Bulkhead isolation   | `BulkheadService`    | Cap concurrency per dependency so one can't starve the others |
+| Fallback             | `FallbackService`    | Serve a substitute result when the primary call fails         |
+| Graceful degradation | `DegradationService` | Shed non-essential features as health worsens                 |
+| Incident tracking    | `IncidentService`    | Track incidents and drive degradation (see INCIDENT_RESPONSE) |
+| Timeout enforcement  | `TimeoutService`     | Abort external calls that exceed a configurable deadline      |
 
-All four are provided by a `@Global()` module, so any feature module can inject
+All five are provided by a `@Global()` module, so any feature module can inject
 them directly without re-importing.
 
 ```ts
@@ -20,7 +21,51 @@ constructor(
   private readonly bulkhead: BulkheadService,
   private readonly fallback: FallbackService,
   private readonly degradation: DegradationService,
+  private readonly timeout: TimeoutService,
 ) {}
+```
+
+---
+
+## Timeout enforcement (`TimeoutService`)
+
+Races any async call against a configurable deadline. If the deadline fires
+first the caller receives an `ExternalCallTimeoutError` (HTTP 408) immediately
+instead of waiting indefinitely for a hung downstream service. The internal
+timer is _always_ cleared before the method returns, so settled-but-slow
+promises do not keep the event loop alive.
+
+```ts
+// Simple usage — throw if the KYC call takes longer than 5 s.
+const result = await this.timeout.execute(
+  () => this.kycClient.verify(payload),
+  { context: 'kyc-verify', timeoutMs: 5_000 },
+);
+
+// Composed with FallbackService — serve a cached decision on timeout.
+const decision = await this.fallback.execute(
+  () =>
+    this.timeout.execute(() => this.kycClient.verify(payload), {
+      context: 'kyc-verify',
+      timeoutMs: 5_000,
+    }),
+  {
+    context: 'kyc-verify',
+    fallbackFn: (err) => this.cache.getLastKnownDecision(userId),
+    shouldFallback: (err) => err instanceof ExternalCallTimeoutError,
+  },
+);
+
+// Pre-configure a timeout-protected function for repeated use.
+const safeStatus = this.timeout.wrap(
+  (id: string) => this.paymentProvider.fetchStatus(id),
+  { context: 'payment-status', timeoutMs: 8_000 },
+);
+const status = await safeStatus(paymentId);
+
+// Observe per-context metrics for dashboards / alerts.
+this.timeout.getMetrics('kyc-verify');
+// { context, totalCalls, totalTimeouts, lastTimeoutMs }
 ```
 
 ---
@@ -70,11 +115,11 @@ On failure the service uses `fallbackFn(error)` if present, otherwise
 Holds an overall `DegradationLevel` (`NORMAL` → `PARTIAL` → `SEVERE`) and a
 registry of features tagged by `FeaturePriority`:
 
-| Level     | Enabled features                  |
-| --------- | --------------------------------- |
-| `NORMAL`  | essential + standard + optional   |
-| `PARTIAL` | essential + standard              |
-| `SEVERE`  | essential only                    |
+| Level     | Enabled features                |
+| --------- | ------------------------------- |
+| `NORMAL`  | essential + standard + optional |
+| `PARTIAL` | essential + standard            |
+| `SEVERE`  | essential only                  |
 
 ```ts
 // At startup, declare what's optional.

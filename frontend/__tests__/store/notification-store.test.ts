@@ -10,25 +10,32 @@ import type { Notification } from '@/components/notifications/types';
 vi.mock('@/lib/api-client', () => ({
   apiClient: {
     get: vi.fn().mockResolvedValue({
-      data: [
-        {
-          id: 'mock-1',
-          title: 'Rent received',
-          message: 'Your tenant paid',
-          isRead: false,
-          type: 'payment',
-          createdAt: '2026-03-27T12:00:00.000Z',
-        },
-        {
-          id: 'mock-2',
-          title: 'Maintenance update',
-          message: 'Request resolved',
-          isRead: true,
-          type: 'maintenance',
-          createdAt: '2026-03-26T10:00:00.000Z',
-        },
-      ],
+      data: {
+        data: [
+          {
+            id: 'mock-1',
+            title: 'Rent received',
+            message: 'Your tenant paid',
+            isRead: false,
+            type: 'payment',
+            createdAt: '2026-03-27T12:00:00.000Z',
+          },
+          {
+            id: 'mock-2',
+            title: 'Maintenance update',
+            message: 'Request resolved',
+            isRead: true,
+            type: 'maintenance',
+            createdAt: '2026-03-26T10:00:00.000Z',
+          },
+        ],
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      },
     }),
+    patch: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -78,8 +85,8 @@ describe('notificationStore', () => {
     }
   });
 
-  it('addNotification prepends to the list', () => {
-    useNotificationStore.getState().fetchNotifications();
+  it('addNotification prepends to the list', async () => {
+    await useNotificationStore.getState().fetchNotifications();
     const before = useNotificationStore.getState().notifications.length;
 
     useNotificationStore.getState().addNotification(fakeNotification);
@@ -89,11 +96,11 @@ describe('notificationStore', () => {
     expect(state.notifications[0].id).toBe('n-1');
   });
 
-  it('markAsRead toggles read flag for a single notification', () => {
+  it('markAsRead toggles read flag for a single notification', async () => {
     useNotificationStore.getState().addNotification(fakeNotification);
     expect(useNotificationStore.getState().notifications[0].read).toBe(false);
 
-    useNotificationStore.getState().markAsRead('n-1');
+    await useNotificationStore.getState().markAsRead('n-1');
     expect(useNotificationStore.getState().notifications[0].read).toBe(true);
   });
 
@@ -107,14 +114,14 @@ describe('notificationStore', () => {
     expect(useNotificationStore.getState().notifications[0].read).toBe(false);
   });
 
-  it('markAllAsRead sets every notification to read', () => {
+  it('markAllAsRead sets every notification to read', async () => {
     useNotificationStore.getState().addNotification(fakeNotification);
     useNotificationStore.getState().addNotification({
       ...fakeNotification,
       id: 'n-2',
     });
 
-    useNotificationStore.getState().markAllAsRead();
+    await useNotificationStore.getState().markAllAsRead();
 
     const state = useNotificationStore.getState();
     expect(state.notifications.every((n) => n.read)).toBe(true);
@@ -132,10 +139,10 @@ describe('notificationStore', () => {
     expect(count).toBe(1);
   });
 
-  it('markAsRead on non-existent id is a safe no-op', () => {
+  it('markAsRead on non-existent id is a safe no-op', async () => {
     useNotificationStore.getState().addNotification(fakeNotification);
 
-    useNotificationStore.getState().markAsRead('does-not-exist');
+    await useNotificationStore.getState().markAsRead('does-not-exist');
 
     const state = useNotificationStore.getState();
     expect(state.notifications[0].read).toBe(false);

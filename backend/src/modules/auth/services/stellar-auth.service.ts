@@ -170,11 +170,13 @@ export class StellarAuthService {
     });
 
     if (!user) {
-      // Create new user with Stellar auth
+      // Create new user with Stellar auth. Owning the wallet proves control
+      // of the address, not an email address, so emailVerified stays false
+      // until the user completes onboarding (POST /auth/complete-profile).
       user = this.userRepository.create({
         walletAddress,
         authMethod: AuthMethod.STELLAR,
-        emailVerified: true, // Wallet-based auth is considered verified
+        emailVerified: false,
         failedLoginAttempts: 0,
         isActive: true,
       });
@@ -262,20 +264,27 @@ export class StellarAuthService {
     walletAddress: string,
   ): boolean {
     try {
-      const transaction = TransactionBuilder.fromXDR(
+      // `challengeXdr` is the original, server-signed challenge (unsigned by
+      // the wallet). `signature` is the transaction XDR the wallet returned
+      // after signing that same challenge, so it carries both the server's
+      // signature and the wallet's new one. The wallet's signature is what
+      // we actually need to verify — the two envelopes share the same
+      // transaction hash since signing doesn't alter the tx body.
+      const originalTransaction = TransactionBuilder.fromXDR(
         challengeXdr,
         this.getNetworkPassphrase(),
       );
-      void signature;
+      const signedTransaction = TransactionBuilder.fromXDR(
+        signature,
+        this.getNetworkPassphrase(),
+      );
 
-      // Verify the signature using the correct Stellar SDK API
       const keypair = Keypair.fromPublicKey(walletAddress);
+      const txHash = originalTransaction.hash();
 
-      // Check if the transaction is signed by the expected keypair
-      const signatures = transaction.signatures;
-      return signatures.some((sig) => {
+      return signedTransaction.signatures.some((sig) => {
         try {
-          return keypair.verify(transaction.hash(), sig.signature());
+          return keypair.verify(txHash, sig.signature());
         } catch {
           return false;
         }

@@ -62,7 +62,7 @@ export class ApiKey {
    */
   isExpired(): boolean {
     if (!this.expiresAt) return false;
-    return new Date() > this.expiresAt;
+    return new Date() > new Date(this.expiresAt);
   }
 
   /**

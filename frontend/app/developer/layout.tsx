@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Code2, KeyRound, Webhook } from 'lucide-react';
+import { Code2, KeyRound, Webhook, Activity } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/store/authStore';
 import { isDeveloperPortalUser } from '@/lib/developer-webhooks';
@@ -11,6 +11,7 @@ import { isDeveloperPortalUser } from '@/lib/developer-webhooks';
 const developerNavItems = [
   { href: '/developer', label: 'Overview', icon: Code2 },
   { href: '/developer/webhooks', label: 'Webhooks', icon: Webhook },
+  { href: '/developer/status', label: 'Status', icon: Activity },
 ];
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
@@ -44,6 +45,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
                 >
                   Open webhooks
                 </Link>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- /api/docs serves proxied Swagger HTML, not a Next.js page */}
                 <a
                   href="/api/docs"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"

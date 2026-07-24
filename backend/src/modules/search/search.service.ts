@@ -6,6 +6,11 @@ import {
   PropertyType,
   ListingStatus,
 } from '../properties/entities/property.entity';
+import { User, UserRole } from '../users/entities/user.entity';
+import {
+  RentAgreement,
+  AgreementStatus,
+} from '../rent/entities/rent-contract.entity';
 import { CacheService } from '../../common/cache/cache.service';
 import {
   CACHE_PREFIX_SEARCH_PROPERTIES,
@@ -33,6 +38,32 @@ export interface SearchFilters {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  // Sort
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface UserSearchFilters {
+  query?: string;
+  role?: UserRole;
+  isActive?: boolean;
+  kycVerified?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface DocumentSearchFilters {
+  query?: string;
+  status?: AgreementStatus;
+  propertyId?: string;
+  userId?: string;
+  adminId?: string;
+  minRent?: number;
+  maxRent?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface SearchResult<T> {
@@ -64,6 +95,10 @@ export class SearchService {
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+    @InjectRepository(RentAgreement)
+    private readonly agreementRepo: Repository<RentAgreement>,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -337,5 +372,159 @@ export class SearchService {
         petsAllowed: parseInt(amenityCounts?.pets_allowed) || 0,
       },
     };
+  }
+
+  // ─── Users ──────────────────────────────────────────────────────────────────
+
+  async searchUsers(
+    filters: UserSearchFilters,
+    page = 1,
+    limit = 20,
+  ): Promise<{ items: User[]; total: number; page: number; limit: number }> {
+    const qb = this.buildUserQuery(filters);
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    const sortBy = filters.sortBy || 'createdAt';
+    const sortOrder = filters.sortOrder || 'desc';
+    const allowedSortFields = [
+      'createdAt',
+      'firstName',
+      'lastName',
+      'email',
+      'role',
+    ];
+    const safeSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'createdAt';
+    qb.orderBy(`user.${safeSortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return { items, total, page, limit };
+  }
+
+  private buildUserQuery(filters: UserSearchFilters): SelectQueryBuilder<User> {
+    const qb = this.userRepo.createQueryBuilder('user');
+
+    if (filters.query) {
+      qb.andWhere(
+        `(LOWER(user.firstName) ILIKE :query OR LOWER(user.lastName) ILIKE :query OR LOWER(user.email) ILIKE :query)`,
+        { query: `%${filters.query.toLowerCase()}%` },
+      );
+    }
+
+    if (filters.role) {
+      qb.andWhere('user.role = :role', { role: filters.role });
+    }
+
+    if (filters.isActive !== undefined) {
+      qb.andWhere('user.isActive = :isActive', { isActive: filters.isActive });
+    }
+
+    if (filters.kycVerified !== undefined) {
+      qb.andWhere(
+        filters.kycVerified
+          ? "user.kycStatus = 'APPROVED'"
+          : "user.kycStatus != 'APPROVED'",
+      );
+    }
+
+    return qb;
+  }
+
+  // ─── Documents (Agreements) ─────────────────────────────────────────────────
+
+  async searchDocuments(
+    filters: DocumentSearchFilters,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    items: RentAgreement[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const qb = this.buildDocumentQuery(filters);
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    const sortBy = filters.sortBy || 'createdAt';
+    const sortOrder = filters.sortOrder || 'desc';
+    const allowedSortFields = [
+      'createdAt',
+      'startDate',
+      'endDate',
+      'monthlyRent',
+      'status',
+    ];
+    const safeSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'createdAt';
+    qb.orderBy(
+      `agreement.${safeSortBy}`,
+      sortOrder.toUpperCase() as 'ASC' | 'DESC',
+    );
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return { items, total, page, limit };
+  }
+
+  private buildDocumentQuery(
+    filters: DocumentSearchFilters,
+  ): SelectQueryBuilder<RentAgreement> {
+    const qb = this.agreementRepo.createQueryBuilder('agreement');
+
+    if (filters.query) {
+      qb.andWhere(
+        `(LOWER(agreement.agreementNumber) ILIKE :query OR LOWER(agreement.termsAndConditions) ILIKE :query)`,
+        { query: `%${filters.query.toLowerCase()}%` },
+      );
+    }
+
+    if (filters.status) {
+      qb.andWhere('agreement.status = :status', { status: filters.status });
+    }
+
+    if (filters.propertyId) {
+      qb.andWhere('agreement.propertyId = :propertyId', {
+        propertyId: filters.propertyId,
+      });
+    }
+
+    if (filters.userId) {
+      qb.andWhere('agreement.userId = :userId', { userId: filters.userId });
+    }
+
+    if (filters.adminId) {
+      qb.andWhere('agreement.adminId = :adminId', { adminId: filters.adminId });
+    }
+
+    if (filters.minRent !== undefined) {
+      qb.andWhere('CAST(agreement.monthlyRent AS float) >= :minRent', {
+        minRent: filters.minRent,
+      });
+    }
+
+    if (filters.maxRent !== undefined) {
+      qb.andWhere('CAST(agreement.monthlyRent AS float) <= :maxRent', {
+        maxRent: filters.maxRent,
+      });
+    }
+
+    if (filters.dateFrom) {
+      qb.andWhere('agreement.startDate >= :dateFrom', {
+        dateFrom: new Date(filters.dateFrom),
+      });
+    }
+
+    if (filters.dateTo) {
+      qb.andWhere('agreement.startDate <= :dateTo', {
+        dateTo: new Date(filters.dateTo),
+      });
+    }
+
+    return qb;
   }
 }

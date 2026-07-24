@@ -20,6 +20,11 @@ import { useAuth } from '@/store/authStore';
 import { getFreighterPublicKey } from '@/lib/stellar-auth';
 import { Uploader } from '@/components/ui/Uploader';
 import { toast } from 'react-hot-toast';
+import {
+  useKycStatus,
+  useSubmitKyc,
+} from '@/lib/query/hooks/use-kyc-verifications';
+import type { KycStatus as BackendKycStatus } from '@/types';
 
 interface UserProfile {
   fullName: string;
@@ -48,11 +53,29 @@ export default function UserProfilePage() {
     walletAddress: null,
   });
 
-  const [kyc, setKyc] = useState<KycStatus>({
-    level: 'Unverified',
-    status: 'none',
-    progress: 0,
-  });
+  const { data: kycStatusData, isLoading: isKycLoading } = useKycStatus();
+  const submitKycMutation = useSubmitKyc();
+
+  const [dob, setDob] = useState('');
+  const [country, setCountry] = useState('');
+  const [idFiles, setIdFiles] = useState<File[]>([]);
+  const [addressFiles, setAddressFiles] = useState<File[]>([]);
+
+  const kyc = React.useMemo(() => {
+    if (!kycStatusData)
+      return { level: 'Unverified', status: 'none', progress: 0 } as KycStatus;
+    switch (kycStatusData.status) {
+      case 'APPROVED':
+        return { level: 'Full', status: 'verified', progress: 100 };
+      case 'PENDING':
+        return { level: 'Basic', status: 'pending', progress: 66 };
+      case 'REJECTED':
+      case 'NEEDS_INFO':
+        return { level: 'Basic', status: 'rejected', progress: 33 };
+      default:
+        return { level: 'Unverified', status: 'none', progress: 0 };
+    }
+  }, [kycStatusData]);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -73,15 +96,6 @@ export default function UserProfilePage() {
           const data = await profileRes.json();
           setProfile((prev) => ({ ...prev, ...data }));
         }
-        const kycRes = await fetch('/api/stellar/kyc', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (kycRes.ok) {
-          const data = await kycRes.json();
-          setKyc(data);
-        } else {
-          setKyc({ level: 'Basic', status: 'verified', progress: 33 });
-        }
       } catch (error) {
         console.error('Error fetching profile data:', error);
       } finally {
@@ -90,6 +104,46 @@ export default function UserProfilePage() {
     };
     fetchData();
   }, [accessToken, user]);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+
+  const handleSubmitKyc = async () => {
+    if (!dob || !country || idFiles.length === 0 || addressFiles.length === 0) {
+      toast.error('Please fill all fields and upload documents');
+      return;
+    }
+
+    try {
+      const idBase64 = await fileToBase64(idFiles[0]);
+      const addressBase64 = await fileToBase64(addressFiles[0]);
+
+      await submitKycMutation.mutateAsync({
+        first_name: profile.fullName.split(' ')[0] || '',
+        last_name: profile.fullName.split(' ').slice(1).join(' ') || '',
+        email_address: profile.email,
+        phone_number: profile.phone,
+        dob,
+        country,
+        id_document: idBase64,
+        address_document: addressBase64,
+      });
+
+      toast.success('KYC verification submitted successfully');
+      setDob('');
+      setCountry('');
+      setIdFiles([]);
+      setAddressFiles([]);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to submit KYC verification');
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +216,7 @@ export default function UserProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isKycLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -457,23 +511,54 @@ export default function UserProfilePage() {
                     </p>
                   </div>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-blue-200/50 uppercase tracking-wider">
+                      Date of Birth
+                    </label>
+                    <input
+                      type="date"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/30 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-blue-200/50 uppercase tracking-wider">
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="e.g. United States"
+                      className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/30 text-sm"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Uploader
                     label="Government ID"
                     description="Upload Passport or Driver License"
-                    onFilesSelected={(files) => console.log('ID Files:', files)}
+                    onFilesSelected={setIdFiles}
                   />
                   <Uploader
                     label="Proof of Address"
                     description="Utility Bill or Bank Statement"
-                    onFilesSelected={(files) =>
-                      console.log('Address Files:', files)
-                    }
+                    onFilesSelected={setAddressFiles}
                   />
                 </div>
-                <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all flex items-center justify-center space-x-2 active:scale-[0.98] text-sm">
-                  <span>Submit for Verification</span>
-                  <ChevronRight size={16} />
+                <button
+                  onClick={handleSubmitKyc}
+                  disabled={submitKycMutation.isPending}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-2xl transition-all flex items-center justify-center space-x-2 active:scale-[0.98] text-sm"
+                >
+                  <span>
+                    {submitKycMutation.isPending
+                      ? 'Submitting...'
+                      : 'Submit for Verification'}
+                  </span>
+                  {!submitKycMutation.isPending && <ChevronRight size={16} />}
                 </button>
               </div>
             ) : (

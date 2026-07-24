@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
@@ -28,6 +23,12 @@ import {
   TTL_PUBLIC_PROPERTY_LIST_MS,
 } from '../../common/cache/cache.constants';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import {
+  PropertyNotFoundError,
+  AuthorizationError,
+  ValidationError,
+  BusinessRuleViolationError,
+} from '../../common/errors/domain-errors';
 
 @Injectable()
 export class PropertiesService {
@@ -177,7 +178,7 @@ export class PropertiesService {
     });
 
     if (!property) {
-      throw new NotFoundException(`Property with ID ${id} not found`);
+      throw new PropertyNotFoundError(id);
     }
 
     return property;
@@ -187,7 +188,7 @@ export class PropertiesService {
     const property = await this.findOne(id);
 
     if (property.status !== ListingStatus.PUBLISHED) {
-      throw new NotFoundException(`Property with ID ${id} not found`);
+      throw new PropertyNotFoundError(id);
     }
 
     return property;
@@ -205,7 +206,7 @@ export class PropertiesService {
       select: ['id', 'viewCount', 'lastViewedAt'],
     });
     if (!row) {
-      throw new NotFoundException(`Property with ID ${id} not found`);
+      throw new PropertyNotFoundError(id);
     }
     return { viewCount: row.viewCount, lastViewedAt: row.lastViewedAt! };
   }
@@ -218,7 +219,7 @@ export class PropertiesService {
       select: ['id', 'favoriteCount'],
     });
     if (!row) {
-      throw new NotFoundException(`Property with ID ${id} not found`);
+      throw new PropertyNotFoundError(id);
     }
     return { favoriteCount: row.favoriteCount };
   }
@@ -300,11 +301,11 @@ export class PropertiesService {
     this.verifyOwnership(property, user);
 
     if (property.status === ListingStatus.PUBLISHED) {
-      throw new BadRequestException('Property is already published');
+      throw new BusinessRuleViolationError('Property is already published');
     }
 
     if (property.status === ListingStatus.ARCHIVED) {
-      throw new BadRequestException(
+      throw new BusinessRuleViolationError(
         'Cannot publish an archived property. Please create a new listing.',
       );
     }
@@ -314,7 +315,7 @@ export class PropertiesService {
       property.price === null ||
       property.price === undefined
     ) {
-      throw new BadRequestException(
+      throw new BusinessRuleViolationError(
         'Property must have at least a title and price to be published',
       );
     }
@@ -413,7 +414,7 @@ export class PropertiesService {
       where: { id: draftId, landlordId },
     });
     if (!draft) {
-      throw new NotFoundException(`Wizard draft ${draftId} not found`);
+      throw new PropertyNotFoundError(draftId);
     }
     return draft;
   }
@@ -432,12 +433,12 @@ export class PropertiesService {
       data.price ?? pricing.monthlyRent ?? basic.price ?? pricing.rent;
     const price = Number(priceRaw);
     if (!String(title).trim()) {
-      throw new BadRequestException(
+      throw new ValidationError(
         'Wizard draft must include a title before publishing.',
       );
     }
     if (!Number.isFinite(price) || price < 0) {
-      throw new BadRequestException(
+      throw new ValidationError(
         'Wizard draft must include a valid price before publishing.',
       );
     }
@@ -499,7 +500,7 @@ export class PropertiesService {
 
   private verifyOwnership(property: Property, user: User): void {
     if (property.ownerId !== user.id && user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException(
+      throw new AuthorizationError(
         'You do not have permission to modify this property',
       );
     }

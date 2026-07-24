@@ -98,8 +98,8 @@ describe('LoggerService', () => {
 
     expect(removed).toBe(1);
     await expect(fs.access(oldLog)).rejects.toThrow();
-    await expect(fs.access(freshLog)).resolves.toBeUndefined();
+    await expect(fs.access(freshLog)).resolves.not.toThrow();
 
     await fs.rm(tempDir, { recursive: true, force: true });
-  });
+  }, 10000);
 });

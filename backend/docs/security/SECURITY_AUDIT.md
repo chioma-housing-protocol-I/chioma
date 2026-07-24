@@ -47,14 +47,14 @@ This document outlines the security audit findings, best practices, authorizatio
   - Use Redis for distributed rate limiting
   - Monitor for abuse patterns
 
-**3. CORS Configuration**
+**3. CORS Configuration & Security Headers**
 
-- **Issue**: CORS allows all origins in development
-- **Risk**: Cross-origin attacks
-- **Mitigation**:
-  - Restrict CORS to known origins
-  - Use environment-specific configuration
-  - Implement CORS validation middleware
+- **Issue**: CORS allows all origins in development and missing security headers
+- **Risk**: Cross-origin attacks, clickjacking, XSS
+- **Mitigation** (Implemented):
+  - Strict CORS configured based on environment variables
+  - Helmet middleware added for HSTS, Content Security Policy, and X-Frame-Options
+  - E2E tests added to ensure continuous validation
 
 ### Medium Priority Findings
 

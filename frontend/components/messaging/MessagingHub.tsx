@@ -41,109 +41,119 @@ export function MessagingHub() {
     ? getOtherParticipant(activeRoom, user?.id ?? '')
     : null;
 
-  return (
-    <div className="flex h-screen bg-white">
-      <div
-        className={`${showSidebar ? 'flex' : 'hidden'} md:flex flex-col shrink-0`}
-      >
-        <ChatSidebar
-          rooms={rooms}
-          activeRoom={activeRoom}
-          isLoading={isLoadingRooms}
-          onSelectRoom={handleSelectRoom}
-        />
-      </div>
+  const connectionBanner = !isConnected && (
+    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-medium">
+      <WifiOff size={13} />
+      Connecting to messaging server… Chat will be available once connected.
+    </div>
+  );
 
-      <div
-        className={`${!showSidebar ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`}
-      >
-        {activeRoom ? (
-          <>
-            <header className="h-16 px-5 border-b border-neutral-200 flex items-center gap-3 bg-white shrink-0">
+  return (
+    <div className="flex flex-col h-screen bg-white">
+      {connectionBanner}
+      <div className="flex flex-1 min-h-0">
+        <div
+          className={`${showSidebar ? 'flex' : 'hidden'} md:flex flex-col shrink-0`}
+        >
+          <ChatSidebar
+            rooms={rooms}
+            activeRoom={activeRoom}
+            isLoading={isLoadingRooms}
+            onSelectRoom={handleSelectRoom}
+          />
+        </div>
+
+        <div
+          className={`${!showSidebar ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`}
+        >
+          {activeRoom ? (
+            <>
+              <header className="h-16 px-5 border-b border-neutral-200 flex items-center gap-3 bg-white shrink-0">
+                <button
+                  onClick={() => setShowSidebar(true)}
+                  className="md:hidden p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 transition-colors"
+                  aria-label="Back to conversations"
+                >
+                  <Menu size={20} />
+                </button>
+
+                {otherUser ? (
+                  <UserAvatar
+                    firstName={otherUser.firstName}
+                    lastName={otherUser.lastName}
+                    role={otherUser.role}
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-neutral-200" />
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-sm font-semibold text-neutral-900 truncate">
+                    {otherUser
+                      ? `${otherUser.firstName} ${otherUser.lastName}`
+                      : (activeRoom.name ?? 'Chat')}
+                  </h2>
+                  <div className="flex items-center gap-1.5">
+                    {typingUsers.size > 0 ? (
+                      <span className="text-xs text-blue-500 font-medium animate-pulse">
+                        typing...
+                      </span>
+                    ) : (
+                      <span
+                        className={`flex items-center gap-1 text-xs ${
+                          isConnected ? 'text-emerald-500' : 'text-neutral-400'
+                        }`}
+                      >
+                        {isConnected ? (
+                          <>
+                            <Wifi size={11} />
+                            <span>Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <WifiOff size={11} />
+                            <span>Reconnecting...</span>
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </header>
+
+              <MessageList
+                messages={messages}
+                typingUsers={typingUsers}
+                isLoading={isLoadingMessages}
+              />
+
+              <MessageInput
+                onSend={sendMessage}
+                onTyping={sendTyping}
+                disabled={!isConnected}
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center bg-neutral-50 p-8">
               <button
                 onClick={() => setShowSidebar(true)}
-                className="md:hidden p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 transition-colors"
-                aria-label="Back to conversations"
+                className="md:hidden mb-6 text-sm text-blue-600 font-medium hover:underline"
               >
-                <Menu size={20} />
+                Back to conversations
               </button>
-
-              {otherUser ? (
-                <UserAvatar
-                  firstName={otherUser.firstName}
-                  lastName={otherUser.lastName}
-                  role={otherUser.role}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-neutral-200" />
-              )}
-
-              <div className="flex-1 min-w-0">
-                <h2 className="text-sm font-semibold text-neutral-900 truncate">
-                  {otherUser
-                    ? `${otherUser.firstName} ${otherUser.lastName}`
-                    : (activeRoom.name ?? 'Chat')}
-                </h2>
-                <div className="flex items-center gap-1.5">
-                  {typingUsers.size > 0 ? (
-                    <span className="text-xs text-blue-500 font-medium animate-pulse">
-                      typing...
-                    </span>
-                  ) : (
-                    <span
-                      className={`flex items-center gap-1 text-xs ${
-                        isConnected ? 'text-emerald-500' : 'text-neutral-400'
-                      }`}
-                    >
-                      {isConnected ? (
-                        <>
-                          <Wifi size={11} />
-                          <span>Connected</span>
-                        </>
-                      ) : (
-                        <>
-                          <WifiOff size={11} />
-                          <span>Reconnecting...</span>
-                        </>
-                      )}
-                    </span>
-                  )}
-                </div>
+              <div className="w-20 h-20 rounded-3xl bg-blue-50 flex items-center justify-center mb-5">
+                <MessageSquare size={36} className="text-blue-400" />
               </div>
-            </header>
-
-            <MessageList
-              messages={messages}
-              typingUsers={typingUsers}
-              isLoading={isLoadingMessages}
-            />
-
-            <MessageInput
-              onSend={sendMessage}
-              onTyping={sendTyping}
-              disabled={!isConnected}
-            />
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-neutral-50 p-8">
-            <button
-              onClick={() => setShowSidebar(true)}
-              className="md:hidden mb-6 text-sm text-blue-600 font-medium hover:underline"
-            >
-              Back to conversations
-            </button>
-            <div className="w-20 h-20 rounded-3xl bg-blue-50 flex items-center justify-center mb-5">
-              <MessageSquare size={36} className="text-blue-400" />
+              <h3 className="text-base font-semibold text-neutral-800 mb-1">
+                Your messages
+              </h3>
+              <p className="text-sm text-neutral-500 text-center max-w-xs">
+                Select a conversation from the sidebar, or start a new chat from
+                a property or profile page.
+              </p>
             </div>
-            <h3 className="text-base font-semibold text-neutral-800 mb-1">
-              Your messages
-            </h3>
-            <p className="text-sm text-neutral-500 text-center max-w-xs">
-              Select a conversation from the sidebar, or start a new chat from a
-              property or profile page.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

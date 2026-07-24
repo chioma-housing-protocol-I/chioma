@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { storageApi } from '@/lib/api/storage';
+import { useDocument } from '@/lib/query/hooks/use-landlord-documents';
 import type { Document, DocumentType } from '@/components/documents';
 
 function mapFileType(mime: string): DocumentType {
@@ -28,48 +27,9 @@ export default function UserDocumentDetailPage() {
   const params = useParams();
   const router = useRouter();
   const documentId = params.id as string;
-  const [document, setDocument] = useState<Document | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: docRecord, isLoading, error } = useDocument(documentId);
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const files = await storageApi.listFiles();
-        const match = files.find((file) => file.id === documentId);
-        if (!match) {
-          if (active) setError('Document not found');
-          return;
-        }
-        const url = await storageApi.getDownloadUrl(match.s3Key);
-        if (active) {
-          setDocument({
-            id: match.id,
-            name: match.fileName,
-            type: mapFileType(match.fileType),
-            url,
-            size: match.fileSize,
-            uploadedBy: '',
-            uploadedByName: 'You',
-            uploadedAt: match.createdAt,
-            category: 'other',
-          });
-        }
-      } catch {
-        if (active) setError('Failed to load document');
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [documentId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh] gap-3 text-blue-200/60">
         <Loader2 className="w-6 h-6 animate-spin" />
@@ -78,10 +38,12 @@ export default function UserDocumentDetailPage() {
     );
   }
 
-  if (error || !document) {
+  if (error || !docRecord) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
-        <p className="text-white font-semibold mb-2">{error ?? 'Not found'}</p>
+        <p className="text-white font-semibold mb-2">
+          {error ? 'Failed to load document' : 'Not found'}
+        </p>
         <Link
           href="/user/documents"
           className="text-blue-400 hover:text-blue-300"
@@ -91,6 +53,18 @@ export default function UserDocumentDetailPage() {
       </div>
     );
   }
+
+  const document: Document = {
+    id: docRecord.id,
+    name: docRecord.name,
+    type: mapFileType(docRecord.fileType),
+    url: docRecord.url,
+    size: docRecord.fileSize,
+    uploadedBy: '',
+    uploadedByName: 'You',
+    uploadedAt: docRecord.uploadedAt,
+    category: (docRecord.category as Document['category']) || 'other',
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">

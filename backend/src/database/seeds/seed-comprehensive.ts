@@ -16,6 +16,27 @@ import {
   AgreementStatus,
   RentAgreement,
 } from '../../modules/rent/entities/rent-contract.entity';
+import {
+  Payment,
+  PaymentStatus,
+} from '../../modules/payments/entities/payment.entity';
+import { GuestReview } from '../../modules/reviews/entities/guest-review.entity';
+import { HostReview } from '../../modules/reviews/entities/host-review.entity';
+import {
+  Dispute,
+  DisputeStatus,
+  DisputeType,
+} from '../../modules/disputes/entities/dispute.entity';
+import {
+  MaintenanceRequest,
+  MaintenanceStatus,
+} from '../../modules/maintenance/maintenance-request.entity';
+import { Document as LeaseDocument } from '../../modules/documents/document.entity';
+import { Notification } from '../../modules/notifications/entities/notification.entity';
+import {
+  PropertyInquiry,
+  PropertyInquiryStatus,
+} from '../../modules/inquiries/entities/property-inquiry.entity';
 import { createScriptLogger } from '../../common/services/script-logger';
 
 const logger = createScriptLogger('seed-comprehensive');
@@ -473,6 +494,14 @@ export async function seedComprehensiveData(
   const propertyRepo = dataSource.getRepository(Property);
   const imageRepo = dataSource.getRepository(PropertyImage);
   const agreementRepo = dataSource.getRepository(RentAgreement);
+  const paymentRepo = dataSource.getRepository(Payment);
+  const guestReviewRepo = dataSource.getRepository(GuestReview);
+  const hostReviewRepo = dataSource.getRepository(HostReview);
+  const disputeRepo = dataSource.getRepository(Dispute);
+  const maintenanceRepo = dataSource.getRepository(MaintenanceRequest);
+  const documentRepo = dataSource.getRepository(LeaseDocument);
+  const notificationRepo = dataSource.getRepository(Notification);
+  const inquiryRepo = dataSource.getRepository(PropertyInquiry);
 
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, SALT_ROUNDS);
 
@@ -582,6 +611,7 @@ export async function seedComprehensiveData(
   ];
 
   let agreementsCreated = 0;
+  const agreements: RentAgreement[] = [];
   for (let i = 0; i < agreementScenarios.length; i++) {
     const scenario = agreementScenarios[i];
     const admin = admins[i % admins.length];
@@ -593,6 +623,7 @@ export async function seedComprehensiveData(
       where: { agreementNumber },
     });
     if (existing) {
+      agreements.push(existing);
       continue;
     }
 
@@ -620,11 +651,391 @@ export async function seedComprehensiveData(
       renewalOption: scenario.status === AgreementStatus.ACTIVE,
     });
 
-    await agreementRepo.save(agreement);
+    const savedAgreement = await agreementRepo.save(agreement);
+    agreements.push(savedAgreement);
     agreementsCreated++;
   }
   logger.log(
     `Agreements ready: ${agreementsCreated} created (skipped existing)`,
+  );
+
+  // 5. Seed payments (2 completed + 1 pending per non-draft agreement)
+  logger.log('Seeding payments...');
+  let paymentsCreated = 0;
+  const nonDraftAgreements = agreements.filter(
+    (a) => a.status !== AgreementStatus.DRAFT,
+  );
+  for (const agreement of nonDraftAgreements) {
+    const scenarios: Array<{ offsetMonths: number; status: PaymentStatus }> = [
+      { offsetMonths: -2, status: PaymentStatus.COMPLETED },
+      { offsetMonths: -1, status: PaymentStatus.COMPLETED },
+      {
+        offsetMonths: 0,
+        status:
+          agreement.status === AgreementStatus.ACTIVE
+            ? PaymentStatus.PENDING
+            : PaymentStatus.COMPLETED,
+      },
+    ];
+
+    for (let i = 0; i < scenarios.length; i++) {
+      const idempotencyKey = `SEED-PAY-${agreement.agreementNumber}-${i + 1}`;
+      const existing = await paymentRepo.findOne({
+        where: { userId: agreement.userId, idempotencyKey },
+      });
+      if (existing) {
+        continue;
+      }
+
+      const processedAt = new Date(
+        Date.now() + scenarios[i].offsetMonths * 30 * 86_400_000,
+      );
+      const payment = paymentRepo.create({
+        userId: agreement.userId,
+        agreementId: agreement.id,
+        amount: agreement.monthlyRent,
+        transactionFee: Number(agreement.monthlyRent) * 0.015,
+        netAmount: Number(agreement.monthlyRent) * 0.985,
+        currency: 'NGN',
+        status: scenarios[i].status,
+        paymentMethod: 'card',
+        referenceNumber: `REF-${idempotencyKey}`,
+        processedAt:
+          scenarios[i].status === PaymentStatus.COMPLETED
+            ? processedAt
+            : undefined,
+        idempotencyKey,
+      });
+      await paymentRepo.save(payment);
+      paymentsCreated++;
+    }
+  }
+  logger.log(`Payments ready: ${paymentsCreated} created (skipped existing)`);
+
+  // 6. Seed reviews for expired agreements (lease completed) — guest <-> host
+  logger.log('Seeding reviews...');
+  let reviewsCreated = 0;
+  const expiredAgreements = agreements.filter(
+    (a) => a.status === AgreementStatus.EXPIRED,
+  );
+  const reviewComments = [
+    'Great experience, would rent again.',
+    'Communication was smooth throughout the lease.',
+    'Property was well maintained, minor issues resolved quickly.',
+    'Solid experience overall, a few rough edges.',
+    'Everything went as expected, no complaints.',
+  ];
+  for (let i = 0; i < expiredAgreements.length; i++) {
+    const agreement = expiredAgreements[i];
+    const bookingId = agreement.id;
+
+    const existingGuestReview = await guestReviewRepo.findOne({
+      where: { bookingId, hostId: agreement.adminId },
+    });
+    if (!existingGuestReview) {
+      await guestReviewRepo.save(
+        guestReviewRepo.create({
+          bookingId,
+          guestId: agreement.userId,
+          hostId: agreement.adminId,
+          cleanliness: 4 + (i % 2),
+          communication: 4 + (i % 2),
+          respectForRules: 5,
+          comment: reviewComments[i % reviewComments.length],
+          wouldHostAgain: true,
+        }),
+      );
+      reviewsCreated++;
+    }
+
+    const existingHostReview = await hostReviewRepo.findOne({
+      where: { bookingId, guestId: agreement.userId },
+    });
+
+    if (!existingHostReview) {
+      await hostReviewRepo.save(
+        hostReviewRepo.create({
+          bookingId,
+          guestId: agreement.userId,
+          hostId: agreement.adminId,
+          accuracy: 4 + (i % 2),
+          cleanliness: 5,
+          checkIn: 5,
+          communication: 4 + (i % 2),
+          location: 5,
+          value: 4,
+          comment: reviewComments[(i + 1) % reviewComments.length],
+        }),
+      );
+      reviewsCreated++;
+    }
+  }
+  logger.log(`Reviews ready: ${reviewsCreated} created (skipped existing)`);
+
+  // 7. Seed disputes (tied to real agreement FK)
+  logger.log('Seeding disputes...');
+  const disputeScenarios: Array<{
+    type: DisputeType;
+    status: DisputeStatus;
+    description: string;
+    requestedAmount: number | undefined;
+    resolved: boolean;
+  }> = [
+    {
+      type: DisputeType.SECURITY_DEPOSIT,
+      status: DisputeStatus.RESOLVED,
+      description: 'Tenant disputes deductions made from security deposit.',
+      requestedAmount: 50000,
+      resolved: true,
+    },
+    {
+      type: DisputeType.MAINTENANCE,
+      status: DisputeStatus.UNDER_REVIEW,
+      description: 'Landlord delayed repair of a reported plumbing issue.',
+      requestedAmount: undefined,
+      resolved: false,
+    },
+    {
+      type: DisputeType.RENT_PAYMENT,
+      status: DisputeStatus.OPEN,
+      description: 'Discrepancy between paid amount and recorded rent.',
+      requestedAmount: 25000,
+      resolved: false,
+    },
+    {
+      type: DisputeType.PROPERTY_DAMAGE,
+      status: DisputeStatus.REJECTED,
+      description: 'Claim of pre-existing damage not caused by tenant.',
+      requestedAmount: 80000,
+      resolved: true,
+    },
+  ];
+
+  let disputesCreated = 0;
+  for (let i = 0; i < disputeScenarios.length; i++) {
+    const scenario = disputeScenarios[i];
+    const agreement =
+      expiredAgreements[i % Math.max(expiredAgreements.length, 1)] ??
+      agreements[i % agreements.length];
+    const disputeId = `DISPUTE-SEED-${String(i + 1).padStart(4, '0')}`;
+
+    const existing = await disputeRepo.findOne({ where: { disputeId } });
+    if (existing) {
+      continue;
+    }
+
+    await disputeRepo.save(
+      disputeRepo.create({
+        disputeId,
+        agreementId: agreement.id,
+        initiatedBy: agreement.userId,
+        disputeType: scenario.type,
+        requestedAmount: scenario.requestedAmount,
+        description: scenario.description,
+        status: scenario.status,
+        resolution: scenario.resolved
+          ? 'Reviewed by admin and resolved per platform policy.'
+          : undefined,
+        resolvedBy: scenario.resolved ? agreement.adminId : undefined,
+        resolvedAt: scenario.resolved ? new Date() : undefined,
+      }),
+    );
+    disputesCreated++;
+  }
+  logger.log(`Disputes ready: ${disputesCreated} created (skipped existing)`);
+
+  // 8. Seed maintenance requests
+  logger.log('Seeding maintenance requests...');
+  const maintenanceScenarios: Array<{
+    category: string;
+    description: string;
+    priority: string;
+    status: MaintenanceStatus;
+  }> = [
+    {
+      category: 'Plumbing',
+      description: 'Leaking pipe under the kitchen sink.',
+      priority: 'HIGH',
+      status: MaintenanceStatus.RESOLVED,
+    },
+    {
+      category: 'Electrical',
+      description: 'Intermittent power loss in the living room.',
+      priority: 'HIGH',
+      status: MaintenanceStatus.IN_PROGRESS,
+    },
+    {
+      category: 'HVAC',
+      description: 'Air conditioning unit not cooling properly.',
+      priority: 'MEDIUM',
+      status: MaintenanceStatus.OPEN,
+    },
+    {
+      category: 'General Repair',
+      description: 'Broken cabinet hinge in the bathroom.',
+      priority: 'LOW',
+      status: MaintenanceStatus.CLOSED,
+    },
+    {
+      category: 'Pest Control',
+      description: 'Ants spotted near the balcony door.',
+      priority: 'MEDIUM',
+      status: MaintenanceStatus.OPEN,
+    },
+  ];
+
+  let maintenanceCreated = 0;
+  for (let i = 0; i < maintenanceScenarios.length; i++) {
+    const scenario = maintenanceScenarios[i];
+    const agreement = nonDraftAgreements[i % nonDraftAgreements.length];
+
+    const existing = await maintenanceRepo.findOne({
+      where: {
+        propertyId: agreement.propertyId,
+        tenantId: agreement.userId,
+        category: scenario.category,
+      },
+    });
+    if (existing) {
+      continue;
+    }
+
+    await maintenanceRepo.save(
+      maintenanceRepo.create({
+        propertyId: agreement.propertyId,
+        tenantId: agreement.userId,
+        landlordId: agreement.adminId,
+        category: scenario.category,
+        description: scenario.description,
+        priority: scenario.priority,
+        status: scenario.status,
+      }),
+    );
+    maintenanceCreated++;
+  }
+  logger.log(
+    `Maintenance requests ready: ${maintenanceCreated} created (skipped existing)`,
+  );
+
+  // 9. Seed lease documents for non-draft agreements
+  logger.log('Seeding documents...');
+  let documentsCreated = 0;
+  for (const agreement of nonDraftAgreements) {
+    const name = `Lease Agreement - ${agreement.agreementNumber}`;
+    const existing = await documentRepo.findOne({ where: { name } });
+    if (existing) {
+      continue;
+    }
+
+    await documentRepo.save(
+      documentRepo.create({
+        name,
+        type: 'LEASE',
+        status:
+          agreement.status === AgreementStatus.EXPIRED ? 'ARCHIVED' : 'ACTIVE',
+        category: 'lease',
+        fileKey: `seed/leases/${agreement.agreementNumber}.pdf`,
+        fileSize: 245_760,
+        fileType: 'application/pdf',
+        propertyId: agreement.propertyId,
+        tenantId: agreement.userId,
+        ownerId: agreement.adminId,
+        description: `Signed lease document for ${agreement.agreementNumber}.`,
+        sharedWith: [agreement.userId, agreement.adminId],
+      }),
+    );
+    documentsCreated++;
+  }
+  logger.log(`Documents ready: ${documentsCreated} created (skipped existing)`);
+
+  // 10. Seed notifications for tenants
+  logger.log('Seeding notifications...');
+  const notificationTemplates = [
+    {
+      title: 'Payment due soon',
+      message: 'Your next rent payment is due in 5 days.',
+      type: 'payment_reminder',
+    },
+    {
+      title: 'Maintenance update',
+      message: 'Your maintenance request status has changed.',
+      type: 'maintenance_update',
+    },
+    {
+      title: 'Lease renewal available',
+      message: 'Your lease is eligible for renewal — review your options.',
+      type: 'lease_renewal',
+    },
+  ];
+
+  let notificationsCreated = 0;
+  for (const user of users) {
+    for (const template of notificationTemplates) {
+      const existing = await notificationRepo.findOne({
+        where: { userId: user.id, title: template.title },
+      });
+      if (existing) {
+        continue;
+      }
+      await notificationRepo.save(
+        notificationRepo.create({
+          userId: user.id,
+          title: template.title,
+          message: template.message,
+          type: template.type,
+          isRead: false,
+        }),
+      );
+      notificationsCreated++;
+    }
+  }
+  logger.log(
+    `Notifications ready: ${notificationsCreated} created (skipped existing)`,
+  );
+
+  // 11. Seed property inquiries for published properties without an agreement
+  logger.log('Seeding property inquiries...');
+  const propertiesWithAgreements = new Set(agreements.map((a) => a.propertyId));
+  const availableProperties = properties.filter(
+    (p) => !propertiesWithAgreements.has(p.id),
+  );
+  const inquiryMessages = [
+    'Is this property still available for viewing this weekend?',
+    'Could you share more details on the utilities included?',
+    'I am interested — what is the earliest move-in date?',
+  ];
+
+  let inquiriesCreated = 0;
+  for (let i = 0; i < availableProperties.length && i < 10; i++) {
+    const property = availableProperties[i];
+    const fromUser = users[i % users.length];
+
+    const existing = await inquiryRepo.findOne({
+      where: {
+        propertyId: property.id,
+        fromUserId: fromUser.id,
+        toUserId: property.ownerId,
+      },
+    });
+    if (existing) {
+      continue;
+    }
+
+    await inquiryRepo.save(
+      inquiryRepo.create({
+        propertyId: property.id,
+        fromUserId: fromUser.id,
+        toUserId: property.ownerId,
+        message: inquiryMessages[i % inquiryMessages.length],
+        senderName: `${fromUser.firstName} ${fromUser.lastName}`,
+        senderEmail: fromUser.email,
+        status: PropertyInquiryStatus.PENDING,
+      }),
+    );
+    inquiriesCreated++;
+  }
+  logger.log(
+    `Property inquiries ready: ${inquiriesCreated} created (skipped existing)`,
   );
 
   logger.log(

@@ -394,3 +394,264 @@ fn test_timeout_config_requires_auth() {
     let result = client.try_set_timeout_config(&caller, &config);
     assert!(result.is_ok());
 }
+
+// ── approve_release ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_beneficiary_can_approve_release() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let result = client.try_approve_release(&escrow_id, &beneficiary, &beneficiary);
+    assert!(
+        result.is_ok(),
+        "beneficiary should be able to approve release"
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_outsider_cannot_approve_release() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+    let outsider = Address::generate(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    // Outsider cannot approve release
+    client.approve_release(&escrow_id, &outsider, &beneficiary);
+}
+
+// ── initiate_dispute ────────────────────────────────────────────────────────
+
+#[test]
+fn test_beneficiary_can_initiate_dispute() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let reason = soroban_sdk::String::from_str(&env, "unauthorized deduction");
+    let result = client.try_initiate_dispute(&escrow_id, &beneficiary, &reason);
+    assert!(
+        result.is_ok(),
+        "beneficiary should be able to initiate dispute"
+    );
+    assert_eq!(client.get_escrow(&escrow_id).status, EscrowStatus::Disputed);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #1)")]
+fn test_outsider_cannot_initiate_dispute() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+    let outsider = Address::generate(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let reason = soroban_sdk::String::from_str(&env, "dispute");
+    // Only depositor/beneficiary can initiate dispute
+    client.initiate_dispute(&escrow_id, &outsider, &reason);
+}
+
+// ── resolve_dispute ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_arbiter_can_resolve_dispute() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let reason = soroban_sdk::String::from_str(&env, "dispute");
+    client.initiate_dispute(&escrow_id, &depositor, &reason);
+
+    // Arbiter resolves dispute in favor of beneficiary
+    let result = client.try_resolve_dispute(&escrow_id, &arbiter, &beneficiary);
+    assert!(result.is_ok(), "arbiter should be able to resolve dispute");
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #1)")]
+fn test_non_arbiter_cannot_resolve_dispute() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+    let outsider = Address::generate(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let reason = soroban_sdk::String::from_str(&env, "dispute");
+    client.initiate_dispute(&escrow_id, &depositor, &reason);
+
+    // Outsider cannot resolve dispute
+    client.resolve_dispute(&escrow_id, &outsider, &beneficiary);
+}
+
+// ── approve_partial_release ─────────────────────────────────────────────────
+
+#[test]
+fn test_depositor_can_approve_partial_release() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let result = client.try_approve_partial_release(&escrow_id, &depositor, &beneficiary);
+    assert!(
+        result.is_ok(),
+        "depositor should be able to approve partial release"
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_outsider_cannot_approve_partial_release() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+    let outsider = Address::generate(&env);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    // Outsider cannot approve partial release
+    client.approve_partial_release(&escrow_id, &outsider, &beneficiary);
+}
+
+// ── admin_unfreeze ──────────────────────────────────────────────────────────
+
+#[test]
+fn test_admin_can_unfreeze_and_release() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, depositor, beneficiary, arbiter, platform_governance, agent_referral, token) =
+        setup(&env);
+    let admin = Address::generate(&env);
+    client.initialize_admin(&admin);
+
+    let escrow_id = funded_escrow(
+        &env,
+        &client,
+        &depositor,
+        &beneficiary,
+        &arbiter,
+        &platform_governance,
+        &agent_referral,
+        &token,
+        1000,
+    );
+
+    let reason = soroban_sdk::String::from_str(&env, "security freeze");
+    client.freeze_escrow(&escrow_id, &admin, &reason);
+    assert!(client.is_escrow_frozen(&escrow_id));
+
+    // Admin unfreezes
+    let result = client.try_unfreeze_escrow(&escrow_id, &admin);
+    assert!(result.is_ok(), "admin should be able to unfreeze escrow");
+    assert!(!client.is_escrow_frozen(&escrow_id));
+}

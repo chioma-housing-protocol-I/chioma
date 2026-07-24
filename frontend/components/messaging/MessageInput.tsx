@@ -118,6 +118,7 @@ export function MessageInput({
           ref={fileInputRef}
           type="file"
           className="hidden"
+          tabIndex={-1}
           onChange={handleFileChange}
           accept="image/*,.pdf,.doc,.docx,.txt"
           aria-label="Attach file"

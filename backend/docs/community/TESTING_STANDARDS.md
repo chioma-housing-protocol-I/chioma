@@ -49,6 +49,31 @@ Standards:
 
 ---
 
+## Contract Testing
+
+Contract testing validates the agreement between our backend and external API providers.
+
+Standards:
+
+- Use `nock` to intercept outgoing requests.
+- Use `jest-json-schema` to validate provider response shapes.
+- Focus on request/response compatibility.
+- Cover both success and error contracts.
+
+Recommended tools:
+
+- Nock
+- Jest-json-schema
+
+Commands:
+
+- `make test-contract`: Run all contract tests.
+- `pnpm run test:contract`: Run contract tests via Jest.
+
+For more details, see [CONTRACT_TESTING.md](../api/CONTRACT_TESTING.md).
+
+---
+
 ## Coverage Requirements
 
 Minimum expectations for backend pull requests:
@@ -59,6 +84,28 @@ Minimum expectations for backend pull requests:
 - No reduction in overall coverage without a documented rationale in the PR.
 
 Coverage should be validated in CI using `pnpm test:cov`.
+
+---
+
+## Mutation Testing
+
+Mutation testing validates the effectiveness of your tests by introducing small changes (mutants) to your code and checking if your tests catch them.
+
+Standards:
+
+- Aim for a high mutation score in critical business logic.
+- Use mutation testing to identify "weak" tests that pass but don't actually validate behavior.
+- Run mutation tests locally before submitting major changes to core modules.
+
+Commands:
+
+- `make test-mutation`: Run full mutation test suite (slow).
+- `make test-mutation-fast`: Run mutation tests on common utilities (faster).
+- `pnpm run test:mutation -- --mutate src/path/to/file.ts`: Run on a specific file.
+
+Recommended tools:
+
+- Stryker Mutator
 
 ---
 
@@ -88,6 +135,35 @@ Examples:
 - `it('persists payment and emits payment.created event')`
 
 Avoid vague names such as `it('works')` or `it('test payment')`.
+
+---
+
+## Database Seeding for Tests
+
+Integration and E2E tests often require pre-populated data (users, properties, etc.).
+
+### Using Test Helpers
+
+Use `seedDatabase(dataSource)` from `test-helpers.ts` to populate the database with standard test data. This is typically done in `beforeAll` or `beforeEach` hooks.
+
+```typescript
+import { seedDatabase, clearDatabase } from './test-helpers';
+
+beforeAll(async () => {
+  await clearDatabase(dataSource);
+  await seedDatabase(dataSource);
+});
+```
+
+### Manual Seeding
+
+You can manually seed the test database using the following command:
+
+```bash
+pnpm run seed:test
+```
+
+This runs `src/database/seeds/seed-test-db.ts` in the `test` environment.
 
 ---
 

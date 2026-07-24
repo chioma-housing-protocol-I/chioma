@@ -105,9 +105,7 @@ export function useTenantReviews(filters: TenantReviewFilters = {}) {
           rating: r.rating || 5,
           comment: r.comment || r.content || '',
           status: (r.status || 'PUBLISHED') as
-            | 'PUBLISHED'
-            | 'PENDING'
-            | 'FLAGGED',
+            'PUBLISHED' | 'PENDING' | 'FLAGGED',
           context: (r.context || 'LEASE') as 'LEASE' | 'MAINTENANCE',
           createdAt: r.createdAt || new Date().toISOString(),
           updatedAt: r.updatedAt || r.createdAt || new Date().toISOString(),
@@ -144,12 +142,9 @@ export function useTenantReview(id: string) {
           rating: (apiData as TenantReviewRecord).rating || 5,
           comment: (apiData as TenantReviewRecord).comment || '',
           status: ((apiData as TenantReviewRecord).status || 'PUBLISHED') as
-            | 'PUBLISHED'
-            | 'PENDING'
-            | 'FLAGGED',
+            'PUBLISHED' | 'PENDING' | 'FLAGGED',
           context: ((apiData as TenantReviewRecord).context || 'LEASE') as
-            | 'LEASE'
-            | 'MAINTENANCE',
+            'LEASE' | 'MAINTENANCE',
           createdAt:
             (apiData as TenantReviewRecord).createdAt ||
             new Date().toISOString(),
@@ -175,7 +170,12 @@ export function useCreateReview() {
       targetId: string;
       context: string;
     }) => {
-      await apiClient.post('/reviews', payload);
+      await apiClient.post('/reviews', {
+        rating: payload.rating,
+        comment: payload.comment,
+        revieweeId: payload.targetId,
+        context: payload.context,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_REVIEWS_QUERY_KEY });
@@ -193,7 +193,7 @@ export function useUpdateReview() {
       id: string;
       payload: { rating: number; comment: string };
     }) => {
-      await apiClient.put(`/reviews/${id}`, payload);
+      await apiClient.patch(`/reviews/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_REVIEWS_QUERY_KEY });

@@ -1,6 +1,6 @@
 'use client';
 
-import Footer from '@/components/Footer';
+import Footer from '@/components/landing/Footer';
 
 export default function PrivacyPage() {
   return (

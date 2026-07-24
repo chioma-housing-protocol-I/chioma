@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReferralModule } from '../referral/referral.module';
+import { AuditModule } from '../audit/audit.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthMetricsService } from './services/auth-metrics.service';
@@ -19,10 +20,14 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { SessionCleanupService } from './cron/session-cleanup.service';
+import { OAuth2Service } from './oauth/oauth2.service';
+import { OAuth2ClientService } from './oauth/oauth2-client.service';
+import { OAuth2Controller } from './oauth/oauth2.controller';
+import { OAuthAccount } from './oauth/entities/oauth-account.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice]),
+    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice, OAuthAccount]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -42,12 +47,20 @@ import { SessionCleanupService } from './cron/session-cleanup.service';
     }),
     NotificationsModule,
     ReferralModule,
+    AuditModule,
   ],
-  controllers: [AuthController, StellarAuthController, AuthMetricsController],
+  controllers: [
+    AuthController,
+    StellarAuthController,
+    AuthMetricsController,
+    OAuth2Controller,
+  ],
   providers: [
     AuthService,
     AuthMetricsService,
     StellarAuthService,
+    OAuth2Service,
+    OAuth2ClientService,
     MfaService,
     PasswordPolicyService,
     JwtStrategy,
@@ -57,6 +70,7 @@ import { SessionCleanupService } from './cron/session-cleanup.service';
   exports: [
     AuthService,
     AuthMetricsService,
+    OAuth2Service,
     MfaService,
     PasswordPolicyService,
     JwtModule,

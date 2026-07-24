@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Menu, Search, User } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
 import { Sidebar } from '@/components/user-dashboard';
@@ -20,7 +22,15 @@ export default function UserDashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const router = useRouter();
   const { walletAddress, loading } = useAuth();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchValue.trim();
+    if (q) router.push(`/properties?q=${encodeURIComponent(q)}`);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 font-sans text-white flex flex-col lg:flex-row">
@@ -55,27 +65,36 @@ export default function UserDashboardLayout({
 
             {/* Right Section - Search, Wallet, Profile */}
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="hidden md:flex relative w-64">
+              <form
+                onSubmit={handleSearch}
+                className="hidden md:flex relative w-64"
+              >
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300/60"
                   size={18}
                 />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder="Search properties..."
                   className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-white placeholder:text-blue-300/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                 />
-              </div>
-              <button className="md:hidden p-2 text-blue-200 hover:bg-white/10 rounded-full transition-colors">
+              </form>
+              <button
+                onClick={() => router.push('/properties')}
+                className="md:hidden p-2 text-blue-200 hover:bg-white/10 rounded-full transition-colors"
+                aria-label="Search properties"
+              >
                 <Search size={20} />
               </button>
 
-              <a
+              <Link
                 href="/user/properties/wizard"
                 className="hidden sm:flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 Add new listing
-              </a>
+              </Link>
               <NotificationBell
                 viewAllHref="/user/notifications"
                 size={20}

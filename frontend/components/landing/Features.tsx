@@ -7,82 +7,83 @@ import { Zap, Shield, Coins, FileCheck, Globe, Lock } from 'lucide-react';
 const features = [
   {
     icon: Zap,
-    title: 'Instant Payments',
+    title: 'Payments that land in seconds',
     description:
-      'Funds settle in seconds, not days. Experience the speed of blockchain technology.',
-  },
-  {
-    icon: Shield,
-    title: 'Immutable Records',
-    description:
-      'Every transaction is recorded on the blockchain, creating an unchangeable audit trail.',
+      'Rent moves over the Stellar network, so funds settle in under three seconds — not three business days.',
   },
   {
     icon: Coins,
-    title: 'Automated Commissions',
+    title: 'Commissions that split themselves',
     description:
-      'Agent commissions are distributed automatically with every rent payment.',
+      'Agent commissions are carved out of every rent payment automatically. No invoices, no reminders, no awkward calls.',
   },
   {
     icon: FileCheck,
-    title: 'Smart Contracts',
+    title: 'Leases as smart contracts',
     description:
-      'Lease agreements are executed as smart contracts, eliminating disputes.',
-  },
-  {
-    icon: Globe,
-    title: 'Multi-Currency Support',
-    description:
-      'Accept payments in USDC, local fiat tokens, or any Stellar asset.',
+      'Every agreement is executed on-chain, so the terms you signed are the terms that run — for both sides.',
   },
   {
     icon: Lock,
-    title: 'Secure Escrow',
+    title: 'Deposits held in escrow',
     description:
-      'Security deposits are held in multi-sig escrow for maximum protection.',
+      'Security deposits sit in multi-signature escrow until the lease ends. Neither party can touch them alone.',
+  },
+  {
+    icon: Shield,
+    title: 'A record nobody can edit',
+    description:
+      'Payments, signatures, and disputes leave an immutable audit trail. When there is a disagreement, the ledger settles it.',
+  },
+  {
+    icon: Globe,
+    title: 'Any Stellar asset',
+    description:
+      'Collect rent in USDC, local fiat tokens, or XLM — whatever suits both sides of the lease.',
   },
 ];
 
 export default function Features() {
   return (
-    <section className="relative py-32">
+    <section className="relative py-28">
       <div className="container mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="max-w-2xl mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Built for Modern Rentals
-          </h2>
-          <p className="text-xl text-blue-200/80 max-w-2xl mx-auto">
-            Everything you need to manage rentals efficiently and transparently
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass-400 mb-4">
+            Why Chioma
           </p>
+          <h2 className="font-display text-4xl md:text-5xl text-cream leading-tight">
+            Renting has a trust problem.
+            <br />
+            We removed the trust part.
+          </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-1">
           {features.map((feature, index) => (
             <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
+              key={feature.title}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="group relative"
+              transition={{ duration: 0.5, delay: (index % 3) * 0.08 }}
+              className="group border-t border-cream/8 py-8 pr-4 hover:border-brass-500/40 transition-colors"
             >
-              <div className="h-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-blue-200/70 leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
+              <feature.icon
+                className="w-5 h-5 text-brass-400 mb-5"
+                strokeWidth={1.75}
+              />
+              <h3 className="text-lg font-semibold text-cream mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-cream-dim text-[15px] leading-relaxed">
+                {feature.description}
+              </p>
             </motion.div>
           ))}
         </div>

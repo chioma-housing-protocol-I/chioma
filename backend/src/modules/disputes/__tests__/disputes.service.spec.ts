@@ -17,10 +17,13 @@ import { User, UserRole } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { CreateDisputeDto } from '../dto/create-dispute.dto';
 import {
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+  AgreementNotFoundError,
+  UserNotFoundError,
+  AuthorizationError,
+  BusinessRuleViolationError,
+  DisputeNotFoundError,
+  ValidationError,
+} from '../../../common/errors/domain-errors';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
 
@@ -57,8 +60,8 @@ describe('DisputesService', () => {
   const mockDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute description',
@@ -207,6 +210,8 @@ describe('DisputesService', () => {
       expect(queryRunner.manager.create).toHaveBeenCalledWith(
         Dispute,
         expect.objectContaining({
+          agreement: mockAgreement,
+          initiatedBy: 'user-1',
           disputeType: DisputeType.RENT_PAYMENT,
           requestedAmount: 500,
           description: 'Test dispute description',
@@ -222,7 +227,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(AgreementNotFoundError);
     });
 
     it('should throw ForbiddenException if user not party to agreement', async () => {
@@ -241,7 +246,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'other-user'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('should throw BadRequestException if active dispute already exists', async () => {
@@ -255,7 +260,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'user-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
   });
 
@@ -275,7 +280,7 @@ describe('DisputesService', () => {
     it('should throw NotFoundException when dispute not found', async () => {
       jest.spyOn(disputeRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(999)).rejects.toThrow(DisputeNotFoundError);
     });
   });
 
@@ -290,6 +295,33 @@ describe('DisputesService', () => {
         where: { disputeId: 'dispute-uuid-1' },
         relations: expect.any(Array),
       });
+    });
+  });
+
+  describe('update', () => {
+    it('allows a non-admin party to appeal a rejected dispute back to OPEN', async () => {
+      const rejectedDispute = {
+        ...mockDispute,
+        status: DisputeStatus.REJECTED,
+        agreement: mockAgreement,
+      } as Dispute;
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(rejectedDispute);
+      jest
+        .spyOn(disputeRepository, 'save')
+        .mockImplementation(async (input) => input as Dispute);
+      jest.spyOn(_userRepository, 'findOne').mockResolvedValue(mockUser);
+
+      const result = await service.update(
+        1,
+        { status: DisputeStatus.OPEN },
+        'user-1',
+      );
+
+      expect(result.status).toBe(DisputeStatus.OPEN);
+      expect(disputeRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: DisputeStatus.OPEN }),
+      );
     });
   });
 

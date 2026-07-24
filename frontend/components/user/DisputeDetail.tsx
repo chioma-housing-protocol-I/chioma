@@ -13,6 +13,7 @@ import {
 import {
   useTenantDispute,
   useAddDisputeComment,
+  useAppealTenantDispute,
 } from '@/lib/query/hooks/use-tenant-dispute';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
@@ -53,12 +54,13 @@ export function DisputeDetail({
   const [newComment, setNewComment] = useState('');
   const { data: dispute, isLoading, error } = useTenantDispute(disputeId);
   const addCommentMutation = useAddDisputeComment();
+  const appealDisputeMutation = useAppealTenantDispute();
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !dispute || addCommentMutation.isPending) return;
     addCommentMutation.mutate(
-      { disputeId: dispute.id, content: newComment.trim() },
+      { disputeId: dispute.backendDisputeId, content: newComment.trim() },
       { onSuccess: () => setNewComment('') },
     );
   };
@@ -136,6 +138,20 @@ export function DisputeDetail({
             )}
           </div>
           <div className="flex flex-col gap-3 text-sm shrink-0">
+            {dispute.status === 'REJECTED' && (
+              <button
+                type="button"
+                onClick={() =>
+                  appealDisputeMutation.mutate({ disputeId: dispute.id })
+                }
+                disabled={appealDisputeMutation.isPending}
+                className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {appealDisputeMutation.isPending
+                  ? 'Submitting appeal...'
+                  : 'Appeal Dispute'}
+              </button>
+            )}
             <div>
               <p className="text-blue-200/40 text-xs uppercase tracking-wider mb-0.5">
                 Agreement
@@ -228,9 +244,20 @@ export function DisputeDetail({
                     </p>
                   </div>
                 </div>
-                <button className="w-full text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors text-left">
-                  Download
-                </button>
+                {ev.fileUrl ? (
+                  <a
+                    href={ev.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full text-xs font-semibold text-blue-400 transition-colors hover:text-blue-300"
+                  >
+                    Open Evidence
+                  </a>
+                ) : (
+                  <span className="text-xs font-semibold text-blue-300/40">
+                    File uploaded
+                  </span>
+                )}
               </div>
             ))}
           </div>

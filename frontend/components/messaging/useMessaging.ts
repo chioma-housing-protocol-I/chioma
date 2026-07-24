@@ -11,7 +11,7 @@ import type {
   TypingPayload,
 } from './types';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface UseMessagingReturn {
   rooms: ChatRoom[];

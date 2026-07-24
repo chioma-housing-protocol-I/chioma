@@ -114,34 +114,20 @@ export default function WalletConnectButton({
             setWalletAddress(address);
             toast.success('Successfully logged in with Wallet!');
 
-            console.log('✅ Auth tokens set. User role:', userWithRole.role);
-            console.log('📋 User object from backend:', userWithRole);
-
-            // Call onSuccess callback if provided
             if (onSuccess) {
               onSuccess();
+            } else if (!userWithRole.email) {
+              // Wallet-only account: no email on file yet, so route into the
+              // short onboarding flow before the dashboard.
+              setTimeout(() => {
+                router.push('/complete-profile');
+              }, 800);
             } else {
-              // Navigate to dashboard based on role from backend
-              // Check for admin roles: 'admin' or 'super_admin'
               const isAdmin = ['admin', 'super_admin'].includes(
                 userWithRole.role?.toLowerCase() || '',
               );
               const dashboardRoute = isAdmin ? '/admin' : '/user';
-
-              console.log('🚀 Navigating to:', dashboardRoute);
-              console.log('User role:', userWithRole.role);
-              console.log('Is admin:', isAdmin);
-              console.log('Auth state:', {
-                hasAccessToken: !!result.accessToken,
-                hasRefreshToken: !!result.refreshToken,
-                hasUser: !!userWithRole,
-                userRole: userWithRole.role,
-              });
-
-              // Use a longer delay to ensure localStorage is fully synced
-              // and the store hydration on the new page completes
               setTimeout(() => {
-                console.log('📍 Performing redirect to:', dashboardRoute);
                 router.push(dashboardRoute);
               }, 800);
             }

@@ -24,12 +24,23 @@ function buildQueryString(filters?: NotificationFilters): string {
  * Fetch notifications with optional filters. Integrates with the existing
  * notification service endpoint.
  */
-export function useNotificationsQuery(filters?: NotificationFilters) {
+export interface PaginatedNotifications {
+  data: Notification[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export function useNotificationsQuery(
+  filters?: NotificationFilters,
+  page: number = 1,
+  limit: number = 20,
+) {
   return useQuery({
-    queryKey: queryKeys.notifications.list(filters),
+    queryKey: [...queryKeys.notifications.list(filters), page, limit],
     queryFn: async () => {
-      const { data } = await apiClient.get<Notification[]>(
-        `/notifications${buildQueryString(filters)}`,
+      const { data } = await apiClient.get<PaginatedNotifications>(
+        `/notifications${buildQueryString(filters)}${filters ? '&' : '?'}page=${page}&limit=${limit}`,
       );
       return data;
     },

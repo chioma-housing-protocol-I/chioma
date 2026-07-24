@@ -189,12 +189,41 @@ describe('DeveloperService', () => {
         id: keyId,
         userId,
         status: ApiKeyStatus.REVOKED,
+        isExpired: () => false,
       } as ApiKey;
 
       mockApiKeyRepo.findOne.mockResolvedValue(oldKey);
 
       await expect(service.rotateKey(userId, keyId)).rejects.toThrow(
         BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException when rotating an expired key', async () => {
+      const userId = 'user-123';
+      const keyId = 'key-1';
+      const oldKey = {
+        id: keyId,
+        userId,
+        status: ApiKeyStatus.ACTIVE,
+        isExpired: () => true,
+      } as ApiKey;
+
+      mockApiKeyRepo.findOne.mockResolvedValue(oldKey);
+
+      await expect(service.rotateKey(userId, keyId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw NotFoundException when rotating key of another user', async () => {
+      const userId = 'user-123';
+      const keyId = 'key-1';
+
+      mockApiKeyRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.rotateKey(userId, keyId)).rejects.toThrow(
+        /API key not found/,
       );
     });
   });

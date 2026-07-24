@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { format, subMonths } from 'date-fns';
 import { Eye, ShieldCheck } from 'lucide-react';
 import {
   AreaChart,
@@ -11,6 +12,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTransactions } from '@/lib/query/hooks/use-transactions';
+import {
+  useStellarNetworkAccount,
+  readAssetBalance,
+} from '@/lib/query/hooks/use-stellar-account';
+import { useAuth } from '@/store/authStore';
+import type { Transaction as ApiTransaction } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,9 +40,9 @@ interface Transaction {
   previewImage: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Mock Data (dev fallback while the account has no real transactions) ─────
 
-const revenueData: RevenueDataPoint[] = [
+const MOCK_REVENUE_DATA: RevenueDataPoint[] = [
   { month: 'Jul', revenue: 3200000 },
   { month: 'Aug', revenue: 3800000 },
   { month: 'Sep', revenue: 3500000 },
@@ -49,7 +57,7 @@ const revenueData: RevenueDataPoint[] = [
   { month: 'Jun', revenue: 7100000 },
 ];
 
-const transactions: Transaction[] = [
+const MOCK_TRANSACTIONS: Transaction[] = [
   {
     hash: 'GABC3F9K…7X1A',
     date: 'Jun 15, 2025',
@@ -163,6 +171,59 @@ const transactions: Transaction[] = [
       'https://images.unsplash.com/photo-1512915922686-57c11dde9b6b?auto=format&fit=crop&w=160&q=80',
   },
 ];
+
+// ─── API mapping ──────────────────────────────────────────────────────────────
+
+const TX_TYPE_LABELS: Record<ApiTransaction['type'], string> = {
+  payment: 'Rent Collected',
+  deposit: 'Security Deposit',
+  refund: 'Deposit Refund',
+  withdrawal: 'Smart Contract Payout',
+};
+
+const TX_STATUS_LABELS: Record<ApiTransaction['status'], string> = {
+  completed: 'Confirmed',
+  pending: 'Held',
+  failed: 'Failed',
+};
+
+const TX_PREVIEW_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=160&q=80';
+
+const shortenHash = (hash: string): string =>
+  hash.length > 14 ? `${hash.slice(0, 8)}…${hash.slice(-4)}` : hash;
+
+const mapApiTransaction = (tx: ApiTransaction): Transaction => ({
+  hash: shortenHash(tx.blockchainTxHash ?? tx.id),
+  date: format(new Date(tx.createdAt), 'MMM dd, yyyy'),
+  type: TX_TYPE_LABELS[tx.type] ?? tx.type,
+  property: tx.description || '—',
+  amount: tx.amount,
+  status: TX_STATUS_LABELS[tx.status] ?? tx.status,
+  inflow: tx.type === 'payment' || tx.type === 'deposit',
+  previewImage:
+    typeof tx.metadata?.previewImage === 'string'
+      ? tx.metadata.previewImage
+      : TX_PREVIEW_FALLBACK,
+});
+
+/** Sums completed inflows per calendar month over the trailing 12 months. */
+const deriveMonthlyRevenue = (items: ApiTransaction[]): RevenueDataPoint[] => {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = subMonths(now, 11 - i);
+    const key = format(month, 'yyyy-MM');
+    const revenue = items
+      .filter(
+        (tx) =>
+          tx.status === 'completed' &&
+          (tx.type === 'payment' || tx.type === 'deposit') &&
+          format(new Date(tx.createdAt), 'yyyy-MM') === key,
+      )
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return { month: format(month, 'MMM'), revenue };
+  });
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -304,6 +365,25 @@ const TX_TYPES = [
 
 export default function FinancialsPage() {
   const [filter, setFilter] = useState('All');
+  const { walletAddress } = useAuth();
+
+  const { data: txPage } = useTransactions({ limit: 100 });
+  const { data: networkAccount } = useStellarNetworkAccount(walletAddress);
+
+  const usingMock = (txPage?.data ?? []).length === 0;
+
+  const transactions = useMemo(() => {
+    const items = txPage?.data ?? [];
+    return items.length === 0
+      ? MOCK_TRANSACTIONS
+      : items.map(mapApiTransaction);
+  }, [txPage]);
+  const revenueData = useMemo(() => {
+    const items = txPage?.data ?? [];
+    return items.length === 0 ? MOCK_REVENUE_DATA : deriveMonthlyRevenue(items);
+  }, [txPage]);
+
+  const xlmBalance = readAssetBalance(networkAccount, 'XLM');
 
   const filtered =
     filter === 'All'
@@ -312,12 +392,16 @@ export default function FinancialsPage() {
 
   const totalRevenue =
     transactions.filter((t) => t.inflow).reduce((s, t) => s + t.amount, 0) +
-    37900000;
+    (usingMock ? 37900000 : 0);
   const feesRemitted =
     transactions
       .filter((t) => t.type === 'Platform Fee')
-      .reduce((s, t) => s + t.amount, 0) + 450000;
-  const pendingPayout = 3800000;
+      .reduce((s, t) => s + t.amount, 0) + (usingMock ? 450000 : 0);
+  const pendingPayout = usingMock
+    ? 3800000
+    : transactions
+        .filter((t) => t.inflow && t.status === 'Held')
+        .reduce((s, t) => s + t.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -338,7 +422,11 @@ export default function FinancialsPage() {
               <p className="text-[10px] text-blue-300/40 font-bold tracking-widest uppercase">
                 Stellar Wallet
               </p>
-              <p className="text-sm font-bold text-white">45,200 XLM</p>
+              <p className="text-sm font-bold text-white">
+                {xlmBalance !== null
+                  ? `${xlmBalance.toLocaleString()} XLM`
+                  : 'Not connected'}
+              </p>
             </div>
           </div>
           <button className="bg-blue-600/50 border border-blue-500/30 text-white rounded-2xl px-6 py-3 text-xs font-bold hover:bg-blue-600 hover:border-blue-400 transition-all shadow-xl uppercase tracking-widest">

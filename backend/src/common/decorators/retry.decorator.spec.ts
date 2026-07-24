@@ -137,4 +137,103 @@ describe('@Retry decorator', () => {
     const result = await target.call();
     expect(result).toBe('default');
   });
+
+  it('calculates linear backoff delay correctly', async () => {
+    const impl = jest
+      .fn()
+      .mockRejectedValueOnce(new NetworkError())
+      .mockRejectedValueOnce(new NetworkError())
+      .mockResolvedValue('ok');
+
+    const target = buildTarget(impl, {
+      maxAttempts: 3,
+      delay: 50,
+      backoff: 'linear',
+      backoffMultiplier: 1.5,
+    });
+
+    const promise = target.call();
+
+    // First delay: 50 * 1 * 1.5 = 75ms
+    await jest.advanceTimersByTimeAsync(74);
+    expect(impl).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(impl).toHaveBeenCalledTimes(2);
+
+    // Second delay: 50 * 2 * 1.5 = 150ms
+    await jest.advanceTimersByTimeAsync(149);
+    expect(impl).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(impl).toHaveBeenCalledTimes(3);
+
+    expect(await promise).toBe('ok');
+  });
+
+  it('calculates exponential backoff delay correctly', async () => {
+    const impl = jest
+      .fn()
+      .mockRejectedValueOnce(new NetworkError())
+      .mockRejectedValueOnce(new NetworkError())
+      .mockResolvedValue('ok');
+
+    const target = buildTarget(impl, {
+      maxAttempts: 3,
+      delay: 50,
+      backoff: 'exponential',
+      backoffMultiplier: 2,
+    });
+
+    const promise = target.call();
+
+    // First delay: 50 * 2^0 = 50ms
+    await jest.advanceTimersByTimeAsync(49);
+    expect(impl).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(impl).toHaveBeenCalledTimes(2);
+
+    // Second delay: 50 * 2^1 = 100ms
+    await jest.advanceTimersByTimeAsync(99);
+    expect(impl).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(impl).toHaveBeenCalledTimes(3);
+
+    expect(await promise).toBe('ok');
+  });
+
+  it('handles Axios-specific error status retry validation', async () => {
+    const createAxiosError = (status: number) => {
+      const err: any = new Error(`Request failed with status code ${status}`);
+      err.isAxiosError = true;
+      err.response = { status };
+      return err;
+    };
+
+    const impl500 = jest
+      .fn()
+      .mockRejectedValueOnce(createAxiosError(500))
+      .mockResolvedValue('ok-500');
+
+    const target500 = buildTarget(impl500, { maxAttempts: 2, delay: 10 });
+    const promise500 = target500.call();
+    await jest.runAllTimersAsync();
+    expect(await promise500).toBe('ok-500');
+
+    const impl400 = jest.fn().mockRejectedValueOnce(createAxiosError(400));
+    const target400 = buildTarget(impl400, { maxAttempts: 2, delay: 10 });
+    await expect(target400.call()).rejects.toThrow(MaxRetriesExceededError);
+    expect(impl400).toHaveBeenCalledTimes(1);
+
+    const noResponseError: any = new Error('Network Error');
+    noResponseError.isAxiosError = true;
+
+    const implNoRes = jest
+      .fn()
+      .mockRejectedValueOnce(noResponseError)
+      .mockResolvedValue('ok-no-res');
+
+    const targetNoRes = buildTarget(implNoRes, { maxAttempts: 2, delay: 10 });
+    const promiseNoRes = targetNoRes.call();
+    await jest.runAllTimersAsync();
+    expect(await promiseNoRes).toBe('ok-no-res');
+  });
 });

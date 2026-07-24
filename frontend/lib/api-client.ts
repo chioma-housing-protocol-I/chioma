@@ -10,17 +10,24 @@ import {
   createHttpError,
   logError,
   withRetry,
+  globalCircuitBreaker,
 } from '@/lib/errors';
-import { getMockData, shouldUseMockApi } from '@/lib/mock-api';
+import { cancellationManager, isCancellationError } from '@/lib/cancellation';
+import { getMockData, shouldUseMockApi } from '@/mocks';
+import { globalRateLimitTracker } from '@/lib/rate-limit';
+import { getTimeoutForEndpoint } from '@/lib/config/timeouts';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Record<string, string>;
   body?: unknown;
   cache?: RequestCache;
+  credentials?: RequestCredentials;
   retries?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
+  cancellationKey?: string;
+  disableTimeoutConfig?: boolean;
 };
 
 type ApiResponse<T> = {
@@ -34,7 +41,6 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-/** Browser calls same-origin `/api` (Next proxy); SSR hits backend directly. */
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
@@ -43,7 +49,7 @@ function getApiBaseUrl(): string {
   return (
     process.env.BACKEND_API_BASE_URL ??
     process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
-    'http://localhost:5000/api'
+    'http://localhost:5000/api/v1'
   );
 }
 
@@ -54,7 +60,7 @@ class ApiClient {
   constructor() {
     this.baseURL = getApiBaseUrl();
     this.defaultHeaders = {
-      'Content-Type': 'application/json',
+      Accept: 'application/json',
     };
   }
 
@@ -81,18 +87,12 @@ class ApiClient {
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
-
-    // DISABLED FOR DEVELOPMENT - Prevent aggressive redirect to home page
-    // if (window.location.pathname !== '/') {
-    //   window.location.assign('/');
-    // }
   }
 
   private async request<T>(
     endpoint: string,
     config: RequestConfig = {},
   ): Promise<ApiResponse<T>> {
-    // Use mock API if enabled
     if (shouldUseMockApi()) {
       const mockResponse = getMockData(endpoint);
       return {
@@ -106,98 +106,161 @@ class ApiClient {
       headers = {},
       body,
       cache = 'no-cache',
+      credentials = 'include',
       retries = 3,
-      timeoutMs = 12000,
+      timeoutMs,
       signal,
+      cancellationKey,
+      disableTimeoutConfig = false,
     } = config;
 
+    // Calculate timeout based on endpoint if not explicitly provided
+    const calculatedTimeout =
+      timeoutMs ||
+      (disableTimeoutConfig ? 12000 : getTimeoutForEndpoint(endpoint));
+    const finalTimeout = disableTimeoutConfig
+      ? timeoutMs || 12000
+      : calculatedTimeout;
+
     const token = this.getAuthToken();
+    const isFormData =
+      typeof FormData !== 'undefined' && body instanceof FormData;
     const requestHeaders = {
       ...this.defaultHeaders,
-      ...headers,
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
+      ...headers,
     };
 
+    if (isFormData && 'Content-Type' in requestHeaders) {
+      delete requestHeaders['Content-Type'];
+    }
+
     const url = `${this.baseURL}${endpoint}`;
+    const breakerName = `${method}:${endpoint}`;
 
-    return withRetry(
-      async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const waitTimeMs = globalRateLimitTracker.getWaitTimeMs();
+    if (waitTimeMs > 0) {
+      const error = createHttpError(429, {
+        source: 'lib/api-client.ts',
+        action: `${method} ${endpoint}`,
+        metadata: { waitTimeMs },
+      });
+      return Promise.reject(error);
+    }
 
-        if (signal) {
-          if (signal.aborted) controller.abort();
-          signal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
+    return globalCircuitBreaker.execute(breakerName, () =>
+      withRetry(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
 
-        try {
-          const response = await fetch(url, {
-            method,
-            headers: requestHeaders,
-            body: body ? JSON.stringify(body) : undefined,
-            cache,
-            signal: controller.signal,
-          });
+          if (signal) {
+            if (signal.aborted) controller.abort();
+            signal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
 
-          if (!response.ok) {
-            this.clearAuthAndRedirectIfNeeded(response.status);
+          if (cancellationKey) {
+            const cancelSignal =
+              cancellationManager.createSignal(cancellationKey).signal;
+            if (cancelSignal.aborted) controller.abort();
+            cancelSignal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
 
-            const errorBody = await response
-              .json()
-              .catch(() => ({ message: response.statusText }));
-            const baseError = createHttpError(response.status, {
+          try {
+            const response = await fetch(url, {
+              method,
+              headers: requestHeaders,
+              body: isFormData
+                ? (body as FormData)
+                : body
+                  ? JSON.stringify(body)
+                  : undefined,
+              cache,
+              credentials,
+              signal: controller.signal,
+            });
+
+            globalRateLimitTracker.updateFromHeaders(
+              response.headers,
+              response.status,
+            );
+
+            if (!response.ok) {
+              this.clearAuthAndRedirectIfNeeded(response.status);
+
+              const errorBody = await response
+                .json()
+                .catch(() => ({ message: response.statusText }));
+              const baseError = createHttpError(response.status, {
+                source: 'lib/api-client.ts',
+                action: `${method} ${endpoint}`,
+              });
+
+              throw new AppError({
+                ...baseError,
+                message: errorBody.message || baseError.message,
+                userMessage: errorBody.message || baseError.userMessage,
+                cause: errorBody,
+              });
+            }
+
+            const data = await this.parseResponse<T>(response);
+            return {
+              data,
+              status: response.status,
+              message:
+                data &&
+                typeof data === 'object' &&
+                'message' in (data as object)
+                  ? String((data as { message?: string }).message)
+                  : undefined,
+            };
+          } catch (error) {
+            if (isCancellationError(error)) {
+              clearTimeout(timeoutId);
+              throw cancellationManager.classifyCancellationError(
+                error,
+                'lib/api-client.ts',
+              );
+            }
+
+            const appError = classifyUnknownError(error, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
-              metadata: { responseBody: errorBody },
             });
 
-            throw new AppError({
-              ...baseError,
-              message: errorBody.message || baseError.message,
-              userMessage: errorBody.message || baseError.userMessage,
-              cause: errorBody,
-            });
+            logError(appError, appError.context);
+            throw appError;
+          } finally {
+            clearTimeout(timeoutId);
           }
-
-          const data = await this.parseResponse<T>(response);
-          return {
-            data,
-            status: response.status,
-            message:
-              data && typeof data === 'object' && 'message' in (data as object)
-                ? String((data as { message?: string }).message)
-                : undefined,
-          };
-        } catch (error) {
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `${method} ${endpoint}`,
-          });
-
-          logError(appError, appError.context);
-          throw appError;
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      {
-        maxAttempts: retries,
-        shouldRetry: (error) => {
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `retry-check ${method} ${endpoint}`,
-          });
-
-          if (appError.category === 'network') return true;
-          if (typeof appError.status === 'number' && appError.status >= 500) {
-            return true;
-          }
-
-          return false;
         },
-      },
+        {
+          maxAttempts: retries,
+          endpoint: `${method}:${endpoint}`,
+          shouldRetry: (error) => {
+            if (isCancellationError(error)) return false;
+
+            const appError = classifyUnknownError(error, {
+              source: 'lib/api-client.ts',
+              action: `retry-check ${method} ${endpoint}`,
+            });
+
+            if (appError.code === 'NETWORK_RATE_LIMIT') return false;
+            if (appError.category === 'network') return true;
+            if (typeof appError.status === 'number' && appError.status >= 500) {
+              return true;
+            }
+
+            return false;
+          },
+        },
+      ),
     );
   }
 

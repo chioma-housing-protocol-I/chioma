@@ -2,6 +2,7 @@
 
 import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
+import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
 import { useModal } from '@/contexts/ModalContext';
 import type {
   PropertyDetailData,
@@ -37,6 +38,11 @@ export default function PropertyCard({
   const isList = variant === 'list';
   const [imageError, setImageError] = useState(false);
   const { openModal } = useModal();
+  const propertyId = String(property.id);
+  const { data: favoriteStatus } = useFavoriteStatus(propertyId);
+  const { isPending: isFavoritePending, toggleFavorite } =
+    useToggleFavorite(propertyId);
+  const isFavorited = favoriteStatus?.isFavorited ?? false;
 
   const handlePropertyClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,7 +80,12 @@ export default function PropertyCard({
   };
 
   return (
-    <div onClick={handlePropertyClick} className="block group cursor-pointer">
+    <div
+      onClick={handlePropertyClick}
+      className="block group cursor-pointer"
+      data-testid="property-card"
+      data-property-id={String(property.id)}
+    >
       <div
         className={`glass-card rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
           isList ? 'flex flex-col sm:flex-row h-full' : 'flex flex-col h-full'
@@ -116,13 +127,27 @@ export default function PropertyCard({
 
           {/* Wishlist Heart */}
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              // Handle favorite action
+              void toggleFavorite(isFavorited);
             }}
-            className="absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart"
+            disabled={isFavoritePending}
+            aria-pressed={isFavorited}
+            aria-label={
+              isFavorited ? 'Remove from favorites' : 'Add to favorites'
+            }
+            className={[
+              'absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart disabled:opacity-60',
+              isFavorited ? 'text-red-400' : '',
+            ].join(' ')}
           >
-            <Heart className="w-5 h-5 transition-transform group-hover/heart:scale-110" />
+            <Heart
+              className={[
+                'w-5 h-5 transition-transform group-hover/heart:scale-110',
+                isFavorited ? 'fill-current' : '',
+              ].join(' ')}
+            />
           </button>
         </div>
 

@@ -48,7 +48,14 @@ export class NotificationsService {
   async getUserNotifications(
     userId: string,
     filters?: { isRead?: boolean; type?: string },
-  ): Promise<Notification[]> {
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    data: Notification[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const query = this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.userId = :userId', { userId })
@@ -64,7 +71,16 @@ export class NotificationsService {
       query.andWhere('notification.type = :type', { type: filters.type });
     }
 
-    return query.getMany();
+    query.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getUnreadCount(userId: string): Promise<number> {

@@ -1,8 +1,17 @@
 @import 'tailwindcss';
 
+/* ────────────────────────────────────────────────────────────────────────────
+   Chioma design system — "Golden Hour"
+   Warm ink surfaces, cream text, brass/amber brand accents.
+   The Tailwind `blue`, `indigo`, `purple`, `slate`, and `neutral` ramps are
+   deliberately remapped to the brand palette so legacy utility classes
+   (bg-blue-600, text-slate-400, …) across the app pick up the new identity
+   without per-file edits. New code should prefer the semantic tokens.
+   ──────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  --background: #0d0e12;
+  --foreground: #f7f4ec;
 }
 
 @theme inline {
@@ -10,22 +19,96 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Brand Colors */
-  --color-brand-blue: #2563eb;
-  --color-brand-blue-dark: #1e40af;
-  --color-brand-accent: #3b82f6;
-  --color-brand-green: #10b981;
-  --color-brand-orange: #f97316;
+  /* Semantic brand tokens (preferred for new code) */
+  --color-ink-950: #08090c;
+  --color-ink-900: #0d0e12;
+  --color-ink-800: #14161c;
+  --color-ink-700: #1c1f27;
+  --color-ink-600: #272b35;
+  --color-cream: #f7f4ec;
+  --color-cream-dim: #b9b3a4;
+  --color-brass-300: #ecc06f;
+  --color-brass-400: #e0a84a;
+  --color-brass-500: #d18f28;
+  --color-brass-600: #b8771c;
+  --color-ember: #d96f32;
 
-  /* Neutral Colors */
-  --color-neutral-900: #0f172a;
-  --color-neutral-700: #334155;
-  --color-neutral-500: #64748b;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-100: #f8fafc;
+  /* Legacy aliases kept for existing components */
+  --color-brand-blue: #b8771c;
+  --color-brand-blue-dark: #96601a;
+  --color-brand-accent: #d18f28;
+  --color-brand-green: #3f9e6e;
+  --color-brand-orange: #d96f32;
+
+  /* `blue` remapped → brass/amber brand ramp */
+  --color-blue-50: #fdf9ee;
+  --color-blue-100: #f9efd6;
+  --color-blue-200: #f2dfae;
+  --color-blue-300: #ecc06f;
+  --color-blue-400: #e0a84a;
+  --color-blue-500: #d18f28;
+  --color-blue-600: #b8771c;
+  --color-blue-700: #96601a;
+  --color-blue-800: #764b18;
+  --color-blue-900: #5a3a16;
+  --color-blue-950: #35210c;
+
+  /* `indigo` remapped → deeper copper/ember */
+  --color-indigo-50: #fdf6ef;
+  --color-indigo-100: #f9e8d8;
+  --color-indigo-200: #f1cfae;
+  --color-indigo-300: #e6ae7c;
+  --color-indigo-400: #db8d51;
+  --color-indigo-500: #d96f32;
+  --color-indigo-600: #b95724;
+  --color-indigo-700: #964420;
+  --color-indigo-800: #763720;
+  --color-indigo-900: #5c2d1c;
+  --color-indigo-950: #33160d;
+
+  /* `purple` remapped → muted rosewood */
+  --color-purple-50: #fbf6f3;
+  --color-purple-100: #f5e9e2;
+  --color-purple-200: #e9cfc2;
+  --color-purple-300: #d9ad99;
+  --color-purple-400: #c68871;
+  --color-purple-500: #b06a52;
+  --color-purple-600: #935241;
+  --color-purple-700: #784237;
+  --color-purple-800: #613730;
+  --color-purple-900: #4f2f2a;
+  --color-purple-950: #2a1713;
+
+  /* `slate` remapped → warm ink neutrals (dark surfaces) */
+  --color-slate-50: #f8f6f0;
+  --color-slate-100: #ece9e0;
+  --color-slate-200: #d9d5c9;
+  --color-slate-300: #b9b3a4;
+  --color-slate-400: #8e897c;
+  --color-slate-500: #646056;
+  --color-slate-600: #45423c;
+  --color-slate-700: #2c2b28;
+  --color-slate-800: #1a1a1c;
+  --color-slate-900: #101114;
+  --color-slate-950: #0a0a0c;
+
+  /* `neutral` remapped → same warm ramp (project used custom neutrals) */
+  --color-neutral-50: #f8f6f0;
+  --color-neutral-100: #ece9e0;
+  --color-neutral-200: #d9d5c9;
+  --color-neutral-300: #b9b3a4;
+  --color-neutral-400: #8e897c;
+  --color-neutral-500: #646056;
+  --color-neutral-600: #45423c;
+  --color-neutral-700: #2c2b28;
+  --color-neutral-800: #1a1a1c;
+  --color-neutral-900: #101114;
+  --color-neutral-950: #0a0a0c;
 
   /* Typography */
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    'Fraunces Variable', Fraunces, Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-geist-mono);
 
   /* Border Radius */
@@ -37,43 +120,69 @@
 }
 
 @layer utilities {
-  .bg-brand-gradient {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 72;
+    letter-spacing: -0.02em;
   }
 
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, #e0a84a 0%, #d18f28 50%, #b8771c 100%);
+  }
+
+  /* Solid warm surfaces (names kept for legacy call sites) */
   .glass {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    background: rgba(13, 14, 18, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(247, 244, 236, 0.08);
   }
 
   .glass-dark {
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(13, 14, 18, 0.85);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border: 1px solid rgba(247, 244, 236, 0.08);
   }
 
   .glass-card {
-    background: rgba(30, 41, 59, 0.5);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
+    background: #14161c;
+    border: 1px solid rgba(247, 244, 236, 0.07);
+    transition:
+      border-color 0.25s ease,
+      background 0.25s ease,
+      transform 0.25s ease;
   }
 
   .glass-card:hover {
-    background: rgba(30, 41, 59, 0.7);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #1c1f27;
+    border-color: rgba(224, 168, 74, 0.28);
     transform: translateY(-2px);
   }
 
   .text-gradient {
-    background: linear-gradient(to right, #fff, #bfdbfe);
+    background: linear-gradient(to right, #f7f4ec, #ecc06f);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+
+  /* Fine grain overlay — adds analog warmth to large dark surfaces */
+  .bg-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.97 0 0 0 0 0.95 0 0 0 0 0.9 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Hairline rule with a warm glint in the middle */
+  .rule-glint {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(224, 168, 74, 0.45),
+      transparent
+    );
   }
 
   /* Custom Scrollbar */
@@ -82,16 +191,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.1);
+    background: #0d0e12;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(247, 244, 236, 0.12);
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(224, 168, 74, 0.35);
   }
 
   .animate-slide-in {
@@ -150,8 +259,12 @@ body {
   overscroll-behavior-y: none;
 }
 
+::selection {
+  background: rgba(224, 168, 74, 0.3);
+}
+
 :focus-visible {
-  outline: 3px solid #60a5fa;
+  outline: 2px solid #e0a84a;
   outline-offset: 3px;
 }
 
@@ -161,8 +274,8 @@ body {
   top: -100%;
   z-index: 999;
   border-radius: 0.5rem;
-  background: #f8fafc;
-  color: #0f172a;
+  background: #f7f4ec;
+  color: #0d0e12;
   padding: 0.5rem 0.75rem;
   font-weight: 600;
 }

@@ -9,9 +9,12 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
+import { clearDatabase, seedDatabase } from './test-helpers';
 
 describe('Integration (e2e)', () => {
   let app: INestApplication | undefined;
+  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -19,6 +22,9 @@ describe('Integration (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
+    // Get DataSource for cleanup/seeding
+    dataSource = app.get(DataSource);
 
     // Apply validation pipe like in main.ts
     app.useGlobalPipes(
@@ -52,10 +58,15 @@ describe('Integration (e2e)', () => {
     SwaggerModule.setup('api/docs', app, document);
 
     await app.init();
+
+    // Clear and seed database for integration tests
+    await clearDatabase(dataSource);
+    await seedDatabase(dataSource);
   });
 
   afterAll(async () => {
     if (app) {
+      await clearDatabase(dataSource);
       await app.close();
     }
   }, 60000);

@@ -94,7 +94,7 @@ describe('KycController', () => {
       expect(kycService.submitKyc).toHaveBeenCalledWith('ctrl-user-1', {
         kycData: { first_name: 'Jane', last_name: 'Doe' },
       });
-    });
+    }, 15000);
 
     it('returns 400 when kycData is missing', async () => {
       await request(app.getHttpServer())

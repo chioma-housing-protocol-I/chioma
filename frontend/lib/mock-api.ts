@@ -268,22 +268,95 @@ const dynamicPatterns: Array<{
             createdAt: '2026-03-25T10:10:00Z',
           },
         ],
-        scheduledDate: '2026-03-26',
-        scheduledTime: '09:00-10:00',
       },
+    }),
+  },
+  {
+    pattern: /^\/payments\/(.+)\/receipt$/,
+    handler: (match) => ({
+      fileName: `deposit-receipt-${match[1]}.json`,
+      receipt: {
+        paymentId: match[1],
+        amount: 2500,
+        currency: 'USDC',
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+        verified: true,
+      },
+    }),
+  },
+  {
+    pattern: /^\/payments\/(.+)\/refund$/,
+    handler: (match) => ({
+      id: match[1],
+      amount: 2500,
+      currency: 'USDC',
+      status: 'refunded',
+      createdAt: '2025-04-28T12:00:00Z',
+    }),
+  },
+  {
+    pattern: /^\/payments\/(.+)$/,
+    handler: (match) => ({
+      id: match[1],
+      amount: 2500,
+      currency: 'USDC',
+      status: 'completed',
+      paymentMethod: 'crypto',
+      dueDate: '2025-04-28',
+      createdAt: '2025-04-28T12:00:00Z',
+      metadata: {
+        flow: 'deposit',
+        type: 'security_deposit',
+        description: 'Security Deposit for Adeola Odeku St',
+        deductions: [
+          { id: 'd-1', label: 'Cleaning Fee', amount: 150 },
+          { id: 'd-2', label: 'Minor Repairs', amount: 250 },
+        ],
+      },
+    }),
+  },
+  {
+    pattern: /^\/payments$/,
+    handler: (match) => ({
+      data: [
+        {
+          id: 'escrow-security-adeola',
+          amount: 2500,
+          currency: 'USDC',
+          status: 'completed',
+          paymentMethod: 'crypto',
+          dueDate: '2025-04-28',
+          createdAt: '2025-04-28T12:00:00Z',
+          metadata: {
+            flow: 'deposit',
+            type: 'security_deposit',
+            description: 'Security Deposit for Adeola Odeku St',
+            deductions: [
+              { id: 'd-1', label: 'Cleaning Fee', amount: 150 },
+              { id: 'd-2', label: 'Minor Repairs', amount: 250 },
+            ],
+          },
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
     }),
   },
 ];
 
 export function getMockData(endpoint: string): unknown {
+  const pathname = endpoint.split('?')[0];
+
   // Check static patterns first
-  if (endpoint in mockData) {
-    return mockData[endpoint];
+  if (pathname in mockData) {
+    return mockData[pathname];
   }
 
   // Check dynamic patterns
   for (const { pattern, handler } of dynamicPatterns) {
-    const match = endpoint.match(pattern);
+    const match = pathname.match(pattern);
     if (match) {
       return handler(match);
     }
