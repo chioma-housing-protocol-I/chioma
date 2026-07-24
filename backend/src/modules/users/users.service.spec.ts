@@ -12,6 +12,7 @@ import { User, UserRole, AuthMethod } from './entities/user.entity';
 import { UserNotificationPreference } from './entities/user-notification-preference.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/entities/audit-log.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -56,6 +57,7 @@ describe('UsersService', () => {
     softDelete: jest.fn(),
     delete: jest.fn(),
     restore: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockAuditService = {
@@ -279,6 +281,173 @@ describe('UsersService', () => {
       expect(result).toHaveProperty('accountCreated');
       expect(result).toHaveProperty('emailVerified');
       expect(result).toHaveProperty('isActive');
+    });
+  });
+
+  describe('findAllForAdmin', () => {
+    it('returns a paginated, mapped list of users', async () => {
+      const listUser: User = {
+        ...mockUser,
+        firstName: 'Test',
+        lastName: 'User',
+      };
+      const mockQb = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[listUser], 1]),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQb);
+
+      const result = await service.findAllForAdmin({ page: 1, limit: 10 });
+
+      expect(result.total).toBe(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        id: listUser.id,
+        email: listUser.email,
+        name: 'Test User',
+        isVerified: true,
+      });
+    });
+
+    it('applies role, isVerified, and search filters', async () => {
+      const mockQb = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQb);
+
+      await service.findAllForAdmin({
+        page: 1,
+        limit: 10,
+        role: UserRole.ADMIN,
+        isVerified: true,
+        search: 'test',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith('user.role = :role', {
+        role: UserRole.ADMIN,
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'user.emailVerified = :isVerified',
+        { isVerified: true },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('ILIKE'),
+        { search: '%test%' },
+      );
+    });
+  });
+
+  describe('adminDeactivateAccount', () => {
+    it('suspends the user and writes an audit log', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminDeactivateAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.update).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({ isActive: false }),
+      );
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_SUSPENDED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminDeactivateAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('adminVerifyAccount', () => {
+    it('marks the user verified and writes an audit log', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminVerifyAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        emailVerified: true,
+      });
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_VERIFIED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminVerifyAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('adminRestoreAccount', () => {
+    it('restores a soft-deleted user and reactivates them', async () => {
+      const deletedUser = {
+        ...mockUser,
+        deletedAt: new Date(),
+        isActive: false,
+      };
+      mockUserRepository.findOne.mockResolvedValue(deletedUser);
+      mockUserRepository.restore.mockResolvedValue({});
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminRestoreAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.restore).toHaveBeenCalledWith('1');
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        isActive: true,
+      });
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_RESTORED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('reactivates a suspended (not soft-deleted) user without calling restore', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      await service.adminRestoreAccount('1', 'admin-1');
+
+      expect(mockUserRepository.restore).not.toHaveBeenCalled();
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        isActive: true,
+      });
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminRestoreAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
