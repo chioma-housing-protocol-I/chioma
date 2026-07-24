@@ -23,6 +23,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { LockService } from '../../common/lock';
 import { IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { encryptMetadata, decryptMetadata } from './payment.helpers';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
@@ -875,6 +876,123 @@ describe('PaymentService', () => {
       expect(result.totalPayments).toBe(2);
       expect(result.byFlow.rent).toBe(1);
       expect(result.byCurrency.XLM.count).toBe(1);
+    });
+  });
+
+  describe('encryptMetadata / decryptMetadata round-trip', () => {
+    let originalSecret: string | undefined;
+
+    beforeAll(() => {
+      originalSecret = process.env.PAYMENT_METADATA_SECRET;
+    });
+
+    beforeEach(() => {
+      process.env.PAYMENT_METADATA_SECRET = 'test-secret-key-123456';
+    });
+
+    afterAll(() => {
+      process.env.PAYMENT_METADATA_SECRET = originalSecret;
+    });
+
+    it('successfully round-trips standard metadata and verifies data integrity', () => {
+      const testData = {
+        orderId: '12345',
+        amount: 100,
+        isProcessed: true,
+      };
+
+      const encrypted = encryptMetadata(testData);
+      expect(encrypted).toBeDefined();
+      expect(encrypted).toContain(':');
+
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('supports various metadata data types', () => {
+      const testData = {
+        stringProp: 'hello',
+        numberProp: 99.99,
+        boolProp: false,
+        arrayProp: [1, 'two', { nested: true }],
+        objectProp: { key: 'val', list: [1, 2] },
+      };
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('handles unicode characters in metadata correctly', () => {
+      const testData = {
+        message:
+          'Unicode test: 🌟 Emoji, 🚀 Rocket, Chinese: 中文, Arabic: العربية',
+      };
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('handles empty payload inputs gracefully', () => {
+      expect(decryptMetadata(null)).toBeNull();
+      expect(decryptMetadata('')).toBeNull();
+    });
+
+    it('handles invalid format payload inputs gracefully', () => {
+      expect(decryptMetadata('invalidpayload')).toBeNull();
+      expect(decryptMetadata('one:two')).toBeNull();
+    });
+
+    it('handles large metadata payloads', () => {
+      const testData: Record<string, string> = {};
+      for (let i = 0; i < 500; i++) {
+        testData[`key_${i}`] = `value_long_string_to_make_it_large_${i}`;
+      }
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('throws an error if encryption is attempted without secret configured', () => {
+      delete process.env.PAYMENT_METADATA_SECRET;
+
+      expect(() => encryptMetadata({ foo: 'bar' })).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('returns null if decryption is attempted without secret configured', () => {
+      const encrypted = encryptMetadata({ foo: 'bar' });
+      delete process.env.PAYMENT_METADATA_SECRET;
+
+      expect(decryptMetadata(encrypted)).toBeNull();
+    });
+
+    it('throws an error during decryption when ciphertext or authentication tag is corrupted', () => {
+      const encrypted = encryptMetadata({ sensitive: 'data' });
+      const parts = encrypted.split(':');
+
+      // Corrupt the ciphertext part (last part)
+      parts[2] = parts[2].substring(0, parts[2].length - 2) + '00';
+      const corruptedCiphertext = parts.join(':');
+
+      expect(() => decryptMetadata(corruptedCiphertext)).toThrow();
+
+      // Corrupt the auth tag part (middle part)
+      const parts2 = encrypted.split(':');
+      parts2[1] = parts2[1].substring(0, parts2[1].length - 2) + '00';
+      const corruptedTag = parts2.join(':');
+
+      expect(() => decryptMetadata(corruptedTag)).toThrow();
+    });
+
+    it('throws an error during decryption if the secret key changes', () => {
+      const encrypted = encryptMetadata({ sensitive: 'data' });
+      process.env.PAYMENT_METADATA_SECRET = 'different-secret-key-456';
+
+      expect(() => decryptMetadata(encrypted)).toThrow();
     });
   });
 });
