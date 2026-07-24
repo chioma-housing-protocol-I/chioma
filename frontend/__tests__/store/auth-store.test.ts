@@ -148,6 +148,24 @@ describe('authStore', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
+  it('rejects authentication if an invalid role is provided', async () => {
+    postMock.mockResolvedValueOnce({
+      data: {
+        accessToken: 'at-login-invalid',
+        user: { ...mockUser, role: 'superuser' },
+      },
+      status: 200,
+    });
+
+    const result = await useAuthStore
+      .getState()
+      .login('test@chioma.local', 'pass');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Invalid role assigned: superuser');
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
   it('refreshSession updates the stored access token', async () => {
     useAuthStore.getState().setTokens('at-old', null, mockUser);
     postMock.mockResolvedValueOnce({
