@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { MAX_PAGE_SIZE } from '../constants/business-rules.constants';
 
 export interface PaginationResponse<T> {
   data: T[];
@@ -26,8 +27,8 @@ export class PaginationUtils {
     if (limit < 1) {
       throw new BadRequestException('Limit must be at least 1');
     }
-    if (limit > 100) {
-      throw new BadRequestException('Limit cannot exceed 100');
+    if (limit > MAX_PAGE_SIZE) {
+      throw new BadRequestException(`Limit cannot exceed ${MAX_PAGE_SIZE}`);
     }
   }
 

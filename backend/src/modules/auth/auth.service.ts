@@ -30,11 +30,18 @@ import {
   DuplicateEntryError,
 } from '../../common/errors/domain-errors';
 import { ErrorCode } from '../../common/errors/error-codes';
+import {
+  BCRYPT_SALT_ROUNDS,
+  MAX_FAILED_LOGIN_ATTEMPTS,
+  LOCKOUT_DURATION_MINUTES,
+  PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
+  JWT_ACCESS_TOKEN_EXPIRY,
+  JWT_REFRESH_TOKEN_EXPIRY,
+} from '../../common/constants/business-rules.constants';
 
-const SALT_ROUNDS = 12;
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 30;
-const RESET_TOKEN_EXPIRY_HOURS = 1;
+const SALT_ROUNDS = BCRYPT_SALT_ROUNDS;
+const MAX_FAILED_ATTEMPTS = MAX_FAILED_LOGIN_ATTEMPTS;
+const RESET_TOKEN_EXPIRY_HOURS = PASSWORD_RESET_TOKEN_EXPIRY_HOURS;
 
 @Injectable()
 export class AuthService {
@@ -530,7 +537,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtSecret(),
-        expiresIn: '15m',
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
 
@@ -543,7 +550,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtRefreshSecret(),
-        expiresIn: '7d',
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );
 

@@ -13,6 +13,13 @@ import {
   SecurityEventSeverity,
 } from './entities/security-event.entity';
 import { SecurityEventsService } from './security-events.service';
+import {
+  IP_BLOCK_DURATION_MS,
+  BRUTE_FORCE_WINDOW_MS,
+  BRUTE_FORCE_THRESHOLD,
+  PER_IP_RATE_THRESHOLD,
+  DATA_EXFILTRATION_RECORD_THRESHOLD,
+} from '../../common/constants/business-rules.constants';
 
 export interface ThreatContext {
   userId?: string;
@@ -40,8 +47,8 @@ export class ThreatDetectionService {
   private readonly blockedIps = new Map<string, number>();
 
   // Thresholds
-  private readonly BRUTE_FORCE_THRESHOLD = 10; // failed logins per 15 min
-  private readonly RATE_THRESHOLD = 200; // requests per minute per IP
+  private readonly BRUTE_FORCE_THRESHOLD = BRUTE_FORCE_THRESHOLD;
+  private readonly RATE_THRESHOLD = PER_IP_RATE_THRESHOLD; // requests per minute per IP
   private readonly WINDOW_MS = 60_000;
 
   // Patterns for injection detection
@@ -101,7 +108,7 @@ export class ThreatDetectionService {
         autoMitigated: true,
         mitigationAction: 'ip_temp_block',
       });
-      this.blockIp(ipAddress, 10 * 60 * 1000); // 10-minute block
+      this.blockIp(ipAddress, IP_BLOCK_DURATION_MS);
       return 'block';
     }
 
@@ -120,12 +127,12 @@ export class ThreatDetectionService {
    * Check for brute-force attack based on stored security events.
    */
   async checkBruteForce(ipAddress: string, userId?: string): Promise<boolean> {
-    const windowStart = new Date(Date.now() - 15 * 60 * 1000);
+    const windowStart = new Date(Date.now() - BRUTE_FORCE_WINDOW_MS);
 
     const failedAttempts =
       await this.securityEventsService.getFailedLoginAttempts(
         ipAddress,
-        0.25, // 15 minutes
+        BRUTE_FORCE_WINDOW_MS / (60 * 60 * 1000), // window expressed in hours
       );
 
     if (failedAttempts >= this.BRUTE_FORCE_THRESHOLD) {
@@ -199,7 +206,7 @@ export class ThreatDetectionService {
     recordsAccessed: number,
     windowMinutes: number = 5,
   ): Promise<void> {
-    const threshold = 1000;
+    const threshold = DATA_EXFILTRATION_RECORD_THRESHOLD;
     if (recordsAccessed >= threshold) {
       await this.recordThreat({
         userId,

@@ -10,6 +10,7 @@ import {
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { User } from '../users/entities/user.entity';
 import { PaginationUtils, DateUtils } from '../../common/utils';
+import { MAX_PAGE_SIZE } from '../../common/constants/business-rules.constants';
 
 export interface AuditLogData {
   action: AuditAction;
@@ -199,7 +200,8 @@ export class AuditService {
     }
 
     const page = queryDto.page || 1;
-    const limit = Math.min(queryDto.limit || 50, 100);
+    const AUDIT_DEFAULT_PAGE_SIZE = 50;
+    const limit = Math.min(queryDto.limit || AUDIT_DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
     PaginationUtils.validatePagination(page, limit);
     const offset = PaginationUtils.calculateOffset(page, limit);
