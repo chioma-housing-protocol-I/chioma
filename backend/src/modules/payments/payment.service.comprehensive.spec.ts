@@ -313,6 +313,73 @@ describe('PaymentService – edge cases & isolation', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('rejects refund with a descriptive error when metadata has no chargeId', async () => {
+      entityManager.findOne.mockResolvedValue({
+        id: 'pay-1',
+        userId: 'user-1',
+        status: PaymentStatus.COMPLETED,
+        amount: 100,
+        refundAmount: 0,
+        metadata: { gateway: 'paystack' },
+      } as unknown as Payment);
+
+      await expect(
+        service.processRefund(
+          'pay-1',
+          { amount: 50, reason: 'no charge' } as ProcessRefundDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(
+        /payment pay-1 has no gateway charge ID recorded in its metadata/,
+      );
+
+      // Refund must be rejected before it ever reaches the gateway.
+      expect(mockGateway.processRefund).not.toHaveBeenCalled();
+      expect(entityManager.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects refund when metadata is entirely null', async () => {
+      entityManager.findOne.mockResolvedValue({
+        id: 'pay-2',
+        userId: 'user-1',
+        status: PaymentStatus.COMPLETED,
+        amount: 100,
+        refundAmount: 0,
+        metadata: null,
+      } as unknown as Payment);
+
+      await expect(
+        service.processRefund(
+          'pay-2',
+          { amount: 50, reason: 'null meta' } as ProcessRefundDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockGateway.processRefund).not.toHaveBeenCalled();
+    });
+
+    it('rejects refund when chargeId is blank/whitespace', async () => {
+      entityManager.findOne.mockResolvedValue({
+        id: 'pay-3',
+        userId: 'user-1',
+        status: PaymentStatus.COMPLETED,
+        amount: 100,
+        refundAmount: 0,
+        metadata: { chargeId: '   ' },
+      } as unknown as Payment);
+
+      await expect(
+        service.processRefund(
+          'pay-3',
+          { amount: 50, reason: 'blank' } as ProcessRefundDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockGateway.processRefund).not.toHaveBeenCalled();
+    });
+
     it('sends notification after successful refund', async () => {
       entityManager.findOne.mockResolvedValue({
         id: 'pay-1',

@@ -231,13 +231,19 @@ export class PaymentService {
         );
       }
 
-      if (dto.amount > payment.amount - payment.refundAmount) {
-        throw new BadRequestException('Refund amount exceeds available amount');
+      // Assert the gateway charge reference exists before any refund work.
+      // Without it we cannot tell the gateway which charge to reverse, and
+      // proceeding with an undefined chargeId risks crashing the gateway call
+      // or refunding against the wrong charge.
+      const chargeId = payment.metadata?.chargeId?.trim();
+      if (!chargeId) {
+        throw new BadRequestException(
+          `Cannot process refund: payment ${paymentId} has no gateway charge ID recorded in its metadata`,
+        );
       }
 
-      const chargeId = payment.metadata?.chargeId;
-      if (!chargeId) {
-        throw new BadRequestException('No charge ID found for refund');
+      if (dto.amount > payment.amount - payment.refundAmount) {
+        throw new BadRequestException('Refund amount exceeds available amount');
       }
 
       const refundResult = await Promise.resolve(
