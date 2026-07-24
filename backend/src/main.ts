@@ -107,11 +107,11 @@ async function bootstrap() {
   if (process.env.RESPONSE_TIME_ENABLED !== 'false') {
     app.use(
       (
-        req: express.Request,
+        req: express.Request & { _startTime?: number },
         _res: express.Response,
         next: express.NextFunction,
       ) => {
-        (req as any)._startTime = Date.now();
+        req._startTime = Date.now();
         next();
       },
     );
