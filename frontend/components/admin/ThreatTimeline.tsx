@@ -1,16 +1,18 @@
 'use client';
 
 import React from 'react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { ThreatStats } from '@/types/security';
+import dynamic from 'next/dynamic';
+import type { ThreatStats } from '@/types/security';
+
+const AreaChartWrapper = dynamic(
+  () => import('@/components/charts/AreaChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 interface ThreatTimelineProps {
   stats: ThreatStats | null;
@@ -38,56 +40,13 @@ export function ThreatTimeline({ stats, loading }: ThreatTimelineProps) {
         Threat Activity Timeline
       </h3>
       <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="displayDate"
-              stroke="rgba(255,255,255,0.4)"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="rgba(255,255,255,0.4)"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#fff',
-              }}
-              itemStyle={{ color: '#ef4444' }}
-              labelStyle={{
-                color: 'rgba(255, 255, 255, 0.6)',
-                marginBottom: '4px',
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="count"
-              stroke="#ef4444"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorCount)"
-              name="Threats Detect"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <AreaChartWrapper
+          data={data}
+          dataKeyX="displayDate"
+          dataKeyY="count"
+          strokeColor="#ef4444"
+          name="Threats Detect"
+        />
       </div>
     </div>
   );

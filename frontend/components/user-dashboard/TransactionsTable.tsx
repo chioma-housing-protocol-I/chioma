@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { TransactionsTableProps, Transaction } from './types';
+import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 /**
  * Transactions table with filtering and sorting
@@ -138,10 +139,10 @@ export function TransactionsTable({
                     {transaction.description}
                   </td>
                   <td className="px-6 py-4 font-semibold text-white">
-                    {transaction.amount.toLocaleString()} {transaction.currency}
+                    {formatCurrency(transaction.amount, transaction.currency)}
                   </td>
                   <td className="px-6 py-4 text-blue-200/70">
-                    {new Date(transaction.date).toLocaleDateString()}
+                    {formatDate(transaction.date)}
                   </td>
                   <td className="px-6 py-4">
                     <span

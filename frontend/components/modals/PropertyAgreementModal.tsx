@@ -10,8 +10,8 @@ import {
   User,
   CheckCircle2,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 interface PropertyAgreementData {
   propertyId: string;
@@ -298,7 +298,7 @@ export const PropertyAgreementModal: React.FC<PropertyAgreementModalProps> = ({
               </label>
               {isViewMode ? (
                 <p className="text-2xl font-bold text-green-600">
-                  ${formData.monthlyRent.toLocaleString()}
+                  {formatCurrency(formData.monthlyRent, 'USD')}
                 </p>
               ) : (
                 <div className="relative">
@@ -329,7 +329,7 @@ export const PropertyAgreementModal: React.FC<PropertyAgreementModalProps> = ({
               </label>
               {isViewMode ? (
                 <p className="text-2xl font-bold text-green-600">
-                  ${formData.securityDeposit.toLocaleString()}
+                  {formatCurrency(formData.securityDeposit, 'USD')}
                 </p>
               ) : (
                 <div className="relative">
@@ -375,7 +375,7 @@ export const PropertyAgreementModal: React.FC<PropertyAgreementModalProps> = ({
               {isViewMode ? (
                 <p className="text-neutral-900 dark:text-white font-medium">
                   {formData.startDate
-                    ? format(new Date(formData.startDate), 'MMMM d, yyyy')
+                    ? formatDate(formData.startDate, { dateStyle: 'long' })
                     : 'Not set'}
                 </p>
               ) : (
@@ -395,7 +395,7 @@ export const PropertyAgreementModal: React.FC<PropertyAgreementModalProps> = ({
               {isViewMode ? (
                 <p className="text-neutral-900 dark:text-white font-medium">
                   {formData.endDate
-                    ? format(new Date(formData.endDate), 'MMMM d, yyyy')
+                    ? formatDate(formData.endDate, { dateStyle: 'long' })
                     : 'Not set'}
                 </p>
               ) : (

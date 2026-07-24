@@ -1,14 +1,17 @@
 'use client';
 
 import { DollarSign, TrendingUp, Calendar, ArrowUpRight } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const BarChartWrapper = dynamic(
+  () => import('@/components/charts/BarChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 const mockMonthly = [
   { month: 'Jan', earnings: 1200 },
@@ -67,36 +70,15 @@ export default function HostEarningsPage() {
 
       <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-6">Monthly Earnings</h2>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={mockMonthly}>
-            <XAxis
-              dataKey="month"
-              stroke="#94a3b8"
-              tick={{ fill: '#94a3b8', fontSize: 12 }}
-            />
-            <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{
-                background: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                color: '#fff',
-              }}
-              formatter={(v) => [`${v ?? 0}`, 'Earnings']}
-            />
-            <Bar
-              dataKey="earnings"
-              fill="url(#barGrad)"
-              radius={[6, 6, 0, 0]}
-            />
-            <defs>
-              <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#3b82f6" />
-              </linearGradient>
-            </defs>
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="h-[240px]">
+          <BarChartWrapper
+            data={mockMonthly}
+            dataKeyX="month"
+            dataKeyY="earnings"
+            fillColor="#6366f1"
+            name="Earnings"
+          />
+        </div>
       </div>
 
       <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-6">
