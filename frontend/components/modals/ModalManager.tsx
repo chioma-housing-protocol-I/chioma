@@ -2,30 +2,80 @@
 
 import React from 'react';
 import { useModal } from '@/contexts/ModalContext';
-import { PropertyDetailModal } from './PropertyDetailModal';
-import { PropertyInquiryModal } from './PropertyInquiryModal';
-import { PropertyAgreementModal } from './PropertyAgreementModal';
-import { AgreementViewModal } from './AgreementViewModal';
-import { AgreementSigningModal } from './AgreementSigningModal';
-import { DisputeModal } from './DisputeModal';
-import { DisputeFilingModal } from './DisputeFilingModal';
 import type { DisputeFilingData } from './DisputeFilingModal';
-import { DisputeResolutionModal } from './DisputeResolutionModal';
-import { DisputeDetailModal } from './DisputeDetailModal';
-import { EvidenceUploadModal } from './EvidenceUploadModal';
 import type { EvidenceUploadData } from './EvidenceUploadModal';
-import { PaymentModal } from './PaymentModal';
 import type { DashboardDispute } from '@/lib/dashboard-data';
-import { RefundModal } from './RefundModal';
-import { UserManagementModal } from './UserManagementModal';
-import { RefundRequestModal } from './RefundRequestModal';
 import type { RefundRequestData } from './RefundRequestModal';
-import { UserProfileEditModal } from './UserProfileEditModal';
 import type { UserProfileData } from './UserProfileEditModal';
-import { AccountSettingsModal } from './AccountSettingsModal';
 import type { AccountSettingsData } from './AccountSettingsModal';
 import { apiClient } from '@/lib/api-client';
 import dynamic from 'next/dynamic';
+
+// Dynamically import all modals to keep them out of the initial bundle load
+const PropertyDetailModal = dynamic(
+  () => import('./PropertyDetailModal').then((m) => m.PropertyDetailModal),
+  { ssr: false }
+);
+const PropertyInquiryModal = dynamic(
+  () => import('./PropertyInquiryModal').then((m) => m.PropertyInquiryModal),
+  { ssr: false }
+);
+const PropertyAgreementModal = dynamic(
+  () => import('./PropertyAgreementModal').then((m) => m.PropertyAgreementModal),
+  { ssr: false }
+);
+const AgreementViewModal = dynamic(
+  () => import('./AgreementViewModal').then((m) => m.AgreementViewModal),
+  { ssr: false }
+);
+const AgreementSigningModal = dynamic(
+  () => import('./AgreementSigningModal').then((m) => m.AgreementSigningModal),
+  { ssr: false }
+);
+const DisputeModal = dynamic(
+  () => import('./DisputeModal').then((m) => m.DisputeModal),
+  { ssr: false }
+);
+const DisputeFilingModal = dynamic(
+  () => import('./DisputeFilingModal').then((m) => m.DisputeFilingModal),
+  { ssr: false }
+);
+const DisputeResolutionModal = dynamic(
+  () => import('./DisputeResolutionModal').then((m) => m.DisputeResolutionModal),
+  { ssr: false }
+);
+const DisputeDetailModal = dynamic(
+  () => import('./DisputeDetailModal').then((m) => m.DisputeDetailModal),
+  { ssr: false }
+);
+const EvidenceUploadModal = dynamic(
+  () => import('./EvidenceUploadModal').then((m) => m.EvidenceUploadModal),
+  { ssr: false }
+);
+const PaymentModal = dynamic(
+  () => import('./PaymentModal').then((m) => m.PaymentModal),
+  { ssr: false }
+);
+const RefundModal = dynamic(
+  () => import('./RefundModal').then((m) => m.RefundModal),
+  { ssr: false }
+);
+const UserManagementModal = dynamic(
+  () => import('./UserManagementModal').then((m) => m.UserManagementModal),
+  { ssr: false }
+);
+const RefundRequestModal = dynamic(
+  () => import('./RefundRequestModal').then((m) => m.RefundRequestModal),
+  { ssr: false }
+);
+const UserProfileEditModal = dynamic(
+  () => import('./UserProfileEditModal').then((m) => m.UserProfileEditModal),
+  { ssr: false }
+);
+const AccountSettingsModal = dynamic(
+  () => import('./AccountSettingsModal').then((m) => m.AccountSettingsModal),
+  { ssr: false }
+);
 import type { Document, DocumentMetadata } from '@/components/documents';
 import type {
   PropertyDetailData,

@@ -11,21 +11,18 @@ import {
   Heart,
   BarChart3,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { useLandlordPropertyAnalytics } from '@/lib/query/hooks/use-property-analytics';
+import dynamic from 'next/dynamic';
+
+const LineChartWrapper = dynamic(() => import('@/components/charts/LineChartWrapper'), {
+  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
+  ssr: false,
+});
+
+const PieChartWrapper = dynamic(() => import('@/components/charts/PieChartWrapper'), {
+  loading: () => <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />,
+  ssr: false,
+});
 
 const PIE_COLORS = ['#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#2563eb'];
 
@@ -173,40 +170,13 @@ export default function UserAnalyticsPage() {
             </span>
           </div>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="shortDate"
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="inquiries"
-                  stroke="#38bdf8"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Inquiries"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <LineChartWrapper
+              data={trendData}
+              dataKeyX="shortDate"
+              dataKeyY="inquiries"
+              strokeColor="#38bdf8"
+              name="Inquiries"
+            />
           </div>
         </div>
 
@@ -215,34 +185,12 @@ export default function UserAnalyticsPage() {
             Listing Status Mix
           </h2>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={marketTrends.listingStatusDistribution}
-                  dataKey="count"
-                  nameKey="status"
-                  outerRadius={95}
-                  innerRadius={50}
-                  paddingAngle={2}
-                >
-                  {marketTrends.listingStatusDistribution.map(
-                    (entry, index) => (
-                      <Cell
-                        key={entry.status}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      />
-                    ),
-                  )}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <PieChartWrapper
+              data={marketTrends.listingStatusDistribution}
+              dataKey="count"
+              nameKey="status"
+              colors={PIE_COLORS}
+            />
           </div>
           <div className="space-y-2 mt-2">
             {marketTrends.listingStatusDistribution.map((item) => (

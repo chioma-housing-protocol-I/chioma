@@ -3,6 +3,7 @@ import { en } from './data/en';
 import { fr } from './data/fr';
 import { es } from './data/es';
 import { ar } from './data/ar';
+import { FormatUtils } from '../../common/utils';
 
 export type SupportedLanguage = 'en' | 'fr' | 'es' | 'ar';
 
@@ -76,6 +77,56 @@ export class I18nService {
     const percent = total === 0 ? 100 : Math.round((translated / total) * 100);
 
     return { total, translated, percent };
+  }
+
+  /**
+   * Format a date according to the specified locale
+   */
+  formatDate(
+    date: Date | string | number,
+    language?: string,
+    options?: Intl.DateTimeFormatOptions
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatDate(date, lang, options);
+  }
+
+  /**
+   * Format a number according to the specified locale
+   */
+  formatNumber(
+    num: number | string,
+    language?: string,
+    options?: Intl.NumberFormatOptions
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatNumber(num, lang, options);
+  }
+
+  /**
+   * Format a currency amount according to the specified locale
+   */
+  formatCurrency(
+    amount: number | string,
+    currency: string,
+    language?: string,
+    options?: Intl.NumberFormatOptions
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatCurrency(amount, currency, lang, options);
+  }
+
+  /**
+   * Format a crypto/Stellar amount (7 decimal places)
+   */
+  formatCrypto(
+    amount: number | string,
+    symbol?: string,
+    language?: string,
+    options?: Intl.NumberFormatOptions
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatCrypto(amount, lang, symbol, options);
   }
 
   private getNested(tree: TranslationTree, path: string): string | undefined {
