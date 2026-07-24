@@ -6,11 +6,13 @@ import { User } from './entities/user.entity';
 import { UserNotificationPreference } from './entities/user-notification-preference.entity';
 import { AuditModule } from '../audit/audit.module';
 import { UserKycStatusService } from './user-kyc-status.service';
+import { EncryptionModule } from '../../common/services/encryption.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, UserNotificationPreference]),
     AuditModule,
+    EncryptionModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, UserKycStatusService],

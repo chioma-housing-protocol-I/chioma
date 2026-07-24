@@ -60,8 +60,24 @@ export class User {
   @Column({ name: 'first_name', nullable: true, type: 'varchar' })
   firstName: string | null;
 
+  @Column({
+    name: 'first_name_encrypted',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
+    nullable: true,
+    select: false,
+  })
+  firstNameEncrypted?: Buffer | null;
+
   @Column({ name: 'last_name', nullable: true, type: 'varchar' })
   lastName: string | null;
+
+  @Column({
+    name: 'last_name_encrypted',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
+    nullable: true,
+    select: false,
+  })
+  lastNameEncrypted?: Buffer | null;
 
   @Column({ name: 'phone_number', nullable: true, type: 'varchar' })
   phoneNumber: string | null;
