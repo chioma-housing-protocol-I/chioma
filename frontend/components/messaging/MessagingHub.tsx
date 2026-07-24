@@ -137,7 +137,7 @@ export function MessagingHub() {
             <div className="flex-1 flex flex-col items-center justify-center bg-neutral-50 p-8">
               <button
                 onClick={() => setShowSidebar(true)}
-                className="md:hidden mb-6 text-sm text-blue-600 font-medium hover:underline"
+                className="md:hidden mb-6 text-sm text-blue-800 font-medium hover:underline"
               >
                 Back to conversations
               </button>
