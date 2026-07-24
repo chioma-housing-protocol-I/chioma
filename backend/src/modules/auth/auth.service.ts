@@ -35,6 +35,7 @@ const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 30;
 const RESET_TOKEN_EXPIRY_HOURS = 1;
+const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
 
 @Injectable()
 export class AuthService {
@@ -80,7 +81,6 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
     const userReferralCode = await this.referralService.generateReferralCode();
 
     const user = this.userRepository.create({
@@ -92,10 +92,11 @@ export class AuthService {
       role,
       emailVerified: false,
       failedLoginAttempts: 0,
-      verificationToken,
       isActive: true,
       referralCode: userReferralCode,
     });
+
+    const verificationToken = this.issueVerificationToken(user);
 
     const savedUser = await this.userRepository.save(user);
 
@@ -416,6 +417,7 @@ export class AuthService {
 
     user.emailVerified = true;
     user.verificationToken = null;
+    user.verificationTokenExpires = null;
 
     await this.userRepository.save(user);
     this.logger.log(`Email verified for user: ${user.id}`);
@@ -430,6 +432,10 @@ export class AuthService {
    * account, then sends a verification link through the same flow used
    * during normal registration.
    */
+  @Locked({
+    key: (userId: string) => `user:verification:${userId}`,
+    ttlMs: 5000,
+  })
   async completeProfile(
     userId: string,
     dto: CompleteProfileDto,
@@ -447,14 +453,22 @@ export class AuthService {
       throw new DuplicateEntryError('Email already registered');
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const emailChanged = user.email !== normalizedEmail;
 
     user.email = normalizedEmail;
     user.emailHash = this.hashLookupValue(normalizedEmail);
     user.emailVerified = false;
-    user.verificationToken = verificationToken;
     if (dto.firstName) user.firstName = dto.firstName;
     if (dto.lastName) user.lastName = dto.lastName;
+
+    // A change of email invalidates any token minted for the previous address;
+    // otherwise reuse an existing, unexpired token so concurrent requests stay
+    // idempotent and links already delivered keep working.
+    if (emailChanged) {
+      user.verificationToken = null;
+      user.verificationTokenExpires = null;
+    }
+    const verificationToken = this.issueVerificationToken(user);
 
     await this.userRepository.save(user);
     this.logger.log(`Profile completed for wallet user: ${user.id}`);
@@ -470,6 +484,52 @@ export class AuthService {
 
     return {
       message: 'Profile saved. Check your inbox to verify your email.',
+    };
+  }
+
+  /**
+   * Re-sends the email verification link for a user who has not yet verified.
+   *
+   * Concurrent requests are serialized with a per-user lock, and the token is
+   * generated idempotently — an existing, unexpired token is reused rather than
+   * overwritten, so a verification link already delivered to the user keeps
+   * working instead of being silently invalidated.
+   */
+  @Locked({
+    key: (userId: string) => `user:verification:${userId}`,
+    ttlMs: 5000,
+  })
+  async resendVerificationEmail(userId: string): Promise<MessageResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    if (!user.email) {
+      throw new ValidationError('No email is associated with this account');
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email is already verified' };
+    }
+
+    const verificationToken = this.issueVerificationToken(user);
+
+    await this.userRepository.save(user);
+    this.logger.log(`Verification email re-sent for user: ${user.id}`);
+
+    this.emailService
+      .sendVerificationEmail(user.email, verificationToken)
+      .catch((error) =>
+        this.logger.error(
+          `Failed to send verification email for ${user.email}`,
+          error,
+        ),
+      );
+
+    return {
+      message: 'A new verification link has been sent to your email.',
     };
   }
 
@@ -561,12 +621,42 @@ export class AuthService {
     });
   }
 
+  /**
+   * Idempotently sets a verification token on the given user entity.
+   *
+   * If the user already holds an unexpired verification token it is reused, so
+   * concurrent requests do not overwrite each other and any link already sent
+   * to the user stays valid. A fresh token is only minted when none exists or
+   * the current one has expired. The token is mutated onto the entity but NOT
+   * persisted — the caller is responsible for saving.
+   */
+  private issueVerificationToken(user: User): string {
+    const now = Date.now();
+
+    if (
+      user.verificationToken &&
+      user.verificationTokenExpires &&
+      user.verificationTokenExpires.getTime() > now
+    ) {
+      return user.verificationToken;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpires = new Date(
+      now + VERIFICATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
+    );
+
+    return verificationToken;
+  }
+
   public sanitizeUser(user: User) {
     const {
       password: _password,
       refreshToken: _refreshToken,
       resetToken: _resetToken,
       verificationToken: _verificationToken,
+      verificationTokenExpires: _verificationTokenExpires,
       ...sanitized
     } = user;
     return sanitized;

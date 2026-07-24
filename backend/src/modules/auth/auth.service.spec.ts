@@ -58,6 +58,7 @@ describe('AuthService', () => {
     phoneNumber: null,
     avatarUrl: null,
     verificationToken: null,
+    verificationTokenExpires: null,
   };
 
   const mockUserRepository = {
@@ -420,6 +421,118 @@ describe('AuthService', () => {
       await expect(service.verifyEmail('invalid-token')).rejects.toThrow(
         ValidationError,
       );
+    });
+  });
+
+  describe('resendVerificationEmail', () => {
+    it('generates a token and sends the email for an unverified user', async () => {
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      const result = await service.resendVerificationEmail(mockUser.id!);
+
+      expect(mockUserRepository.save).toHaveBeenCalledTimes(1);
+      expect(unverifiedUser.verificationToken).toEqual(expect.any(String));
+      expect(unverifiedUser.verificationTokenExpires).toBeInstanceOf(Date);
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        unverifiedUser.email,
+        unverifiedUser.verificationToken,
+      );
+      expect(result.message).toContain('verification link');
+    });
+
+    it('reuses an existing unexpired token instead of overwriting it', async () => {
+      const existingToken = 'existing-valid-token';
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: existingToken,
+        verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await service.resendVerificationEmail(mockUser.id!);
+
+      // The already-issued token (and its link) must remain valid.
+      expect(unverifiedUser.verificationToken).toBe(existingToken);
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        unverifiedUser.email,
+        existingToken,
+      );
+    });
+
+    it('rotates an expired token', async () => {
+      const expiredToken = 'expired-token';
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: expiredToken,
+        verificationTokenExpires: new Date(Date.now() - 60 * 60 * 1000),
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await service.resendVerificationEmail(mockUser.id!);
+
+      expect(unverifiedUser.verificationToken).not.toBe(expiredToken);
+      expect(unverifiedUser.verificationToken).toEqual(expect.any(String));
+    });
+
+    it('is a no-op for an already-verified user', async () => {
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        emailVerified: true,
+      });
+
+      const result = await service.resendVerificationEmail(mockUser.id!);
+
+      expect(result.message).toContain('already verified');
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+      expect(emailService.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('throws when the user does not exist', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.resendVerificationEmail('missing-id'),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('handles concurrent requests idempotently (single shared token)', async () => {
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      };
+
+      // Both concurrent requests resolve the same user entity, mirroring two
+      // requests that read the row before either has written a token.
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await Promise.all([
+        service.resendVerificationEmail(mockUser.id!),
+        service.resendVerificationEmail(mockUser.id!),
+      ]);
+
+      const emailCalls = (emailService.sendVerificationEmail as jest.Mock).mock
+        .calls;
+      expect(emailCalls).toHaveLength(2);
+      // Both emails carry the identical token — no request clobbered the other.
+      expect(emailCalls[0][1]).toBe(emailCalls[1][1]);
+      expect(unverifiedUser.verificationToken).toBe(emailCalls[0][1]);
     });
   });
 

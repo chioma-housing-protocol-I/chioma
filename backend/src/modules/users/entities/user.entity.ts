@@ -107,8 +107,17 @@ export class User {
   kycStatus: KycStatus;
 
   @Exclude()
+  @Index('idx_users_verification_token', { unique: true })
   @Column({ name: 'verification_token', nullable: true, type: 'varchar' })
   verificationToken: string | null;
+
+  @Exclude()
+  @Column({
+    name: 'verification_token_expires',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
+  verificationTokenExpires: Date | null;
 
   @Exclude()
   @Column({ name: 'reset_token', nullable: true, type: 'varchar' })
