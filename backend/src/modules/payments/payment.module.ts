@@ -20,6 +20,7 @@ import { AdminRefundsController } from './admin-refunds.controller';
 import { AdminRefundsService } from './admin-refunds.service';
 import { FraudModule } from '../fraud/fraud.module';
 import { AuditModule } from '../audit/audit.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuditModule } from '../audit/audit.module';
     StellarModule,
     FraudModule,
     AuditModule,
+    WebhooksModule,
   ],
   controllers: [
     PaymentController,

@@ -20,9 +20,13 @@ export class RefreshTokenStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>('JWT_REFRESH_SECRET') ||
-        'your-refresh-secret-key',
+      secretOrKey: (() => {
+        const secret = configService.get<string>('JWT_REFRESH_SECRET');
+        if (!secret) {
+          throw new Error('JWT_REFRESH_SECRET is required');
+        }
+        return secret;
+      })(),
       passReqToCallback: true,
     });
   }
