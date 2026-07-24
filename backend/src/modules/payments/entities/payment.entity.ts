@@ -52,6 +52,9 @@ export class Payment {
   @Column({ nullable: true, type: 'varchar' })
   agreementId: string | null; // Reference to agreement (no FK constraint)
 
+  @Column({ nullable: true, type: 'varchar' })
+  bookingId: string | null; // Reference to booking (no FK constraint)
+
   @Column('decimal', { name: 'amount', precision: 12, scale: 2 })
   amount: number;
 

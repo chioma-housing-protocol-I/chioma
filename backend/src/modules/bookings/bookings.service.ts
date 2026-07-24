@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, In, LessThan, MoreThan } from 'typeorm';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import { Property } from '../properties/entities/property.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -11,6 +11,10 @@ import {
   PropertyNotFoundError,
   BookingNotFoundError,
 } from '../../common/errors/domain-errors';
+import { PaymentService } from '../payments/payment.service';
+import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
+import { StellarService } from '../stellar/services/stellar.service';
+import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -23,6 +27,13 @@ export class BookingsService {
     private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
+    @InjectRepository(StellarEscrow)
+    private readonly escrowRepository: Repository<StellarEscrow>,
+    private readonly paymentService: PaymentService,
+    private readonly stellarService: StellarService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(guestId: string, dto: CreateBookingDto): Promise<Booking> {
@@ -44,24 +55,68 @@ export class BookingsService {
       );
     }
 
-    const booking = this.bookingRepository.create({
-      propertyId: property.id,
-      guestId,
-      checkInDate: dto.checkIn,
-      checkOutDate: dto.checkOut,
-      guests: dto.guests,
-      specialRequests: dto.specialRequests ?? null,
-      paymentMethod: dto.paymentMethod,
-      totalAmount: Number(property.price) * nights,
-      currency: property.currency,
-      status: BookingStatus.PENDING,
+    // Check for overlapping bookings
+    const overlapping = await this.bookingRepository.exists({
+      where: {
+        propertyId: dto.propertyId,
+        status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+        checkInDate: LessThan(dto.checkOut),
+        checkOutDate: MoreThan(dto.checkIn),
+      },
     });
+    if (overlapping) {
+      throw new BusinessRuleViolationError(
+        'Property is not available for the selected dates',
+      );
+    }
 
-    const saved = await this.bookingRepository.save(booking);
-    this.logger.log(
-      `Booking created: ${saved.id} for property ${property.id} by guest ${guestId}`,
-    );
-    return saved;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const booking = queryRunner.manager.create(Booking, {
+        propertyId: property.id,
+        guestId,
+        checkInDate: dto.checkIn,
+        checkOutDate: dto.checkOut,
+        guests: dto.guests,
+        specialRequests: dto.specialRequests ?? null,
+        paymentMethod: dto.paymentMethod,
+        totalAmount: Number(property.price) * nights,
+        currency: property.currency,
+        status: BookingStatus.PENDING,
+      });
+
+      const savedBooking = await queryRunner.manager.save(booking);
+
+      // Create pending payment record for the booking
+      const payment = queryRunner.manager.create(Payment, {
+        userId: guestId,
+        bookingId: savedBooking.id,
+        amount: savedBooking.totalAmount,
+        transactionFee: 0,
+        netAmount: savedBooking.totalAmount,
+        currency: savedBooking.currency,
+        status: PaymentStatus.PENDING,
+        paymentMethod: dto.paymentMethod,
+        metadata: { flow: 'booking' },
+      });
+
+      await queryRunner.manager.save(payment);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `Booking created: ${savedBooking.id} for property ${property.id} by guest ${guestId}`,
+      );
+      return savedBooking;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findForUser(
@@ -88,39 +143,98 @@ export class BookingsService {
   }
 
   async confirm(userId: string, bookingId: string): Promise<Booking> {
-    return this.transitionAsHost(userId, bookingId, BookingStatus.CONFIRMED);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['property', 'guest'],
+      });
+      if (!booking) {
+        throw new BookingNotFoundError(bookingId);
+      }
+      if (booking.property.ownerId !== userId) {
+        throw new AuthorizationError(
+          'Only the property owner can update this booking',
+        );
+      }
+      if (booking.status !== BookingStatus.PENDING) {
+        throw new BusinessRuleViolationError(
+          `Booking is already ${booking.status}`,
+        );
+      }
+
+      booking.status = BookingStatus.CONFIRMED;
+      const savedBooking = await queryRunner.manager.save(booking);
+
+      // Update payment status to completed (simulate for now; in real flow this would be after payment gateway confirmation)
+      const payment = await queryRunner.manager.findOne(Payment, {
+        where: { bookingId: savedBooking.id },
+      });
+      if (payment) {
+        payment.status = PaymentStatus.COMPLETED;
+        payment.processedAt = new Date();
+        await queryRunner.manager.save(payment);
+      }
+
+      await queryRunner.commitTransaction();
+      this.logger.log(`Booking ${bookingId} transitioned to confirmed`);
+      return savedBooking;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async cancel(userId: string, bookingId: string): Promise<Booking> {
-    return this.transitionAsHost(userId, bookingId, BookingStatus.CANCELLED);
-  }
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-  private async transitionAsHost(
-    userId: string,
-    bookingId: string,
-    nextStatus: BookingStatus,
-  ): Promise<Booking> {
-    const booking = await this.bookingRepository.findOne({
-      where: { id: bookingId },
-      relations: ['property', 'guest'],
-    });
-    if (!booking) {
-      throw new BookingNotFoundError(bookingId);
-    }
-    if (booking.property.ownerId !== userId) {
-      throw new AuthorizationError(
-        'Only the property owner can update this booking',
-      );
-    }
-    if (booking.status !== BookingStatus.PENDING) {
-      throw new BusinessRuleViolationError(
-        `Booking is already ${booking.status}`,
-      );
-    }
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['property', 'guest'],
+      });
+      if (!booking) {
+        throw new BookingNotFoundError(bookingId);
+      }
+      if (booking.property.ownerId !== userId) {
+        throw new AuthorizationError(
+          'Only the property owner can update this booking',
+        );
+      }
+      if (booking.status !== BookingStatus.PENDING) {
+        throw new BusinessRuleViolationError(
+          `Booking is already ${booking.status}`,
+        );
+      }
 
-    booking.status = nextStatus;
-    const saved = await this.bookingRepository.save(booking);
-    this.logger.log(`Booking ${bookingId} transitioned to ${nextStatus}`);
-    return saved;
+      booking.status = BookingStatus.CANCELLED;
+      const savedBooking = await queryRunner.manager.save(booking);
+
+      // Update payment status to refunded (simulate for now)
+      const payment = await queryRunner.manager.findOne(Payment, {
+        where: { bookingId: savedBooking.id },
+      });
+      if (payment && payment.status === PaymentStatus.COMPLETED) {
+        payment.status = PaymentStatus.REFUNDED;
+        payment.refundAmount = payment.amount;
+        await queryRunner.manager.save(payment);
+      }
+
+      await queryRunner.commitTransaction();
+      this.logger.log(`Booking ${bookingId} transitioned to cancelled`);
+      return savedBooking;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
