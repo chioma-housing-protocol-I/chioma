@@ -157,7 +157,9 @@ describe('authStore', () => {
       status: 200,
     });
 
-    const result = await useAuthStore.getState().login('test@chioma.local', 'pass');
+    const result = await useAuthStore
+      .getState()
+      .login('test@chioma.local', 'pass');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Invalid role assigned: superuser');
