@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
@@ -765,6 +765,35 @@ describe('PaymentService', () => {
       expect(result.totalPayments).toBe(2);
       expect(result.byFlow.rent).toBe(1);
       expect(result.byCurrency.XLM.count).toBe(1);
+    });
+  });
+
+  describe('handlePaymentGatewayWebhook', () => {
+    it('rejects webhook when PAYMENT_WEBHOOK_SECRET is not configured (fail-closed)', async () => {
+      const originalEnv = process.env.PAYMENT_WEBHOOK_SECRET;
+      delete process.env.PAYMENT_WEBHOOK_SECRET;
+
+      await expect(
+        service.handlePaymentGatewayWebhook(
+          { eventType: 'payment.completed', paymentId: 'pay_1', status: 'completed' },
+          'any-secret',
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+
+      process.env.PAYMENT_WEBHOOK_SECRET = originalEnv;
+    });
+
+    it('rejects webhook with incorrect secret', async () => {
+      process.env.PAYMENT_WEBHOOK_SECRET = 'correct-secret';
+
+      await expect(
+        service.handlePaymentGatewayWebhook(
+          { eventType: 'payment.completed', paymentId: 'pay_1', status: 'completed' },
+          'wrong-secret',
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+
+      delete process.env.PAYMENT_WEBHOOK_SECRET;
     });
   });
 });

@@ -35,4 +35,19 @@ export class AnalyticsController {
       query.days ?? 30,
     );
   }
+
+  @Get('landlord/fees-summary')
+  @ApiOperation({ summary: 'Get landlord platform fees summary' })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    type: Number,
+    description: 'Number of days to include (1-365)',
+  })
+  async getLandlordFeesSummary(
+    @CurrentUser() user: User,
+    @Query() query: LandlordAnalyticsQueryDto,
+  ) {
+    return this.analyticsService.getLandlordFeesSummary(user.id);
+  }
 }

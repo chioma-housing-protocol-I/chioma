@@ -138,5 +138,11 @@ export const queryKeys = {
     all: ['analytics'] as const,
     landlordOverview: (days: number) =>
       [...queryKeys.analytics.all, 'landlord-overview', days] as const,
+    feesSummary: () => [...queryKeys.analytics.all, 'fees-summary'] as const,
+  },
+  referrals: {
+    all: ['referrals'] as const,
+    code: () => [...queryKeys.referrals.all, 'code'] as const,
+    stats: () => [...queryKeys.referrals.all, 'stats'] as const,
   },
 } as const;

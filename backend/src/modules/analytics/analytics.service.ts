@@ -9,6 +9,7 @@ import {
   PropertyInquiry,
   PropertyInquiryStatus,
 } from '../inquiries/entities/property-inquiry.entity';
+import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
 
 export interface CityAggregate {
   city: string;
@@ -19,6 +20,11 @@ export interface CityAggregate {
   averageViewsPerProperty: number;
 }
 
+export interface LandlordFeesSummary {
+  totalPlatformFees: number;
+  bookingCount: number;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -26,6 +32,8 @@ export class AnalyticsService {
     private readonly propertyRepository: Repository<Property>,
     @InjectRepository(PropertyInquiry)
     private readonly inquiryRepository: Repository<PropertyInquiry>,
+    @InjectRepository(SubletBooking)
+    private readonly subletBookingRepository: Repository<SubletBooking>,
   ) {}
 
   async getLandlordDashboard(ownerId: string, days = 30) {
@@ -272,6 +280,22 @@ export class AnalyticsService {
       }))
       .sort((a, b) => b.totalViews - a.totalViews)
       .slice(0, 8);
+  }
+
+  async getLandlordFeesSummary(ownerId: string) {
+    const bookings = await this.subletBookingRepository.find({
+      where: { landlordId: ownerId },
+    });
+
+    const totalPlatformFees = bookings.reduce(
+      (sum, b) => sum + Number(b.platformFee),
+      0,
+    );
+
+    return {
+      totalPlatformFees,
+      bookingCount: bookings.length,
+    };
   }
 
   private toDateKey(value: Date): string {

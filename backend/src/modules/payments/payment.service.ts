@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import * as crypto from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, LessThanOrEqual } from 'typeorm';
 import {
@@ -924,7 +925,19 @@ export class PaymentService {
     secretHeader?: string,
   ) {
     const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
-    if (configuredSecret && secretHeader !== configuredSecret) {
+    if (!configuredSecret) {
+      throw new UnauthorizedException(
+        'Payment webhook secret is not configured',
+      );
+    }
+
+    const secretBuffer = Buffer.from(configuredSecret, 'utf8');
+    const headerBuffer = Buffer.from(secretHeader ?? '', 'utf8');
+
+    if (
+      secretBuffer.length !== headerBuffer.length ||
+      !crypto.timingSafeEqual(secretBuffer, headerBuffer)
+    ) {
       throw new UnauthorizedException('Invalid payment webhook secret');
     }
 
