@@ -10,6 +10,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { IpAccessControlGuard } from '../auth/guards/ip-access-control.guard';
 import { UserRole } from '../users/entities/user.entity';
 import {
   AdminRefundsService,
@@ -25,7 +26,7 @@ interface RequestUser {
 
 @ApiTags('Admin Refunds')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(IpAccessControlGuard, JwtAuthGuard)
 @Controller('admin/refunds')
 export class AdminRefundsController {
   constructor(private readonly adminRefundsService: AdminRefundsService) {}

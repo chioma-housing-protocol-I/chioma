@@ -13,6 +13,7 @@ import { UserNotificationPreference } from './entities/user-notification-prefere
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
+import { LockService } from '../../common/lock';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -70,6 +71,12 @@ describe('UsersService', () => {
     save: jest.fn(),
   };
 
+  const mockLockService = {
+    withLock: jest.fn(
+      async (_key: string, _ttlMs: number, fn: () => Promise<unknown>) => fn(),
+    ),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -83,6 +90,7 @@ describe('UsersService', () => {
           useValue: mockNotificationPreferenceRepository,
         },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: LockService, useValue: mockLockService },
       ],
     }).compile();
 
@@ -162,6 +170,28 @@ describe('UsersService', () => {
 
       expect(result).toHaveProperty('message');
       expect(mockUserRepository.update).toHaveBeenCalled();
+    });
+
+    it('should serialize concurrent requests through a per-user lock', async () => {
+      const changeEmailDto = {
+        newEmail: 'newemail@example.com',
+        currentPassword: 'correctPassword',
+      };
+
+      mockUserRepository.findOne
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(null);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      mockUserRepository.update.mockResolvedValue({});
+
+      await service.changeEmail('1', changeEmailDto);
+
+      expect(mockLockService.withLock).toHaveBeenCalledWith(
+        'user:change-email:1',
+        expect.any(Number),
+        expect.any(Function),
+        undefined,
+      );
     });
 
     it('should throw UnauthorizedException with wrong password', async () => {
