@@ -30,6 +30,7 @@ import {
   DuplicateEntryError,
 } from '../../common/errors/domain-errors';
 import { ErrorCode } from '../../common/errors/error-codes';
+import { ValidationUtils } from '../../common/utils/validation.utils';
 
 const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -239,7 +240,7 @@ export class AuthService {
         secret: this.getJwtRefreshSecret(),
       });
 
-      if (payload.type !== 'refresh') {
+      if (!ValidationUtils.validateTokenType(payload, 'refresh')) {
         throw new AuthenticationError(
           ErrorCode.AUTH_TOKEN_INVALID,
           'Invalid token type',

@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { ValidationUtils } from '../../../common/utils/validation.utils';
 
 interface JwtPayload {
   sub: string;
@@ -28,7 +29,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
   }
 
   validate(req: Request, payload: JwtPayload) {
-    if (payload.type !== 'refresh') {
+    if (!ValidationUtils.validateTokenType(payload, 'refresh')) {
       throw new Error('Invalid token type');
     }
     return {

@@ -40,4 +40,35 @@ describe('ValidationUtils', () => {
       expect(ValidationUtils.validateWalletAddress('abc')).toBe(false);
     });
   });
+
+  describe('validateTokenType', () => {
+    it('should return true when payload type matches expected type', () => {
+      expect(
+        ValidationUtils.validateTokenType({ type: 'access' }, 'access'),
+      ).toBe(true);
+      expect(
+        ValidationUtils.validateTokenType({ type: 'refresh' }, 'refresh'),
+      ).toBe(true);
+    });
+
+    it('should return false when payload type does not match expected type', () => {
+      expect(
+        ValidationUtils.validateTokenType({ type: 'refresh' }, 'access'),
+      ).toBe(false);
+      expect(
+        ValidationUtils.validateTokenType({ type: 'access' }, 'refresh'),
+      ).toBe(false);
+    });
+
+    it('should return false when payload is missing the type claim', () => {
+      expect(ValidationUtils.validateTokenType({}, 'access')).toBe(false);
+    });
+
+    it('should return false when payload is null or undefined', () => {
+      expect(ValidationUtils.validateTokenType(null, 'access')).toBe(false);
+      expect(ValidationUtils.validateTokenType(undefined, 'refresh')).toBe(
+        false,
+      );
+    });
+  });
 });

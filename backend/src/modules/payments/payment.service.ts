@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
   UnauthorizedException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, LessThanOrEqual } from 'typeorm';
@@ -35,6 +36,7 @@ import {
   encryptMetadata,
   ensureUserId,
   getIdempotencyKey,
+  PAYMENT_STATUS_MAP,
 } from './payment.helpers';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
@@ -98,11 +100,15 @@ export class PaymentService {
       throw new BadRequestException('Payment amount must be greater than 0');
     }
     if (dto.amount > 999999999.99) {
-      throw new BadRequestException('Payment amount cannot exceed 999,999,999.99');
+      throw new BadRequestException(
+        'Payment amount cannot exceed 999,999,999.99',
+      );
     }
     // Check for decimal precision (max 2 decimal places for currency)
     if (!Number.isInteger(dto.amount * 100)) {
-      throw new BadRequestException('Payment amount can have at most 2 decimal places');
+      throw new BadRequestException(
+        'Payment amount can have at most 2 decimal places',
+      );
     }
 
     const idempotencyKey = getIdempotencyKey(dto);
@@ -253,8 +259,15 @@ export class PaymentService {
         );
       }
 
-      if (dto.amount > payment.amount - payment.refundAmount) {
-        throw new BadRequestException('Refund amount exceeds available amount');
+      const availableToRefund = payment.amount - payment.refundAmount;
+      if (dto.amount > availableToRefund) {
+        throw new BadRequestException({
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+          message: 'Refund amount exceeds available amount',
+          available: availableToRefund,
+          requested: dto.amount,
+        });
       }
 
       const refundResult = await Promise.resolve(
@@ -1045,18 +1058,9 @@ export class PaymentService {
   }
 
   private mapWebhookStatus(webhookStatus: string): PaymentStatus {
-    const statusMap: Record<string, PaymentStatus> = {
-      completed: PaymentStatus.COMPLETED,
-      successful: PaymentStatus.COMPLETED,
-      success: PaymentStatus.COMPLETED,
-      pending: PaymentStatus.PENDING,
-      processing: PaymentStatus.PENDING,
-      failed: PaymentStatus.FAILED,
-      error: PaymentStatus.FAILED,
-      refunded: PaymentStatus.REFUNDED,
-      cancelled: PaymentStatus.FAILED,
-    };
-    return statusMap[webhookStatus?.toLowerCase()] ?? PaymentStatus.PENDING;
+    return (
+      PAYMENT_STATUS_MAP[webhookStatus?.toLowerCase()] ?? PaymentStatus.PENDING
+    );
   }
 
   private async syncEscrowPaymentFromState(
@@ -1074,15 +1078,7 @@ export class PaymentService {
       return null;
     }
 
-    const statusMap: Record<string, PaymentStatus> = {
-      active: PaymentStatus.PENDING,
-      released: PaymentStatus.COMPLETED,
-      refunded: PaymentStatus.REFUNDED,
-      failed: PaymentStatus.FAILED,
-      expired: PaymentStatus.FAILED,
-    };
-
-    payment.status = statusMap[status] ?? PaymentStatus.PENDING;
+    payment.status = PAYMENT_STATUS_MAP[status] ?? PaymentStatus.PENDING;
     payment.metadata = {
       ...(payment.metadata ?? {}),
       ...metadata,
