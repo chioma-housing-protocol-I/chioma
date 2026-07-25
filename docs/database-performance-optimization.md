@@ -72,9 +72,12 @@ CREATE UNIQUE INDEX idx_users_email_lower
 CREATE INDEX idx_stellar_txns_account_created
   ON stellar_transactions (account_id, created_at DESC);
 
--- Full-text property search (if not using Elasticsearch)
-CREATE INDEX idx_properties_fts
-  ON properties USING GIN (to_tsvector('english', title || ' ' || COALESCE(description, '')));
+-- Full-text property search (GIN on stored search_vector — issue #1407)
+-- Used by PropertyQueryBuilder.applySearchFilter and SearchService
+CREATE INDEX "IDX_properties_search_vector"
+  ON properties USING GIN (search_vector);
+-- Strategy: prefer search_vector @@ plainto_tsquery over LIKE '%…%' so the
+-- planner can use the GIN index. Address ILIKE remains as a narrow fallback.
 
 -- JSONB amenities filter
 CREATE INDEX idx_properties_amenities
