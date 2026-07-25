@@ -57,7 +57,31 @@ describe('FormErrorAlert', () => {
   });
 
   it('renders special characters in the message safely', () => {
-    render(<FormErrorAlert message="Error: invalid <input> & value" />);
+    const { container } = render(
+      <FormErrorAlert message="Error: invalid <input> & value" />,
+    );
     expect(screen.getByText('Error: invalid <input> & value')).toBeDefined();
+    // The message must appear as literal text, not be parsed as markup.
+    expect(container.querySelector('input')).toBeNull();
+  });
+
+  // Regression coverage for issue #1424 ("XSS Vulnerability in Error Display
+  // Components"): `message` is rendered via plain JSX text interpolation
+  // ({message}), which React auto-escapes — never dangerouslySetInnerHTML or
+  // a raw DOM API. These lock that in against a future regression.
+  it('renders a malicious message as inert text, not markup', () => {
+    const payload = '<img src=x onerror=alert(1)>';
+    const { container } = render(<FormErrorAlert message={payload} />);
+
+    expect(screen.getByText(payload)).toBeDefined();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('renders a script-tag payload as inert text, not an executable script', () => {
+    const payload = '<script>alert(document.cookie)</script>';
+    const { container } = render(<FormErrorAlert message={payload} />);
+
+    expect(screen.getByText(payload)).toBeDefined();
+    expect(container.querySelector('script')).toBeNull();
   });
 });
