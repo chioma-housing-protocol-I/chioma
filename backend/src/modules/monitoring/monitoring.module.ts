@@ -17,12 +17,14 @@ import { DatabaseReplicationService } from './database-replication.service';
 import { WebhookSignatureService } from '../webhooks/webhook-signature.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     HttpModule,
     ScheduleModule.forRoot(),
     NotificationsModule,
+    StorageModule,
     TypeOrmModule.forFeature([]),
   ],
   controllers: [MonitoringController, PerformanceController],
