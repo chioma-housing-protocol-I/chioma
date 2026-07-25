@@ -19,6 +19,7 @@ import { UserRestoreDto } from './dto/user-restore.dto';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
+import { Locked, LockService } from '../../common/lock';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   UserPreferences,
@@ -29,6 +30,7 @@ import {
   AuditLevel,
   AuditStatus,
 } from '../audit/entities/audit-log.entity';
+import { EncryptionService } from '../../common/services/encryption.service';
 
 const SALT_ROUNDS = 12;
 
@@ -62,6 +64,8 @@ export class UsersService {
     @InjectRepository(UserNotificationPreference)
     private readonly userNotificationPreferenceRepository: Repository<UserNotificationPreference>,
     private readonly auditService: AuditService,
+    private readonly encryptionService: EncryptionService,
+    private readonly lockService: LockService,
   ) {}
 
   async getNotificationPreferences(userId: string): Promise<UserPreferences> {
@@ -203,17 +207,59 @@ export class UsersService {
     updateProfileDto: UpdateUserProfileDto,
   ): Promise<User> {
     const user = await this.findById(userId);
-    Object.assign(user, updateProfileDto);
+    
+    // Encrypt PII fields before saving
+    if (updateProfileDto.firstName !== undefined) {
+      user.firstName = updateProfileDto.firstName;
+      if (updateProfileDto.firstName) {
+        user.firstNameEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.firstName),
+        );
+      }
+    }
+    
+    if (updateProfileDto.lastName !== undefined) {
+      user.lastName = updateProfileDto.lastName;
+      if (updateProfileDto.lastName) {
+        user.lastNameEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.lastName),
+        );
+      }
+    }
+    
     if (updateProfileDto.phoneNumber !== undefined) {
+      user.phoneNumber = updateProfileDto.phoneNumber;
       user.phoneNumberHash = updateProfileDto.phoneNumber
         ? this.hashLookupValue(updateProfileDto.phoneNumber)
         : null;
+      if (updateProfileDto.phoneNumber) {
+        user.phoneNumberEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.phoneNumber),
+        );
+      }
     }
+    
     const updatedUser = await this.userRepository.save(user);
+    
+    // Audit log for PII access
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      performedBy: userId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      metadata: { type: 'PII_UPDATE', fields: Object.keys(updateProfileDto) },
+    });
+    
     this.logger.log(`Profile updated for user: ${user.email}`);
     return updatedUser;
   }
 
+  @Locked({
+    key: (userId: string) => `user:change-email:${userId}`,
+    ttlMs: 5000,
+  })
   async changeEmail(
     userId: string,
     changeEmailDto: ChangeEmailDto,
@@ -236,11 +282,26 @@ export class UsersService {
 
     const verificationToken = randomBytes(32).toString('hex');
 
+    // Encrypt new email
+    const encryptedEmail = await this.encryptionService.encrypt(normalizedNew);
+
     await this.userRepository.update(userId, {
       email: normalizedNew,
+      emailEncrypted: Buffer.from(encryptedEmail),
       emailHash: this.hashLookupValue(normalizedNew),
       emailVerified: false,
       verificationToken,
+    });
+
+    // Audit log for PII access
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      performedBy: userId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      metadata: { type: 'EMAIL_CHANGE', oldEmail: user.email, newEmail: normalizedNew },
     });
 
     this.logger.log(

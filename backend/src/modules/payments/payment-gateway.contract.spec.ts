@@ -166,5 +166,20 @@ describe('PaymentGatewayService - Contract Tests', () => {
         });
       }
     });
+
+    it('should reject a missing or empty chargeId instead of calling the gateway', async () => {
+      await expect(
+        service.processRefund(undefined as any, 100),
+      ).rejects.toThrow('A valid chargeId is required to process a refund');
+      await expect(service.processRefund(null as any, 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
+      await expect(service.processRefund('', 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
+      await expect(service.processRefund('   ', 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
+    });
   });
 });

@@ -86,10 +86,24 @@ export async function proxyToBackend(
     }
 
     if (responseContentType?.includes('application/json')) {
-      return NextResponse.json(JSON.parse(text), {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      try {
+        const parsed = JSON.parse(text);
+        return NextResponse.json(parsed, {
+          status: response.status,
+          headers: responseHeaders,
+        });
+      } catch (parseError) {
+        console.error(`Backend proxy JSON parse failed for ${path}:`, parseError);
+        console.error(`Response text (first 200 chars):`, text.substring(0, 200));
+        return NextResponse.json(
+          { 
+            message: 'Invalid JSON response from backend',
+            details: 'Backend returned non-JSON response',
+            contentType: responseContentType,
+          },
+          { status: 502, headers: responseHeaders },
+        );
+      }
     }
 
     return new NextResponse(text, {

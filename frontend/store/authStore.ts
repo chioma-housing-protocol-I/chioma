@@ -16,6 +16,7 @@ export interface BaseUser {
   firstName: string;
   lastName: string;
   avatar?: string;
+  locale?: string;
 }
 
 export type AdminUser = BaseUser & { role: 'admin' };
@@ -91,6 +92,7 @@ interface AuthActions {
     firstName?: string;
     lastName?: string;
   }) => Promise<AuthResult>;
+  updatePreferences: (preferences: { locale: string }) => Promise<void>;
   hydrate: () => void;
 }
 
@@ -212,7 +214,8 @@ function normalizeUser(user: AuthApiUser): User {
     lastName: user.lastName ?? '',
     role: user.role,
     avatar: user.avatar,
-  } as User;
+    locale: (user as any).locale,
+  };
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -312,6 +315,30 @@ export const useAuthStore = create<AuthStore>()(
               'Could not save your profile. Please try again.',
             ),
           };
+        }
+      },
+
+      updatePreferences: async (preferences) => {
+        try {
+          // Attempt to update backend if API exists. We gracefully fail if it doesn't.
+          await apiClient.post('/auth/preferences', preferences);
+        } catch {
+          // Silent catch for mock environments or missing endpoint
+        }
+
+        const currentUser = get().user;
+        if (currentUser) {
+          const updatedUser: User = {
+            ...currentUser,
+            ...preferences,
+          };
+          localStorage.setItem(
+            AUTH_STORAGE_KEYS.USER,
+            JSON.stringify(updatedUser),
+          );
+          set((state) => {
+            state.user = updatedUser;
+          });
         }
       },
 

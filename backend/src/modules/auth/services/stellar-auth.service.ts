@@ -20,10 +20,16 @@ import {
 import { User, AuthMethod } from '../../users/entities/user.entity';
 import { StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import {
+  BCRYPT_SALT_ROUNDS,
+  STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES,
+  JWT_ACCESS_TOKEN_EXPIRY,
+  JWT_REFRESH_TOKEN_EXPIRY,
+} from '../../../common/constants/business-rules.constants';
 
-const CHALLENGE_EXPIRY_MINUTES = 5;
+const CHALLENGE_EXPIRY_MINUTES = STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES;
 const CHALLENGE_NONCE_LENGTH = 32;
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = BCRYPT_SALT_ROUNDS;
 
 interface StoredChallenge {
   walletAddress: string;
@@ -322,6 +328,9 @@ export class StellarAuthService {
       {
         secret: jwtSecret,
         expiresIn: '15m',
+        secret:
+          this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
 
@@ -335,6 +344,10 @@ export class StellarAuthService {
       {
         secret: jwtRefreshSecret,
         expiresIn: '7d',
+        secret:
+          this.configService.get<string>('JWT_REFRESH_SECRET') ||
+          'your-refresh-secret-key',
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );
 

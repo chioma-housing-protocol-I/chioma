@@ -17,6 +17,7 @@ import { UsersService } from './users.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { IpAccessControlGuard } from '../auth/guards/ip-access-control.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from './entities/user.entity';
@@ -25,7 +26,7 @@ import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor
 @ApiTags('Admin Users')
 @ApiBearerAuth('JWT-auth')
 @Controller('admin/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(IpAccessControlGuard, JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @UseInterceptors(AuditLogInterceptor)
 export class AdminUsersController {

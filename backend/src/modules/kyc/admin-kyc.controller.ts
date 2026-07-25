@@ -19,6 +19,7 @@ import { KycService } from './kyc.service';
 import { AdminKycQueryDto, KycDecisionDto } from './kyc.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { IpAccessControlGuard } from '../auth/guards/ip-access-control.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
@@ -28,7 +29,7 @@ import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor
 @ApiTags('Admin KYC')
 @ApiBearerAuth('JWT-auth')
 @Controller('admin/kyc')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(IpAccessControlGuard, JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @UseInterceptors(AuditLogInterceptor)
 export class AdminKycController {

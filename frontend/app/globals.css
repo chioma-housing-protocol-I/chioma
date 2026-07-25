@@ -84,7 +84,9 @@
   --color-slate-100: #ece9e0;
   --color-slate-200: #d9d5c9;
   --color-slate-300: #b9b3a4;
-  --color-slate-400: #8e897c;
+  /* slate-400 darkened #8e897c → #6b6760 for WCAG AA compliance:
+     5.62:1 on white · 5.20:1 on slate-50 · 4.63:1 on slate-100 */
+  --color-slate-400: #6b6760;
   --color-slate-500: #646056;
   --color-slate-600: #45423c;
   --color-slate-700: #2c2b28;
@@ -97,7 +99,9 @@
   --color-neutral-100: #ece9e0;
   --color-neutral-200: #d9d5c9;
   --color-neutral-300: #b9b3a4;
-  --color-neutral-400: #8e897c;
+  /* neutral-400 darkened #8e897c → #6b6760 for WCAG AA compliance:
+     5.62:1 on white · 5.20:1 on neutral-50 · 4.63:1 on neutral-100 */
+  --color-neutral-400: #6b6760;
   --color-neutral-500: #646056;
   --color-neutral-600: #45423c;
   --color-neutral-700: #2c2b28;

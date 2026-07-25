@@ -7,13 +7,16 @@ import {
   LOCALE_OPTIONS,
   type SupportedLocale,
 } from '@/lib/i18n';
+import { useAuthStore } from '@/store/authStore';
 
 interface LanguageSwitcherProps {
   className?: string;
 }
 
 export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
-  const { locale, setLocale } = useTranslation();
+  const { locale, setLocale, isHydrated } = useTranslation();
+  const updatePreferences = useAuthStore((s) => s.updatePreferences);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -40,6 +43,24 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   function handleSelect(code: SupportedLocale) {
     setLocale(code);
     setOpen(false);
+
+    // Sync locale preference to the user's profile if authenticated.
+    if (isAuthenticated) {
+      updatePreferences({ locale: code });
+    }
+  }
+
+  // Render a stable placeholder until the store has hydrated to avoid
+  // any React hydration mismatch between server and client renders.
+  if (!isHydrated) {
+    return (
+      <div className={`relative ${className}`}>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300">
+          <Globe size={15} />
+          <span className="w-14 h-4 bg-white/10 rounded animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   return (

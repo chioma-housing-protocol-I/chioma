@@ -70,7 +70,7 @@ function buildTimeline(dispute: DashboardDispute): TimelineEvent[] {
       label: 'Dispute filed',
       date: dispute.createdAt,
       icon: <Scale size={14} />,
-      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     },
   ];
 
@@ -236,7 +236,7 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
             <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
               <MessageSquareText
                 size={16}
-                className="text-blue-600 dark:text-blue-400"
+                className="text-blue-800 dark:text-blue-400"
               />
             </div>
             <div>
