@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -69,7 +70,7 @@ export class PaymentService {
     private readonly idempotencyService: IdempotencyService,
     private readonly dataSource: DataSource,
     private readonly fraudHooksService: FraudHooksService,
-  ) {}
+  ) { }
 
   @Locked({
     key: (dto: CreatePaymentRecordDto) =>
@@ -298,9 +299,9 @@ export class PaymentService {
       },
       paymentMethod: payment.paymentMethodRelation
         ? {
-            type: payment.paymentMethodRelation.paymentType,
-            lastFour: payment.paymentMethodRelation.lastFour,
-          }
+          type: payment.paymentMethodRelation.paymentType,
+          lastFour: payment.paymentMethodRelation.lastFour,
+        }
         : null,
     };
 
@@ -935,19 +936,19 @@ export class PaymentService {
   ) {
     const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
     const isProduction = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
-    
+
     // Require webhook secret in production/staging environments
     if (isProduction && !configuredSecret) {
       this.logger.error('PAYMENT_WEBHOOK_SECRET is required in production/staging');
       throw new InternalServerErrorException('Webhook secret not configured');
     }
-    
+
     // Validate webhook secret if configured
     if (configuredSecret && secretHeader !== configuredSecret) {
       this.logger.warn('Invalid payment webhook secret provided');
       throw new UnauthorizedException('Invalid payment webhook secret');
     }
-    
+
     // Log webhook validation failures for security monitoring
     if (!secretHeader && configuredSecret) {
       this.logger.warn('Webhook received without secret header');
@@ -958,8 +959,8 @@ export class PaymentService {
       ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
       : dto.referenceNumber
         ? await this.paymentRepository.findOne({
-            where: { referenceNumber: dto.referenceNumber },
-          })
+          where: { referenceNumber: dto.referenceNumber },
+        })
         : null;
 
     if (!payment) {
