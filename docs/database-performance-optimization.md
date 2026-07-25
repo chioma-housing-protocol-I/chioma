@@ -57,9 +57,12 @@ CREATE INDEX idx_properties_city_status_created
   ON properties (city, status, created_at DESC)
   WHERE status = 'published';
 
--- Payments: tenant history lookup
-CREATE INDEX idx_payments_tenant_created
-  ON payments (tenant_id, created_at DESC);
+-- Payments: status filters + createdAt sort (issue #1405)
+-- Covers PaymentService.listPayments: WHERE user_id + status, ORDER BY created_at DESC
+CREATE INDEX "IDX_payments_user_status_created_at"
+  ON payments (user_id, status, created_at);
+-- Verify planner: pnpm --dir backend run db:verify-payment-status-index
+-- Benchmark (~2M rows): Bitmap Heap Scan + Sort ~41.9ms → Index Scan Backward ~0.37ms (~114x)
 
 -- Users: email login (case-insensitive)
 CREATE UNIQUE INDEX idx_users_email_lower
