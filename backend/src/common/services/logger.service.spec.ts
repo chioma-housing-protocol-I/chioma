@@ -2,6 +2,7 @@ import { LoggerService } from './logger.service';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { requestContext } from '../request-context/request-context';
 
 describe('LoggerService', () => {
   let service: LoggerService;
@@ -80,6 +81,30 @@ describe('LoggerService', () => {
     expect(verboseSpy).toHaveBeenCalledWith(
       'Verbose message',
       expect.any(Object),
+    );
+  });
+
+  it('adds request correlation metadata from the active request context', () => {
+    const logSpy = jest.spyOn(service['logger'], 'info');
+
+    requestContext.run(
+      {
+        requestId: 'req-123',
+        correlationId: 'req-123',
+        userId: 'user-456',
+      },
+      () => {
+        service.log('Scoped message');
+      },
+    );
+
+    expect(logSpy).toHaveBeenCalledWith(
+      'Scoped message',
+      expect.objectContaining({
+        requestId: 'req-123',
+        correlationId: 'req-123',
+        userId: 'user-456',
+      }),
     );
   });
 

@@ -17,16 +17,19 @@ describe('QueryBuilderUtils', () => {
     it('should apply equality filter for a string value', () => {
       QueryBuilderUtils.applyFilters(mockQb, { status: 'ACTIVE' });
 
-      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.status = :status', {
-        status: 'ACTIVE',
-      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'entity.status = :filter_0',
+        {
+          filter_0: 'ACTIVE',
+        },
+      );
     });
 
     it('should apply equality filter for a numeric value', () => {
       QueryBuilderUtils.applyFilters(mockQb, { page: 1 });
 
-      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.page = :page', {
-        page: 1,
+      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.page = :filter_0', {
+        filter_0: 1,
       });
     });
 
@@ -36,8 +39,8 @@ describe('QueryBuilderUtils', () => {
       });
 
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'entity.roles IN (:...roles)',
-        { roles: ['ADMIN', 'LANDLORD'] },
+        'entity.roles IN (:...filter_0)',
+        { filter_0: ['ADMIN', 'LANDLORD'] },
       );
     });
 
@@ -45,8 +48,8 @@ describe('QueryBuilderUtils', () => {
       QueryBuilderUtils.applyFilters(mockQb, { types: ['APARTMENT'] });
 
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'entity.types IN (:...types)',
-        { types: ['APARTMENT'] },
+        'entity.types IN (:...filter_0)',
+        { filter_0: ['APARTMENT'] },
       );
     });
 
@@ -87,8 +90,8 @@ describe('QueryBuilderUtils', () => {
       });
 
       expect(mockQb.andWhere).toHaveBeenCalledTimes(1);
-      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.valid = :valid', {
-        valid: 'value',
+      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.valid = :filter_0', {
+        filter_0: 'value',
       });
     });
 
@@ -103,11 +106,19 @@ describe('QueryBuilderUtils', () => {
       // The implementation checks `value !== undefined && value !== null && value !== ''`
       // so `false` passes through and is applied as an equality filter
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'entity.isActive = :isActive',
+        'entity.isActive = :filter_0',
         {
-          isActive: false,
+          filter_0: false,
         },
       );
+    });
+
+    it('skips unsafe filter field names', () => {
+      QueryBuilderUtils.applyFilters(mockQb, {
+        'status OR 1=1 --': 'ACTIVE',
+      });
+
+      expect(mockQb.andWhere).not.toHaveBeenCalled();
     });
   });
 
@@ -241,9 +252,12 @@ describe('QueryBuilderUtils', () => {
     it('should handle empty array filter value', () => {
       QueryBuilderUtils.applyFilters(mockQb, { ids: [] });
       // Empty array is truthy, so it will be applied as IN
-      expect(mockQb.andWhere).toHaveBeenCalledWith('entity.ids IN (:...ids)', {
-        ids: [],
-      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'entity.ids IN (:...filter_0)',
+        {
+          filter_0: [],
+        },
+      );
     });
 
     it('should use alias from query builder for field prefixing', () => {
@@ -251,8 +265,8 @@ describe('QueryBuilderUtils', () => {
       QueryBuilderUtils.applyFilters(mockQb, { action: 'CREATE' });
 
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'audit_log.action = :action',
-        { action: 'CREATE' },
+        'audit_log.action = :filter_0',
+        { filter_0: 'CREATE' },
       );
     });
 
@@ -261,6 +275,16 @@ describe('QueryBuilderUtils', () => {
       QueryBuilderUtils.applySorting(mockQb, 'price', 'ASC');
 
       expect(mockQb.orderBy).toHaveBeenCalledWith('property.price', 'ASC');
+    });
+
+    it('falls back to createdAt for unsafe sort fields', () => {
+      QueryBuilderUtils.applySorting(
+        mockQb,
+        'createdAt; DROP TABLE users; --',
+        'ASC',
+      );
+
+      expect(mockQb.orderBy).toHaveBeenCalledWith('entity.createdAt', 'ASC');
     });
   });
 });
