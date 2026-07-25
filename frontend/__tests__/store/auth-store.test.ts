@@ -8,6 +8,7 @@ vi.mock('@/lib/api-client', () => ({
   apiClient: {
     post: postMock,
   },
+  setApiClientToken: vi.fn(),
 }));
 
 import {
