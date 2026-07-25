@@ -36,6 +36,7 @@ import {
   ensureUserId,
   getIdempotencyKey,
 } from './payment.helpers';
+import { runBatch, BatchResult } from '../../common/utils/batch.utils';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -590,7 +591,9 @@ export class PaymentService {
     return this.processSchedulePayment(schedule);
   }
 
-  async processDueSchedules(limit = 50): Promise<Payment[]> {
+  async processDueSchedules(
+    limit = 50,
+  ): Promise<BatchResult<PaymentSchedule, Payment>> {
     const now = new Date();
     const dueSchedules = await this.paymentScheduleRepository.find({
       where: {
@@ -600,13 +603,19 @@ export class PaymentService {
       order: { nextRunAt: 'ASC' },
       take: limit,
     });
-    const results: Payment[] = [];
 
-    for (const schedule of dueSchedules) {
-      results.push(await this.processSchedulePayment(schedule));
+    const result = await runBatch(dueSchedules, (schedule) =>
+      this.processSchedulePayment(schedule),
+    );
+
+    if (result.failed.length > 0) {
+      this.logger.warn(
+        `processDueSchedules: ${result.failed.length}/${result.total} schedules failed: ` +
+          result.failed.map((f) => `${f.item.id} (${f.error})`).join(', '),
+      );
     }
 
-    return results;
+    return result;
   }
 
   @Locked({
