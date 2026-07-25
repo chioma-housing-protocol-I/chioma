@@ -21,7 +21,7 @@ help:
 	@echo "$(BLUE)================================$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Main Targets (matches frontend-ci-cd.yml):$(NC)"
-	@echo "  $(GREEN)ci$(NC)              - Run full CI pipeline (install → audit → format-check → test → build)"
+	@echo "  $(GREEN)ci$(NC)              - Run full CI pipeline (install → audit → format-check → test → i18n-audit → build)"
 	@echo "  $(GREEN)pre-commit$(NC)      - Run pre-commit checks (format-check → test)"
 	@echo ""
 	@echo "$(YELLOW)Individual Pipeline Steps:$(NC)"
@@ -31,6 +31,8 @@ help:
 	@echo "  $(GREEN)format$(NC)          - Format code with Prettier"
 	@echo "  $(GREEN)format-check$(NC)    - Check Prettier formatting without modifying"
 	@echo "  $(GREEN)test$(NC)            - Run unit tests"
+	@echo "  $(GREEN)i18n-audit$(NC)      - Audit translation coverage (fails CI on missing keys)"
+	@echo "  $(GREEN)i18n-audit-fix$(NC)  - Scaffold missing translation keys with TODO values"
 	@echo "  $(GREEN)build$(NC)           - Create production build"
 	@echo ""
 	@echo "$(YELLOW)Utility Targets:$(NC)"
@@ -94,6 +96,18 @@ build: install
 	pnpm run build
 	@echo "$(GREEN)✅ Build completed successfully$(NC)"
 
+##@ i18n
+
+i18n-audit: install
+	@echo "$(BLUE)🌐 Running i18n translation coverage audit...$(NC)"
+	node scripts/i18n-audit.mjs
+	@echo "$(GREEN)✅ i18n audit passed$(NC)"
+
+i18n-audit-fix: install
+	@echo "$(BLUE)🔧 Scaffolding missing translation keys...$(NC)"
+	node scripts/i18n-audit.mjs --fix
+	@echo "$(GREEN)✅ Missing keys scaffolded (review TODO values)$(NC)"
+
 ##@ CI/CD Pipeline Validation
 
 pre-commit: format-check test
@@ -102,7 +116,7 @@ pre-commit: format-check test
 	@echo "   Ready to commit your changes."
 	@echo ""
 
-ci: install audit format-check test build
+ci: install audit format-check test i18n-audit build
 	@echo ""
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════$(NC)"
 	@echo "$(GREEN)✅ FULL FRONTEND CI PIPELINE PASSED SUCCESSFULLY$(NC)"
@@ -113,6 +127,7 @@ ci: install audit format-check test build
 	@echo "  ✅ Security audit passed"
 	@echo "  ✅ Code formatting verified"
 	@echo "  ✅ Unit tests passed"
+	@echo "  ✅ i18n translation coverage passed"
 	@echo "  ✅ Production build successful"
 	@echo ""
 	@echo "$(YELLOW)Your PR should pass all GitHub Actions checks.$(NC)"

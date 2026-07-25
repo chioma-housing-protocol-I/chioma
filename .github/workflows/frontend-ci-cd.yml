@@ -53,6 +53,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Run i18n translation coverage audit
+        run: pnpm run i18n:audit
+
   build:
     name: Build
     runs-on: ubuntu-latest
