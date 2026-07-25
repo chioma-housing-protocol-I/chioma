@@ -289,8 +289,7 @@ export class KycService {
     const limit = query.limit ?? 10;
     const sortBy = query.sortBy ?? 'createdAt';
     const sortOrder = (query.sortOrder ?? 'desc').toUpperCase() as
-      | 'ASC'
-      | 'DESC';
+      'ASC' | 'DESC';
 
     const qb = this.kycRepository
       .createQueryBuilder('kyc')

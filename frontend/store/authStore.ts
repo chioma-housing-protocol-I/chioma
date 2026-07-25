@@ -7,15 +7,22 @@ import { withMiddleware } from './middleware';
 
 // --- Types -------------------------------------------------------------------
 
-export interface User {
+export type Role = 'admin' | 'user' | 'agent';
+
+export interface BaseUser {
   id: string;
   email: string;
   emailVerified: boolean;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
   avatar?: string;
 }
+
+export type AdminUser = BaseUser & { role: 'admin' };
+export type RegularUser = BaseUser & { role: 'user' };
+export type AgentUser = BaseUser & { role: 'agent' };
+
+export type User = AdminUser | RegularUser | AgentUser;
 
 interface AuthState {
   user: User | null;
@@ -193,15 +200,19 @@ function persistAuth(
 }
 
 function normalizeUser(user: AuthApiUser): User {
+  if (user.role !== 'admin' && user.role !== 'user' && user.role !== 'agent') {
+    throw new Error(`Invalid role assigned: ${user.role}`);
+  }
+
   return {
     id: user.id,
     email: user.email ?? '',
     emailVerified: user.emailVerified ?? false,
     firstName: user.firstName ?? '',
     lastName: user.lastName ?? '',
-    role: user.role === 'admin' ? 'admin' : 'user',
+    role: user.role,
     avatar: user.avatar,
-  };
+  } as User;
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {

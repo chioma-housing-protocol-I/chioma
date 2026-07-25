@@ -78,7 +78,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const dashboardHref = user?.role === 'admin' ? '/admin' : '/user';
 
   return (
-    <nav
+    <header
       className={`top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
         isScrolled
           ? 'backdrop-blur-xl bg-slate-950/95 border-b border-white/20 py-2 shadow-xl shadow-black/20'
@@ -86,7 +86,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
       }`}
       suppressHydrationWarning
     >
-      <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
+      <nav
+        className="container mx-auto px-4 sm:px-6 flex items-center justify-between"
+        aria-label="Main navigation"
+      >
         <Logo
           size="md"
           textClassName="text-xl font-bold text-white tracking-tight"
@@ -197,17 +200,25 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
           )}
         </div>
 
+        {/* Mobile Menu Button */}
         <button
           className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg hover:bg-white/10 transition-colors text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-menu"
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-      </div>
+      </nav>
 
+      {/* Mobile Navigation Drawer */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-slate-950/98 border-b border-white/20 shadow-xl shadow-black/20">
+        <nav
+          id="mobile-menu"
+          className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-slate-950/98 border-b border-white/20 shadow-xl shadow-black/20"
+          aria-label="Mobile navigation"
+        >
           <div className="flex flex-col p-6 space-y-4">
             {NAV_LINKS.map((link) => {
               const active = isActive(link.href);
@@ -273,9 +284,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
               )}
             </div>
           </div>
-        </div>
+        </nav>
       )}
-    </nav>
+    </header>
   );
 };
 

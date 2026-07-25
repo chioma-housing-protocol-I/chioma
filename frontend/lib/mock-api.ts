@@ -344,6 +344,109 @@ const dynamicPatterns: Array<{
       limit: 10,
     }),
   },
+  // ─── Rent Payment Schedule ─────────────────────────────────────────────────
+  {
+    pattern: /^\/rent\/agreements\/([^/]+)\/schedule$/,
+    handler: (match) => [
+      {
+        paymentNumber: 1,
+        dueDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+        amount: 2500,
+        agreementId: match[1],
+      },
+      {
+        paymentNumber: 2,
+        dueDate: new Date(Date.now() + 60 * 86400000).toISOString(),
+        amount: 2500,
+        agreementId: match[1],
+      },
+      {
+        paymentNumber: 3,
+        dueDate: new Date(Date.now() + 90 * 86400000).toISOString(),
+        amount: 2500,
+        agreementId: match[1],
+      },
+    ],
+  },
+  // ─── Rent Payment History ──────────────────────────────────────────────────
+  {
+    pattern: /^\/rent\/agreements\/([^/]+)\/history$/,
+    handler: (match) => [
+      {
+        id: 'pay-hist-001',
+        agreementId: match[1],
+        amount: 2500,
+        currency: 'USDC',
+        status: 'completed',
+        paymentMethod: 'card',
+        dueDate: new Date(Date.now() - 30 * 86400000).toISOString(),
+        paidAt: new Date(Date.now() - 28 * 86400000).toISOString(),
+        referenceNumber: 'REF-001',
+        createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
+      },
+      {
+        id: 'pay-hist-002',
+        agreementId: match[1],
+        amount: 2500,
+        currency: 'USDC',
+        status: 'completed',
+        paymentMethod: 'bank_transfer',
+        dueDate: new Date(Date.now() - 60 * 86400000).toISOString(),
+        paidAt: new Date(Date.now() - 58 * 86400000).toISOString(),
+        referenceNumber: 'REF-002',
+        createdAt: new Date(Date.now() - 58 * 86400000).toISOString(),
+      },
+    ],
+  },
+  // ─── Late Fee Calculation ──────────────────────────────────────────────────
+  {
+    pattern: /^\/rent\/calculate\/late-fee$/,
+    handler: () => ({ lateFee: 125 }),
+  },
+  // ─── Payment Schedules ─────────────────────────────────────────────────────
+  {
+    pattern: /^\/payments\/schedules$/,
+    handler: () => [
+      {
+        id: 'sched-001',
+        userId: 'user_1',
+        agreementId: 'agreement_1',
+        paymentMethod: null,
+        paymentMethodId: 1,
+        amount: 2500,
+        currency: 'USDC',
+        interval: 'monthly',
+        nextRunAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+        status: 'active',
+        retries: 0,
+        maxRetries: 3,
+        lastError: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+  },
+  // ─── Payment Schedule Detail ───────────────────────────────────────────────
+  {
+    pattern: /^\/payments\/schedules\/([^/]+)$/,
+    handler: (match) => ({
+      id: match[1],
+      userId: 'user_1',
+      agreementId: 'agreement_1',
+      paymentMethod: null,
+      paymentMethodId: 1,
+      amount: 2500,
+      currency: 'USDC',
+      interval: 'monthly',
+      nextRunAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+      status: 'active',
+      retries: 0,
+      maxRetries: 3,
+      lastError: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+  },
 ];
 
 export function getMockData(endpoint: string): unknown {

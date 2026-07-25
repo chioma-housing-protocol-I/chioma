@@ -54,7 +54,10 @@ export function useSuspendUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiClient.post(`/users/${userId}/deactivate`, {});
+      await apiClient.post(
+        `/admin/users/${encodeURIComponent(userId)}/deactivate`,
+        {},
+      );
     },
     onSuccess: (_, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
@@ -72,7 +75,10 @@ export function useActivateUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiClient.post(`/users/restore`, { userId });
+      await apiClient.post(
+        `/admin/users/${encodeURIComponent(userId)}/restore`,
+        {},
+      );
     },
     onSuccess: (_, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
