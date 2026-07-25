@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PaymentService } from '../payment.service';
+import { RefundService } from '../refund.service';
 import { Payment } from '../entities/payment.entity';
 import { PaymentMethod } from '../entities/payment-method.entity';
 import { PaymentSchedule } from '../entities/payment-schedule.entity';
@@ -39,6 +40,7 @@ import { RetryService } from '../../../common/services/retry.service';
 describe('Utility Bill Integration Tests', () => {
   let module: TestingModule;
   let paymentService: PaymentService;
+  let refundService: RefundService;
   let dataSource: DataSource;
   let testUser: User;
   let testPaymentMethod: PaymentMethod;
@@ -88,6 +90,7 @@ describe('Utility Bill Integration Tests', () => {
       ],
       providers: [
         PaymentService,
+        RefundService,
         PaymentGatewayService,
         RetryService,
         {
@@ -138,6 +141,7 @@ describe('Utility Bill Integration Tests', () => {
     }).compile();
 
     paymentService = module.get<PaymentService>(PaymentService);
+    refundService = module.get<RefundService>(RefundService);
     dataSource = module.get<DataSource>(DataSource);
 
     // Setup test data
@@ -450,7 +454,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      const refunded = await paymentService.processRefund(
+      const refunded = await refundService.processRefund(
         payment.id,
         { amount: 500.0, reason: 'Bill overpayment refund' },
         testUser.id,
@@ -470,7 +474,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      const refunded = await paymentService.processRefund(
+      const refunded = await refundService.processRefund(
         payment.id,
         { amount: 200.0, reason: 'Partial refund' },
         testUser.id,
@@ -490,7 +494,7 @@ describe('Utility Bill Integration Tests', () => {
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
       await expect(
-        paymentService.processRefund(
+        refundService.processRefund(
           payment.id,
           { amount: 500.0, reason: 'Excessive refund' },
           testUser.id,
@@ -615,7 +619,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      await paymentService.processRefund(
+      await refundService.processRefund(
         payment.id,
         { amount: 300, reason: 'Full refund' },
         testUser.id,
@@ -642,7 +646,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      const refunded = await paymentService.processRefund(
+      const refunded = await refundService.processRefund(
         payment.id,
         {
           amount: 400.0,
@@ -666,7 +670,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      const refunded = await paymentService.processRefund(
+      const refunded = await refundService.processRefund(
         payment.id,
         { amount: 300.0, reason: 'Partial dispute - overcharged for service' },
         testUser.id,
@@ -685,14 +689,14 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      await paymentService.processRefund(
+      await refundService.processRefund(
         payment.id,
         { amount: 500.0, reason: 'First refund' },
         testUser.id,
       );
 
       await expect(
-        paymentService.processRefund(
+        refundService.processRefund(
           payment.id,
           { amount: 100.0, reason: 'Second refund attempt' },
           testUser.id,
@@ -709,7 +713,7 @@ describe('Utility Bill Integration Tests', () => {
 
       const payment = await paymentService.recordPayment(billDto, testUser.id);
 
-      await paymentService.processRefund(
+      await refundService.processRefund(
         payment.id,
         { amount: 250.0, reason: 'Dispute resolved in tenant favor' },
         testUser.id,

@@ -37,17 +37,51 @@ function isPlaceholderSecret(value: string): boolean {
   );
 }
 
+const MIN_JWT_SECRET_BYTES = 32;
+const MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR = 3;
+const JWT_SECRET_GENERATION_HINT =
+  'Generate a strong secret with: openssl rand -base64 48';
+
+/**
+ * Shannon entropy (bits per character). Used to catch secrets that are long
+ * enough but trivially predictable, e.g. a repeated character or a short
+ * repeating pattern padded out to the minimum length.
+ */
+function calculateShannonEntropyBitsPerChar(value: string): number {
+  const frequencies = new Map<string, number>();
+  for (const char of value) {
+    frequencies.set(char, (frequencies.get(char) ?? 0) + 1);
+  }
+  let entropy = 0;
+  for (const count of frequencies.values()) {
+    const probability = count / value.length;
+    entropy -= probability * Math.log2(probability);
+  }
+  return entropy;
+}
+
 function validateJwtSecret(
   name: string,
   value: unknown,
   errors: string[],
 ): void {
   if (!isNonEmpty(value)) {
-    errors.push(`${name} is required`);
+    errors.push(`${name} is required. ${JWT_SECRET_GENERATION_HINT}`);
     return;
   }
-  if (value.length < 32) {
-    errors.push(`${name} must be at least 32 characters`);
+  const byteLength = Buffer.byteLength(value, 'utf8');
+  if (byteLength < MIN_JWT_SECRET_BYTES) {
+    errors.push(
+      `${name} must be at least ${MIN_JWT_SECRET_BYTES} bytes (got ${byteLength}). ${JWT_SECRET_GENERATION_HINT}`,
+    );
+  }
+  if (
+    calculateShannonEntropyBitsPerChar(value) <
+    MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR
+  ) {
+    errors.push(
+      `${name} does not have enough entropy — it looks repetitive or predictable rather than randomly generated. ${JWT_SECRET_GENERATION_HINT}`,
+    );
   }
 }
 
