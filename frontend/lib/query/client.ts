@@ -8,6 +8,7 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { classifyUnknownError } from '@/lib/errors';
 import { useErrorStore } from '@/store/errorStore';
+import { queryCacheTtl } from './cache-ttl';
 
 // ─── Cache Monitoring ───────────────────────────────────────────────────────
 
@@ -50,12 +51,14 @@ export function recordCacheMiss(): void {
   cacheMetrics.misses++;
 }
 
-// ─── Defaults ────────────────────────────────────────────────────────────────
+// ─── Defaults (aligned with queryCacheTtl.default / queryKeys) ───────────────
 
-const STALE_TIME_MS = 30_000; // 30 s — data considered fresh
-const GC_TIME_MS = 5 * 60_000; // 5 min — unused cache kept in memory
+const STALE_TIME_MS = queryCacheTtl.default.staleTime;
+const GC_TIME_MS = queryCacheTtl.default.gcTime;
 const MAX_RETRIES = 2;
 const MAX_CACHE_SIZE = 100; // Maximum number of queries to cache
+
+export { STALE_TIME_MS, GC_TIME_MS };
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= MAX_RETRIES) return false;
