@@ -1,21 +1,28 @@
 import { LoggerService, LogContext } from './logger.service';
 
+/** Minimal interface covering both NestJS and custom logger shapes. */
+interface LoggerLike {
+  info?: (message: string, metadata: Record<string, unknown>) => void;
+  log?: (message: string, metadata: Record<string, unknown>) => void;
+  error: (message: string, error: unknown, metadata?: Record<string, unknown>) => void;
+}
+
 export function Logging(contextInfo: Partial<LogContext> = {}) {
   return function (
-    target: any,
+    target: { constructor: { name: string } },
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    const originalMethod = descriptor.value;
-    descriptor.value = async function (...args: any[]) {
-      const logger: LoggerService = this.logger || new LoggerService();
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
+    descriptor.value = async function (this: { logger?: LoggerLike }, ...args: unknown[]) {
+      const logger: LoggerLike = this.logger ?? new LoggerService();
       const logInfo = (message: string, metadata: Record<string, unknown>) => {
-        if (typeof (logger as any).info === 'function') {
-          (logger as any).info(message, metadata);
+        if (typeof logger.info === 'function') {
+          logger.info(message, metadata);
           return;
         }
-        if (typeof (logger as any).log === 'function') {
-          (logger as any).log(message, metadata);
+        if (typeof logger.log === 'function') {
+          logger.log(message, metadata);
         }
       };
       const method = propertyKey;

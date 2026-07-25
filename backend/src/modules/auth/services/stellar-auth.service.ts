@@ -307,6 +307,17 @@ export class StellarAuthService {
     email: string,
     role: string,
   ): { accessToken: string; refreshToken: string } {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is required');
+    }
+
+    const jwtRefreshSecret =
+      this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!jwtRefreshSecret) {
+      throw new Error('JWT_REFRESH_SECRET is required');
+    }
+
     const accessToken = this.jwtService.sign(
       {
         sub: userId,
@@ -315,6 +326,8 @@ export class StellarAuthService {
         type: 'access',
       },
       {
+        secret: jwtSecret,
+        expiresIn: '15m',
         secret:
           this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
         expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
@@ -329,6 +342,8 @@ export class StellarAuthService {
         type: 'refresh',
       },
       {
+        secret: jwtRefreshSecret,
+        expiresIn: '7d',
         secret:
           this.configService.get<string>('JWT_REFRESH_SECRET') ||
           'your-refresh-secret-key',

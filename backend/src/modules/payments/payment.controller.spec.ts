@@ -255,6 +255,10 @@ describe('Payment Controllers', () => {
       paymentId: 'pay_1',
       status: 'completed',
     };
+    await paymentWebhookController.handleGatewayWebhook(dto);
+    expect(mockPaymentService.handlePaymentGatewayWebhook).toHaveBeenCalledWith(
+      dto,
+    );
     await paymentWebhookController.handleGatewayWebhook(dto, 'secret');
     expect(
       mockPaymentWebhookService.handlePaymentGatewayWebhook,

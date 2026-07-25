@@ -11,6 +11,8 @@ import {
   UseGuards,
   UseInterceptors,
   Headers,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -33,6 +35,9 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
+import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
+import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
@@ -417,6 +422,19 @@ export class PaymentWebhookController {
   constructor(private readonly paymentWebhookService: PaymentWebhookService) {}
 
   @Post('gateway')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @UseGuards(WebhookSignatureGuard)
+  @WebhookSecret('PAYMENT_WEBHOOK_SECRET')
+  @ApiOperation({
+    summary: 'Handle payment gateway webhook events',
+    description:
+      'Called by external payment gateways to notify of status changes. ' +
+      'Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and ' +
+      'a timestamp in X-Webhook-Timestamp. Not for direct client use.',
+  })
+  async handleGatewayWebhook(@Body() dto: PaymentGatewayWebhookDto) {
+    return this.paymentService.handlePaymentGatewayWebhook(dto);
   @ApiOperation({ summary: 'Handle payment gateway webhook events' })
   @AuditLog({
     action: AuditAction.PAYMENT_COMPLETED,

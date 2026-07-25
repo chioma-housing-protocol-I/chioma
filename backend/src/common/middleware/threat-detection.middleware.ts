@@ -2,6 +2,11 @@ import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ThreatDetectionService } from '../../modules/security/threat-detection.service';
 
+/** Express Request extended with the user object populated by Passport/JWT. */
+interface AuthenticatedRequest extends Request {
+  user?: { id: string };
+}
+
 /**
  * Middleware that runs every inbound request through the threat detection engine.
  * Non-blocking: failures are logged and the request is allowed through.
@@ -12,9 +17,9 @@ export class ThreatDetectionMiddleware implements NestMiddleware {
 
   constructor(private readonly threatDetection: ThreatDetectionService) {}
 
-  async use(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  async use(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = (req as any).user?.id as string | undefined;
+      const userId = req.user?.id;
       const decision = await this.threatDetection.analyzeRequest(req, userId);
 
       if (decision === 'block') {

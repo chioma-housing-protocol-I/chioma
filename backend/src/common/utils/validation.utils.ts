@@ -45,4 +45,16 @@ export class ValidationUtils {
     const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
     return stellarAddressRegex.test(address);
   }
+
+  /**
+   * Validates that a decoded JWT payload's `type` claim matches the
+   * expected token type (e.g. an access token used where a refresh
+   * token is required, or vice versa)
+   */
+  static validateTokenType(
+    payload: { type?: string } | null | undefined,
+    expectedType: 'access' | 'refresh',
+  ): boolean {
+    return payload?.type === expectedType;
+  }
 }

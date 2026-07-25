@@ -16,7 +16,11 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { LockService } from '../../common/lock';
 import { IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
-import { encryptMetadata, decryptMetadata } from './payment.helpers';
+import {
+  encryptMetadata,
+  decryptMetadata,
+  PAYMENT_STATUS_MAP,
+} from './payment.helpers';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
@@ -710,6 +714,82 @@ describe('PaymentService', () => {
       process.env.PAYMENT_METADATA_SECRET = 'different-secret-key-456';
 
       expect(() => decryptMetadata(encrypted)).toThrow();
+    });
+  });
+
+  describe('PAYMENT_STATUS_MAP', () => {
+    it('maps payment gateway webhook statuses to PaymentStatus', () => {
+      expect(PAYMENT_STATUS_MAP['completed']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['successful']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['success']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['pending']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['processing']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['failed']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['error']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['cancelled']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['refunded']).toBe(PaymentStatus.REFUNDED);
+    });
+
+    it('maps escrow states to PaymentStatus', () => {
+      expect(PAYMENT_STATUS_MAP['active']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['released']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['refunded']).toBe(PaymentStatus.REFUNDED);
+      expect(PAYMENT_STATUS_MAP['failed']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['expired']).toBe(PaymentStatus.FAILED);
+    });
+
+    it('has no unknown status key', () => {
+      expect(PAYMENT_STATUS_MAP['unknown-status']).toBeUndefined();
+    });
+  });
+
+  describe('mapWebhookStatus (via handlePaymentGatewayWebhook)', () => {
+    it('maps a recognized webhook status using PAYMENT_STATUS_MAP', async () => {
+      const payment = {
+        id: 'pay_1',
+        userId: 'user_1',
+        status: PaymentStatus.PENDING,
+        metadata: {},
+      } as unknown as Payment;
+
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(payment);
+      (paymentRepository.save as jest.Mock).mockImplementation((p) =>
+        Promise.resolve(p),
+      );
+
+      const dto = {
+        paymentId: 'pay_1',
+        status: 'successful',
+        eventType: 'charge.updated',
+      } as any;
+
+      const result = await service.handlePaymentGatewayWebhook(dto);
+
+      expect(result.payment!.status).toBe(PaymentStatus.COMPLETED);
+    });
+
+    it('falls back to PENDING for an unrecognized webhook status', async () => {
+      const payment = {
+        id: 'pay_1',
+        userId: 'user_1',
+        status: PaymentStatus.PENDING,
+        metadata: {},
+      } as unknown as Payment;
+
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(payment);
+      (paymentRepository.save as jest.Mock).mockImplementation((p) =>
+        Promise.resolve(p),
+      );
+
+      const dto = {
+        paymentId: 'pay_1',
+        status: 'unknown-status',
+        eventType: 'charge.updated',
+      } as any;
+
+      const result = await service.handlePaymentGatewayWebhook(dto);
+
+      expect(result.payment!.status).toBe(PaymentStatus.PENDING);
     });
   });
 });

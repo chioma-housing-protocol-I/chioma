@@ -252,7 +252,7 @@ export class AuthService {
         secret: this.getJwtRefreshSecret(),
       });
 
-      if (payload.type !== 'refresh') {
+      if (!ValidationUtils.validateTokenType(payload, 'refresh')) {
         throw new AuthenticationError(
           ErrorCode.AUTH_TOKEN_INVALID,
           'Invalid token type',

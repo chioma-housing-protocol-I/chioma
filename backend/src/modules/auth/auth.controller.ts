@@ -259,7 +259,11 @@ export class AuthController {
       role: string;
       type: string;
     }>(completeMfaLoginDto.mfaToken, {
-      secret: this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+      secret: (() => {
+        const s = this.configService.get<string>('JWT_SECRET');
+        if (!s) throw new Error('JWT_SECRET is required');
+        return s;
+      })(),
     });
 
     if (payload.type !== 'mfa_required') {
