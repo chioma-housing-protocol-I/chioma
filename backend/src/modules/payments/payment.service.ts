@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,6 +37,7 @@ import {
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
+import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 import { TransactionStatus } from '../stellar/entities/stellar-transaction.entity';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
@@ -182,7 +184,41 @@ export class PaymentService {
       idempotencyKey,
     });
 
-    const savedPayment = await this.paymentRepository.save(payment);
+    let savedPayment: Payment;
+    try {
+      savedPayment = await this.paymentRepository.save(payment);
+    } catch (persistError) {
+      // The gateway has already moved money at this point. If we can't
+      // persist the payment record locally, the charge would otherwise
+      // silently vanish from our books (and a client retry would double-
+      // charge, since there is no record for the idempotency check to find).
+      // Attempt a compensating refund so the customer isn't left charged
+      // for a payment we have no record of.
+      this.logger.error(
+        `CRITICAL: charge ${chargeResult.chargeId} succeeded but persisting the payment record failed for user ${userId}. Attempting compensating refund.`,
+        persistError instanceof Error ? persistError.stack : persistError,
+      );
+
+      let compensated = false;
+      try {
+        const refundResult = await this.paymentGateway.processRefund(
+          chargeResult.chargeId ?? '',
+          dto.amount,
+        );
+        compensated = refundResult.success;
+      } catch (refundError) {
+        this.logger.error(
+          `CRITICAL: compensating refund for charge ${chargeResult.chargeId} also failed. Manual reconciliation required.`,
+          refundError instanceof Error ? refundError.stack : refundError,
+        );
+      }
+
+      throw new InternalServerErrorException(
+        compensated
+          ? 'Payment could not be recorded and has been automatically refunded. Please try again.'
+          : `Payment could not be recorded and the automatic refund failed for charge ${chargeResult.chargeId}. Contact support with this reference.`,
+      );
+    }
     this.logger.log(`Payment recorded: ${savedPayment.id}`);
 
     void this.fraudHooksService.onPaymentRecorded({
@@ -428,16 +464,39 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
+    let transactionHash: string;
     try {
       const callerKeypair = StellarSdk.Keypair.fromSecret(dto.userSecret);
-      const transactionHash =
-        await this.paymentProcessingService.processRentPayment(
-          dto.userAddress,
-          dto.agreementId,
-          dto.amount,
-          callerKeypair,
-        );
+      transactionHash = await this.paymentProcessingService.processRentPayment(
+        dto.userAddress,
+        dto.agreementId,
+        dto.amount,
+        callerKeypair,
+      );
+    } catch (error) {
+      // The on-chain transfer itself failed, so nothing needs to be
+      // reconciled - it's safe to record this as a failed payment.
+      const failedPayment = this.paymentRepository.create({
+        userId,
+        agreementId: dto.agreementId,
+        amount: Number(dto.amount),
+        transactionFee: 0,
+        netAmount: Number(dto.amount),
+        currency: 'XLM',
+        status: PaymentStatus.FAILED,
+        processedAt: new Date(),
+        metadata: {
+          gateway: 'stellar',
+          flow: 'rent',
+          userAddress: dto.userAddress,
+          error: error instanceof Error ? error.message : 'Payment failed',
+        } as PaymentMetadata,
+      });
+      await this.paymentRepository.save(failedPayment);
+      throw error;
+    }
 
+    try {
       const payment = this.paymentRepository.create({
         userId,
         agreementId: dto.agreementId,
@@ -471,25 +530,17 @@ export class PaymentService {
         'PAYMENT_RECEIVED',
       );
       return saved;
-    } catch (error) {
-      const failedPayment = this.paymentRepository.create({
-        userId,
-        agreementId: dto.agreementId,
-        amount: Number(dto.amount),
-        transactionFee: 0,
-        netAmount: Number(dto.amount),
-        currency: 'XLM',
-        status: PaymentStatus.FAILED,
-        processedAt: new Date(),
-        metadata: {
-          gateway: 'stellar',
-          flow: 'rent',
-          userAddress: dto.userAddress,
-          error: error instanceof Error ? error.message : 'Payment failed',
-        } as PaymentMetadata,
-      });
-      await this.paymentRepository.save(failedPayment);
-      throw error;
+    } catch (persistError) {
+      // The on-chain transfer already succeeded. Recording it as FAILED here
+      // would hide a real transfer of funds, so surface a distinct error
+      // instead and flag it for manual reconciliation against the tx hash.
+      this.logger.error(
+        `CRITICAL: Stellar rent payment ${transactionHash} succeeded on-chain but failed to persist for user ${userId}. Manual reconciliation required.`,
+        persistError instanceof Error ? persistError.stack : persistError,
+      );
+      throw new InternalServerErrorException(
+        `Payment succeeded on-chain (tx: ${transactionHash}) but could not be recorded. Contact support with this reference for reconciliation.`,
+      );
     }
   }
 
@@ -512,15 +563,41 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
+    let escrow: StellarEscrow;
     try {
-      const escrow = await this.stellarService.createEscrow({
+      escrow = await this.stellarService.createEscrow({
         sourcePublicKey: dto.sourcePublicKey,
         destinationPublicKey: dto.destinationPublicKey,
         amount: dto.amount,
         expirationDate: dto.expirationDate,
         rentAgreementId: dto.agreementId,
       });
+    } catch (error) {
+      // The on-chain escrow was never created, so nothing needs to be
+      // reconciled - it's safe to record this as a failed payment.
+      const failedPayment = this.paymentRepository.create({
+        userId,
+        agreementId: dto.agreementId ?? null,
+        amount: Number(dto.amount),
+        transactionFee: 0,
+        netAmount: Number(dto.amount),
+        currency: 'XLM',
+        status: PaymentStatus.FAILED,
+        processedAt: new Date(),
+        metadata: {
+          gateway: 'stellar',
+          flow: 'escrow_deposit',
+          sourcePublicKey: dto.sourcePublicKey,
+          destinationPublicKey: dto.destinationPublicKey,
+          error:
+            error instanceof Error ? error.message : 'Escrow creation failed',
+        } as PaymentMetadata,
+      });
+      await this.paymentRepository.save(failedPayment);
+      throw error;
+    }
 
+    try {
       const payment = this.paymentRepository.create({
         userId,
         agreementId: dto.agreementId ?? null,
@@ -550,27 +627,17 @@ export class PaymentService {
         'PAYMENT_RECEIVED',
       );
       return saved;
-    } catch (error) {
-      const failedPayment = this.paymentRepository.create({
-        userId,
-        agreementId: dto.agreementId ?? null,
-        amount: Number(dto.amount),
-        transactionFee: 0,
-        netAmount: Number(dto.amount),
-        currency: 'XLM',
-        status: PaymentStatus.FAILED,
-        processedAt: new Date(),
-        metadata: {
-          gateway: 'stellar',
-          flow: 'escrow_deposit',
-          sourcePublicKey: dto.sourcePublicKey,
-          destinationPublicKey: dto.destinationPublicKey,
-          error:
-            error instanceof Error ? error.message : 'Escrow creation failed',
-        } as PaymentMetadata,
-      });
-      await this.paymentRepository.save(failedPayment);
-      throw error;
+    } catch (persistError) {
+      // The on-chain escrow already exists. Recording it as FAILED here
+      // would hide real, locked-up funds, so surface a distinct error
+      // instead and flag it for manual reconciliation against the escrow id.
+      this.logger.error(
+        `CRITICAL: Escrow ${escrow.id} was created on-chain but failed to persist for user ${userId}. Manual reconciliation required.`,
+        persistError instanceof Error ? persistError.stack : persistError,
+      );
+      throw new InternalServerErrorException(
+        `Escrow deposit succeeded on-chain (escrow: ${escrow.id}) but could not be recorded. Contact support with this reference for reconciliation.`,
+      );
     }
   }
 

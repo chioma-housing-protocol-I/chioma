@@ -6,8 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { PaymentGatewayWebhookDto } from './dto/payment-gateway.dto';
+import { IdempotencyService } from '../../common/idempotency';
+
+const WEBHOOK_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class PaymentWebhookService {
@@ -16,6 +20,7 @@ export class PaymentWebhookService {
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+    private readonly idempotencyService: IdempotencyService,
   ) {}
 
   async handlePaymentGatewayWebhook(
@@ -47,6 +52,37 @@ export class PaymentWebhookService {
       throw new UnauthorizedException('Webhook signature required');
     }
 
+    // Gateways retry webhook deliveries on timeout or non-2xx responses.
+    // Dedupe on the gateway's event ID (or a fingerprint of the payload when
+    // no event ID is supplied) so a retried delivery replays the original
+    // result instead of reprocessing the status transition a second time.
+    const idempotencyKey = this.buildIdempotencyKey(dto);
+    return this.idempotencyService.process(
+      idempotencyKey,
+      WEBHOOK_IDEMPOTENCY_TTL_MS,
+      () => this.processWebhook(dto),
+    );
+  }
+
+  private buildIdempotencyKey(dto: PaymentGatewayWebhookDto): string {
+    if (dto.eventId) {
+      return `webhook:payment-gateway:${dto.eventId}`;
+    }
+    const fingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          eventType: dto.eventType,
+          paymentId: dto.paymentId ?? null,
+          referenceNumber: dto.referenceNumber ?? null,
+          status: dto.status,
+          transactionHash: dto.transactionHash ?? null,
+        }),
+      )
+      .digest('hex');
+    return `webhook:payment-gateway:fingerprint:${fingerprint}`;
+  }
+
+  private async processWebhook(dto: PaymentGatewayWebhookDto) {
     const payment = dto.paymentId
       ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
       : dto.referenceNumber
