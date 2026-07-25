@@ -23,6 +23,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { ValidationError } from '../../common/errors/domain-errors';
 
 @ApiTags('Admin Disputes')
 @ApiBearerAuth('JWT-auth')
@@ -55,8 +56,12 @@ export class AdminDisputesController {
         @Body() adminUpdateDisputeDto: AdminUpdateDisputeDto,
         @Request() req,
     ) {
+        const numericId = parseInt(id, 10);
+        if (isNaN(numericId)) {
+            throw new ValidationError(`Invalid dispute ID: ${id}. Must be a valid number.`);
+        }
         return this.disputesService.update(
-            parseInt(id),
+            numericId,
             adminUpdateDisputeDto,
             req.user.id,
         );
