@@ -17,7 +17,7 @@
     "test:cov": "jest --coverage --forceExit",
     "test:leaks": "jest --detectOpenHandles --forceExit",
     "test:mutation": "stryker run",
-    "test:mutation:fast": "stryker run --mutate src/common/utils/*.ts",
+    "test:mutation:fast": "stryker run --mutate src/common/utils/**/*.ts",
     "test:contract": "jest --config ./test/jest-contract.json --forceExit",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "DB_TYPE=postgres jest --config ./test/jest-e2e.json --runInBand",

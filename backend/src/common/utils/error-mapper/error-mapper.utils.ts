@@ -1,14 +1,14 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
-import { BaseAppError } from '../errors/base.error';
-import { ErrorFactory } from '../errors/error-factory';
+import { BaseAppError } from '../../errors/base.error';
+import { ErrorFactory } from '../../errors/error-factory';
 import {
   ResourceNotFoundError,
   DuplicateEntryError,
   ValidationError,
   SystemError,
-} from '../errors/domain-errors';
-import { ErrorCode } from '../errors/error-codes';
+} from '../../errors/domain-errors';
+import { ErrorCode } from '../../errors/error-codes';
 
 export interface StandardErrorResponse {
   success: false;

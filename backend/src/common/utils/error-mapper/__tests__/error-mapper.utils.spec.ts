@@ -9,7 +9,7 @@ import {
   ResourceNotFoundError,
   DuplicateEntryError,
   SystemError,
-} from '../../errors/domain-errors';
+} from '../../../errors/domain-errors';
 
 describe('ErrorMapperUtils', () => {
   describe('mapError', () => {

@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  forwardRef,
+} from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -22,7 +27,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   imports: [
     HttpModule,
     ScheduleModule.forRoot(),
-    NotificationsModule,
+    forwardRef(() => NotificationsModule),
     TypeOrmModule.forFeature([]),
   ],
   controllers: [MonitoringController, PerformanceController],

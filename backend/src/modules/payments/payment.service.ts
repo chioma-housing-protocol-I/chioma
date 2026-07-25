@@ -26,7 +26,7 @@ import {
   getIdempotencyKey,
   PAYMENT_STATUS_MAP,
 } from './payment.helpers';
-import { runBatch, BatchResult } from '../../common/utils/batch.utils';
+import { runBatch, BatchResult } from '../../common/utils/batch/batch.utils';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
