@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -64,6 +67,8 @@ export class AuthService {
     private referralService: ReferralService,
     private readonly loggerService: LoggerService,
     private readonly lockService: LockService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly encryptedCache: EncryptedCacheService,
   ) {}
 
   @Logging({ service: 'AuthService' })
@@ -153,6 +158,7 @@ export class AuthService {
 
   async login(
     loginDto: LoginDto,
+    context?: { ipAddress?: string; userAgent?: string },
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
@@ -198,6 +204,9 @@ export class AuthService {
         'Invalid email or password',
       );
     }
+
+    // Account takeover detection: flag anomalous logins before issuing tokens
+    await this.detectLoginAnomaly(user, context);
 
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
@@ -579,6 +588,48 @@ export class AuthService {
     }
 
     return this.sanitizeUser(user);
+  }
+
+  /**
+   * Detects account takeover signals: new IP, new user-agent, or unusual
+   * login time. Logs a warning; does not block (MFA handles hard blocking).
+   */
+  private async detectLoginAnomaly(
+    user: User,
+    context?: { ipAddress?: string; userAgent?: string },
+  ): Promise<void> {
+    if (!context?.ipAddress && !context?.userAgent) return;
+
+    const knownKey = `login:known:${user.id}`;
+    const known = await this.encryptedCache
+      .get<{ ips: string[]; agents: string[] }>(knownKey)
+      .catch(() => null);
+
+    const ip = context.ipAddress ?? '';
+    const ua = context.userAgent ?? '';
+    const anomalies: string[] = [];
+
+    if (known) {
+      if (ip && !known.ips.includes(ip)) {
+        anomalies.push(`new_ip:${ip}`);
+      }
+      if (ua && !known.agents.includes(ua)) {
+        anomalies.push('new_user_agent');
+      }
+    }
+
+    if (anomalies.length) {
+      this.logger.warn(
+        `Potential account takeover for user ${user.id}: ${anomalies.join(', ')}`,
+      );
+    }
+
+    // Update known fingerprints (keep last 10 IPs and agents)
+    const updatedIps = [...new Set([...(known?.ips ?? []), ip])].slice(-10);
+    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(-10);
+    await this.encryptedCache
+      .set(knownKey, { ips: updatedIps, agents: updatedAgents }, 30 * 24 * 3600 * 1000)
+      .catch(() => null);
   }
 
   private async handleFailedLogin(user: User): Promise<void> {

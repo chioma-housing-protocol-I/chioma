@@ -170,7 +170,10 @@ export class AuthController {
     const startTime = Date.now();
 
     try {
-      const result = await this.authService.login(loginDto);
+      const result = await this.authService.login(loginDto, {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') ?? undefined,
+      });
       const duration = Date.now() - startTime;
 
       // If MFA is required, return MFA token

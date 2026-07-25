@@ -168,13 +168,18 @@ export class RateLimitGuard implements CanActivate {
   }
 
   private getIdentifier(request: RequestWithUser): string {
+    // Authenticated users are always identified by their user ID.
+    // This prevents bypass via IP spoofing / X-Forwarded-For manipulation.
     if (request.user?.id) {
       return `user:${request.user.id}`;
     }
-    return `ip:${this.getClientIp(request)}`;
+    // Unauthenticated: use the socket-level IP only (ignore forwarded headers
+    // for rate-limit keying to prevent header injection attacks).
+    return `ip:${request.socket?.remoteAddress ?? request.ip ?? 'unknown'}`;
   }
 
   private getClientIp(request: Request): string {
+    // For logging/analytics only — not used as the rate-limit key.
     const forwarded = request.headers['x-forwarded-for'];
     if (typeof forwarded === 'string') {
       return forwarded.split(',')[0].trim();
