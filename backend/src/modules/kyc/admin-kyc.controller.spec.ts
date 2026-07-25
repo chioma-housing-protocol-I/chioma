@@ -9,6 +9,7 @@ import * as request from 'supertest';
 import { AdminKycController } from './admin-kyc.controller';
 import { KycService } from './kyc.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { IpAccessControlGuard } from '../auth/guards/ip-access-control.guard';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { KycStatus } from './kyc-status.enum';
 import { UserRole } from '../users/entities/user.entity';
@@ -45,6 +46,8 @@ describe('AdminKycController', () => {
           return true;
         },
       })
+      .overrideGuard(IpAccessControlGuard)
+      .useValue({ canActivate: () => true })
       .overrideInterceptor(AuditLogInterceptor)
       .useValue({
         intercept(_ctx: ExecutionContext, next: CallHandler) {

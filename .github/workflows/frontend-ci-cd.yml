@@ -86,13 +86,99 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend/
+          path: frontend/.next/
           retention-days: 7
+
+  bundle-size:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: "./frontend/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/.next/
+
+      - name: Check bundle size budgets
+        id: size_check
+        run: |
+          pnpm run size:check 2>&1 | tee /tmp/size-report.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: /tmp/size-report.txt
+          retention-days: 30
+
+      - name: Post PR comment with bundle report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/size-report.txt', 'utf8');
+            const exitCode = '${{ steps.size_check.outputs.exit_code }}';
+            const status = exitCode === '0' ? '✅ Budgets OK' : '❌ Budget Exceeded';
+            const body = `## 📦 Bundle Size Report — ${status}\n\n\`\`\`\n${report}\n\`\`\`\n\n> Update \`bundle-budgets.json\` to adjust thresholds. See [BUNDLE_ANALYZER.md](./docs/BUNDLE_ANALYZER.md) for guidance.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes('📦 Bundle Size Report'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail if budgets exceeded
+        if: steps.size_check.outputs.exit_code != '0'
+        run: |
+          echo "::error::Bundle size budgets exceeded. See the bundle-size-report artifact and size check output above."
+          exit 1
 
   deploy:
     name: Deploy to Vercel (Production)
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, bundle-size]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     defaults:
       run:
@@ -106,7 +192,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: frontend/
+          path: frontend/.next/
 
       - name: Deploy to production
         run: |
