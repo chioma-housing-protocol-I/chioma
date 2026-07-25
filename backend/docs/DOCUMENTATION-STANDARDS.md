@@ -144,7 +144,7 @@ Templates are intended to be copied into new files and filled in.
 
 ### README template
 
-```markdown
+````markdown
 # <Project/Module Name>
 
 ## Overview
@@ -153,7 +153,7 @@ What this is and who it’s for.
 
 ## Quick Start
 
-```bash
+````bash
 # install
 
 # run
@@ -182,7 +182,8 @@ Common failure modes and fixes.
 ## References
 
 Links to deeper docs.
-```
+````
+````
 
 ### ADR (Architecture Decision Record) template
 
@@ -212,7 +213,7 @@ What else did we consider and why was it rejected?
 
 ### API endpoint documentation template
 
-```markdown
+````markdown
 # <Feature> API
 
 ## Endpoint
@@ -235,6 +236,7 @@ Body:
 ```json
 {}
 ```
+````
 
 ## Response
 
@@ -254,7 +256,8 @@ Error examples:
 ## Notes
 
 Idempotency, rate limits, pagination, etc.
-```
+
+````
 
 ### Runbook template
 
@@ -289,7 +292,7 @@ Links to dashboards.
 - check logs/metrics
 - mitigate
 - follow up
-```
+````
 
 ### Troubleshooting guide template
 

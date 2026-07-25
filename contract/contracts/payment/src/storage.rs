@@ -33,4 +33,8 @@ pub enum DataKey {
     LateFeeConfig(String),
     /// Late fee record per payment
     LateFeeRecord(String),
+    /// Rent escalation configuration per agreement
+    RentEscalationConfig(String),
+    /// Upgrade proposal
+    UpgradeProposal(String),
 }

@@ -448,7 +448,7 @@ export class ChiomaContractService {
   private parsePaymentSplit(result: xdr.ScVal): PaymentSplit {
     const native = StellarSdk.scValToNative(result);
     return {
-      adminAmount: native.landlord_amount?.toString() || '0',
+      adminAmount: native.admin_amount?.toString() || '0',
       agentAmount: native.agent_amount?.toString() || '0',
       totalAmount: native.total_amount?.toString() || '0',
     };

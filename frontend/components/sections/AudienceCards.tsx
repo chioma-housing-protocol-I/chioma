@@ -3,8 +3,8 @@ import { Key, ChartLine, Handshake } from 'lucide-react';
 
 const audiences = [
   {
-    role: 'Tenants',
-    title: 'For Tenants',
+    role: 'Users',
+    title: 'For Users',
     description:
       'Instant background checks and deposit-free options available through our trusted partner network.',
     cta: 'Start Renting',
@@ -15,8 +15,8 @@ const audiences = [
     icon: <Key className="w-8 h-8 text-blue-700" strokeWidth={1.5} />,
   },
   {
-    role: 'Landlords',
-    title: 'For Landlords',
+    role: 'Hosts',
+    title: 'For Hosts',
     description:
       'Guaranteed rent payouts and automated property management driven by smart contracts.',
     cta: 'Maximize Yield',

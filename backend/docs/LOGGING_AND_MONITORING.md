@@ -73,13 +73,13 @@ The custom `LoggerService` is a transient-scoped NestJS provider that produces s
 
 **Log methods:**
 
-| Method   | Level   | Usage                                    |
-| -------- | ------- | ---------------------------------------- |
-| `debug`  | DEBUG   | Verbose development output               |
-| `info`   | INFO    | Normal operational events                |
-| `warn`   | WARN    | Degraded conditions, slow requests       |
-| `error`  | ERROR   | Request failures, caught exceptions      |
-| `fatal`  | FATAL   | Unrecoverable conditions, process-level  |
+| Method  | Level | Usage                                   |
+| ------- | ----- | --------------------------------------- |
+| `debug` | DEBUG | Verbose development output              |
+| `info`  | INFO  | Normal operational events               |
+| `warn`  | WARN  | Degraded conditions, slow requests      |
+| `error` | ERROR | Request failures, caught exceptions     |
+| `fatal` | FATAL | Unrecoverable conditions, process-level |
 
 **Usage example:**
 
@@ -143,11 +143,13 @@ The interceptor adds a second logging layer with Sentry integration:
 Both the middleware and interceptor automatically redact sensitive data before logging:
 
 **Redacted headers:**
+
 - `authorization`
 - `cookie`
 - `x-api-key`
 
 **Redacted body fields:**
+
 - `password`
 - `token`
 - `secret`
@@ -156,13 +158,13 @@ These fields appear as `[REDACTED]` in log output. Sanitization is applied recur
 
 ### Log Levels
 
-| Level | When to use                                            | Example                                  |
-| ----- | ------------------------------------------------------ | ---------------------------------------- |
-| DEBUG | Development tracing, verbose internal state            | Cache key lookups, query parameters      |
-| INFO  | Normal operations, milestones                          | Payment processed, user registered       |
-| WARN  | Degraded state, slow responses, client errors          | Rate limit approached, 4xx response      |
-| ERROR | Failures requiring investigation                       | Database query failed, 5xx response      |
-| FATAL | Unrecoverable errors, service startup failures         | Database connection failed, OOM          |
+| Level | When to use                                    | Example                             |
+| ----- | ---------------------------------------------- | ----------------------------------- |
+| DEBUG | Development tracing, verbose internal state    | Cache key lookups, query parameters |
+| INFO  | Normal operations, milestones                  | Payment processed, user registered  |
+| WARN  | Degraded state, slow responses, client errors  | Rate limit approached, 4xx response |
+| ERROR | Failures requiring investigation               | Database query failed, 5xx response |
+| FATAL | Unrecoverable errors, service startup failures | Database connection failed, OOM     |
 
 ### Structured Log Format
 
@@ -197,7 +199,10 @@ For HTTP logs, the middleware produces an `HttpLog` object:
   "ip": "192.168.1.1",
   "userAgent": "Mozilla/5.0...",
   "correlationId": "550e8400-e29b-41d4-a716-446655440000",
-  "requestHeaders": { "authorization": "[REDACTED]", "content-type": "application/json" },
+  "requestHeaders": {
+    "authorization": "[REDACTED]",
+    "content-type": "application/json"
+  },
   "requestBody": { "amount": "100.00", "password": "[REDACTED]" },
   "responseHeaders": { "x-request-id": "550e8400..." },
   "responseSize": "256"
@@ -250,11 +255,11 @@ window.__CHIOMA_ERROR_REPORTER__ = (payload) => {
 
 Sentry is initialized before any NestJS modules load:
 
-| Setting              | Development | Production |
-| -------------------- | ----------- | ---------- |
-| `tracesSampleRate`   | 1.0 (100%)  | 0.2 (20%) |
-| `enabled`            | Only if `SENTRY_DSN` is set | Only if `SENTRY_DSN` is set |
-| `environment`        | `SENTRY_ENVIRONMENT` env var or `development` | `SENTRY_ENVIRONMENT` env var |
+| Setting            | Development                                   | Production                   |
+| ------------------ | --------------------------------------------- | ---------------------------- |
+| `tracesSampleRate` | 1.0 (100%)                                    | 0.2 (20%)                    |
+| `enabled`          | Only if `SENTRY_DSN` is set                   | Only if `SENTRY_DSN` is set  |
+| `environment`      | `SENTRY_ENVIRONMENT` env var or `development` | `SENTRY_ENVIRONMENT` env var |
 
 **Required environment variables:**
 
@@ -264,6 +269,7 @@ SENTRY_ENVIRONMENT=production
 ```
 
 **What Sentry captures:**
+
 - Unhandled exceptions (via `AllExceptionsFilter`)
 - Request context (method, URL, user agent, IP, correlation ID)
 - User identity (ID and email when authenticated)
@@ -342,12 +348,12 @@ Alertmanager routes alerts from Prometheus to notification channels:
 
 The following alert rules are configured:
 
-| Alert                           | Condition                                                   | Duration | Severity |
-| ------------------------------- | ----------------------------------------------------------- | -------- | -------- |
-| HighErrorRate                   | 5xx error rate > 0.05/sec over 5 minutes                   | 5m       | critical |
-| HighResponseTime                | P95 response time > 1 second over 5 minutes                | 5m       | warning  |
-| BlockchainTransactionFailure    | Blockchain tx failure rate > 0.1/sec over 5 minutes         | 2m       | critical |
-| DatabaseConnectionPoolExhausted | Active connections > 90% of max pool over 5 minutes         | 5m       | warning  |
+| Alert                           | Condition                                           | Duration | Severity |
+| ------------------------------- | --------------------------------------------------- | -------- | -------- |
+| HighErrorRate                   | 5xx error rate > 0.05/sec over 5 minutes            | 5m       | critical |
+| HighResponseTime                | P95 response time > 1 second over 5 minutes         | 5m       | warning  |
+| BlockchainTransactionFailure    | Blockchain tx failure rate > 0.1/sec over 5 minutes | 2m       | critical |
+| DatabaseConnectionPoolExhausted | Active connections > 90% of max pool over 5 minutes | 5m       | warning  |
 
 ### Adding Custom Alerts
 
@@ -360,8 +366,8 @@ Add new rules to `backend/monitoring/prometheus/alerts.yml`:
   labels:
     severity: critical
   annotations:
-    summary: "High payment failure rate"
-    description: "{{ $value }} payment failures per second"
+    summary: 'High payment failure rate'
+    description: '{{ $value }} payment failures per second'
 ```
 
 ---
@@ -370,10 +376,10 @@ Add new rules to `backend/monitoring/prometheus/alerts.yml`:
 
 The backend exposes health check endpoints excluded from the API prefix:
 
-| Endpoint            | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `GET /health`       | Basic liveness check                           |
-| `GET /health/detailed` | Detailed status with dependency health      |
+| Endpoint               | Description                            |
+| ---------------------- | -------------------------------------- |
+| `GET /health`          | Basic liveness check                   |
+| `GET /health/detailed` | Detailed status with dependency health |
 
 Health endpoints are excluded from logging middleware and the logging interceptor to avoid noise.
 
@@ -390,13 +396,13 @@ docker-compose -f docker-compose.monitoring.yml up -d
 
 **Service ports:**
 
-| Service      | Port  | URL                          |
-| ------------ | ----- | ---------------------------- |
-| Prometheus   | 9090  | http://localhost:9090        |
-| Grafana      | 3001  | http://localhost:3001        |
-| Loki         | 3100  | http://localhost:3100        |
-| Alertmanager | 9093  | http://localhost:9093        |
-| Promtail     | 9080  | http://localhost:9080        |
+| Service      | Port | URL                   |
+| ------------ | ---- | --------------------- |
+| Prometheus   | 9090 | http://localhost:9090 |
+| Grafana      | 3001 | http://localhost:3001 |
+| Loki         | 3100 | http://localhost:3100 |
+| Alertmanager | 9093 | http://localhost:9093 |
+| Promtail     | 9080 | http://localhost:9080 |
 
 ---
 
@@ -420,9 +426,9 @@ docker-compose -f docker-compose.monitoring.yml up -d
 
 ### Environment Variables
 
-| Variable                       | Description                              | Default       |
-| ------------------------------ | ---------------------------------------- | ------------- |
-| `SENTRY_DSN`                   | Sentry Data Source Name                  | _(disabled)_  |
-| `SENTRY_ENVIRONMENT`           | Sentry environment tag                   | `development` |
-| `NODE_ENV`                     | Controls log output destination          | `development` |
-| `LOG_SLOW_REQUEST_THRESHOLD`   | Slow request warning threshold (ms)      | `500`         |
+| Variable                     | Description                         | Default       |
+| ---------------------------- | ----------------------------------- | ------------- |
+| `SENTRY_DSN`                 | Sentry Data Source Name             | _(disabled)_  |
+| `SENTRY_ENVIRONMENT`         | Sentry environment tag              | `development` |
+| `NODE_ENV`                   | Controls log output destination     | `development` |
+| `LOG_SLOW_REQUEST_THRESHOLD` | Slow request warning threshold (ms) | `500`         |

@@ -440,9 +440,7 @@ export async function loadLandlordDisputes(): Promise<DashboardDispute[]> {
   }
 }
 
-export async function loadReviewWorkspace(
-  role: 'user' | 'admin',
-): Promise<{
+export async function loadReviewWorkspace(role: 'user' | 'admin'): Promise<{
   targets: ReviewTarget[];
   reviews: DashboardReview[];
 }> {

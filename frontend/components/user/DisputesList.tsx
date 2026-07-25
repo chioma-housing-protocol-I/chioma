@@ -19,7 +19,10 @@ import {
   useTenantDisputes,
   TenantDisputeRecord,
 } from '@/lib/query/hooks/use-tenant-disputes';
+import { useUploadTenantDisputeEvidence } from '@/lib/query/hooks/use-tenant-dispute';
 import { formatDistanceToNow } from 'date-fns';
+import { useModal } from '@/contexts/ModalContext';
+import type { EvidenceUploadData } from '@/components/modals/EvidenceUploadModal';
 
 const statusBadge: Record<DisputeStatus, string> = {
   OPEN: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -29,11 +32,15 @@ const statusBadge: Record<DisputeStatus, string> = {
   WITHDRAWN: 'bg-white/5 text-blue-300/40 border-white/10',
 };
 
+const DISPUTE_PREVIEW_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=80&q=80';
+
 interface DisputesListProps {
   className?: string;
 }
 
 export function DisputesList({ className = '' }: DisputesListProps) {
+  const { openModal } = useModal();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -42,6 +49,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
     'ALL',
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const uploadEvidenceMutation = useUploadTenantDisputeEvidence();
 
   const {
     data: disputes = [],
@@ -136,16 +144,56 @@ export function DisputesList({ className = '' }: DisputesListProps) {
       {
         id: 'actions',
         cell: ({ row }) => (
-          <Link
-            href={`/tenant/disputes/${row.original.id}`}
-            className="p-2 text-blue-300/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors inline-flex"
-          >
-            <Eye className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                openModal('disputeDetail', {
+                  dispute: {
+                    id: row.original.id,
+                    disputeId: row.original.disputeId,
+                    agreementReference: row.original.agreementReference,
+                    propertyName: row.original.propertyName,
+                    counterpartyName: 'Landlord',
+                    disputeType: row.original.disputeType,
+                    description: row.original.description,
+                    status: row.original.status,
+                    requestedAmount: row.original.requestedAmount,
+                    evidenceCount: row.original.evidenceCount,
+                    commentCount: row.original.commentCount,
+                    createdAt: row.original.createdAt,
+                    updatedAt: row.original.updatedAt,
+                  },
+                  onUploadEvidence: (_disputeId: string) =>
+                    openModal('evidenceUpload', {
+                      disputeId: row.original.backendDisputeId,
+                      disputeTitle: row.original.disputeId,
+                      onUpload: async (data: EvidenceUploadData) => {
+                        await uploadEvidenceMutation.mutateAsync({
+                          disputeId: data.disputeId,
+                          files: data.files,
+                          description: data.description,
+                        });
+                      },
+                    }),
+                })
+              }
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-blue-300/70 hover:text-white hover:bg-blue-500/20 transition-colors"
+              aria-label={`Preview dispute ${row.original.disputeId}`}
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+            <Link
+              href={`/user/disputes/${row.original.id}`}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              Details
+            </Link>
+          </div>
         ),
       },
     ],
-    [],
+    [openModal, uploadEvidenceMutation],
   );
 
   const table = useReactTable({

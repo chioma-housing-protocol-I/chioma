@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageSquare, Wrench, CreditCard, CheckCheck } from 'lucide-react';
+import {
+  MessageSquare,
+  Wrench,
+  CreditCard,
+  CheckCheck,
+  Bell,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification, NotificationType } from './types';
 
@@ -26,25 +32,37 @@ const typeConfig: Record<
   },
 };
 
+const fallbackConfig = {
+  icon: Bell,
+  bg: 'bg-white/10',
+  text: 'text-blue-200/60',
+};
+
 interface NotificationItemProps {
   notification: Notification;
   onToggleRead: (id: string) => void;
+  onDelete?: (id: string) => void;
   variant?: 'compact' | 'full';
 }
 
 export default function NotificationItem({
   notification,
   onToggleRead,
+  onDelete,
   variant = 'compact',
 }: NotificationItemProps) {
-  const { icon: Icon, bg, text } = typeConfig[notification.type];
+  const {
+    icon: Icon,
+    bg,
+    text,
+  } = typeConfig[notification.type] ?? fallbackConfig;
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
   });
 
   const content = (
     <div
-      className={`flex items-start gap-3 px-4 transition-colors
+      className={`flex items-start gap-3 px-4 transition-colors relative group
         ${variant === 'compact' ? 'py-2.5' : 'py-4'}
         ${notification.read ? 'bg-transparent' : 'bg-blue-500/5'}
         hover:bg-white/5
@@ -58,7 +76,7 @@ export default function NotificationItem({
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-8">
         <div className="flex items-center justify-between gap-2">
           <p
             className={`text-sm ${
@@ -84,24 +102,39 @@ export default function NotificationItem({
         <p className="text-xs text-blue-200/30 mt-1">{timeAgo}</p>
       </div>
 
-      {/* Mark read button */}
-      {variant === 'full' &&
-        (notification.read ? (
-          <span className="shrink-0 flex items-center gap-1 text-xs text-blue-400/50 mt-0.5">
-            <CheckCheck size={16} />
-          </span>
-        ) : (
+      {/* Action buttons */}
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        {variant === 'full' &&
+          (notification.read ? (
+            <span className="shrink-0 flex items-center gap-1 text-xs text-blue-400/50 mt-0.5">
+              <CheckCheck size={16} />
+            </span>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleRead(notification.id);
+              }}
+              className="shrink-0 text-xs text-blue-300 hover:text-white hover:underline mt-0.5 cursor-pointer transition-colors"
+            >
+              Mark read
+            </button>
+          ))}
+
+        {variant === 'full' && onDelete && (
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onToggleRead(notification.id);
+              onDelete(notification.id);
             }}
-            className="shrink-0 text-xs text-blue-300 hover:text-white hover:underline mt-0.5 cursor-pointer transition-colors"
+            className="opacity-0 group-hover:opacity-100 shrink-0 text-xs text-red-400 hover:text-red-300 hover:underline cursor-pointer transition-opacity"
           >
-            Mark read
+            Delete
           </button>
-        ))}
+        )}
+      </div>
     </div>
   );
 

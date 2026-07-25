@@ -854,6 +854,13 @@ make security-lint
 make security-test
 ```
 
+## API Documentation
+
+- [docs/README.md](./docs/README.md) — documentation hub
+- [docs/api/api-documentation.md](./docs/api/api-documentation.md) — API reference
+- [docs/api/USAGE_GUIDE.md](./docs/api/USAGE_GUIDE.md) — integration walkthrough
+- Interactive Swagger: `http://localhost:5000/api/docs` (when server is running)
+
 **OpenAPI Generation**
 
 ```bash
@@ -1019,7 +1026,7 @@ make ci
 pnpm run openapi:generate
 
 # View API documentation
-# http://localhost:3000/api/docs
+# http://localhost:5000/api/docs
 ```
 
 ### Git Workflow
@@ -1164,6 +1171,8 @@ export class MyService {
 
 ### Performance
 
+See [Performance Tuning Guidelines](./docs/PERFORMANCE_TUNING_GUIDELINES.md) for operational tuning (database, cache, queues, observability).
+
 1. **Database Queries**
    - Use indexes on frequently queried columns
    - Avoid N+1 queries with eager loading
@@ -1219,14 +1228,14 @@ export class MyService {
 
 ### Common Issues
 
-**Port 3000 already in use**
+**Port 5000 already in use**
 
 ```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
+# Kill process on port 5000
+lsof -ti:5000 | xargs kill -9
 
 # Or use different port
-PORT=3001 pnpm run start:dev
+PORT=5001 pnpm run start:dev
 ```
 
 **Database connection errors**

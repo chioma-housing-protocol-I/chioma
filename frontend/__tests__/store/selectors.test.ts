@@ -27,17 +27,23 @@ const authState: AuthStore = {
   user: {
     id: 'u-1',
     email: 'a@b.com',
+    emailVerified: true,
     firstName: 'A',
     lastName: 'B',
-    role: 'landlord',
+    role: 'user',
   },
   accessToken: 'tok',
   refreshToken: 'ref',
   isAuthenticated: true,
   loading: false,
+  walletAddress: null,
   login: async () => ({ success: true }),
+  register: async () => ({ success: true }),
   logout: async () => {},
+  refreshSession: async () => ({ success: true as const }),
   setTokens: () => {},
+  setWalletAddress: () => {},
+  completeProfile: async () => ({ success: true }),
   hydrate: () => {},
 };
 
@@ -70,10 +76,11 @@ const notificationState: NotificationStore = {
   ],
   isLoaded: true,
   fetchNotifications: async () => {},
-  markAsRead: () => {},
+  markAsRead: async (_id: string) => {},
   markAsUnread: () => {},
-  markAllAsRead: () => {},
+  markAllAsRead: async () => {},
   addNotification: () => {},
+  deleteNotification: async (_id: string) => {},
 };
 
 const propertyState: PropertyStore = {
@@ -83,12 +90,15 @@ const propertyState: PropertyStore = {
   selectedPropertyId: null,
   viewMode: 'grid',
   searchQuery: '',
+  pagination: { page: 1, limit: 20 },
   setFilters: () => {},
   resetFilters: () => {},
   setSort: () => {},
   selectProperty: () => {},
   setViewMode: () => {},
   setSearchQuery: () => {},
+  setPage: () => {},
+  setLimit: () => {},
 };
 
 const uiState: UIStore = {
@@ -128,7 +138,7 @@ describe('selectors', () => {
     });
 
     it('selectUserRole returns the role string', () => {
-      expect(selectUserRole(authState)).toBe('landlord');
+      expect(selectUserRole(authState)).toBe('user');
     });
 
     it('selectUserRole returns null when no user', () => {

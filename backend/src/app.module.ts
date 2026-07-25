@@ -6,9 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { validateEnvironment } from './config/env.validation';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AgreementsModule } from './modules/agreements/agreements.module';
@@ -19,6 +20,7 @@ import { PropertiesModule } from './modules/properties/properties.module';
 import { StellarModule } from './modules/stellar/stellar.module';
 import { DisputesModule } from './modules/disputes/disputes.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { StatusModule } from './modules/status/status.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { PaymentModule } from './modules/payments/payment.module';
@@ -34,11 +36,15 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { StorageModule } from './modules/storage/storage.module';
+import { DocumentModule } from './modules/documents/document.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { SearchModule } from './modules/search/search.module';
 import { JobQueueService } from './common/services/job-queue.service';
+import { CompressionService } from './common/middleware/compression.service';
+import { CompressionMiddleware } from './common/middleware/compression.middleware';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { upstashStore } from './common/cache/upstash-cache.store';
@@ -56,6 +62,14 @@ import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { LockModule } from './common/lock';
 import { IdempotencyModule } from './common/idempotency';
+import { ResilienceModule } from './common/resilience';
+import { FraudModule } from './modules/fraud/fraud.module';
+import { TransactionModule } from './modules/transactions/transaction.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
+import { ApiVersionModule } from './common/api-versioning/api-version.module';
+import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { createDatabaseConnectionOptions } from './database/database-config';
 
 const appLogger = new Logger('AppModule');
 
@@ -64,10 +78,13 @@ const appLogger = new Logger('AppModule');
     ...(process.env.NODE_ENV === 'test' ? [] : [SentryModule.forRoot()]),
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+      validate: validateEnvironment,
     }),
     LoggerModule,
     LockModule,
     IdempotencyModule,
+    ResilienceModule,
     require('./common/services/encryption.module').EncryptionModule,
     process.env.NODE_ENV === 'test'
       ? CacheModule.register({
@@ -175,26 +192,28 @@ const appLogger = new Logger('AppModule');
             logging: false,
           };
         }
-        const config = {
-          type: 'postgres' as const,
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT || '5432'),
-          username: process.env.DB_USERNAME,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          namingStrategy: new SnakeNamingStrategy(),
-          entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
-          migrations: isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
-          synchronize: isTest,
-          logging: false, // Disable query logging to prevent credential exposure
+        const config = createDatabaseConnectionOptions(
+          __dirname,
+          isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
+        );
+        const debugConfig = config as {
+          host?: string;
+          port?: number;
+          database?: string;
+          replication?: unknown;
+          synchronize?: boolean;
+          logging?: boolean;
+          extra?: unknown;
         };
-        appLogger.log('[TypeORM Config] PostgreSQL config');
         appLogger.debug({
-          type: config.type,
-          host: config.host,
-          port: config.port,
-          database: config.database,
+          host: debugConfig.host,
+          port: debugConfig.port,
+          database: debugConfig.database,
           // Removed username to prevent credential exposure in logs
+          replicationEnabled: Boolean(debugConfig.replication),
+          synchronize: debugConfig.synchronize,
+          logging: debugConfig.logging,
+          pool: debugConfig.extra,
         });
         return config;
       },
@@ -206,7 +225,9 @@ const appLogger = new Logger('AppModule');
     PropertiesModule,
     StellarModule,
     DisputesModule,
+    BookingsModule,
     MonitoringModule,
+    StatusModule,
     // Load HealthModule only when not generating OpenAPI (avoids loading broken @nestjs/terminus in script)
     ...(process.env.OPENAPI_GENERATE !== 'true'
       ? [require('./health/health.module').HealthModule]
@@ -217,17 +238,22 @@ const appLogger = new Logger('AppModule');
     SecurityModule,
     I18nModule,
     StorageModule,
+    DocumentModule,
     ReviewsModule,
     FeedbackModule,
     DeveloperModule,
     SearchModule,
     CleanupModule,
     AiModule,
+    FraudModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,
     InquiriesModule,
     AnalyticsModule,
+    require('./modules/database-performance/database-performance.module')
+      .DatabasePerformanceModule,
+    TransactionModule,
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [RateLimitingModule] : []),
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,
@@ -235,11 +261,14 @@ const appLogger = new Logger('AppModule');
     require('./modules/kyc/kyc.module').KycModule,
     // Queue module
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [QueuesModule] : []),
+    // API versioning module
+    ApiVersionModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     JobQueueService,
+    CompressionService,
     {
       provide: 'APP_PIPE',
       useClass: ValidationPipe,
@@ -252,34 +281,22 @@ const appLogger = new Logger('AppModule');
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseTimeInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TimeoutInterceptor,
+    },
   ],
 })
 export class AppModule implements NestModule {
-  constructor() {
-    appLogger.log('Validating rate limit config');
-    this.validateRateLimitConfig();
-    appLogger.log('Rate limit config validation passed');
-  }
-
-  private validateRateLimitConfig(): void {
-    const required = [
-      'RATE_LIMIT_TTL',
-      'RATE_LIMIT_MAX',
-      'RATE_LIMIT_AUTH_TTL',
-      'RATE_LIMIT_AUTH_MAX',
-      'RATE_LIMIT_STRICT_TTL',
-      'RATE_LIMIT_STRICT_MAX',
-    ];
-
-    const missing = required.filter((key) => !process.env[key]);
-    if (missing.length > 0) {
-      throw new Error(
-        `Missing required environment variables: ${missing.join(', ')}`,
-      );
-    }
-  }
-
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+
+    consumer.apply(CompressionMiddleware).forRoutes('*');
+
     consumer.apply(LocalizationMiddleware).forRoutes('*');
 
     // Security headers middleware (applied to all routes)

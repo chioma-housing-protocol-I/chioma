@@ -396,17 +396,26 @@ export class UpdateKycEncryptionSchema1774292331248 implements MigrationInterfac
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "kyc_status" "public"."users_kyc_status_enum" NOT NULL DEFAULT 'PENDING'`,
     );
     await queryRunner.query(
-      `ALTER TABLE "users" ADD "wallet_address" character varying`,
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "wallet_address" character varying`,
     );
-    await queryRunner.query(
-      `ALTER TABLE "users" ADD CONSTRAINT "UQ_196ef3e52525d3cd9e203bdb1de" UNIQUE ("wallet_address")`,
-    );
-    await queryRunner.query(
-      `CREATE TYPE "public"."users_auth_method_enum" AS ENUM('password', 'stellar')`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "users" ADD "auth_method" "public"."users_auth_method_enum" NOT NULL DEFAULT 'password'`,
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "users" ADD CONSTRAINT "UQ_196ef3e52525d3cd9e203bdb1de" UNIQUE ("wallet_address");
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE "public"."users_auth_method_enum" AS ENUM('password', 'stellar');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "auth_method" "public"."users_auth_method_enum" NOT NULL DEFAULT 'password';
+      EXCEPTION WHEN duplicate_column THEN null;
+      END $$;
+    `);
     await queryRunner.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMP`,
     );
@@ -525,12 +534,18 @@ export class UpdateKycEncryptionSchema1774292331248 implements MigrationInterfac
       `ALTER TABLE "users" ADD "avatar_url" character varying`,
     );
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "role"`);
-    await queryRunner.query(
-      `CREATE TYPE "public"."users_role_enum" AS ENUM('user', 'admin', 'landlord', 'tenant', 'agent')`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "users" ADD "role" "public"."users_role_enum" NOT NULL DEFAULT 'user'`,
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE "public"."users_role_enum" AS ENUM('user', 'admin', 'landlord', 'tenant', 'agent');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" "public"."users_role_enum" NOT NULL DEFAULT 'user';
+      EXCEPTION WHEN duplicate_column THEN null;
+      END $$;
+    `);
     await queryRunner.query(
       `ALTER TABLE "users" DROP COLUMN "verification_token"`,
     );
@@ -590,12 +605,18 @@ export class UpdateKycEncryptionSchema1774292331248 implements MigrationInterfac
       `ALTER TABLE "reviews" ADD "reviewee_id" character varying NOT NULL`,
     );
     await queryRunner.query(`ALTER TABLE "reviews" DROP COLUMN "context"`);
-    await queryRunner.query(
-      `CREATE TYPE "public"."reviews_context_enum" AS ENUM('LEASE', 'MAINTENANCE')`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "reviews" ADD "context" "public"."reviews_context_enum" NOT NULL`,
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE "public"."reviews_context_enum" AS ENUM('LEASE', 'MAINTENANCE');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "reviews" ADD COLUMN IF NOT EXISTS "context" "public"."reviews_context_enum" NOT NULL;
+      EXCEPTION WHEN duplicate_column THEN null;
+      END $$;
+    `);
     await queryRunner.query(
       `ALTER TABLE "reviews" ALTER COLUMN "anonymous" SET NOT NULL`,
     );

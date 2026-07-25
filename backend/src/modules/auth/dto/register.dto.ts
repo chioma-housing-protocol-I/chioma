@@ -65,12 +65,12 @@ export class RegisterDto {
   lastName: string;
 
   @ApiProperty({
-    example: 'tenant',
+    example: 'user',
     description: 'User role in the system',
     enum: UserRole,
   })
   @IsEnum(UserRole, {
-    message: 'Role must be one of: landlord, tenant, agent, admin',
+    message: 'Role must be one of: admin, user, agent, super_admin',
   })
   @IsNotEmpty({ message: 'Role is required' })
   role: UserRole;

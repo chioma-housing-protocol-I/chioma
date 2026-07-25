@@ -86,5 +86,31 @@ describe('API Documentation (e2e)', () => {
       expect(securitySchemes['JWT-auth']).toBeDefined();
       expect(securitySchemes['JWT-auth'].type).toBe('http');
     });
+
+    it('spec documents critical API paths', async () => {
+      const res = await request(app!.getHttpServer())
+        .get('/api/docs-json')
+        .expect(200);
+      const paths = res.body.paths || {};
+      const pathKeys = Object.keys(paths);
+      expect(pathKeys.some((p) => p.includes('/auth/login'))).toBe(true);
+      expect(pathKeys.some((p) => p.includes('/properties'))).toBe(true);
+      expect(pathKeys.some((p) => p.includes('/health'))).toBe(false);
+      expect(pathKeys.some((p) => p.includes('/developer'))).toBe(true);
+    });
+
+    it('spec includes primary API tags', async () => {
+      const res = await request(app!.getHttpServer())
+        .get('/api/docs-json')
+        .expect(200);
+      const tags = (res.body.tags || []).map((t: { name: string }) => t.name);
+      expect(tags).toEqual(
+        expect.arrayContaining([
+          'Authentication',
+          'Properties',
+          'Developer Portal',
+        ]),
+      );
+    });
   });
 });

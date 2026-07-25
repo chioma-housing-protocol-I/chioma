@@ -25,6 +25,8 @@ export class NotificationsController {
   @Get()
   async getNotifications(
     @Request() req: RequestWithUser,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
     @Query('isRead') isRead?: string,
     @Query('type') type?: string,
   ) {
@@ -38,7 +40,15 @@ export class NotificationsController {
       filters.type = type;
     }
 
-    return this.notificationsService.getUserNotifications(userId, filters);
+    const pageNumber = Math.max(1, parseInt(page, 10));
+    const limitNumber = Math.max(1, parseInt(limit, 10));
+
+    return this.notificationsService.getUserNotifications(
+      userId,
+      filters,
+      pageNumber,
+      limitNumber,
+    );
   }
 
   @Get('unread/count')

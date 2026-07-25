@@ -15,6 +15,7 @@ pub mod payment_impl;
 pub mod rate_limit;
 pub mod storage;
 pub mod types;
+pub mod upgrade;
 
 #[cfg(test)]
 mod tests;
@@ -25,13 +26,17 @@ mod tests_recurring;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_property;
+
 // Re-export public APIs
 pub use errors::PaymentError;
-pub use payment_impl::{calculate_payment_split, create_payment_record};
+pub use payment_impl::{calculate_payment_split, calculate_rent_for_period, create_payment_record};
 pub use storage::DataKey;
 pub use types::{
-    ExecutionStatus, LateFeeConfig, LateFeeRecord, PaymentExecution, PaymentFrequency,
-    PaymentRecord, PaymentSplit, RecurringPayment, RecurringPaymentEvent, RecurringStatus,
+    EscalationType, ExecutionStatus, LateFeeConfig, LateFeeRecord, PaymentExecution,
+    PaymentFrequency, PaymentRecord, PaymentSplit, RecurringPayment, RecurringPaymentEvent,
+    RecurringStatus, RentEscalationConfig,
 };
 
 use crate::errors::PaymentError as Error;
@@ -279,7 +284,19 @@ impl PaymentContract {
             return Err(Error::InvalidPaymentAmount);
         }
 
-        if payment_amount != agreement.monthly_rent {
+        let payment_number = agreement.payment_history.len() + 1;
+        let expected_amount = if let Some(config) = env
+            .storage()
+            .persistent()
+            .get::<StorageKey, RentEscalationConfig>(&StorageKey::RentEscalationConfig(
+                agreement_id.clone(),
+            )) {
+            calculate_rent_for_period(agreement.monthly_rent, payment_number, &config)
+        } else {
+            agreement.monthly_rent
+        };
+
+        if payment_amount != expected_amount {
             return Err(Error::InvalidPaymentAmount);
         }
 
@@ -818,5 +835,84 @@ impl PaymentContract {
         crate::events::late_fee_waived(&env, payment_id, reason);
 
         Ok(())
+    }
+
+    /// Set or update rent escalation configuration for an agreement
+    pub fn set_rent_escalation_config(
+        env: Env,
+        agreement_id: String,
+        annual_rate_bps: u32,
+        payments_per_year: u32,
+        escalation_type: EscalationType,
+    ) -> Result<(), Error> {
+        let agreement: RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        agreement.landlord.require_auth();
+
+        let config = RentEscalationConfig {
+            agreement_id: agreement_id.clone(),
+            annual_rate_bps,
+            payments_per_year,
+            escalation_type,
+        };
+
+        env.storage().persistent().set(
+            &StorageKey::RentEscalationConfig(agreement_id.clone()),
+            &config,
+        );
+
+        crate::events::rent_escalation_config_set(&env, agreement_id, annual_rate_bps);
+
+        Ok(())
+    }
+
+    /// Get rent escalation configuration for an agreement
+    pub fn get_rent_escalation_config(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<RentEscalationConfig, Error> {
+        env.storage()
+            .persistent()
+            .get(&StorageKey::RentEscalationConfig(agreement_id))
+            .ok_or(Error::AgreementNotFound)
+    }
+
+    /// Calculate the rent amount due for a specific payment period, applying
+    /// programmable annual escalation from the stored configuration.
+    pub fn calculate_rent_for_period(
+        env: Env,
+        agreement_id: String,
+        period_number: u32,
+    ) -> Result<i128, Error> {
+        let agreement: RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        let config = env
+            .storage()
+            .persistent()
+            .get::<StorageKey, RentEscalationConfig>(&StorageKey::RentEscalationConfig(
+                agreement_id,
+            ))
+            .unwrap_or(RentEscalationConfig {
+                agreement_id: String::from_str(&env, ""),
+                annual_rate_bps: 0,
+                payments_per_year: 12,
+                escalation_type: EscalationType::None,
+            });
+
+        // period_number is 0-indexed (0 = 1st payment)
+        // payment_impl expects 1-indexed payment number
+        Ok(payment_impl::calculate_rent_for_period(
+            agreement.monthly_rent,
+            period_number + 1,
+            &config,
+        ))
     }
 }

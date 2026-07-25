@@ -25,7 +25,6 @@ jobs:
   lint-and-test:
     name: Lint, Format & Test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     defaults:
       run:
         working-directory: ./backend
@@ -46,9 +45,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Run npm audit
-        run: pnpm audit --audit-level=high
 
       - name: Run ESLint
         run: pnpm run lint

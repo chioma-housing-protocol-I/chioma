@@ -3,7 +3,14 @@
 import { X, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { SignaturePad } from './SignaturePad';
+import { NegotiationSidebar } from './NegotiationSidebar';
 import toast from 'react-hot-toast';
+import type {
+  NegotiationOffer,
+  NegotiationMessage,
+  Contract,
+} from '@/types/contracts';
+import { MessageSquare } from 'lucide-react';
 
 export type LeaseStatus = 'ACTIVE' | 'PENDING' | 'EXPIRED';
 
@@ -34,6 +41,78 @@ export function LeaseDetailsModal({
 }: LeaseDetailsModalProps) {
   const [isSigning, setIsSigning] = useState(false);
   const [isSignMode, setIsSignMode] = useState(false);
+  const [isNegotiating, setIsNegotiating] = useState(false);
+
+  // Mock data for demonstration
+  const [offers, setOffers] = useState<NegotiationOffer[]>([
+    {
+      id: 'off-1',
+      contractId: lease.id,
+      proposerRole: 'LANDLORD',
+      rentAmount: lease.rentAmount,
+      startDate: lease.startDate,
+      endDate: lease.endDate,
+      message: 'Initial lease terms',
+      status: 'PENDING',
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ]);
+
+  const [messages, setMessages] = useState<NegotiationMessage[]>([
+    {
+      id: 'msg-1',
+      senderId: 'landlord-1',
+      senderName: lease.landlordName,
+      content: 'Hello! I have sent the initial lease terms for your review.',
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ]);
+
+  const handlePropose = (offer: Partial<NegotiationOffer>) => {
+    const newOffer: NegotiationOffer = {
+      id: `off-${Date.now()}`,
+      contractId: lease.id,
+      proposerRole: offer.proposerRole || 'TENANT',
+      rentAmount: offer.rentAmount || lease.rentAmount,
+      startDate: offer.startDate || lease.startDate,
+      endDate: offer.endDate || lease.endDate,
+      message: offer.message || '',
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Counter previous pending offers
+    setOffers((prev: NegotiationOffer[]) =>
+      prev
+        .map((o: NegotiationOffer): NegotiationOffer =>
+          o.status === 'PENDING' ? { ...o, status: 'COUNTERED' } : o,
+        )
+        .concat(newOffer),
+    );
+
+    // Add message
+    const newMessage: NegotiationMessage = {
+      id: `msg-${Date.now()}`,
+      senderId: 'user-1',
+      senderName: lease.tenantName,
+      content: `I've proposed new terms: $${newOffer.rentAmount} rent starting ${new Date(newOffer.startDate).toLocaleDateString()}.`,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+
+    toast.success('Counter-proposal sent!');
+  };
+
+  const handleSendMessage = (content: string) => {
+    const newMessage: NegotiationMessage = {
+      id: `msg-${Date.now()}`,
+      senderId: 'user-1',
+      senderName: lease.tenantName,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev: NegotiationMessage[]) => [...prev, newMessage]);
+  };
 
   const handleSign = async () => {
     setIsSigning(true);
@@ -173,6 +252,15 @@ export function LeaseDetailsModal({
             >
               Close
             </button>
+            {lease.status === 'PENDING' && (
+              <button
+                onClick={() => setIsNegotiating(true)}
+                className="px-6 py-2.5 rounded-xl font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Negotiate
+              </button>
+            )}
             {canSign && (
               <button
                 onClick={() => setIsSignMode(true)}
@@ -192,6 +280,56 @@ export function LeaseDetailsModal({
           </div>
         )}
       </div>
+
+      <NegotiationSidebar
+        isOpen={isNegotiating}
+        onClose={() => setIsNegotiating(false)}
+        contract={
+          {
+            ...lease,
+            id: lease.id,
+            propertyName: lease.property,
+            propertyAddress: '',
+            landlord: {
+              name: lease.landlordName,
+              walletAddress: '',
+              role: 'ADMIN',
+            },
+            tenant: { name: lease.tenantName, walletAddress: '', role: 'USER' },
+            agent: { name: '', walletAddress: '', role: 'USER' },
+            rentAmount: lease.rentAmount,
+            securityDeposit: '0',
+            commissionRate: '0',
+            startDate: lease.startDate,
+            endDate: lease.endDate,
+            status: 'PENDING',
+            stage: 'DRAFTED',
+            stellarTxHash: '',
+            createdAt: '',
+            terms: lease.terms,
+          } as Contract
+        }
+        offers={offers}
+        messages={messages}
+        onPropose={handlePropose}
+        onAccept={(id: string) => {
+          setOffers((prev: NegotiationOffer[]) =>
+            prev.map((o: NegotiationOffer) =>
+              o.id === id ? { ...o, status: 'ACCEPTED' } : o,
+            ),
+          );
+          toast.success('Offer accepted!');
+        }}
+        onReject={(id: string) => {
+          setOffers((prev: NegotiationOffer[]) =>
+            prev.map((o: NegotiationOffer) =>
+              o.id === id ? { ...o, status: 'REJECTED' } : o,
+            ),
+          );
+          toast.error('Offer rejected.');
+        }}
+        onSendMessage={handleSendMessage}
+      />
     </div>
   );
 }

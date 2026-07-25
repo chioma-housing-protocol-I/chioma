@@ -99,4 +99,73 @@ describe('NotificationsService', () => {
 
     expect(realtimeService.emitToUser).not.toHaveBeenCalled();
   });
+
+  it('falls back to defaults when user preferences are missing', async () => {
+    const created: Partial<Notification> = {
+      userId: 'user-2',
+      title: 'Maintenance',
+      message: 'Update',
+      type: 'MAINTENANCE_UPDATE',
+      isRead: false,
+      createdAt: new Date(),
+    };
+    const saved = { id: 'n-2', ...created } as Notification;
+    notificationRepo.create.mockReturnValue(created);
+    notificationRepo.save.mockResolvedValue(saved);
+    preferenceRepo.findOne.mockResolvedValue(null);
+
+    await service.notify(
+      'user-2',
+      'Maintenance',
+      'Update',
+      'MAINTENANCE_UPDATE',
+    );
+
+    expect(realtimeService.emitToUser).toHaveBeenCalledWith('user-2', saved);
+  });
+
+  it('blocks message realtime notifications when push.newMessages is disabled', async () => {
+    const created: Partial<Notification> = {
+      userId: 'user-3',
+      title: 'New message',
+      message: 'hello',
+      type: 'NEW_MESSAGE',
+      isRead: false,
+      createdAt: new Date(),
+    };
+    const saved = { id: 'n-3', ...created } as Notification;
+    notificationRepo.create.mockReturnValue(created);
+    notificationRepo.save.mockResolvedValue(saved);
+    preferenceRepo.findOne.mockResolvedValue({
+      userId: 'user-3',
+      preferences: {
+        ...DEFAULT_NOTIFICATION_PREFERENCES,
+        notifications: {
+          ...DEFAULT_NOTIFICATION_PREFERENCES.notifications,
+          push: {
+            ...DEFAULT_NOTIFICATION_PREFERENCES.notifications.push,
+            newMessages: false,
+          },
+        },
+      },
+    } as UserNotificationPreference);
+
+    await service.notify('user-3', 'New message', 'hello', 'NEW_MESSAGE');
+    expect(realtimeService.emitToUser).not.toHaveBeenCalled();
+  });
+
+  it('marks all unread notifications as read', async () => {
+    await service.markAllAsRead('user-4');
+    expect(notificationRepo.update).toHaveBeenCalledWith(
+      { userId: 'user-4', isRead: false },
+      { isRead: true },
+    );
+  });
+
+  it('throws for missing notification on markAsRead', async () => {
+    notificationRepo.findOne.mockResolvedValue(null);
+    await expect(service.markAsRead('missing', 'user-5')).rejects.toThrow(
+      'Notification not found',
+    );
+  });
 });

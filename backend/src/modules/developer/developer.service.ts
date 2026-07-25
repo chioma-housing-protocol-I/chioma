@@ -136,7 +136,7 @@ export class DeveloperService {
   ): Promise<{ id: string; key: string; name: string; expiresAt: Date }> {
     const oldKey = await this.getKey(userId, keyId);
 
-    if (oldKey.status !== ApiKeyStatus.ACTIVE) {
+    if (oldKey.status !== ApiKeyStatus.ACTIVE || oldKey.isExpired()) {
       throw new BadRequestException('Cannot rotate a key that is not active');
     }
 

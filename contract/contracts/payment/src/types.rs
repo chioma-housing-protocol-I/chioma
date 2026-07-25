@@ -1,6 +1,28 @@
 //! Data structures for the Payment contract.
 use soroban_sdk::{contracttype, Address, Map, String};
 
+/// Escalation type for programmable rent increases
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EscalationType {
+    /// Fixed annual percentage increase (rate in basis points, e.g. 500 = 5%)
+    FixedAnnual,
+    /// No escalation — rent stays flat for the entire lease
+    None,
+}
+
+/// Configuration for programmable rent escalation per agreement
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RentEscalationConfig {
+    pub agreement_id: String,
+    /// Annual increase rate in basis points (1 bps = 0.01%, so 500 = 5%)
+    pub annual_rate_bps: u32,
+    /// Number of rent payments per year (e.g. 12 for monthly, 52 for weekly)
+    pub payments_per_year: u32,
+    pub escalation_type: EscalationType,
+}
+
 /// Configuration for late fee calculation per agreement
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

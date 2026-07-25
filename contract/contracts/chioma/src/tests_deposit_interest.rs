@@ -33,8 +33,8 @@ fn setup(env: &Env) -> (ContractClient<'_>, Address) {
 fn create_agreement_helper(
     env: &Env,
     client: &ContractClient<'_>,
-    tenant: &Address,
-    landlord: &Address,
+    user: &Address,
+    admin: &Address,
     deposit: i128,
 ) -> String {
     let id = String::from_str(env, "AGR001");
@@ -48,8 +48,8 @@ fn create_agreement_helper(
 
     client.create_agreement(&AgreementInput {
         agreement_id: id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -693,8 +693,8 @@ fn test_process_interest_accruals_batch() {
 
         client.create_agreement(&AgreementInput {
             agreement_id: id.clone(),
-            landlord: landlord.clone(),
-            tenant: tenant.clone(),
+            admin: landlord.clone(),
+            user: tenant.clone(),
             agent: None,
             terms: AgreementTerms {
                 monthly_rent: 1000,

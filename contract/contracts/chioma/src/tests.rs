@@ -248,8 +248,8 @@ fn test_create_agreement_success() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: agent.clone(),
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -286,8 +286,8 @@ fn test_create_agreement_with_agent() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: Some(agent.clone()),
         terms: AgreementTerms {
             monthly_rent: 1500,
@@ -316,8 +316,8 @@ fn test_create_agreement_without_agent() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1200,
@@ -347,8 +347,8 @@ fn test_negative_rent_rejected() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: -100,
@@ -378,8 +378,8 @@ fn test_zero_monthly_rent_rejected() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 0,
@@ -409,8 +409,8 @@ fn test_invalid_dates_rejected() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -446,8 +446,8 @@ fn test_backdated_agreement_rejected() {
     // Try to create agreement with start_date more than 1 day in the past
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -482,8 +482,8 @@ fn test_agreement_within_grace_period_accepted() {
     // Create agreement with start_date within grace period (less than 1 day ago)
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -515,8 +515,8 @@ fn test_duplicate_agreement_id() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -532,8 +532,8 @@ fn test_duplicate_agreement_id() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -563,8 +563,8 @@ fn test_invalid_commission_rate() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -583,13 +583,13 @@ fn create_pending_agreement(
     env: &Env,
     client: &ContractClient,
     agreement_id: &str,
-    tenant: &Address,
-    landlord: &Address,
+    user: &Address,
+    admin: &Address,
 ) {
     client.create_agreement(&AgreementInput {
         agreement_id: String::from_str(env, agreement_id).clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -633,9 +633,9 @@ fn test_sign_agreement_success() {
     let agreement = client
         .get_agreement(&String::from_str(&env, agreement_id))
         .unwrap();
-    assert_eq!(agreement.status, AgreementStatus::Active);
+    assert_eq!(agreement.status, AgreementStatus::PendingApproval);
     assert!(agreement.signed_at.is_some());
-    assert_eq!(agreement.tenant, tenant);
+    assert_eq!(agreement.user, tenant);
 }
 
 #[test]
@@ -681,8 +681,8 @@ fn test_sign_agreement_invalid_state() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, agreement_id).clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -713,8 +713,8 @@ fn test_sign_agreement_expired() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, agreement_id).clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -796,8 +796,8 @@ fn test_submit_agreement_success() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -847,8 +847,8 @@ fn test_submit_agreement_unauthorized() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -894,8 +894,8 @@ fn test_cancel_agreement_success_draft() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -962,8 +962,8 @@ fn test_cancel_agreement_unauthorized() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -995,6 +995,9 @@ fn test_cancel_agreement_invalid_state() {
 
     client.sign_agreement(&tenant, &String::from_str(&env, agreement_id));
 
+    // Agreement is now PendingApproval; must be approved before cancel is invalid
+    client.approve_agreement(&landlord, &String::from_str(&env, agreement_id));
+
     // Status is now Active
 
     client.cancel_agreement(&landlord, &String::from_str(&env, agreement_id));
@@ -1013,8 +1016,8 @@ fn test_get_agreement() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1030,8 +1033,8 @@ fn test_get_agreement() {
 
     let agreement = client.get_agreement(&agreement_id).unwrap();
     assert_eq!(agreement.monthly_rent, 1000);
-    assert_eq!(agreement.landlord, landlord);
-    assert_eq!(agreement.tenant, tenant);
+    assert_eq!(agreement.admin, landlord);
+    assert_eq!(agreement.user, tenant);
 }
 
 #[test]
@@ -1049,8 +1052,8 @@ fn test_has_agreement() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1080,8 +1083,8 @@ fn test_get_agreement_count() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "COUNT_001").clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1099,8 +1102,8 @@ fn test_get_agreement_count() {
 
     client.create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "COUNT_002").clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1140,8 +1143,8 @@ proptest! {
         // Disable panic catching since we expect some combinations to fail
         let result = client.try_create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent,
@@ -1213,8 +1216,8 @@ fn test_contract_paused_operations() {
 
     let res = client.try_create_agreement(&AgreementInput {
         agreement_id: String::from_str(&env, "agreement-paused").clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1236,8 +1239,8 @@ fn test_contract_paused_operations() {
     let agreement_id = String::from_str(&env, agreement_id_str);
     client.create_agreement(&AgreementInput {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,
@@ -1394,4 +1397,214 @@ fn test_unpause_unauthorized() {
             },
         }])
         .unpause();
+}
+
+#[test]
+fn test_freeze_and_unfreeze_escrow_by_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_001");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user: user.clone(),
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token,
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    client.freeze_escrow(&admin, &agreement_id);
+    assert!(client.is_escrow_frozen(&agreement_id));
+
+    client.unfreeze_escrow(&admin, &agreement_id);
+    assert!(!client.is_escrow_frozen(&agreement_id));
+}
+
+#[test]
+fn test_release_escrow_fails_when_frozen() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_002");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user,
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token: payment_token.clone(),
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    client.freeze_escrow(&admin, &agreement_id);
+
+    let result = client.try_release_escrow_with_token(&agreement_id, &payment_token);
+    assert_eq!(result, Err(Ok(RentalError::InvalidState)));
+}
+
+#[test]
+fn test_freeze_escrow_unauthorized_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_003");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user,
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token,
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    let result = client.try_freeze_escrow(&attacker, &agreement_id);
+    assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
+}
+
+#[test]
+fn test_unfreeze_escrow_unauthorized_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let payment_token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let agreement_id = String::from_str(&env, "FREEZE_004");
+    client.create_agreement(&AgreementInput {
+        agreement_id: agreement_id.clone(),
+        admin: admin.clone(),
+        user,
+        agent: None,
+        terms: AgreementTerms {
+            monthly_rent: 1000,
+            security_deposit: 2000,
+            start_date: 100,
+            end_date: 1_000_000,
+            agent_commission_rate: 0,
+        },
+        payment_token,
+        metadata_uri: String::from_str(&env, ""),
+        attributes: Vec::new(&env),
+    });
+
+    client.freeze_escrow(&admin, &agreement_id);
+    let result = client.try_unfreeze_escrow(&attacker, &agreement_id);
+    assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
+}
+
+#[test]
+fn test_freeze_escrow_missing_agreement_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let missing_id = String::from_str(&env, "FREEZE_MISSING");
+    let result = client.try_freeze_escrow(&admin, &missing_id);
+    assert_eq!(result, Err(Ok(RentalError::AgreementNotFound)));
+}
+
+#[test]
+fn test_unfreeze_escrow_missing_agreement_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let config = Config {
+        fee_bps: 100,
+        fee_collector: Address::generate(&env),
+        paused: false,
+    };
+    client.initialize(&admin, &config);
+
+    let missing_id = String::from_str(&env, "UNFREEZE_MISSING");
+    let result = client.try_unfreeze_escrow(&admin, &missing_id);
+    assert_eq!(result, Err(Ok(RentalError::AgreementNotFound)));
 }

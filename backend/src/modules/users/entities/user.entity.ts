@@ -27,13 +27,17 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  /**
+   * Nullable: wallet-only sign-ups have no email until they complete
+   * onboarding via POST /auth/complete-profile.
+   */
   @Index()
-  @Column({ type: 'varchar', unique: true })
-  email: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  email: string | null;
 
   @Column({
     name: 'email_encrypted',
-    type: 'bytea',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
     nullable: true,
     select: false,
   })
@@ -56,15 +60,31 @@ export class User {
   @Column({ name: 'first_name', nullable: true, type: 'varchar' })
   firstName: string | null;
 
+  @Column({
+    name: 'first_name_encrypted',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
+    nullable: true,
+    select: false,
+  })
+  firstNameEncrypted?: Buffer | null;
+
   @Column({ name: 'last_name', nullable: true, type: 'varchar' })
   lastName: string | null;
+
+  @Column({
+    name: 'last_name_encrypted',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
+    nullable: true,
+    select: false,
+  })
+  lastNameEncrypted?: Buffer | null;
 
   @Column({ name: 'phone_number', nullable: true, type: 'varchar' })
   phoneNumber: string | null;
 
   @Column({
     name: 'phone_number_encrypted',
-    type: 'bytea',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
     nullable: true,
     select: false,
   })
@@ -83,7 +103,11 @@ export class User {
   @Column({ name: 'avatar_url', nullable: true, type: 'varchar' })
   avatarUrl: string | null;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-enum' : 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
   role: UserRole;
 
   @Column({ name: 'email_verified', type: 'boolean', default: false })
@@ -92,31 +116,52 @@ export class User {
   // ✅ Moved inside the class
   @Column({
     name: 'kyc_status',
-    type: 'enum',
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-enum' : 'enum',
     enum: KycStatus,
     default: KycStatus.PENDING,
   })
   kycStatus: KycStatus;
 
   @Exclude()
+  @Index('idx_users_verification_token', { unique: true })
   @Column({ name: 'verification_token', nullable: true, type: 'varchar' })
   verificationToken: string | null;
+
+  @Exclude()
+  @Column({
+    name: 'verification_token_expires',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
+  verificationTokenExpires: Date | null;
 
   @Exclude()
   @Column({ name: 'reset_token', nullable: true, type: 'varchar' })
   resetToken: string | null;
 
   @Exclude()
-  @Column({ name: 'reset_token_expires', nullable: true, type: 'timestamp' })
+  @Column({
+    name: 'reset_token_expires',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
   resetTokenExpires: Date | null;
 
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts: number;
 
-  @Column({ name: 'account_locked_until', nullable: true, type: 'timestamp' })
+  @Column({
+    name: 'account_locked_until',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
   accountLockedUntil: Date | null;
 
-  @Column({ name: 'last_login_at', nullable: true, type: 'timestamp' })
+  @Column({
+    name: 'last_login_at',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
   lastLoginAt: Date | null;
 
   @Column({ name: 'login_count', type: 'int', default: 0 })
@@ -158,7 +203,7 @@ export class User {
 
   @Column({
     name: 'wallet_address_encrypted',
-    type: 'bytea',
+    type: process.env.DB_TYPE === 'sqlite' ? 'blob' : 'bytea',
     nullable: true,
     select: false,
   })
@@ -184,7 +229,7 @@ export class User {
 
   @Column({
     name: 'auth_method',
-    type: 'enum',
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-enum' : 'enum',
     enum: AuthMethod,
     default: AuthMethod.PASSWORD,
   })

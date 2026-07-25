@@ -25,7 +25,7 @@ import { StellarConfig } from '../config/stellar.config';
 export class PropertyRegistryService {
   private readonly logger = new Logger(PropertyRegistryService.name);
   private readonly sorobanRpc: StellarSdk.SorobanRpc.Server;
-  private readonly contract: StellarSdk.Contract;
+  private readonly contract: StellarSdk.Contract | null;
   private readonly networkPassphrase: string;
 
   constructor(
@@ -46,10 +46,18 @@ export class PropertyRegistryService {
     this.sorobanRpc = new StellarSdk.SorobanRpc.Server(rpcUrl);
     this.networkPassphrase = config.networkPassphrase;
 
-    const contractId =
-      this.configService.get<string>('PROPERTY_REGISTRY_CONTRACT_ID') ||
-      'DEFAULT_CONTRACT_ID';
-    this.contract = new StellarSdk.Contract(contractId);
+    const contractId = this.configService.get<string>(
+      'PROPERTY_REGISTRY_CONTRACT_ID',
+    );
+    if (contractId && contractId !== 'DEFAULT_CONTRACT_ID') {
+      this.contract = new StellarSdk.Contract(contractId);
+      this.logger.log(`PropertyRegistry contract initialized: ${contractId}`);
+    } else {
+      this.contract = null;
+      this.logger.warn(
+        'PROPERTY_REGISTRY_CONTRACT_ID not set - on-chain features will be disabled',
+      );
+    }
   }
 
   private async invokeContractFunction(
@@ -57,6 +65,12 @@ export class PropertyRegistryService {
     functionName: string,
     args: StellarSdk.xdr.ScVal[],
   ): Promise<string> {
+    if (!this.contract) {
+      throw new InternalServerErrorException(
+        'On-chain features are disabled - PROPERTY_REGISTRY_CONTRACT_ID not set',
+      );
+    }
+
     try {
       const sourceAccountDb = await this.accountRepository.findOne({
         where: { publicKey: sourcePublicKey },

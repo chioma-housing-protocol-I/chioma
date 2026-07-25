@@ -404,3 +404,67 @@ fn test_error_log_limit_returns_most_recent() {
         String::from_str(&env, "error_14")
     );
 }
+
+#[test]
+fn test_get_error_logs_empty_history_returns_empty_vec() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = setup(&env);
+
+    let logs = client.get_error_logs(&10);
+    assert_eq!(logs.len(), 0);
+}
+
+#[test]
+fn test_get_error_logs_zero_limit_returns_empty_vec() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = setup(&env);
+
+    client.log_error(
+        &RentalError::InternalError,
+        &String::from_str(&env, "op"),
+        &String::from_str(&env, "details"),
+    );
+
+    let logs = client.get_error_logs(&0);
+    assert_eq!(logs.len(), 0);
+}
+
+#[test]
+fn test_get_error_logs_limit_above_count_returns_all_logs() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = setup(&env);
+
+    client.log_error(
+        &RentalError::AgreementNotFound,
+        &String::from_str(&env, "op_a"),
+        &String::from_str(&env, "a"),
+    );
+    client.log_error(
+        &RentalError::PaymentFailed,
+        &String::from_str(&env, "op_b"),
+        &String::from_str(&env, "b"),
+    );
+    client.log_error(
+        &RentalError::EscrowNotFound,
+        &String::from_str(&env, "op_c"),
+        &String::from_str(&env, "c"),
+    );
+
+    let logs = client.get_error_logs(&100);
+    assert_eq!(logs.len(), 3);
+    assert_eq!(
+        logs.get(0).unwrap().operation,
+        String::from_str(&env, "op_a")
+    );
+    assert_eq!(
+        logs.get(1).unwrap().operation,
+        String::from_str(&env, "op_b")
+    );
+    assert_eq!(
+        logs.get(2).unwrap().operation,
+        String::from_str(&env, "op_c")
+    );
+}

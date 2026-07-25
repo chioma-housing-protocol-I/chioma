@@ -40,4 +40,14 @@ pub enum EscrowError {
     RateLimitExceeded = 16,
     /// Cooldown period not met
     CooldownNotMet = 17,
+    /// Escrow is frozen - no fund movements allowed
+    EscrowFrozen = 18,
+    /// Escrow is already frozen
+    AlreadyFrozen = 19,
+    /// Escrow is not frozen
+    NotFrozen = 20,
+    /// Empty freeze reason string
+    EmptyFreezeReason = 21,
+    /// System admin not set
+    AdminNotSet = 22,
 }

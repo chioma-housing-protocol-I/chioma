@@ -4,6 +4,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::errors::EscrowError;
+use crate::storage::EscrowStorage;
 use crate::types::Escrow;
 
 /// Access control validation functions.
@@ -54,6 +55,27 @@ impl AccessControl {
             Ok(())
         } else {
             Err(EscrowError::NotAuthorized)
+        }
+    }
+
+    /// Verify caller is the system admin.
+    /// System admin has emergency powers to freeze/unfreeze escrows.
+    pub fn is_system_admin(env: &Env, caller: &Address) -> Result<(), EscrowError> {
+        let admin = EscrowStorage::get_admin(env).ok_or(EscrowError::AdminNotSet)?;
+        if admin == *caller {
+            Ok(())
+        } else {
+            Err(EscrowError::NotAuthorized)
+        }
+    }
+
+    /// Verify escrow is not frozen.
+    /// Most operations should check this before proceeding.
+    pub fn require_not_frozen(escrow: &Escrow) -> Result<(), EscrowError> {
+        if escrow.is_frozen {
+            Err(EscrowError::EscrowFrozen)
+        } else {
+            Ok(())
         }
     }
 }

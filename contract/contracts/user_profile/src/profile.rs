@@ -2,6 +2,7 @@ use crate::errors::ContractError;
 use crate::events;
 use crate::storage::DataKey;
 use crate::types::{AccountType, UserProfile};
+use crate::upgrade;
 use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String};
 
 #[contract]
@@ -251,6 +252,46 @@ impl UserProfileContract {
         events::profile_deleted(&env, account_id);
 
         Ok(())
+    }
+
+    // --- Upgrade Functions ---
+
+    /// Propose a contract upgrade (admin only).
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: soroban_sdk::Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), ContractError> {
+        upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve an upgrade proposal (admin only).
+    pub fn approve_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), ContractError> {
+        upgrade::approve_upgrade(&env, approver, proposal_id)
+    }
+
+    /// Execute an approved upgrade (admin only).
+    pub fn execute_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), ContractError> {
+        upgrade::execute_upgrade(&env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, ContractError> {
+        upgrade::get_upgrade_proposal(&env, proposal_id)
     }
 }
 

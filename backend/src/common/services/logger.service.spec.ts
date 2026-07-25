@@ -1,4 +1,7 @@
 import { LoggerService } from './logger.service';
+import { promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 describe('LoggerService', () => {
   let service: LoggerService;
@@ -79,4 +82,24 @@ describe('LoggerService', () => {
       expect.any(Object),
     );
   });
+
+  it('removes log files older than retention', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chioma-logs-'));
+    const oldLog = path.join(tempDir, 'application-2026-01-01.log');
+    const freshLog = path.join(tempDir, 'application-2026-05-26.log');
+
+    await fs.writeFile(oldLog, 'old');
+    await fs.writeFile(freshLog, 'fresh');
+
+    const oldTime = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    await fs.utimes(oldLog, oldTime, oldTime);
+
+    const removed = await service.cleanupOldLogFiles(tempDir, 1);
+
+    expect(removed).toBe(1);
+    await expect(fs.access(oldLog)).rejects.toThrow();
+    await expect(fs.access(freshLog)).resolves.not.toThrow();
+
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }, 10000);
 });

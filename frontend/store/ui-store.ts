@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { withMiddleware } from './middleware';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -56,6 +56,12 @@ function nextToastId(): string {
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
+
+const noopStorage = {
+  getItem: (_key: string) => null,
+  setItem: (_key: string, _value: string) => undefined,
+  removeItem: (_key: string) => undefined,
+};
 
 export const useUIStore = create<UIStore>()(
   persist(
@@ -135,6 +141,9 @@ export const useUIStore = create<UIStore>()(
     ),
     {
       name: 'chioma-ui',
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? localStorage : noopStorage,
+      ),
       partialize: (state) => ({
         theme: state.theme,
         sidebarCollapsed: state.sidebarCollapsed,

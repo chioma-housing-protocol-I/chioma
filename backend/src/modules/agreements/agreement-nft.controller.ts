@@ -23,7 +23,7 @@ export class AgreementNftController {
   async mintNft(@Body() dto: MintNftDto) {
     return this.nftService.mintNftForAgreement(
       dto.agreementId,
-      dto.landlordAddress,
+      dto.adminAddress,
     );
   }
 

@@ -5,7 +5,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 
 export interface MintObligationParams {
   agreementId: string;
-  landlordAddress: string;
+  adminAddress: string;
 }
 
 export interface TransferObligationParams {
@@ -73,14 +73,14 @@ export class RentObligationNftService {
       if (!this.isConfigured || !this.contract) {
         throw new Error('Contract not configured');
       }
-      const landlordAddress = new Address(params.landlordAddress);
+      const adminAddress = new Address(params.adminAddress);
       const agreementIdScVal = xdr.ScVal.scvString(params.agreementId);
-      const landlordScVal = landlordAddress.toScVal();
+      const adminScVal = adminAddress.toScVal();
 
       const tx = await this.buildTransaction(
         'mint_obligation',
-        [agreementIdScVal, landlordScVal],
-        params.landlordAddress,
+        [agreementIdScVal, adminScVal],
+        params.adminAddress,
       );
 
       const response = await this.server.sendTransaction(tx);

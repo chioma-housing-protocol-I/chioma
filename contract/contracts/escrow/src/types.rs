@@ -25,10 +25,14 @@ pub struct Escrow {
     pub id: BytesN<32>,
     /// The party depositing funds (tenant)
     pub depositor: Address,
-    /// The party who benefits from the deposit (landlord)
+    /// The party who benefits from the deposit (landlord/admin)
     pub beneficiary: Address,
     /// The admin/arbiter who can resolve disputes
     pub arbiter: Address,
+    /// Platform governance address receiving 5% on rent release
+    pub platform_governance: Address,
+    /// Agent/referral address receiving 5% on rent release
+    pub agent_referral: Address,
     /// Amount of funds in the escrow
     pub amount: i128,
     /// Token contract address (USDC, XLM, etc.)
@@ -43,6 +47,12 @@ pub struct Escrow {
     pub disputed_at: Option<u64>,
     /// Reason for dispute, if any
     pub dispute_reason: Option<String>,
+    /// Emergency freeze flag - prevents all fund movements when true
+    pub is_frozen: bool,
+    /// Timestamp when escrow was frozen
+    pub frozen_at: Option<u64>,
+    /// Reason for freezing the escrow
+    pub freeze_reason: Option<String>,
 }
 
 /// Contract-level timeout configuration.
@@ -128,4 +138,8 @@ pub enum DataKey {
     UserCallCount(Address, String),
     /// Block call count for rate limiting: DataKey::BlockCallCount(block_number, function_name)
     BlockCallCount(u64, String),
+    /// System admin address for emergency operations
+    SystemAdmin,
+    /// Upgrade proposal
+    UpgradeProposal(String),
 }

@@ -23,6 +23,15 @@ export {
 } from './use-notifications';
 
 export {
+  useFavorites,
+  useFavoriteStatus,
+  useFavoriteCount,
+  useAddFavorite,
+  useRemoveFavorite,
+  useToggleFavorite,
+} from './use-favorites';
+
+export {
   useTransactions,
   useUserTransactions,
   useTransaction,
@@ -70,6 +79,21 @@ export {
   useResolveSecurityIncident,
 } from './use-security-dashboard';
 
+export {
+  useAgreements,
+  useUserAgreements,
+  useAgreement,
+  useAgreementFees,
+  useCreateAgreement,
+  useUpdateAgreement,
+  useSignAgreement,
+  useTerminateAgreement,
+  useRenewAgreement,
+  useRecordPayment,
+} from './use-agreements';
+
+export type { AgreementSummary, AgreementResponse } from './use-agreements';
+
 export { useLandlordPropertyAnalytics } from './use-property-analytics';
 
 export { useOptimisticUpdate } from './use-optimistic-update';
@@ -86,3 +110,27 @@ export type {
   CacheInvalidationConfig,
   UseCacheInvalidationResult,
 } from './use-cache-invalidation';
+
+export {
+  useSearchProperties,
+  useSearchUsers,
+  useSearchDocuments,
+  useSearchSuggest,
+} from './use-properties';
+export type { PropertySearchParams } from './use-properties';
+export {
+  useLandlordDocuments,
+  useSharedDocuments,
+  useDocument,
+  useUploadDocument,
+  useDeleteDocument,
+  useArchiveDocument,
+  useShareDocument,
+  useUpdateDocument,
+} from './use-landlord-documents';
+export type {
+  DocumentRecord,
+  DocumentStatus,
+  DocumentType,
+  DocumentFilters,
+} from './use-landlord-documents';

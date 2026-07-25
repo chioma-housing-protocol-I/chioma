@@ -6,7 +6,7 @@ services:
     image: prom/prometheus:latest
     container_name: chioma-prometheus
     ports:
-      - "9090:9090"
+      - '9090:9090'
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -21,7 +21,7 @@ services:
     image: grafana/grafana:latest
     container_name: chioma-grafana
     ports:
-      - "3001:3000"
+      - '3001:3000'
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -38,7 +38,7 @@ services:
     image: grafana/loki:latest
     container_name: chioma-loki
     ports:
-      - "3100:3100"
+      - '3100:3100'
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
@@ -65,14 +65,14 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: chioma-jaeger
     ports:
-      - "5775:5775/udp"
-      - "6831:6831/udp"
-      - "6832:6832/udp"
-      - "5778:5778"
-      - "16686:16686"
-      - "14268:14268"
-      - "14250:14250"
-      - "9411:9411"
+      - '5775:5775/udp'
+      - '6831:6831/udp'
+      - '6832:6832/udp'
+      - '5778:5778'
+      - '16686:16686'
+      - '14268:14268'
+      - '14250:14250'
+      - '9411:9411'
     environment:
       - COLLECTOR_ZIPKIN_HOST_PORT=:9411
     networks:
@@ -83,7 +83,7 @@ services:
     image: prom/alertmanager:latest
     container_name: chioma-alertmanager
     ports:
-      - "9093:9093"
+      - '9093:9093'
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     command:

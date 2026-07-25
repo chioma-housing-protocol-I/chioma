@@ -55,13 +55,13 @@ Verify that `OPENAPI_GENERATE` is not set to `true` in the environment, which wo
 
 ### Resolution
 
-| Root Cause | Resolution |
-|---|---|
-| Queue is paused | `POST /api/v1/queues/:queueName/resume` |
-| Worker process crashed | Restart the application; investigate crash logs |
-| Redis unreachable | Fix Redis connectivity (see scenario 4) |
+| Root Cause                  | Resolution                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| Queue is paused             | `POST /api/v1/queues/:queueName/resume`                                           |
+| Worker process crashed      | Restart the application; investigate crash logs                                   |
+| Redis unreachable           | Fix Redis connectivity (see scenario 4)                                           |
 | `QueuesModule` not imported | Ensure `OPENAPI_GENERATE !== 'true'` and `QueuesModule` is in `AppModule.imports` |
-| Processor not registered | Verify the processor class is listed in `QueuesModule.providers` |
+| Processor not registered    | Verify the processor class is listed in `QueuesModule.providers`                  |
 
 ---
 
@@ -108,13 +108,13 @@ Bull stores jobs under keys prefixed with `bull:<queueName>:`. Large counts here
 
 ### Resolution
 
-| Root Cause | Resolution |
-|---|---|
+| Root Cause                             | Resolution                                                                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Completed blockchain jobs accumulating | Archive and remove old completed jobs via `POST /api/v1/queues/blockchain/jobs/:jobId/remove`; consider setting `removeOnComplete: 10000` |
-| Failed jobs not being cleared | Investigate and resolve failures, then clear via the admin API |
-| Wrong eviction policy | Set `maxmemory-policy noeviction` in `redis.conf` |
-| Metrics history too large | Reduce `maxMetricsPerQueue` in `QueueMonitoringService` or increase collection interval |
-| Insufficient `maxmemory` | Increase Redis `maxmemory` allocation |
+| Failed jobs not being cleared          | Investigate and resolve failures, then clear via the admin API                                                                            |
+| Wrong eviction policy                  | Set `maxmemory-policy noeviction` in `redis.conf`                                                                                         |
+| Metrics history too large              | Reduce `maxMetricsPerQueue` in `QueueMonitoringService` or increase collection interval                                                   |
+| Insufficient `maxmemory`               | Increase Redis `maxmemory` allocation                                                                                                     |
 
 ---
 
@@ -153,6 +153,7 @@ If the worker process has crashed or is unresponsive, active jobs will remain in
 **Step 3 — Check for processor deadlocks or infinite loops.**
 
 Review application logs for the affected processor around the time the job became active. Look for:
+
 - Missing `completed` or `error` log lines after the job started.
 - Repeated log lines suggesting an infinite loop.
 - No log output at all (suggesting the process hung).
@@ -165,12 +166,12 @@ If jobs are stuck for longer than `lockDuration`, the worker holding the lock is
 
 ### Resolution
 
-| Root Cause | Resolution |
-|---|---|
-| Worker process crashed | Restart the application; Bull will re-queue the job after lock expiry |
-| Processor hanging on external call | Add a timeout to the external call; restart the worker |
-| Infinite loop in processor | Fix the processor logic; restart the worker |
-| Lock not expiring | Verify `lockDuration` is set appropriately; restart the worker to release the lock |
+| Root Cause                         | Resolution                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| Worker process crashed             | Restart the application; Bull will re-queue the job after lock expiry              |
+| Processor hanging on external call | Add a timeout to the external call; restart the worker                             |
+| Infinite loop in processor         | Fix the processor logic; restart the worker                                        |
+| Lock not expiring                  | Verify `lockDuration` is set appropriately; restart the worker to release the lock |
 
 To force-remove a stuck active job (use with caution — the job will be lost):
 
@@ -232,15 +233,15 @@ Look for `max number of clients reached`, `out of memory`, or authentication err
 
 ### Resolution
 
-| Root Cause | Resolution |
-|---|---|
-| Wrong `REDIS_HOST` / `REDIS_PORT` | Correct the environment variables and restart |
-| Wrong `REDIS_PASSWORD` | Update the password and restart |
-| TLS mismatch | Align `REDIS_TLS` with the server's TLS configuration |
-| Redis server down | Restart the Redis server; investigate the cause |
-| Network/firewall blocking | Update firewall rules to allow traffic on the Redis port |
-| Redis max clients reached | Increase `maxclients` in `redis.conf` or reduce connection pool size |
-| Upstash token expired | Rotate the `REDIS_TOKEN` in Upstash dashboard and update the environment variable |
+| Root Cause                        | Resolution                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| Wrong `REDIS_HOST` / `REDIS_PORT` | Correct the environment variables and restart                                     |
+| Wrong `REDIS_PASSWORD`            | Update the password and restart                                                   |
+| TLS mismatch                      | Align `REDIS_TLS` with the server's TLS configuration                             |
+| Redis server down                 | Restart the Redis server; investigate the cause                                   |
+| Network/firewall blocking         | Update firewall rules to allow traffic on the Redis port                          |
+| Redis max clients reached         | Increase `maxclients` in `redis.conf` or reduce connection pool size              |
+| Upstash token expired             | Rotate the `REDIS_TOKEN` in Upstash dashboard and update the environment variable |
 
 After fixing the root cause, the application's ioredis client will reconnect automatically using the configured `retryStrategy` (exponential backoff, max 2 000 ms). No restart is required unless environment variables were changed.
 

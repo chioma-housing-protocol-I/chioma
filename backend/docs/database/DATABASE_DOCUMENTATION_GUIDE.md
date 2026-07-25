@@ -262,3 +262,17 @@ Docker and non-Docker flows, and both plain SQL and gzipped dumps.
 - run `EXPLAIN ANALYZE` for slow queries and compare with documented indexes
 - verify `DB_*` vars and `BACKUP_DIR` permissions when backup or restore fails
 - verify active encryption keys and hashed lookup columns when encrypted field lookups fail
+
+## Scheduled Maintenance
+
+`DatabaseMaintenanceService` runs from the backend cleanup module every day at
+03:00. For PostgreSQL deployments it:
+
+- Reads `pg_stat_user_tables` to identify tables with accumulated dead tuples.
+- Runs `VACUUM (ANALYZE)` so PostgreSQL can reclaim space and refresh planner
+  statistics.
+- Skips maintenance automatically for non-PostgreSQL test databases.
+
+Run the service during low-traffic windows. If dead tuple counts remain high
+after repeated runs, review long-running transactions, autovacuum settings, and
+table-specific write patterns before increasing maintenance frequency.

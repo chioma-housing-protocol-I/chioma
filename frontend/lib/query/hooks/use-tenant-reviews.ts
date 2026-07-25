@@ -175,7 +175,12 @@ export function useCreateReview() {
       targetId: string;
       context: string;
     }) => {
-      await apiClient.post('/reviews', payload);
+      await apiClient.post('/reviews', {
+        rating: payload.rating,
+        comment: payload.comment,
+        revieweeId: payload.targetId,
+        context: payload.context,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_REVIEWS_QUERY_KEY });
@@ -193,7 +198,7 @@ export function useUpdateReview() {
       id: string;
       payload: { rating: number; comment: string };
     }) => {
-      await apiClient.put(`/reviews/${id}`, payload);
+      await apiClient.patch(`/reviews/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_REVIEWS_QUERY_KEY });

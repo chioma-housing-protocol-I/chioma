@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
 import {
@@ -9,8 +9,8 @@ import {
 } from '@/lib/stellar-wallets-kit';
 import toast from 'react-hot-toast';
 import { requestChallenge, verifySignature } from '@/lib/stellar-auth';
+import { getNetworkPassphrase } from '@/lib/stellar-network';
 import { detectRoleFromWallet } from '@/lib/navigation/detect-user-role';
-import * as StellarSdk from '@stellar/stellar-sdk';
 
 interface WalletConnectButtonProps {
   onSuccess?: () => void;
@@ -21,7 +21,6 @@ interface WalletConnectButtonProps {
 export default function WalletConnectButton({
   onSuccess,
   className = '',
-  buttonText = 'Connect Wallet',
 }: WalletConnectButtonProps) {
   const buttonWrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -73,7 +72,7 @@ export default function WalletConnectButton({
           const { signedTxXdr } = await StellarWalletsKit.signTransaction(
             challengeXdr,
             {
-              networkPassphrase: StellarSdk.Networks.PUBLIC,
+              networkPassphrase: getNetworkPassphrase(),
               address,
             },
           );
@@ -92,8 +91,10 @@ export default function WalletConnectButton({
           if (result.accessToken && result.refreshToken && result.user) {
             let userWithRole = result.user;
 
-            // Ensure user has a role - detect if missing
+            // Use the role from the backend response directly
+            // The backend already determines the role based on the wallet address
             if (!userWithRole.role) {
+              // Only detect role if backend didn't provide one (shouldn't happen)
               toast.loading('Detecting user role...', { id: 'role-detect' });
               const detectedRole = await detectRoleFromWallet(address);
               toast.dismiss('role-detect');
@@ -113,19 +114,22 @@ export default function WalletConnectButton({
             setWalletAddress(address);
             toast.success('Successfully logged in with Wallet!');
 
-            console.log('✅ Auth tokens set. User role:', userWithRole.role);
-
-            // Call onSuccess callback if provided
             if (onSuccess) {
               onSuccess();
-            } else {
-              // Navigate to dashboard based on role
+            } else if (!userWithRole.email) {
+              // Wallet-only account: no email on file yet, so route into the
+              // short onboarding flow before the dashboard.
               setTimeout(() => {
-                const dashboardRoute =
-                  userWithRole.role === 'admin' ? '/admin' : '/user';
-                console.log('🚀 Navigating to:', dashboardRoute);
+                router.push('/complete-profile');
+              }, 800);
+            } else {
+              const isAdmin = ['admin', 'super_admin'].includes(
+                userWithRole.role?.toLowerCase() || '',
+              );
+              const dashboardRoute = isAdmin ? '/admin' : '/user';
+              setTimeout(() => {
                 router.push(dashboardRoute);
-              }, 500); // Small delay to show success message
+              }, 800);
             }
           } else {
             throw new Error('Invalid authentication response');
@@ -186,7 +190,14 @@ export default function WalletConnectButton({
 
   // Don't render anything until mounted on client
   if (!isMounted) {
-    return <div className={className} />;
+    return (
+      <div
+        className={`${className} px-6 py-2.5 text-sm rounded-lg bg-blue-600 text-white font-medium`}
+        suppressHydrationWarning
+      >
+        Connect Wallet
+      </div>
+    );
   }
 
   return (

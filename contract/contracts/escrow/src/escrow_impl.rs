@@ -1,6 +1,6 @@
 //! Core escrow lifecycle logic: creation, funding, approvals, and release.
 //! Implements checks-effects-interactions pattern for reentrancy safety.
-use soroban_sdk::{contract, contractimpl, token, xdr::ToXdr, Address, BytesN, Env};
+use soroban_sdk::{contract, contractimpl, token, xdr::ToXdr, Address, BytesN, Env, String};
 
 use crate::access::AccessControl;
 use crate::dispute::DisputeHandler;
@@ -9,6 +9,7 @@ use crate::events;
 use crate::rate_limit;
 use crate::storage::EscrowStorage;
 use crate::types::{Escrow, EscrowStatus, ReleaseApproval, ReleaseRecord, TimeoutConfig};
+use crate::upgrade;
 
 /// Core escrow contract implementation.
 #[contract]
@@ -35,6 +36,8 @@ impl EscrowContract {
         depositor: Address,
         beneficiary: Address,
         arbiter: Address,
+        platform_governance: Address,
+        agent_referral: Address,
         amount: i128,
         token: Address,
     ) -> Result<BytesN<32>, EscrowError> {
@@ -43,7 +46,7 @@ impl EscrowContract {
             return Err(EscrowError::InsufficientFunds);
         }
 
-        // Ensure all parties are distinct
+        // Ensure primary parties are distinct
         if depositor == beneficiary || depositor == arbiter || beneficiary == arbiter {
             return Err(EscrowError::InvalidSigner);
         }
@@ -65,6 +68,8 @@ impl EscrowContract {
             depositor: depositor.clone(),
             beneficiary: beneficiary.clone(),
             arbiter: arbiter.clone(),
+            platform_governance,
+            agent_referral,
             amount,
             token,
             status: EscrowStatus::Pending,
@@ -72,6 +77,9 @@ impl EscrowContract {
             timeout_days: EscrowStorage::get_timeout_config(&env).escrow_timeout_days,
             disputed_at: None,
             dispute_reason: None,
+            is_frozen: false,
+            frozen_at: None,
+            freeze_reason: None,
         };
 
         EscrowStorage::save(&env, &escrow);
@@ -128,6 +136,7 @@ impl EscrowContract {
     ///
     /// CHECKS:
     /// - Escrow must exist and be Funded (or Disputed if arbiter)
+    /// - Escrow must not be frozen
     /// - Caller must be a valid party
     /// - Release target must be beneficiary or depositor
     /// - Caller must not have already approved this same target
@@ -147,6 +156,9 @@ impl EscrowContract {
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
         let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        // Check if escrow is frozen
+        AccessControl::require_not_frozen(&escrow)?;
 
         // Verify caller is a valid party
         AccessControl::is_party(&escrow, &caller)?;
@@ -378,6 +390,7 @@ impl EscrowContract {
     ///
     /// CHECKS:
     /// - Escrow must exist and be Funded
+    /// - Escrow must not be frozen
     /// - Amount must be positive and not exceed escrow balance
     /// - Recipient must be beneficiary or depositor
     /// - Reason must not be empty
@@ -400,6 +413,9 @@ impl EscrowContract {
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        // Check if escrow is frozen
+        AccessControl::require_not_frozen(&escrow)?;
 
         // Verify escrow is in Funded state
         if escrow.status != EscrowStatus::Funded {
@@ -473,6 +489,7 @@ impl EscrowContract {
     ///
     /// CHECKS:
     /// - Escrow must exist and be Funded
+    /// - Escrow must not be frozen
     /// - Damage amount must be non-negative and not exceed escrow balance
     /// - Reason must not be empty
     /// - Must have 2-of-3 approval for release to depositor
@@ -493,6 +510,9 @@ impl EscrowContract {
     ) -> Result<(), EscrowError> {
         // CHECKS: Get and validate escrow
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        // Check if escrow is frozen
+        AccessControl::require_not_frozen(&escrow)?;
 
         // Verify escrow is in Funded state
         if escrow.status != EscrowStatus::Funded {
@@ -597,5 +617,334 @@ impl EscrowContract {
         // Verify escrow exists
         EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
         Ok(EscrowStorage::get_release_history(&env, &escrow_id))
+    }
+
+    /// Initialize the system admin address.
+    /// Should be called once during contract deployment.
+    /// Only the initial caller can set the admin.
+    ///
+    /// CHECKS:
+    /// - Admin must not already be set
+    ///
+    /// EFFECTS:
+    /// - Set admin address in storage
+    pub fn initialize_admin(env: Env, admin: Address) -> Result<(), EscrowError> {
+        // Check if admin is already set
+        if EscrowStorage::get_admin(&env).is_some() {
+            return Err(EscrowError::NotAuthorized);
+        }
+
+        // Require authorization from the admin address
+        admin.require_auth();
+
+        // Set the admin
+        EscrowStorage::set_admin(&env, &admin);
+
+        Ok(())
+    }
+
+    /// Update the system admin address.
+    /// Only the current admin can update to a new admin.
+    ///
+    /// CHECKS:
+    /// - Caller must be current admin
+    ///
+    /// EFFECTS:
+    /// - Update admin address in storage
+    pub fn update_admin(env: Env, caller: Address, new_admin: Address) -> Result<(), EscrowError> {
+        // Verify caller is current admin
+        AccessControl::is_system_admin(&env, &caller)?;
+
+        // Require authorization
+        caller.require_auth();
+
+        // Update the admin
+        EscrowStorage::set_admin(&env, &new_admin);
+
+        Ok(())
+    }
+
+    /// Get the current system admin address.
+    pub fn get_admin(env: Env) -> Option<Address> {
+        EscrowStorage::get_admin(&env)
+    }
+
+    /// Freeze an escrow to prevent all fund movements.
+    /// Used in case of verified exploit, major dispute, or security incident.
+    /// Only the system admin or arbiter can freeze an escrow.
+    ///
+    /// CHECKS:
+    /// - Escrow must exist
+    /// - Escrow must not already be frozen
+    /// - Caller must be system admin or arbiter
+    /// - Reason must not be empty
+    ///
+    /// EFFECTS:
+    /// - Set is_frozen flag to true
+    /// - Record freeze timestamp and reason
+    /// - Emit EscrowFrozen event
+    pub fn freeze_escrow(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+        reason: soroban_sdk::String,
+    ) -> Result<(), EscrowError> {
+        // CHECKS: Get and validate escrow
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        // Check if already frozen
+        if escrow.is_frozen {
+            return Err(EscrowError::AlreadyFrozen);
+        }
+
+        // Verify reason is not empty
+        if reason.is_empty() {
+            return Err(EscrowError::EmptyFreezeReason);
+        }
+
+        // Verify caller is system admin or arbiter
+        let is_admin = AccessControl::is_system_admin(&env, &caller).is_ok();
+        let is_arbiter = AccessControl::is_arbiter(&escrow, &caller).is_ok();
+
+        if !is_admin && !is_arbiter {
+            return Err(EscrowError::NotAuthorized);
+        }
+
+        // Require authorization
+        caller.require_auth();
+
+        // EFFECTS: Freeze the escrow
+        let timestamp = env.ledger().timestamp();
+        escrow.is_frozen = true;
+        escrow.frozen_at = Some(timestamp);
+        escrow.freeze_reason = Some(reason.clone());
+
+        EscrowStorage::save(&env, &escrow);
+
+        // Emit event
+        events::escrow_frozen(&env, escrow_id, caller, reason, timestamp);
+
+        Ok(())
+    }
+
+    /// Unfreeze an escrow to allow fund movements again.
+    /// Only the system admin can unfreeze an escrow.
+    ///
+    /// CHECKS:
+    /// - Escrow must exist
+    /// - Escrow must be frozen
+    /// - Caller must be system admin
+    ///
+    /// EFFECTS:
+    /// - Set is_frozen flag to false
+    /// - Clear freeze timestamp and reason
+    /// - Emit EscrowUnfrozen event
+    pub fn unfreeze_escrow(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+    ) -> Result<(), EscrowError> {
+        // CHECKS: Get and validate escrow
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        // Check if escrow is frozen
+        if !escrow.is_frozen {
+            return Err(EscrowError::NotFrozen);
+        }
+
+        // Verify caller is system admin
+        AccessControl::is_system_admin(&env, &caller)?;
+
+        // Require authorization
+        caller.require_auth();
+
+        // EFFECTS: Unfreeze the escrow
+        let timestamp = env.ledger().timestamp();
+        escrow.is_frozen = false;
+        escrow.frozen_at = None;
+        escrow.freeze_reason = None;
+
+        EscrowStorage::save(&env, &escrow);
+
+        // Emit event
+        events::escrow_unfrozen(&env, escrow_id, caller, timestamp);
+
+        Ok(())
+    }
+
+    /// Check if an escrow is frozen.
+    /// Read-only view function.
+    pub fn is_escrow_frozen(env: Env, escrow_id: BytesN<32>) -> Result<bool, EscrowError> {
+        let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+        Ok(escrow.is_frozen)
+    }
+
+    /// Release rent with automatic 90/5/5 fee split.
+    ///
+    /// Distributes the full escrow balance:
+    ///   - beneficiary (landlord/admin): 90%
+    ///   - platform_governance: 5%
+    ///   - agent_referral: remainder (total - beneficiary_share - governance_share)
+    ///
+    /// Integer arithmetic using scale multiplication avoids rounding loss: the
+    /// remainder is assigned to agent_referral so that all strokes sum to `amount`.
+    ///
+    /// CHECKS:
+    /// - Escrow must exist and be in Funded state (not Disputed)
+    /// - Caller must be the arbiter
+    ///
+    /// EFFECTS:
+    /// - Escrow status → Released
+    ///
+    /// INTERACTIONS:
+    /// - Three token transfers after all state updates
+    pub fn release_rent(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+    ) -> Result<(), EscrowError> {
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        AccessControl::is_arbiter(&escrow, &caller)?;
+
+        if escrow.status != EscrowStatus::Funded {
+            return Err(EscrowError::InvalidState);
+        }
+
+        caller.require_auth();
+
+        let total = escrow.amount;
+        let beneficiary_share = total * 90 / 100;
+        let governance_share = total * 5 / 100;
+        let agent_share = total - beneficiary_share - governance_share;
+
+        // EFFECTS: mark as released before any transfers (checks-effects-interactions)
+        escrow.status = EscrowStatus::Released;
+        EscrowStorage::save(&env, &escrow);
+
+        // INTERACTIONS: distribute funds
+        let token_client = token::Client::new(&env, &escrow.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &escrow.beneficiary,
+            &beneficiary_share,
+        );
+        token_client.transfer(
+            &env.current_contract_address(),
+            &escrow.platform_governance,
+            &governance_share,
+        );
+        token_client.transfer(
+            &env.current_contract_address(),
+            &escrow.agent_referral,
+            &agent_share,
+        );
+
+        events::rent_released(
+            &env,
+            escrow_id,
+            beneficiary_share,
+            governance_share,
+            agent_share,
+        );
+        Ok(())
+    }
+
+    /// Withdraw safety deposit back to the depositor.
+    ///
+    /// Can only be called when:
+    ///   1. The escrow timeout has elapsed (same timestamp logic as release_escrow_on_timeout)
+    ///   2. No active dispute is registered (status must NOT be Disputed)
+    ///
+    /// CHECKS:
+    /// - Escrow must exist and be in Funded state
+    /// - Caller must be the depositor
+    /// - Escrow must not be in Disputed state
+    /// - Timeout must have passed (now > created_at + timeout_days * 86400)
+    ///
+    /// EFFECTS:
+    /// - Escrow status → Refunded
+    ///
+    /// INTERACTIONS:
+    /// - Token transfer after state update
+    pub fn withdraw_safety_deposit(
+        env: Env,
+        escrow_id: BytesN<32>,
+        caller: Address,
+    ) -> Result<(), EscrowError> {
+        let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
+
+        AccessControl::is_depositor(&escrow, &caller)?;
+
+        if escrow.status == EscrowStatus::Disputed {
+            return Err(EscrowError::DisputeActive);
+        }
+
+        if escrow.status != EscrowStatus::Funded {
+            return Err(EscrowError::InvalidState);
+        }
+
+        caller.require_auth();
+
+        let timeout_seconds = escrow.timeout_days.saturating_mul(86_400);
+        let deadline = escrow.created_at.saturating_add(timeout_seconds);
+        if env.ledger().timestamp() <= deadline {
+            return Err(EscrowError::TimeoutNotReached);
+        }
+
+        // EFFECTS
+        escrow.status = EscrowStatus::Refunded;
+        EscrowStorage::save(&env, &escrow);
+
+        // INTERACTIONS
+        let token_client = token::Client::new(&env, &escrow.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &escrow.depositor,
+            &escrow.amount,
+        );
+
+        events::safety_deposit_withdrawn(&env, escrow_id, escrow.amount);
+        Ok(())
+    }
+
+    // --- Upgrade Functions ---
+
+    /// Propose a contract upgrade.
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: soroban_sdk::Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), EscrowError> {
+        upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve an upgrade proposal.
+    pub fn approve_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), EscrowError> {
+        upgrade::approve_upgrade(&env, approver, proposal_id)
+    }
+
+    /// Execute an approved upgrade.
+    pub fn execute_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), EscrowError> {
+        upgrade::execute_upgrade(&env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, EscrowError> {
+        upgrade::get_upgrade_proposal(&env, proposal_id)
     }
 }

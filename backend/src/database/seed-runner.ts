@@ -9,6 +9,7 @@
 
 import { AppDataSource } from './data-source';
 import { seedSupportedCurrencies } from './seeds/seed-currencies';
+import { seedComprehensiveData } from './seeds/seed-comprehensive';
 import { createScriptLogger } from '../common/services/script-logger';
 
 const logger = createScriptLogger('seed-runner');
@@ -17,6 +18,7 @@ export async function runAllDataSeeds(): Promise<void> {
   await AppDataSource.initialize();
   try {
     await seedSupportedCurrencies(AppDataSource);
+    await seedComprehensiveData(AppDataSource);
     logger.log('Data seeding completed.');
   } finally {
     await AppDataSource.destroy();

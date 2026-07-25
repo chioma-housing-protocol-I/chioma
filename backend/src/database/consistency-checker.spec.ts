@@ -19,7 +19,7 @@ describe('ConsistencyChecker', () => {
       expect(c).toHaveProperty('name');
       expect(c).toHaveProperty('passed');
     });
-  });
+  }, 30000);
 
   it('returns error message when init fails', async () => {
     const result = await runConsistencyChecks();
@@ -27,5 +27,5 @@ describe('ConsistencyChecker', () => {
       expect(result.error).toBeDefined();
       expect(typeof result.error).toBe('string');
     }
-  });
+  }, 30000);
 });

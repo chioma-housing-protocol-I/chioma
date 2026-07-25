@@ -44,6 +44,28 @@ export class ReviewsController {
     return this.reviewsService.create(payload as Partial<Review>);
   }
 
+  @Get()
+  @ApiOperation({
+    summary:
+      'Get reviews for the authenticated user with pagination and filters',
+  })
+  async getMyReviews(
+    @Req() req: { user?: { id: string } },
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+    @Query('rating') rating?: number,
+    @Query('search') search?: string,
+  ) {
+    return this.reviewsService.getMyReviews(
+      req.user?.id ?? '',
+      Number(page),
+      Number(limit),
+      { role, status, rating, search },
+    );
+  }
+
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get reviews for a user' })
   @ApiParam({ name: 'userId', description: 'User ID (reviewee)' })

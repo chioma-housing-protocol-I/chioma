@@ -5,10 +5,14 @@ use crate::errors::RentalError;
 use crate::events;
 use crate::rate_limit;
 use crate::storage::DataKey;
-use crate::types::{AgreementStatus, PaymentSplit, RentAgreement};
+use crate::types::{
+    AgreementExtension, AgreementStatus, ExtensionHistory, ExtensionStatus, PaymentSplit,
+    RentAgreement,
+};
 
 const TTL_THRESHOLD: u32 = 500000;
 const TTL_BUMP: u32 = 500000;
+const SECONDS_PER_MONTH: u64 = 30 * 24 * 60 * 60;
 
 /// Validate agreement parameters
 ///
@@ -47,10 +51,10 @@ pub fn validate_agreement_params(
 #[allow(clippy::too_many_arguments)]
 pub fn create_agreement(env: &Env, input: crate::types::AgreementInput) -> Result<(), RentalError> {
     // Tenant MUST authorize creation
-    input.tenant.require_auth();
+    input.user.require_auth();
 
     // Rate limiting check
-    rate_limit::check_rate_limit(env, &input.tenant, "create_agreement")?;
+    rate_limit::check_rate_limit(env, &input.user, "create_agreement")?;
 
     create_agreement_internal(env, input)
 }
@@ -84,8 +88,8 @@ fn create_agreement_internal(
     // Initialize agreement
     let agreement = RentAgreement {
         agreement_id: agreement_id.clone(),
-        landlord: input.landlord.clone(),
-        tenant: input.tenant.clone(),
+        admin: input.admin.clone(),
+        user: input.user.clone(),
         agent: input.agent.clone(),
         monthly_rent: input.terms.monthly_rent,
         security_deposit: input.terms.security_deposit,
@@ -96,6 +100,7 @@ fn create_agreement_internal(
         total_rent_paid: 0,
         payment_count: 0,
         signed_at: None,
+        witness_id: None,
         payment_token: input.payment_token.clone(),
         next_payment_due: input.terms.start_date,
         metadata_uri: input.metadata_uri,
@@ -128,8 +133,8 @@ fn create_agreement_internal(
     events::agreement_created(
         env,
         agreement_id,
-        agreement.tenant.clone(),
-        agreement.landlord.clone(),
+        agreement.user.clone(),
+        agreement.admin.clone(),
         agreement.monthly_rent,
         agreement.security_deposit,
         agreement.start_date,
@@ -141,12 +146,12 @@ fn create_agreement_internal(
 }
 
 /// Sign an agreement as the tenant
-pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Result<(), RentalError> {
+pub fn sign_agreement(env: &Env, user: Address, agreement_id: String) -> Result<(), RentalError> {
     // Tenant MUST authorize signing
-    tenant.require_auth();
+    user.require_auth();
 
     // Rate limiting check
-    rate_limit::check_rate_limit(env, &tenant, "sign_agreement")?;
+    rate_limit::check_rate_limit(env, &user, "sign_agreement")?;
 
     // Retrieve the agreement
     let mut agreement: RentAgreement = env
@@ -156,7 +161,7 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
         .ok_or(RentalError::AgreementNotFound)?;
 
     // Validate caller is the intended tenant
-    if agreement.tenant != tenant {
+    if agreement.user != user {
         return Err(RentalError::NotTenant);
     }
 
@@ -171,8 +176,8 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
         return Err(RentalError::Expired);
     }
 
-    // Update agreement status and record signing time
-    agreement.status = AgreementStatus::Active;
+    // Update agreement status and record signing time; awaiting witness approval
+    agreement.status = AgreementStatus::PendingApproval;
     agreement.signed_at = Some(current_time);
 
     // Save updated agreement
@@ -190,21 +195,24 @@ pub fn sign_agreement(env: &Env, tenant: Address, agreement_id: String) -> Resul
     events::agreement_signed(
         env,
         agreement_id,
-        tenant,
-        agreement.landlord.clone(),
+        user,
+        agreement.admin.clone(),
         current_time,
     );
 
     Ok(())
 }
 
-/// Submit a draft agreement for tenant signature (Draft → Pending)
-pub fn submit_agreement(
+/// Approve a pending agreement as a witness (PendingApproval → Active)
+///
+/// Only admin or designated agent may call this. The witness ID is permanently
+/// recorded in the agreement storage, and the agreement transitions to Active.
+pub fn approve_agreement(
     env: &Env,
-    landlord: Address,
+    approver: Address,
     agreement_id: String,
 ) -> Result<(), RentalError> {
-    landlord.require_auth();
+    approver.require_auth();
 
     let mut agreement: RentAgreement = env
         .storage()
@@ -212,7 +220,51 @@ pub fn submit_agreement(
         .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    if agreement.landlord != landlord {
+    // Only valid from PendingApproval state
+    if agreement.status != AgreementStatus::PendingApproval {
+        return Err(RentalError::InvalidState);
+    }
+
+    // Validate agreement has not expired
+    let current_time = env.ledger().timestamp();
+    if current_time > agreement.end_date {
+        return Err(RentalError::Expired);
+    }
+
+    // Permanently record witness and activate agreement
+    agreement.witness_id = Some(approver.clone());
+    agreement.status = AgreementStatus::Active;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+    env.storage().persistent().extend_ttl(
+        &DataKey::Agreement(agreement_id.clone()),
+        TTL_THRESHOLD,
+        TTL_BUMP,
+    );
+    env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
+
+    events::agreement_approved(env, agreement_id, approver);
+
+    Ok(())
+}
+
+/// Submit a draft agreement for tenant signature (Draft → Pending)
+pub fn submit_agreement(
+    env: &Env,
+    admin: Address,
+    agreement_id: String,
+) -> Result<(), RentalError> {
+    admin.require_auth();
+
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if agreement.admin != admin {
         return Err(RentalError::Unauthorized);
     }
 
@@ -231,7 +283,7 @@ pub fn submit_agreement(
         TTL_BUMP,
     );
 
-    events::agreement_submitted(env, agreement_id, landlord, agreement.tenant.clone());
+    events::agreement_submitted(env, agreement_id, admin, agreement.user.clone());
 
     Ok(())
 }
@@ -251,12 +303,15 @@ pub fn cancel_agreement(
         .ok_or(RentalError::AgreementNotFound)?;
 
     // Only landlord can cancel
-    if agreement.landlord != caller {
+    if agreement.admin != caller {
         return Err(RentalError::Unauthorized);
     }
 
-    // Only in Draft or Pending states
-    if agreement.status != AgreementStatus::Draft && agreement.status != AgreementStatus::Pending {
+    // Only in Draft, Pending, or PendingApproval states
+    if agreement.status != AgreementStatus::Draft
+        && agreement.status != AgreementStatus::Pending
+        && agreement.status != AgreementStatus::PendingApproval
+    {
         return Err(RentalError::InvalidState);
     }
 
@@ -271,7 +326,7 @@ pub fn cancel_agreement(
         TTL_BUMP,
     );
 
-    events::agreement_cancelled(env, agreement_id, caller, agreement.tenant.clone());
+    events::agreement_cancelled(env, agreement_id, caller, agreement.user.clone());
 
     Ok(())
 }
@@ -346,7 +401,7 @@ pub fn update_metadata(
         .get(&DataKey::Agreement(agreement_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    agreement.landlord.require_auth();
+    agreement.admin.require_auth();
 
     agreement.metadata_uri = metadata_uri;
     agreement.attributes = attributes;
@@ -363,7 +418,7 @@ pub fn create_agreement_with_token(
     env: &Env,
     input: crate::types::AgreementInput,
 ) -> Result<String, RentalError> {
-    input.tenant.require_auth();
+    input.user.require_auth();
 
     // Check if token is supported
     if !crate::multi_token::is_token_supported(env.clone(), input.payment_token.clone())? {
@@ -406,6 +461,8 @@ pub fn make_payment_with_token(
     amount: i128,
     token: Address,
 ) -> Result<(), RentalError> {
+    // Single storage read – reuse `agreement` for all subsequent checks and
+    // the final write-back, avoiding a second persistent-storage lookup.
     let mut agreement: RentAgreement = env
         .storage()
         .persistent()
@@ -416,9 +473,10 @@ pub fn make_payment_with_token(
         return Err(RentalError::AgreementNotActive);
     }
 
-    agreement.tenant.require_auth();
+    agreement.user.require_auth();
 
-    // Convert amount to the agreement's base token if they differ
+    // Skip the token-rate lookup entirely when the payment token already
+    // matches the agreement's base token – saves one persistent storage read.
     let amount_in_base = if token != agreement.payment_token {
         crate::multi_token::convert_amount(
             env.clone(),
@@ -436,27 +494,28 @@ pub fn make_payment_with_token(
 
     // Transfer tokens from tenant to contract (escrow)
     let client = soroban_sdk::token::Client::new(env, &token);
-    client.transfer(&agreement.tenant, env.current_contract_address(), &amount);
+    client.transfer(&agreement.user, env.current_contract_address(), &amount);
 
-    // Update agreement state
+    // Update agreement state in the cached local variable
     agreement.total_rent_paid += amount_in_base;
     agreement.payment_count += 1;
 
-    // Simple split for now: 100% to landlord
     let split = PaymentSplit {
-        landlord_amount: amount_in_base,
+        admin_amount: amount_in_base,
         platform_amount: 0,
         token: token.clone(),
         payment_date: env.ledger().timestamp(),
-        payer: agreement.tenant.clone(),
+        payer: agreement.user.clone(),
     };
 
+    // Write payment record
     let record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
     env.storage().persistent().set(&record_key, &split);
     env.storage()
         .persistent()
         .extend_ttl(&record_key, TTL_THRESHOLD, TTL_BUMP);
 
+    // Single write-back of the mutated agreement (no second read needed)
     env.storage()
         .persistent()
         .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
@@ -480,19 +539,314 @@ pub fn release_escrow_with_token(
         .get(&DataKey::Agreement(agreement_id))
         .ok_or(RentalError::AgreementNotFound)?;
 
+    if is_escrow_frozen(env, escrow_id.clone()) {
+        return Err(RentalError::InvalidState);
+    }
+
     // Only landlord can release? Or admin?
     // Let's assume landlord for this implementation
-    agreement.landlord.require_auth();
+    agreement.admin.require_auth();
 
     let contract_addr = env.current_contract_address();
     let client = soroban_sdk::token::Client::new(env, &token);
     let balance = client.balance(&contract_addr);
 
     if balance > 0 {
-        client.transfer(&contract_addr, &agreement.landlord, &balance);
+        client.transfer(&contract_addr, &agreement.admin, &balance);
     }
 
     events::escrow_released_with_token(env, escrow_id, token, balance);
 
     Ok(())
+}
+
+pub fn set_escrow_frozen(env: &Env, escrow_id: String, is_frozen: bool) -> Result<(), RentalError> {
+    if !env
+        .storage()
+        .persistent()
+        .has(&DataKey::Agreement(escrow_id.clone()))
+    {
+        return Err(RentalError::AgreementNotFound);
+    }
+
+    let key = DataKey::EscrowFrozen(escrow_id);
+    env.storage().persistent().set(&key, &is_frozen);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, TTL_THRESHOLD, TTL_BUMP);
+    Ok(())
+}
+
+pub fn is_escrow_frozen(env: &Env, escrow_id: String) -> bool {
+    env.storage()
+        .persistent()
+        .get::<DataKey, bool>(&DataKey::EscrowFrozen(escrow_id))
+        .unwrap_or(false)
+}
+
+pub fn propose_extension(
+    env: &Env,
+    caller: Address,
+    agreement_id: String,
+    extension_months: u32,
+    new_rent: Option<i128>,
+    new_deposit: Option<i128>,
+) -> Result<String, RentalError> {
+    caller.require_auth();
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if caller != agreement.admin && caller != agreement.user {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if extension_months == 0 {
+        return Err(RentalError::InvalidInput);
+    }
+
+    let extension_start = get_current_agreement_end(env, agreement_id.clone())?;
+    let extension_end = extension_start + (extension_months as u64 * SECONDS_PER_MONTH);
+
+    let extension_id = agreement_id.clone();
+    let extension = AgreementExtension {
+        id: extension_id.clone(),
+        original_agreement_id: agreement_id.clone(),
+        extension_start,
+        extension_end,
+        extension_rent: new_rent.unwrap_or(agreement.monthly_rent),
+        extension_deposit: new_deposit.unwrap_or(agreement.security_deposit),
+        status: ExtensionStatus::Proposed,
+        created_at: env.ledger().timestamp(),
+        proposed_by: caller.clone(),
+        landlord_accepted: caller == agreement.admin,
+        tenant_accepted: caller == agreement.user,
+        last_reason: None,
+    };
+
+    env.storage().persistent().set(
+        &DataKey::AgreementExtension(extension_id.clone()),
+        &extension,
+    );
+    env.storage().persistent().extend_ttl(
+        &DataKey::AgreementExtension(extension_id.clone()),
+        TTL_THRESHOLD,
+        TTL_BUMP,
+    );
+
+    let mut history =
+        get_extension_history(env, agreement_id.clone()).unwrap_or(ExtensionHistory {
+            agreement_id: agreement_id.clone(),
+            extensions: Vec::new(env),
+            total_extensions: 0,
+        });
+    history.extensions.push_back(extension.clone());
+    history.total_extensions += 1;
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::ExtensionHistory(agreement_id.clone()), &history);
+
+    events::extension_proposed(env, extension_id.clone(), agreement_id, extension_end);
+
+    Ok(extension_id)
+}
+
+pub fn accept_extension(
+    env: &Env,
+    caller: Address,
+    extension_id: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::AgreementExtension(extension_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if extension.status != ExtensionStatus::Proposed {
+        return Err(RentalError::InvalidState);
+    }
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if caller == agreement.admin {
+        extension.landlord_accepted = true;
+    } else if caller == agreement.user {
+        extension.tenant_accepted = true;
+    } else {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if extension.landlord_accepted && extension.tenant_accepted {
+        extension.status = ExtensionStatus::Accepted;
+        events::extension_accepted(env, extension_id.clone());
+    }
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::AgreementExtension(extension_id), &extension);
+
+    Ok(())
+}
+
+pub fn reject_extension(
+    env: &Env,
+    caller: Address,
+    extension_id: String,
+    reason: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::AgreementExtension(extension_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if caller != agreement.admin && caller != agreement.user {
+        return Err(RentalError::Unauthorized);
+    }
+
+    extension.status = ExtensionStatus::Rejected;
+    extension.last_reason = Some(reason);
+
+    env.storage().persistent().set(
+        &DataKey::AgreementExtension(extension_id.clone()),
+        &extension,
+    );
+
+    events::extension_rejected(env, extension_id);
+
+    Ok(())
+}
+
+pub fn activate_extension(
+    env: &Env,
+    caller: Address,
+    extension_id: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::AgreementExtension(extension_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if extension.status != ExtensionStatus::Accepted {
+        return Err(RentalError::InvalidState);
+    }
+
+    let mut agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if caller != agreement.admin {
+        return Err(RentalError::Unauthorized);
+    }
+
+    agreement.end_date = extension.extension_end;
+    agreement.monthly_rent = extension.extension_rent;
+    agreement.security_deposit = extension.extension_deposit;
+    extension.status = ExtensionStatus::Active;
+
+    env.storage().persistent().set(
+        &DataKey::Agreement(extension.original_agreement_id.clone()),
+        &agreement,
+    );
+    env.storage().persistent().set(
+        &DataKey::AgreementExtension(extension_id.clone()),
+        &extension,
+    );
+
+    events::extension_activated(env, extension_id);
+
+    Ok(())
+}
+
+pub fn cancel_extension(
+    env: &Env,
+    caller: Address,
+    extension_id: String,
+    reason: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut extension: AgreementExtension = env
+        .storage()
+        .persistent()
+        .get(&DataKey::AgreementExtension(extension_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(extension.original_agreement_id.clone()))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    if caller != agreement.admin && caller != agreement.user {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if extension.status == ExtensionStatus::Completed
+        || extension.status == ExtensionStatus::Cancelled
+    {
+        return Err(RentalError::InvalidState);
+    }
+
+    extension.status = ExtensionStatus::Cancelled;
+    extension.last_reason = Some(reason);
+
+    env.storage().persistent().set(
+        &DataKey::AgreementExtension(extension_id.clone()),
+        &extension,
+    );
+
+    events::extension_cancelled(env, extension_id);
+
+    Ok(())
+}
+
+pub fn get_extension(env: &Env, extension_id: String) -> Result<AgreementExtension, RentalError> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::AgreementExtension(extension_id))
+        .ok_or(RentalError::AgreementNotFound)
+}
+
+pub fn get_extension_history(
+    env: &Env,
+    agreement_id: String,
+) -> Result<ExtensionHistory, RentalError> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::ExtensionHistory(agreement_id))
+        .ok_or(RentalError::AgreementNotFound)
+}
+
+pub fn get_current_agreement_end(env: &Env, agreement_id: String) -> Result<u64, RentalError> {
+    let agreement: RentAgreement = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Agreement(agreement_id))
+        .ok_or(RentalError::AgreementNotFound)?;
+
+    Ok(agreement.end_date)
 }

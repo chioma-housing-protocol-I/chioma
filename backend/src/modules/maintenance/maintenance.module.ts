@@ -8,6 +8,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { PropertiesModule } from '../properties/properties.module';
 import { UsersModule } from '../users/users.module';
+import { AutoRecoveryService } from './auto-recovery.service';
+import { HealthRecoveryService } from './health-recovery.service';
+import { TerminusModule } from '@nestjs/terminus';
 
 @Module({
   imports: [
@@ -17,9 +20,10 @@ import { UsersModule } from '../users/users.module';
     ReviewsModule,
     PropertiesModule,
     UsersModule,
+    TerminusModule,
   ],
-  providers: [MaintenanceService],
+  providers: [MaintenanceService, AutoRecoveryService, HealthRecoveryService],
   controllers: [MaintenanceController],
-  exports: [MaintenanceService],
+  exports: [MaintenanceService, AutoRecoveryService, HealthRecoveryService],
 })
 export class MaintenanceModule {}

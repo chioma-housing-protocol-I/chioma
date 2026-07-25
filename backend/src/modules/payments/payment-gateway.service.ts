@@ -74,6 +74,12 @@ export class PaymentGatewayService {
     chargeId: string,
     amount: number,
   ): Promise<GatewayRefundResponse> {
+    if (!chargeId || typeof chargeId !== 'string' || !chargeId.trim()) {
+      throw new BadRequestException(
+        'A valid chargeId is required to process a refund',
+      );
+    }
+
     this.logger.log(
       `Processing refund for charge ${chargeId} amount ${amount}`,
     );

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AgreementsService } from './agreements.service';
 import {
   RentAgreement,
@@ -16,6 +17,7 @@ import { TemplateRenderingService } from './template-rendering.service';
 import { PDFGenerationService } from './pdf-generation.service';
 import { LockService } from '../../common/lock';
 import { IdempotencyService } from '../../common/idempotency';
+import { AgreementStateService } from './state-machines/agreement-state-machine.service';
 
 describe('AgreementsService (lease extensions)', () => {
   let service: AgreementsService;
@@ -117,6 +119,15 @@ describe('AgreementsService (lease extensions)', () => {
             set: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: AgreementStateService,
+          useValue: {
+            validateTransition: jest.fn(),
+            getAvailableTransitions: jest.fn().mockReturnValue([]),
+            transition: jest.fn(),
+          },
+        },
+        { provide: EventEmitter2, useValue: {} },
       ],
     }).compile();
 

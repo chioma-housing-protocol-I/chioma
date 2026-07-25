@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -15,6 +10,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PropertiesService } from '../properties/properties.service';
 import { UsersService } from '../users/users.service';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
+import {
+  MaintenanceNotFoundError,
+  AuthorizationError,
+  ValidationError,
+} from '../../common/errors/domain-errors';
 
 export interface CreateMaintenanceDto {
   propertyId: string;
@@ -44,16 +44,16 @@ export class MaintenanceService {
 
   async create(dto: CreateMaintenanceDto): Promise<MaintenanceRequest> {
     const property = await this.propertiesService.findOne(dto.propertyId);
-    if (!property) throw new BadRequestException('Invalid property');
+    if (!property) throw new ValidationError('Invalid property');
 
     const tenant = await this.usersService.getUserById(dto.tenantId);
     const landlord = await this.usersService.getUserById(dto.landlordId);
-    if (!tenant || !landlord) throw new BadRequestException('Invalid user');
+    if (!tenant || !landlord) throw new ValidationError('Invalid user');
 
     if (dto.mediaUrls && dto.mediaUrls.length > 0) {
       for (const url of dto.mediaUrls) {
         if (!url.includes(dto.tenantId)) {
-          throw new BadRequestException('Invalid media ownership');
+          throw new ValidationError('Invalid media ownership');
         }
       }
     }
@@ -82,7 +82,7 @@ export class MaintenanceService {
 
   async findOne(id: string): Promise<MaintenanceRequest> {
     const req = await this.maintenanceRepo.findOne({ where: { id } });
-    if (!req) throw new NotFoundException('Maintenance request not found');
+    if (!req) throw new MaintenanceNotFoundError(id);
     return req;
   }
 
@@ -94,7 +94,7 @@ export class MaintenanceService {
   ): Promise<MaintenanceRequest> {
     const req = await this.findOne(id);
 
-    if (!isLandlordOrAgent) throw new ForbiddenException('Not authorized');
+    if (!isLandlordOrAgent) throw new AuthorizationError('Not authorized');
 
     req.status = status;
     const saved = await this.maintenanceRepo.save(req);

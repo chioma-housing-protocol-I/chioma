@@ -460,8 +460,8 @@ fn test_operations_blocked_when_paused() {
     // This should fail
     client.create_agreement(&AgreementInput {
         agreement_id,
-        landlord,
-        tenant,
+        admin: landlord,
+        user: tenant,
         agent: None,
         terms: AgreementTerms {
             monthly_rent: 1000,

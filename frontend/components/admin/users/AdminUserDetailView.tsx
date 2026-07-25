@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { UserAvatar } from '@/components/admin/users/UserAvatar';
 import { useAdminUserDetailBundle } from '@/lib/query/hooks/use-admin-user-detail';
 import { useUserTransactions } from '@/lib/query/hooks/use-transactions';
 import {
@@ -26,7 +27,6 @@ import {
   Mail,
   Phone,
   Shield,
-  User,
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -197,18 +197,14 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
         <div className="xl:col-span-1 space-y-6">
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center overflow-hidden">
-                {user.avatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={user.avatar}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User size={40} className="text-slate-500" />
-                )}
-              </div>
+              <UserAvatar
+                name={user.name}
+                email={user.email}
+                src={user.avatar}
+                sizeClassName="w-24 h-24 border-4 border-slate-700 bg-slate-800"
+                textClassName="text-3xl"
+                iconSize={40}
+              />
               <div>
                 <h2 className="text-xl font-bold text-white">
                   {user.name || 'Unknown'}

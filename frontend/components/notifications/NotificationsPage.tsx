@@ -26,12 +26,20 @@ export default function NotificationsPage() {
   const isLoaded = useNotificationStore((s) => s.isLoaded);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const deleteNotification = useNotificationStore((s) => s.deleteNotification);
 
   const [filter, setFilter] = useState<FilterValue>('all');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!isLoaded) fetchNotifications();
+    if (!isLoaded) fetchNotifications(1, 20);
   }, [isLoaded, fetchNotifications]);
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchNotifications(nextPage, 20);
+  };
 
   if (!isLoaded) return <NotificationsPageSkeleton />;
 
@@ -44,6 +52,10 @@ export default function NotificationsPage() {
     const n = notifications.find((n) => n.id === id);
     if (!n || n.read) return;
     markAsRead(id);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteNotification(id);
   };
 
   return (
@@ -100,11 +112,23 @@ export default function NotificationsPage() {
               key={n.id}
               notification={n}
               onToggleRead={handleToggleRead}
+              onDelete={handleDelete}
               variant="full"
             />
           ))
         )}
       </div>
+
+      {filtered.length >= page * 20 && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={loadMore}
+            className="px-4 py-2 rounded-lg bg-white/5 text-blue-200/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10"
+          >
+            Load More
+          </button>
+        </div>
+      )}
     </div>
   );
 }

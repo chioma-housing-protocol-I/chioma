@@ -79,47 +79,14 @@ export class RbacService {
         action: PermissionAction.CREATE,
       },
     ],
-    [SystemRole.LANDLORD]: [
-      {
-        resource: PermissionResource.PROPERTIES,
-        action: PermissionAction.CREATE,
-      },
-      {
-        resource: PermissionResource.PROPERTIES,
-        action: PermissionAction.READ,
-      },
-      {
-        resource: PermissionResource.PROPERTIES,
-        action: PermissionAction.UPDATE,
-      },
-      {
-        resource: PermissionResource.PROPERTIES,
-        action: PermissionAction.DELETE,
-      },
-      {
-        resource: PermissionResource.AGREEMENTS,
-        action: PermissionAction.CREATE,
-      },
-      {
-        resource: PermissionResource.AGREEMENTS,
-        action: PermissionAction.READ,
-      },
-      {
-        resource: PermissionResource.AGREEMENTS,
-        action: PermissionAction.UPDATE,
-      },
-      { resource: PermissionResource.PAYMENTS, action: PermissionAction.READ },
-      {
-        resource: PermissionResource.DISPUTES,
-        action: PermissionAction.CREATE,
-      },
-      { resource: PermissionResource.DISPUTES, action: PermissionAction.READ },
-    ],
-    [SystemRole.TENANT]: [
+    // user: inherits base user permissions AND renter capabilities
+    // (formerly: USER + TENANT)
+    [SystemRole.USER]: [
       {
         resource: PermissionResource.PROPERTIES,
         action: PermissionAction.READ,
       },
+      { resource: PermissionResource.USERS, action: PermissionAction.READ },
       {
         resource: PermissionResource.AGREEMENTS,
         action: PermissionAction.READ,
@@ -134,13 +101,6 @@ export class RbacService {
         action: PermissionAction.CREATE,
       },
       { resource: PermissionResource.DISPUTES, action: PermissionAction.READ },
-    ],
-    [SystemRole.USER]: [
-      {
-        resource: PermissionResource.PROPERTIES,
-        action: PermissionAction.READ,
-      },
-      { resource: PermissionResource.USERS, action: PermissionAction.READ },
     ],
   };
 

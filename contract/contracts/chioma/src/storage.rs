@@ -34,4 +34,12 @@ pub enum DataKey {
     // Versioning keys
     CurrentVersion,
     VersionHistory,
+    AgreementExtension(String),
+    ExtensionHistory(String),
+    EscrowFrozen(String),
+    UpgradeProposal(String),
+    UpgradeProposalCount,
+    ActiveUpgradeProposals,
+    // Gas optimisation metrics (keyed by operation name string)
+    GasMetrics(String),
 }

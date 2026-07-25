@@ -16,7 +16,7 @@ export class AgreementNftService {
 
   async mintNftForAgreement(
     agreementId: string,
-    landlordAddress: string,
+    adminAddress: string,
   ): Promise<RentObligationNft> {
     const existing = await this.nftRepository.findOne({
       where: { agreementId },
@@ -29,14 +29,14 @@ export class AgreementNftService {
     const { txHash, obligationId } =
       await this.nftContractService.mintObligation({
         agreementId,
-        landlordAddress,
+        adminAddress,
       });
 
     const nft = this.nftRepository.create({
       agreementId,
       obligationId,
-      currentOwner: landlordAddress,
-      originalLandlord: landlordAddress,
+      currentOwner: adminAddress,
+      originalLandlord: adminAddress,
       mintTxHash: txHash,
       mintedAt: new Date(),
       status: 'active',

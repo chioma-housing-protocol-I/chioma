@@ -1,39 +1,325 @@
 groups:
-  - name: chioma_alerts
-    interval: 30s
+  - name: chioma_backend_alerts
+    interval: 15s
     rules:
+      # ==================== CRITICAL ERRORS ====================
       - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "High error rate detected"
-          description: "Error rate is {{ $value }} errors/sec"
-
-      - alert: HighResponseTime
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High response time detected"
-          description: "95th percentile response time is {{ $value }}s"
-
-      - alert: BlockchainTransactionFailure
-        expr: rate(blockchain_transaction_failures_total[5m]) > 0.1
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
         for: 2m
         labels:
           severity: critical
+          component: backend
         annotations:
-          summary: "Blockchain transaction failures detected"
-          description: "{{ $value }} blockchain transactions failing per second"
+          summary: 'High error rate detected'
+          description: 'Error rate is {{ $value | humanizePercentage }} (threshold: 5%) for the last 5 minutes'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-error-rate'
+
+      - alert: CriticalExceptionRate
+        expr: |
+          sum(rate(exceptions_total{severity="critical"}[5m])) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: 'Critical exceptions detected'
+          description: 'Critical exception rate is {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/critical-exceptions'
 
       - alert: DatabaseConnectionPoolExhausted
-        expr: database_connections_active / database_connections_max > 0.9
+        expr: |
+          (
+            db_pool_active_connections / db_pool_max_connections
+          ) > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: 'Database connection pool nearly exhausted'
+          description: 'Active connections: {{ $value | humanizePercentage }} of max capacity'
+          runbook_url: 'https://wiki.chioma.app/runbooks/db-pool-exhausted'
+
+      - alert: DatabaseQueryTimeout
+        expr: |
+          sum(rate(db_query_timeout_total[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: 'High database query timeout rate'
+          description: 'Query timeouts: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/db-query-timeout'
+
+      - alert: RedisConnectionLost
+        expr: |
+          redis_connected_clients == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: 'Redis connection lost'
+          description: 'No active Redis connections detected'
+          runbook_url: 'https://wiki.chioma.app/runbooks/redis-connection-lost'
+
+      - alert: OutOfMemory
+        expr: |
+          (
+            process_resident_memory_bytes / 1024 / 1024 / 1024
+          ) > 1.5
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: 'High memory usage detected'
+          description: 'Memory usage: {{ $value | humanize }}GB (threshold: 1.5GB)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-memory-usage'
+
+      - alert: PaymentProcessingFailure
+        expr: |
+          sum(rate(payment_processing_errors_total[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: payments
+        annotations:
+          summary: 'Payment processing failures detected'
+          description: 'Payment error rate: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/payment-processing-failure'
+
+      - alert: StellarBlockchainUnavailable
+        expr: |
+          stellar_api_errors_total > 10
+        for: 2m
+        labels:
+          severity: critical
+          component: blockchain
+        annotations:
+          summary: 'Stellar blockchain API unavailable'
+          description: 'Stellar API errors in last 5 minutes: {{ $value }}'
+          runbook_url: 'https://wiki.chioma.app/runbooks/stellar-unavailable'
+
+      # ==================== PERFORMANCE WARNINGS ====================
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1.0
         for: 5m
         labels:
           severity: warning
+          component: backend
         annotations:
-          summary: "Database connection pool nearly exhausted"
-          description: "{{ $value }}% of database connections in use"
+          summary: 'High API response time'
+          description: 'P95 response time: {{ $value | humanizeDuration }} (threshold: 1s)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-response-time'
+
+      - alert: HighCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: 'High CPU usage detected'
+          description: 'CPU usage: {{ $value | humanizePercentage }} (threshold: 80%)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-cpu-usage'
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'Slow database queries detected'
+          description: 'P95 query time: {{ $value | humanizeDuration }} (threshold: 500ms)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/slow-queries'
+
+      - alert: HighDatabaseConnections
+        expr: |
+          (
+            db_pool_active_connections / db_pool_max_connections
+          ) > 0.7
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'High database connection usage'
+          description: 'Active connections: {{ $value | humanizePercentage }} of max capacity'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-db-connections'
+
+      - alert: RedisCacheHitRateLow
+        expr: |
+          (
+            redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)
+          ) < 0.7
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: 'Low Redis cache hit rate'
+          description: 'Cache hit rate: {{ $value | humanizePercentage }} (threshold: 70%)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/low-cache-hit-rate'
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes / 1024 / 1024 / 1024
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: 'Elevated memory usage'
+          description: 'Memory usage: {{ $value | humanize }}GB (threshold: 1GB)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/high-memory-usage'
+
+      - alert: AuthenticationFailureRate
+        expr: |
+          sum(rate(auth_failures_total[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: 'High authentication failure rate'
+          description: 'Auth failures: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/auth-failures'
+
+      - alert: RateLimitExceeded
+        expr: |
+          sum(rate(rate_limit_exceeded_total[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: 'Rate limit exceeded frequently'
+          description: 'Rate limit violations: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/rate-limit-exceeded'
+
+      - alert: WebhookDeliveryFailure
+        expr: |
+          sum(rate(webhook_delivery_failures_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: webhooks
+        annotations:
+          summary: 'Webhook delivery failures detected'
+          description: 'Webhook failure rate: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/webhook-failures'
+
+      # ==================== AVAILABILITY CHECKS ====================
+      - alert: ServiceDown
+        expr: |
+          up{job="chioma-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: 'Chioma backend service is down'
+          description: 'Backend service has been unreachable for 1 minute'
+          runbook_url: 'https://wiki.chioma.app/runbooks/service-down'
+
+      - alert: HealthCheckFailing
+        expr: |
+          health_check_status != 1
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: 'Health check endpoint failing'
+          description: 'Health check status: {{ $value }}'
+          runbook_url: 'https://wiki.chioma.app/runbooks/health-check-failing'
+
+      - alert: DatabaseUnreachable
+        expr: |
+          db_connection_errors_total > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: 'Database unreachable'
+          description: 'Database connection errors: {{ $value }}'
+          runbook_url: 'https://wiki.chioma.app/runbooks/db-unreachable'
+
+      # ==================== BUSINESS LOGIC ALERTS ====================
+      - alert: EscrowTransactionFailure
+        expr: |
+          sum(rate(escrow_transaction_failures_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: escrow
+        annotations:
+          summary: 'Escrow transaction failures detected'
+          description: 'Escrow failure rate: {{ $value }} per second'
+          runbook_url: 'https://wiki.chioma.app/runbooks/escrow-failures'
+
+      - alert: DisputeResolutionDelayed
+        expr: |
+          disputes_pending_resolution_count > 100
+        for: 30m
+        labels:
+          severity: warning
+          component: disputes
+        annotations:
+          summary: 'High number of pending disputes'
+          description: 'Pending disputes: {{ $value }} (threshold: 100)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/pending-disputes'
+
+      - alert: KYCVerificationBacklog
+        expr: |
+          kyc_pending_verification_count > 50
+        for: 30m
+        labels:
+          severity: warning
+          component: kyc
+        annotations:
+          summary: 'KYC verification backlog'
+          description: 'Pending KYC verifications: {{ $value }} (threshold: 50)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/kyc-backlog'
+
+      # ==================== INFRASTRUCTURE ALERTS ====================
+      - alert: DiskSpaceRunningLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: 'Disk space running low'
+          description: 'Available disk space: {{ $value | humanizePercentage }} (threshold: 10%)'
+          runbook_url: 'https://wiki.chioma.app/runbooks/low-disk-space'
+
+      - alert: FileDescriptorLimitApproaching
+        expr: |
+          (
+            process_open_fds / process_max_fds
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: 'File descriptor limit approaching'
+          description: 'Open file descriptors: {{ $value | humanizePercentage }} of limit'
+          runbook_url: 'https://wiki.chioma.app/runbooks/fd-limit'

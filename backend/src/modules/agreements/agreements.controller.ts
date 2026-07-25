@@ -33,6 +33,8 @@ import { RenewAgreementDto } from './dto/renew-agreement.dto';
 import { QueryAgreementFeesDto } from './dto/query-agreement-fees.dto';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 
 @ApiTags('Rent Agreements')
 @ApiBearerAuth('JWT-auth')
@@ -43,6 +45,12 @@ export class AgreementsController {
   constructor(private readonly agreementsService: AgreementsService) {}
 
   @Post()
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createAgreementDto: CreateAgreementDto) {
     return await this.agreementsService.create(createAgreementDto);
@@ -89,6 +97,13 @@ export class AgreementsController {
   }
 
   @Put(':id')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async update(
     @Param('id') id: string,
     @Body() updateAgreementDto: UpdateAgreementDto,
@@ -97,6 +112,13 @@ export class AgreementsController {
   }
 
   @Patch(':id')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   @ApiOperation({
     summary: 'Partially update agreement',
     description: 'Same payload rules as PUT; use for partial updates.',
@@ -109,6 +131,12 @@ export class AgreementsController {
   }
 
   @Delete(':id')
+  @AuditLog({
+    action: AuditAction.DELETE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async terminate(
     @Param('id') id: string,
     @Body() terminateDto: TerminateAgreementDto,
@@ -117,6 +145,12 @@ export class AgreementsController {
   }
 
   @Post(':id/renew')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Renew lease term',
@@ -128,6 +162,12 @@ export class AgreementsController {
   }
 
   @Post(':id/pay')
+  @AuditLog({
+    action: AuditAction.PAYMENT_INITIATED,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
   @HttpCode(HttpStatus.CREATED)
   async recordPayment(
     @Param('id') id: string,

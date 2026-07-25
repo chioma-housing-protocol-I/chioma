@@ -1,8 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
+import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
+import { useModal } from '@/contexts/ModalContext';
+import type {
+  PropertyDetailData,
+  PropertyInquiryData,
+} from '@/components/modals/types';
 
 interface PropertyCardProps {
   property: {
@@ -18,6 +23,10 @@ interface PropertyCardProps {
     image: string;
     verified: boolean;
     amenities?: string[];
+    description?: string;
+    latitude?: number;
+    longitude?: number;
+    images?: string[];
   };
   variant?: 'grid' | 'list';
 }
@@ -28,9 +37,55 @@ export default function PropertyCard({
 }: PropertyCardProps) {
   const isList = variant === 'list';
   const [imageError, setImageError] = useState(false);
+  const { openModal } = useModal();
+  const propertyId = String(property.id);
+  const { data: favoriteStatus } = useFavoriteStatus(propertyId);
+  const { isPending: isFavoritePending, toggleFavorite } =
+    useToggleFavorite(propertyId);
+  const isFavorited = favoriteStatus?.isFavorited ?? false;
+
+  const handlePropertyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    // Transform property data to PropertyDetailData format
+    const propertyDetail: PropertyDetailData = {
+      id: String(property.id),
+      title: property.title,
+      description:
+        property.description ||
+        `Beautiful ${property.category || 'property'} in ${property.location}`,
+      price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
+      address: property.location,
+      bedrooms: property.beds,
+      bathrooms: property.baths,
+      areaSqft: property.sqft,
+      landlordName: property.manager,
+      images: property.images || [property.image],
+      amenities: property.amenities || [],
+      verificationStatus: property.verified ? 'Verified' : undefined,
+      viewCount: 0,
+      favoriteCount: 0,
+    };
+
+    openModal('propertyDetail', {
+      property: propertyDetail,
+      onInquiryClick: (prop: PropertyDetailData) => {
+        openModal('propertyInquiry', {
+          propertyId: prop.id,
+          propertyTitle: prop.title,
+          landlordName: prop.landlordName,
+        });
+      },
+    });
+  };
 
   return (
-    <Link href={`/properties/${property.id}`} className="block group">
+    <div
+      onClick={handlePropertyClick}
+      className="block group cursor-pointer"
+      data-testid="property-card"
+      data-property-id={String(property.id)}
+    >
       <div
         className={`glass-card rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
           isList ? 'flex flex-col sm:flex-row h-full' : 'flex flex-col h-full'
@@ -71,8 +126,28 @@ export default function PropertyCard({
           </div>
 
           {/* Wishlist Heart */}
-          <button className="absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart">
-            <Heart className="w-5 h-5 transition-transform group-hover/heart:scale-110" />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void toggleFavorite(isFavorited);
+            }}
+            disabled={isFavoritePending}
+            aria-pressed={isFavorited}
+            aria-label={
+              isFavorited ? 'Remove from favorites' : 'Add to favorites'
+            }
+            className={[
+              'absolute top-4 right-4 z-10 bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3 hover:bg-white hover:text-red-500 text-white transition-all shadow-2xl active:scale-90 border border-white/10 group/heart disabled:opacity-60',
+              isFavorited ? 'text-red-400' : '',
+            ].join(' ')}
+          >
+            <Heart
+              className={[
+                'w-5 h-5 transition-transform group-hover/heart:scale-110',
+                isFavorited ? 'fill-current' : '',
+              ].join(' ')}
+            />
           </button>
         </div>
 
@@ -170,6 +245,6 @@ export default function PropertyCard({
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

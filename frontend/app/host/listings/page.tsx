@@ -1,9 +1,36 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Bed, Bath, Plus, Eye, Pencil } from 'lucide-react';
+import { MapPin, Bed, Bath, Plus, Eye, Pencil, Building2 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+
+function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
+  const [error, setError] = useState(false);
+
+  if (!src || error) {
+    return (
+      <div className="aspect-video bg-slate-700/60 flex items-center justify-center">
+        <Building2 size={40} className="text-blue-300/20" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video relative overflow-hidden bg-slate-700/60">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        className="object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
 
 export default function HostListingsPage() {
   const { data: listings = [], isLoading } = useQuery({
@@ -58,9 +85,16 @@ export default function HostListingsPage() {
                 key={p.id}
                 className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all"
               >
-                <div className="aspect-video bg-slate-700 flex items-center justify-center text-4xl text-blue-300/20">
-                  🏠
-                </div>
+                <PropertyThumbnail
+                  src={
+                    typeof p.imageUrl === 'string'
+                      ? p.imageUrl
+                      : typeof p.image === 'string'
+                        ? p.image
+                        : null
+                  }
+                  alt={typeof p.title === 'string' ? p.title : 'Property'}
+                />
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold line-clamp-1">
@@ -91,7 +125,7 @@ export default function HostListingsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Link
-                      href={`/stays/${p.id}`}
+                      href={`/properties/${p.id}`}
                       className="flex-1 flex items-center justify-center gap-1 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors"
                     >
                       <Eye size={14} /> View

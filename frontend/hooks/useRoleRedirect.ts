@@ -19,47 +19,22 @@ export function useRoleRedirect(
   const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to load
-    if (loading) {
-      console.log('⏳ Auth still loading...');
-      return;
-    }
+    if (loading) return;
 
-    console.log('📋 useRoleRedirect check:', {
-      isAuthenticated,
-      userRole: user?.role,
-      allowedRoles,
-      loading,
-    });
-
-    // Redirect to home if not authenticated and redirectIfNotAuth is true
     if (!isAuthenticated && redirectIfNotAuth) {
-      console.log('❌ Not authenticated, redirecting to home');
-      router.push('/');
+      router.push('/login');
       return;
     }
 
-    // If allowedRoles is specified, check if user's role is allowed
     if (allowedRoles && user) {
-      // Normalize role to lowercase for comparison
       const userRole = (user.role as string).toLowerCase() as UserRole;
       const normalizedAllowedRoles = allowedRoles.map(
         (r) => r.toLowerCase() as UserRole,
       );
 
-      console.log('🔍 Role check:', {
-        userRole,
-        normalizedAllowedRoles,
-        isAllowed: normalizedAllowedRoles.includes(userRole),
-      });
-
       if (!normalizedAllowedRoles.includes(userRole)) {
-        // Redirect to user's appropriate dashboard
         const correctDashboard = getDashboardRoute(userRole);
-        console.log('⚠️ Role mismatch! Redirecting to:', correctDashboard);
         router.push(correctDashboard);
-      } else {
-        console.log('✅ Role allowed, rendering page');
       }
     }
   }, [user, isAuthenticated, loading, allowedRoles, redirectIfNotAuth, router]);

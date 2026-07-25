@@ -1,6 +1,39 @@
 version: '3.8'
 
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: chioma-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ssl-certs:/etc/ssl/certs
+      - ssl-private:/etc/ssl/private
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      - backend
+    networks:
+      - chioma-network
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: chioma-certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    # Run renewal check daily; exits immediately when not renewing
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --quiet --webroot --webroot-path /var/www/certbot
+               sleep 12h & wait $${!};
+             done"
+    networks:
+      - chioma-network
+
   backend:
     image: ${DOCKER_IMAGE:-chioma-backend:latest}
     container_name: chioma-backend-${ENVIRONMENT:-production}
@@ -38,6 +71,7 @@ services:
     image: postgres:16-alpine
     container_name: chioma-postgres-${ENVIRONMENT:-production}
     restart: unless-stopped
+    command: postgres -c shared_preload_libraries=pg_stat_statements
     environment:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -74,3 +108,7 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  ssl-certs:
+  ssl-private:
+  certbot-webroot:
+  letsencrypt:

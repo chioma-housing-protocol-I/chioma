@@ -6,14 +6,14 @@ pub struct ContractInitialized {
     pub admin: Address,
 }
 
-#[contractevent(topics = ["agent_reg"])]
+#[contractevent(topics = ["agent_registered"])]
 pub struct AgentRegistered {
     #[topic]
     pub agent: Address,
     pub external_profile_hash: String,
 }
 
-#[contractevent(topics = ["agent_ver"])]
+#[contractevent(topics = ["agent_verified"])]
 pub struct AgentVerified {
     #[topic]
     pub admin: Address,
@@ -30,7 +30,7 @@ pub struct AgentRated {
     pub score: u32,
 }
 
-#[contractevent(topics = ["txn_reg"])]
+#[contractevent(topics = ["transaction_registered"])]
 pub struct TransactionRegistered {
     #[topic]
     pub transaction_id: String,

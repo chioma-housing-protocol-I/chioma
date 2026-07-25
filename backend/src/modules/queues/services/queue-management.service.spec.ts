@@ -123,6 +123,7 @@ describe('QueueManagementService', () => {
           attempts: 3,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,
+          removeOnFail: false,
         }),
       );
     });
@@ -187,6 +188,7 @@ describe('QueueManagementService', () => {
           attempts: 5,
           backoff: { type: 'exponential', delay: 5000 },
           removeOnComplete: false,
+          removeOnFail: false,
         }),
       );
     });

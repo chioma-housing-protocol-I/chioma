@@ -26,7 +26,13 @@ export class PropertyQueryBuilder {
       .applyLocationFilters(filters.city, filters.state, filters.country)
       .applyOwnerFilter(filters.ownerId)
       .applySearchFilter(filters.search)
-      .applyAmenitiesFilter(filters.amenities);
+      .applyAmenitiesFilter(filters.amenities)
+      .applyBooleanFilters(
+        filters.isFurnished,
+        filters.hasParking,
+        filters.petsAllowed,
+      )
+      .applyProximityFilter(filters.lat, filters.lng, filters.radiusKm);
 
     return this;
   }
@@ -154,6 +160,54 @@ export class PropertyQueryBuilder {
           'WHERE pa.property_id = property.id AND ' +
           'LOWER(pa.name) IN (:...amenities))',
         { amenities: amenities.map((a) => a.toLowerCase()) },
+      );
+    }
+    return this;
+  }
+
+  /**
+   * Filter by boolean property attributes (furnished, parking, pets)
+   */
+  applyBooleanFilters(
+    isFurnished?: boolean,
+    hasParking?: boolean,
+    petsAllowed?: boolean,
+  ): this {
+    if (isFurnished !== undefined) {
+      this.queryBuilder.andWhere('property.isFurnished = :isFurnished', {
+        isFurnished,
+      });
+    }
+    if (hasParking !== undefined) {
+      this.queryBuilder.andWhere('property.hasParking = :hasParking', {
+        hasParking,
+      });
+    }
+    if (petsAllowed !== undefined) {
+      this.queryBuilder.andWhere('property.petsAllowed = :petsAllowed', {
+        petsAllowed,
+      });
+    }
+    return this;
+  }
+
+  /**
+   * Filter by proximity using the Haversine formula.
+   * Requires lat, lng, and radiusKm to all be defined.
+   */
+  applyProximityFilter(lat?: number, lng?: number, radiusKm?: number): this {
+    if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
+      this.queryBuilder.andWhere(
+        `(
+          6371 * acos(
+            cos(radians(:lat))
+            * cos(radians(CAST(property.latitude AS float)))
+            * cos(radians(CAST(property.longitude AS float)) - radians(:lng))
+            + sin(radians(:lat))
+            * sin(radians(CAST(property.latitude AS float)))
+          )
+        ) <= :radiusKm`,
+        { lat, lng, radiusKm },
       );
     }
     return this;

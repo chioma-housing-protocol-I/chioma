@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+  PropertyNotFoundError,
+  AuthorizationError,
+  BusinessRuleViolationError,
+} from '../../common/errors/domain-errors';
 import { CacheService } from '../../common/cache/cache.service';
 import { PropertiesService } from './properties.service';
 import {
@@ -20,6 +20,7 @@ import { RentalUnit } from './entities/rental-unit.entity';
 import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
+import { FraudHooksService } from '../fraud/fraud-hooks.service';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -183,6 +184,10 @@ describe('PropertiesService', () => {
     remove: jest.fn(),
   };
 
+  const mockFraudHooksService = {
+    onListingPublished: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     mockCacheService.getOrSet.mockImplementation(
       async (_key: string, factory: () => Promise<unknown>) => factory(),
@@ -217,6 +222,10 @@ describe('PropertiesService', () => {
         {
           provide: CacheService,
           useValue: mockCacheService,
+        },
+        {
+          provide: FraudHooksService,
+          useValue: mockFraudHooksService,
         },
       ],
     }).compile();
@@ -336,7 +345,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('non-existent-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
     });
 
@@ -351,7 +360,7 @@ describe('PropertiesService', () => {
     it('should treat empty string id as not found when repository returns null', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne('')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('')).rejects.toThrow(PropertyNotFoundError);
       expect(mockPropertyRepository.findOne).toHaveBeenCalledWith({
         where: { id: '' },
         relations: ['images', 'amenities', 'rentalUnits', 'owner'],
@@ -386,7 +395,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
 
       await expect(service.findOnePublic('property-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
     });
 
@@ -474,7 +483,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
 
       await expect(service.recordView('property-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
       expect(mockPropertyRepository.increment).not.toHaveBeenCalled();
     });
@@ -537,10 +546,11 @@ describe('PropertiesService', () => {
 
       await expect(
         service.update('property-id', { title: 'Hack' }, mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('should strip verificationStatus for non-admin owners', async () => {
+      const ownerUser = { ...mockOwner, role: UserRole.USER };
       const draft = { ...mockProperty, verificationStatus: null };
       mockPropertyRepository.findOne.mockResolvedValue(draft);
       mockPropertyRepository.save.mockImplementation((p) => Promise.resolve(p));
@@ -548,7 +558,7 @@ describe('PropertiesService', () => {
       await service.update(
         'property-id',
         { verificationStatus: 'verified', title: 'T' },
-        mockOwner,
+        ownerUser,
       );
 
       expect(mockPropertyRepository.save).toHaveBeenCalledWith(
@@ -591,7 +601,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.remove('property-id', mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -609,6 +619,9 @@ describe('PropertiesService', () => {
       const result = await service.publish('property-id', mockOwner);
 
       expect(result.status).toBe(ListingStatus.PUBLISHED);
+      expect(mockFraudHooksService.onListingPublished).toHaveBeenCalledWith(
+        'property-id',
+      );
     });
 
     it('should throw BadRequestException if already published', async () => {
@@ -619,7 +632,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(publishedProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
 
@@ -631,7 +644,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(archivedProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
 
@@ -645,7 +658,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(incompleteProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
   });
@@ -670,7 +683,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.archive('property-id', mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 

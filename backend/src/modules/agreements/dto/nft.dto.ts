@@ -7,7 +7,7 @@ export class MintNftDto {
 
   @IsString()
   @IsNotEmpty()
-  landlordAddress: string;
+  adminAddress: string;
 }
 
 export class TransferNftDto {

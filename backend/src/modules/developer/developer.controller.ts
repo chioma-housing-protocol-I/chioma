@@ -66,6 +66,17 @@ export class DeveloperController {
     return this.developerService.listKeys(req.user.id);
   }
 
+  @Get('api-keys/expiring-soon')
+  @ApiOperation({
+    summary: 'Get keys expiring soon',
+    description:
+      'Get API keys that will expire within the next 30 days. Useful for proactive rotation reminders.',
+  })
+  @ApiResponse({ status: 200, description: 'List of keys expiring soon' })
+  async getKeysExpiringSoon(@Req() req: { user: { id: string } }) {
+    return this.developerService.getKeysExpiringSoon(req.user.id);
+  }
+
   @Get('api-keys/:id')
   @ApiOperation({
     summary: 'Get API key details',
@@ -188,16 +199,5 @@ export class DeveloperController {
   ) {
     await this.developerService.revokeKey(req.user.id, id);
     return { success: true };
-  }
-
-  @Get('api-keys/expiring-soon')
-  @ApiOperation({
-    summary: 'Get keys expiring soon',
-    description:
-      'Get API keys that will expire within the next 30 days. Useful for proactive rotation reminders.',
-  })
-  @ApiResponse({ status: 200, description: 'List of keys expiring soon' })
-  async getKeysExpiringSoon(@Req() req: { user: { id: string } }) {
-    return this.developerService.getKeysExpiringSoon(req.user.id);
   }
 }

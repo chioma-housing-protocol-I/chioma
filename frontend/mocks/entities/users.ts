@@ -99,10 +99,7 @@ export function getUserByWalletAddress(
 ): User | undefined {
   if (!walletAddress) return undefined;
 
-  const allUsers = [
-    ...MOCK_USERS.users,
-    ...MOCK_USERS.admins,
-  ];
+  const allUsers = [...MOCK_USERS.users, ...MOCK_USERS.admins];
 
   return allUsers.find(
     (user) => user.walletAddress?.toLowerCase() === walletAddress.toLowerCase(),

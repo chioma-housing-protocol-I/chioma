@@ -73,7 +73,7 @@ fn test_queue_all_action_types() {
 
     for (action_type, delay) in cases {
         let result = client.try_queue_timelock_action(&admin, action_type, &target, &data, delay);
-        assert!(result.is_ok(), "queue failed for {:?}", action_type);
+        assert!(result.is_ok(), "queue failed for {action_type:?}");
     }
 
     assert_eq!(client.get_timelock_action_count(), 5);

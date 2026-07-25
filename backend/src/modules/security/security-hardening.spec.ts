@@ -220,14 +220,21 @@ describe('RbacService', () => {
     }
   });
 
-  it('landlord should be able to create properties', () => {
+  it('user should have READ but not CREATE on properties', () => {
     expect(
       service.hasPermission(
-        'landlord',
+        'user',
+        PermissionResource.PROPERTIES,
+        PermissionAction.READ,
+      ),
+    ).toBe(true);
+    expect(
+      service.hasPermission(
+        'user',
         PermissionResource.PROPERTIES,
         PermissionAction.CREATE,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('tenant should NOT be able to delete properties', () => {

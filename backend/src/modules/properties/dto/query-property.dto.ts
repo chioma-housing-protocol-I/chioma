@@ -3,6 +3,7 @@ import {
   IsString,
   IsEnum,
   IsNumber,
+  IsBoolean,
   IsArray,
   Min,
   Max,
@@ -146,6 +147,79 @@ export class QueryPropertyDto {
   @IsString({ each: true })
   @MaxLength(100, { each: true })
   amenities?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by furnished status',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isFurnished?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by parking availability',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  hasParking?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by pets allowed',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  petsAllowed?: boolean;
+
+  // Proximity / geospatial filters
+  @ApiPropertyOptional({
+    description: 'Latitude for proximity search (requires lng and radiusKm)',
+    example: 40.7128,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude for proximity search (requires lat and radiusKm)',
+    example: -74.006,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
+
+  @ApiPropertyOptional({
+    description: 'Search radius in kilometres (requires lat and lng)',
+    example: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.1)
+  @Max(500)
+  radiusKm?: number;
 
   @ApiPropertyOptional({
     description: 'Filter by owner ID',

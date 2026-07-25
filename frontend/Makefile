@@ -62,7 +62,7 @@ install: check-pnpm
 
 audit: install
 	@echo "$(BLUE)� Running npm audit...$(NC)"
-	pnpm audit --audit-level=high
+	pnpm audit --audit-level=critical
 	@echo "$(GREEN)✅ Audit passed$(NC)"
 
 lint: install

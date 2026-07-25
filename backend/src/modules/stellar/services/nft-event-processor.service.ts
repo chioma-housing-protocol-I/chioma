@@ -6,7 +6,7 @@ import { RentObligationNft } from '../../agreements/entities/rent-obligation-nft
 
 export interface ObligationMintedEvent {
   agreementId: string;
-  landlord: string;
+  admin: string;
   mintedAt: number;
   txHash: string;
 }
@@ -47,8 +47,8 @@ export class NftEventProcessor {
     const nft = this.nftRepository.create({
       agreementId: event.agreementId,
       obligationId: event.agreementId,
-      currentOwner: event.landlord,
-      originalLandlord: event.landlord,
+      currentOwner: event.admin,
+      originalLandlord: event.admin,
       mintTxHash: event.txHash,
       mintedAt: new Date(event.mintedAt * 1000),
       status: 'active',

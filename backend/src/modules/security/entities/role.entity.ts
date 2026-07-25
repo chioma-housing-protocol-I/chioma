@@ -13,8 +13,6 @@ import { Permission } from './permission.entity';
 export enum SystemRole {
   SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
-  LANDLORD = 'landlord',
-  TENANT = 'tenant',
   USER = 'user',
   AUDITOR = 'auditor',
   SUPPORT = 'support',

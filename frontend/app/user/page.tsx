@@ -1,10 +1,28 @@
 'use client';
 
 import React from 'react';
-import { Calendar, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Calendar,
+  FileText,
+  ArrowUpRight,
+  TrendingUp,
+  BarChart3,
+  Eye,
+  ReceiptText,
+  AlertTriangle,
+} from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
+import { useAuth } from '@/store/authStore';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
+import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
+import { usePayments } from '@/lib/query/hooks/use-payments';
+import { useModal } from '@/contexts/ModalContext';
+import { apiClient } from '@/lib/api-client';
+import type { AgreementSigningData } from '@/components/modals/types';
 
 const mockAgreements = [
   {
@@ -30,11 +48,179 @@ const mockAgreements = [
   },
 ];
 
-const agreements = process.env.NODE_ENV === 'production' ? [] : mockAgreements;
+const analyticsPreviewData = [
+  { month: 'Jan', views: 120 },
+  { month: 'Feb', views: 180 },
+  { month: 'Mar', views: 240 },
+  { month: 'Apr', views: 200 },
+  { month: 'May', views: 320 },
+  { month: 'Jun', views: 410 },
+];
+
+const DASHBOARD_IMAGE_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=200&q=80';
+
+const dashboardPayments = [
+  {
+    id: 'PMT-2201',
+    property: 'Sunset Apartments, Unit 4B',
+    amount: '$1,200',
+    date: 'Oct 1, 2023',
+    previewImage:
+      'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'PMT-2202',
+    property: 'Downtown Loft, Unit 12',
+    amount: '$2,500',
+    date: 'Nov 1, 2023',
+    previewImage:
+      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=200&q=80',
+  },
+];
+
+const dashboardDisputes = [
+  {
+    id: 'dis-001',
+    disputeReference: 'DSP-2026-001',
+    property: 'Sunset Apartments, Unit 4B',
+    status: 'Open',
+    previewImage:
+      'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=200&q=80',
+  },
+];
 
 export default function UserDashboardOverview() {
-  // AUTH DISABLED - useRoleRedirect commented out for development
-  // useRoleRedirect(['user']);
+  useRoleRedirect(['user', 'admin']);
+
+  const { openModal } = useModal();
+  const router = useRouter();
+  const { loading } = useAuth();
+  const { data: agreementsResult } = useUserAgreements();
+  const apiAgreements = agreementsResult?.data ?? [];
+  const { data: paymentsData } = usePayments({ limit: 50 });
+  const apiPayments = paymentsData?.data ?? [];
+
+  const activeAgreement =
+    apiAgreements.find((a) => a.status === 'active') ?? null;
+
+  const leaseStart = activeAgreement?.startDate
+    ? new Date(activeAgreement.startDate)
+    : null;
+  const leaseEnd = activeAgreement?.endDate
+    ? new Date(activeAgreement.endDate)
+    : null;
+  const leaseMonthsTotal =
+    leaseStart && leaseEnd
+      ? Math.round(
+          (leaseEnd.getTime() - leaseStart.getTime()) /
+            (1000 * 60 * 60 * 24 * 30.44),
+        )
+      : 12;
+  const leaseMonthsElapsed = leaseStart
+    ? Math.max(
+        0,
+        Math.round(
+          (Date.now() - leaseStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
+        ),
+      )
+    : 5;
+  const leaseMonthsRemaining = Math.max(
+    0,
+    leaseMonthsTotal - leaseMonthsElapsed,
+  );
+  const leaseProgressPct =
+    leaseMonthsTotal > 0
+      ? Math.min(100, Math.round((leaseMonthsElapsed / leaseMonthsTotal) * 100))
+      : 60;
+  const currentYear = new Date().getFullYear();
+  const totalPaidThisYear = apiPayments
+    .filter((p) => {
+      const year = p.createdAt ? new Date(p.createdAt).getFullYear() : 0;
+      return year === currentYear && p.status?.toLowerCase() === 'completed';
+    })
+    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const rentPaidDisplay =
+    totalPaidThisYear > 0 ? `$${totalPaidThisYear.toLocaleString()}` : '$8,400';
+
+  const nextPaymentAmount = activeAgreement?.monthlyRent
+    ? `${activeAgreement.monthlyRent.toLocaleString()}`
+    : mockAgreements[0].amount;
+  const nextPaymentProperty =
+    activeAgreement?.displayTitle ?? mockAgreements[0].property;
+
+  const previewPayments =
+    apiPayments.length > 0
+      ? apiPayments.slice(0, 2).map((p) => ({
+          id: p.id,
+          property: p.agreement?.property?.title ?? 'Rental payment',
+          amount: `$${(p.amount ?? 0).toLocaleString()}`,
+          date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+          previewImage: DASHBOARD_IMAGE_FALLBACK,
+        }))
+      : dashboardPayments;
+
+  const agreements =
+    apiAgreements.length > 0
+      ? apiAgreements.map((a) => ({
+          id: a.id,
+          property: a.displayTitle ?? 'Rental property',
+          amount: a.monthlyRent ? `$${a.monthlyRent.toLocaleString()}` : '—',
+          dueDate: a.endDate ? new Date(a.endDate).toLocaleDateString() : '—',
+          status: a.status ?? 'Active',
+        }))
+      : process.env.NODE_ENV === 'production'
+        ? []
+        : mockAgreements;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-blue-200/60 font-medium">
+            Loading dashboard…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleAgreementSign = (agreement: (typeof mockAgreements)[0]) => {
+    openModal('agreementView', {
+      agreement: {
+        agreementId: agreement.id,
+        propertyTitle: agreement.property,
+        propertyAddress: agreement.property,
+        landlordName: 'Landlord',
+        tenantName: 'Tenant',
+        monthlyRent: parseFloat(agreement.amount.replace(/[^0-9.]/g, '')),
+        securityDeposit: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date(
+          new Date().setFullYear(new Date().getFullYear() + 1),
+        ).toISOString(),
+        status:
+          agreement.status === 'Active'
+            ? 'active'
+            : agreement.status === 'Pending'
+              ? 'pending'
+              : 'signed',
+      },
+      onSignSubmit: async (data: AgreementSigningData) => {
+        await apiClient.patch(`/agreements/${data.agreementId}`, {
+          status: 'signed',
+          signedAt: data.signedAt,
+          signerName: data.signerName,
+          signature: data.signature,
+        });
+      },
+    });
+  };
+
+  const handleAgreementPreview = (agreementId: string) => {
+    router.push(`/user/agreements/${encodeURIComponent(agreementId)}`);
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
@@ -69,12 +255,12 @@ export default function UserDashboardOverview() {
             </p>
             <div className="flex items-baseline gap-2 mt-1">
               <h3 className="text-3xl font-bold tracking-tight text-white">
-                $1,200
+                {nextPaymentAmount}
               </h3>
               <span className="text-sm text-blue-300/40">/mo</span>
             </div>
             <p className="text-sm text-blue-200/60 mt-2 truncate">
-              Sunset Apartments, Unit 4B
+              {nextPaymentProperty}
             </p>
           </div>
         </div>
@@ -94,16 +280,16 @@ export default function UserDashboardOverview() {
               Active Lease
             </p>
             <h3 className="text-xl font-bold tracking-tight text-white mt-1">
-              12 Months
+              {leaseMonthsTotal} Months
             </h3>
             <div className="mt-3 w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all duration-1000"
-                style={{ width: '60%' }}
+                style={{ width: `${leaseProgressPct}%` }}
               />
             </div>
             <p className="text-xs text-blue-300/40 mt-3 font-medium uppercase tracking-wider">
-              7 months remaining
+              {leaseMonthsRemaining} months remaining
             </p>
           </div>
         </div>
@@ -126,10 +312,260 @@ export default function UserDashboardOverview() {
                   Rent Paid This Year
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight text-white mt-1">
-                  $8,400
+                  {rentPaidDisplay}
                 </h3>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Preview */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/5 text-blue-400 rounded-2xl flex items-center justify-center border border-white/5">
+              <BarChart3 size={20} strokeWidth={1.5} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Analytics
+              </h3>
+              <p className="text-xs text-blue-200/40">
+                Property performance overview
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/user/analytics"
+            className="flex items-center gap-1 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View Analytics
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Chart */}
+          <div className="md:col-span-2 h-40">
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart
+                data={analyticsPreviewData}
+                margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+              >
+                <defs>
+                  <linearGradient
+                    id="analyticsGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{
+                    fill: 'rgba(147, 197, 253, 0.4)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    padding: '8px 12px',
+                  }}
+                  itemStyle={{ color: '#fff', fontSize: '12px' }}
+                  labelStyle={{
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontSize: '10px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#60a5fa"
+                  strokeWidth={2.5}
+                  fill="url(#analyticsGrad)"
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-col gap-4 justify-center">
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+              <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
+                Property Views
+              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-2xl font-bold text-white">1,470</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-400">
+                  <ArrowUpRight size={12} />
+                  +12%
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/user/inquiries"
+              className="block bg-white/5 rounded-2xl p-4 border border-white/5 transition-colors hover:bg-white/10"
+            >
+              <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
+                Inquiries
+              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-2xl font-bold text-white">83</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-400">
+                  <ArrowUpRight size={12} />
+                  +8%
+                </span>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment and Dispute previews */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Payment Preview
+            </h3>
+            <Link
+              href="/user/payments"
+              className="text-xs font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {previewPayments.map((payment) => (
+              <div
+                key={payment.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="relative h-11 w-11 overflow-hidden rounded-xl border border-white/10 bg-white/5 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={payment.previewImage}
+                      alt={`${payment.property} payment receipt preview`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {payment.property}
+                    </p>
+                    <p className="text-xs text-blue-200/50">
+                      {payment.amount} · {payment.date}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/user/payments"
+                  className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                  aria-label={`Preview payment ${payment.id}`}
+                >
+                  <span className="relative h-5 w-5 overflow-hidden rounded-md border border-white/10 bg-white/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={payment.previewImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <Eye size={12} />
+                  Preview
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white/5 backdrop-blur-sm rounded-3xl shadow-xl border border-white/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Dispute Preview
+            </h3>
+            <Link
+              href="/user/disputes"
+              className="text-xs font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {dashboardDisputes.map((dispute) => (
+              <div
+                key={dispute.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="relative h-11 w-11 overflow-hidden rounded-xl border border-white/10 bg-white/5 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={dispute.previewImage}
+                      alt={`${dispute.property} dispute preview`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {dispute.property}
+                    </p>
+                    <p className="text-xs text-blue-200/50">
+                      {dispute.disputeReference} · {dispute.status}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/user/disputes/${dispute.id}`}
+                  className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                  aria-label={`Preview dispute ${dispute.disputeReference}`}
+                >
+                  <span className="relative h-5 w-5 overflow-hidden rounded-md border border-white/10 bg-white/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={dispute.previewImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                      }}
+                    />
+                  </span>
+                  <Eye size={12} />
+                  Preview
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -163,13 +599,17 @@ export default function UserDashboardOverview() {
                 <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">
                   Status
                 </th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">
+                  Preview
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {agreements.map((agreement) => (
                 <tr
                   key={agreement.id}
-                  className="hover:bg-white/5 transition-colors group"
+                  onClick={() => handleAgreementPreview(agreement.id)}
+                  className="hover:bg-white/5 transition-colors group cursor-pointer"
                 >
                   <td className="px-6 py-4 font-bold text-white group-hover:text-blue-400 transition-colors">
                     {agreement.id}
@@ -184,17 +624,53 @@ export default function UserDashboardOverview() {
                     {agreement.dueDate}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        agreement.status === 'Active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : agreement.status === 'Pending'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            : 'bg-white/5 text-blue-300/40 border-white/10'
-                      }`}
+                    <div className="flex items-center justify-end gap-2">
+                      {/* Preview Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAgreementPreview(agreement.id);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-blue-400 hover:text-white hover:bg-blue-500/20 transition-colors"
+                        title="Preview agreement"
+                      >
+                        <Eye size={12} />
+                        Preview
+                      </button>
+                      {agreement.status === 'Pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAgreementSign(agreement);
+                          }}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+                        >
+                          Sign
+                        </button>
+                      )}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          agreement.status === 'Active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : agreement.status === 'Pending'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : 'bg-white/5 text-blue-300/40 border-white/10'
+                        }`}
+                      >
+                        {agreement.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <Link
+                      href={`/user/agreements/${agreement.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+                      aria-label={`Preview agreement ${agreement.id}`}
                     >
-                      {agreement.status}
-                    </span>
+                      <Eye size={12} />
+                      Preview
+                    </Link>
                   </td>
                 </tr>
               ))}

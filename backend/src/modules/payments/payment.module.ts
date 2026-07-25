@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentService } from './payment.service';
+import { RefundService } from './refund.service';
+import { ScheduleService } from './schedule.service';
+import { PaymentWebhookService } from './payment-webhook.service';
 import {
   PaymentController,
   AgreementPaymentController,
@@ -15,13 +18,22 @@ import { PaymentSchedule } from './entities/payment-schedule.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { User } from '../users/entities/user.entity';
+import { AdminRefundsController } from './admin-refunds.controller';
+import { AdminRefundsService } from './admin-refunds.service';
+import { FraudModule } from '../fraud/fraud.module';
+import { AuditModule } from '../audit/audit.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, PaymentMethod, PaymentSchedule]),
+    TypeOrmModule.forFeature([Payment, PaymentMethod, PaymentSchedule, User]),
     NotificationsModule,
     UsersModule,
     StellarModule,
+    FraudModule,
+    AuditModule,
+    WebhooksModule,
   ],
   controllers: [
     PaymentController,
@@ -29,8 +41,16 @@ import { StellarModule } from '../stellar/stellar.module';
     PaymentMethodController,
     PaymentScheduleController,
     PaymentWebhookController,
+    AdminRefundsController,
   ],
-  providers: [PaymentService, PaymentGatewayService],
+  providers: [
+    PaymentService,
+    RefundService,
+    ScheduleService,
+    PaymentWebhookService,
+    PaymentGatewayService,
+    AdminRefundsService,
+  ],
   exports: [PaymentService, PaymentGatewayService],
 })
 export class PaymentModule {}

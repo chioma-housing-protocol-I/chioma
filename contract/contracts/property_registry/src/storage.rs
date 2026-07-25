@@ -7,4 +7,5 @@ pub enum DataKey {
     State,
     Initialized,
     PropertyCount,
+    UpgradeProposal(String),
 }

@@ -109,4 +109,40 @@ describe('queryKeys', () => {
       ]);
     });
   });
+
+  describe('search', () => {
+    it('all is a stable tuple', () => {
+      expect(queryKeys.search.all).toEqual(['search']);
+    });
+
+    it('properties includes filters', () => {
+      expect(
+        queryKeys.search.properties({ q: 'lagos', minPrice: '1000' }),
+      ).toEqual(['search', 'properties', { q: 'lagos', minPrice: '1000' }]);
+    });
+
+    it('users includes filters', () => {
+      expect(queryKeys.search.users({ role: 'admin' })).toEqual([
+        'search',
+        'users',
+        { role: 'admin' },
+      ]);
+    });
+
+    it('documents includes filters', () => {
+      expect(queryKeys.search.documents({ status: 'active' })).toEqual([
+        'search',
+        'documents',
+        { status: 'active' },
+      ]);
+    });
+
+    it('suggest includes the query string', () => {
+      expect(queryKeys.search.suggest('modern')).toEqual([
+        'search',
+        'suggest',
+        'modern',
+      ]);
+    });
+  });
 });

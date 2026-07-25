@@ -21,9 +21,9 @@ export class PaymentProcessingController {
     description: 'Rent payment processed successfully',
   })
   async processRentPayment(@Body() dto: ProcessRentPaymentDto) {
-    const callerKeypair = StellarSdk.Keypair.fromSecret(dto.tenantSecret);
+    const callerKeypair = StellarSdk.Keypair.fromSecret(dto.userSecret);
     const hash = await this.paymentProcessingService.processRentPayment(
-      dto.tenantAddress,
+      dto.userAddress,
       dto.agreementId,
       dto.amount,
       callerKeypair,

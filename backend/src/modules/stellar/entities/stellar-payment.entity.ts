@@ -26,11 +26,11 @@ export class StellarPayment {
   @Column({ type: 'decimal', precision: 20, scale: 7 })
   amount: string;
 
-  @Column({ name: 'tenant_address', type: 'varchar', length: 56 })
-  tenantAddress: string;
+  @Column({ name: 'user_address', type: 'varchar', length: 56 })
+  userAddress: string;
 
-  @Column({ name: 'landlord_address', type: 'varchar', length: 56 })
-  landlordAddress: string;
+  @Column({ name: 'admin_address', type: 'varchar', length: 56 })
+  adminAddress: string;
 
   @Column({ name: 'platform_fee_collector', type: 'varchar', length: 56 })
   platformFeeCollector: string;

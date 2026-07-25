@@ -2,6 +2,7 @@
 
 import {
   Anchor,
+  Award,
   BarChart3,
   Blocks,
   Gavel,
@@ -72,6 +73,12 @@ const adminNavItems: AdminNavItem[] = [
     visibleFor: ['admin'],
   },
   {
+    icon: Award,
+    label: 'Arbiters Management',
+    href: '/admin/arbiters',
+    visibleFor: ['admin'],
+  },
+  {
     icon: ShieldX,
     label: 'Rejected KYC',
     href: '/admin/kyc/rejected',
@@ -134,9 +141,9 @@ export function getAdminBreadcrumbItems(pathname: string): Array<{
       index === segments.length - 1
         ? undefined
         : `/${pathname
-          .split('/')
-          .filter(Boolean)
-          .slice(0, index + 1)
-          .join('/')}`,
+            .split('/')
+            .filter(Boolean)
+            .slice(0, index + 1)
+            .join('/')}`,
   }));
 }

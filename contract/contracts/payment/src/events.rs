@@ -1,5 +1,20 @@
 use soroban_sdk::{contractevent, Env, String};
 
+#[contractevent(topics = ["rent_escalation_config_set"])]
+pub struct RentEscalationConfigSet {
+    #[topic]
+    pub agreement_id: String,
+    pub annual_rate_bps: u32,
+}
+
+pub(crate) fn rent_escalation_config_set(env: &Env, agreement_id: String, annual_rate_bps: u32) {
+    RentEscalationConfigSet {
+        agreement_id,
+        annual_rate_bps,
+    }
+    .publish(env);
+}
+
 #[contractevent(topics = ["late_fee_config_set"])]
 pub struct LateFeeConfigSet {
     #[topic]

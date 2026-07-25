@@ -13,13 +13,13 @@ pub struct ContractInitialized {
 }
 
 /// Event emitted when an agreement is created
-/// Topics: ["agr_created", tenant: Address, landlord: Address]
-#[contractevent(topics = ["agr_created"])]
+/// Topics: ["agreement_created", user: Address, admin: Address]
+#[contractevent(topics = ["agreement_created"])]
 pub struct AgreementCreated {
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     pub agreement_id: String,
     pub monthly_rent: i128,
     pub security_deposit: i128,
@@ -29,42 +29,51 @@ pub struct AgreementCreated {
 }
 
 /// Event emitted when an agreement is signed
-/// Topics: ["agr_signed", tenant: Address, landlord: Address]
-#[contractevent(topics = ["agr_signed"])]
+/// Topics: ["agreement_signed", user: Address, admin: Address]
+#[contractevent(topics = ["agreement_signed"])]
 pub struct AgreementSigned {
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     pub agreement_id: String,
     pub signed_at: u64,
 }
 
 /// Event emitted when an agreement is submitted for signing
-/// Topics: ["agr_submit", landlord: Address, tenant: Address]
-#[contractevent(topics = ["agr_submit"])]
+/// Topics: ["agreement_submitted", admin: Address, user: Address]
+#[contractevent(topics = ["agreement_submitted"])]
 pub struct AgreementSubmitted {
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
     pub agreement_id: String,
 }
 
 /// Event emitted when an agreement is cancelled
-/// Topics: ["agr_cancel", landlord: Address, tenant: Address]
-#[contractevent(topics = ["agr_cancel"])]
+/// Topics: ["agreement_cancelled", admin: Address, user: Address]
+#[contractevent(topics = ["agreement_cancelled"])]
 pub struct AgreementCancelled {
     #[topic]
-    pub landlord: Address,
+    pub admin: Address,
     #[topic]
-    pub tenant: Address,
+    pub user: Address,
+    pub agreement_id: String,
+}
+
+/// Event emitted when an agreement is approved by a witness (PendingApproval → Active)
+/// Topics: ["agreement_approved", approver: Address]
+#[contractevent(topics = ["agreement_approved"])]
+pub struct AgreementApproved {
+    #[topic]
+    pub approver: Address,
     pub agreement_id: String,
 }
 
 /// Event emitted when the contract configuration is updated
-/// Topics: ["cfg_updated", admin: Address]
-#[contractevent(topics = ["cfg_updated"])]
+/// Topics: ["config_updated", admin: Address]
+#[contractevent(topics = ["config_updated"])]
 pub struct ConfigUpdated {
     #[topic]
     pub admin: Address,
@@ -105,8 +114,8 @@ pub(crate) fn contract_initialized(env: &Env, admin: Address, config: Config) {
 pub(crate) fn agreement_created(
     env: &Env,
     agreement_id: String,
-    tenant: Address,
-    landlord: Address,
+    user: Address,
+    admin: Address,
     monthly_rent: i128,
     security_deposit: i128,
     start_date: u64,
@@ -114,8 +123,8 @@ pub(crate) fn agreement_created(
     agent: Option<Address>,
 ) {
     AgreementCreated {
-        tenant,
-        landlord,
+        user,
+        admin,
         agreement_id,
         monthly_rent,
         security_deposit,
@@ -130,13 +139,13 @@ pub(crate) fn agreement_created(
 pub(crate) fn agreement_signed(
     env: &Env,
     agreement_id: String,
-    tenant: Address,
-    landlord: Address,
+    user: Address,
+    admin: Address,
     signed_at: u64,
 ) {
     AgreementSigned {
-        tenant,
-        landlord,
+        user,
+        admin,
         agreement_id,
         signed_at,
     }
@@ -144,30 +153,29 @@ pub(crate) fn agreement_signed(
 }
 
 /// Helper function to emit agreement submitted event
-pub(crate) fn agreement_submitted(
-    env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-) {
+pub(crate) fn agreement_submitted(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementSubmitted {
-        landlord,
-        tenant,
+        admin,
+        user,
         agreement_id,
     }
     .publish(env);
 }
 
 /// Helper function to emit agreement cancelled event
-pub(crate) fn agreement_cancelled(
-    env: &Env,
-    agreement_id: String,
-    landlord: Address,
-    tenant: Address,
-) {
+pub(crate) fn agreement_cancelled(env: &Env, agreement_id: String, admin: Address, user: Address) {
     AgreementCancelled {
-        landlord,
-        tenant,
+        admin,
+        user,
+        agreement_id,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit agreement approved (witness) event
+pub(crate) fn agreement_approved(env: &Env, agreement_id: String, approver: Address) {
+    AgreementApproved {
+        approver,
         agreement_id,
     }
     .publish(env);
@@ -292,8 +300,8 @@ pub struct InterestAccruedEvent {
 #[contractevent]
 pub struct InterestDistributed {
     pub escrow_id: String,
-    pub tenant_share: i128,
-    pub landlord_share: i128,
+    pub user_share: i128,
+    pub admin_share: i128,
 }
 
 pub(crate) fn interest_config_set(env: &Env, agreement_id: String, annual_rate: u32) {
@@ -316,13 +324,13 @@ pub(crate) fn interest_accrued(env: &Env, escrow_id: String, amount: i128, total
 pub(crate) fn interest_distributed(
     env: &Env,
     escrow_id: String,
-    tenant_share: i128,
-    landlord_share: i128,
+    user_share: i128,
+    admin_share: i128,
 ) {
     InterestDistributed {
         escrow_id,
-        tenant_share,
-        landlord_share,
+        user_share,
+        admin_share,
     }
     .publish(env);
 }
@@ -379,7 +387,7 @@ pub(crate) fn royalty_paid(env: &Env, token_id: String, amount: i128, recipient:
 
 // ─── Rate Limiting Events ─────────────────────────────────────────────────────
 
-#[contractevent(topics = ["rate_limit"])]
+#[contractevent(topics = ["rate_limit_exceeded"])]
 pub struct RateLimitExceeded {
     #[topic]
     pub user: Address,
@@ -426,7 +434,7 @@ pub(crate) fn rate_limit_config_updated(
 
 // ─── Multi-Sig Events ─────────────────────────────────────────────────────────
 
-#[contractevent(topics = ["multisig_init"])]
+#[contractevent(topics = ["multisig_initialized"])]
 pub struct MultiSigInitialized {
     pub admins: u32,
     pub required_signatures: u32,
@@ -561,20 +569,20 @@ pub(crate) fn required_signatures_updated(env: &Env, old_required: u32, new_requ
 
 // ─── Timelock Events ──────────────────────────────────────────────────────────
 
-#[contractevent(topics = ["tl_queued"])]
+#[contractevent(topics = ["timelock_queued"])]
 pub struct TimelockActionQueued {
     #[topic]
     pub action_id: String,
     pub eta: u64,
 }
 
-#[contractevent(topics = ["tl_executed"])]
+#[contractevent(topics = ["timelock_executed"])]
 pub struct TimelockActionExecuted {
     #[topic]
     pub action_id: String,
 }
 
-#[contractevent(topics = ["tl_cancelled"])]
+#[contractevent(topics = ["timelock_cancelled"])]
 pub struct TimelockActionCancelled {
     #[topic]
     pub action_id: String,
@@ -608,4 +616,106 @@ pub(crate) fn version_updated(env: &Env, major: u32, minor: u32, patch: u32) {
         patch,
     }
     .publish(env);
+}
+
+// ─── Agreement Extension Events ─────────────────────────────────────────────
+
+#[contractevent(topics = ["extension_proposed"])]
+pub struct ExtensionProposed {
+    #[topic]
+    pub extension_id: String,
+    pub agreement_id: String,
+    pub new_end_date: u64,
+}
+
+#[contractevent(topics = ["extension_accepted"])]
+pub struct ExtensionAccepted {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_rejected"])]
+pub struct ExtensionRejected {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_activated"])]
+pub struct ExtensionActivated {
+    #[topic]
+    pub extension_id: String,
+}
+
+#[contractevent(topics = ["extension_cancelled"])]
+pub struct ExtensionCancelled {
+    #[topic]
+    pub extension_id: String,
+}
+
+pub(crate) fn extension_proposed(
+    env: &Env,
+    extension_id: String,
+    agreement_id: String,
+    new_end_date: u64,
+) {
+    ExtensionProposed {
+        extension_id,
+        agreement_id,
+        new_end_date,
+    }
+    .publish(env);
+}
+
+pub(crate) fn extension_accepted(env: &Env, extension_id: String) {
+    ExtensionAccepted { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_rejected(env: &Env, extension_id: String) {
+    ExtensionRejected { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_activated(env: &Env, extension_id: String) {
+    ExtensionActivated { extension_id }.publish(env);
+}
+
+pub(crate) fn extension_cancelled(env: &Env, extension_id: String) {
+    ExtensionCancelled { extension_id }.publish(env);
+}
+
+// ─── Contract Upgrade Events ────────────────────────────────────────────────
+
+#[contractevent(topics = ["upgrade_proposed"])]
+pub struct UpgradeProposed {
+    #[topic]
+    pub proposal_id: String,
+    pub eta: u64,
+}
+
+#[contractevent(topics = ["upgrade_approved"])]
+pub struct UpgradeApproved {
+    #[topic]
+    pub proposal_id: String,
+    pub approvals: u32,
+}
+
+#[contractevent(topics = ["upgrade_executed"])]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub proposal_id: String,
+}
+
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, eta: u64) {
+    UpgradeProposed { proposal_id, eta }.publish(env);
+}
+
+pub(crate) fn upgrade_approved(env: &Env, proposal_id: String, approvals: u32) {
+    UpgradeApproved {
+        proposal_id,
+        approvals,
+    }
+    .publish(env);
+}
+
+pub(crate) fn upgrade_executed(env: &Env, proposal_id: String) {
+    UpgradeExecuted { proposal_id }.publish(env);
 }

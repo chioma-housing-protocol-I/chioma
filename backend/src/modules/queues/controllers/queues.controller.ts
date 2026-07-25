@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 import { QueueManagementService } from '../services/queue-management.service';
 import { QueueMonitoringService } from '../services/queue-monitoring.service';
+import { DeadLetterQueueService } from '../services/dead-letter-queue.service';
 
 @ApiTags('Queue Management')
 @Controller('api/v1/queues')
@@ -25,6 +26,7 @@ export class QueuesController {
   constructor(
     private queueManagementService: QueueManagementService,
     private queueMonitoringService: QueueMonitoringService,
+    private deadLetterQueueService: DeadLetterQueueService,
   ) {}
 
   /**
@@ -35,6 +37,59 @@ export class QueuesController {
   async getQueueStats(): Promise<any> {
     this.logger.debug('Fetching all queue statistics');
     return this.queueManagementService.getAllQueueStats();
+  }
+
+  /**
+   * Get dead letter queue statistics
+   */
+  @Get('dead-letter/stats')
+  @ApiOperation({ summary: 'Get dead letter queue statistics' })
+  async getDeadLetterStats(): Promise<any> {
+    this.logger.debug('Fetching dead letter queue statistics');
+    return this.deadLetterQueueService.getDeadLetterStats();
+  }
+
+  /**
+   * List jobs in the dead letter queue
+   */
+  @Get('dead-letter/jobs')
+  @ApiOperation({ summary: 'List jobs in the dead letter queue' })
+  async getDeadLetterJobs(): Promise<any> {
+    this.logger.debug('Fetching dead letter queue jobs');
+    return this.deadLetterQueueService.getDeadLetterJobs(0, 50);
+  }
+
+  /**
+   * Purge expired dead letter jobs
+   */
+  @Post('dead-letter/purge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Purge expired dead letter jobs' })
+  async purgeDeadLetterJobs(): Promise<any> {
+    const removed = await this.deadLetterQueueService.purgeExpiredJobs();
+    return { message: `Purged ${removed} expired dead letter jobs`, removed };
+  }
+
+  /**
+   * Retry a job from the dead letter queue
+   */
+  @Post('dead-letter/jobs/:jobId/retry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retry a job from the dead letter queue' })
+  async retryDeadLetterJob(@Param('jobId') jobId: string): Promise<any> {
+    await this.deadLetterQueueService.retryFromDeadLetter(jobId);
+    return { message: `Dead letter job ${jobId} re-queued` };
+  }
+
+  /**
+   * Remove a job from the dead letter queue
+   */
+  @Post('dead-letter/jobs/:jobId/remove')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a job from the dead letter queue' })
+  async removeDeadLetterJob(@Param('jobId') jobId: string): Promise<any> {
+    await this.deadLetterQueueService.removeDeadLetterJob(jobId);
+    return { message: `Dead letter job ${jobId} removed` };
   }
 
   /**

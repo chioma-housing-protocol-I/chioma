@@ -13,7 +13,7 @@ import {
   Networks,
   Operation,
 } from '@stellar/stellar-sdk';
-import { getTestDatabaseConfig } from './test-helpers';
+import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
 
 describe.skip('Stellar Authentication E2E', () => {
   // Skipped: Requires PostgreSQL database (User entity uses enum types not supported by SQLite)
@@ -57,12 +57,15 @@ describe.skip('Stellar Authentication E2E', () => {
   });
 
   beforeEach(async () => {
-    // Clean up test data before each test
-    await userRepository.delete({ walletAddress: validWalletAddress });
+    await clearRepositories([userRepository]);
+  }, 60000);
+
+  afterEach(async () => {
+    await clearRepositories([userRepository]);
   }, 60000);
 
   afterAll(async () => {
-    await userRepository.delete({ walletAddress: validWalletAddress });
+    await clearRepositories([userRepository]);
     if (app) {
       await app.close();
     }

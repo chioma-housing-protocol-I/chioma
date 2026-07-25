@@ -1,0 +1,155 @@
+{
+  "scenarios": [
+    {
+      "name": "Health Check Load Test",
+      "endpoint": "/health",
+      "method": "GET",
+      "connections": 50,
+      "duration": 10,
+      "expectedMaxP99": 100,
+      "expectedMinRPS": 500,
+      "description": "Basic health check under high load"
+    },
+    {
+      "name": "Detailed Health Check",
+      "endpoint": "/health/detailed",
+      "method": "GET",
+      "connections": 20,
+      "duration": 8,
+      "expectedMaxP99": 200,
+      "expectedMinRPS": 100,
+      "description": "Comprehensive health check with database connectivity"
+    },
+    {
+      "name": "API Documentation Serving",
+      "endpoint": "/api/docs-json",
+      "method": "GET",
+      "connections": 15,
+      "duration": 5,
+      "expectedMaxP99": 500,
+      "expectedMinRPS": 50,
+      "description": "OpenAPI specification serving performance"
+    },
+    {
+      "name": "Security Policy Access",
+      "endpoint": "/security.txt",
+      "method": "GET",
+      "connections": 30,
+      "duration": 3,
+      "expectedMaxP99": 50,
+      "expectedMinRPS": 200,
+      "description": "Security policy file access"
+    },
+    {
+      "name": "Authentication Load Test",
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "connections": 10,
+      "duration": 8,
+      "expectedMaxP99": 1000,
+      "expectedMinRPS": 20,
+      "description": "User authentication under load",
+      "payload": {
+        "email": "test@example.com",
+        "password": "TestPassword123!"
+      },
+      "setupRequired": true
+    },
+    {
+      "name": "Property Listing Performance",
+      "endpoint": "/api/properties",
+      "method": "GET",
+      "connections": 15,
+      "duration": 10,
+      "expectedMaxP99": 1500,
+      "expectedMinRPS": 30,
+      "description": "Property listing retrieval performance",
+      "requiresAuth": true
+    },
+    {
+      "name": "Property Search Performance",
+      "endpoint": "/api/properties/search",
+      "method": "GET",
+      "connections": 12,
+      "duration": 8,
+      "expectedMaxP99": 2000,
+      "expectedMinRPS": 25,
+      "description": "Property search with filters",
+      "queryParams": "?city=Lagos&minPrice=100000&maxPrice=500000",
+      "requiresAuth": true
+    },
+    {
+      "name": "User Profile Access",
+      "endpoint": "/api/users/profile",
+      "method": "GET",
+      "connections": 20,
+      "duration": 6,
+      "expectedMaxP99": 800,
+      "expectedMinRPS": 40,
+      "description": "User profile data retrieval",
+      "requiresAuth": true
+    },
+    {
+      "name": "Payment Processing Simulation",
+      "endpoint": "/api/payments",
+      "method": "GET",
+      "connections": 8,
+      "duration": 10,
+      "expectedMaxP99": 3000,
+      "expectedMinRPS": 15,
+      "description": "Payment history and processing endpoints",
+      "requiresAuth": true
+    }
+  ],
+  "thresholds": {
+    "critical": {
+      "maxP99ResponseTime": 5000,
+      "minSuccessRate": 95,
+      "maxErrorRate": 5
+    },
+    "warning": {
+      "maxP99ResponseTime": 2000,
+      "minSuccessRate": 98,
+      "maxErrorRate": 2
+    },
+    "excellent": {
+      "maxP99ResponseTime": 1000,
+      "minSuccessRate": 99.5,
+      "maxErrorRate": 0.5
+    }
+  },
+  "environments": {
+    "local": {
+      "baseUrl": "http://localhost:5000",
+      "connections": 10,
+      "duration": 5
+    },
+    "staging": {
+      "baseUrl": "https://staging-api.chioma.com",
+      "connections": 20,
+      "duration": 10
+    },
+    "production": {
+      "baseUrl": "https://api.chioma.com",
+      "connections": 50,
+      "duration": 30
+    }
+  },
+  "reporting": {
+    "formats": ["console", "json", "html"],
+    "outputDirectory": "./performance-reports",
+    "includeSystemInfo": true,
+    "includeDetailedMetrics": true,
+    "generateCharts": true
+  },
+  "monitoring": {
+    "enableRealTimeAlerts": true,
+    "alertThresholds": {
+      "responseTime": 2000,
+      "errorRate": 5,
+      "memoryUsage": 512
+    },
+    "metricsRetention": "24h",
+    "exportMetrics": true
+  }
+}

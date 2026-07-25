@@ -5,12 +5,12 @@ export class ProcessRentPaymentDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  tenantAddress: string;
+  userAddress: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  tenantSecret: string;
+  userSecret: string;
 
   @ApiProperty()
   @IsString()

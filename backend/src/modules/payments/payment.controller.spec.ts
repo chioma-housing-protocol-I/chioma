@@ -8,6 +8,9 @@ import {
   PaymentWebhookController,
 } from './payment.controller';
 import { PaymentService } from './payment.service';
+import { RefundService } from './refund.service';
+import { ScheduleService } from './schedule.service';
+import { PaymentWebhookService } from './payment-webhook.service';
 import { AuditService } from '../audit/audit.service';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
@@ -29,21 +32,30 @@ const mockPaymentService = {
   refundEscrowDeposit: jest.fn(),
   reconcileStellarPayments: jest.fn(),
   retryFailedPayments: jest.fn(),
-  handlePaymentGatewayWebhook: jest.fn(),
   getPaymentAnalytics: jest.fn(),
   listPayments: jest.fn(),
   getPaymentById: jest.fn(),
-  processRefund: jest.fn(),
   generateReceipt: jest.fn(),
   createPaymentMethod: jest.fn(),
   listPaymentMethods: jest.fn(),
   updatePaymentMethod: jest.fn(),
   removePaymentMethod: jest.fn(),
+};
+
+const mockRefundService = {
+  processRefund: jest.fn(),
+};
+
+const mockScheduleService = {
   createPaymentSchedule: jest.fn(),
   listPaymentSchedules: jest.fn(),
   updatePaymentSchedule: jest.fn(),
   runPaymentSchedule: jest.fn(),
   processDueSchedules: jest.fn(),
+};
+
+const mockPaymentWebhookService = {
+  handlePaymentGatewayWebhook: jest.fn(),
 };
 
 describe('Payment Controllers', () => {
@@ -66,6 +78,18 @@ describe('Payment Controllers', () => {
         {
           provide: PaymentService,
           useValue: mockPaymentService,
+        },
+        {
+          provide: RefundService,
+          useValue: mockRefundService,
+        },
+        {
+          provide: ScheduleService,
+          useValue: mockScheduleService,
+        },
+        {
+          provide: PaymentWebhookService,
+          useValue: mockPaymentWebhookService,
         },
         {
           provide: AuditService,
@@ -119,7 +143,7 @@ describe('Payment Controllers', () => {
     await paymentController.processRefund('pay_1', dto, {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.processRefund).toHaveBeenCalledWith(
+    expect(mockRefundService.processRefund).toHaveBeenCalledWith(
       'pay_1',
       dto,
       'user_1',
@@ -172,7 +196,7 @@ describe('Payment Controllers', () => {
     await paymentScheduleController.createSchedule(dto, {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.createPaymentSchedule).toHaveBeenCalledWith(
+    expect(mockScheduleService.createPaymentSchedule).toHaveBeenCalledWith(
       dto,
       'user_1',
     );
@@ -182,7 +206,7 @@ describe('Payment Controllers', () => {
     await paymentScheduleController.runSchedule('schedule_1', {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.runPaymentSchedule).toHaveBeenCalledWith(
+    expect(mockScheduleService.runPaymentSchedule).toHaveBeenCalledWith(
       'schedule_1',
       'user_1',
     );
@@ -190,13 +214,13 @@ describe('Payment Controllers', () => {
 
   it('processes due schedules', async () => {
     await paymentScheduleController.processDueSchedules();
-    expect(mockPaymentService.processDueSchedules).toHaveBeenCalled();
+    expect(mockScheduleService.processDueSchedules).toHaveBeenCalled();
   });
 
   it('processes stellar rent payment with user id', async () => {
     const dto: ProcessStellarRentGatewayDto = {
-      tenantAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
-      tenantSecret: 'SSECRET',
+      userAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      userSecret: 'SSECRET',
       agreementId: 'agreement_1',
       amount: '12.5',
     };
@@ -232,9 +256,8 @@ describe('Payment Controllers', () => {
       status: 'completed',
     };
     await paymentWebhookController.handleGatewayWebhook(dto, 'secret');
-    expect(mockPaymentService.handlePaymentGatewayWebhook).toHaveBeenCalledWith(
-      dto,
-      'secret',
-    );
+    expect(
+      mockPaymentWebhookService.handlePaymentGatewayWebhook,
+    ).toHaveBeenCalledWith(dto, 'secret');
   });
 });

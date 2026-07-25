@@ -1,39 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Next.js Proxy — Server-side route protection.
+ * Next.js Proxy (middleware) — server-side route protection.
  *
- * DISABLED FOR DEVELOPMENT - All routes are now accessible without authentication
- *
- * To re-enable authentication:
- * 1. Uncomment the auth check below
- * 2. Uncomment the matcher config
+ * The auth store mirrors the access token into the `chioma_auth_token`
+ * cookie on login, so protected areas can be gated before any client
+ * JavaScript runs. Unauthenticated visitors are sent to /login with a
+ * `next` param so they return to where they were headed.
  */
 export function proxy(request: NextRequest) {
-  // AUTH DISABLED - Allow all access
-  // const authToken = request.cookies.get('chioma_auth_token')?.value;
-  // if (!authToken) {
-  //   console.log('🔒 Proxy: No auth token, redirecting to home');
-  //   return NextResponse.redirect(new URL('/', request.url));
-  // }
-  // console.log('✅ Proxy: Auth token found, allowing access');
+  const authToken = request.cookies.get('chioma_auth_token')?.value;
+
+  if (!authToken) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set(
+      'next',
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
+    return NextResponse.redirect(loginUrl);
+  }
 
   return NextResponse.next();
 }
 
-/**
- * Matcher — Only run this middleware on dashboard routes.
- * DISABLED FOR DEVELOPMENT - Middleware is disabled
- *
- * To re-enable, uncomment the matcher config below
- */
+/** Only run on areas that require a signed-in user. */
 export const config = {
   matcher: [
-    // DISABLED - All routes are accessible
-    // '/landlords/:path*',
-    // '/agents/:path*',
-    // '/tenant/:path*',
-    // '/admin/:path*',
-    // '/developer/:path*',
+    '/admin/:path*',
+    '/user/:path*',
+    '/messages/:path*',
+    '/settings/:path*',
   ],
 };

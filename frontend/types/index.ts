@@ -38,28 +38,54 @@ export interface UserActivity {
   createdAt: string;
 }
 
-// Property Types
+// Property Types — aligned with backend entity (ListingStatus / PropertyType enums)
+export type PropertyType =
+  | 'apartment'
+  | 'house'
+  | 'commercial'
+  | 'land'
+  | 'other';
+export type ListingStatus = 'draft' | 'published' | 'rented' | 'archived';
+
 export interface Property {
   id: string;
   title: string;
   description: string;
+  /** Street address */
   address: string;
   city: string;
   state: string;
+  postalCode?: string;
   country: string;
+  latitude?: number;
+  longitude?: number;
   price: number;
+  currency?: string;
   bedrooms: number;
   bathrooms: number;
-  squareFeet: number;
-  propertyType: 'apartment' | 'house' | 'condo' | 'studio';
-  status: 'available' | 'rented' | 'maintenance';
+  /** Area in square metres (backend field name) */
+  area: number;
+  /** Alias kept for backward compatibility */
+  squareFeet?: number;
+  floor?: number;
+  type: PropertyType;
+  /** @deprecated Use `type` — kept for backward compatibility */
+  propertyType?: PropertyType;
+  status: ListingStatus;
+  isFurnished?: boolean;
+  hasParking?: boolean;
+  petsAllowed?: boolean;
   images: PropertyImage[];
   amenities: PropertyAmenity[];
-  landlordId: string;
+  /** Owner UUID (backend: ownerId) */
+  ownerId: string;
+  /** @deprecated Use `ownerId` — kept for backward compatibility */
+  landlordId?: string;
+  owner?: User;
+  /** @deprecated Use `owner` — kept for backward compatibility */
   landlord?: User;
   createdAt: string;
   updatedAt: string;
-  /** API-aligned optional fields (Nest/TypeORM property listing) */
   viewCount?: number;
   favoriteCount?: number;
   lastViewedAt?: string | null;
@@ -121,13 +147,65 @@ export interface Payment {
   agreement?: RentalAgreement;
   amount: number;
   currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'partial_refund';
   paymentMethod: 'card' | 'bank_transfer' | 'crypto';
   transactionId?: string;
   blockchainTxHash?: string;
   dueDate: string;
   paidAt?: string;
+  referenceNumber?: string | null;
+  refundAmount?: number;
+  refundStatus?: string | null;
+  refundReason?: string | null;
+  receiptUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
+}
+
+export interface PaymentMethod {
+  id: number;
+  userId: string;
+  paymentType: string;
+  lastFour: string;
+  expiryDate?: string;
+  isDefault: boolean;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaymentInterval = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export type PaymentScheduleStatus = 'active' | 'paused' | 'canceled' | 'failed';
+
+export interface PaymentSchedule {
+  id: string;
+  userId: string;
+  agreementId: string | null;
+  paymentMethod: PaymentMethod | null;
+  paymentMethodId: number | null;
+  amount: number;
+  currency: string;
+  interval: PaymentInterval;
+  nextRunAt: string;
+  status: PaymentScheduleStatus;
+  retries: number;
+  maxRetries: number;
+  lastError: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentScheduleEntry {
+  paymentNumber: number;
+  dueDate: string;
+  amount: number;
+  agreementId: string;
+}
+
+export interface LateFeeCalculation {
+  lateFee: number;
 }
 
 // Maintenance Types
@@ -175,6 +253,29 @@ export interface DisputeEvidence {
   url: string;
   description?: string;
   uploadedAt: string;
+}
+
+// Arbiter Types
+export interface Arbiter {
+  id: number;
+  stellarAddress: string;
+  userId?: number | null;
+  user?: User | null;
+  active: boolean;
+  blockchainAddedAt?: number | null;
+  transactionHash?: string | null;
+  totalVotes: number;
+  totalDisputesResolved: number;
+  reputationScore: number;
+  successfulResolutions: number;
+  metadata?: {
+    qualifications?: string;
+    specialization?: string;
+    stakeAmount?: string;
+    [key: string]: any;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Audit Types
@@ -364,6 +465,76 @@ export interface Role {
   permissions: Permission[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Search Types
+export interface SearchFilters {
+  query?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  type?: string;
+  status?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  isFurnished?: boolean;
+  hasParking?: boolean;
+  petsAllowed?: boolean;
+  amenities?: string[];
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface UserSearchFilters {
+  query?: string;
+  role?: string;
+  isActive?: boolean;
+  kycVerified?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface DocumentSearchFilters {
+  query?: string;
+  status?: string;
+  propertyId?: string;
+  userId?: string;
+  adminId?: string;
+  minRent?: number;
+  maxRent?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface SearchFacets {
+  types: Array<{ type: string; count: number }>;
+  cities: Array<{ city: string; count: number }>;
+  priceRanges: Array<{
+    label: string;
+    min: number;
+    max: number;
+    count: number;
+  }>;
+  amenities: { furnished: number; parking: number; petsAllowed: number };
+}
+
+export interface SearchResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  facets: SearchFacets;
+}
+
+export interface SearchSuggestResult {
+  suggestions: string[];
 }
 
 // API Response Types

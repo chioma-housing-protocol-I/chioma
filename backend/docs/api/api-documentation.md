@@ -7,7 +7,7 @@ The Chioma API is a RESTful API built on NestJS that provides endpoints for mana
 ## Base URL
 
 ```
-Development: http://localhost:3000/api
+Development: http://localhost:5000/api
 Production: https://api.chioma.com/api
 ```
 
@@ -383,7 +383,7 @@ List endpoints support pagination with these query parameters:
 ```typescript
 // Initialize API client
 const api = new ChiomaAPI({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: 'http://localhost:5000/api',
   apiKey: 'your-jwt-token',
 });
 
@@ -416,7 +416,7 @@ const payment = await api.agreements.recordPayment(agreement.id, {
 from chioma_sdk import ChiomaAPI
 
 # Initialize client
-api = ChiomaAPI(base_url='http://localhost:3000/api')
+api = ChiomaAPI(base_url='http://localhost:5000/api')
 api.set_token('your-jwt-token')
 
 # Get user agreements
@@ -474,7 +474,7 @@ Chioma supports webhooks for real-time notifications:
 
 ### Test Environment
 
-- URL: `http://localhost:3000/api`
+- URL: `http://localhost:5000/api`
 - Test Stellar Network: Testnet
 - Test Accounts: Available in development environment
 
@@ -482,7 +482,7 @@ Chioma supports webhooks for real-time notifications:
 
 ```bash
 # Create test user
-curl -X POST http://localhost:3000/api/auth/register \
+curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",

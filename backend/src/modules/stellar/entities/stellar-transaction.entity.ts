@@ -43,14 +43,14 @@ export class StellarTransaction {
   @Column({ name: 'transaction_hash', length: 64, unique: true })
   transactionHash: string;
 
-  @Column({ name: 'from_account_id', nullable: true })
+  @Column({ name: 'from_account_id', type: 'int', nullable: true })
   fromAccountId: number | null;
 
   @ManyToOne(() => StellarAccount, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'from_account_id' })
   fromAccount: StellarAccount;
 
-  @Column({ name: 'to_account_id', nullable: true })
+  @Column({ name: 'to_account_id', type: 'int', nullable: true })
   toAccountId: number | null;
 
   @ManyToOne(() => StellarAccount, { onDelete: 'SET NULL' })

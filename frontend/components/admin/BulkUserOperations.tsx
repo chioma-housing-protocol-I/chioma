@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
+import { UserAvatar } from '@/components/admin/users/UserAvatar';
 import type { User, PaginatedResponse } from '@/types';
 
 interface BulkUserOperationsProps {
@@ -25,6 +26,7 @@ interface BulkUserOperationsProps {
   onBulkSuspend: (ids: string[]) => Promise<void>;
   onBulkActivate: (ids: string[]) => Promise<void>;
   onBulkExport: (ids: string[]) => void;
+  onRowClick?: (user: User) => void;
 }
 
 interface ConfirmDialogProps {
@@ -100,6 +102,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   onBulkSuspend,
   onBulkActivate,
   onBulkExport,
+  onRowClick,
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | 'suspend' | 'activate'>(null);
@@ -238,11 +241,15 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                 {data.map((user) => (
                   <tr
                     key={user.id}
-                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''}`}
+                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    onClick={onRowClick ? () => onRowClick(user) : undefined}
                   >
                     <td className="px-5 py-4">
                       <button
-                        onClick={() => toggleOne(user.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleOne(user.id);
+                        }}
                         className="text-blue-300/40 hover:text-blue-400 transition-colors"
                       >
                         {selectedIds.has(user.id) ? (
@@ -254,9 +261,11 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-white uppercase flex-shrink-0">
-                          {(user.name ?? user.email).charAt(0)}
-                        </div>
+                        <UserAvatar
+                          name={user.name}
+                          email={user.email}
+                          src={user.avatar}
+                        />
                         <div>
                           <Link
                             href={`/admin/users/${user.id}`}

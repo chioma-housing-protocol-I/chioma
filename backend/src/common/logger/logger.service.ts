@@ -1,4 +1,4 @@
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable, Logger, Scope } from '@nestjs/common';
 import * as fs from 'fs';
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
@@ -18,6 +18,7 @@ export interface LogContext {
 export class LoggerService {
   private logToFile = process.env.NODE_ENV === 'production';
   private logFile = 'logs/app.log';
+  private readonly nestLogger = new Logger(LoggerService.name);
 
   private log(
     level: LogLevel,
@@ -36,13 +37,13 @@ export class LoggerService {
     if (this.logToFile) {
       fs.appendFileSync(this.logFile, logStr + '\n');
     } else {
-      // Console output for dev
+      // Use NestJS Logger for dev output
       if (level === 'ERROR' || level === 'FATAL') {
-        console.error(logStr);
+        this.nestLogger.error(logStr);
       } else if (level === 'WARN') {
-        console.warn(logStr);
+        this.nestLogger.warn(logStr);
       } else {
-        console.log(logStr);
+        this.nestLogger.log(logStr);
       }
     }
     // TODO: Add Sentry, CloudWatch, ELK integration as needed

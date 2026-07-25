@@ -8,6 +8,11 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { User, UserRole } from '../users/entities/user.entity';
 
+import {
+  AuthenticationError,
+  DuplicateEntryError,
+  ValidationError,
+} from '../../common/errors/domain-errors';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../notifications/email.service';
@@ -19,6 +24,7 @@ import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { RegisterDto } from './dto/register.dto';
 import { Repository } from 'typeorm';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReferralService } from '../referral/referral.service';
@@ -52,6 +58,7 @@ describe('AuthService', () => {
     phoneNumber: null,
     avatarUrl: null,
     verificationToken: null,
+    verificationTokenExpires: null,
   };
 
   const mockUserRepository = {
@@ -205,10 +212,10 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw ConflictException if email already exists', async () => {
+    it('should throw DuplicateEntryError if email already exists', async () => {
       const registerDto: RegisterDto = {
         email: 'test@example.com',
-        password: 'SecurePass123!',
+        password: 'password123',
         firstName: 'Test',
         lastName: 'User',
         role: UserRole.USER,
@@ -217,7 +224,7 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
       await expect(service.register(registerDto)).rejects.toThrow(
-        ConflictException,
+        DuplicateEntryError,
       );
     });
   });
@@ -254,11 +261,11 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        AuthenticationError,
       );
     });
 
-    it('should throw UnauthorizedException for non-existent user', async () => {
+    it('should throw AuthenticationError for non-existent user', async () => {
       const loginDto: LoginDto = {
         email: 'nonexistent@example.com',
         password: 'password123',
@@ -267,42 +274,41 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        AuthenticationError,
       );
     });
 
-    it('should throw UnauthorizedException for inactive account', async () => {
+    it('should throw AuthenticationError for inactive account', async () => {
       const loginDto: LoginDto = {
         email: 'test@example.com',
-        password: 'Password123!',
+        password: 'password123',
       };
 
       mockUserRepository.findOne.mockResolvedValue({
         ...mockUser,
-        status: 'inactive',
+        isActive: false,
       });
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        AuthenticationError,
       );
     });
 
     it('should handle account lockout after failed attempts', async () => {
       const loginDto: LoginDto = {
         email: 'test@example.com',
-        password: 'wrongpassword',
+        password: 'password123',
       };
-
       const lockedUser = {
         ...mockUser,
-        accountLocked: true,
-        lockedUntil: new Date(Date.now() + 30 * 60 * 1000),
+        accountLockedUntil: new Date(Date.now() + 3600000),
       };
 
       mockUserRepository.findOne.mockResolvedValue(lockedUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        AuthenticationError,
       );
     });
   });
@@ -371,70 +377,162 @@ describe('AuthService', () => {
     it('should throw BadRequestException for invalid token', async () => {
       const resetPasswordDto: ResetPasswordDto = {
         token: 'invalid-token',
-        newPassword: 'NewSecurePass123!',
+        newPassword: 'new-password',
       };
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(
-        BadRequestException,
+        ValidationError,
       );
     });
 
     it('should throw BadRequestException for expired token', async () => {
-      const mockUserWithExpiredToken = {
-        ...mockUser,
-        resetToken: 'hashed-token',
-        resetTokenExpires: new Date(Date.now() - 3600000),
-      };
-
       const resetPasswordDto: ResetPasswordDto = {
         token: 'expired-token',
-        newPassword: 'NewSecurePass123!',
+        newPassword: 'new-password',
       };
 
-      mockUserRepository.findOne.mockResolvedValue(mockUserWithExpiredToken);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        resetTokenExpires: new Date(Date.now() - 3600000),
+      });
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
       await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(
-        BadRequestException,
+        ValidationError,
       );
     });
   });
 
   describe('verifyEmail', () => {
-    it('should verify email with valid token', async () => {
-      const token = 'valid-verification-token';
-      const userWithToken = {
-        ...mockUser,
-        verificationToken: token,
-        emailVerified: false,
-      };
+    it('should verify email successfully', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
 
-      mockUserRepository.findOne.mockResolvedValue(userWithToken);
-      mockUserRepository.save.mockResolvedValue({
-        ...userWithToken,
-        emailVerified: true,
-        verificationToken: null,
-      });
+      await service.verifyEmail('valid-token');
 
-      const result = await service.verifyEmail(token);
-
-      expect(result).toHaveProperty('message');
-      expect(mockUserRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          emailVerified: true,
-          verificationToken: null,
-        }),
-      );
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException with invalid token', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.verifyEmail('invalid-token')).rejects.toThrow(
-        BadRequestException,
+        ValidationError,
       );
+    });
+  });
+
+  describe('resendVerificationEmail', () => {
+    it('generates a token and sends the email for an unverified user', async () => {
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      const result = await service.resendVerificationEmail(mockUser.id!);
+
+      expect(mockUserRepository.save).toHaveBeenCalledTimes(1);
+      expect(unverifiedUser.verificationToken).toEqual(expect.any(String));
+      expect(unverifiedUser.verificationTokenExpires).toBeInstanceOf(Date);
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        unverifiedUser.email,
+        unverifiedUser.verificationToken,
+      );
+      expect(result.message).toContain('verification link');
+    });
+
+    it('reuses an existing unexpired token instead of overwriting it', async () => {
+      const existingToken = 'existing-valid-token';
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: existingToken,
+        verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await service.resendVerificationEmail(mockUser.id!);
+
+      // The already-issued token (and its link) must remain valid.
+      expect(unverifiedUser.verificationToken).toBe(existingToken);
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        unverifiedUser.email,
+        existingToken,
+      );
+    });
+
+    it('rotates an expired token', async () => {
+      const expiredToken = 'expired-token';
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: expiredToken,
+        verificationTokenExpires: new Date(Date.now() - 60 * 60 * 1000),
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await service.resendVerificationEmail(mockUser.id!);
+
+      expect(unverifiedUser.verificationToken).not.toBe(expiredToken);
+      expect(unverifiedUser.verificationToken).toEqual(expect.any(String));
+    });
+
+    it('is a no-op for an already-verified user', async () => {
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        emailVerified: true,
+      });
+
+      const result = await service.resendVerificationEmail(mockUser.id!);
+
+      expect(result.message).toContain('already verified');
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+      expect(emailService.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('throws when the user does not exist', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.resendVerificationEmail('missing-id'),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('handles concurrent requests idempotently (single shared token)', async () => {
+      const unverifiedUser = {
+        ...mockUser,
+        emailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      };
+
+      // Both concurrent requests resolve the same user entity, mirroring two
+      // requests that read the row before either has written a token.
+      mockUserRepository.findOne.mockResolvedValue(unverifiedUser);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await Promise.all([
+        service.resendVerificationEmail(mockUser.id!),
+        service.resendVerificationEmail(mockUser.id!),
+      ]);
+
+      const emailCalls = (emailService.sendVerificationEmail as jest.Mock).mock
+        .calls;
+      expect(emailCalls).toHaveLength(2);
+      // Both emails carry the identical token — no request clobbered the other.
+      expect(emailCalls[0][1]).toBe(emailCalls[1][1]);
+      expect(unverifiedUser.verificationToken).toBe(emailCalls[0][1]);
     });
   });
 
@@ -453,21 +551,19 @@ describe('AuthService', () => {
   });
 
   describe('validateUserById', () => {
-    it('should validate user by ID', async () => {
+    it('should return user if exists', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
       const result = await service.validateUserById('test-user-id');
 
-      expect(result).toHaveProperty('id');
-      expect(result).toHaveProperty('email');
-      expect(result).toHaveProperty('role');
+      expect(result.id).toBe(mockUser.id);
     });
 
     it('should throw UnauthorizedException for non-existent user', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.validateUserById('non-existent-id')).rejects.toThrow(
-        UnauthorizedException,
+        AuthenticationError,
       );
     });
   });

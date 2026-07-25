@@ -3,6 +3,7 @@ export interface CacheStats {
   misses: number;
   sets: number;
   evictions: number;
+  cleanups: number;
   hitRate: number;
   missRate: number;
   /** Keys tracked for dependency-based invalidation (approximate) */

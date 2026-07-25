@@ -28,11 +28,11 @@ pub fn set_royalty(
         .get::<DataKey, crate::types::RentAgreement>(&DataKey::Agreement(token_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    agreement.landlord.require_auth();
+    agreement.admin.require_auth();
 
     let config = RoyaltyConfig {
         token_id: token_id.clone(),
-        creator: agreement.landlord.clone(),
+        creator: agreement.admin.clone(),
         royalty_percentage,
         royalty_recipient: royalty_recipient.clone(),
     };
@@ -84,7 +84,7 @@ pub fn transfer_with_royalty(
         .get::<DataKey, crate::types::RentAgreement>(&DataKey::Agreement(token_id.clone()))
         .ok_or(RentalError::AgreementNotFound)?;
 
-    let current_landlord = agreement.landlord.clone();
+    let current_landlord = agreement.admin.clone();
     current_landlord.require_auth();
     to.require_auth(); // Buyer must authorize the payment
 
@@ -131,7 +131,7 @@ pub fn transfer_with_royalty(
         .set(&DataKey::RoyaltyPayments(token_id.clone()), &payments);
 
     // 4. Update agreement landlord
-    agreement.landlord = to;
+    agreement.admin = to;
     env.storage()
         .persistent()
         .set(&DataKey::Agreement(token_id), &agreement);

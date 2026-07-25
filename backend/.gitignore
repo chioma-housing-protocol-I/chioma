@@ -47,6 +47,11 @@ package-lock.json
 # temp directory
 .temp
 .tmp
+stryker-tmp
+.stryker-tmp
+
+# Mutation testing reports
+reports/mutation
 
 # Runtime data
 pids

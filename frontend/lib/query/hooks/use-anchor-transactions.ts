@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
 import type {
@@ -60,6 +60,33 @@ export function useAnchorTransaction(id: string | null) {
     },
     enabled: Boolean(id),
     refetchInterval: 15000,
+  });
+}
+
+export interface WithdrawRequest {
+  amount: number;
+  currency: string;
+  destination: string;
+  walletAddress: string;
+}
+
+/** Initiates an anchor withdrawal to an external Stellar address. */
+export function useCreateWithdrawal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: WithdrawRequest) => {
+      const { data } = await apiClient.post<AnchorTransaction>(
+        '/anchor/withdraw',
+        payload,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.anchorTransactions.all,
+      });
+    },
   });
 }
 

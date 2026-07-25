@@ -173,4 +173,16 @@ impl EscrowStorage {
         let key = DataKey::ReleaseHistory(escrow_id.clone());
         env.storage().persistent().set(&key, &history);
     }
+
+    /// Get the system admin address.
+    /// Returns None if admin has not been set.
+    pub fn get_admin(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::SystemAdmin)
+    }
+
+    /// Set the system admin address.
+    /// Only the admin can freeze/unfreeze escrows.
+    pub fn set_admin(env: &Env, admin: &Address) {
+        env.storage().instance().set(&DataKey::SystemAdmin, admin);
+    }
 }

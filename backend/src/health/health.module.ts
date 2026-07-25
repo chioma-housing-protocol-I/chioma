@@ -7,12 +7,15 @@ import { HealthService } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
+import { HealthAutomationService } from './health-automation.service';
+import { MonitoringModule } from '../modules/monitoring/monitoring.module';
 
 @Module({
   imports: [
     TerminusModule,
     HttpModule,
-    TypeOrmModule.forFeature([]), // Add entities if needed
+    TypeOrmModule.forFeature([]),
+    MonitoringModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -20,6 +23,7 @@ import { MemoryHealthIndicator } from './indicators/memory.indicator';
     DatabaseHealthIndicator,
     StellarHealthIndicator,
     MemoryHealthIndicator,
+    HealthAutomationService,
   ],
   exports: [HealthService],
 })

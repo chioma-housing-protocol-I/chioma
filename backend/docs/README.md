@@ -6,23 +6,25 @@ Welcome to the Chioma backend documentation hub. This index covers all aspects o
 
 ## Navigation
 
-| Category                                     | Description                                      |
-| -------------------------------------------- | ------------------------------------------------ |
-| [Getting Started](#getting-started)          | Prerequisites, local setup, environment config   |
-| [API Reference](#api-reference)              | Endpoint docs, standards, versioning, changelog  |
-| [Architecture](#architecture)                | System design, dependency graph, performance     |
-| [Database](#database)                        | Schema, migrations, indexes                      |
-| [Blockchain](#blockchain)                    | Stellar integration, anchor, SEP-0010 auth       |
-| [Authentication](#authentication)            | JWT, Stellar auth, MFA, guards, security         |
-| [Caching](#caching)                          | Redis/Upstash strategy, invalidation, monitoring |
-| [Queues](#queues)                            | Bull queue implementation                        |
-| [Deployment](#deployment)                    | Production setup, Docker, CI/CD                  |
-| [Error Handling](#error-handling)            | Exception filters, error types, error responses  |
-| [Logging & Monitoring](#logging--monitoring) | Logging, Prometheus, Grafana, Sentry, alerts     |
-| [Security](#security)                        | Encryption, threat model, compliance             |
-| [Integrations](#integrations)                | Third-party services                             |
-| [Support](#support)                          | Support procedures, SLAs, maintenance schedules  |
-| [Community](#community)                      | Contributing, code of conduct, team policies     |
+| Category                                        | Description                                                    |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| [Getting Started](#getting-started)             | Prerequisites, local setup, environment config                 |
+| [API Reference](#api-reference)                 | Endpoint docs, standards, versioning, changelog                |
+| [Architecture](#architecture)                   | System design, dependency graph, performance                   |
+| [Database](#database)                           | Schema, migrations, indexes                                    |
+| [Blockchain](#blockchain)                       | Stellar integration, anchor, SEP-0010 auth                     |
+| [Authentication](#authentication)               | JWT, Stellar auth, MFA, guards, security                       |
+| [Caching](#caching)                             | Redis/Upstash strategy, invalidation, monitoring               |
+| [Queues](#queues)                               | Bull queue implementation                                      |
+| [Deployment](#deployment)                       | Production setup, Docker, CI/CD                                |
+| [Error Handling](#error-handling)               | Exception filters, error types, error responses                |
+| [Logging & Monitoring](#logging--monitoring)    | Monitoring setup, logging, Prometheus, Grafana, Sentry, alerts |
+| [Security](#security)                           | Encryption, threat model, compliance                           |
+| [Dependency Management](#dependency-management) | Package strategy, auditing, security updates                   |
+| [Integrations](#integrations)                   | Third-party services                                           |
+| [Support](#support)                             | Support procedures, SLAs, maintenance schedules                |
+| [Incident Response](#incident-response)         | Incident classification, escalation, runbooks                  |
+| [Community](#community)                         | Contributing, code of conduct, team policies                   |
 
 ---
 
@@ -63,6 +65,7 @@ The API will be available at `http://localhost:5000/api` and Swagger UI at `http
 | Document                                                        | Summary                                                   |
 | --------------------------------------------------------------- | --------------------------------------------------------- |
 | [API Overview](./api/api-documentation.md)                      | Base URL, auth, all endpoint groups                       |
+| [Usage Guide](./api/USAGE_GUIDE.md)                             | Step-by-step integration walkthrough with curl examples |
 | [API Standards](./api/API-STANDARDS.md)                         | Annotation conventions, request/response formats          |
 | [Documentation Standards](./DOCUMENTATION-STANDARDS.md)         | README, code comments, API docs, architecture standards   |
 | [Authentication Guide](./api/AUTHENTICATION.md)                 | JWT flow, SEP-0010, refresh tokens                        |
@@ -85,7 +88,9 @@ The API will be available at `http://localhost:5000/api` and Swagger UI at `http
 | -------------------------------------------------------------------------- | --------------------------------------------- |
 | [Dependency Graph](./architecture/DEPENDENCY_GRAPH.md)                     | Module dependency overview                    |
 | [Architecture Documentation](./architecture/ARCHITECTURE_DOCUMENTATION.md) | System architecture, layers, integrations     |
+| [Architecture Decisions](./architecture/ARCHITECTURE_DECISIONS.md)         | Key decisions, rationale, trade-offs          |
 | [Scalability & Performance](./architecture/scalability-and-performance.md) | Horizontal scaling, caching layers, DB tuning |
+| [Performance Tuning Guidelines](./PERFORMANCE_TUNING_GUIDELINES.md)       | Operational tuning for latency, DB, cache, queues |
 
 **Key design decisions:**
 
@@ -99,10 +104,11 @@ The API will be available at `http://localhost:5000/api` and Swagger UI at `http
 
 ## Database
 
-| Document                                                     | Summary                                 |
-| ------------------------------------------------------------ | --------------------------------------- |
-| [Database Guide](./database/DATABASE_DOCUMENTATION_GUIDE.md) | Schema, migrations, backup, recovery    |
-| [Performance Indexes](./database/PERFORMANCE_INDEXES.md)     | Index strategy for high-traffic queries |
+| Document                                                              | Summary                                        |
+| --------------------------------------------------------------------- | ---------------------------------------------- |
+| [Database Guide](./database/DATABASE_DOCUMENTATION_GUIDE.md)          | Schema, migrations, backup, recovery           |
+| [Database Schema & Relationships](./database/SCHEMA_RELATIONSHIPS.md) | Detailed entity relationships, ERDs, data flow |
+| [Performance Indexes](./database/PERFORMANCE_INDEXES.md)              | Index strategy for high-traffic queries        |
 
 Migrations live in `backend/migrations/`. Run with:
 
@@ -156,6 +162,7 @@ Chioma supports dual authentication: **JWT (email/password)** and **Stellar SEP-
 
 | Document                                                     | Summary                         |
 | ------------------------------------------------------------ | ------------------------------- |
+| [Dead Letter Queues](./queues/DEAD_LETTER_QUEUES.md)         | Failed job archival and retry   |
 | [Bull Queues](./queues/BULL_QUEUES_IMPLEMENTATION.md)        | Queue setup, workers, job types |
 | [Implementation Summary](./queues/IMPLEMENTATION_SUMMARY.md) | Summary of queue usage          |
 
@@ -169,6 +176,7 @@ Chioma supports dual authentication: **JWT (email/password)** and **Stellar SEP-
 | [Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)     | Pre-deploy and post-deploy safety checklist                             |
 | [Production Setup](./deployment/PRODUCTION_SETUP.md)             | Environment config, secrets, health checks                              |
 | [Monitoring & Alerting](./deployment/MONITORING_AND_ALERTING.md) | Metrics collection, alert configuration, dashboards, alert response     |
+| [Error Notification & Escalation](./deployment/ERROR_NOTIFICATION_AND_ESCALATION.md) | Alert webhooks, email/Slack delivery, escalation tiers |
 | [Backup & Recovery](./deployment/BACKUP_AND_RECOVERY.md)         | Backup strategies, verification, recovery procedures, testing           |
 | [Release Management](./deployment/RELEASE_MANAGEMENT.md)         | Release planning, versioning, release notes, deployment, rollback       |
 
@@ -193,9 +201,11 @@ The `AllExceptionsFilter` catches all unhandled exceptions and maps them to stan
 
 ## Logging & Monitoring
 
-| Document                                            | Summary                                                              |
-| --------------------------------------------------- | -------------------------------------------------------------------- |
-| [Logging & Monitoring](./LOGGING_AND_MONITORING.md) | LoggerService, middleware, Sentry, Prometheus, Grafana, Loki, alerts |
+| Document                                                  | Summary                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Monitoring Setup](./MONITORING_SETUP.md)                 | Quick start, metrics endpoint, alert rules, log queries, health checks |
+| [Logging & Monitoring](./LOGGING_AND_MONITORING.md)       | LoggerService, middleware, Sentry, Prometheus, Grafana, Loki, alerts   |
+| [Comprehensive Monitoring](./COMPREHENSIVE_MONITORING.md) | Observability strategy, full metrics catalogue, best practices         |
 
 The platform uses structured JSON logging with correlation IDs, sensitive data sanitization, and a full Prometheus + Grafana + Loki + Alertmanager monitoring stack.
 
@@ -203,12 +213,17 @@ The platform uses structured JSON logging with correlation IDs, sensitive data s
 
 ## Security
 
-| Document                                                                   | Summary                                   |
-| -------------------------------------------------------------------------- | ----------------------------------------- |
-| [Encryption](./encryption.md)                                              | Field-level encryption for sensitive data |
-| [Security Policies](./security/SECURITY_POLICIES_AND_STANDARDS.md)         | Backend security controls and procedures  |
-| [Authorization Guide](./security/AUTHORIZATION_DOCUMENTATION.md)           | RBAC, permissions, and access control     |
-| [Tenant Screening Compliance](./compliance/TENANT_SCREENING_COMPLIANCE.md) | FCRA / compliance notes                   |
+| Document                                                                   | Summary                                             |
+| -------------------------------------------------------------------------- | --------------------------------------------------- |
+| [Encryption](./encryption.md)                                              | Field-level encryption for sensitive data           |
+| [Security Policies](./security/SECURITY_POLICIES_AND_STANDARDS.md)         | Backend security controls and procedures            |
+| [Security Best Practices](./security/SECURITY_BEST_PRACTICES.md)           | Development and operational security best practices |
+| [Security Audit](./security/SECURITY_AUDIT.md)                             | Audit findings, authorization patterns, validation  |
+| [Authorization Guide](./security/AUTHORIZATION_DOCUMENTATION.md)           | RBAC, permissions, and access control               |
+| [Secrets Management](./security/SECRETS_MANAGEMENT.md)                     | Secret storage, rotation, and recovery              |
+| [Audit Logging](./security/AUDIT_LOGGING.md)                               | Audit event standards, retention, and analysis      |
+| [Vulnerability Management](./security/VULNERABILITY_MANAGEMENT.md)         | Vulnerability lifecycle, disclosure, and patching   |
+| [Tenant Screening Compliance](./compliance/TENANT_SCREENING_COMPLIANCE.md) | FCRA / compliance notes                             |
 
 Security features active in every request:
 
@@ -221,6 +236,16 @@ Security features active in every request:
 
 ---
 
+## Dependency Management
+
+| Document                                            | Summary                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| [Dependency Management](./DEPENDENCY_MANAGEMENT.md) | Package management, version pinning, audits, updates, security |
+
+Automated dependency updates are configured via Dependabot in `.github/dependabot.yml`, covering pnpm (root, backend, frontend), Docker, and GitHub Actions dependencies. Updates are checked weekly and grouped by ecosystem/domain for reviewable PRs.
+
+---
+
 ## Integrations
 
 | Document                                                                   | Summary                                                                    |
@@ -228,6 +253,35 @@ Security features active in every request:
 | [API Integration Procedures](./integrations/API_INTEGRATION_PROCEDURES.md) | Third-party API integration, webhooks, testing, error handling, monitoring |
 | [Tenant Screening](./integrations/TENANT_SCREENING_PROVIDER_RESEARCH.md)   | Third-party screening providers                                            |
 | [Tenant Screening Integration](./api/TENANT_SCREENING_INTEGRATION.md)      | API integration guide                                                      |
+
+---
+
+## Configuration
+
+| Document                                                          | Summary                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Configuration Management](./CONFIGURATION_MANAGEMENT.md)         | Environment setup, validation, secrets, deployment          |
+| [Configuration Options](./CONFIGURATION_OPTIONS.md)               | Complete reference of all environment variables             |
+
+---
+
+## Troubleshooting
+
+| Document                                            | Summary                                                             |
+| --------------------------------------------------- | ------------------------------------------------------------------- |
+| [Troubleshooting Guide](./TROUBLESHOOTING.md)       | Common issues by area, error codes, resolution steps                |
+| [Error Handling](./ERROR_HANDLING.md)               | Exception filters, custom errors, frontend classification           |
+| [Caching Troubleshooting](./caching/troubleshooting.md) | Cache-specific issues                                         |
+
+---
+
+## Incident Response
+
+| Document                                                               | Summary                                                             |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Incident Response Procedures](./INCIDENT_RESPONSE.md)                 | Classification, detection, escalation, communication, runbooks, PIR |
+| [Disaster Recovery Plan](./deployment/DISASTER_RECOVERY_PLAN.md)       | Full platform outage and DR scenarios                               |
+| [Disaster Recovery Procedures](./deployment/runbooks/DISASTER_RECOVERY_PROCEDURES.md) | Step-by-step recovery runbooks                          |
 
 ---
 

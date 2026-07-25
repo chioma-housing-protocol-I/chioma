@@ -9,6 +9,7 @@ import { SubmitKycDto, KycWebhookDto } from './kyc.dto';
 import { UserKycStatusService } from '../users/user-kyc-status.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { User } from '../users/entities/user.entity';
 
 describe('KycService', () => {
   let service: KycService;
@@ -20,6 +21,11 @@ describe('KycService', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+  };
+
+  const mockUserRepository = {
+    find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(null),
   };
 
   const mockUserKycStatusService = {
@@ -56,6 +62,10 @@ describe('KycService', () => {
         {
           provide: getRepositoryToken(Kyc),
           useValue: mockKycRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
         },
         {
           provide: UserKycStatusService,
@@ -100,6 +110,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.PENDING,
         providerReference: null,
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -149,6 +160,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.PENDING,
         providerReference: null,
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -180,6 +192,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.APPROVED,
         providerReference: 'ref-123',
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -206,7 +219,7 @@ describe('KycService', () => {
       expect(encryptionService.decrypt).not.toHaveBeenCalled();
     });
 
-    it('should handle decryption errors gracefully', async () => {
+    it('should propagate decryption failures', async () => {
       const encryptedKyc: Kyc = {
         id: 'kyc-123',
         userId: mockUserId,
@@ -216,6 +229,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.APPROVED,
         providerReference: null,
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -225,7 +239,6 @@ describe('KycService', () => {
         throw new Error('Decryption failed');
       });
 
-      // Should not throw, but keep encrypted value
       const result = await service.getKycStatus(mockUserId);
 
       expect(result).toBeDefined();
@@ -248,6 +261,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.PENDING,
         providerReference: 'ref-123',
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -283,6 +297,96 @@ describe('KycService', () => {
       expect(mockKycRepository.save).not.toHaveBeenCalled();
       expect(userKycStatusService.setStatus).not.toHaveBeenCalled();
     });
+
+    it('should notify user on REJECTED webhook', async () => {
+      const notify = jest.fn().mockResolvedValue(undefined);
+      const module = await Test.createTestingModule({
+        providers: [
+          KycService,
+          { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+          { provide: getRepositoryToken(User), useValue: mockUserRepository },
+          { provide: UserKycStatusService, useValue: mockUserKycStatusService },
+          { provide: EncryptionService, useValue: mockEncryptionService },
+          { provide: AuditService, useValue: mockAuditService },
+          { provide: NotificationsService, useValue: { notify } },
+        ],
+      }).compile();
+      const svc = module.get(KycService);
+
+      const existingKyc: Kyc = {
+        id: 'kyc-rej',
+        userId: mockUserId,
+        encryptedKycData: {},
+        encryptionVersion: 1,
+        status: KycStatus.PENDING,
+        providerReference: 'ref-rej',
+        reason: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockKycRepository.findOne.mockResolvedValue(existingKyc);
+      mockKycRepository.save.mockResolvedValue({
+        ...existingKyc,
+        status: KycStatus.REJECTED,
+      });
+
+      await svc.handleWebhook({
+        providerReference: 'ref-rej',
+        status: KycStatus.REJECTED,
+      });
+
+      expect(notify).toHaveBeenCalledWith(
+        mockUserId,
+        'KYC rejected',
+        expect.stringContaining('rejected'),
+        'KYC_REJECTED',
+      );
+    });
+
+    it('should notify user on intermediate status (NEEDS_INFO)', async () => {
+      const notify = jest.fn().mockResolvedValue(undefined);
+      const module = await Test.createTestingModule({
+        providers: [
+          KycService,
+          { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+          { provide: getRepositoryToken(User), useValue: mockUserRepository },
+          { provide: UserKycStatusService, useValue: mockUserKycStatusService },
+          { provide: EncryptionService, useValue: mockEncryptionService },
+          { provide: AuditService, useValue: mockAuditService },
+          { provide: NotificationsService, useValue: { notify } },
+        ],
+      }).compile();
+      const svc = module.get(KycService);
+
+      const existingKyc: Kyc = {
+        id: 'kyc-info',
+        userId: mockUserId,
+        encryptedKycData: {},
+        encryptionVersion: 1,
+        status: KycStatus.PENDING,
+        providerReference: 'ref-info',
+        reason: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockKycRepository.findOne.mockResolvedValue(existingKyc);
+      mockKycRepository.save.mockResolvedValue({
+        ...existingKyc,
+        status: KycStatus.NEEDS_INFO,
+      });
+
+      await svc.handleWebhook({
+        providerReference: 'ref-info',
+        status: KycStatus.NEEDS_INFO,
+      });
+
+      expect(notify).toHaveBeenCalledWith(
+        mockUserId,
+        'KYC status updated',
+        expect.stringContaining('NEEDS_INFO'),
+        'KYC_UPDATED',
+      );
+    });
   });
 
   describe('encryption integration', () => {
@@ -299,6 +403,10 @@ describe('KycService', () => {
           {
             provide: getRepositoryToken(Kyc),
             useValue: mockKycRepository,
+          },
+          {
+            provide: getRepositoryToken(User),
+            useValue: mockUserRepository,
           },
           {
             provide: UserKycStatusService,
@@ -336,6 +444,7 @@ describe('KycService', () => {
         encryptionVersion: 1,
         status: KycStatus.PENDING,
         providerReference: null,
+        reason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -358,6 +467,111 @@ describe('KycService', () => {
       expect(retrieved?.encryptedKycData.first_name).toBe('Alice');
       expect(retrieved?.encryptedKycData.last_name).toBe('Smith');
       expect(retrieved?.encryptedKycData.id_number).toBe('ID987654');
+    });
+  });
+
+  describe('admin approve/reject', () => {
+    const adminId = 'admin-1';
+
+    const pendingKyc: Kyc = {
+      id: 'kyc-admin-1',
+      userId: mockUserId,
+      encryptedKycData: {},
+      encryptionVersion: 1,
+      status: KycStatus.PENDING,
+      providerReference: null,
+      reason: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('approves a pending verification and notifies the user', async () => {
+      mockKycRepository.findOne.mockResolvedValue({ ...pendingKyc });
+      mockKycRepository.save.mockImplementation((kyc) => Promise.resolve(kyc));
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.approveKyc(pendingKyc.id, adminId);
+
+      expect(result.status).toBe(KycStatus.APPROVED);
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
+        mockUserId,
+        KycStatus.APPROVED,
+      );
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'KYC_APPROVED',
+          performedBy: adminId,
+        }),
+      );
+    });
+
+    it('rejects a pending verification with a reason and notifies the user', async () => {
+      mockKycRepository.findOne.mockResolvedValue({ ...pendingKyc });
+      mockKycRepository.save.mockImplementation((kyc) => Promise.resolve(kyc));
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.rejectKyc(
+        pendingKyc.id,
+        adminId,
+        'Blurry document',
+      );
+
+      expect(result.status).toBe(KycStatus.REJECTED);
+      expect(result.reason).toBe('Blurry document');
+      expect(mockUserKycStatusService.setStatus).toHaveBeenCalledWith(
+        mockUserId,
+        KycStatus.REJECTED,
+      );
+    });
+
+    it('throws when the KYC verification does not exist', async () => {
+      mockKycRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.approveKyc('missing-id', adminId)).rejects.toThrow(
+        'KYC verification not found',
+      );
+    });
+
+    it('is idempotent when re-approving an already-approved record', async () => {
+      const approvedKyc: Kyc = {
+        ...pendingKyc,
+        status: KycStatus.APPROVED,
+      };
+      mockKycRepository.findOne.mockResolvedValue({ ...approvedKyc });
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.approveKyc(pendingKyc.id, adminId);
+
+      expect(result.status).toBe(KycStatus.APPROVED);
+      expect(mockKycRepository.save).not.toHaveBeenCalled();
+      expect(mockUserKycStatusService.setStatus).not.toHaveBeenCalled();
+      expect(mockAuditService.log).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'KYC_APPROVED' }),
+      );
+    });
+
+    it('is idempotent when re-rejecting an already-rejected record', async () => {
+      const rejectedKyc: Kyc = {
+        ...pendingKyc,
+        status: KycStatus.REJECTED,
+        reason: 'Original reason',
+      };
+      mockKycRepository.findOne.mockResolvedValue({ ...rejectedKyc });
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.rejectKyc(
+        pendingKyc.id,
+        adminId,
+        'A new reason',
+      );
+
+      expect(result.status).toBe(KycStatus.REJECTED);
+      expect(result.reason).toBe('Original reason');
+      expect(mockKycRepository.save).not.toHaveBeenCalled();
+      expect(mockUserKycStatusService.setStatus).not.toHaveBeenCalled();
+      expect(mockAuditService.log).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'KYC_REJECTED' }),
+      );
     });
   });
 });

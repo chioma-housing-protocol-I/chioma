@@ -29,11 +29,63 @@ pub struct TimelockAction {
 pub enum AgreementStatus {
     Draft,
     Pending,
+    PendingApproval,
     Active,
     Completed,
     Cancelled,
     Terminated,
     Disputed,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ExtensionStatus {
+    Proposed,
+    Accepted,
+    Rejected,
+    Active,
+    Completed,
+    Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgreementExtension {
+    pub id: String,
+    pub original_agreement_id: String,
+    pub extension_start: u64,
+    pub extension_end: u64,
+    pub extension_rent: i128,
+    pub extension_deposit: i128,
+    pub status: ExtensionStatus,
+    pub created_at: u64,
+    pub proposed_by: Address,
+    pub landlord_accepted: bool,
+    pub tenant_accepted: bool,
+    pub last_reason: Option<String>,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExtensionHistory {
+    pub agreement_id: String,
+    pub extensions: Vec<AgreementExtension>,
+    pub total_extensions: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContractUpgradeProposal {
+    pub id: String,
+    pub proposer: Address,
+    pub wasm_hash: Bytes,
+    pub approvals: Vec<Address>,
+    pub required_signatures: u32,
+    pub eta: u64,
+    pub executed: bool,
+    pub cancelled: bool,
+    pub notes: String,
+    pub created_at: u64,
 }
 
 // ─── Multi-Sig Types ──────────────────────────────────────────────────────────
@@ -88,8 +140,8 @@ pub struct Attribute {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RentAgreement {
     pub agreement_id: String,
-    pub landlord: Address,
-    pub tenant: Address,
+    pub admin: Address,
+    pub user: Address,
     pub agent: Option<Address>,
     pub monthly_rent: i128,
     pub security_deposit: i128,
@@ -100,6 +152,7 @@ pub struct RentAgreement {
     pub total_rent_paid: i128,
     pub payment_count: u32,
     pub signed_at: Option<u64>,
+    pub witness_id: Option<Address>,
     pub payment_token: Address,
     pub next_payment_due: u64,
     pub metadata_uri: String,
@@ -109,7 +162,7 @@ pub struct RentAgreement {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PaymentSplit {
-    pub landlord_amount: i128,
+    pub admin_amount: i128,
     pub platform_amount: i128,
     pub token: Address,
     pub payment_date: u64,
@@ -297,8 +350,8 @@ pub enum RateLimitReason {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgreementInput {
     pub agreement_id: String,
-    pub landlord: Address,
-    pub tenant: Address,
+    pub admin: Address,
+    pub user: Address,
     pub agent: Option<Address>,
     pub terms: AgreementTerms,
     pub payment_token: Address,

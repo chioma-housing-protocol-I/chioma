@@ -9,8 +9,8 @@ pub struct ContractInitialized {
 }
 
 /// Event emitted when a property is registered
-/// Topics: ["prop_reg", landlord: Address, property_id: String]
-#[contractevent(topics = ["prop_reg"])]
+/// Topics: ["property_registered", landlord: Address, property_id: String]
+#[contractevent(topics = ["property_registered"])]
 pub struct PropertyRegistered {
     #[topic]
     pub landlord: Address,
@@ -20,8 +20,8 @@ pub struct PropertyRegistered {
 }
 
 /// Event emitted when a property is verified
-/// Topics: ["prop_ver", admin: Address, property_id: String]
-#[contractevent(topics = ["prop_ver"])]
+/// Topics: ["property_verified", admin: Address, property_id: String]
+#[contractevent(topics = ["property_verified"])]
 pub struct PropertyVerified {
     #[topic]
     pub admin: Address,

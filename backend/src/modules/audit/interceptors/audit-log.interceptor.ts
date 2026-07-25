@@ -161,6 +161,13 @@ export class AuditLogInterceptor implements NestInterceptor {
       'privateKey',
       'ssn',
       'creditCard',
+      'cardNumber',
+      'cvv',
+      'pan',
+      'sensitiveMetadata',
+      'routingNumber',
+      'accountNumber',
+      'authorizationCode',
     ];
 
     for (const field of sensitiveFields) {

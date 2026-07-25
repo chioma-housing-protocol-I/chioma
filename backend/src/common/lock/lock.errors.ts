@@ -1,6 +1,15 @@
-export class LockNotAcquiredError extends Error {
-  constructor(message = 'Could not acquire lock within the retry window') {
-    super(message);
-    this.name = 'LockNotAcquiredError';
+import { BaseAppError } from '../errors/base.error';
+import { ErrorCode } from '../errors/error-codes';
+import { HttpStatus } from '@nestjs/common';
+
+export class LockNotAcquiredError extends BaseAppError {
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.LOCK_NOT_ACQUIRED,
+      HttpStatus.CONFLICT,
+      message,
+      true,
+      context,
+    );
   }
 }

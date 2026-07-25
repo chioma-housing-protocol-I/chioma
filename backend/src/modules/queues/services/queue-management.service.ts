@@ -40,6 +40,7 @@ export class QueueManagementService {
         delay: 2000,
       },
       removeOnComplete: true,
+      removeOnFail: false,
       ...options,
     };
 
@@ -58,6 +59,7 @@ export class QueueManagementService {
         delay: 3000,
       },
       removeOnComplete: true,
+      removeOnFail: false,
       ...options,
     };
 
@@ -79,6 +81,7 @@ export class QueueManagementService {
         delay: 5000,
       },
       removeOnComplete: false, // Keep for audit trail
+      removeOnFail: false,
       ...options,
     };
 
@@ -97,6 +100,7 @@ export class QueueManagementService {
         delay: 2000,
       },
       removeOnComplete: true,
+      removeOnFail: false,
       ...options,
     };
 

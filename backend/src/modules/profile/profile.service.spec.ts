@@ -129,7 +129,7 @@ describe('ProfileService', () => {
 
   describe('createProfile', () => {
     const createDto = {
-      accountType: AccountTypeDto.Tenant,
+      accountType: AccountTypeDto.User,
       displayName: 'Test User',
       bio: 'Test bio',
     };

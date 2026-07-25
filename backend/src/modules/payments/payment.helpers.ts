@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentInterval } from './entities/payment-schedule.entity';
+import { PaymentStatus } from './entities/payment.entity';
 import {
   createCipheriv,
   createDecipheriv,
@@ -56,20 +57,29 @@ export function parseEscrowReference(referenceNumber: string): number | null {
   return null;
 }
 
-export function mapWebhookStatus(webhookStatus: string): string {
-  const statusMap: Record<string, string> = {
-    completed: 'completed',
-    successful: 'completed',
-    success: 'completed',
-    pending: 'pending',
-    processing: 'pending',
-    failed: 'failed',
-    error: 'failed',
-    refunded: 'refunded',
-    cancelled: 'failed',
-  };
-  return statusMap[webhookStatus?.toLowerCase()] ?? 'pending';
-}
+/**
+ * Single source of truth for mapping external status strings — payment
+ * gateway webhook statuses and Stellar escrow states — to the internal
+ * PaymentStatus enum. Used by both PaymentService.mapWebhookStatus() and
+ * PaymentService.syncEscrowPaymentFromState().
+ */
+export const PAYMENT_STATUS_MAP: Record<string, PaymentStatus> = {
+  // Payment gateway webhook statuses
+  completed: PaymentStatus.COMPLETED,
+  successful: PaymentStatus.COMPLETED,
+  success: PaymentStatus.COMPLETED,
+  pending: PaymentStatus.PENDING,
+  processing: PaymentStatus.PENDING,
+  error: PaymentStatus.FAILED,
+  cancelled: PaymentStatus.FAILED,
+  // Escrow states
+  active: PaymentStatus.PENDING,
+  released: PaymentStatus.COMPLETED,
+  expired: PaymentStatus.FAILED,
+  // Shared by both webhook and escrow status vocabularies
+  failed: PaymentStatus.FAILED,
+  refunded: PaymentStatus.REFUNDED,
+};
 
 export function encryptMetadata(data: Record<string, unknown>): string {
   const secret = process.env.PAYMENT_METADATA_SECRET;
