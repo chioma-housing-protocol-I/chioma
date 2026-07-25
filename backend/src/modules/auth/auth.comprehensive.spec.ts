@@ -16,6 +16,7 @@ import { PasswordPolicyService } from './services/password-policy.service';
 import { ReferralService } from '../referral/referral.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { LockService } from '../../common/lock';
+import { QueueManagementService } from '../queues/services/queue-management.service';
 
 describe('AuthService — comprehensive coverage', () => {
   let service: AuthService;
@@ -81,11 +82,25 @@ describe('AuthService — comprehensive coverage', () => {
   const mockEmailService = {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendAlertEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockReferralService = {
     generateReferralCode: jest.fn().mockResolvedValue('REF12345'),
     trackReferral: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockQueueManagementService = {
+    addEmailJob: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ finished: jest.fn().mockResolvedValue(undefined) }),
+      ),
+    addDataSyncJob: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ finished: jest.fn().mockResolvedValue(undefined) }),
+      ),
   };
 
   const mockLoggerService = {
@@ -110,6 +125,10 @@ describe('AuthService — comprehensive coverage', () => {
         { provide: MfaService, useValue: mockMfaService },
         { provide: ReferralService, useValue: mockReferralService },
         { provide: LoggerService, useValue: mockLoggerService },
+        {
+          provide: QueueManagementService,
+          useValue: mockQueueManagementService,
+        },
         {
           provide: LockService,
           useValue: {
