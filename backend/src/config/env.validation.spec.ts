@@ -10,8 +10,8 @@ const baseRateLimits = {
 };
 
 const validJwt = {
-  JWT_SECRET: 'a'.repeat(32),
-  JWT_REFRESH_SECRET: 'b'.repeat(32),
+  JWT_SECRET: 'c+/BvbdsahHWA/BN3Uc783i2n/aGwpidvqpOLEmwgbaDnAp/',
+  JWT_REFRESH_SECRET: 'OXufQVF2B2HgRSy1iRR2Jrm77LA8UbTbeEDr1jgJzsJZASza',
 };
 
 const validProduction = {
@@ -77,6 +77,53 @@ describe('validateEnvironment', () => {
 
   it('accepts valid production configuration', () => {
     expect(() => validateEnvironment(validProduction)).not.toThrow();
+  });
+
+  it('rejects a JWT secret shorter than 32 bytes', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'short-secret-value-only-20b',
+      }),
+    ).toThrow(/JWT_SECRET must be at least 32 bytes/);
+  });
+
+  it('rejects a JWT secret that is long enough but low-entropy (repeated character)', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'a'.repeat(40),
+      }),
+    ).toThrow(/JWT_SECRET does not have enough entropy/);
+  });
+
+  it('rejects a JWT secret padded with a short repeating pattern', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_REFRESH_SECRET: 'ab'.repeat(20),
+      }),
+    ).toThrow(/JWT_REFRESH_SECRET does not have enough entropy/);
+  });
+
+  it('rejects a missing JWT secret with operator guidance in the message', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: undefined,
+      }),
+    ).toThrow(/openssl rand -base64 48/);
+  });
+
+  it('accepts a high-entropy secret using multi-byte characters once its byte length clears the minimum', () => {
+    // Multi-byte characters inflate byte length relative to character count;
+    // this secret is well past 32 bytes despite being a short character run.
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'Kx7!密语véryRandØm#92pQ&fz—unicode✓salt',
+      }),
+    ).not.toThrow();
   });
 
   it('accepts staging with classic redis host', () => {
