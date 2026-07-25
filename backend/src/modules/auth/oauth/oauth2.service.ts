@@ -19,8 +19,9 @@ import {
   OAuth2Provider,
   OAuth2UserProfile,
 } from './oauth2.types';
+import { OAUTH_STATE_EXPIRY_MINUTES } from '../../../common/constants/business-rules.constants';
 
-const STATE_EXPIRY_MINUTES = 10;
+const STATE_EXPIRY_MINUTES = OAUTH_STATE_EXPIRY_MINUTES;
 
 interface PendingOAuthState {
   provider: OAuth2Provider;

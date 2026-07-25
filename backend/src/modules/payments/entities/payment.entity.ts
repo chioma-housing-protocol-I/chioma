@@ -36,6 +36,7 @@ export enum PaymentStatus {
 @Entity('payments')
 @Index('idx_payments_user_id', ['userId'])
 @Index('idx_payments_processed_at', ['processedAt'])
+@Index('idx_payments_user_status_created', ['userId', 'status', 'createdAt'])
 @Index('uq_payments_user_id_idempotency_key', ['userId', 'idempotencyKey'], {
   unique: true,
 })
