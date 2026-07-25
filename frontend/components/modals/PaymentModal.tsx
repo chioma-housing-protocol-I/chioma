@@ -18,6 +18,7 @@ import {
   useCreatePaymentMethod,
   useDeletePaymentMethod,
 } from '@/lib/query/hooks/use-payments';
+import { formatCurrency } from '@/lib/utils/format';
 
 interface PaymentData {
   agreementId: string;
@@ -245,7 +246,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               Total Amount
             </p>
             <p className="text-2xl font-black text-brand-blue">
-              ${formData.amount.toLocaleString()}
+              {formatCurrency(formData.amount, 'USD')}
             </p>
           </div>
           <div className="flex items-center gap-3">

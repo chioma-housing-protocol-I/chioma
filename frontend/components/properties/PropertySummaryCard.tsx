@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Bed, Bath, Ruler, Heart } from 'lucide-react';
 import { useState } from 'react';
+import { formatNumber } from '@/lib/utils/format';
 
 interface PropertySummaryCardProps {
   property: {
@@ -127,12 +128,12 @@ export default function PropertySummaryCard({
           </div>
           {property.viewCount != null && (
             <div className="flex items-center gap-1 text-gray-500">
-              <span>{property.viewCount.toLocaleString()} views</span>
+              <span>{formatNumber(property.viewCount)} views</span>
             </div>
           )}
           {property.favoriteCount != null && (
             <div className="flex items-center gap-1 text-gray-500">
-              <span>{property.favoriteCount.toLocaleString()} favorites</span>
+              <span>{formatNumber(property.favoriteCount)} favorites</span>
             </div>
           )}
         </div>

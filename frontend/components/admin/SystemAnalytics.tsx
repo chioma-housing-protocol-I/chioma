@@ -24,6 +24,7 @@ import { useAdminUsers } from '@/lib/query/hooks/use-admin-users';
 import { useProperties } from '@/lib/query/hooks/use-properties';
 import { useTransactions } from '@/lib/query/hooks/use-transactions';
 import type { Property, Transaction, User } from '@/types';
+import { formatDate, formatNumber, formatCrypto } from '@/lib/utils/format';
 
 type DatePreset = '30d' | '90d' | '365d' | 'custom';
 
@@ -282,7 +283,7 @@ export function SystemAnalytics() {
     ];
   }, [filteredProperties, filteredTransactions, filteredUsers]);
 
-  const dateRangeLabel = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  const dateRangeLabel = `${formatDate(startDate.toISOString(), { dateStyle: 'medium' })} - ${formatDate(endDate.toISOString(), { dateStyle: 'medium' })}`;
 
   const handleExport = () => {
     const rows = [
@@ -393,7 +394,9 @@ export function SystemAnalytics() {
           title="Transaction Volume"
           metric={metrics.volume}
           icon={<Wallet size={20} />}
-          formatValue={(value) => currency(value)}
+          formatValue={(value) =>
+            formatCrypto(value, 'USDC', { maximumFractionDigits: 0 })
+          }
         />
       </section>
 
@@ -551,7 +554,7 @@ function MetricCard({
   title,
   metric,
   icon,
-  formatValue = (value) => number(value),
+  formatValue = (value) => formatNumber(value),
 }: {
   title: string;
   metric: MetricComparison;
@@ -696,10 +699,7 @@ function buildGrowthSeries(
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     if (!months.has(key)) {
       months.set(key, {
-        label: date.toLocaleString('en-US', {
-          month: 'short',
-          year: '2-digit',
-        }),
+        label: formatDate(dateIso, { month: 'short', year: '2-digit' }),
         users: 0,
         properties: 0,
         transactions: 0,
@@ -765,26 +765,4 @@ function formatPercent(value: number | null) {
   if (value === null) return 'N/A';
   const sign = value > 0 ? '+' : '';
   return `${sign}${value.toFixed(1)}%`;
-}
-
-function formatDate(value: Date) {
-  return value.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function currency(value: number) {
-  return (
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value) + ' USDC'
-  );
-}
-
-function number(value: number) {
-  return new Intl.NumberFormat('en-US').format(value);
 }

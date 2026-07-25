@@ -1,0 +1,18 @@
+{
+  "_comment": "Per-route JS size budgets. 'warnKB' triggers a warning; 'maxKB' triggers a CI failure.",
+  "_notes": [
+    "Budgets apply to the total first-load JS for a given route segment prefix.",
+    "Tighten these values gradually as you optimize splits and lazy-load heavy components.",
+    "Run 'pnpm run size:check' locally after any build to see current sizes."
+  ],
+  "routes": {
+    "/": { "maxKB": 500, "warnKB": 400 },
+    "/properties": { "maxKB": 500, "warnKB": 400 },
+    "/user": { "maxKB": 500, "warnKB": 400 },
+    "/admin": { "maxKB": 500, "warnKB": 400 },
+    "/login": { "maxKB": 500, "warnKB": 400 },
+    "/signup": { "maxKB": 500, "warnKB": 400 },
+    "/messages": { "maxKB": 500, "warnKB": 400 },
+    "shared-chunks": { "maxKB": 7000, "warnKB": 5500 }
+  }
+}
