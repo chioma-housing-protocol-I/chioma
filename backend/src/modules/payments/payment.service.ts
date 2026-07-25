@@ -3,34 +3,23 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   Payment,
   PaymentStatus,
   PaymentMetadata,
 } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
-import {
-  PaymentSchedule,
-  PaymentScheduleStatus,
-} from './entities/payment-schedule.entity';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
-import { ProcessRefundDto } from './dto/process-refund.dto';
 import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { PaymentMethodFiltersDto } from './dto/payment-method-filters.dto';
-import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
-import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
-import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
-  addDays,
-  calculateNextRunAt,
   decryptMetadata,
   encryptMetadata,
   ensureUserId,
@@ -42,7 +31,6 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { Locked, LockService } from '../../common/lock';
 import {
   CreateEscrowGatewayDto,
-  PaymentGatewayWebhookDto,
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
@@ -59,15 +47,12 @@ export class PaymentService {
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(PaymentMethod)
     private readonly paymentMethodRepository: Repository<PaymentMethod>,
-    @InjectRepository(PaymentSchedule)
-    private readonly paymentScheduleRepository: Repository<PaymentSchedule>,
     private readonly paymentGateway: PaymentGatewayService,
     private readonly notificationsService: NotificationsService,
     private readonly paymentProcessingService: PaymentProcessingService,
     private readonly stellarService: StellarService,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
-    private readonly dataSource: DataSource,
     private readonly fraudHooksService: FraudHooksService,
   ) {}
 
@@ -98,11 +83,15 @@ export class PaymentService {
       throw new BadRequestException('Payment amount must be greater than 0');
     }
     if (dto.amount > 999999999.99) {
-      throw new BadRequestException('Payment amount cannot exceed 999,999,999.99');
+      throw new BadRequestException(
+        'Payment amount cannot exceed 999,999,999.99',
+      );
     }
     // Check for decimal precision (max 2 decimal places for currency)
     if (!Number.isInteger(dto.amount * 100)) {
-      throw new BadRequestException('Payment amount can have at most 2 decimal places');
+      throw new BadRequestException(
+        'Payment amount can have at most 2 decimal places',
+      );
     }
 
     const idempotencyKey = getIdempotencyKey(dto);
@@ -209,86 +198,6 @@ export class PaymentService {
     );
 
     return savedPayment;
-  }
-
-  async processRefund(
-    paymentId: string,
-    dto: ProcessRefundDto,
-    userId: string,
-  ): Promise<Payment> {
-    ensureUserId(userId);
-
-    // Wrap in a transaction with a pessimistic write lock to prevent
-    // concurrent refunds from double-spending the same payment. SQLite has
-    // no row-level locking support (used by in-memory test databases), so
-    // the lock is skipped there rather than failing the query outright.
-    const supportsRowLocking = this.dataSource.options?.type !== 'sqlite';
-
-    return this.dataSource.transaction(async (manager) => {
-      const payment = await manager.findOne(Payment, {
-        where: { id: paymentId, userId },
-        ...(supportsRowLocking
-          ? { lock: { mode: 'pessimistic_write' as const } }
-          : {}),
-      });
-
-      if (!payment) {
-        throw new NotFoundException('Payment not found');
-      }
-
-      if (payment.status !== PaymentStatus.COMPLETED) {
-        throw new BadRequestException(
-          'Only completed payments can be refunded',
-        );
-      }
-
-      // Assert the gateway charge reference exists before any refund work.
-      // Without it we cannot tell the gateway which charge to reverse, and
-      // proceeding with an undefined chargeId risks crashing the gateway call
-      // or refunding against the wrong charge.
-      const chargeId = payment.metadata?.chargeId?.trim();
-      if (!chargeId) {
-        throw new BadRequestException(
-          `Cannot process refund: payment ${paymentId} has no gateway charge ID recorded in its metadata`,
-        );
-      }
-
-      if (dto.amount > payment.amount - payment.refundAmount) {
-        throw new BadRequestException('Refund amount exceeds available amount');
-      }
-
-      const refundResult = await Promise.resolve(
-        this.paymentGateway.processRefund(chargeId, dto.amount),
-      );
-
-      if (!refundResult.success) {
-        throw new BadRequestException('Refund processing failed');
-      }
-
-      payment.refundAmount += dto.amount;
-      payment.refundReason = dto.reason;
-      payment.refundStatus = 'completed';
-      payment.status =
-        payment.refundAmount >= payment.amount
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIAL_REFUND;
-      payment.metadata = {
-        ...(payment.metadata ?? {}),
-        refundId: refundResult.refundId,
-      };
-
-      const updatedPayment = await manager.save(Payment, payment);
-      this.logger.log(`Refund processed for payment: ${paymentId}`);
-
-      await this.notificationsService.notify(
-        userId,
-        'Refund processed',
-        `Your refund of ${dto.amount} ${payment.currency} was processed successfully.`,
-        'PAYMENT_REFUNDED',
-      );
-
-      return updatedPayment;
-    });
   }
 
   async generateReceipt(paymentId: string, userId: string): Promise<any> {
@@ -492,121 +401,6 @@ export class PaymentService {
     }
 
     await this.paymentMethodRepository.remove(paymentMethod);
-  }
-
-  async createPaymentSchedule(
-    dto: CreatePaymentScheduleDto,
-    userId: string,
-  ): Promise<PaymentSchedule> {
-    ensureUserId(userId);
-
-    const paymentMethod = await this.paymentMethodRepository.findOne({
-      where: { id: parseInt(dto.paymentMethodId), userId },
-    });
-    if (!paymentMethod) {
-      throw new NotFoundException('Payment method not found');
-    }
-
-    const nextRunAt = dto.startDate ? new Date(dto.startDate) : new Date();
-
-    const schedule = this.paymentScheduleRepository.create({
-      userId,
-      agreementId: dto.agreementId ?? null,
-      paymentMethodId: paymentMethod.id,
-      amount: dto.amount,
-      currency: dto.currency ?? 'NGN',
-      interval: dto.interval,
-      nextRunAt,
-      maxRetries: dto.maxRetries ?? 3,
-      status: PaymentScheduleStatus.ACTIVE,
-    });
-
-    return this.paymentScheduleRepository.save(schedule);
-  }
-
-  async updatePaymentSchedule(
-    id: string,
-    dto: UpdatePaymentScheduleDto,
-    userId: string,
-  ): Promise<PaymentSchedule> {
-    ensureUserId(userId);
-    const schedule = await this.paymentScheduleRepository.findOne({
-      where: { id, userId },
-    });
-
-    if (!schedule) {
-      throw new NotFoundException('Payment schedule not found');
-    }
-
-    if (dto.status) {
-      schedule.status = dto.status;
-    }
-    if (dto.nextRunAt) {
-      schedule.nextRunAt = new Date(dto.nextRunAt);
-    }
-    if (typeof dto.maxRetries === 'number') {
-      schedule.maxRetries = dto.maxRetries;
-    }
-
-    return this.paymentScheduleRepository.save(schedule);
-  }
-
-  async listPaymentSchedules(
-    filters: PaymentScheduleFiltersDto,
-    userId: string,
-  ): Promise<PaymentSchedule[]> {
-    ensureUserId(userId);
-    const query = this.paymentScheduleRepository
-      .createQueryBuilder('schedule')
-      .leftJoinAndSelect('schedule.paymentMethod', 'paymentMethod');
-
-    query.andWhere('schedule.userId = :userId', { userId });
-    if (filters.agreementId) {
-      query.andWhere('schedule.agreementId = :agreementId', {
-        agreementId: filters.agreementId,
-      });
-    }
-    if (filters.status) {
-      query.andWhere('schedule.status = :status', { status: filters.status });
-    }
-
-    return query.orderBy('schedule.nextRunAt', 'ASC').getMany();
-  }
-
-  async runPaymentSchedule(id: string, userId: string): Promise<Payment> {
-    ensureUserId(userId);
-    const schedule = await this.paymentScheduleRepository.findOne({
-      where: { id, userId },
-    });
-
-    if (!schedule) {
-      throw new NotFoundException('Payment schedule not found');
-    }
-
-    if (schedule.status !== PaymentScheduleStatus.ACTIVE) {
-      throw new BadRequestException('Payment schedule is not active');
-    }
-
-    return this.processSchedulePayment(schedule);
-  }
-
-  async processDueSchedules(limit = 50): Promise<Payment[]> {
-    const now = new Date();
-    const dueSchedules = await this.paymentScheduleRepository.find({
-      where: {
-        status: PaymentScheduleStatus.ACTIVE,
-        nextRunAt: LessThanOrEqual(now),
-      },
-      order: { nextRunAt: 'ASC' },
-      take: limit,
-    });
-    const results: Payment[] = [];
-
-    for (const schedule of dueSchedules) {
-      results.push(await this.processSchedulePayment(schedule));
-    }
-
-    return results;
   }
 
   @Locked({
@@ -946,51 +740,6 @@ export class PaymentService {
     };
   }
 
-  async handlePaymentGatewayWebhook(
-    dto: PaymentGatewayWebhookDto,
-    secretHeader?: string,
-  ) {
-    const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
-    if (configuredSecret && secretHeader !== configuredSecret) {
-      throw new UnauthorizedException('Invalid payment webhook secret');
-    }
-
-    const payment = dto.paymentId
-      ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
-      : dto.referenceNumber
-        ? await this.paymentRepository.findOne({
-            where: { referenceNumber: dto.referenceNumber },
-          })
-        : null;
-
-    if (!payment) {
-      return {
-        processed: false,
-        reason: 'payment_not_found',
-      };
-    }
-
-    payment.status = this.mapWebhookStatus(dto.status);
-    payment.processedAt ??= new Date();
-    payment.metadata = {
-      ...(payment.metadata ?? {}),
-      webhookEventType: dto.eventType,
-      transactionHash:
-        dto.transactionHash ?? String(payment.metadata?.transactionHash ?? ''),
-      error: dto.error ?? payment.metadata?.error,
-      reconciledAt: new Date().toISOString(),
-    };
-    if (dto.transactionHash) {
-      payment.referenceNumber = dto.transactionHash;
-    }
-
-    const saved = await this.paymentRepository.save(payment);
-    return {
-      processed: true,
-      payment: saved,
-    };
-  }
-
   async getPaymentAnalytics(userId: string) {
     ensureUserId(userId);
     const payments = await this.paymentRepository.find({
@@ -1044,21 +793,6 @@ export class PaymentService {
     return null;
   }
 
-  private mapWebhookStatus(webhookStatus: string): PaymentStatus {
-    const statusMap: Record<string, PaymentStatus> = {
-      completed: PaymentStatus.COMPLETED,
-      successful: PaymentStatus.COMPLETED,
-      success: PaymentStatus.COMPLETED,
-      pending: PaymentStatus.PENDING,
-      processing: PaymentStatus.PENDING,
-      failed: PaymentStatus.FAILED,
-      error: PaymentStatus.FAILED,
-      refunded: PaymentStatus.REFUNDED,
-      cancelled: PaymentStatus.FAILED,
-    };
-    return statusMap[webhookStatus?.toLowerCase()] ?? PaymentStatus.PENDING;
-  }
-
   private async syncEscrowPaymentFromState(
     escrowId: number,
     status: string,
@@ -1089,71 +823,5 @@ export class PaymentService {
     };
     payment.processedAt ??= new Date();
     return this.paymentRepository.save(payment);
-  }
-
-  private async processSchedulePayment(
-    schedule: PaymentSchedule,
-  ): Promise<Payment> {
-    if (!schedule.paymentMethodId) {
-      schedule.status = PaymentScheduleStatus.FAILED;
-      schedule.lastError = 'Payment method is missing';
-      await this.paymentScheduleRepository.save(schedule);
-      await this.notificationsService.notify(
-        schedule.userId,
-        'Recurring payment failed',
-        `We could not process your scheduled payment. ${schedule.lastError}`.trim(),
-        'PAYMENT_FAILED',
-      );
-      throw new BadRequestException('Payment method is missing');
-    }
-
-    const idempotencyKey = `${schedule.id}-${schedule.nextRunAt.getTime()}`;
-    try {
-      const payment = await this.recordPayment(
-        {
-          agreementId: schedule.agreementId ?? undefined,
-          amount: Number(schedule.amount),
-          paymentMethodId: String(schedule.paymentMethodId),
-          idempotencyKey,
-          notes: 'Recurring payment',
-        },
-        schedule.userId,
-      );
-
-      schedule.retries = 0;
-      schedule.lastError = null;
-      schedule.nextRunAt = calculateNextRunAt(
-        schedule.nextRunAt,
-        schedule.interval,
-      );
-      await this.paymentScheduleRepository.save(schedule);
-
-      await this.notificationsService.notify(
-        schedule.userId,
-        'Recurring payment processed',
-        `Your scheduled payment of ${payment.amount} ${payment.currency} was processed successfully.`,
-        'PAYMENT_SCHEDULED',
-      );
-      return payment;
-    } catch (error) {
-      schedule.retries += 1;
-      schedule.lastError = error instanceof Error ? error.message : 'Failed';
-
-      if (schedule.retries >= schedule.maxRetries) {
-        schedule.status = PaymentScheduleStatus.FAILED;
-      } else {
-        schedule.nextRunAt = addDays(schedule.nextRunAt, 1);
-      }
-
-      await this.paymentScheduleRepository.save(schedule);
-
-      await this.notificationsService.notify(
-        schedule.userId,
-        'Recurring payment failed',
-        `We could not process your scheduled payment. ${schedule.lastError ?? ''}`.trim(),
-        'PAYMENT_FAILED',
-      );
-      throw error;
-    }
   }
 }

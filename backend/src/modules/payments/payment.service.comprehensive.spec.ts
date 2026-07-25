@@ -5,21 +5,13 @@
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
-import {
-  PaymentSchedule,
-  PaymentScheduleStatus,
-  PaymentInterval,
-} from './entities/payment-schedule.entity';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
-import { ProcessRefundDto } from './dto/process-refund.dto';
-import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import { LockService } from '../../common/lock';
@@ -47,27 +39,12 @@ const makePaymentMethodRepo = () => ({
   createQueryBuilder: jest.fn(),
 });
 
-const makePaymentScheduleRepo = () => ({
-  findOne: jest.fn(),
-  find: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  createQueryBuilder: jest.fn(),
-});
-
-const makeEntityManager = () => ({
-  findOne: jest.fn(),
-  save: jest.fn(),
-});
-
 // ─── Test Suite ──────────────────────────────────────────────────────────────
 
 describe('PaymentService – edge cases & isolation', () => {
   let service: PaymentService;
   let paymentRepo: ReturnType<typeof makePaymentRepo>;
   let paymentMethodRepo: ReturnType<typeof makePaymentMethodRepo>;
-  let paymentScheduleRepo: ReturnType<typeof makePaymentScheduleRepo>;
-  let entityManager: ReturnType<typeof makeEntityManager>;
   let mockGateway: {
     chargePayment: jest.Mock;
     processRefund: jest.Mock;
@@ -89,8 +66,6 @@ describe('PaymentService – edge cases & isolation', () => {
   beforeEach(async () => {
     paymentRepo = makePaymentRepo();
     paymentMethodRepo = makePaymentMethodRepo();
-    paymentScheduleRepo = makePaymentScheduleRepo();
-    entityManager = makeEntityManager();
 
     mockGateway = {
       chargePayment: jest.fn(),
@@ -126,10 +101,6 @@ describe('PaymentService – edge cases & isolation', () => {
           provide: getRepositoryToken(PaymentMethod),
           useValue: paymentMethodRepo,
         },
-        {
-          provide: getRepositoryToken(PaymentSchedule),
-          useValue: paymentScheduleRepo,
-        },
         { provide: PaymentGatewayService, useValue: mockGateway },
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: Object, useValue: { getUserById: jest.fn() } },
@@ -137,15 +108,6 @@ describe('PaymentService – edge cases & isolation', () => {
         { provide: StellarService, useValue: mockStellar },
         { provide: LockService, useValue: mockLock },
         { provide: IdempotencyService, useValue: mockIdempotency },
-        {
-          provide: DataSource,
-          useValue: {
-            transaction: jest.fn(
-              (cb: (em: typeof entityManager) => Promise<unknown>) =>
-                cb(entityManager),
-            ),
-          },
-        },
         { provide: FraudHooksService, useValue: mockFraud },
       ],
     }).compile();
@@ -260,210 +222,6 @@ describe('PaymentService – edge cases & isolation', () => {
     });
   });
 
-  // ─── processRefund edge cases ────────────────────────────────────────────
-
-  describe('processRefund – edge cases', () => {
-    it('throws when payment is not found', async () => {
-      entityManager.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.processRefund(
-          'pay-missing',
-          { amount: 50, reason: 'test' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('throws when refund amount exceeds payment amount', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-1',
-          { amount: 999, reason: 'over' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('prevents double-refund on already-refunded payment', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.REFUNDED,
-        amount: 100,
-        refundAmount: 100,
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-1',
-          { amount: 1, reason: 'dup' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('rejects refund with a descriptive error when metadata has no chargeId', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: { gateway: 'paystack' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-1',
-          { amount: 50, reason: 'no charge' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(
-        /payment pay-1 has no gateway charge ID recorded in its metadata/,
-      );
-
-      // Refund must be rejected before it ever reaches the gateway.
-      expect(mockGateway.processRefund).not.toHaveBeenCalled();
-      expect(entityManager.save).not.toHaveBeenCalled();
-    });
-
-    it('rejects refund when metadata is entirely null', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-2',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: null,
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-2',
-          { amount: 50, reason: 'null meta' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-
-      expect(mockGateway.processRefund).not.toHaveBeenCalled();
-    });
-
-    it('rejects refund when chargeId is blank/whitespace', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-3',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: { chargeId: '   ' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-3',
-          { amount: 50, reason: 'blank' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-
-      expect(mockGateway.processRefund).not.toHaveBeenCalled();
-    });
-
-    it('sends notification after successful refund', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        currency: 'NGN',
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-      mockGateway.processRefund.mockResolvedValue({
-        success: true,
-        refundId: 'ref-1',
-      });
-      entityManager.save.mockResolvedValue({
-        id: 'pay-1',
-        status: PaymentStatus.REFUNDED,
-        refundAmount: 50,
-      } as Payment);
-
-      await service.processRefund(
-        'pay-1',
-        { amount: 50, reason: 'partial' } as ProcessRefundDto,
-        'user-1',
-      );
-
-      expect(mockNotifications.notify).toHaveBeenCalledWith(
-        'user-1',
-        expect.stringContaining('efund'),
-        expect.any(String),
-        'PAYMENT_REFUNDED',
-      );
-    });
-  });
-
-  // ─── createPaymentSchedule edge cases ───────────────────────────────────
-
-  describe('createPaymentSchedule – edge cases', () => {
-    it('throws when payment method is not found', async () => {
-      paymentMethodRepo.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.createPaymentSchedule(
-          {
-            agreementId: 'agr-1',
-            paymentMethodId: 'pm-missing',
-            amount: 500,
-            interval: PaymentInterval.MONTHLY,
-          } as CreatePaymentScheduleDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('sets status to ACTIVE on creation', async () => {
-      paymentMethodRepo.findOne.mockResolvedValue({
-        id: 'pm-1',
-        userId: 'user-1',
-      });
-      paymentScheduleRepo.create.mockImplementation(
-        (d: Partial<PaymentSchedule>) => d as PaymentSchedule,
-      );
-      paymentScheduleRepo.save.mockResolvedValue({
-        id: 'sched-1',
-        status: PaymentScheduleStatus.ACTIVE,
-      } as PaymentSchedule);
-
-      const result = await service.createPaymentSchedule(
-        {
-          agreementId: 'agr-1',
-          paymentMethodId: 'pm-1',
-          amount: 500,
-          interval: PaymentInterval.MONTHLY,
-        } as CreatePaymentScheduleDto,
-        'user-1',
-      );
-
-      expect(paymentScheduleRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: PaymentScheduleStatus.ACTIVE }),
-      );
-      expect(result.id).toBe('sched-1');
-    });
-  });
-
   // ─── deposit management integration flow ───────────────────────────────
 
   describe('deposit management integration flow', () => {
@@ -537,97 +295,6 @@ describe('PaymentService – edge cases & isolation', () => {
         memo: 'Deposit released',
       });
       expect(released?.status).toBe(PaymentStatus.COMPLETED);
-    });
-
-    it('processes a partial security deposit refund for damage deductions', async () => {
-      const depositPayment = {
-        id: 'pay-deposit-1',
-        userId: 'user-1',
-        agreementId: 'agr-1',
-        amount: 3000,
-        refundAmount: 0,
-        currency: 'XLM',
-        status: PaymentStatus.COMPLETED,
-        metadata: {
-          chargeId: 'ch-deposit-1',
-        },
-      } as Payment;
-
-      entityManager.findOne.mockResolvedValue(depositPayment);
-      entityManager.save.mockImplementation(
-        async (_entityClass: unknown, entity?: Payment) =>
-          ({
-            ...entity,
-            refundAmount: 500,
-            refundStatus: 'completed',
-            status: PaymentStatus.PARTIAL_REFUND,
-          }) as Payment,
-      );
-
-      mockGateway.processRefund.mockResolvedValue({
-        success: true,
-        refundId: 'refund-1',
-      });
-
-      const partialRefund = await service.processRefund(
-        'pay-deposit-1',
-        { amount: 500, reason: 'Minor damage assessment' } as ProcessRefundDto,
-        'user-1',
-      );
-
-      expect(mockGateway.processRefund).toHaveBeenCalledWith(
-        'ch-deposit-1',
-        500,
-      );
-      expect(partialRefund.status).toBe(PaymentStatus.PARTIAL_REFUND);
-      expect(partialRefund.refundAmount).toBe(500);
-    });
-
-    it('processes a full security deposit refund when no deductions remain', async () => {
-      const depositPayment = {
-        id: 'pay-deposit-2',
-        userId: 'user-1',
-        agreementId: 'agr-1',
-        amount: 3000,
-        refundAmount: 0,
-        currency: 'XLM',
-        status: PaymentStatus.COMPLETED,
-        metadata: {
-          chargeId: 'ch-deposit-2',
-        },
-      } as Payment;
-
-      entityManager.findOne.mockResolvedValue(depositPayment);
-      entityManager.save.mockImplementation(
-        async (_entityClass: unknown, entity?: Payment) =>
-          ({
-            ...entity,
-            refundAmount: 3000,
-            refundStatus: 'completed',
-            status: PaymentStatus.REFUNDED,
-          }) as Payment,
-      );
-
-      mockGateway.processRefund.mockResolvedValue({
-        success: true,
-        refundId: 'refund-2',
-      });
-
-      const finalRefund = await service.processRefund(
-        'pay-deposit-2',
-        {
-          amount: 3000,
-          reason: 'Full deposit refund after move-out',
-        } as ProcessRefundDto,
-        'user-1',
-      );
-
-      expect(mockGateway.processRefund).toHaveBeenCalledWith(
-        'ch-deposit-2',
-        3000,
-      );
-      expect(finalRefund.status).toBe(PaymentStatus.REFUNDED);
-      expect(finalRefund.refundAmount).toBe(3000);
     });
 
     it('refunds a held escrow deposit when the security deposit is returned', async () => {
