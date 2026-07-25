@@ -460,6 +460,10 @@ export class PaymentService {
     paymentMethod.isDefault = dto.isDefault ?? paymentMethod.isDefault;
     paymentMethod.metadata = dto.metadata ?? paymentMethod.metadata;
 
+    if (dto.sensitiveMetadata) {
+      paymentMethod.encryptedMetadata = encryptMetadata(dto.sensitiveMetadata);
+    }
+
     return this.paymentMethodRepository.save(paymentMethod);
   }
 

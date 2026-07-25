@@ -91,7 +91,13 @@ interface AuthActions {
     firstName?: string;
     lastName?: string;
   }) => Promise<AuthResult>;
-  hydrate: () => void;
+  /**
+   * Restores auth state from localStorage. Reads are cached in a closure
+   * (see readStoredAuth) so repeat calls -- e.g. React Strict Mode's
+   * double-invoked effects -- don't re-hit localStorage. Pass `forceRefresh`
+   * to explicitly re-read storage (e.g. after another tab changed it).
+   */
+  hydrate: (forceRefresh?: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -123,7 +129,20 @@ function removeAuthCookie() {
 
 // --- Storage Helpers ---------------------------------------------------------
 
-function readStoredAuth(): Omit<AuthState, 'loading'> {
+/**
+ * Closure cache for the parsed localStorage snapshot. localStorage.getItem()
+ * is synchronous and blocks the main thread, so repeat reads within the same
+ * page session (e.g. a re-mounted hydrator) reuse this instead of hitting
+ * storage again. Only refreshed when readStoredAuth is called with
+ * `forceRefresh: true`, which `hydrate()` does not do by default.
+ */
+let cachedAuthSnapshot: Omit<AuthState, 'loading'> | null = null;
+
+function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
+  if (cachedAuthSnapshot && !forceRefresh) {
+    return cachedAuthSnapshot;
+  }
+
   if (typeof window === 'undefined') {
     return {
       user: null,
@@ -147,13 +166,14 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     );
 
     if (storedAccessToken && storedUser) {
-      return {
+      cachedAuthSnapshot = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
         isAuthenticated: true,
         walletAddress: storedWalletAddress,
       };
+      return cachedAuthSnapshot;
     }
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
@@ -163,13 +183,19 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     removeAuthCookie();
   }
 
-  return {
+  cachedAuthSnapshot = {
     user: null,
     accessToken: null,
     refreshToken: null,
     isAuthenticated: false,
     walletAddress: null,
   };
+  return cachedAuthSnapshot;
+}
+
+/** Test-only escape hatch to reset the closure cache between test cases. */
+export function __resetAuthStorageCacheForTests(): void {
+  cachedAuthSnapshot = null;
 }
 
 function clearStorage() {
@@ -180,6 +206,14 @@ function clearStorage() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
+
+  cachedAuthSnapshot = {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    walletAddress: null,
+  };
 }
 
 function persistAuth(
@@ -197,6 +231,14 @@ function persistAuth(
 
   localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
   setAuthCookie(accessToken);
+
+  cachedAuthSnapshot = {
+    user,
+    accessToken,
+    refreshToken,
+    isAuthenticated: true,
+    walletAddress: cachedAuthSnapshot?.walletAddress ?? null,
+  };
 }
 
 function normalizeUser(user: AuthApiUser): User {
@@ -239,8 +281,8 @@ export const useAuthStore = create<AuthStore>()(
       loading: true,
       walletAddress: null,
 
-      hydrate: () => {
-        const stored = readStoredAuth();
+      hydrate: (forceRefresh = false) => {
+        const stored = readStoredAuth(forceRefresh);
         set((state) => {
           state.user = stored.user;
           state.accessToken = stored.accessToken;
@@ -273,6 +315,10 @@ export const useAuthStore = create<AuthStore>()(
           localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
         }
 
+        if (cachedAuthSnapshot) {
+          cachedAuthSnapshot = { ...cachedAuthSnapshot, walletAddress: address };
+        }
+
         set((state) => {
           state.walletAddress = address;
         });
@@ -298,6 +344,9 @@ export const useAuthStore = create<AuthStore>()(
               AUTH_STORAGE_KEYS.USER,
               JSON.stringify(updatedUser),
             );
+            if (cachedAuthSnapshot) {
+              cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+            }
             set((state) => {
               state.user = updatedUser;
             });

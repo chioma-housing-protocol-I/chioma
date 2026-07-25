@@ -617,6 +617,72 @@ describe('PaymentService', () => {
     });
   });
 
+  describe('updatePaymentMethod', () => {
+    beforeEach(() => {
+      process.env.PAYMENT_METADATA_SECRET = 'test-secret';
+    });
+
+    it('re-encrypts encryptedMetadata when sensitiveMetadata is provided', async () => {
+      const existing = {
+        id: 1,
+        userId: 'user_1',
+        lastFour: '1234',
+        isDefault: false,
+        metadata: null,
+        encryptedMetadata: encryptMetadata({ authorizationCode: 'old_auth' }),
+      } as PaymentMethod;
+      const originalEncryptedMetadata = existing.encryptedMetadata;
+
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(
+        existing,
+      );
+      (paymentMethodRepository.save as jest.Mock).mockImplementation(
+        (data: PaymentMethod) => Promise.resolve(data),
+      );
+
+      const result = await service.updatePaymentMethod(
+        1,
+        { sensitiveMetadata: { authorizationCode: 'new_auth' } },
+        'user_1',
+      );
+
+      expect(result.encryptedMetadata).toBeTruthy();
+      expect(result.encryptedMetadata).not.toBe(originalEncryptedMetadata);
+      expect(decryptMetadata(result.encryptedMetadata)).toEqual({
+        authorizationCode: 'new_auth',
+      });
+    });
+
+    it('leaves encryptedMetadata untouched when sensitiveMetadata is not provided', async () => {
+      const originalEncrypted = encryptMetadata({
+        authorizationCode: 'unchanged',
+      });
+      const existing = {
+        id: 1,
+        userId: 'user_1',
+        lastFour: '1234',
+        isDefault: false,
+        metadata: null,
+        encryptedMetadata: originalEncrypted,
+      } as PaymentMethod;
+
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(
+        existing,
+      );
+      (paymentMethodRepository.save as jest.Mock).mockImplementation(
+        (data: PaymentMethod) => Promise.resolve(data),
+      );
+
+      const result = await service.updatePaymentMethod(
+        1,
+        { lastFour: '5678' },
+        'user_1',
+      );
+
+      expect(result.encryptedMetadata).toBe(originalEncrypted);
+    });
+  });
+
   describe('createPaymentSchedule', () => {
     it('creates payment schedule successfully', async () => {
       const dto: CreatePaymentScheduleDto = {
