@@ -12,6 +12,10 @@ import {
 } from '../properties/entities/property.entity';
 import { UserRole } from '../users/entities/user.entity';
 import { AgreementStatus } from '../rent/entities/rent-contract.entity';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+} from '../../common/constants/business-rules.constants';
 
 @ApiTags('Search')
 @Controller('search')

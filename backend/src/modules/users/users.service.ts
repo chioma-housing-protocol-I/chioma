@@ -19,6 +19,7 @@ import { UserRestoreDto } from './dto/user-restore.dto';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
+import { Locked, LockService } from '../../common/lock';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   UserPreferences,
@@ -62,6 +63,7 @@ export class UsersService {
     @InjectRepository(UserNotificationPreference)
     private readonly userNotificationPreferenceRepository: Repository<UserNotificationPreference>,
     private readonly auditService: AuditService,
+    private readonly lockService: LockService,
   ) {}
 
   async getNotificationPreferences(userId: string): Promise<UserPreferences> {
@@ -214,6 +216,10 @@ export class UsersService {
     return updatedUser;
   }
 
+  @Locked({
+    key: (userId: string) => `user:change-email:${userId}`,
+    ttlMs: 5000,
+  })
   async changeEmail(
     userId: string,
     changeEmailDto: ChangeEmailDto,

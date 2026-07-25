@@ -531,7 +531,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtSecret(),
-        expiresIn: '15m',
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
 
@@ -544,7 +544,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtRefreshSecret(),
-        expiresIn: '7d',
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );
 
