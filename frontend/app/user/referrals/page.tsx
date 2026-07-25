@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   Gift,
@@ -102,11 +102,11 @@ export default function TenantReferralsPage() {
                 Your Referral Code
               </p>
               <div className="text-2xl font-black text-white tracking-tight uppercase">
-                {stats.referralCode}
+                {referralCode}
               </div>
             </div>
             <button
-              onClick={() => handleCopy(stats.referralCode)}
+              onClick={() => handleCopy(referralCode ?? '')}
               className="w-full py-3.5 bg-white text-blue-900 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all active:scale-95"
             >
               {isCopying ? <CheckCircle2 size={18} /> : <Copy size={18} />}
