@@ -433,9 +433,6 @@ export class PaymentWebhookController {
       'Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and ' +
       'a timestamp in X-Webhook-Timestamp. Not for direct client use.',
   })
-  async handleGatewayWebhook(@Body() dto: PaymentGatewayWebhookDto) {
-    return this.paymentService.handlePaymentGatewayWebhook(dto);
-  @ApiOperation({ summary: 'Handle payment gateway webhook events' })
   @AuditLog({
     action: AuditAction.PAYMENT_COMPLETED,
     entityType: 'Payment',

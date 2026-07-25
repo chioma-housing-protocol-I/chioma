@@ -199,18 +199,17 @@ const appLogger = new Logger('AppModule');
         const debugConfig = config as {
           host?: string;
           port?: number;
-          username?: string;
           database?: string;
           replication?: unknown;
           synchronize?: boolean;
           logging?: boolean;
           extra?: unknown;
         };
-        console.log('[DEBUG] TypeORM Config:', {
+        appLogger.debug({
           host: debugConfig.host,
           port: debugConfig.port,
-          username: debugConfig.username,
           database: debugConfig.database,
+          // Removed username to prevent credential exposure in logs
           replicationEnabled: Boolean(debugConfig.replication),
           synchronize: debugConfig.synchronize,
           logging: debugConfig.logging,

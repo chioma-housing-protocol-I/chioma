@@ -371,6 +371,10 @@ export class PaymentService {
     paymentMethod.isDefault = dto.isDefault ?? paymentMethod.isDefault;
     paymentMethod.metadata = dto.metadata ?? paymentMethod.metadata;
 
+    if (dto.sensitiveMetadata) {
+      paymentMethod.encryptedMetadata = encryptMetadata(dto.sensitiveMetadata);
+    }
+
     return this.paymentMethodRepository.save(paymentMethod);
   }
 
@@ -739,68 +743,6 @@ export class PaymentService {
       scanned: failedPayments.length,
       retried,
       skipped,
-    };
-  }
-
-  async handlePaymentGatewayWebhook(dto: PaymentGatewayWebhookDto) {
-  async handlePaymentGatewayWebhook(
-    dto: PaymentGatewayWebhookDto,
-    secretHeader?: string,
-  ) {
-    const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
-    
-    // Require webhook secret in production/staging environments
-    if (isProduction && !configuredSecret) {
-      this.logger.error('PAYMENT_WEBHOOK_SECRET is required in production/staging');
-      throw new InternalServerErrorException('Webhook secret not configured');
-    }
-    
-    // Validate webhook secret if configured
-    if (configuredSecret && secretHeader !== configuredSecret) {
-      this.logger.warn('Invalid payment webhook secret provided');
-      throw new UnauthorizedException('Invalid payment webhook secret');
-    }
-    
-    // Log webhook validation failures for security monitoring
-    if (!secretHeader && configuredSecret) {
-      this.logger.warn('Webhook received without secret header');
-      throw new UnauthorizedException('Webhook signature required');
-    }
-
-    const payment = dto.paymentId
-      ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
-      : dto.referenceNumber
-        ? await this.paymentRepository.findOne({
-            where: { referenceNumber: dto.referenceNumber },
-          })
-        : null;
-
-    if (!payment) {
-      return {
-        processed: false,
-        reason: 'payment_not_found',
-      };
-    }
-
-    payment.status = this.mapWebhookStatus(dto.status);
-    payment.processedAt ??= new Date();
-    payment.metadata = {
-      ...(payment.metadata ?? {}),
-      webhookEventType: dto.eventType,
-      transactionHash:
-        dto.transactionHash ?? String(payment.metadata?.transactionHash ?? ''),
-      error: dto.error ?? payment.metadata?.error,
-      reconciledAt: new Date().toISOString(),
-    };
-    if (dto.transactionHash) {
-      payment.referenceNumber = dto.transactionHash;
-    }
-
-    const saved = await this.paymentRepository.save(payment);
-    return {
-      processed: true,
-      payment: saved,
     };
   }
 
