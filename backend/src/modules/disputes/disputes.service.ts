@@ -111,7 +111,7 @@ export class DisputesService {
       // Check if there's already an active dispute for this agreement
       const existingDispute = await queryRunner.manager.findOne(Dispute, {
         where: {
-          agreementId: parseInt(createDisputeDto.agreementId),
+          agreementId: createDisputeDto.agreementId,
           status: In([DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW]),
         },
       });
@@ -134,7 +134,7 @@ export class DisputesService {
         metadata: createDisputeDto.metadata
           ? JSON.parse(createDisputeDto.metadata)
           : null,
-      } as any);
+      });
 
       const savedDispute = await queryRunner.manager.save(dispute);
 
@@ -284,9 +284,18 @@ export class DisputesService {
     userId: string,
   ): Promise<Dispute> {
     const dispute = await this.findOne(id);
+    const isAppealReopenRequest =
+      dispute.status === DisputeStatus.REJECTED &&
+      updateDisputeDto.status === DisputeStatus.OPEN &&
+      updateDisputeDto.description === undefined &&
+      updateDisputeDto.requestedAmount === undefined;
 
     // Check permissions
-    await this.checkDisputePermission(dispute, userId, 'update');
+    await this.checkDisputePermission(
+      dispute,
+      userId,
+      isAppealReopenRequest ? 'appeal' : 'update',
+    );
 
     // Validate status transitions
     if (
@@ -322,7 +331,7 @@ export class DisputesService {
     // Create evidence record
     const evidence = this.evidenceRepository.create({
       dispute: dispute,
-      uploadedBy: parseInt(userId),
+      uploadedBy: userId,
       fileUrl: file.path, // This would be replaced with actual file storage URL
       fileName: file.originalname,
       fileType: file.mimetype,
@@ -354,7 +363,7 @@ export class DisputesService {
 
     const comment = this.commentRepository.create({
       dispute: dispute,
-      userId: parseInt(userId),
+      userId: userId,
       content: addCommentDto.content,
       isInternal: addCommentDto.isInternal || false,
     });
@@ -404,7 +413,7 @@ export class DisputesService {
       await queryRunner.manager.update(Dispute, dispute.id, {
         status: DisputeStatus.RESOLVED,
         resolution: resolveDisputeDto.resolution,
-        resolvedBy: parseInt(userId),
+        resolvedBy: userId,
         resolvedAt: new Date(),
       });
 
@@ -456,7 +465,7 @@ export class DisputesService {
     }
 
     return this.disputeRepository.find({
-      where: { agreementId: parseInt(agreementId) },
+      where: { agreementId },
       relations: ['initiator', 'resolver', 'evidence', 'comments'],
       order: { createdAt: 'DESC' },
     });
@@ -475,9 +484,9 @@ export class DisputesService {
       throw new UserNotFoundError(userId);
     }
 
-    const isInitiator = dispute.initiatedBy.toString() === userId;
-    const isLandlord = dispute.agreement.adminId?.toString() === userId;
-    const isTenant = dispute.agreement.userId?.toString() === userId;
+    const isInitiator = dispute.initiatedBy === userId;
+    const isLandlord = dispute.agreement.adminId === userId;
+    const isTenant = dispute.agreement.userId === userId;
     const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isAdmin && !isInitiator && !isLandlord && !isTenant) {

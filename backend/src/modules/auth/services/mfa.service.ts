@@ -23,6 +23,12 @@ import {
 } from '../dto/auth-response.dto';
 import { AuthService } from '../auth.service';
 import { JwtService } from '@nestjs/jwt';
+import {
+  MFA_TOKEN_EXPIRY,
+  MFA_TOTP_WINDOW_STEPS,
+  MFA_BACKUP_CODES_COUNT,
+  MFA_BACKUP_CODE_SALT_ROUNDS,
+} from '../../../common/constants/business-rules.constants';
 
 @Injectable()
 export class MfaService {
@@ -85,7 +91,7 @@ export class MfaService {
     // Generate backup codes
     const backupCodes = this.generateBackupCodes();
     const hashedBackupCodes = await Promise.all(
-      backupCodes.map((code) => bcrypt.hash(code, 10)),
+      backupCodes.map((code) => bcrypt.hash(code, MFA_BACKUP_CODE_SALT_ROUNDS)),
     );
 
     // Create MFA device
@@ -136,7 +142,7 @@ export class MfaService {
       secret,
       encoding: 'base32',
       token,
-      window: 2, // Allow 2 time steps (60 seconds) of tolerance
+      window: MFA_TOTP_WINDOW_STEPS, // time steps (~30s each) of tolerance either side of now
     });
 
     if (verified) {
@@ -247,7 +253,7 @@ export class MfaService {
 
     const backupCodes = this.generateBackupCodes();
     const hashedBackupCodes = await Promise.all(
-      backupCodes.map((code) => bcrypt.hash(code, 10)),
+      backupCodes.map((code) => bcrypt.hash(code, MFA_BACKUP_CODE_SALT_ROUNDS)),
     );
 
     device.backupCodes = JSON.stringify(hashedBackupCodes);
@@ -261,7 +267,7 @@ export class MfaService {
   /**
    * Generate backup codes
    */
-  private generateBackupCodes(count: number = 10): string[] {
+  private generateBackupCodes(count: number = MFA_BACKUP_CODES_COUNT): string[] {
     const codes: string[] = [];
     for (let i = 0; i < count; i++) {
       const code = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -370,7 +376,7 @@ export class MfaService {
       },
       {
         secret: authService.getJwtSecret(),
-        expiresIn: '5m', // Short-lived token for MFA verification
+        expiresIn: MFA_TOKEN_EXPIRY,
       },
     );
 

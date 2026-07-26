@@ -19,7 +19,8 @@ export class ThrottlerExceptionFilter implements ExceptionFilter {
       const message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : (exceptionResponse as any).message || 'Too Many Requests';
+          : ((exceptionResponse as Record<string, unknown>).message as string) ||
+            'Too Many Requests';
 
       response.status(status).json({
         statusCode: status,

@@ -1,153 +1,28 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { DisputeStatus } from '@/lib/dashboard-data';
+import {
+  addDisputeComment,
+  appealDispute,
+  getTenantDispute,
+  uploadDisputeEvidence,
+  type DisputeDetailRecord,
+} from '@/lib/disputes/api';
 
-export interface TenantDisputeDetail {
-  id: string;
-  disputeId: string;
-  agreementId: string;
-  propertyName: string;
-  raisedBy: { name: string; role: string };
-  against: { name: string; role: string };
-  disputeType: string;
-  description: string;
-  status: DisputeStatus;
-  requestedAmount?: number;
-  resolution?: string;
-  createdAt: string;
-  updatedAt: string;
-  evidence: Array<{ id: string; filename: string; uploadedAt: string }>;
-  comments: Array<{
-    id: string;
-    author: { name: string; role: string };
-    content: string;
-    createdAt: string;
-  }>;
-}
+export type TenantDisputeDetail = DisputeDetailRecord;
 
 const TENANT_DISPUTE_DETAIL_QUERY_KEY = (id: string) =>
   ['tenant-dispute', id] as const;
-
-const mockDetail: TenantDisputeDetail = {
-  id: 'dis-001',
-  disputeId: 'DSP-2026-001',
-  agreementId: 'AGR-2025-014',
-  propertyName: 'Sunset Apartments, Unit 4B',
-  raisedBy: { name: 'You', role: 'tenant' },
-  against: { name: 'James Adebayo', role: 'landlord' },
-  disputeType: 'MAINTENANCE',
-  description:
-    'Water damage repairs were delayed for 12 days after reporting. Ceiling paint affected, temporary fixes inadequate.',
-  status: 'UNDER_REVIEW',
-  requestedAmount: 40000,
-  createdAt: '2026-02-18T10:00:00.000Z',
-  updatedAt: '2026-03-06T13:20:00.000Z',
-  evidence: [
-    {
-      id: 'ev-1',
-      filename: 'water_damage_1.jpg',
-      uploadedAt: '2026-02-18T10:05:00Z',
-    },
-    {
-      id: 'ev-2',
-      filename: 'inspection_report.pdf',
-      uploadedAt: '2026-02-19T14:30:00Z',
-    },
-    {
-      id: 'ev-3',
-      filename: 'repair_delay_timeline.xlsx',
-      uploadedAt: '2026-02-20T09:15:00Z',
-    },
-  ],
-  comments: [
-    {
-      id: 'c-1',
-      author: { name: 'You', role: 'tenant' },
-      content: 'Initial report submitted. Awaiting response.',
-      createdAt: '2026-02-18T10:10:00Z',
-    },
-    {
-      id: 'c-2',
-      author: { name: 'James Adebayo', role: 'landlord' },
-      content: 'Contractor scheduled for Feb 25. Will update.',
-      createdAt: '2026-02-20T16:45:00Z',
-    },
-  ],
-};
 
 export function useTenantDispute(disputeId: string) {
   return useQuery({
     queryKey: TENANT_DISPUTE_DETAIL_QUERY_KEY(disputeId),
     enabled: !!disputeId,
-    queryFn: async () => {
-      try {
-        const responseData = await apiClient.get<{ data: TenantDisputeDetail }>(
-          `/disputes/${disputeId}`,
-        );
-        const apiData = responseData.data?.data || responseData.data;
-        // Normalize to TenantDisputeDetail
-        return {
-          id: String((apiData as TenantDisputeDetail).id || 'unknown'),
-          disputeId:
-            (apiData as TenantDisputeDetail).disputeId ||
-            `DSP-${String((apiData as TenantDisputeDetail).id || 'unknown').slice(-6)}`,
-          agreementId: String(
-            (apiData as TenantDisputeDetail).agreementId || '',
-          ),
-          propertyName:
-            (apiData as TenantDisputeDetail).propertyName || 'Rental Property',
-          raisedBy: (apiData as TenantDisputeDetail).raisedBy || {
-            name: 'You',
-            role: 'tenant',
-          },
-          against: (apiData as TenantDisputeDetail).against || {
-            name: 'Counterparty',
-            role: 'landlord',
-          },
-          disputeType: (apiData as TenantDisputeDetail).disputeType || 'OTHER',
-          description: (apiData as TenantDisputeDetail).description || '',
-          status:
-            ((apiData as TenantDisputeDetail).status as DisputeStatus) ||
-            'OPEN',
-          requestedAmount: (apiData as TenantDisputeDetail).requestedAmount,
-          resolution: (apiData as TenantDisputeDetail).resolution,
-          createdAt:
-            (apiData as TenantDisputeDetail).createdAt ||
-            new Date().toISOString(),
-          updatedAt:
-            (apiData as TenantDisputeDetail).updatedAt ||
-            (apiData as TenantDisputeDetail).createdAt ||
-            new Date().toISOString(),
-          evidence: (
-            ((apiData as TenantDisputeDetail).evidence || []) as Array<{
-              id?: string;
-              filename?: string;
-              uploadedAt?: string;
-            }>
-          ).map((e) => ({
-            id: String(e.id),
-            filename: e.filename || '',
-            uploadedAt: e.uploadedAt || new Date().toISOString(),
-          })),
-          comments: (
-            ((apiData as TenantDisputeDetail).comments || []) as Array<{
-              id?: string;
-              author?: { name?: string; role?: string };
-              content?: string;
-              createdAt?: string;
-            }>
-          ).map((c) => ({
-            id: String(c.id),
-            author: c.author || { name: 'Anonymous', role: 'user' },
-            content: c.content || '',
-            createdAt: c.createdAt || new Date().toISOString(),
-          })),
-        };
-      } catch {
-        return mockDetail;
-      }
+    queryFn: () => getTenantDispute(disputeId),
+    staleTime: 5_000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'OPEN' || status === 'UNDER_REVIEW' ? 30_000 : false;
     },
   });
 }
@@ -166,13 +41,45 @@ export function useAddDisputeComment() {
       disputeId: string;
       content: string;
     }) => {
-      await apiClient.post(`/disputes/${disputeId}/comments`, { content });
+      await addDisputeComment(disputeId, content);
       return { success: true };
     },
-    onSuccess: (_data: any, variables: any) => {
-      queryClient.invalidateQueries({
-        queryKey: TENANT_DISPUTE_DETAIL_QUERY_KEY(variables.disputeId),
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-dispute'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-disputes'] });
+    },
+  });
+}
+
+export function useUploadTenantDisputeEvidence() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      disputeId,
+      files,
+      description,
+    }: {
+      disputeId: string;
+      files: File[];
+      description?: string;
+    }) => uploadDisputeEvidence(disputeId, files, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-dispute'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-disputes'] });
+    },
+  });
+}
+
+export function useAppealTenantDispute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ disputeId }: { disputeId: string }) =>
+      appealDispute(disputeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-dispute'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-disputes'] });
     },
   });
 }

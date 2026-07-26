@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, Send, AlertCircle, Loader2 } from 'lucide-react';
 import { getFreighterPublicKey } from '@/lib/stellar-auth';
+import { useCreateWithdrawal } from '@/lib/query/hooks/use-anchor-transactions';
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function WithdrawModal({
     'idle' | 'connecting' | 'processing' | 'success' | 'error'
   >('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const createWithdrawal = useCreateWithdrawal();
 
   if (!isOpen) return null;
 
@@ -52,13 +54,16 @@ export default function WithdrawModal({
       setStatus('connecting');
       setErrorMessage('');
 
-      // Connect to Freighter
-      await getFreighterPublicKey();
+      const walletAddress = await getFreighterPublicKey();
 
       setStatus('processing');
 
-      // Simulate transaction delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await createWithdrawal.mutateAsync({
+        amount: numAmount,
+        currency,
+        destination: address,
+        walletAddress,
+      });
 
       setStatus('success');
       setTimeout(() => {

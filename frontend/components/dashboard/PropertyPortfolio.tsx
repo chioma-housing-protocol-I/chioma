@@ -2,8 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Building2, Filter, Download, ChevronRight } from 'lucide-react';
-import { PreviewImage } from '@/components/ui/PreviewImage';
+import { Download, Filter, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PropertyPortfolio = () => {
@@ -145,13 +144,15 @@ const PropertyPortfolio = () => {
                   {/* Property */}
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-3">
-                      <PreviewImage
-                        src={property.image}
-                        alt={property.name}
-                        fallbackIcon={Building2}
-                        className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10 group-hover:border-white/20 transition-colors"
-                        imageClassName="object-cover"
-                      />
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10 group-hover:border-white/20 transition-colors">
+                        <Image
+                          src={property.image}
+                          alt={property.name}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                        />
+                      </div>
                       <div>
                         <p className="font-bold text-white group-hover:text-blue-400 transition-colors">
                           {property.name}
@@ -182,7 +183,6 @@ const PropertyPortfolio = () => {
                             alt={property.tenant.name}
                             fill
                             sizes="32px"
-                            unoptimized
                             className="object-cover"
                           />
                         </div>
@@ -239,13 +239,15 @@ const PropertyPortfolio = () => {
             >
               {/* Property Info */}
               <div className="flex items-start space-x-4">
-                <PreviewImage
-                  src={property.image}
-                  alt={property.name}
-                  fallbackIcon={Building2}
-                  className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-white/10"
-                  imageClassName="object-cover"
-                />
+                <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                  <Image
+                    src={property.image}
+                    alt={property.name}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-white mb-1 truncate">
                     {property.name}
@@ -297,7 +299,6 @@ const PropertyPortfolio = () => {
                         alt={property.tenant.name}
                         fill
                         sizes="32px"
-                        unoptimized
                         className="object-cover"
                       />
                     </div>

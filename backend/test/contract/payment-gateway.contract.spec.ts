@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentGatewayService, GatewayChargeResponse } from '../../src/modules/payments/payment-gateway.service';
+import {
+  PaymentGatewayService,
+  GatewayChargeResponse,
+} from '../../src/modules/payments/payment-gateway.service';
 import * as nock from 'nock';
 import { matchers } from 'jest-json-schema';
 import 'jest-json-schema';
@@ -106,7 +109,9 @@ describe('Payment Gateway Provider Contract (Nock + JSON Schema)', () => {
           { provide: RetryService, useValue: mockRetryService },
         ],
       }).compile();
-      const flwService = module.get<PaymentGatewayService>(PaymentGatewayService);
+      const flwService = module.get<PaymentGatewayService>(
+        PaymentGatewayService,
+      );
 
       const mockPaymentMethod = {
         id: 2,

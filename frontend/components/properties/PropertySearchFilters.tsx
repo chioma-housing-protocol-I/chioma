@@ -9,7 +9,9 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePropertyStore } from '@/store/property-store';
+import { useSearchSuggest } from '@/lib/query/hooks';
 
 interface FilterOption {
   label: string;
@@ -29,24 +31,182 @@ const propertyTypes: FilterOption[] = [
   { label: 'Airbnb', value: 'airbnb' },
 ];
 
+const POPULAR_TAGS = [
+  { label: 'Verified Only', filter: 'verified only' },
+  { label: 'Pets Allowed', filter: 'pets allowed' },
+  { label: 'Parking', filter: 'parking' },
+  { label: 'Gym', filter: 'gym' },
+  { label: 'Internet Included', filter: 'internet included' },
+] as const;
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function PropertySearchFilters() {
+  const { searchQuery, setSearchQuery, filters, setFilters, resetFilters } =
+    usePropertyStore();
+
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [minBudget, setMinBudget] = useState('');
-  const [maxBudget, setMaxBudget] = useState('');
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [minBudget, setMinBudget] = useState(
+    filters.minPrice ? String(filters.minPrice) : '',
+  );
+  const [maxBudget, setMaxBudget] = useState(
+    filters.maxPrice ? String(filters.maxPrice) : '',
+  );
+  const [selectedType, setSelectedType] = useState(
+    filters.propertyType || 'all',
+  );
   const [availability, setAvailability] = useState('');
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const debouncedSearch = useDebounce(localSearch, 300);
+
+  const { data: suggestions } = useSearchSuggest(
+    debouncedSearch.length >= 2 ? debouncedSearch : '',
+  );
+
+  useEffect(() => {
+    setSearchQuery(debouncedSearch);
+  }, [debouncedSearch, setSearchQuery]);
+
+  useEffect(() => {
+    setMinBudget(filters.minPrice ? String(filters.minPrice) : '');
+    setMaxBudget(filters.maxPrice ? String(filters.maxPrice) : '');
+  }, [filters.minPrice, filters.maxPrice]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      setSearchQuery(localSearch);
+      setShowSuggestions(false);
+    },
+    [localSearch, setSearchQuery],
+  );
+
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      setLocalSearch(suggestion);
+      setSearchQuery(suggestion);
+      setShowSuggestions(false);
+    },
+    [setSearchQuery],
+  );
+
+  const handleApplyFilters = useCallback(() => {
+    const newFilters: Partial<typeof filters> = {};
+    if (minBudget) newFilters.minPrice = Number(minBudget);
+    if (maxBudget) newFilters.maxPrice = Number(maxBudget);
+    if (selectedType && selectedType !== 'all') {
+      newFilters.propertyType = selectedType as import('@/types').PropertyType;
+    }
+    if (activeTags.has('pets allowed')) newFilters.petsAllowed = true;
+    if (activeTags.has('parking')) newFilters.hasParking = true;
+
+    setFilters(newFilters);
+    setIsMobileFiltersOpen(false);
+  }, [minBudget, maxBudget, selectedType, activeTags, setFilters]);
+
+  const handleTagToggle = useCallback((tag: string) => {
+    setActiveTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) {
+        next.delete(tag);
+      } else {
+        next.add(tag);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setLocalSearch('');
+    setMinBudget('');
+    setMaxBudget('');
+    setSelectedType('all');
+    setAvailability('');
+    setActiveTags(new Set());
+    resetFilters();
+  }, [resetFilters]);
+
+  const hasActiveFilters =
+    localSearch ||
+    minBudget ||
+    maxBudget ||
+    selectedType !== 'all' ||
+    activeTags.size > 0;
 
   return (
-    <div className="w-full space-y-4 mb-6" data-testid="property-search-filters">
+    <div
+      className="w-full space-y-4 mb-6"
+      data-testid="property-search-filters"
+    >
       {/* Search Bar - Desktop & Mobile */}
-      <div className="flex flex-col xl:flex-row gap-4 items-center backdrop-blur-xl bg-slate-800/50 border border-white/10 p-4 rounded-[2rem] shadow-2xl">
+      <form
+        onSubmit={handleSearchSubmit}
+        className="flex flex-col xl:flex-row gap-4 items-center backdrop-blur-xl bg-slate-800/50 border border-white/10 p-4 rounded-[2rem] shadow-2xl"
+      >
         <div className="relative flex-1 w-full xl:w-auto">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-200/50" />
           <input
+            ref={inputRef}
             type="text"
-            placeholder="Search by location..."
+            placeholder="Search by location, name, or keyword..."
+            value={localSearch}
+            onChange={(e) => {
+              setLocalSearch(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
             data-testid="search-location-input"
             className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-blue-200/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
           />
+
+          {/* Autocomplete Suggestions */}
+          {showSuggestions && suggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+            >
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="w-full text-left px-4 py-3 text-white hover:bg-slate-700 transition-colors text-sm flex items-center gap-2"
+                >
+                  <Search className="w-3.5 h-3.5 text-blue-200/50 flex-shrink-0" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-4 flex-1 w-full">
@@ -54,6 +214,8 @@ export default function PropertySearchFilters() {
           <div className="relative flex-1">
             <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-200/50" />
             <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
               data-testid="property-type-select"
               className="w-full appearance-none bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer"
             >
@@ -106,15 +268,27 @@ export default function PropertySearchFilters() {
           </div>
 
           <button
+            type="submit"
             data-testid="search-submit-btn"
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-95"
           >
             Search
           </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="text-blue-200/50 hover:text-white text-sm px-2 transition-colors"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {/* Mobile Toggle */}
         <button
+          type="button"
           onClick={() => setIsMobileFiltersOpen(true)}
           data-testid="mobile-filters-toggle"
           className="md:hidden w-full flex items-center justify-center gap-2 bg-slate-800/80 text-white py-3.5 rounded-2xl border border-white/5"
@@ -122,33 +296,38 @@ export default function PropertySearchFilters() {
           <Filter className="w-5 h-5" />
           <span>Filters</span>
         </button>
-      </div>
+      </form>
 
       {/* Advanced Filters (Facets) - Desktop Only */}
-      <div className="hidden md:flex flex-wrap items-center gap-3" data-testid="popular-filters">
+      <div
+        className="hidden md:flex flex-wrap items-center gap-3"
+        data-testid="popular-filters"
+      >
         <span className="text-blue-200/50 text-sm font-medium pr-2">
           Popular:
         </span>
-        {[
-          'Verified Only',
-          'Pets Allowed',
-          'Parking',
-          'Gym',
-          'Internet Included',
-        ].map((tag) => (
+        {POPULAR_TAGS.map((tag) => (
           <button
-            key={tag}
-            data-testid={`filter-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
-            className="bg-slate-800/30 hover:bg-slate-700/50 text-blue-200/70 border border-white/5 px-4 py-2 rounded-xl text-sm transition-all hover:text-white"
+            key={tag.filter}
+            onClick={() => handleTagToggle(tag.filter)}
+            className={`px-4 py-2 rounded-xl text-sm transition-all border ${
+              activeTags.has(tag.filter)
+                ? 'bg-blue-600/30 border-blue-500/50 text-white'
+                : 'bg-slate-800/30 hover:bg-slate-700/50 text-blue-200/70 border-white/5 hover:text-white'
+            }`}
+            data-testid={`filter-tag-${tag.filter.toLowerCase().replace(/\s+/g, '-')}`}
           >
-            {tag}
+            {tag.label}
           </button>
         ))}
       </div>
 
       {/* Mobile Filters Modal/Drawer */}
       {isMobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300" data-testid="mobile-filters-drawer">
+        <div
+          className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300"
+          data-testid="mobile-filters-drawer"
+        >
           <div
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
             onClick={() => setIsMobileFiltersOpen(false)}
@@ -175,10 +354,36 @@ export default function PropertySearchFilters() {
                   {propertyTypes.slice(1).map((opt) => (
                     <button
                       key={opt.value}
+                      onClick={() => setSelectedType(opt.value)}
+                      className={`py-3 rounded-xl font-medium transition-all text-xs border ${
+                        selectedType === opt.value
+                          ? 'bg-blue-600/30 border-blue-500/50 text-white'
+                          : 'bg-slate-800 border-white/5 text-white hover:bg-blue-600/20'
+                      }`}
                       data-testid={`mobile-type-${opt.value}`}
-                      className="bg-slate-800 border border-white/5 py-3 rounded-xl text-white font-medium hover:bg-blue-600/20 transition-all text-xs"
                     >
                       {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-blue-200/50 uppercase tracking-widest pl-1">
+                  Amenities
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {POPULAR_TAGS.slice(1).map((tag) => (
+                    <button
+                      key={tag.filter}
+                      onClick={() => handleTagToggle(tag.filter)}
+                      className={`px-4 py-2 rounded-xl text-sm transition-all border ${
+                        activeTags.has(tag.filter)
+                          ? 'bg-blue-600/30 border-blue-500/50 text-white'
+                          : 'bg-slate-800 border-white/5 text-blue-200/70 hover:text-white'
+                      }`}
+                    >
+                      {tag.label}
                     </button>
                   ))}
                 </div>
@@ -224,7 +429,7 @@ export default function PropertySearchFilters() {
             </div>
 
             <button
-              onClick={() => setIsMobileFiltersOpen(false)}
+              onClick={handleApplyFilters}
               data-testid="mobile-filters-apply-btn"
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all mt-4"
             >

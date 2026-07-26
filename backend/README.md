@@ -11,7 +11,9 @@ cp .env.example .env   # configure database, JWT, Stellar contracts
 pnpm run start:dev
 ```
 
-The API listens on `http://localhost:5000` by default (`PORT` env).
+The API listens on `http://localhost:5000` by default (`PORT` env). See
+[CONFIG.md](CONFIG.md) for a full reference of every environment variable,
+which are required per environment, and how they depend on each other.
 
 ## API documentation
 

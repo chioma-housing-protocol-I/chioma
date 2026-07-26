@@ -13,6 +13,7 @@ import { ErrorEscalationService } from './error-escalation.service';
 import { StructuredLoggerService } from './structured-logger.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { DatabaseMonitorService } from './database-monitor.service';
+import { DatabaseReplicationService } from './database-replication.service';
 import { WebhookSignatureService } from '../webhooks/webhook-signature.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -34,6 +35,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PerformanceMonitorService,
     PerformanceMiddleware,
     DatabaseMonitorService,
+    DatabaseReplicationService,
     WebhookSignatureService,
     WebhookSignatureGuard,
   ],
@@ -46,6 +48,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PerformanceMonitorService,
     PerformanceMiddleware,
     DatabaseMonitorService,
+    DatabaseReplicationService,
   ],
 })
 export class MonitoringModule implements NestModule {

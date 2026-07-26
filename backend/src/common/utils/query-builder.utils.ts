@@ -1,6 +1,8 @@
 import { SelectQueryBuilder } from 'typeorm';
 
 export class QueryBuilderUtils {
+  private static readonly SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
   /**
    * Applies basic equality filters to a query
    */
@@ -8,15 +10,23 @@ export class QueryBuilderUtils {
     query: SelectQueryBuilder<any>,
     filters: Record<string, any>,
   ): SelectQueryBuilder<any> {
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(filters).forEach(([key, value], index) => {
       if (value !== undefined && value !== null && value !== '') {
+        if (!this.SAFE_IDENTIFIER.test(key)) {
+          return;
+        }
+
+        const parameterName = `filter_${index}`;
+
         // Handle array values with IN, others with equality
         if (Array.isArray(value)) {
-          query.andWhere(`${query.alias}.${key} IN (:...${key})`, {
-            [key]: value,
+          query.andWhere(`${query.alias}.${key} IN (:...${parameterName})`, {
+            [parameterName]: value,
           });
         } else {
-          query.andWhere(`${query.alias}.${key} = :${key}`, { [key]: value });
+          query.andWhere(`${query.alias}.${key} = :${parameterName}`, {
+            [parameterName]: value,
+          });
         }
       }
     });
@@ -32,11 +42,16 @@ export class QueryBuilderUtils {
     sortOrder: 'ASC' | 'DESC' = 'DESC',
     validFields: string[] = [],
   ): SelectQueryBuilder<any> {
+    const safeSortOrder = sortOrder === 'ASC' ? 'ASC' : 'DESC';
     const field =
-      validFields.length === 0 || validFields.includes(sortBy)
-        ? sortBy
-        : 'createdAt';
-    query.orderBy(`${query.alias}.${field}`, sortOrder);
+      validFields.length > 0
+        ? validFields.includes(sortBy)
+          ? sortBy
+          : 'createdAt'
+        : this.SAFE_IDENTIFIER.test(sortBy)
+          ? sortBy
+          : 'createdAt';
+    query.orderBy(`${query.alias}.${field}`, safeSortOrder);
     return query;
   }
 

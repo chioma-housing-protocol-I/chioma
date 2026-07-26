@@ -46,10 +46,6 @@ export default function MyContactsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void fetchContacts();
-  }, []);
-
   const fetchContacts = async () => {
     try {
       setLoading(true);
@@ -107,6 +103,10 @@ export default function MyContactsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchContacts();
+  }, []);
 
   const getInitials = (name: string) =>
     name

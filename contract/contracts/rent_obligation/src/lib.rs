@@ -48,6 +48,8 @@ impl TokenizedRentObligationContract {
             .persistent()
             .extend_ttl(&DataKey::ObligationCount, 500000, 500000);
 
+        events::contract_initialized(&env);
+
         Ok(())
     }
 
@@ -296,7 +298,7 @@ impl TokenizedRentObligationContract {
             .persistent()
             .extend_ttl(&DataKey::ObligationCount, 500000, 500000);
 
-        events::nft_burned(&env, token_id, obligation.owner, burn_record.reason);
+        events::obligation_burned(&env, token_id, obligation.owner, burn_record.reason);
 
         Ok(())
     }

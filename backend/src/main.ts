@@ -50,7 +50,7 @@ async function bootstrap() {
     .get<string>('CORS_ORIGINS')
     ?.split(',')
     .map((origin) => origin.trim()) || [
-    configService.get<string>('FRONTEND_URL') || 'http://localhost:3001',
+    configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
   ];
 
   app.enableCors({
@@ -83,6 +83,7 @@ async function bootstrap() {
       'security.txt',
       '.well-known',
       'developer-portal',
+      'metrics',
     ],
   });
 
@@ -106,11 +107,11 @@ async function bootstrap() {
   if (process.env.RESPONSE_TIME_ENABLED !== 'false') {
     app.use(
       (
-        req: express.Request,
+        req: express.Request & { _startTime?: number },
         _res: express.Response,
         next: express.NextFunction,
       ) => {
-        (req as any)._startTime = Date.now();
+        req._startTime = Date.now();
         next();
       },
     );

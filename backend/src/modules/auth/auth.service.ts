@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +15,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 import {
   AuthSuccessResponseDto,
   MfaRequiredResponseDto,
@@ -34,6 +38,19 @@ const SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 30;
 const RESET_TOKEN_EXPIRY_HOURS = 1;
+const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
+import {
+  BCRYPT_SALT_ROUNDS,
+  MAX_FAILED_LOGIN_ATTEMPTS,
+  LOCKOUT_DURATION_MINUTES,
+  PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
+  JWT_ACCESS_TOKEN_EXPIRY,
+  JWT_REFRESH_TOKEN_EXPIRY,
+} from '../../common/constants/business-rules.constants';
+
+const SALT_ROUNDS = BCRYPT_SALT_ROUNDS;
+const MAX_FAILED_ATTEMPTS = MAX_FAILED_LOGIN_ATTEMPTS;
+const RESET_TOKEN_EXPIRY_HOURS = PASSWORD_RESET_TOKEN_EXPIRY_HOURS;
 
 @Injectable()
 export class AuthService {
@@ -50,6 +67,8 @@ export class AuthService {
     private referralService: ReferralService,
     private readonly loggerService: LoggerService,
     private readonly lockService: LockService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly encryptedCache: EncryptedCacheService,
   ) {}
 
   @Logging({ service: 'AuthService' })
@@ -79,7 +98,6 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
     const userReferralCode = await this.referralService.generateReferralCode();
 
     const user = this.userRepository.create({
@@ -91,10 +109,11 @@ export class AuthService {
       role,
       emailVerified: false,
       failedLoginAttempts: 0,
-      verificationToken,
       isActive: true,
       referralCode: userReferralCode,
     });
+
+    const verificationToken = this.issueVerificationToken(user);
 
     const savedUser = await this.userRepository.save(user);
 
@@ -113,7 +132,7 @@ export class AuthService {
 
     // Send verification email asynchronously
     this.emailService
-      .sendVerificationEmail(savedUser.email, verificationToken)
+      .sendVerificationEmail(normalizedEmail, verificationToken)
       .catch((error) =>
         this.logger.error(
           `Failed to send verification email for ${savedUser.email}`,
@@ -139,6 +158,7 @@ export class AuthService {
 
   async login(
     loginDto: LoginDto,
+    context?: { ipAddress?: string; userAgent?: string },
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
@@ -184,6 +204,9 @@ export class AuthService {
         'Invalid email or password',
       );
     }
+
+    // Account takeover detection: flag anomalous logins before issuing tokens
+    await this.detectLoginAnomaly(user, context);
 
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
@@ -238,7 +261,7 @@ export class AuthService {
         secret: this.getJwtRefreshSecret(),
       });
 
-      if (payload.type !== 'refresh') {
+      if (!ValidationUtils.validateTokenType(payload, 'refresh')) {
         throw new AuthenticationError(
           ErrorCode.AUTH_TOKEN_INVALID,
           'Invalid token type',
@@ -302,8 +325,9 @@ export class AuthService {
     forgotPasswordDto: ForgotPasswordDto,
   ): Promise<MessageResponseDto> {
     const { email } = forgotPasswordDto;
+    const normalizedEmail = email.toLowerCase();
 
-    const user = await this.findUserByEmail(email.toLowerCase());
+    const user = await this.findUserByEmail(normalizedEmail);
 
     if (!user) {
       this.logger.warn(
@@ -331,7 +355,7 @@ export class AuthService {
 
     // Send password reset email asynchronously
     this.emailService
-      .sendPasswordResetEmail(user.email, resetToken)
+      .sendPasswordResetEmail(normalizedEmail, resetToken)
       .catch((error) =>
         this.logger.error(
           `Failed to send password reset email for ${user.email}`,
@@ -414,12 +438,124 @@ export class AuthService {
 
     user.emailVerified = true;
     user.verificationToken = null;
+    user.verificationTokenExpires = null;
 
     await this.userRepository.save(user);
     this.logger.log(`Email verified for user: ${user.id}`);
 
     return {
       message: 'Email verified successfully',
+    };
+  }
+
+  /**
+   * Attaches an email address (and optionally a name) to a wallet-only
+   * account, then sends a verification link through the same flow used
+   * during normal registration.
+   *
+   * Locked per-user so concurrent calls can't each generate and save a
+   * different verification token (last write wins, silently invalidating
+   * whichever token was already emailed out). Once a token is pending for
+   * the same unverified email, it's reused rather than regenerated.
+   */
+  @Locked({
+    key: (userId: string) => `user:verification:${userId}`,
+    ttlMs: 5000,
+  })
+  async completeProfile(
+    userId: string,
+    dto: CompleteProfileDto,
+  ): Promise<MessageResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    const normalizedEmail = dto.email.toLowerCase();
+    const existingUser = await this.findUserByEmail(normalizedEmail, true);
+
+    if (existingUser && existingUser.id !== user.id) {
+      throw new DuplicateEntryError('Email already registered');
+    }
+
+    const emailChanged = user.email !== normalizedEmail;
+
+    user.email = normalizedEmail;
+    user.emailHash = this.hashLookupValue(normalizedEmail);
+    user.emailVerified = false;
+    if (dto.firstName) user.firstName = dto.firstName;
+    if (dto.lastName) user.lastName = dto.lastName;
+
+    // A change of email invalidates any token minted for the previous address;
+    // otherwise reuse an existing, unexpired token so concurrent requests stay
+    // idempotent and links already delivered keep working.
+    if (emailChanged) {
+      user.verificationToken = null;
+      user.verificationTokenExpires = null;
+    }
+    const verificationToken = this.issueVerificationToken(user);
+
+    await this.userRepository.save(user);
+    this.logger.log(`Profile completed for wallet user: ${user.id}`);
+
+    this.emailService
+      .sendVerificationEmail(normalizedEmail, verificationToken)
+      .catch((error) =>
+        this.logger.error(
+          `Failed to send verification email for ${normalizedEmail}`,
+          error,
+        ),
+      );
+
+    return {
+      message: 'Profile saved. Check your inbox to verify your email.',
+    };
+  }
+
+  /**
+   * Re-sends the email verification link for a user who has not yet verified.
+   *
+   * Concurrent requests are serialized with a per-user lock, and the token is
+   * generated idempotently — an existing, unexpired token is reused rather than
+   * overwritten, so a verification link already delivered to the user keeps
+   * working instead of being silently invalidated.
+   */
+  @Locked({
+    key: (userId: string) => `user:verification:${userId}`,
+    ttlMs: 5000,
+  })
+  async resendVerificationEmail(userId: string): Promise<MessageResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    if (!user.email) {
+      throw new ValidationError('No email is associated with this account');
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email is already verified' };
+    }
+
+    const verificationToken = this.issueVerificationToken(user);
+
+    await this.userRepository.save(user);
+    this.logger.log(`Verification email re-sent for user: ${user.id}`);
+
+    this.emailService
+      .sendVerificationEmail(user.email, verificationToken)
+      .catch((error) =>
+        this.logger.error(
+          `Failed to send verification email for ${user.email}`,
+          error,
+        ),
+      );
+
+    return {
+      message: 'A new verification link has been sent to your email.',
     };
   }
 
@@ -454,9 +590,49 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
-  private async handleFailedLogin(user: User): Promise<void> {
-    user.failedLoginAttempts += 1;
+  /**
+   * Detects account takeover signals: new IP, new user-agent, or unusual
+   * login time. Logs a warning; does not block (MFA handles hard blocking).
+   */
+  private async detectLoginAnomaly(
+    user: User,
+    context?: { ipAddress?: string; userAgent?: string },
+  ): Promise<void> {
+    if (!context?.ipAddress && !context?.userAgent) return;
 
+    const knownKey = `login:known:${user.id}`;
+    const known = await this.encryptedCache
+      .get<{ ips: string[]; agents: string[] }>(knownKey)
+      .catch(() => null);
+
+    const ip = context.ipAddress ?? '';
+    const ua = context.userAgent ?? '';
+    const anomalies: string[] = [];
+
+    if (known) {
+      if (ip && !known.ips.includes(ip)) {
+        anomalies.push(`new_ip:${ip}`);
+      }
+      if (ua && !known.agents.includes(ua)) {
+        anomalies.push('new_user_agent');
+      }
+    }
+
+    if (anomalies.length) {
+      this.logger.warn(
+        `Potential account takeover for user ${user.id}: ${anomalies.join(', ')}`,
+      );
+    }
+
+    // Update known fingerprints (keep last 10 IPs and agents)
+    const updatedIps = [...new Set([...(known?.ips ?? []), ip])].slice(-10);
+    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(-10);
+    await this.encryptedCache
+      .set(knownKey, { ips: updatedIps, agents: updatedAgents }, 30 * 24 * 3600 * 1000)
+      .catch(() => null);
+  }
+
+  private async handleFailedLogin(user: User): Promise<void> {
     if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
       user.accountLockedUntil = new Date(
         Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000,
@@ -464,12 +640,13 @@ export class AuthService {
       this.logger.warn(`Account locked due to failed attempts: ${user.email}`);
     }
 
+    user.failedLoginAttempts += 1;
     await this.userRepository.save(user);
   }
 
   public generateTokens(
     userId: string,
-    email: string,
+    email: string | null,
     role: string,
   ): { accessToken: string; refreshToken: string } {
     const accessToken = this.jwtService.sign(
@@ -481,7 +658,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtSecret(),
-        expiresIn: '15m',
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
 
@@ -494,7 +671,7 @@ export class AuthService {
       },
       {
         secret: this.getJwtRefreshSecret(),
-        expiresIn: '7d',
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );
 
@@ -511,12 +688,42 @@ export class AuthService {
     });
   }
 
+  /**
+   * Idempotently sets a verification token on the given user entity.
+   *
+   * If the user already holds an unexpired verification token it is reused, so
+   * concurrent requests do not overwrite each other and any link already sent
+   * to the user stays valid. A fresh token is only minted when none exists or
+   * the current one has expired. The token is mutated onto the entity but NOT
+   * persisted — the caller is responsible for saving.
+   */
+  private issueVerificationToken(user: User): string {
+    const now = Date.now();
+
+    if (
+      user.verificationToken &&
+      user.verificationTokenExpires &&
+      user.verificationTokenExpires.getTime() > now
+    ) {
+      return user.verificationToken;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpires = new Date(
+      now + VERIFICATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
+    );
+
+    return verificationToken;
+  }
+
   public sanitizeUser(user: User) {
     const {
       password: _password,
       refreshToken: _refreshToken,
       resetToken: _resetToken,
       verificationToken: _verificationToken,
+      verificationTokenExpires: _verificationTokenExpires,
       ...sanitized
     } = user;
     return sanitized;

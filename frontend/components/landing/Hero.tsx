@@ -4,14 +4,17 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Search } from 'lucide-react';
-import Image from 'next/image';
+import { ArrowRight, CheckCircle2, Search } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
-import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import HeroFamilyScene from '@/components/landing/HeroFamilyScene';
+
+const trustPoints = [
+  'Settles in seconds',
+  'Fees under a cent',
+  'Contracts you can read',
+];
 
 export default function Hero() {
-  // AUTH DISABLED - useAuthRedirect commented out for development
-  // useAuthRedirect(); // Redirect authenticated users to their dashboard
   const { walletAddress } = useAuth();
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -19,153 +22,138 @@ export default function Hero() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = query.trim();
-    if (trimmed) {
-      router.push(`/properties?q=${encodeURIComponent(trimmed)}`);
-    } else {
-      router.push('/properties');
-    }
+    router.push(
+      trimmed ? `/properties?q=${encodeURIComponent(trimmed)}` : '/properties',
+    );
   };
 
   return (
-    <section className="relative pt-20 pb-32 overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: '1s' }}
-        ></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl"></div>
-      </div>
-
+    <section className="relative pt-16 pb-24 lg:pt-24 lg:pb-32 overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
-        <div className="max-w-5xl mx-auto text-center space-y-8">
-          {/* Main Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight"
-          >
-            Automated Commissions.
-            <br />
-            <span className="bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">
-              Zero Disputes.
-            </span>
-          </motion.h1>
-
-          {/* Subheadline */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl md:text-2xl text-blue-100/90 max-w-3xl mx-auto leading-relaxed"
-          >
-            Connect natively with users on the Stellar network. Experience
-            instant payouts and transparent contract tracking without the
-            paperwork.
-          </motion.p>
-
-          {/* Display Wallet Address if Connected */}
-          {walletAddress && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
+        <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
+          {/* Text column */}
+          <div className="text-center lg:text-left">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.25 }}
-              className="inline-block px-4 py-2 rounded-lg bg-green-500/20 border border-green-500/50 backdrop-blur-sm"
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brass-400 mb-6"
             >
-              <p className="text-sm text-green-200">
-                Connected Wallet:{' '}
-                <span className="font-mono font-semibold">
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-6)}
+              <span className="w-8 rule-glint" aria-hidden />
+              Rentals on the Stellar network
+            </motion.p>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08 }}
+              className="font-display text-5xl md:text-6xl xl:text-7xl text-cream leading-[1.05]"
+            >
+              Come home
+              <br />
+              to{' '}
+              <em className="text-brass-300 not-italic border-b-4 border-brass-500/40">
+                certainty.
+              </em>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.16 }}
+              className="mt-6 text-lg md:text-xl text-cream-dim max-w-xl mx-auto lg:mx-0 leading-relaxed"
+            >
+              Chioma puts leases, rent, and agent commissions on rails. Payments
+              settle in seconds on Stellar, contracts stay transparent, and
+              nobody has to chase anybody for money.
+            </motion.p>
+
+            {walletAddress && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-green/10 border border-brand-green/30 text-sm text-cream"
+              >
+                <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
+                <span className="font-mono">
+                  {walletAddress.slice(0, 6)}…{walletAddress.slice(-6)}
+                </span>
+              </motion.div>
+            )}
+
+            {/* Search */}
+            <motion.form
+              onSubmit={handleSearch}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.24 }}
+              className="mt-10 flex items-stretch max-w-xl mx-auto lg:mx-0 rounded-2xl bg-ink-800 border border-cream/10 p-2 focus-within:border-brass-500/50 transition-colors"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cream-dim/60 pointer-events-none" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="City, neighborhood, or property type…"
+                  aria-label="Search properties"
+                  className="w-full h-full pl-12 pr-4 py-3 bg-transparent text-cream placeholder:text-cream-dim/50 focus:outline-none text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                className="group flex items-center gap-2 px-5 py-3 rounded-xl bg-brass-500 hover:bg-brass-400 text-ink-950 font-semibold text-sm transition-colors whitespace-nowrap"
+              >
+                Browse homes
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </motion.form>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-sm text-cream-dim"
+            >
+              {trustPoints.map((point) => (
+                <span key={point} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brass-400" />
+                  {point}
+                </span>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Golden-hour scene */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="relative mx-auto w-full max-w-md lg:max-w-lg"
+          >
+            <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border border-cream/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
+              <HeroFamilyScene />
+            </div>
+            {/* Floating settlement receipt card */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="absolute -bottom-6 -left-4 sm:-left-10 bg-ink-800 border border-cream/10 rounded-2xl px-5 py-4 shadow-2xl"
+            >
+              <p className="text-[11px] uppercase tracking-widest text-cream-dim mb-1">
+                Rent settled
+              </p>
+              <p className="text-cream font-semibold">
+                1,250 XLM{' '}
+                <span className="text-brand-green text-sm font-normal">
+                  · confirmed in 2.8s
                 </span>
               </p>
             </motion.div>
-          )}
-
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
-          >
-            <Link
-              href="#how-it-works"
-              className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/20 transition-all duration-200"
-            >
-              See How It Works
-            </Link>
-          </motion.div>
-
-          {/* Search Bar */}
-          <motion.form
-            onSubmit={handleSearch}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.35 }}
-            className="flex items-center gap-2 max-w-xl mx-auto w-full mt-2"
-          >
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300/60 pointer-events-none" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by location, property type..."
-                className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm transition-colors whitespace-nowrap"
-            >
-              Browse Properties
-            </button>
-          </motion.form>
-
-          {/* Trust Indicators */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-wrap items-center justify-center gap-6 pt-8 text-blue-200/80 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
-              <span>Instant Settlement</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
-              <span>Ultra-Low Fees</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
-              <span>Transparent Contracts</span>
-            </div>
           </motion.div>
         </div>
-
-        {/* Hero Visual */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.5 }}
-          className="mt-20 max-w-6xl mx-auto"
-        >
-          <div className="relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
-            <div className="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl overflow-hidden">
-              <Image
-                src="/dashboard-preview.png"
-                alt="Platform Dashboard Preview"
-                width={1200}
-                height={675}
-                className="w-full h-full object-fill"
-                priority
-              />
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

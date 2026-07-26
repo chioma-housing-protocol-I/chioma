@@ -342,13 +342,19 @@ soroban contract invoke \
 
 ## Mainnet Deployment
 
-When ready for mainnet:
+Mainnet handles **real funds** and has its own dedicated runbook and launch
+gate — do **not** improvise mainnet from this testnet guide.
 
-1. Repeat deployment steps with mainnet network
-2. Use production-grade admin keys (hardware wallet)
-3. Implement multi-sig governance
-4. Enable comprehensive monitoring
-5. Have incident response plan ready
+See **[MAINNET_DEPLOYMENT.md](./MAINNET_DEPLOYMENT.md)**, which covers:
+
+1. The production launch gate (an independent security audit is a **hard
+   blocker** — see [../security/AUDIT.md](../security/AUDIT.md))
+2. What changes from testnet (passphrase, RPC, no Friendbot) — captured in
+   [`.env.mainnet.example`](../../.env.mainnet.example)
+3. Production-grade admin keys (hardware wallet) and multisig governance
+4. Comprehensive monitoring
+5. Rollback/pause and incident response
+   ([../security/EMERGENCY-PROCEDURES.md](../security/EMERGENCY-PROCEDURES.md))
 
 ## Support
 

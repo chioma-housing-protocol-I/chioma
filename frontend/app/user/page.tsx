@@ -96,7 +96,8 @@ export default function UserDashboardOverview() {
   const { openModal } = useModal();
   const router = useRouter();
   const { loading } = useAuth();
-  const { data: apiAgreements = [] } = useUserAgreements();
+  const { data: agreementsResult } = useUserAgreements();
+  const apiAgreements = agreementsResult?.data ?? [];
   const { data: paymentsData } = usePayments({ limit: 50 });
   const apiPayments = paymentsData?.data ?? [];
 
@@ -413,7 +414,10 @@ export default function UserDashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <Link
+              href="/user/inquiries"
+              className="block bg-white/5 rounded-2xl p-4 border border-white/5 transition-colors hover:bg-white/10"
+            >
               <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
                 Inquiries
               </p>
@@ -424,7 +428,7 @@ export default function UserDashboardOverview() {
                   +8%
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>

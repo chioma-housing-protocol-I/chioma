@@ -16,15 +16,13 @@ describe('Batch Processing Integration', () => {
 
   const makeQueueMock = (overrides: Partial<any> = {}) => ({
     add: jest.fn().mockResolvedValue({ id: 'job-mock' }),
-    getJobCounts: jest
-      .fn()
-      .mockResolvedValue({
-        active: 0,
-        wait: 0,
-        delayed: 0,
-        failed: 0,
-        completed: 0,
-      }),
+    getJobCounts: jest.fn().mockResolvedValue({
+      active: 0,
+      wait: 0,
+      delayed: 0,
+      failed: 0,
+      completed: 0,
+    }),
     getFailed: jest.fn().mockResolvedValue([]),
     getDelayed: jest.fn().mockResolvedValue([]),
     isPaused: jest.fn().mockResolvedValue(false),
@@ -37,27 +35,23 @@ describe('Batch Processing Integration', () => {
 
   beforeEach(async () => {
     mockEmailQueue = makeQueueMock({
-      getJobCounts: jest
-        .fn()
-        .mockResolvedValue({
-          active: 2,
-          wait: 8,
-          delayed: 1,
-          failed: 0,
-          completed: 50,
-        }),
+      getJobCounts: jest.fn().mockResolvedValue({
+        active: 2,
+        wait: 8,
+        delayed: 1,
+        failed: 0,
+        completed: 50,
+      }),
     });
 
     mockDataSyncQueue = makeQueueMock({
-      getJobCounts: jest
-        .fn()
-        .mockResolvedValue({
-          active: 1,
-          wait: 4,
-          delayed: 0,
-          failed: 2,
-          completed: 30,
-        }),
+      getJobCounts: jest.fn().mockResolvedValue({
+        active: 1,
+        wait: 4,
+        delayed: 0,
+        failed: 2,
+        completed: 30,
+      }),
     });
 
     const module: TestingModule = await Test.createTestingModule({

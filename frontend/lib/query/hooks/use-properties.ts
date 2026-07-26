@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
-import type { Property, PaginatedResponse } from '@/types';
+import type { Property, PaginatedResponse, SearchResult, User } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,18 +89,27 @@ function buildQueryString(params: PropertyListParams): string {
   if (params.city) qs.append('city', params.city);
   if (params.state) qs.append('state', params.state);
   if (params.country) qs.append('country', params.country);
-  if (params.minPrice !== undefined) qs.append('minPrice', String(params.minPrice));
-  if (params.maxPrice !== undefined) qs.append('maxPrice', String(params.maxPrice));
-  if (params.minBedrooms !== undefined) qs.append('minBedrooms', String(params.minBedrooms));
-  if (params.maxBedrooms !== undefined) qs.append('maxBedrooms', String(params.maxBedrooms));
-  if (params.minBathrooms !== undefined) qs.append('minBathrooms', String(params.minBathrooms));
-  if (params.maxBathrooms !== undefined) qs.append('maxBathrooms', String(params.maxBathrooms));
+  if (params.minPrice !== undefined)
+    qs.append('minPrice', String(params.minPrice));
+  if (params.maxPrice !== undefined)
+    qs.append('maxPrice', String(params.maxPrice));
+  if (params.minBedrooms !== undefined)
+    qs.append('minBedrooms', String(params.minBedrooms));
+  if (params.maxBedrooms !== undefined)
+    qs.append('maxBedrooms', String(params.maxBedrooms));
+  if (params.minBathrooms !== undefined)
+    qs.append('minBathrooms', String(params.minBathrooms));
+  if (params.maxBathrooms !== undefined)
+    qs.append('maxBathrooms', String(params.maxBathrooms));
   if (params.type) qs.append('type', params.type);
   if (params.status) qs.append('status', params.status);
   if (params.search) qs.append('search', params.search);
-  if (params.isFurnished !== undefined) qs.append('isFurnished', String(params.isFurnished));
-  if (params.hasParking !== undefined) qs.append('hasParking', String(params.hasParking));
-  if (params.petsAllowed !== undefined) qs.append('petsAllowed', String(params.petsAllowed));
+  if (params.isFurnished !== undefined)
+    qs.append('isFurnished', String(params.isFurnished));
+  if (params.hasParking !== undefined)
+    qs.append('hasParking', String(params.hasParking));
+  if (params.petsAllowed !== undefined)
+    qs.append('petsAllowed', String(params.petsAllowed));
   if (params.sortBy) qs.append('sortBy', params.sortBy);
   if (params.sortOrder) qs.append('sortOrder', params.sortOrder);
   const str = qs.toString();
@@ -186,6 +195,112 @@ export function useInfiniteProperties(
       if (lastPage.page < lastPage.totalPages) return lastPage.page + 1;
       return undefined;
     },
+  });
+}
+
+// ─── Search Hooks ────────────────────────────────────────────────────────────
+
+export interface PropertySearchParams {
+  q?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  type?: string;
+  status?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+  furnished?: string;
+  parking?: string;
+  petsAllowed?: string;
+  amenities?: string;
+  lat?: string;
+  lng?: string;
+  radiusKm?: string;
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  [key: string]: string | undefined;
+}
+
+function buildSearchQueryString(params: PropertySearchParams): string {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== '' && val !== null) {
+      qs.append(key, val);
+    }
+  });
+  const str = qs.toString();
+  return str ? `?${str}` : '';
+}
+
+/**
+ * Fetch search results from the dedicated search/properties endpoint
+ * with full-text search, filters, faceting, and pagination.
+ */
+export function useSearchProperties(params: PropertySearchParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.search.properties(params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<SearchResult<Property>>(
+        `/search/properties${buildSearchQueryString(params)}`,
+      );
+      return data;
+    },
+  });
+}
+
+/**
+ * Search users by name, email, role, or status.
+ */
+export function useSearchUsers(params: PropertySearchParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.search.users(params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        items: User[];
+        total: number;
+        page: number;
+        limit: number;
+      }>(`/search/users${buildSearchQueryString(params)}`);
+      return data;
+    },
+  });
+}
+
+/**
+ * Search documents (agreements) by status, party, date, or amount.
+ */
+export function useSearchDocuments(params: PropertySearchParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.search.documents(params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        items: Record<string, unknown>[];
+        total: number;
+        page: number;
+        limit: number;
+      }>(`/search/documents${buildSearchQueryString(params)}`);
+      return data;
+    },
+  });
+}
+
+/**
+ * Autocomplete suggestions for the search bar.
+ */
+export function useSearchSuggest(q: string) {
+  return useQuery({
+    queryKey: queryKeys.search.suggest(q),
+    queryFn: async () => {
+      const { data } = await apiClient.get<string[]>(
+        `/search/suggest?q=${encodeURIComponent(q)}`,
+      );
+      return data;
+    },
+    enabled: q.length >= 2,
   });
 }
 

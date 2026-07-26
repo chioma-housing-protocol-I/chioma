@@ -535,7 +535,7 @@ curl -X GET http://localhost:3000/health
 **Frontend Health Check**:
 
 ```bash
-curl -X GET http://localhost:3001/api/health
+curl -X GET http://localhost:5000/api/health
 # Response: { "status": "ok" }
 ```
 

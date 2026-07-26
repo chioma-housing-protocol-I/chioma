@@ -63,8 +63,8 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   const openDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute',
@@ -323,6 +323,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       expect(result).toEqual(mockEvidence);
       expect(mockEvidenceRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          uploadedBy: 'user-1',
           fileName: 'evidence.pdf',
           fileType: 'application/pdf',
         }),
@@ -395,6 +396,12 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       );
 
       expect(result).toEqual(mockComment);
+      expect(mockCommentRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          content: 'I have a question',
+        }),
+      );
       expect(mockCommentRepository.save).toHaveBeenCalled();
     });
 

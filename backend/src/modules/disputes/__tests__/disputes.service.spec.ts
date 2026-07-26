@@ -60,8 +60,8 @@ describe('DisputesService', () => {
   const mockDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute description',
@@ -210,6 +210,8 @@ describe('DisputesService', () => {
       expect(queryRunner.manager.create).toHaveBeenCalledWith(
         Dispute,
         expect.objectContaining({
+          agreement: mockAgreement,
+          initiatedBy: 'user-1',
           disputeType: DisputeType.RENT_PAYMENT,
           requestedAmount: 500,
           description: 'Test dispute description',
@@ -293,6 +295,33 @@ describe('DisputesService', () => {
         where: { disputeId: 'dispute-uuid-1' },
         relations: expect.any(Array),
       });
+    });
+  });
+
+  describe('update', () => {
+    it('allows a non-admin party to appeal a rejected dispute back to OPEN', async () => {
+      const rejectedDispute = {
+        ...mockDispute,
+        status: DisputeStatus.REJECTED,
+        agreement: mockAgreement,
+      } as Dispute;
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(rejectedDispute);
+      jest
+        .spyOn(disputeRepository, 'save')
+        .mockImplementation(async (input) => input as Dispute);
+      jest.spyOn(_userRepository, 'findOne').mockResolvedValue(mockUser);
+
+      const result = await service.update(
+        1,
+        { status: DisputeStatus.OPEN },
+        'user-1',
+      );
+
+      expect(result.status).toBe(DisputeStatus.OPEN);
+      expect(disputeRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: DisputeStatus.OPEN }),
+      );
     });
   });
 

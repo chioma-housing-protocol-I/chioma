@@ -84,7 +84,7 @@ export class MaintenanceController {
     @Body() body: UpdateMaintenanceStatusDto,
     @Req() req: any,
   ) {
-    const isLandlordOrAgent = [UserRole.ADMIN, UserRole.ADMIN].includes(
+    const isLandlordOrAgent = [UserRole.ADMIN, UserRole.AGENT].includes(
       req.user.role,
     );
     if (!isLandlordOrAgent)

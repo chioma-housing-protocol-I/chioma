@@ -104,7 +104,8 @@ export class ErrorFactory {
       const message =
         typeof response === 'string'
           ? response
-          : (response as any).message || error.message;
+          : ((response as Record<string, unknown>).message as string) ||
+            error.message;
 
       return new BaseAppError(
         this.httpStatusToErrorCode(status),

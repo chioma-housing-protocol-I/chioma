@@ -27,6 +27,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { AuthResponseDto, MessageResponseDto } from './dto/auth-response.dto';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -169,7 +170,10 @@ export class AuthController {
     const startTime = Date.now();
 
     try {
-      const result = await this.authService.login(loginDto);
+      const result = await this.authService.login(loginDto, {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') ?? undefined,
+      });
       const duration = Date.now() - startTime;
 
       // If MFA is required, return MFA token
@@ -258,7 +262,11 @@ export class AuthController {
       role: string;
       type: string;
     }>(completeMfaLoginDto.mfaToken, {
-      secret: this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+      secret: (() => {
+        const s = this.configService.get<string>('JWT_SECRET');
+        if (!s) throw new Error('JWT_SECRET is required');
+        return s;
+      })(),
     });
 
     if (payload.type !== 'mfa_required') {
@@ -475,6 +483,59 @@ export class AuthController {
     @Query() verifyEmailDto: VerifyEmailDto,
   ): Promise<MessageResponseDto> {
     return this.authService.verifyEmail(verifyEmailDto.token);
+  }
+
+  @Post('resend-verification')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Resend email verification link',
+    description:
+      'Re-sends the verification email for the current user. Idempotent: an existing, unexpired token is reused so previously sent links keep working.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent (or email already verified)',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: ErrorResponseDto,
+  })
+  async resendVerification(
+    @CurrentUser() user: User,
+  ): Promise<MessageResponseDto> {
+    return this.authService.resendVerificationEmail(user.id);
+  }
+
+  @Post('complete-profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Attach an email to a wallet-only account',
+    description:
+      'Completes onboarding for wallet-based sign-ins by adding an email address and sending a verification link.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile saved, verification email sent',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already registered to another account',
+    type: ErrorResponseDto,
+  })
+  async completeProfile(
+    @CurrentUser() user: User,
+    @Body() completeProfileDto: CompleteProfileDto,
+  ): Promise<MessageResponseDto> {
+    return this.authService.completeProfile(user.id, completeProfileDto);
   }
 
   @Post('mfa/enable')

@@ -11,6 +11,7 @@ import {
   Users,
   Flag,
   MessageSquare,
+  Inbox,
 } from 'lucide-react';
 
 export const userNavItems: navItems[] = [
@@ -43,6 +44,11 @@ export const userNavItems: navItems[] = [
     name: 'Messages',
     href: '/user/messages',
     icon: MessageSquare,
+  },
+  {
+    name: 'Inquiries',
+    href: '/user/inquiries',
+    icon: Inbox,
   },
   {
     name: 'Contracts',

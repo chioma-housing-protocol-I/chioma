@@ -19,6 +19,7 @@ import {
   useTenantDisputes,
   TenantDisputeRecord,
 } from '@/lib/query/hooks/use-tenant-disputes';
+import { useUploadTenantDisputeEvidence } from '@/lib/query/hooks/use-tenant-dispute';
 import { formatDistanceToNow } from 'date-fns';
 import { useModal } from '@/contexts/ModalContext';
 import type { EvidenceUploadData } from '@/components/modals/EvidenceUploadModal';
@@ -48,6 +49,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
     'ALL',
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const uploadEvidenceMutation = useUploadTenantDisputeEvidence();
 
   const {
     data: disputes = [],
@@ -162,16 +164,16 @@ export function DisputesList({ className = '' }: DisputesListProps) {
                     createdAt: row.original.createdAt,
                     updatedAt: row.original.updatedAt,
                   },
-                  onUploadEvidence: (disputeId: string) =>
+                  onUploadEvidence: (_disputeId: string) =>
                     openModal('evidenceUpload', {
-                      disputeId,
+                      disputeId: row.original.backendDisputeId,
                       disputeTitle: row.original.disputeId,
                       onUpload: async (data: EvidenceUploadData) => {
-                        const { apiClient } = await import('@/lib/api-client');
-                        await apiClient.post(
-                          `/disputes/${disputeId}/evidence`,
-                          data,
-                        );
+                        await uploadEvidenceMutation.mutateAsync({
+                          disputeId: data.disputeId,
+                          files: data.files,
+                          description: data.description,
+                        });
                       },
                     }),
                 })
@@ -191,7 +193,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
         ),
       },
     ],
-    [openModal],
+    [openModal, uploadEvidenceMutation],
   );
 
   const table = useReactTable({

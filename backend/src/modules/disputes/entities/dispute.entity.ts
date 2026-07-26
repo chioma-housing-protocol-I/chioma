@@ -38,15 +38,15 @@ export class Dispute {
   @Column({ name: 'dispute_id', unique: true })
   disputeId: string;
 
-  @Column({ name: 'agreement_id' })
-  agreementId: number;
+  @Column({ name: 'agreement_id', type: 'uuid' })
+  agreementId: string;
 
   @ManyToOne(() => RentAgreement, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'agreement_id' })
   agreement: RentAgreement;
 
-  @Column({ name: 'initiated_by' })
-  initiatedBy: number;
+  @Column({ name: 'initiated_by', type: 'uuid' })
+  initiatedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'initiated_by' })
@@ -81,8 +81,8 @@ export class Dispute {
   @Column({ type: 'text', nullable: true })
   resolution: string;
 
-  @Column({ name: 'resolved_by', nullable: true })
-  resolvedBy: number;
+  @Column({ name: 'resolved_by', type: 'uuid', nullable: true })
+  resolvedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'resolved_by' })

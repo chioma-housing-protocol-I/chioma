@@ -242,7 +242,58 @@ export class ReviewsService {
     };
   }
 
+  async getMyReviews(userId: string, page = 1, limit = 20, filters: any = {}) {
+    const query = this.reviewRepository
+      .createQueryBuilder('review')
+      .where('(review.reviewerId = :userId OR review.revieweeId = :userId)', {
+        userId,
+      });
+
+    if (filters.rating) {
+      query.andWhere('review.rating = :rating', { rating: filters.rating });
+    }
+    if (filters.status) {
+      if (filters.status === 'FLAGGED') {
+        query.andWhere('review.reported = :reported', { reported: true });
+      } else if (filters.status === 'PUBLISHED') {
+        query.andWhere('review.reported = :reported', { reported: false });
+      }
+    }
+    if (filters.search) {
+      query.andWhere('review.comment ILIKE :search', {
+        search: `%${filters.search}%`,
+      });
+    }
+
+    const [items, total] = await query
+      .orderBy('review.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async updateReview(id: string, dto: UpdateReviewDto, userId: string) {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+    });
+    if (review) {
+      if (review.reviewerId !== userId) {
+        throw new AuthorizationError('Not authorized');
+      }
+      Object.assign(review, dto);
+      return this.reviewRepository.save(review);
+    }
+
     const guestReview = await this.guestReviewRepository.findOne({
       where: { id },
     });
@@ -269,6 +320,17 @@ export class ReviewsService {
   }
 
   async deleteReview(id: string, userId: string) {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+    });
+    if (review) {
+      if (review.reviewerId !== userId) {
+        throw new AuthorizationError('Not authorized');
+      }
+      await this.reviewRepository.delete({ id });
+      return { deleted: true };
+    }
+
     const guestReview = await this.guestReviewRepository.findOne({
       where: { id },
     });

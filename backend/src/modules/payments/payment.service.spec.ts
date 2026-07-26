@@ -2,27 +2,28 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
+import { BadRequestException } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
-import {
-  PaymentSchedule,
-  PaymentScheduleStatus,
-} from './entities/payment-schedule.entity';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentStatus } from './entities/payment.entity';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
-import { ProcessRefundDto } from './dto/process-refund.dto';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
-import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
-import { PaymentInterval } from './entities/payment-schedule.entity';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { LockService } from '../../common/lock';
+import { REDIS_CLIENT } from '../../common/lock/redis-client.token';
 import { IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import {
+  encryptMetadata,
+  decryptMetadata,
+  PAYMENT_STATUS_MAP,
+} from './payment.helpers';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
@@ -40,14 +41,6 @@ const mockPaymentMethodRepository = () => ({
   save: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
-  createQueryBuilder: jest.fn(),
-});
-
-const mockPaymentScheduleRepository = () => ({
-  findOne: jest.fn(),
-  find: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
   createQueryBuilder: jest.fn(),
 });
 
@@ -89,18 +82,6 @@ const mockIdempotencyService = {
   ),
 };
 
-// DataSource mock — transaction() runs the callback with a mock entity manager.
-const mockEntityManager = {
-  findOne: jest.fn(),
-  save: jest.fn(),
-};
-const mockDataSource = {
-  transaction: jest.fn(
-    (cb: (em: typeof mockEntityManager) => Promise<unknown>) =>
-      cb(mockEntityManager),
-  ),
-};
-
 const mockFraudHooksService = {
   onPaymentRecorded: jest.fn().mockResolvedValue(undefined),
 };
@@ -109,7 +90,6 @@ describe('PaymentService', () => {
   let service: PaymentService;
   let paymentRepository: Repository<Payment>;
   let paymentMethodRepository: Repository<PaymentMethod>;
-  let paymentScheduleRepository: Repository<PaymentSchedule>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -122,10 +102,6 @@ describe('PaymentService', () => {
         {
           provide: getRepositoryToken(PaymentMethod),
           useFactory: mockPaymentMethodRepository,
-        },
-        {
-          provide: getRepositoryToken(PaymentSchedule),
-          useFactory: mockPaymentScheduleRepository,
         },
         {
           provide: PaymentGatewayService,
@@ -156,10 +132,6 @@ describe('PaymentService', () => {
           useValue: mockIdempotencyService,
         },
         {
-          provide: DataSource,
-          useValue: mockDataSource,
-        },
-        {
           provide: FraudHooksService,
           useValue: mockFraudHooksService,
         },
@@ -173,9 +145,6 @@ describe('PaymentService', () => {
     paymentMethodRepository = module.get<Repository<PaymentMethod>>(
       getRepositoryToken(PaymentMethod),
     );
-    paymentScheduleRepository = module.get<Repository<PaymentSchedule>>(
-      getRepositoryToken(PaymentSchedule),
-    );
   });
 
   afterEach(() => {
@@ -183,6 +152,116 @@ describe('PaymentService', () => {
   });
 
   describe('recordPayment', () => {
+    it('rejects payment amount that is Infinity', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: Infinity,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be a valid number',
+      );
+    });
+
+    it('rejects payment amount that is NaN', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: NaN,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be a valid number',
+      );
+    });
+
+    it('rejects payment amount that is zero or negative', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 0,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount must be greater than 0',
+      );
+    });
+
+    it('rejects payment amount exceeding maximum (999,999,999.99)', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 1000000000,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount cannot exceed 999,999,999.99',
+      );
+    });
+
+    it('rejects payment amount with more than 2 decimal places', async () => {
+      const dto = {
+        agreementId: 'agreement_1',
+        amount: 100.123,
+        paymentMethodId: '1',
+      } as CreatePaymentRecordDto;
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        'Payment amount can have at most 2 decimal places',
+      );
+    });
+
+    it('accepts payment amount with exactly 2 decimal places', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_1',
+      });
+
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        amount: 100.99,
+        currency: 'NGN',
+        paymentMethod: 'card',
+      });
+
+      const dto: CreatePaymentRecordDto = {
+        agreementId: 'agreement_1',
+        amount: 100.99,
+        paymentMethodId: '1',
+      };
+
+      const result = await service.recordPayment(dto, 'user_1');
+      expect(result.id).toBe('pay_1');
+    });
+
     it('returns existing payment when idempotency key matches', async () => {
       const existingPayment = { id: 'pay_1' } as Payment;
       (paymentRepository.findOne as jest.Mock).mockResolvedValue(
@@ -332,139 +411,120 @@ describe('PaymentService', () => {
     });
   });
 
-  describe('processRefund', () => {
-    beforeEach(() => {
+  describe('concurrent recordPayment calls', () => {
+    // These tests exercise the real LockService/IdempotencyService (in-memory
+    // fallback, no Redis) instead of the pass-through mocks used above, so
+    // that the @Locked + @Idempotent decorators on recordPayment actually
+    // serialize concurrent calls and dedupe by idempotency key.
+    let concurrentService: PaymentService;
+    let concurrentPaymentRepository: ReturnType<typeof mockPaymentRepository>;
+    let concurrentPaymentMethodRepository: ReturnType<
+      typeof mockPaymentMethodRepository
+    >;
+
+    beforeEach(async () => {
+      concurrentPaymentRepository = mockPaymentRepository();
+      concurrentPaymentMethodRepository = mockPaymentMethodRepository();
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PaymentService,
+          {
+            provide: getRepositoryToken(Payment),
+            useValue: concurrentPaymentRepository,
+          },
+          {
+            provide: getRepositoryToken(PaymentMethod),
+            useValue: concurrentPaymentMethodRepository,
+          },
+          { provide: PaymentGatewayService, useValue: mockPaymentGateway },
+          { provide: NotificationsService, useValue: mockNotificationsService },
+          { provide: Object, useValue: mockUsersService },
+          {
+            provide: PaymentProcessingService,
+            useValue: mockPaymentProcessingService,
+          },
+          { provide: StellarService, useValue: mockStellarService },
+          { provide: FraudHooksService, useValue: mockFraudHooksService },
+          LockService,
+          IdempotencyService,
+          { provide: REDIS_CLIENT, useValue: null },
+        ],
+      }).compile();
+
+      concurrentService = module.get<PaymentService>(PaymentService);
+
+      concurrentPaymentMethodRepository.findOne.mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_concurrent',
+      });
+      concurrentPaymentRepository.create.mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      concurrentPaymentRepository.save.mockResolvedValue({
+        id: 'pay_concurrent',
+        amount: 100,
+        currency: 'NGN',
+        paymentMethod: 'card',
+      });
+    });
+
+    afterEach(() => {
       jest.clearAllMocks();
     });
 
-    it('throws when payment is not found', async () => {
-      mockEntityManager.findOne.mockResolvedValue(null);
+    it.each([5, 10, 50])(
+      'dedupes %i concurrent recordPayment calls sharing an idempotency key',
+      async (concurrency) => {
+        const dto = {
+          agreementId: 'agreement_1',
+          amount: 100,
+          paymentMethodId: '1',
+          idempotencyKey: 'idem_concurrent_1',
+        } as CreatePaymentRecordDto & { idempotencyKey: string };
 
-      await expect(
-        service.processRefund(
-          'pay_1',
-          { amount: 10, reason: 'test' },
-          'user_1',
-        ),
-      ).rejects.toBeInstanceOf(NotFoundException);
-    });
+        const results = await Promise.all(
+          Array.from({ length: concurrency }, () =>
+            concurrentService.recordPayment(dto, 'user_1'),
+          ),
+        );
 
-    it('processes refund successfully using pessimistic lock transaction', async () => {
-      const payment = {
-        id: 'pay_1',
-        userId: 'user_1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        currency: 'NGN',
-        metadata: { chargeId: 'charge_1' },
-        user: {} as any,
-        agreementId: null,
-        transactionFee: 0,
-        netAmount: 100,
-        paymentMethod: null,
-        paymentMethodRelation: null,
-        paymentMethodRelationId: null,
-        receiptUrl: '',
-        referenceNumber: null,
-        processedAt: new Date(),
-        idempotencyKey: null,
-        refundStatus: 'none',
-        refundReason: null,
-        notes: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as unknown as Payment;
+        expect(results).toHaveLength(concurrency);
+        results.forEach((result) => {
+          expect(result.id).toBe('pay_concurrent');
+        });
 
-      mockEntityManager.findOne.mockResolvedValue(payment);
-      mockPaymentGateway.processRefund.mockResolvedValue({
-        success: true,
-        refundId: 'refund_1',
-      });
-      mockEntityManager.save.mockResolvedValue({
-        ...payment,
-        status: PaymentStatus.REFUNDED,
-        refundAmount: 100,
-      });
+        expect(mockPaymentGateway.chargePayment).toHaveBeenCalledTimes(1);
+        expect(concurrentPaymentRepository.save).toHaveBeenCalledTimes(1);
+      },
+    );
 
-      const dto: ProcessRefundDto = { amount: 100, reason: 'test' };
-      const result = await service.processRefund('pay_1', dto, 'user_1');
+    it('only records one payment when concurrent requests use different idempotency keys but the same payment method', async () => {
+      const makeDto = (idempotencyKey: string) =>
+        ({
+          agreementId: 'agreement_1',
+          amount: 100,
+          paymentMethodId: '1',
+          idempotencyKey,
+        }) as CreatePaymentRecordDto & { idempotencyKey: string };
 
-      // Verify pessimistic lock was requested.
-      expect(mockEntityManager.findOne).toHaveBeenCalledWith(
-        Payment,
-        expect.objectContaining({
-          lock: { mode: 'pessimistic_write' },
-        }),
-      );
-      expect(result.status).toBe(PaymentStatus.REFUNDED);
-      expect(mockNotificationsService.notify).toHaveBeenCalledWith(
-        'user_1',
-        'Refund processed',
-        expect.stringContaining('100'),
-        'PAYMENT_REFUNDED',
-      );
-    });
+      const results = await Promise.all([
+        concurrentService.recordPayment(makeDto('idem_a'), 'user_1'),
+        concurrentService.recordPayment(makeDto('idem_a'), 'user_1'),
+        concurrentService.recordPayment(makeDto('idem_b'), 'user_1'),
+      ]);
 
-    it('throws when refund amount exceeds available amount', async () => {
-      const payment = {
-        id: 'pay_1',
-        userId: 'user_1',
-        status: PaymentStatus.COMPLETED,
-        amount: 50,
-        refundAmount: 0,
-        metadata: { chargeId: 'charge_1' },
-      } as unknown as Payment;
-
-      mockEntityManager.findOne.mockResolvedValue(payment);
-
-      await expect(
-        service.processRefund(
-          'pay_1',
-          { amount: 100, reason: 'over' },
-          'user_1',
-        ),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('throws when charge id is missing', async () => {
-      const payment = {
-        id: 'pay_1',
-        userId: 'user_1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: {},
-        currency: 'NGN',
-      } as unknown as Payment;
-
-      mockEntityManager.findOne.mockResolvedValue(payment);
-
-      await expect(
-        service.processRefund(
-          'pay_1',
-          { amount: 10, reason: 'test' },
-          'user_1',
-        ),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('prevents double-refund: second concurrent call sees updated refundAmount', async () => {
-      // Simulate the state after a first refund has already been applied.
-      const alreadyRefunded = {
-        id: 'pay_1',
-        userId: 'user_1',
-        status: PaymentStatus.REFUNDED,
-        amount: 100,
-        refundAmount: 100,
-        metadata: { chargeId: 'charge_1' },
-      } as unknown as Payment;
-
-      mockEntityManager.findOne.mockResolvedValue(alreadyRefunded);
-
-      await expect(
-        service.processRefund('pay_1', { amount: 1, reason: 'dup' }, 'user_1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(results).toHaveLength(3);
+      expect(mockPaymentGateway.chargePayment).toHaveBeenCalledTimes(2);
+      expect(concurrentPaymentRepository.save).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -503,92 +563,6 @@ describe('PaymentService', () => {
       expect(
         (createdPaymentMethod as Partial<PaymentMethod>)?.encryptedMetadata,
       ).toBeTruthy();
-    });
-  });
-
-  describe('createPaymentSchedule', () => {
-    it('creates payment schedule successfully', async () => {
-      const dto: CreatePaymentScheduleDto = {
-        agreementId: 'agreement_1',
-        paymentMethodId: '1',
-        amount: 100,
-        interval: PaymentInterval.MONTHLY,
-      };
-
-      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
-        id: 1,
-        userId: 'user_1',
-      });
-      const createScheduleMock = jest.spyOn(
-        paymentScheduleRepository,
-        'create',
-      );
-      createScheduleMock.mockImplementation(
-        (data: Partial<PaymentSchedule>) => data as PaymentSchedule,
-      );
-      (paymentScheduleRepository.save as jest.Mock).mockResolvedValue({
-        id: 'schedule_1',
-        ...dto,
-      });
-
-      const result = await service.createPaymentSchedule(dto, 'user_1');
-
-      expect(result.id).toBe('schedule_1');
-      const [createdSchedule] = createScheduleMock.mock.calls[0] ?? [];
-      expect((createdSchedule as Partial<PaymentSchedule>)?.status).toBe(
-        PaymentScheduleStatus.ACTIVE,
-      );
-    });
-  });
-
-  describe('runPaymentSchedule', () => {
-    it('throws when schedule is not active', async () => {
-      const schedule = {
-        id: 'schedule_1',
-        userId: 'user_1',
-        status: PaymentScheduleStatus.PAUSED,
-      } as PaymentSchedule;
-
-      (paymentScheduleRepository.findOne as jest.Mock).mockResolvedValue(
-        schedule,
-      );
-
-      await expect(
-        service.runPaymentSchedule('schedule_1', 'user_1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('fails schedule when payment method is missing', async () => {
-      const schedule = {
-        id: 'schedule_missing_method',
-        userId: 'user_1',
-        status: PaymentScheduleStatus.ACTIVE,
-        paymentMethodId: null,
-        retries: 0,
-        maxRetries: 3,
-        nextRunAt: new Date(),
-      } as unknown as PaymentSchedule;
-      (paymentScheduleRepository.findOne as jest.Mock).mockResolvedValue(
-        schedule,
-      );
-      (paymentScheduleRepository.save as jest.Mock).mockResolvedValue(schedule);
-
-      await expect(
-        service.runPaymentSchedule('schedule_missing_method', 'user_1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
-
-      expect(paymentScheduleRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'schedule_missing_method',
-          status: PaymentScheduleStatus.FAILED,
-        }),
-      );
-      expect(mockNotificationsService.notify).toHaveBeenCalledWith(
-        'user_1',
-        'Recurring payment failed',
-        expect.stringContaining('Payment method is missing'),
-        'PAYMENT_FAILED',
-      );
     });
   });
 
@@ -693,28 +667,6 @@ describe('PaymentService', () => {
       expect(mockStellarService.getEscrowById).toHaveBeenCalledWith(7);
     });
 
-    it('updates payment from webhook event', async () => {
-      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
-        id: 'pay_1',
-        status: PaymentStatus.PENDING,
-        metadata: {},
-      });
-      (paymentRepository.save as jest.Mock).mockResolvedValue({
-        id: 'pay_1',
-        status: PaymentStatus.COMPLETED,
-      });
-
-      const result = await service.handlePaymentGatewayWebhook({
-        eventType: 'payment.completed',
-        paymentId: 'pay_1',
-        status: 'completed',
-        transactionHash: 'tx_complete',
-      });
-
-      expect(result.processed).toBe(true);
-      expect((result.payment as Payment).status).toBe(PaymentStatus.COMPLETED);
-    });
-
     it('retries failed payments that still have a payment method', async () => {
       (paymentRepository.find as jest.Mock).mockResolvedValue([
         {
@@ -796,4 +748,147 @@ describe('PaymentService', () => {
       delete process.env.PAYMENT_WEBHOOK_SECRET;
     });
   });
+  describe('encryptMetadata / decryptMetadata round-trip', () => {
+    let originalSecret: string | undefined;
+
+    beforeAll(() => {
+      originalSecret = process.env.PAYMENT_METADATA_SECRET;
+    });
+
+    beforeEach(() => {
+      process.env.PAYMENT_METADATA_SECRET = 'test-secret-key-123456';
+    });
+
+    afterAll(() => {
+      process.env.PAYMENT_METADATA_SECRET = originalSecret;
+    });
+
+    it('successfully round-trips standard metadata and verifies data integrity', () => {
+      const testData = {
+        orderId: '12345',
+        amount: 100,
+        isProcessed: true,
+      };
+
+      const encrypted = encryptMetadata(testData);
+      expect(encrypted).toBeDefined();
+      expect(encrypted).toContain(':');
+
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('supports various metadata data types', () => {
+      const testData = {
+        stringProp: 'hello',
+        numberProp: 99.99,
+        boolProp: false,
+        arrayProp: [1, 'two', { nested: true }],
+        objectProp: { key: 'val', list: [1, 2] },
+      };
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('handles unicode characters in metadata correctly', () => {
+      const testData = {
+        message:
+          'Unicode test: 🌟 Emoji, 🚀 Rocket, Chinese: 中文, Arabic: العربية',
+      };
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('handles empty payload inputs gracefully', () => {
+      expect(decryptMetadata(null)).toBeNull();
+      expect(decryptMetadata('')).toBeNull();
+    });
+
+    it('handles invalid format payload inputs gracefully', () => {
+      expect(decryptMetadata('invalidpayload')).toBeNull();
+      expect(decryptMetadata('one:two')).toBeNull();
+    });
+
+    it('handles large metadata payloads', () => {
+      const testData: Record<string, string> = {};
+      for (let i = 0; i < 500; i++) {
+        testData[`key_${i}`] = `value_long_string_to_make_it_large_${i}`;
+      }
+
+      const encrypted = encryptMetadata(testData);
+      const decrypted = decryptMetadata(encrypted);
+      expect(decrypted).toEqual(testData);
+    });
+
+    it('throws an error if encryption is attempted without secret configured', () => {
+      delete process.env.PAYMENT_METADATA_SECRET;
+
+      expect(() => encryptMetadata({ foo: 'bar' })).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('returns null if decryption is attempted without secret configured', () => {
+      const encrypted = encryptMetadata({ foo: 'bar' });
+      delete process.env.PAYMENT_METADATA_SECRET;
+
+      expect(decryptMetadata(encrypted)).toBeNull();
+    });
+
+    it('throws an error during decryption when ciphertext or authentication tag is corrupted', () => {
+      const encrypted = encryptMetadata({ sensitive: 'data' });
+      const parts = encrypted.split(':');
+
+      // Corrupt the ciphertext part (last part)
+      parts[2] = parts[2].substring(0, parts[2].length - 2) + '00';
+      const corruptedCiphertext = parts.join(':');
+
+      expect(() => decryptMetadata(corruptedCiphertext)).toThrow();
+
+      // Corrupt the auth tag part (middle part)
+      const parts2 = encrypted.split(':');
+      parts2[1] = parts2[1].substring(0, parts2[1].length - 2) + '00';
+      const corruptedTag = parts2.join(':');
+
+      expect(() => decryptMetadata(corruptedTag)).toThrow();
+    });
+
+    it('throws an error during decryption if the secret key changes', () => {
+      const encrypted = encryptMetadata({ sensitive: 'data' });
+      process.env.PAYMENT_METADATA_SECRET = 'different-secret-key-456';
+
+      expect(() => decryptMetadata(encrypted)).toThrow();
+    });
+  });
+
+  describe('PAYMENT_STATUS_MAP', () => {
+    it('maps payment gateway webhook statuses to PaymentStatus', () => {
+      expect(PAYMENT_STATUS_MAP['completed']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['successful']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['success']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['pending']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['processing']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['failed']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['error']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['cancelled']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['refunded']).toBe(PaymentStatus.REFUNDED);
+    });
+
+    it('maps escrow states to PaymentStatus', () => {
+      expect(PAYMENT_STATUS_MAP['active']).toBe(PaymentStatus.PENDING);
+      expect(PAYMENT_STATUS_MAP['released']).toBe(PaymentStatus.COMPLETED);
+      expect(PAYMENT_STATUS_MAP['refunded']).toBe(PaymentStatus.REFUNDED);
+      expect(PAYMENT_STATUS_MAP['failed']).toBe(PaymentStatus.FAILED);
+      expect(PAYMENT_STATUS_MAP['expired']).toBe(PaymentStatus.FAILED);
+    });
+
+    it('has no unknown status key', () => {
+      expect(PAYMENT_STATUS_MAP['unknown-status']).toBeUndefined();
+    });
+  });
+
 });

@@ -9,6 +9,12 @@ import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Property, PropertyInquiry, SubletBooking]),
+import { Payment } from '../payments/entities/payment.entity';
+import { AuditLog } from '../audit/entities/audit-log.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Property, PropertyInquiry, Payment, AuditLog]),
   ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],

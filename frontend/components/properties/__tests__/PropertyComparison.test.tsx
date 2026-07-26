@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
+import PropertyComparison from '../PropertyComparison';
 
 vi.mock('next/image', () => ({
   default: ({
@@ -13,8 +14,6 @@ vi.mock('next/image', () => ({
     [key: string]: unknown;
   }) => React.createElement('img', { src, alt, ...props }),
 }));
-
-import PropertyComparison from '../PropertyComparison';
 
 const mockProperties = [
   {
@@ -103,7 +102,6 @@ describe('PropertyComparison', () => {
       React.createElement(PropertyComparison, { properties: mockProperties }),
     );
     expect(screen.getByText('3')).toBeInTheDocument();
-    // "1" appears for both bedrooms and bathrooms; verify at least two occurrences
     expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
   });
 

@@ -6,3 +6,4 @@ export * from './date.utils';
 export * from './crypto.utils';
 export * from './file.utils';
 export * from './notification.utils';
+export * from './format.utils';

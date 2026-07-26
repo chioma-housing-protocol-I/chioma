@@ -11,8 +11,9 @@ assignees: ""
 **Do NOT disclose security vulnerabilities publicly!**
 
 - Email security@chioma.dev instead
-- Or use GitHub's private vulnerability reporting
-- See SECURITY.md for responsible disclosure
+- Or use GitHub's private vulnerability reporting (Security tab → "Report a vulnerability")
+- See [SECURITY.md](../../SECURITY.md) for full scope, response timelines, and responsible
+  disclosure guidelines
 
 ## 📝 Description
 

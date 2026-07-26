@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, Search, User } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications';
@@ -88,12 +89,12 @@ export default function UserDashboardLayout({
                 <Search size={20} />
               </button>
 
-              <a
+              <Link
                 href="/user/properties/wizard"
                 className="hidden sm:flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 Add new listing
-              </a>
+              </Link>
               <NotificationBell
                 viewAllHref="/user/notifications"
                 size={20}
@@ -124,7 +125,11 @@ export default function UserDashboardLayout({
           fallbackTitle="User content failed"
           fallbackDescription="This user section encountered an issue. Retry to restore it."
         >
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-x-hidden"
+          >
             {loading ? (
               <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
                 <div className="flex flex-col items-center space-y-4">

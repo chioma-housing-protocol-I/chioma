@@ -82,7 +82,7 @@ describe('TimeoutService', () => {
 
       const err = await race.catch((e: unknown) => e);
       expect(err).toBeInstanceOf(ExternalCallTimeoutError);
-      expect((err as ExternalCallTimeoutError).callContext).toBe(
+      expect((err as ExternalCallTimeoutError).operationContext).toBe(
         'payment-status',
       );
       expect((err as ExternalCallTimeoutError).timeoutMs).toBe(3_000);

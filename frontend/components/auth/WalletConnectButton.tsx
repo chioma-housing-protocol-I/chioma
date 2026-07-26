@@ -116,6 +116,12 @@ export default function WalletConnectButton({
 
             if (onSuccess) {
               onSuccess();
+            } else if (!userWithRole.email) {
+              // Wallet-only account: no email on file yet, so route into the
+              // short onboarding flow before the dashboard.
+              setTimeout(() => {
+                router.push('/complete-profile');
+              }, 800);
             } else {
               const isAdmin = ['admin', 'super_admin'].includes(
                 userWithRole.role?.toLowerCase() || '',

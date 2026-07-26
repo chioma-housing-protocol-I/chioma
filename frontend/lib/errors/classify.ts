@@ -95,6 +95,24 @@ export function classifyUnknownError(
   if (error instanceof AppError) return error;
 
   if (error instanceof DOMException && error.name === 'AbortError') {
+    const isUserCancellation =
+      context?.metadata?.cancellationReason === 'user' ||
+      context?.action?.startsWith('cancel:');
+
+    if (isUserCancellation) {
+      const msg = getErrorMessage('REQUEST_CANCELLED');
+      return new AppError({
+        code: 'REQUEST_CANCELLED',
+        category: 'network',
+        severity: 'info',
+        message: error.message,
+        userMessage: msg.message,
+        recoverable: true,
+        cause: error,
+        context,
+      });
+    }
+
     const msg = getErrorMessage('NETWORK_TIMEOUT');
     return new AppError({
       code: 'NETWORK_TIMEOUT',

@@ -26,6 +26,9 @@ mod tests_recurring;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_property;
+
 // Re-export public APIs
 pub use errors::PaymentError;
 pub use payment_impl::{calculate_payment_split, calculate_rent_for_period, create_payment_record};
@@ -184,6 +187,8 @@ impl PaymentContract {
         env.storage()
             .instance()
             .set(&StorageKey::PlatformFeeCollector, &collector);
+
+        events::platform_fee_collector_updated(&env, collector);
     }
 
     /// Get a payment record by ID
@@ -333,6 +338,17 @@ impl PaymentContract {
         let token_client = token::Client::new(&env, &agreement.payment_token);
         token_client.transfer(&from, &agreement.landlord, &landlord_amount);
         token_client.transfer(&from, &platform_collector, &platform_amount);
+
+        events::rent_paid(
+            &env,
+            agreement_id,
+            from,
+            agreement.landlord.clone(),
+            agreement.payment_token.clone(),
+            payment_amount,
+            landlord_amount,
+            platform_amount,
+        );
 
         Ok(())
     }

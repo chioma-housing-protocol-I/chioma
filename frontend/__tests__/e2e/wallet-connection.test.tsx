@@ -69,14 +69,10 @@ describe('[E2E] Wallet connection – WalletConnectButton', () => {
     render(React.createElement(WalletConnectButton));
     fireEvent.click(screen.getByRole('button', { name: /connect freighter/i }));
 
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('button', { name: /connect freighter/i }),
-      ).not.toBeInTheDocument(),
-    );
-
     // Truncated address is shown (first 6 chars … last 4 chars)
-    expect(screen.getByText(/GDRXE2…UJUJ/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/GDRXE2…UJUJ/)).toBeInTheDocument(),
+    );
   });
 
   it('invokes the onConnect callback with the full public key', async () => {

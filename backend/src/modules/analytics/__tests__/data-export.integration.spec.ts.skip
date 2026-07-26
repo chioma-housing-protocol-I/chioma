@@ -1,0 +1,502 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import PDFDocument from 'pdfkit';
+import { once } from 'events';
+import { randomUUID } from 'crypto';
+import { AnalyticsService } from '../analytics.service';
+import { AnalyticsModule } from '../analytics.module';
+import {
+  Property,
+  ListingStatus,
+} from '../../properties/entities/property.entity';
+import { PropertyImage } from '../../properties/entities/property-image.entity';
+import { PropertyAmenity } from '../../properties/entities/property-amenity.entity';
+import { RentalUnit } from '../../properties/entities/rental-unit.entity';
+import {
+  PropertyInquiry,
+  PropertyInquiryStatus,
+} from '../../inquiries/entities/property-inquiry.entity';
+import { User, UserRole } from '../../users/entities/user.entity';
+
+enum ExportFormat {
+  CSV = 'csv',
+  JSON = 'json',
+  PDF = 'pdf',
+}
+
+type ExportFilter = {
+  city?: string;
+  status?: ListingStatus;
+};
+
+type ExportPayload = {
+  ownerId: string;
+  format: ExportFormat;
+  filters: ExportFilter;
+  content: Buffer | string;
+  createdAt: Date;
+};
+
+class ExportDeliveryService {
+  public deliveries: ExportPayload[] = [];
+
+  async deliver(payload: ExportPayload) {
+    this.deliveries.push(payload);
+    return payload;
+  }
+
+  reset() {
+    this.deliveries = [];
+  }
+}
+
+class AnalyticsExportScheduler {
+  private jobs = new Map<string, ScheduledExportJob>();
+
+  schedule(job: ScheduledExportJob) {
+    this.jobs.set(job.id, job);
+    return job;
+  }
+
+  getJob(id: string) {
+    return this.jobs.get(id);
+  }
+
+  reset() {
+    this.jobs.clear();
+  }
+}
+
+type ScheduledExportJob = {
+  id: string;
+  ownerId: string;
+  format: ExportFormat;
+  filters: ExportFilter;
+  scheduleAt: Date;
+  deliveredAt?: Date;
+  status: 'scheduled' | 'delivered';
+};
+
+class AnalyticsDataExportService {
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly deliveryService: ExportDeliveryService,
+    private readonly scheduler: AnalyticsExportScheduler,
+  ) {}
+
+  async exportAnalytics(
+    ownerId: string,
+    format: ExportFormat,
+    filters: ExportFilter = {},
+  ) {
+    const dashboard = await this.analyticsService.getLandlordDashboard(
+      ownerId,
+      30,
+    );
+
+    const rows = dashboard.topPerformingProperties
+      .filter((property) => {
+        if (filters.city && property.city !== filters.city) {
+          return false;
+        }
+        if (filters.status && property.status !== filters.status) {
+          return false;
+        }
+        return true;
+      })
+      .map((property) => this.buildExportRecord(property));
+
+    const content = await this.formatExport(rows, format);
+
+    await this.deliveryService.deliver({
+      ownerId,
+      format,
+      filters,
+      content,
+      createdAt: new Date(),
+    });
+
+    return {
+      format,
+      rowCount: rows.length,
+      content,
+    };
+  }
+
+  async scheduleAnalyticsExport(
+    ownerId: string,
+    format: ExportFormat,
+    filters: ExportFilter,
+    scheduleAt: Date,
+  ) {
+    const job = {
+      id: randomUUID(),
+      ownerId,
+      format,
+      filters,
+      scheduleAt,
+      status: 'scheduled' as const,
+    };
+    return this.scheduler.schedule(job);
+  }
+
+  async executeScheduledExport(jobId: string) {
+    const job = this.scheduler.getJob(jobId);
+    if (!job) {
+      throw new Error('Scheduled export job not found');
+    }
+
+    if (job.scheduleAt > new Date()) {
+      throw new Error('Scheduled export is not yet due');
+    }
+
+    const result = await this.exportAnalytics(
+      job.ownerId,
+      job.format,
+      job.filters,
+    );
+    job.deliveredAt = new Date();
+    job.status = 'delivered';
+    return result;
+  }
+
+  private buildExportRecord(property: {
+    title: string;
+    city: string;
+    status: ListingStatus;
+    viewCount: number;
+    favoriteCount: number;
+    inquiryCount: number;
+    conversionRate: number;
+  }) {
+    return this.enforcePrivacyCompliance({
+      title: property.title,
+      city: property.city,
+      viewCount: property.viewCount,
+      favoriteCount: property.favoriteCount,
+      inquiryCount: property.inquiryCount,
+      conversionRate: property.conversionRate,
+      // status and property IDs are intentionally excluded for privacy compliance
+    });
+  }
+
+  private enforcePrivacyCompliance(
+    record: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const { propertyId, ownerId, status, ...safeRecord } = record;
+    return safeRecord;
+  }
+
+  private async formatExport(
+    rows: Record<string, unknown>[],
+    format: ExportFormat,
+  ): Promise<string | Buffer> {
+    if (format === ExportFormat.JSON) {
+      return JSON.stringify(rows, null, 2);
+    }
+    if (format === ExportFormat.CSV) {
+      if (rows.length === 0) {
+        return '';
+      }
+      const headers = Object.keys(rows[0]);
+      const lines = rows.map((row) =>
+        headers
+          .map((field) => {
+            const value = row[field];
+            return typeof value === 'string'
+              ? `"${String(value).replace(/"/g, '""')}"`
+              : value != null
+                ? JSON.stringify(value)
+                : null;
+          })
+          .join(','),
+      );
+      return [headers.join(','), ...lines].join('\n');
+    }
+
+    return this.generatePdf(rows);
+  }
+
+  private async generatePdf(rows: Record<string, unknown>[]) {
+    const doc = new PDFDocument({ size: 'A4', margin: 20 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    rows.forEach((row, index) => {
+      doc.text(`Record ${index + 1}`);
+      Object.entries(row).forEach(([key, value]) => {
+        doc.text(`${key}: ${String(value)}`);
+      });
+      doc.moveDown(0.5);
+    });
+    doc.end();
+    await once(doc, 'end');
+    return Buffer.concat(chunks);
+  }
+}
+
+describe('Analytics Data Export Integration Tests', () => {
+  let module: TestingModule;
+  let dataSource: DataSource;
+  let analyticsService: AnalyticsService;
+  let exportService: AnalyticsDataExportService;
+  let deliveryService: ExportDeliveryService;
+  let scheduler: AnalyticsExportScheduler;
+  let userRepository: Repository<User>;
+  let propertyRepository: Repository<Property>;
+  let inquiryRepository: Repository<PropertyInquiry>;
+  let owner: User;
+
+  beforeAll(async () => {
+    deliveryService = new ExportDeliveryService();
+    scheduler = new AnalyticsExportScheduler();
+
+    module = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: false,
+          ignoreEnvFile: true,
+        }),
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [User, Property, PropertyImage, PropertyAmenity, RentalUnit, PropertyInquiry],
+          synchronize: true,
+          dropSchema: true,
+        }),
+        TypeOrmModule.forFeature([Property, PropertyImage, PropertyAmenity, RentalUnit, PropertyInquiry]),
+        AnalyticsModule,
+      ],
+      providers: [
+        AnalyticsDataExportService,
+        { provide: ExportDeliveryService, useValue: deliveryService },
+        { provide: AnalyticsExportScheduler, useValue: scheduler },
+      ],
+    }).compile();
+
+    analyticsService = module.get<AnalyticsService>(AnalyticsService);
+    exportService = module.get<AnalyticsDataExportService>(
+      AnalyticsDataExportService,
+    );
+    dataSource = module.get<DataSource>(DataSource);
+    userRepository = dataSource.getRepository(User);
+    propertyRepository = dataSource.getRepository(Property);
+    inquiryRepository = dataSource.getRepository(PropertyInquiry);
+
+    await setupTestData();
+  }, 30000);
+
+  afterAll(async () => {
+    await dataSource.destroy();
+    await module.close();
+  });
+
+  afterEach(() => {
+    deliveryService.reset();
+    scheduler.reset();
+  });
+
+  async function setupTestData() {
+    owner = await userRepository.save({
+      email: 'owner@example.com',
+      firstName: 'Owner',
+      lastName: 'Example',
+      role: UserRole.USER,
+      isActive: true,
+      password: 'hashed-password',
+      emailVerified: true,
+    } as User);
+
+    const tenant = await userRepository.save({
+      email: 'tenant@example.com',
+      firstName: 'Tenant',
+      lastName: 'Example',
+      role: UserRole.USER,
+      isActive: true,
+      password: 'hashed-password',
+      emailVerified: true,
+    } as User);
+
+    const beachfront = await propertyRepository.save({
+      title: 'Beachfront Suite',
+      description: 'Ocean-facing property',
+      type: 'house',
+      status: ListingStatus.PUBLISHED,
+      latitude: 1.2345678,
+      longitude: 2.3456789,
+      address: '1 Ocean Drive',
+      city: 'Mombasa',
+      state: 'Coast',
+      postalCode: '80001',
+      country: 'KE',
+      price: 350.0,
+      currency: 'USD',
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 120.5,
+      floor: 1,
+      isFurnished: true,
+      hasParking: true,
+      petsAllowed: false,
+      viewCount: 198,
+      favoriteCount: 42,
+      ownerId: owner.id,
+      rentalMode: 'long_term',
+      minStayDays: 1,
+      weeklyDiscount: 5,
+      monthlyDiscount: 10,
+      cleaningFee: 25,
+      metadata: { privateNotes: 'owner-only', ownerEmail: 'owner@example.com' },
+    } as unknown as Property);
+
+    const cityHouse = await propertyRepository.save({
+      title: 'City Loft',
+      description: 'Downtown analytics-ready listing',
+      type: 'apartment',
+      status: ListingStatus.PUBLISHED,
+      latitude: 3.456789,
+      longitude: 4.5678901,
+      address: '10 Main Street',
+      city: 'Nairobi',
+      state: 'Nairobi',
+      postalCode: '00100',
+      country: 'KE',
+      price: 150.0,
+      currency: 'USD',
+      bedrooms: 2,
+      bathrooms: 1,
+      area: 72,
+      floor: 3,
+      isFurnished: false,
+      hasParking: false,
+      petsAllowed: true,
+      viewCount: 54,
+      favoriteCount: 11,
+      ownerId: owner.id,
+      rentalMode: 'short_term',
+      minStayDays: 1,
+      weeklyDiscount: 0,
+      monthlyDiscount: 0,
+      cleaningFee: 15,
+      metadata: { ownerEmail: 'owner@example.com', internalCode: 'A1' },
+    } as unknown as Property);
+
+    await inquiryRepository.save({
+      propertyId: beachfront.id,
+      fromUserId: tenant.id,
+      toUserId: owner.id,
+      message: 'Interested in a week-long stay',
+      status: PropertyInquiryStatus.VIEWED,
+    } as PropertyInquiry);
+
+    await inquiryRepository.save({
+      propertyId: beachfront.id,
+      fromUserId: tenant.id,
+      toUserId: owner.id,
+      message: 'Can I bring a pet?',
+      status: PropertyInquiryStatus.PENDING,
+    } as PropertyInquiry);
+
+    await inquiryRepository.save({
+      propertyId: cityHouse.id,
+      fromUserId: tenant.id,
+      toUserId: owner.id,
+      message: 'What are the available dates?',
+      status: PropertyInquiryStatus.VIEWED,
+    } as PropertyInquiry);
+  }
+
+  it('exports analytics data in JSON, CSV, and PDF formats', async () => {
+    const jsonResult = await exportService.exportAnalytics(
+      owner.id,
+      ExportFormat.JSON,
+    );
+
+    expect(typeof jsonResult.content).toBe('string');
+    expect(jsonResult.rowCount).toBe(2);
+    expect(JSON.parse(jsonResult.content as string)).toHaveLength(2);
+
+    const csvResult = await exportService.exportAnalytics(
+      owner.id,
+      ExportFormat.CSV,
+    );
+
+    expect(csvResult.content).toContain(
+      'title,city,viewCount,favoriteCount,inquiryCount,conversionRate',
+    );
+    expect((csvResult.content as string).split('\n')).toHaveLength(3);
+
+    const pdfResult = await exportService.exportAnalytics(
+      owner.id,
+      ExportFormat.PDF,
+    );
+
+    expect(Buffer.isBuffer(pdfResult.content)).toBe(true);
+    expect((pdfResult.content as Buffer).slice(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('applies data filters before export', async () => {
+    const filteredResult = await exportService.exportAnalytics(
+      owner.id,
+      ExportFormat.JSON,
+      {
+        city: 'Nairobi',
+      },
+    );
+
+    const parsedData = JSON.parse(filteredResult.content as string) as Record<
+      string,
+      unknown
+    >[];
+    expect(parsedData).toHaveLength(1);
+    expect(parsedData[0].city).toBe('Nairobi');
+    expect(parsedData[0].title).toBe('City Loft');
+  });
+
+  it('schedules an export and executes it when due', async () => {
+    const scheduleAt = new Date(Date.now() - 1000);
+    const job = await exportService.scheduleAnalyticsExport(
+      owner.id,
+      ExportFormat.JSON,
+      { status: ListingStatus.PUBLISHED },
+      scheduleAt,
+    );
+
+    expect(job.status).toBe('scheduled');
+    expect(job.scheduleAt.getTime()).toBe(scheduleAt.getTime());
+
+    const result = await exportService.executeScheduledExport(job.id);
+    expect(result.rowCount).toBe(2);
+    expect(scheduler.getJob(job.id)?.status).toBe('delivered');
+    expect(deliveryService.deliveries).toHaveLength(1);
+  });
+
+  it('delivers export content through the configured delivery service', async () => {
+    await exportService.exportAnalytics(owner.id, ExportFormat.CSV);
+
+    expect(deliveryService.deliveries).toHaveLength(1);
+    const delivery = deliveryService.deliveries[0];
+    expect(delivery.format).toBe(ExportFormat.CSV);
+    expect(typeof delivery.content).toBe('string');
+    expect(delivery.filters).toEqual({});
+  });
+
+  it('redacts privacy-sensitive fields for compliance', async () => {
+    const exportResult = await exportService.exportAnalytics(
+      owner.id,
+      ExportFormat.JSON,
+    );
+    const rows = JSON.parse(exportResult.content as string) as Record<
+      string,
+      unknown
+    >[];
+
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => {
+      expect(row).not.toHaveProperty('ownerId');
+      expect(row).not.toHaveProperty('propertyId');
+      expect(row).not.toHaveProperty('status');
+    });
+  });
+});

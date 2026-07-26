@@ -33,6 +33,7 @@ export enum ErrorCode {
   REVIEW_NOT_FOUND = 'RES_3007',
   NOTIFICATION_NOT_FOUND = 'RES_3008',
   MAINTENANCE_NOT_FOUND = 'RES_3009',
+  BOOKING_NOT_FOUND = 'RES_3010',
 
   // Business Logic (4xxx)
   BUSINESS_RULE_VIOLATION = 'BUS_4001',
@@ -142,6 +143,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.REVIEW_NOT_FOUND]: 'Review not found',
   [ErrorCode.NOTIFICATION_NOT_FOUND]: 'Notification not found',
   [ErrorCode.MAINTENANCE_NOT_FOUND]: 'Maintenance request not found',
+  [ErrorCode.BOOKING_NOT_FOUND]: 'Booking not found',
 
   // Business Logic
   [ErrorCode.BUSINESS_RULE_VIOLATION]: 'This operation violates business rules',
