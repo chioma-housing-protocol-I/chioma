@@ -72,7 +72,11 @@ export default function NotificationItem({
       <div
         className={`shrink-0 ${variant === 'compact' ? 'w-8 h-8' : 'w-9 h-9'} flex items-center justify-center rounded-full ${bg}`}
       >
-        <Icon size={variant === 'compact' ? 14 : 16} className={text} />
+        <Icon
+          size={variant === 'compact' ? 14 : 16}
+          className={text}
+          aria-hidden="true"
+        />
       </div>
 
       {/* Body */}
@@ -89,7 +93,10 @@ export default function NotificationItem({
           </p>
 
           {!notification.read && (
-            <span className="shrink-0 w-2 h-2 rounded-full bg-blue-400" />
+            <span
+              className="shrink-0 w-2 h-2 rounded-full bg-blue-400"
+              aria-label="Unread"
+            />
           )}
         </div>
 
@@ -107,7 +114,8 @@ export default function NotificationItem({
         {variant === 'full' &&
           (notification.read ? (
             <span className="shrink-0 flex items-center gap-1 text-xs text-blue-400/50 mt-0.5">
-              <CheckCheck size={16} />
+              <CheckCheck size={16} aria-hidden="true" />
+              <span className="sr-only">Read</span>
             </span>
           ) : (
             <button
@@ -116,6 +124,7 @@ export default function NotificationItem({
                 e.stopPropagation();
                 onToggleRead(notification.id);
               }}
+              aria-label={`Mark ${notification.title} as read`}
               className="shrink-0 text-xs text-blue-300 hover:text-white hover:underline mt-0.5 cursor-pointer transition-colors"
             >
               Mark read
@@ -129,6 +138,7 @@ export default function NotificationItem({
               e.stopPropagation();
               onDelete(notification.id);
             }}
+            aria-label={`Delete ${notification.title}`}
             className="opacity-0 group-hover:opacity-100 shrink-0 text-xs text-red-400 hover:text-red-300 hover:underline cursor-pointer transition-opacity"
           >
             Delete
@@ -140,7 +150,11 @@ export default function NotificationItem({
 
   if (notification.link) {
     return (
-      <Link href={notification.link} className="block">
+      <Link
+        href={notification.link}
+        className="block"
+        aria-label={`${notification.title}: ${notification.body}`}
+      >
         {content}
       </Link>
     );
