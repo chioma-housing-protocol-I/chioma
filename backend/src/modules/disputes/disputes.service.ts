@@ -47,7 +47,7 @@ export class DisputesService {
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
-  ) {}
+  ) { }
 
   /**
    * Create a new dispute
@@ -308,6 +308,17 @@ export class DisputesService {
     }
 
     Object.assign(dispute, updateDisputeDto);
+
+    // When a dispute is resolved with a resolution, track who resolved it
+    if (
+      updateDisputeDto.status === DisputeStatus.RESOLVED &&
+      'resolution' in updateDisputeDto &&
+      updateDisputeDto.resolution
+    ) {
+      dispute.resolvedBy = userId;
+      dispute.resolvedAt = new Date();
+    }
+
     return this.disputeRepository.save(dispute);
   }
 

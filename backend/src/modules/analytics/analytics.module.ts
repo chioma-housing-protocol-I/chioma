@@ -4,6 +4,11 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { Property } from '../properties/entities/property.entity';
 import { PropertyInquiry } from '../inquiries/entities/property-inquiry.entity';
+import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Property, PropertyInquiry, SubletBooking]),
 import { Payment } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 

@@ -19,6 +19,7 @@ import {
   useDeletePaymentMethod,
 } from '@/lib/query/hooks/use-payments';
 import { formatCurrency } from '@/lib/utils/format';
+import PaymentFormErrorBoundary from '@/components/forms/PaymentFormErrorBoundary';
 
 interface PaymentData {
   agreementId: string;
@@ -283,6 +284,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </div>
       }
     >
+      <PaymentFormErrorBoundary>
       <div className="space-y-6">
         {/* Payment Amount */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6">
@@ -625,6 +627,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         </div>
       </div>
+      </PaymentFormErrorBoundary>
     </BaseModal>
   );
 };

@@ -83,7 +83,8 @@ export default function AdminDisputesPage() {
           ? `Updated locally to ${formatLabel(nextStatus)}`
           : `Moved to ${formatLabel(nextStatus)}`,
       );
-    } catch {
+    } catch (error) {
+      console.error(`Failed to update dispute ${disputeId}:`, error);
       toast.error('Could not update dispute status');
     }
   };
