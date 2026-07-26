@@ -254,6 +254,67 @@ describe('Heading hierarchy — landing page components', () => {
   });
 });
 
+// ─── ARIA roles, names, and live regions — audited components ───────────────
+
+describe('ARIA roles, names, and live regions', () => {
+  it('ToastProvider exposes toast updates through a polite status live region', () => {
+    const source = readSource('components/ui/toast.tsx');
+    expect(source).toContain('role="region"');
+    expect(source).toContain('aria-label="Notifications"');
+    expect(source).toContain("role: 'status'");
+    expect(source).toContain("'aria-live': 'polite'");
+  });
+
+  it('NotificationBell communicates popup state and menu ownership', () => {
+    const source = readSource('components/notifications/NotificationBell.tsx');
+    expect(source).toContain('aria-haspopup="dialog"');
+    expect(source).toContain('aria-expanded={open}');
+    expect(source).toContain('aria-controls="notifications-menu"');
+    expect(source).toContain('aria-hidden="true"');
+  });
+
+  it('NotificationDropdown has dialog and list semantics plus named actions', () => {
+    const source = readSource(
+      'components/notifications/NotificationDropdown.tsx',
+    );
+    expect(source).toContain('role="dialog"');
+    expect(source).toContain('aria-label="Recent notifications"');
+    expect(source).toContain('aria-label="Mark all notifications as read"');
+    expect(source).toContain('role="status"');
+  });
+
+  it('NotificationItem names compact links and full-page notification actions', () => {
+    const source = readSource('components/notifications/NotificationItem.tsx');
+    expect(source).toContain(
+      'aria-label={`${notification.title}: ${notification.body}`}',
+    );
+    expect(source).toContain(
+      'aria-label={`Mark ${notification.title} as read`}',
+    );
+    expect(source).toContain('aria-label={`Delete ${notification.title}`}');
+  });
+
+  it('PropertiesTable names icon-only actions and hides decorative icons', () => {
+    const source = readSource(
+      'components/landlord-dashboard/PropertiesTable.tsx',
+    );
+    expect(source).toContain(
+      'aria-label={`Open actions for ${property.title}`}',
+    );
+    expect(source).toContain('<span className="sr-only">Actions</span>');
+    expect(source).toContain('scope="col"');
+    expect(source).toContain('aria-hidden="true"');
+  });
+
+  it('GuestLayout names header controls and exposes a main landmark target', () => {
+    const source = readSource('app/guest/layout.tsx');
+    expect(source).toContain('aria-label="Search guest portal"');
+    expect(source).toContain('aria-label="Open user profile"');
+    expect(source).toContain('id="main-content"');
+    expect(source).toContain('tabIndex={-1}');
+  });
+});
+
 // ─── Route announcer ─────────────────────────────────────────────────────────
 
 describe('RouteAnnouncer for SPA navigation', () => {
