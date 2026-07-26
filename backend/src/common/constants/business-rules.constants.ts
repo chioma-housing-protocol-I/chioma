@@ -41,7 +41,10 @@ export const PASSWORD_RESET_TOKEN_EXPIRY_HOURS = envInt(
 );
 
 /** OAuth2 `state` parameter validity window (CSRF protection for the OAuth flow). */
-export const OAUTH_STATE_EXPIRY_MINUTES = envInt('OAUTH_STATE_EXPIRY_MINUTES', 10);
+export const OAUTH_STATE_EXPIRY_MINUTES = envInt(
+  'OAUTH_STATE_EXPIRY_MINUTES',
+  10,
+);
 
 /** Stellar wallet-auth signed-challenge validity window. */
 export const STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES = envInt(
@@ -57,8 +60,8 @@ export const STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES = envInt(
  */
 export const JWT_ACCESS_TOKEN_EXPIRY = (process.env.JWT_EXPIRATION?.trim() ||
   '15m') as StringValue;
-export const JWT_REFRESH_TOKEN_EXPIRY = (process.env.JWT_REFRESH_EXPIRATION?.trim() ||
-  '7d') as StringValue;
+export const JWT_REFRESH_TOKEN_EXPIRY =
+  (process.env.JWT_REFRESH_EXPIRATION?.trim() || '7d') as StringValue;
 
 /** MFA short-lived verification token validity window (jsonwebtoken duration string). */
 export const MFA_TOKEN_EXPIRY: StringValue = '5m';
@@ -74,17 +77,26 @@ export const BCRYPT_SALT_ROUNDS = envInt('BCRYPT_SALT_ROUNDS', 12);
 
 /** bcrypt cost factor for MFA backup codes (lower than BCRYPT_SALT_ROUNDS is
  * acceptable — backup codes are single-use and already high-entropy). */
-export const MFA_BACKUP_CODE_SALT_ROUNDS = envInt('MFA_BACKUP_CODE_SALT_ROUNDS', 10);
+export const MFA_BACKUP_CODE_SALT_ROUNDS = envInt(
+  'MFA_BACKUP_CODE_SALT_ROUNDS',
+  10,
+);
 
 // ---------------------------------------------------------------------------
 // Threat detection
 // ---------------------------------------------------------------------------
 
 /** How long an IP stays blocked after tripping the rate-limit breach detector. */
-export const IP_BLOCK_DURATION_MS = envInt('IP_BLOCK_DURATION_MS', 10 * 60 * 1000);
+export const IP_BLOCK_DURATION_MS = envInt(
+  'IP_BLOCK_DURATION_MS',
+  10 * 60 * 1000,
+);
 
 /** Sliding window used to detect brute-force login attempts. */
-export const BRUTE_FORCE_WINDOW_MS = envInt('BRUTE_FORCE_WINDOW_MS', 15 * 60 * 1000);
+export const BRUTE_FORCE_WINDOW_MS = envInt(
+  'BRUTE_FORCE_WINDOW_MS',
+  15 * 60 * 1000,
+);
 
 /** Failed attempts within BRUTE_FORCE_WINDOW_MS that trigger a brute-force alert. */
 export const BRUTE_FORCE_THRESHOLD = envInt('BRUTE_FORCE_THRESHOLD', 10);
@@ -103,7 +115,10 @@ export const DATA_EXFILTRATION_RECORD_THRESHOLD = envInt(
 // ---------------------------------------------------------------------------
 
 /** Days an unpublished property listing draft is retained before expiry. */
-export const PROPERTY_DRAFT_EXPIRY_DAYS = envInt('PROPERTY_DRAFT_EXPIRY_DAYS', 30);
+export const PROPERTY_DRAFT_EXPIRY_DAYS = envInt(
+  'PROPERTY_DRAFT_EXPIRY_DAYS',
+  30,
+);
 
 // ---------------------------------------------------------------------------
 // Pagination
@@ -136,7 +151,10 @@ export const STORAGE_MAX_FILE_SIZE_BYTES = envInt(
 // ---------------------------------------------------------------------------
 
 /** Default Stellar TransactionBuilder timeout for standard contract calls. */
-export const STELLAR_TX_TIMEOUT_SECONDS = envInt('STELLAR_TX_TIMEOUT_SECONDS', 30);
+export const STELLAR_TX_TIMEOUT_SECONDS = envInt(
+  'STELLAR_TX_TIMEOUT_SECONDS',
+  30,
+);
 
 /** Extended timeout for slower Stellar operations (e.g. account setup, funding). */
 export const STELLAR_TX_EXTENDED_TIMEOUT_SECONDS = envInt(
@@ -155,10 +173,16 @@ export const WS_SESSION_ABSOLUTE_TTL_MS = envInt(
 );
 
 /** WebSocket session idle timeout. */
-export const WS_SESSION_IDLE_TTL_MS = envInt('WS_SESSION_IDLE_TTL_MS', 30 * 60 * 1000);
+export const WS_SESSION_IDLE_TTL_MS = envInt(
+  'WS_SESSION_IDLE_TTL_MS',
+  30 * 60 * 1000,
+);
 
 /** Max concurrent WebSocket connections allowed per user. */
-export const WS_MAX_CONNECTIONS_PER_USER = envInt('WS_MAX_CONNECTIONS_PER_USER', 5);
+export const WS_MAX_CONNECTIONS_PER_USER = envInt(
+  'WS_MAX_CONNECTIONS_PER_USER',
+  5,
+);
 
 // ---------------------------------------------------------------------------
 // Rent / late fees
@@ -171,7 +195,10 @@ export const RENT_LATE_FEE_GRACE_PERIOD_DAYS = envInt(
 );
 
 /** Flat late fee as a fraction of rent (0.05 = 5%). */
-export const RENT_LATE_FEE_FLAT_RATE = envFloat('RENT_LATE_FEE_FLAT_RATE', 0.05);
+export const RENT_LATE_FEE_FLAT_RATE = envFloat(
+  'RENT_LATE_FEE_FLAT_RATE',
+  0.05,
+);
 
 /** Additional daily penalty rate applied while rent remains unpaid (0.001 = 0.1%/day). */
 export const RENT_LATE_FEE_DAILY_PENALTY_RATE = envFloat(
@@ -184,10 +211,19 @@ export const RENT_LATE_FEE_DAILY_PENALTY_RATE = envFloat(
 // ---------------------------------------------------------------------------
 
 /** Default retry count for the distributed lock service. */
-export const LOCK_SERVICE_DEFAULT_RETRIES = envInt('LOCK_SERVICE_DEFAULT_RETRIES', 3);
+export const LOCK_SERVICE_DEFAULT_RETRIES = envInt(
+  'LOCK_SERVICE_DEFAULT_RETRIES',
+  3,
+);
 
 /** Default Bull job retry attempts for standard (non-blockchain) queues. */
-export const QUEUE_DEFAULT_JOB_ATTEMPTS = envInt('QUEUE_DEFAULT_JOB_ATTEMPTS', 3);
+export const QUEUE_DEFAULT_JOB_ATTEMPTS = envInt(
+  'QUEUE_DEFAULT_JOB_ATTEMPTS',
+  3,
+);
 
 /** Bull job retry attempts for blockchain-submission queues (higher — network flakiness). */
-export const QUEUE_BLOCKCHAIN_JOB_ATTEMPTS = envInt('QUEUE_BLOCKCHAIN_JOB_ATTEMPTS', 5);
+export const QUEUE_BLOCKCHAIN_JOB_ATTEMPTS = envInt(
+  'QUEUE_BLOCKCHAIN_JOB_ATTEMPTS',
+  5,
+);

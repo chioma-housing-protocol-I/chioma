@@ -860,5 +860,4 @@ describe('PaymentService', () => {
       expect(PAYMENT_STATUS_MAP['unknown-status']).toBeUndefined();
     });
   });
-
 });

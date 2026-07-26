@@ -85,7 +85,7 @@ export class I18nService {
   formatDate(
     date: Date | string | number,
     language?: string,
-    options?: Intl.DateTimeFormatOptions
+    options?: Intl.DateTimeFormatOptions,
   ): string {
     const lang = this.resolveLanguage(language);
     return FormatUtils.formatDate(date, lang, options);
@@ -97,7 +97,7 @@ export class I18nService {
   formatNumber(
     num: number | string,
     language?: string,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const lang = this.resolveLanguage(language);
     return FormatUtils.formatNumber(num, lang, options);
@@ -110,7 +110,7 @@ export class I18nService {
     amount: number | string,
     currency: string,
     language?: string,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const lang = this.resolveLanguage(language);
     return FormatUtils.formatCurrency(amount, currency, lang, options);
@@ -123,7 +123,7 @@ export class I18nService {
     amount: number | string,
     symbol?: string,
     language?: string,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const lang = this.resolveLanguage(language);
     return FormatUtils.formatCrypto(amount, lang, symbol, options);

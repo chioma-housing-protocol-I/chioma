@@ -1,4 +1,3 @@
-
 import { SupportedLanguage } from '../../modules/i18n/i18n.service';
 
 export class FormatUtils {
@@ -8,9 +7,12 @@ export class FormatUtils {
   static formatDate(
     date: Date | string | number,
     locale: SupportedLanguage,
-    options?: Intl.DateTimeFormatOptions
+    options?: Intl.DateTimeFormatOptions,
   ): string {
-    const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+    const d =
+      typeof date === 'string' || typeof date === 'number'
+        ? new Date(date)
+        : date;
     return new Intl.DateTimeFormat(locale, options).format(d);
   }
 
@@ -20,7 +22,7 @@ export class FormatUtils {
   static formatNumber(
     num: number | string,
     locale: SupportedLanguage,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const n = typeof num === 'string' ? Number(num) : num;
     return new Intl.NumberFormat(locale, options).format(n);
@@ -33,7 +35,7 @@ export class FormatUtils {
     amount: number | string,
     currency: string,
     locale: SupportedLanguage,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const n = typeof amount === 'string' ? Number(amount) : amount;
     return new Intl.NumberFormat(locale, {
@@ -50,7 +52,7 @@ export class FormatUtils {
     amount: number | string,
     locale: SupportedLanguage,
     symbol?: string,
-    options?: Intl.NumberFormatOptions
+    options?: Intl.NumberFormatOptions,
   ): string {
     const n = typeof amount === 'string' ? Number(amount) : amount;
     const formatted = new Intl.NumberFormat(locale, {

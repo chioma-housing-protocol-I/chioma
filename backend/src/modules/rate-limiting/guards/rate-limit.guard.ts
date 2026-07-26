@@ -138,10 +138,10 @@ export class RateLimitGuard implements CanActivate {
         );
 
         const retryAfter = Math.ceil(result.msBeforeNext / 1000);
-        
+
         // Set Retry-After header
         request.res?.setHeader('Retry-After', retryAfter);
-        
+
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,

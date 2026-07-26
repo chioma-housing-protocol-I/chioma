@@ -626,9 +626,15 @@ export class AuthService {
 
     // Update known fingerprints (keep last 10 IPs and agents)
     const updatedIps = [...new Set([...(known?.ips ?? []), ip])].slice(-10);
-    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(-10);
+    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(
+      -10,
+    );
     await this.encryptedCache
-      .set(knownKey, { ips: updatedIps, agents: updatedAgents }, 30 * 24 * 3600 * 1000)
+      .set(
+        knownKey,
+        { ips: updatedIps, agents: updatedAgents },
+        30 * 24 * 3600 * 1000,
+      )
       .catch(() => null);
   }
 

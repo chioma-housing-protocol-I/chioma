@@ -52,7 +52,8 @@ export class MfaRequiredResponseDto {
 
 /** Discriminated union of all possible login response shapes. */
 export type AuthLoginResponseDto =
-  AuthSuccessResponseDto | MfaRequiredResponseDto;
+  | AuthSuccessResponseDto
+  | MfaRequiredResponseDto;
 
 /** Kept for Swagger decorators and controller return-type annotations. */
 export class AuthResponseDto {
