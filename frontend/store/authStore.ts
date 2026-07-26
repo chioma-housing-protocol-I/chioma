@@ -93,7 +93,7 @@ interface AuthActions {
     lastName?: string;
   }) => Promise<AuthResult>;
   updatePreferences: (preferences: { locale: string }) => Promise<void>;
-  hydrate: () => void;
+  hydrate: (forceRefresh?: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -154,16 +154,25 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
       isAuthenticated: _cache.isAuthenticated,
       walletAddress: _cache.walletAddress,
     };
+let cachedAuthSnapshot: Omit<AuthState, 'loading'> | null = null;
+
+function emptyAuthSnapshot(): Omit<AuthState, 'loading'> {
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    walletAddress: null,
+  };
+}
+
+function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
+  if (cachedAuthSnapshot && !forceRefresh) {
+    return cachedAuthSnapshot;
   }
 
   if (typeof window === 'undefined') {
-    return {
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      walletAddress: null,
-    };
+    return emptyAuthSnapshot();
   }
 
   try {
@@ -180,6 +189,7 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
 
     if (storedAccessToken && storedUser) {
       const result: Omit<AuthState, 'loading'> = {
+      cachedAuthSnapshot = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
@@ -188,6 +198,7 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
       };
       _cache = { ...result, hydrated: true };
       return result;
+      return cachedAuthSnapshot;
     }
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
@@ -206,11 +217,14 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
   };
   _cache = { ...empty, hydrated: true };
   return empty;
+  cachedAuthSnapshot = emptyAuthSnapshot();
+  return cachedAuthSnapshot;
 }
 
 /** Test-only escape hatch to reset the closure cache between test cases. */
 export function __resetAuthStorageCacheForTests(): void {
   _cache = null;
+  cachedAuthSnapshot = null;
 }
 
 function clearStorage() {
@@ -223,6 +237,7 @@ function clearStorage() {
   removeAuthCookie();
 
   invalidateCache();
+  cachedAuthSnapshot = emptyAuthSnapshot();
 }
 
 function persistAuth(
@@ -242,13 +257,14 @@ function persistAuth(
   setAuthCookie(accessToken);
 
   // Keep the closure cache in sync so subsequent reads skip localStorage
-  _cache = {
+  cachedAuthSnapshot = {
     user,
     accessToken,
     refreshToken,
     isAuthenticated: true,
     walletAddress: _cache?.walletAddress ?? null,
     hydrated: true,
+    walletAddress: cachedAuthSnapshot?.walletAddress ?? null,
   };
 }
 
@@ -295,6 +311,9 @@ export const useAuthStore = create<AuthStore>()(
 
       hydrate: () => {
         const stored = readStoredAuth();
+      hydrate: (forceRefresh = false) => {
+        const stored = readStoredAuth(forceRefresh);
+        setApiClientToken(stored.accessToken);
         set((state) => {
           state.user = stored.user;
           state.accessToken = stored.accessToken;
@@ -331,6 +350,8 @@ export const useAuthStore = create<AuthStore>()(
         // Keep closure cache in sync
         if (_cache) {
           _cache = { ..._cache, walletAddress: address };
+        if (cachedAuthSnapshot) {
+          cachedAuthSnapshot = { ...cachedAuthSnapshot, walletAddress: address };
         }
 
         set((state) => {
@@ -396,6 +417,9 @@ export const useAuthStore = create<AuthStore>()(
             AUTH_STORAGE_KEYS.USER,
             JSON.stringify(updatedUser),
           );
+          if (cachedAuthSnapshot) {
+            cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+          }
           set((state) => {
             state.user = updatedUser;
           });

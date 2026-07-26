@@ -1,5 +1,5 @@
 
-import { SupportedLanguage } from '../../modules/i18n/i18n.service';
+import { SupportedLanguage } from '../../../modules/i18n/i18n.service';
 
 export class FormatUtils {
   /**

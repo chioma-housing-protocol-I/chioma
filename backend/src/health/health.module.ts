@@ -25,6 +25,6 @@ import { MonitoringModule } from '../modules/monitoring/monitoring.module';
     MemoryHealthIndicator,
     HealthAutomationService,
   ],
-  exports: [HealthService],
+  exports: [HealthService, DatabaseHealthIndicator],
 })
 export class HealthModule {}

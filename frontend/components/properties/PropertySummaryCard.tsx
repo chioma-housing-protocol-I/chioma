@@ -1,10 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { MapPin, Bed, Bath, Ruler, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { formatNumber } from '@/lib/utils/format';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface PropertySummaryCardProps {
   property: {
@@ -100,11 +100,15 @@ export default function PropertySummaryCard({
         </p>
 
         {/* Title */}
-        <Link href={`/properties/${property.id}`}>
+        <PrefetchLink
+          href={`/properties/${property.id}`}
+          prefetchKind="property"
+          prefetchId={String(property.id)}
+        >
           <h3 className="font-bold text-gray-900 mb-2 text-base hover:text-blue-800 transition">
             {property.title}
           </h3>
-        </Link>
+        </PrefetchLink>
 
         {/* Location */}
         <div className="flex gap-2 text-gray-600 mb-3 text-sm">
@@ -150,12 +154,14 @@ export default function PropertySummaryCard({
         )}
 
         {/* View Details Button */}
-        <Link
+        <PrefetchLink
           href={`/properties/${property.id}`}
+          prefetchKind="property"
+          prefetchId={String(property.id)}
           className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
         >
           View Details
-        </Link>
+        </PrefetchLink>
       </div>
     </div>
   );

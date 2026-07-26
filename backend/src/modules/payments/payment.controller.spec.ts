@@ -20,9 +20,14 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentInterval } from './entities/payment-schedule.entity';
 import {
   CreateEscrowGatewayDto,
-  PaymentGatewayWebhookDto,
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
+import { PaymentWebhookDto } from './dto/payment-webhook.dto';
+import { RefundWebhookDto } from './dto/refund-webhook.dto';
+import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { ExecutionContext, CallHandler } from '@nestjs/common';
 
 const mockPaymentService = {
   recordPayment: jest.fn(),
@@ -56,6 +61,7 @@ const mockScheduleService = {
 
 const mockPaymentWebhookService = {
   handlePaymentGatewayWebhook: jest.fn(),
+  handleRefundWebhook: jest.fn(),
 };
 
 describe('Payment Controllers', () => {
@@ -104,7 +110,18 @@ describe('Payment Controllers', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(WebhookSignatureGuard)
+      .useValue({ canActivate: () => true })
+      .overrideInterceptor(AuditLogInterceptor)
+      .useValue({
+        intercept(_ctx: ExecutionContext, next: CallHandler) {
+          return next.handle();
+        },
+      })
+      .compile();
 
     paymentController = module.get<PaymentController>(PaymentController);
     paymentMethodController = module.get<PaymentMethodController>(
@@ -250,7 +267,7 @@ describe('Payment Controllers', () => {
   });
 
   it('handles payment gateway webhook', async () => {
-    const dto: PaymentGatewayWebhookDto = {
+    const dto: PaymentWebhookDto = {
       eventType: 'payment.completed',
       paymentId: 'pay_1',
       status: 'completed',
@@ -259,5 +276,19 @@ describe('Payment Controllers', () => {
     expect(
       mockPaymentWebhookService.handlePaymentGatewayWebhook,
     ).toHaveBeenCalledWith(dto, 'secret');
+  });
+
+  it('handles refund webhook', async () => {
+    const dto: RefundWebhookDto = {
+      eventType: 'refund.completed',
+      paymentId: 'pay_1',
+      status: 'completed',
+      amount: 50,
+    };
+    await paymentWebhookController.handleRefundWebhook(dto, 'secret');
+    expect(mockPaymentWebhookService.handleRefundWebhook).toHaveBeenCalledWith(
+      dto,
+      'secret',
+    );
   });
 });

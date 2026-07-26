@@ -14,7 +14,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:audit": "node scripts/i18n-audit.mjs",
+    "i18n:audit:fix": "node scripts/i18n-audit.mjs --fix"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.2.9",

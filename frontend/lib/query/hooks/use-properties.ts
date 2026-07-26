@@ -8,7 +8,11 @@ import {
 } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
+import { getDomainCacheTtl } from '../cache-ttl';
 import type { Property, PaginatedResponse, SearchResult, User } from '@/types';
+
+const propertiesTtl = getDomainCacheTtl('properties');
+const searchTtl = getDomainCacheTtl('search');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -130,6 +134,8 @@ export function useProperties(params: PropertyListParams = {}) {
       );
       return data;
     },
+    staleTime: propertiesTtl.staleTime,
+    gcTime: propertiesTtl.gcTime,
   });
 }
 
@@ -144,6 +150,8 @@ export function useProperty(id: string | null) {
       return data;
     },
     enabled: Boolean(id),
+    staleTime: propertiesTtl.staleTime,
+    gcTime: propertiesTtl.gcTime,
   });
 }
 
@@ -195,6 +203,8 @@ export function useInfiniteProperties(
       if (lastPage.page < lastPage.totalPages) return lastPage.page + 1;
       return undefined;
     },
+    staleTime: propertiesTtl.staleTime,
+    gcTime: propertiesTtl.gcTime,
   });
 }
 
@@ -249,6 +259,8 @@ export function useSearchProperties(params: PropertySearchParams = {}) {
       );
       return data;
     },
+    staleTime: searchTtl.staleTime,
+    gcTime: searchTtl.gcTime,
   });
 }
 

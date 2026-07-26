@@ -23,11 +23,17 @@ export class ApiKey {
   @Column({ type: 'varchar', length: 100 })
   name: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  description: string | null;
+
   @Column({ type: 'varchar', length: 64 })
   keyHash: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   keyPrefix: string | null;
+
+  @Column({ type: 'simple-array', default: '' })
+  permissions: string[];
 
   @Column({ type: 'varchar', length: 30, nullable: true })
   lastUsedAt: Date | null;

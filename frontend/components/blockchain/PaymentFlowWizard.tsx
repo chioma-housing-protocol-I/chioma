@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { TransactionSigningModal } from '@/components/blockchain/TransactionSigningModal';
 import { BlockchainStatusBadge } from '@/components/blockchain/BlockchainStatusBadge';
+import PaymentFormErrorBoundary from '@/components/forms/PaymentFormErrorBoundary';
 import { ChevronRight, Loader2 } from 'lucide-react';
 
 export type PaymentFlowStep = 'amount' | 'review' | 'sign';
@@ -65,6 +66,7 @@ export function PaymentFlowWizard({
     <div
       className={`rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 to-slate-950 p-5 sm:p-6 space-y-6 ${className}`}
     >
+      <PaymentFormErrorBoundary>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-bold text-white">{title}</h2>
         <BlockchainStatusBadge variant="network" />
@@ -199,6 +201,7 @@ export function PaymentFlowWizard({
           onError={onError}
         />
       )}
+      </PaymentFormErrorBoundary>
     </div>
   );
 }

@@ -158,7 +158,7 @@ describe('ReferralService', () => {
       mockReferralRepository.create.mockReturnValue(mockReferral);
       mockReferralRepository.save.mockResolvedValue(mockReferral);
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { referralCode: 'ABC123' },
@@ -182,7 +182,7 @@ describe('ReferralService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await service.trackReferral(mockReferredUser as User, 'INVALID');
+      await service.trackReferral(mockReferredUser.id, 'INVALID');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Referral code INVALID not found for user referred-id',
@@ -203,7 +203,7 @@ describe('ReferralService', () => {
         id: mockReferredUser.id, // Same user
       });
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'User referred-id tried to refer themselves',

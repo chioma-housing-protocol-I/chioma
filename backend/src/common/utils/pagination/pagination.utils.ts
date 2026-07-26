@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { MAX_PAGE_SIZE } from '../constants/business-rules.constants';
+import { MAX_PAGE_SIZE } from '../../constants/business-rules.constants';
 
 export interface PaginationResponse<T> {
   data: T[];

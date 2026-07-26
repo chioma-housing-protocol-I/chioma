@@ -93,4 +93,117 @@ describe('HealthAutomationService', () => {
     await expect(service.handleCron()).resolves.not.toThrow();
     expect(healthService.handlePartialFailure).toHaveBeenCalled();
   });
+
+  describe('repeated database connection failures', () => {
+    const errorNotificationService = () =>
+      service['errorNotificationService'] as unknown as {
+        notifyHealthDegradation: jest.Mock;
+      };
+
+    const mockDatabaseFailure = () => {
+      healthCheckService.check.mockResolvedValue({
+        status: 'error',
+        info: {},
+        error: { database: { status: 'down' } },
+        details: { database: { status: 'down' } },
+      });
+      healthService.enhanceHealthResult.mockReturnValue({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: 100,
+        services: {
+          database: { status: 'error' },
+          stellar: { status: 'ok' },
+          memory: { status: 'ok' },
+        },
+      });
+    };
+
+    it('does not alert on a single, isolated database failure', async () => {
+      mockDatabaseFailure();
+
+      await service.handleCron();
+
+      expect(
+        errorNotificationService().notifyHealthDegradation,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('alerts once the database has failed 3 consecutive checks', async () => {
+      mockDatabaseFailure();
+
+      await service.handleCron();
+      await service.handleCron();
+      expect(
+        errorNotificationService().notifyHealthDegradation,
+      ).not.toHaveBeenCalled();
+
+      await service.handleCron();
+      expect(
+        errorNotificationService().notifyHealthDegradation,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('resets the streak once the database recovers', async () => {
+      mockDatabaseFailure();
+      await service.handleCron();
+      await service.handleCron();
+
+      healthCheckService.check.mockResolvedValue({
+        status: 'ok',
+        info: {},
+        error: {},
+        details: {},
+      });
+      healthService.enhanceHealthResult.mockReturnValue({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: 100,
+        services: {
+          database: { status: 'ok' },
+          stellar: { status: 'ok' },
+          memory: { status: 'ok' },
+        },
+      });
+      await service.handleCron();
+
+      mockDatabaseFailure();
+      await service.handleCron();
+      await service.handleCron();
+      expect(
+        errorNotificationService().notifyHealthDegradation,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still alerts immediately when a non-database service also fails', async () => {
+      healthCheckService.check.mockResolvedValue({
+        status: 'error',
+        info: {},
+        error: {
+          database: { status: 'down' },
+          stellar: { status: 'down' },
+        },
+        details: {},
+      });
+      healthService.enhanceHealthResult.mockReturnValue({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: 100,
+        services: {
+          database: { status: 'error' },
+          stellar: { status: 'error' },
+          memory: { status: 'ok' },
+        },
+      });
+
+      await service.handleCron();
+
+      expect(
+        errorNotificationService().notifyHealthDegradation,
+      ).toHaveBeenCalledTimes(1);
+    });
+  });
 });
