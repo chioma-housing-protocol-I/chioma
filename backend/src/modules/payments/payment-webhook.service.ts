@@ -12,6 +12,14 @@ import { PaymentGatewayWebhookDto } from './dto/payment-gateway.dto';
 import { IdempotencyService } from '../../common/idempotency';
 
 const WEBHOOK_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+import {
+  parsePaymentWebhookDto,
+  type PaymentWebhookPayload,
+} from './dto/payment-webhook.dto';
+import {
+  parseRefundWebhookDto,
+  type RefundWebhookPayload,
+} from './dto/refund-webhook.dto';
 
 @Injectable()
 export class PaymentWebhookService {
@@ -24,15 +32,26 @@ export class PaymentWebhookService {
   ) {}
 
   async handlePaymentGatewayWebhook(
-    dto: PaymentGatewayWebhookDto,
+    body: unknown,
     secretHeader?: string,
   ) {
+    this.assertWebhookSecret(secretHeader);
+    const dto = parsePaymentWebhookDto(body);
+    return this.applyPaymentWebhook(dto);
+  }
+
+  async handleRefundWebhook(body: unknown, secretHeader?: string) {
+    this.assertWebhookSecret(secretHeader);
+    const dto = parseRefundWebhookDto(body);
+    return this.applyRefundWebhook(dto);
+  }
+
+  private assertWebhookSecret(secretHeader?: string) {
     const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
     const isProduction =
       process.env.NODE_ENV === 'production' ||
       process.env.NODE_ENV === 'staging';
 
-    // Require webhook secret in production/staging environments
     if (isProduction && !configuredSecret) {
       this.logger.error(
         'PAYMENT_WEBHOOK_SECRET is required in production/staging',
@@ -40,17 +59,31 @@ export class PaymentWebhookService {
       throw new InternalServerErrorException('Webhook secret not configured');
     }
 
-    // Validate webhook secret if configured
     if (configuredSecret && secretHeader !== configuredSecret) {
       this.logger.warn('Invalid payment webhook secret provided');
       throw new UnauthorizedException('Invalid payment webhook secret');
     }
 
-    // Log webhook validation failures for security monitoring
     if (!secretHeader && configuredSecret) {
       this.logger.warn('Webhook received without secret header');
       throw new UnauthorizedException('Webhook signature required');
     }
+  }
+
+  private async findPayment(
+    paymentId?: string,
+    referenceNumber?: string,
+  ): Promise<Payment | null> {
+    if (paymentId) {
+      return this.paymentRepository.findOne({ where: { id: paymentId } });
+    }
+    if (referenceNumber) {
+      return this.paymentRepository.findOne({
+        where: { referenceNumber },
+      });
+    }
+    return null;
+  }
 
     // Gateways retry webhook deliveries on timeout or non-2xx responses.
     // Dedupe on the gateway's event ID (or a fingerprint of the payload when
@@ -90,6 +123,8 @@ export class PaymentWebhookService {
             where: { referenceNumber: dto.referenceNumber },
           })
         : null;
+  private async applyPaymentWebhook(dto: PaymentWebhookPayload) {
+    const payment = await this.findPayment(dto.paymentId, dto.referenceNumber);
 
     if (!payment) {
       return {
@@ -111,6 +146,63 @@ export class PaymentWebhookService {
     if (dto.transactionHash) {
       payment.referenceNumber = dto.transactionHash;
     }
+
+    const saved = await this.paymentRepository.save(payment);
+    return {
+      processed: true,
+      payment: saved,
+    };
+  }
+
+  private async applyRefundWebhook(dto: RefundWebhookPayload) {
+    const payment = await this.findPayment(dto.paymentId, dto.referenceNumber);
+
+    if (!payment) {
+      return {
+        processed: false,
+        reason: 'payment_not_found',
+      };
+    }
+
+    const normalized = dto.status.toLowerCase();
+    const completed =
+      normalized === 'completed' ||
+      normalized === 'successful' ||
+      normalized === 'success' ||
+      normalized === 'refunded';
+
+    if (completed) {
+      if (typeof dto.amount === 'number' && dto.amount > 0) {
+        payment.refundAmount = Math.min(
+          payment.amount,
+          (payment.refundAmount ?? 0) + dto.amount,
+        );
+      } else {
+        payment.refundAmount = payment.amount;
+      }
+      payment.refundStatus = 'completed';
+      payment.refundReason = dto.reason ?? payment.refundReason;
+      payment.status =
+        payment.refundAmount >= payment.amount
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIAL_REFUND;
+    } else if (
+      normalized === 'failed' ||
+      normalized === 'error' ||
+      normalized === 'cancelled'
+    ) {
+      payment.refundStatus = 'failed';
+    } else {
+      payment.refundStatus = 'pending';
+    }
+
+    payment.metadata = {
+      ...(payment.metadata ?? {}),
+      webhookEventType: dto.eventType,
+      refundId: dto.refundId ?? payment.metadata?.refundId,
+      error: dto.error ?? payment.metadata?.error,
+      reconciledAt: new Date().toISOString(),
+    };
 
     const saved = await this.paymentRepository.save(payment);
     return {

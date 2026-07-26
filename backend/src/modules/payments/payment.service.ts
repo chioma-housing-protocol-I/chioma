@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import * as crypto from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -810,6 +811,63 @@ export class PaymentService {
       scanned: failedPayments.length,
       retried,
       skipped,
+    };
+  }
+
+  async handlePaymentGatewayWebhook(
+    dto: PaymentGatewayWebhookDto,
+    secretHeader?: string,
+  ) {
+    const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
+    if (!configuredSecret) {
+      throw new UnauthorizedException(
+        'Payment webhook secret is not configured',
+      );
+    }
+
+    const secretBuffer = Buffer.from(configuredSecret, 'utf8');
+    const headerBuffer = Buffer.from(secretHeader ?? '', 'utf8');
+
+    if (
+      secretBuffer.length !== headerBuffer.length ||
+      !crypto.timingSafeEqual(secretBuffer, headerBuffer)
+    ) {
+      throw new UnauthorizedException('Invalid payment webhook secret');
+    }
+
+    const payment = dto.paymentId
+      ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
+      : dto.referenceNumber
+        ? await this.paymentRepository.findOne({
+            where: { referenceNumber: dto.referenceNumber },
+          })
+        : null;
+
+    if (!payment) {
+      return {
+        processed: false,
+        reason: 'payment_not_found',
+      };
+    }
+
+    payment.status = this.mapWebhookStatus(dto.status);
+    payment.processedAt ??= new Date();
+    payment.metadata = {
+      ...(payment.metadata ?? {}),
+      webhookEventType: dto.eventType,
+      transactionHash:
+        dto.transactionHash ?? String(payment.metadata?.transactionHash ?? ''),
+      error: dto.error ?? payment.metadata?.error,
+      reconciledAt: new Date().toISOString(),
+    };
+    if (dto.transactionHash) {
+      payment.referenceNumber = dto.transactionHash;
+    }
+
+    const saved = await this.paymentRepository.save(payment);
+    return {
+      processed: true,
+      payment: saved,
     };
   }
 

@@ -41,6 +41,8 @@ export class DeveloperService {
   async createKey(
     userId: string,
     name: string,
+    description?: string,
+    permissions?: string[],
     expiresAt?: Date,
   ): Promise<{ id: string; key: string; name: string; expiresAt: Date }> {
     const rawKey = PREFIX + generateKey();
@@ -51,8 +53,10 @@ export class DeveloperService {
     const apiKey = this.apiKeyRepo.create({
       userId,
       name,
+      description: description || null,
       keyHash,
       keyPrefix,
+      permissions: permissions || [],
       expiresAt: expirationDate,
       status: ApiKeyStatus.ACTIVE,
     });
@@ -70,7 +74,9 @@ export class DeveloperService {
     {
       id: string;
       name: string;
-      prefix: string;
+      description: string | null;
+      keyPrefix: string;
+      permissions: string[];
       lastUsedAt: Date | null;
       createdAt: Date;
       expiresAt: Date | null;
@@ -88,7 +94,9 @@ export class DeveloperService {
     return keys.map((k) => ({
       id: k.id,
       name: k.name,
-      prefix: k.keyPrefix ?? 'chioma_sk_...',
+      description: k.description,
+      keyPrefix: k.keyPrefix ?? 'chioma_sk_...',
+      permissions: k.permissions || [],
       lastUsedAt: k.lastUsedAt,
       createdAt: k.createdAt,
       expiresAt: k.expiresAt,
@@ -114,7 +122,12 @@ export class DeveloperService {
   async updateKey(
     userId: string,
     keyId: string,
-    updates: { name?: string; expiresAt?: Date },
+    updates: {
+      name?: string;
+      description?: string;
+      expiresAt?: Date;
+      permissions?: string[];
+    },
   ): Promise<ApiKey> {
     const key = await this.getKey(userId, keyId);
 
@@ -122,8 +135,16 @@ export class DeveloperService {
       key.name = updates.name;
     }
 
+    if (updates.description !== undefined) {
+      key.description = updates.description || null;
+    }
+
     if (updates.expiresAt) {
       key.expiresAt = updates.expiresAt;
+    }
+
+    if (updates.permissions) {
+      key.permissions = updates.permissions;
     }
 
     return this.apiKeyRepo.save(key);

@@ -57,9 +57,12 @@ CREATE INDEX idx_properties_city_status_created
   ON properties (city, status, created_at DESC)
   WHERE status = 'published';
 
--- Payments: tenant history lookup
-CREATE INDEX idx_payments_tenant_created
-  ON payments (tenant_id, created_at DESC);
+-- Payments: status filters + createdAt sort (issue #1405)
+-- Covers PaymentService.listPayments: WHERE user_id + status, ORDER BY created_at DESC
+CREATE INDEX "IDX_payments_user_status_created_at"
+  ON payments (user_id, status, created_at);
+-- Verify planner: pnpm --dir backend run db:verify-payment-status-index
+-- Benchmark (~2M rows): Bitmap Heap Scan + Sort ~41.9ms → Index Scan Backward ~0.37ms (~114x)
 
 -- Users: email login (case-insensitive)
 CREATE UNIQUE INDEX idx_users_email_lower
@@ -69,9 +72,12 @@ CREATE UNIQUE INDEX idx_users_email_lower
 CREATE INDEX idx_stellar_txns_account_created
   ON stellar_transactions (account_id, created_at DESC);
 
--- Full-text property search (if not using Elasticsearch)
-CREATE INDEX idx_properties_fts
-  ON properties USING GIN (to_tsvector('english', title || ' ' || COALESCE(description, '')));
+-- Full-text property search (GIN on stored search_vector — issue #1407)
+-- Used by PropertyQueryBuilder.applySearchFilter and SearchService
+CREATE INDEX "IDX_properties_search_vector"
+  ON properties USING GIN (search_vector);
+-- Strategy: prefer search_vector @@ plainto_tsquery over LIKE '%…%' so the
+-- planner can use the GIN index. Address ILIKE remains as a narrow fallback.
 
 -- JSONB amenities filter
 CREATE INDEX idx_properties_amenities

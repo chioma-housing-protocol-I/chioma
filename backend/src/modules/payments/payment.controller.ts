@@ -43,13 +43,14 @@ import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import {
   CreateEscrowGatewayDto,
-  PaymentGatewayWebhookDto,
   ProcessStellarRentGatewayDto,
   ReconcilePaymentsDto,
   RefundEscrowGatewayDto,
   ReleaseEscrowGatewayDto,
   RetryFailedPaymentsDto,
 } from './dto/payment-gateway.dto';
+import { PaymentWebhookDto } from './dto/payment-webhook.dto';
+import { RefundWebhookDto } from './dto/refund-webhook.dto';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
@@ -440,9 +441,34 @@ export class PaymentWebhookController {
     includeNewValues: true,
   })
   async handleGatewayWebhook(
-    @Body() dto: PaymentGatewayWebhookDto,
+    @Body() dto: PaymentWebhookDto,
     @Headers('x-chioma-payment-secret') secret?: string,
   ) {
     return this.paymentWebhookService.handlePaymentGatewayWebhook(dto, secret);
+  }
+
+  @Post('refund')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @UseGuards(WebhookSignatureGuard)
+  @WebhookSecret('PAYMENT_WEBHOOK_SECRET')
+  @ApiOperation({
+    summary: 'Handle payment gateway refund webhook events',
+    description:
+      'Called by external payment gateways to notify of refund status changes. ' +
+      'Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and ' +
+      'a timestamp in X-Webhook-Timestamp. Payload is validated with RefundWebhookDto (Zod).',
+  })
+  @AuditLog({
+    action: AuditAction.PAYMENT_REFUNDED,
+    entityType: 'Payment',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  async handleRefundWebhook(
+    @Body() dto: RefundWebhookDto,
+    @Headers('x-chioma-payment-secret') secret?: string,
+  ) {
+    return this.paymentWebhookService.handleRefundWebhook(dto, secret);
   }
 }

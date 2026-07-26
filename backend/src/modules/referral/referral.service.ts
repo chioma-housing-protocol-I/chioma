@@ -41,37 +41,40 @@ export class ReferralService {
     return ''; // Should not happen
   }
 
-  async trackReferral(referredUser: User, referralCode: string): Promise<void> {
+  async trackReferral(
+    referredUserId: string,
+    referralCode: string,
+  ): Promise<void> {
     const referrer = await this.userRepository.findOne({
       where: { referralCode },
     });
     if (!referrer) {
       this.logger.warn(
-        `Referral code ${referralCode} not found for user ${referredUser.id}`,
+        `Referral code ${referralCode} not found for user ${referredUserId}`,
       );
       return;
     }
 
-    if (referrer.id === referredUser.id) {
-      this.logger.warn(`User ${referredUser.id} tried to refer themselves`);
+    if (referrer.id === referredUserId) {
+      this.logger.warn(`User ${referredUserId} tried to refer themselves`);
       return;
     }
 
     const referral = this.referralRepository.create({
       referrerId: referrer.id,
-      referredId: referredUser.id,
+      referredId: referredUserId,
       status: ReferralStatus.PENDING,
     });
 
     await this.referralRepository.save(referral);
 
     // Update referred user
-    await this.userRepository.update(referredUser.id, {
+    await this.userRepository.update(referredUserId, {
       referredById: referrer.id,
     });
 
     this.logger.log(
-      `Tracked referral: ${referrer.id} referred ${referredUser.id}`,
+      `Tracked referral: ${referrer.id} referred ${referredUserId}`,
     );
   }
 

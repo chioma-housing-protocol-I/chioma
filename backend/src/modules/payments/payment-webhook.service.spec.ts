@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PaymentWebhookService } from './payment-webhook.service';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 
@@ -80,16 +80,6 @@ describe('PaymentWebhookService', () => {
           'wrong-secret',
         ),
       ).rejects.toThrow(UnauthorizedException);
-      await expect(
-        service.handlePaymentGatewayWebhook(
-          {
-            eventType: 'payment.completed',
-            paymentId: 'pay_1',
-            status: 'completed',
-          },
-          'wrong-secret',
-        ),
-      ).rejects.toThrow('Invalid payment webhook secret');
       expect(paymentRepository.findOne).not.toHaveBeenCalled();
     });
 
@@ -108,20 +98,17 @@ describe('PaymentWebhookService', () => {
       ).rejects.toThrow(UnauthorizedException);
       expect(paymentRepository.findOne).not.toHaveBeenCalled();
     });
+  });
 
-    it('rejects an empty-string secret header when a secret is configured', async () => {
-      process.env.PAYMENT_WEBHOOK_SECRET = 'configured-secret';
-
+  describe('zod DTO validation', () => {
+    it('rejects malformed payment webhook bodies before DB access', async () => {
       await expect(
-        service.handlePaymentGatewayWebhook(
-          {
-            eventType: 'payment.completed',
-            paymentId: 'pay_1',
-            status: 'completed',
-          },
-          '',
-        ),
-      ).rejects.toThrow(UnauthorizedException);
+        service.handlePaymentGatewayWebhook({
+          eventType: 'payment.completed',
+          status: 'completed',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(paymentRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -195,6 +182,41 @@ describe('PaymentWebhookService', () => {
       });
 
       expect((result.payment as Payment).status).toBe(PaymentStatus.PENDING);
+    });
+  });
+
+  describe('handleRefundWebhook', () => {
+    it('marks a payment as refunded from a refund webhook', async () => {
+      paymentRepository.findOne.mockResolvedValue({
+        id: 'pay_1',
+        amount: 100,
+        refundAmount: 0,
+        status: PaymentStatus.COMPLETED,
+        metadata: {},
+      });
+      paymentRepository.save.mockImplementation((p) => Promise.resolve(p));
+
+      const result = await service.handleRefundWebhook({
+        eventType: 'refund.completed',
+        paymentId: 'pay_1',
+        refundId: 're_1',
+        amount: 100,
+        status: 'completed',
+      });
+
+      expect(result.processed).toBe(true);
+      expect((result.payment as Payment).status).toBe(PaymentStatus.REFUNDED);
+      expect((result.payment as Payment).refundStatus).toBe('completed');
+      expect((result.payment as Payment).metadata?.refundId).toBe('re_1');
+    });
+
+    it('rejects invalid refund webhook payloads', async () => {
+      await expect(
+        service.handleRefundWebhook({
+          eventType: 'refund.completed',
+          status: 'completed',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

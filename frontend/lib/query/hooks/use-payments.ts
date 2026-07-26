@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
+import { getDomainCacheTtl } from '../cache-ttl';
 import type {
   Payment,
   PaginatedResponse,
@@ -12,6 +13,8 @@ import type {
   PaymentScheduleStatus,
   LateFeeCalculation,
 } from '@/types';
+
+const paymentsTtl = getDomainCacheTtl('payments');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +92,8 @@ export function usePayments(params: PaymentListParams = {}) {
       );
       return data;
     },
+    staleTime: paymentsTtl.staleTime,
+    gcTime: paymentsTtl.gcTime,
   });
 }
 
@@ -103,6 +108,8 @@ export function usePayment(id: string | null) {
       return data;
     },
     enabled: Boolean(id),
+    staleTime: paymentsTtl.staleTime,
+    gcTime: paymentsTtl.gcTime,
   });
 }
 
