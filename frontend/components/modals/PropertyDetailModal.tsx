@@ -140,12 +140,13 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               type="button"
               key={`${image}-${index}`}
               onClick={() => setActiveImage(index)}
-              className={`overflow-hidden rounded-lg border ${
+              className={`overflow-hidden rounded-lg border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 ${
                 activeImage === index
                   ? 'border-brand-blue'
                   : 'border-neutral-200'
               }`}
               aria-label={`Show image ${index + 1}`}
+              aria-pressed={activeImage === index}
             >
               <div className="relative h-20 w-full">
                 <Image

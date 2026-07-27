@@ -30,19 +30,21 @@ export default function OAuthButtons() {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3" role="group" aria-label="OAuth sign-in options">
       {providers.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           type="button"
           onClick={() => handleClick(id)}
           disabled={pending !== null}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-cream/12 bg-ink-800 text-cream text-sm font-medium hover:border-brass-500/40 hover:text-brass-300 disabled:opacity-60 transition-colors"
+          aria-label={`Sign in with ${label}`}
+          aria-busy={pending === id}
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-cream/12 bg-ink-800 text-cream text-sm font-medium hover:border-brass-500/40 hover:text-brass-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-800 disabled:opacity-60 transition-colors"
         >
           {pending === id ? (
-            <Loader2 size={15} className="animate-spin" />
+            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
           ) : (
-            <Icon size={15} />
+            <Icon size={15} aria-hidden="true" />
           )}
           {label}
         </button>

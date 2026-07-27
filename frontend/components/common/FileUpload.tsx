@@ -123,7 +123,10 @@ export function FileUpload({
     <div className={`space-y-4 ${className}`}>
       {/* Drop Zone */}
       <div
-        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+        role="button"
+        tabIndex={0}
+        aria-label="Upload files"
+        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
           isDragging
             ? 'border-blue-400 bg-blue-50'
             : selectedFiles.length > 0
@@ -134,6 +137,12 @@ export function FileUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
       >
         <input
           ref={fileInputRef}
@@ -142,12 +151,13 @@ export function FileUpload({
           className="hidden"
           accept={acceptedTypes}
           multiple={multiple}
+          aria-label="File upload input"
         />
 
         {selectedFiles.length > 0 ? (
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-2">
-              <Upload className="w-8 h-8 text-green-500" />
+              <Upload className="w-8 h-8 text-green-500" aria-hidden="true" />
               <span className="text-lg font-semibold text-neutral-900">
                 {selectedFiles.length} file
                 {selectedFiles.length !== 1 ? 's' : ''} selected
@@ -159,7 +169,7 @@ export function FileUpload({
           </div>
         ) : (
           <>
-            <Upload className="w-10 h-10 text-neutral-400 mx-auto mb-2" />
+            <Upload className="w-10 h-10 text-neutral-400 mx-auto mb-2" aria-hidden="true" />
             <p className="text-sm text-neutral-600 mb-1">
               Click or drag files here to upload
             </p>
@@ -178,7 +188,7 @@ export function FileUpload({
             <span className="text-sm font-medium text-neutral-700">
               Selected Files ({selectedFiles.length}/{maxFiles})
             </span>
-            <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
+            <Button type="button" variant="ghost" size="sm" onClick={clearAll} aria-label="Clear all selected files">
               Clear All
             </Button>
           </div>
@@ -188,7 +198,7 @@ export function FileUpload({
                 key={`${file.name}-${index}`}
                 className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl"
               >
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center" aria-hidden="true">
                   {getFileIcon(file)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -204,12 +214,13 @@ export function FileUpload({
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
+                  aria-label={`Remove ${file.name}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     removeFile(index);
                   }}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </Button>
               </div>
             ))}

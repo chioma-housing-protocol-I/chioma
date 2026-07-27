@@ -63,6 +63,44 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Keyboard navigation for user menu dropdown
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isUserMenuOpen) return;
+
+      if (e.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const menuItems = userMenuRef.current?.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]'
+        );
+        if (!menuItems || menuItems.length === 0) return;
+
+        const currentIndex = Array.from(menuItems).findIndex(
+          (item) => item === document.activeElement
+        );
+
+        let nextIndex: number;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < menuItems.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : menuItems.length - 1;
+        }
+
+        menuItems[nextIndex]?.focus();
+      }
+    };
+
+    if (isUserMenuOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isUserMenuOpen]);
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
@@ -102,7 +140,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
               <Link
                 key={link.name}
                 href={link.href}
-                className={`relative text-sm font-medium transition-colors ${
+                className={`relative text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded px-1 ${
                   active ? 'text-white' : 'text-blue-200/80 hover:text-white'
                 }`}
               >
@@ -129,11 +167,18 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsUserMenuOpen((v) => !v);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition-all"
                   aria-expanded={isUserMenuOpen}
                   aria-haspopup="true"
+                  aria-label="User menu"
                 >
-                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0" aria-hidden="true">
                     {user.firstName[0]?.toUpperCase() ?? <User size={14} />}
                   </div>
                   <span className="text-sm text-white font-medium max-w-[100px] truncate">
@@ -142,11 +187,16 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <ChevronDown
                     size={14}
                     className={`text-blue-300/60 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
                   />
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    role="menu"
+                    aria-label="User menu options"
+                  >
                     <div className="px-4 py-3 border-b border-white/10">
                       <p className="text-sm font-semibold text-white truncate">
                         {user.firstName} {user.lastName}
@@ -159,16 +209,18 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                       <Link
                         href={dashboardHref}
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-200 hover:bg-white/5 hover:text-white transition-colors"
+                        role="menuitem"
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-200 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                       >
-                        <LayoutDashboard size={15} />
+                        <LayoutDashboard size={15} aria-hidden="true" />
                         Dashboard
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        role="menuitem"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition-colors"
                       >
-                        <LogOut size={15} />
+                        <LogOut size={15} aria-hidden="true" />
                         Sign out
                       </button>
                     </div>
@@ -180,13 +232,13 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
             <>
               <Link
                 href="/login"
-                className="px-4 py-2 text-sm font-medium text-blue-200 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-blue-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 href="/signup"
-                className="px-5 py-2 text-sm font-semibold bg-brass-500 hover:bg-brass-400 text-ink-950 rounded-xl transition-colors"
+                className="px-5 py-2 text-sm font-semibold bg-brass-500 hover:bg-brass-400 text-ink-950 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition-colors"
               >
                 Get started
               </Link>
@@ -202,13 +254,13 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg hover:bg-white/10 transition-colors text-white"
+          className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition-colors text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"
         >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {isMobileMenuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
       </nav>
 
@@ -227,7 +279,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-lg font-medium transition-colors ${
+                  className={`text-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded ${
                     active ? 'text-white' : 'text-blue-200/80 hover:text-white'
                   }`}
                 >
@@ -242,9 +294,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <Link
                     href={dashboardHref}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
-                    <LayoutDashboard size={16} />
+                    <LayoutDashboard size={16} aria-hidden="true" />
                     Dashboard
                   </Link>
                   <button
@@ -252,9 +304,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                       setIsMobileMenuOpen(false);
                       handleLogout();
                     }}
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                   >
-                    <LogOut size={16} />
+                    <LogOut size={16} aria-hidden="true" />
                     Sign out
                   </button>
                 </>
@@ -263,14 +315,14 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <Link
                     href="/login"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium text-center"
+                    className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/signup"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-xl bg-brass-500 text-ink-950 text-sm font-semibold text-center"
+                    className="px-4 py-3 rounded-xl bg-brass-500 text-ink-950 text-sm font-semibold text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-500"
                   >
                     Get started
                   </Link>

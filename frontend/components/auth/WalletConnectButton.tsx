@@ -167,10 +167,23 @@ export default function WalletConnectButton({
         const button = buttonWrapperRef.current?.querySelector('button');
         if (button && !button.dataset.customHandler) {
           button.dataset.customHandler = 'true';
+          button.setAttribute('aria-label', 'Connect cryptocurrency wallet');
+          button.setAttribute('aria-busy', 'false');
+          button.classList.add(
+            'focus-visible:outline-none',
+            'focus-visible:ring-2',
+            'focus-visible:ring-blue-500',
+            'focus-visible:ring-offset-2'
+          );
           button.addEventListener('click', (e) => {
             e.preventDefault();
             handleWalletConnect();
           });
+        }
+        
+        // Update aria-busy state based on connection status
+        if (button) {
+          button.setAttribute('aria-busy', isConnecting ? 'true' : 'false');
         }
       });
 
@@ -186,7 +199,7 @@ export default function WalletConnectButton({
       console.error('Failed to initialize wallet button:', error);
       toast.error('Failed to initialize wallet connection');
     }
-  }, [setTokens, setWalletAddress, onSuccess, isConnecting, isMounted]);
+  }, [setTokens, setWalletAddress, onSuccess, isConnecting, isMounted, router]);
 
   // Don't render anything until mounted on client
   if (!isMounted) {

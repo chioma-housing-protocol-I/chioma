@@ -83,9 +83,11 @@ export default function NotificationItem({
         type="button"
         onClick={() => onSelect(notification)}
         className="flex w-full items-start gap-4 p-4 text-left"
+        aria-label={`View notification: ${notification.title}`}
       >
         <div
           className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${iconWrap}`}
+          aria-hidden="true"
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -116,7 +118,7 @@ export default function NotificationItem({
             </div>
 
             {!notification.isRead && (
-              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-300" />
+              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-300" aria-label="Unread indicator" />
             )}
           </div>
 
@@ -132,9 +134,10 @@ export default function NotificationItem({
             type="button"
             disabled={isBusy}
             onClick={() => onMarkAsRead(notification.id)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Mark notification as read"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <CheckCheck className="h-4 w-4" />
+            <CheckCheck className="h-4 w-4" aria-hidden="true" />
             Mark read
           </button>
         )}
@@ -142,18 +145,20 @@ export default function NotificationItem({
           type="button"
           disabled={isBusy}
           onClick={() => onArchive(notification.id)}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Archive notification"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Archive className="h-4 w-4" />
+          <Archive className="h-4 w-4" aria-hidden="true" />
           Archive
         </button>
         <button
           type="button"
           disabled={isBusy}
           onClick={() => onDelete(notification.id)}
-          className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Delete notification"
+          className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-100 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
           Delete
         </button>
       </div>
