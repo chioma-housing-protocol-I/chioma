@@ -31,13 +31,20 @@ export class PaymentWebhookService {
     private readonly idempotencyService: IdempotencyService,
   ) {}
 
-  async handlePaymentGatewayWebhook(
-    body: unknown,
-    secretHeader?: string,
-  ) {
+  async handlePaymentGatewayWebhook(body: unknown, secretHeader?: string) {
     this.assertWebhookSecret(secretHeader);
     const dto = parsePaymentWebhookDto(body);
-    return this.applyPaymentWebhook(dto);
+
+    // Gateways retry webhook deliveries on timeout or non-2xx responses.
+    // Dedupe on the gateway's event ID (or a fingerprint of the payload when
+    // no event ID is supplied) so a retried delivery replays the original
+    // result instead of reprocessing the status transition a second time.
+    const idempotencyKey = this.buildIdempotencyKey(dto);
+    return this.idempotencyService.process(
+      idempotencyKey,
+      WEBHOOK_IDEMPOTENCY_TTL_MS,
+      () => this.applyPaymentWebhook(dto),
+    );
   }
 
   async handleRefundWebhook(body: unknown, secretHeader?: string) {
@@ -85,18 +92,6 @@ export class PaymentWebhookService {
     return null;
   }
 
-    // Gateways retry webhook deliveries on timeout or non-2xx responses.
-    // Dedupe on the gateway's event ID (or a fingerprint of the payload when
-    // no event ID is supplied) so a retried delivery replays the original
-    // result instead of reprocessing the status transition a second time.
-    const idempotencyKey = this.buildIdempotencyKey(dto);
-    return this.idempotencyService.process(
-      idempotencyKey,
-      WEBHOOK_IDEMPOTENCY_TTL_MS,
-      () => this.processWebhook(dto),
-    );
-  }
-
   private buildIdempotencyKey(dto: PaymentGatewayWebhookDto): string {
     if (dto.eventId) {
       return `webhook:payment-gateway:${dto.eventId}`;
@@ -115,14 +110,6 @@ export class PaymentWebhookService {
     return `webhook:payment-gateway:fingerprint:${fingerprint}`;
   }
 
-  private async processWebhook(dto: PaymentGatewayWebhookDto) {
-    const payment = dto.paymentId
-      ? await this.paymentRepository.findOne({ where: { id: dto.paymentId } })
-      : dto.referenceNumber
-        ? await this.paymentRepository.findOne({
-            where: { referenceNumber: dto.referenceNumber },
-          })
-        : null;
   private async applyPaymentWebhook(dto: PaymentWebhookPayload) {
     const payment = await this.findPayment(dto.paymentId, dto.referenceNumber);
 

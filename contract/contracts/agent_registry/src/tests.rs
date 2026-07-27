@@ -837,11 +837,18 @@ fn test_rate_agent_emits_event() {
     client.register_transaction(&txn_id, &agent, &parties);
     client.complete_transaction(&txn_id, &agent);
 
-    let events_before = env.events().all().len();
     client.rate_agent(&tenant, &agent, &5, &txn_id);
 
+    // env.events().all() reports the events of the most recent invocation
+    // rather than a running total, so assert on the emitted event itself
+    // instead of comparing counts before and after the call.
     let events = env.events().all();
-    assert!(events.len() > events_before);
+    assert!(
+        !events.is_empty(),
+        "rate_agent should emit an agent_rated event"
+    );
+    let (contract_id, _topics, _data) = events.last().unwrap();
+    assert_eq!(contract_id, client.address);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

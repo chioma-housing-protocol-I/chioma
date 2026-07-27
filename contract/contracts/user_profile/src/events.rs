@@ -1,6 +1,20 @@
+// Some event definitions describe operations that are not yet exposed by the
+// contract's public API. They are kept here so the event schema stays in one
+// place; remove the allow once the corresponding entrypoints emit them.
+#![allow(dead_code)]
+
 use soroban_sdk::{contractevent, Address, Bytes, Env, String};
 
 use crate::types::AccountType;
+
+/// Event emitted when the contract is initialized
+/// Topics: ["initialized", admin: Address]
+#[contractevent(topics = ["initialized"])]
+pub struct Initialized {
+    #[topic]
+    pub admin: Address,
+    pub initialized_at: u64,
+}
 
 /// Event emitted when a user profile is created
 /// Topics: ["profile_created", account_id: Address]
@@ -94,6 +108,15 @@ pub struct UpgradeExecuted {
     pub executed_at: u64,
 }
 
+/// Helper function to emit contract initialized event
+pub(crate) fn initialized(env: &Env, admin: Address) {
+    Initialized {
+        admin,
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
 /// Helper function to emit profile created event
 pub(crate) fn profile_created(
     env: &Env,
@@ -170,12 +193,7 @@ pub(crate) fn platform_admin_updated(env: &Env, old_admin: Address, new_admin: A
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

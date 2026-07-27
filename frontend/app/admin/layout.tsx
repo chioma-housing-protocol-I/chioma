@@ -9,7 +9,6 @@ import AdminSidebar from '@/components/admin-dashboard/Sidebar';
 import AdminTopbar from '@/components/admin-dashboard/Topbar';
 import { getAdminPageTitle } from '@/components/admin-dashboard/navigation';
 
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
 import { useAuth } from '@/store/authStore';
 

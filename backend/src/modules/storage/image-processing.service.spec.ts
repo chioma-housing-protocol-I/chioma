@@ -94,8 +94,8 @@ describe('ImageProcessingService cache (issue #1408)', () => {
     await expect(
       service.processImage(Buffer.from('pdf'), 'doc.pdf', 'application/pdf'),
     ).rejects.toThrow('Not an image file');
-    expect(service.getCacheMetrics().hits + service.getCacheMetrics().misses).toBe(
-      0,
-    );
+    expect(
+      service.getCacheMetrics().hits + service.getCacheMetrics().misses,
+    ).toBe(0);
   });
 });

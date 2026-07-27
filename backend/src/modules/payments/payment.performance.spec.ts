@@ -101,7 +101,9 @@ describe('PaymentService performance benchmarks', () => {
         },
         {
           provide: FraudHooksService,
-          useValue: { onPaymentRecorded: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            onPaymentRecorded: jest.fn().mockResolvedValue(undefined),
+          },
         },
         LockService,
         IdempotencyService,
@@ -120,16 +122,18 @@ describe('PaymentService performance benchmarks', () => {
       (data: Partial<Payment>) => data as Payment,
     );
     let saveCount = 0;
-    paymentRepository.save.mockImplementation(async (data: Partial<Payment>) => {
-      saveCount += 1;
-      return {
-        id: `pay_bench_${saveCount}`,
-        amount: data.amount ?? 100,
-        currency: data.currency ?? 'USD',
-        status: data.status,
-        ...data,
-      } as Payment;
-    });
+    paymentRepository.save.mockImplementation(
+      async (data: Partial<Payment>) => {
+        saveCount += 1;
+        return {
+          id: `pay_bench_${saveCount}`,
+          amount: data.amount ?? 100,
+          currency: data.currency ?? 'USD',
+          status: data.status,
+          ...data,
+        } as Payment;
+      },
+    );
   });
 
   it('benchmarks 100 sequential recordPayment calls under baseline', async () => {
@@ -144,9 +148,7 @@ describe('PaymentService performance benchmarks', () => {
       await service.recordPayment(dto, 'user_bench');
     }
     const elapsed = Date.now() - started;
-    expect(elapsed).toBeLessThan(
-      PAYMENT_BENCHMARK_BASELINES.sequential100Ms,
-    );
+    expect(elapsed).toBeLessThan(PAYMENT_BENCHMARK_BASELINES.sequential100Ms);
     expect(paymentRepository.save).toHaveBeenCalledTimes(100);
   });
 
@@ -168,9 +170,7 @@ describe('PaymentService performance benchmarks', () => {
     const avg = elapsed / concurrency;
 
     expect(results).toHaveLength(concurrency);
-    expect(elapsed).toBeLessThan(
-      PAYMENT_BENCHMARK_BASELINES.concurrent1000Ms,
-    );
+    expect(elapsed).toBeLessThan(PAYMENT_BENCHMARK_BASELINES.concurrent1000Ms);
     expect(avg).toBeLessThan(
       PAYMENT_BENCHMARK_BASELINES.avgConcurrentPaymentMs,
     );
@@ -215,9 +215,7 @@ describe('PaymentService performance benchmarks', () => {
     const elapsed = Date.now() - started;
 
     expect(results).toHaveLength(concurrency);
-    expect(elapsed).toBeLessThan(
-      PAYMENT_BENCHMARK_BASELINES.concurrent1000Ms,
-    );
+    expect(elapsed).toBeLessThan(PAYMENT_BENCHMARK_BASELINES.concurrent1000Ms);
     // Shared key should collapse to a single persisted payment
     expect(paymentRepository.save).toHaveBeenCalledTimes(1);
   }, 30_000);

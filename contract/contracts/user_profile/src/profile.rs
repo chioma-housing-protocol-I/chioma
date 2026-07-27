@@ -176,7 +176,7 @@ impl UserProfileContract {
         env.storage().persistent().set(&key, &profile);
 
         // Emit verification event
-        events::profile_verified(&env, account_id);
+        events::profile_verified(&env, account_id, admin);
 
         Ok(profile)
     }
@@ -219,7 +219,8 @@ impl UserProfileContract {
         env.storage().persistent().set(&key, &profile);
 
         // Emit unverification event
-        events::profile_unverified(&env, account_id);
+        // No reason is captured by the current public entrypoint signature.
+        events::profile_unverified(&env, account_id, admin, String::from_str(&env, ""));
 
         Ok(profile)
     }
@@ -249,7 +250,8 @@ impl UserProfileContract {
         env.storage().persistent().remove(&key);
 
         // Emit deletion event
-        events::profile_deleted(&env, account_id);
+        // Deletion is self-service, so the account is also the actor.
+        events::profile_deleted(&env, account_id.clone(), account_id);
 
         Ok(())
     }

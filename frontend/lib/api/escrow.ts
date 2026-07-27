@@ -197,7 +197,10 @@ export const escrowApi = {
   // ── Standard escrow ──────────────────────────────────────────────────────
 
   create: async (payload: CreateEscrowPayload): Promise<EscrowResponse> => {
-    const res = await apiClient.post<EscrowResponse>('/stellar/escrow', payload);
+    const res = await apiClient.post<EscrowResponse>(
+      '/stellar/escrow',
+      payload,
+    );
     return res.data;
   },
 

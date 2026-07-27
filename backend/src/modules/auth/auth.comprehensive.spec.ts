@@ -17,6 +17,8 @@ import { ReferralService } from '../referral/referral.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { LockService } from '../../common/lock';
 import { QueueManagementService } from '../queues/services/queue-management.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 
 describe('AuthService — comprehensive coverage', () => {
   let service: AuthService;
@@ -137,6 +139,14 @@ describe('AuthService — comprehensive coverage', () => {
                 fn(),
             ),
           },
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: EncryptedCacheService,
+          useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
         },
       ],
     }).compile();

@@ -129,7 +129,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         toast.success('Payment card added successfully');
         setShowAddForm(false);
         setCardFields({ cardholderName: '', cardNumber: '', expiryDate: '' });
-      } catch (err) {
+      } catch (_err) {
         toast.error('Failed to save credit card');
       }
     } else if (formData.paymentMethod === 'bank_transfer') {
@@ -158,7 +158,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         toast.success('Bank account registered successfully');
         setShowAddForm(false);
         setBankFields({ bankName: '', accountNumber: '', routingNumber: '' });
-      } catch (err) {
+      } catch (_err) {
         toast.error('Failed to save bank details');
       }
     }
@@ -288,17 +288,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       }
     >
       <PaymentFormErrorBoundary>
-      <div className="space-y-6">
-        {/* Payment Amount */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center">
-              <DollarSign className="text-brand-blue" size={20} />
+        <div className="space-y-6">
+          {/* Payment Amount */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center">
+                <DollarSign className="text-brand-blue" size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+                Payment Amount
+              </h3>
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-              Payment Amount
-            </h3>
-          </div>
 
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-neutral-500">
@@ -325,97 +325,89 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <span>
                 Due: {format(new Date(formData.dueDate), 'MMMM d, yyyy')}
               </span>
-            </div>
-          )}
-        </div>
-
-        {/* Payment Method Category Selection */}
-        <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">
-            Payment Category
-          </label>
-          <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Payment method category">
-            {paymentMethods.map((method) => {
-              const Icon = method.icon;
-              const isSelected = formData.paymentMethod === method.value;
-
-              return (
-                <button
-                  key={method.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={`${method.label}: ${method.description}${method.disabled ? ' (disabled)' : ''}`}
-                  onClick={() =>
-                    handleChange(
-                      'paymentMethod',
-                      method.value as 'card' | 'bank_transfer' | 'crypto',
-                    )
-                  }
-                  className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 ${
-                    isSelected
-                      ? 'border-brand-blue bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
-                  } ${method.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <Icon
-                    size={20}
-                    className={
-                      isSelected ? 'text-brand-blue' : 'text-neutral-500'
-                    }
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={`text-xs font-bold ${isSelected ? 'text-brand-blue' : 'text-neutral-700 dark:text-neutral-300'}`}
-                  >
-                    {method.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Payment Methods Management Section */}
-        {formData.paymentMethod === 'crypto' ? (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
-            <p className="font-bold mb-1">
-              Cryptocurrency payments are disabled
-            </p>
-            <p>
-              Freighter-wallet based payment flows are undergoing security
-              reviews. Please select Card or Bank Transfer to complete your
-              transaction safely.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                Saved{' '}
-                {formData.paymentMethod === 'card' ? 'Cards' : 'Bank Accounts'}
-              </label>
-              {!showAddForm && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(true)}
-                  aria-label={`Add new ${formData.paymentMethod === 'card' ? 'credit card' : 'bank account'}`}
-                  className="text-xs font-bold text-brand-blue hover:text-blue-700 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 rounded"
-                >
-                  <Plus size={14} aria-hidden="true" /> Add New
-                </button>
-              )}
+              <input
+                type="number"
+                value={formData.amount}
+                onChange={(e) =>
+                  handleChange('amount', parseFloat(e.target.value) || 0)
+                }
+                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-3xl font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
             </div>
 
-            {isLoadingMethods ? (
-              <div className="flex items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
-                <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+            {formData.dueDate && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+                <Calendar size={16} />
+                <span>
+                  Due: {format(new Date(formData.dueDate), 'MMMM d, yyyy')}
+                </span>
               </div>
-            ) : showAddForm ? (
-              /* Add payment method form */
-              <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 space-y-3 bg-neutral-50 dark:bg-neutral-850">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  New{' '}
+            )}
+          </div>
+
+          {/* Payment Method Category Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">
+              Payment Category
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {paymentMethods.map((method) => {
+                const Icon = method.icon;
+                const isSelected = formData.paymentMethod === method.value;
+
+                return (
+                  <button
+                    key={method.value}
+                    type="button"
+                    onClick={() =>
+                      handleChange(
+                        'paymentMethod',
+                        method.value as 'card' | 'bank_transfer' | 'crypto',
+                      )
+                    }
+                    className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-2 ${
+                      isSelected
+                        ? 'border-brand-blue bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+                    } ${method.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <Icon
+                      size={20}
+                      className={
+                        isSelected ? 'text-brand-blue' : 'text-neutral-500'
+                      }
+                    />
+                    <span
+                      className={`text-xs font-bold ${isSelected ? 'text-brand-blue' : 'text-neutral-700 dark:text-neutral-300'}`}
+                    >
+                      {method.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Payment Methods Management Section */}
+          {formData.paymentMethod === 'crypto' ? (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
+              <p className="font-bold mb-1">
+                Cryptocurrency payments are disabled
+              </p>
+              <p>
+                Freighter-wallet based payment flows are undergoing security
+                reviews. Please select Card or Bank Transfer to complete your
+                transaction safely.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+                  Saved{' '}
                   {formData.paymentMethod === 'card'
                     ? 'Credit Card'
                     : 'Bank Account'}
@@ -495,6 +487,37 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         }
                         className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
                       />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Card Number"
+                          maxLength={16}
+                          value={cardFields.cardNumber}
+                          onChange={(e) =>
+                            setCardFields({
+                              ...cardFields,
+                              cardNumber: e.target.value,
+                            })
+                          }
+                          className="col-span-2 px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          placeholder="MM/YY"
+                          maxLength={5}
+                          value={cardFields.expiryDate}
+                          onChange={(e) =>
+                            setCardFields({
+                              ...cardFields,
+                              expiryDate: e.target.value,
+                            })
+                          }
+                          className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-center"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
                       <input
                         type="text"
                         placeholder="Routing Number"
@@ -503,7 +526,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         onChange={(e) =>
                           setBankFields({
                             ...bankFields,
-                            routingNumber: e.target.value,
+                            bankName: e.target.value,
                           })
                         }
                         className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
@@ -590,67 +613,73 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                               Expires:{' '}
                               {format(new Date(method.expiryDate), 'MM/yy')}
                             </p>
-                          )}
+                            {method.expiryDate && (
+                              <p className="text-xs text-neutral-500">
+                                Expires:{' '}
+                                {format(new Date(method.expiryDate), 'MM/yy')}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {method.isDefault && (
-                          <span className="text-[10px] uppercase font-bold text-brand-blue bg-brand-blue/10 px-1.5 py-0.5 rounded">
-                            Default
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => void handleDeleteMethod(method.id, e)}
-                          disabled={deleteMethodMutation.isPending}
-                          aria-label={`Remove payment method ending in ${method.lastFour}`}
-                          className="p-1.5 text-neutral-400 hover:text-red-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition"
-                        >
-                          <Trash2 size={16} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                        <div className="flex items-center gap-2">
+                          {method.isDefault && (
+                            <span className="text-[10px] uppercase font-bold text-brand-blue bg-brand-blue/10 px-1.5 py-0.5 rounded">
+                              Default
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              void handleDeleteMethod(method.id, e)
+                            }
+                            disabled={deleteMethodMutation.isPending}
+                            className="p-1.5 text-neutral-400 hover:text-red-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                            title="Remove payment method"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Payment Description */}
-        <div>
-          <label htmlFor="payment-description" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-            Payment Note (Optional)
-          </label>
-          <textarea
-            id="payment-description"
-            value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            rows={3}
-            className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
-            placeholder="Add a note about this payment..."
-            maxLength={200}
-          />
-        </div>
-
-        {/* Security Notice */}
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle2
-              className="text-green-600 shrink-0 mt-0.5"
-              size={20}
+          {/* Payment Description */}
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+              Payment Note (Optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
+              placeholder="Add a note about this payment..."
+              maxLength={200}
             />
-            <div className="text-sm text-green-900 dark:text-green-100">
-              <p className="font-semibold mb-1">Secure Payment</p>
-              <p>
-                Your payment is processed securely using industry-standard
-                encryption. All transactions are audited and recorded for
-                compliance.
-              </p>
+          </div>
+
+          {/* Security Notice */}
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2
+                className="text-green-600 shrink-0 mt-0.5"
+                size={20}
+              />
+              <div className="text-sm text-green-900 dark:text-green-100">
+                <p className="font-semibold mb-1">Secure Payment</p>
+                <p>
+                  Your payment is processed securely using industry-standard
+                  encryption. All transactions are audited and recorded for
+                  compliance.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </PaymentFormErrorBoundary>
     </BaseModal>
   );

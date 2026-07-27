@@ -498,7 +498,7 @@ pub fn create_appeal(
     let appeal = DisputeAppeal {
         id: appeal_id.clone(),
         dispute_id: dispute_id.clone(),
-        appellant,
+        appellant: appellant.clone(),
         reason,
         status: AppealStatus::Pending,
         appeal_arbiters: selected_arbiters,

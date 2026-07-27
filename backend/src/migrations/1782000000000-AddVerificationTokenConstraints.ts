@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddVerificationTokenConstraints1782000000000
-  implements MigrationInterface
-{
+export class AddVerificationTokenConstraints1782000000000 implements MigrationInterface {
   name = 'AddVerificationTokenConstraints1782000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

@@ -201,7 +201,10 @@ export class AuditService {
 
     const page = queryDto.page || 1;
     const AUDIT_DEFAULT_PAGE_SIZE = 50;
-    const limit = Math.min(queryDto.limit || AUDIT_DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const limit = Math.min(
+      queryDto.limit || AUDIT_DEFAULT_PAGE_SIZE,
+      MAX_PAGE_SIZE,
+    );
 
     PaginationUtils.validatePagination(page, limit);
     const offset = PaginationUtils.calculateOffset(page, limit);

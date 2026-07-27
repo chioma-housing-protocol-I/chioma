@@ -297,7 +297,9 @@ const redisExtraSchema = Joi.object({
 });
 
 const stellarSchema = Joi.object({
-  STELLAR_NETWORK: requiredWhenDeployed(Joi.string().valid('testnet', 'mainnet')),
+  STELLAR_NETWORK: requiredWhenDeployed(
+    Joi.string().valid('testnet', 'mainnet'),
+  ),
   SOROBAN_RPC_URL: requiredWhenDeployed(Joi.string().uri()),
   STELLAR_HORIZON_URL: Joi.string().uri(),
   HORIZON_URL: Joi.string().uri(),
@@ -337,7 +339,9 @@ const storageSchema = Joi.object({
 });
 
 const paymentSchema = Joi.object({
-  PAYMENT_GATEWAY: Joi.string().valid('mock', 'paystack', 'flutterwave').default('mock'),
+  PAYMENT_GATEWAY: Joi.string()
+    .valid('mock', 'paystack', 'flutterwave')
+    .default('mock'),
   PAYSTACK_SECRET_KEY: Joi.string().when('PAYMENT_GATEWAY', {
     is: 'paystack',
     then: Joi.required(),

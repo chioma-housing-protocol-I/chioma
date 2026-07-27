@@ -68,10 +68,10 @@ impl EscrowContract {
             depositor: depositor.clone(),
             beneficiary: beneficiary.clone(),
             arbiter: arbiter.clone(),
-            platform_governance,
-            agent_referral,
+            platform_governance: platform_governance.clone(),
+            agent_referral: agent_referral.clone(),
             amount,
-            token,
+            token: token.clone(),
             status: EscrowStatus::Pending,
             created_at: env.ledger().timestamp(),
             timeout_days: EscrowStorage::get_timeout_config(&env).escrow_timeout_days,
@@ -239,16 +239,17 @@ impl EscrowContract {
             let token_client = token::Client::new(&env, &escrow.token);
             token_client.transfer(&env.current_contract_address(), &release_to, &escrow.amount);
 
-            let landlord_amount = if release_to == escrow.beneficiary { escrow.amount } else { 0 };
-            let tenant_amount = if release_to == escrow.depositor { escrow.amount } else { 0 };
-            events::escrow_released(
-                &env,
-                escrow_id,
-                landlord_amount,
-                tenant_amount,
-                0,
-                0,
-            );
+            let landlord_amount = if release_to == escrow.beneficiary {
+                escrow.amount
+            } else {
+                0
+            };
+            let tenant_amount = if release_to == escrow.depositor {
+                escrow.amount
+            } else {
+                0
+            };
+            events::escrow_released(&env, escrow_id, landlord_amount, tenant_amount, 0, 0);
         }
 
         Ok(())

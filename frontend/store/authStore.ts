@@ -132,28 +132,6 @@ function removeAuthCookie() {
  * storage again. Only refreshed when readStoredAuth is called with
  * `forceRefresh: true`, which `hydrate()` does not do by default.
  */
-/**
- * Module-level closure cache for localStorage auth values.
- * Populated once by readStoredAuth() / persistAuth(), cleared by clearStorage().
- * Avoids synchronous localStorage I/O on every store access and every HTTP
- * request (api-client reads the token on each fetch).
- */
-let _cache: (Omit<AuthState, 'loading'> & { hydrated: boolean }) | null = null;
-
-function invalidateCache(): void {
-  _cache = null;
-}
-
-function readStoredAuth(): Omit<AuthState, 'loading'> {
-  // Return in-memory cache when already hydrated (avoids repeated localStorage reads)
-  if (_cache?.hydrated) {
-    return {
-      user: _cache.user,
-      accessToken: _cache.accessToken,
-      refreshToken: _cache.refreshToken,
-      isAuthenticated: _cache.isAuthenticated,
-      walletAddress: _cache.walletAddress,
-    };
 let cachedAuthSnapshot: Omit<AuthState, 'loading'> | null = null;
 
 function emptyAuthSnapshot(): Omit<AuthState, 'loading'> {
@@ -188,7 +166,6 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
     );
 
     if (storedAccessToken && storedUser) {
-      const result: Omit<AuthState, 'loading'> = {
       cachedAuthSnapshot = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
@@ -196,8 +173,6 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
         isAuthenticated: true,
         walletAddress: storedWalletAddress,
       };
-      _cache = { ...result, hydrated: true };
-      return result;
       return cachedAuthSnapshot;
     }
   } catch {
@@ -208,22 +183,12 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
     removeAuthCookie();
   }
 
-  const empty: Omit<AuthState, 'loading'> = {
-    user: null,
-    accessToken: null,
-    refreshToken: null,
-    isAuthenticated: false,
-    walletAddress: null,
-  };
-  _cache = { ...empty, hydrated: true };
-  return empty;
   cachedAuthSnapshot = emptyAuthSnapshot();
   return cachedAuthSnapshot;
 }
 
 /** Test-only escape hatch to reset the closure cache between test cases. */
 export function __resetAuthStorageCacheForTests(): void {
-  _cache = null;
   cachedAuthSnapshot = null;
 }
 
@@ -236,7 +201,6 @@ function clearStorage() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
 
-  invalidateCache();
   cachedAuthSnapshot = emptyAuthSnapshot();
 }
 
@@ -262,8 +226,6 @@ function persistAuth(
     accessToken,
     refreshToken,
     isAuthenticated: true,
-    walletAddress: _cache?.walletAddress ?? null,
-    hydrated: true,
     walletAddress: cachedAuthSnapshot?.walletAddress ?? null,
   };
 }
@@ -309,8 +271,6 @@ export const useAuthStore = create<AuthStore>()(
       loading: true,
       walletAddress: null,
 
-      hydrate: () => {
-        const stored = readStoredAuth();
       hydrate: (forceRefresh = false) => {
         const stored = readStoredAuth(forceRefresh);
         setApiClientToken(stored.accessToken);
@@ -348,10 +308,11 @@ export const useAuthStore = create<AuthStore>()(
         }
 
         // Keep closure cache in sync
-        if (_cache) {
-          _cache = { ..._cache, walletAddress: address };
         if (cachedAuthSnapshot) {
-          cachedAuthSnapshot = { ...cachedAuthSnapshot, walletAddress: address };
+          cachedAuthSnapshot = {
+            ...cachedAuthSnapshot,
+            walletAddress: address,
+          };
         }
 
         set((state) => {
@@ -379,8 +340,8 @@ export const useAuthStore = create<AuthStore>()(
               AUTH_STORAGE_KEYS.USER,
               JSON.stringify(updatedUser),
             );
-            if (_cache) {
-              _cache = { ..._cache, user: updatedUser };
+            if (cachedAuthSnapshot) {
+              cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
             }
             set((state) => {
               state.user = updatedUser;

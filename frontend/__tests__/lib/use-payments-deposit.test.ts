@@ -1,11 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  readDepositDeductions,
-  useDeposits,
-  useDepositStatus,
-  useDepositDeductions,
-} from '@/lib/query/hooks/use-payments';
-import { apiClient } from '@/lib/api-client';
+import { describe, it, expect, vi } from 'vitest';
+import { readDepositDeductions } from '@/lib/query/hooks/use-payments';
 
 // Mock the React Query hooks wrapper or apiClient directly
 vi.mock('@/lib/api-client', () => ({

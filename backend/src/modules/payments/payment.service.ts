@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  UnauthorizedException,
   Logger,
 } from '@nestjs/common';
 import * as crypto from 'node:crypto';
@@ -28,13 +29,13 @@ import {
   getIdempotencyKey,
   PAYMENT_STATUS_MAP,
 } from './payment.helpers';
-import { runBatch, BatchResult } from '../../common/utils/batch/batch.utils';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Locked, LockService } from '../../common/lock';
 import {
   CreateEscrowGatewayDto,
+  PaymentGatewayWebhookDto,
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
@@ -850,7 +851,8 @@ export class PaymentService {
       };
     }
 
-    payment.status = this.mapWebhookStatus(dto.status);
+    payment.status =
+      PAYMENT_STATUS_MAP[dto.status?.toLowerCase()] ?? PaymentStatus.PENDING;
     payment.processedAt ??= new Date();
     payment.metadata = {
       ...(payment.metadata ?? {}),

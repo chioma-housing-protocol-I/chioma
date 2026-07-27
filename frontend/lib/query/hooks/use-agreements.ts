@@ -15,7 +15,6 @@ import type {
   RenewAgreementPayload,
   SignaturePayload,
   RecordPaymentPayload,
-  AgreementFeeSnapshot,
 } from '@/lib/services/agreement.service';
 
 export interface AgreementSummary extends AgreementResponse {

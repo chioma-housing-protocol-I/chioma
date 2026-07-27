@@ -267,7 +267,9 @@ export class MfaService {
   /**
    * Generate backup codes
    */
-  private generateBackupCodes(count: number = MFA_BACKUP_CODES_COUNT): string[] {
+  private generateBackupCodes(
+    count: number = MFA_BACKUP_CODES_COUNT,
+  ): string[] {
     const codes: string[] = [];
     for (let i = 0; i < count; i++) {
       const code = crypto.randomBytes(4).toString('hex').toUpperCase();

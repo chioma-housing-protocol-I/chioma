@@ -376,8 +376,8 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
     it('tracks multiple sessions per user up to the max', async () => {
       sessionService = app.get(WebSocketSessionService);
 
-      const s1 = await sessionService.createSession(USER_C, 'conn-c-1');
-      const s2 = await sessionService.createSession(USER_C, 'conn-c-2');
+      void (await sessionService.createSession(USER_C, 'conn-c-1'));
+      void (await sessionService.createSession(USER_C, 'conn-c-2'));
 
       const count = await sessionService.getUserConnectionCount(USER_C);
       expect(count).toBeGreaterThanOrEqual(2);

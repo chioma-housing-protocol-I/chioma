@@ -5,7 +5,6 @@ import { ErrorFactory } from '../../errors/error-factory';
 import {
   ResourceNotFoundError,
   DuplicateEntryError,
-  ValidationError,
   SystemError,
 } from '../../errors/domain-errors';
 import { ErrorCode } from '../../errors/error-codes';

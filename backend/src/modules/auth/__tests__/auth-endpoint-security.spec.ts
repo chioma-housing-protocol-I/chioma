@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import {
   Injectable,
-  CanActivate,
   ExecutionContext,
   Controller,
   Get,
@@ -22,6 +21,7 @@ import { ROLES_KEY } from '../guards/roles.guard';
 
 describe('Auth Endpoint Security', () => {
   let reflector: Reflector;
+  let guard: JwtAuthGuard;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -38,8 +38,6 @@ describe('Auth Endpoint Security', () => {
         super(reflector);
       }
     }
-
-    let guard: MockJwtAuthGuard;
 
     beforeEach(() => {
       guard = new MockJwtAuthGuard(reflector);

@@ -4,7 +4,7 @@ import { SanitizePipe, SanitizeValidationPipe } from '../pipes/sanitize.pipe';
 const META: ArgumentMetadata = { type: 'body', metatype: String, data: '' };
 
 // Known SQL injection payloads
-const SQL_PAYLOADS = [
+void [
   "' OR '1'='1",
   "'; DROP TABLE users; --",
   '1; SELECT * FROM properties',

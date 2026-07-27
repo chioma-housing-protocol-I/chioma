@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PaymentWebhookService } from './payment-webhook.service';
 import { Payment, PaymentStatus } from './entities/payment.entity';
+import { IdempotencyService } from '../../common/idempotency';
 
 const mockPaymentRepository = () => ({
   findOne: jest.fn(),
@@ -29,6 +30,18 @@ describe('PaymentWebhookService', () => {
         {
           provide: getRepositoryToken(Payment),
           useFactory: mockPaymentRepository,
+        },
+        {
+          provide: IdempotencyService,
+          useValue: {
+            process: jest.fn(
+              async (
+                _key: string,
+                _ttlMs: number,
+                fn: () => Promise<unknown>,
+              ) => fn(),
+            ),
+          },
         },
       ],
     }).compile();

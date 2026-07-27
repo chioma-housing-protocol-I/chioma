@@ -50,17 +50,17 @@ describe('PaymentFormErrorBoundary', () => {
       );
     });
 
-    expect(
-      screen.getByText('Payment form failed to load'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Payment form failed to load')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
   it('recovers and renders children again after retry is clicked', () => {
-    let attempts = 0;
+    // Gate the throw on an explicit flag rather than a render counter: React
+    // retries a failed concurrent render synchronously, so a counter-based
+    // component stops throwing on its own before the fallback ever shows.
+    let shouldThrow = true;
     function FlakyForm() {
-      attempts += 1;
-      if (attempts === 1) {
+      if (shouldThrow) {
         throw new Error('Payment form crashed');
       }
       return <div>Payment form contents</div>;
@@ -74,10 +74,10 @@ describe('PaymentFormErrorBoundary', () => {
       );
     });
 
-    expect(
-      screen.getByText('Payment form failed to load'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Payment form failed to load')).toBeInTheDocument();
 
+    // The underlying cause is resolved, so the retry should now succeed.
+    shouldThrow = false;
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
     expect(screen.getByText('Payment form contents')).toBeInTheDocument();

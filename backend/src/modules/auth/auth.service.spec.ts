@@ -1,10 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import {} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { User, UserRole } from '../users/entities/user.entity';
 
@@ -24,15 +20,14 @@ import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { RegisterDto } from './dto/register.dto';
 import { Repository } from 'typeorm';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReferralService } from '../referral/referral.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { LockService } from '../../common/lock';
-import { REDIS_CLIENT } from '../../common/lock/redis-client.token';
-import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { QueueManagementService } from '../queues/services/queue-management.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -81,8 +76,12 @@ describe('AuthService', () => {
   });
 
   const mockQueueManagementService = {
-    addEmailJob: jest.fn().mockImplementation(() => Promise.resolve(makeQueueJob())),
-    addDataSyncJob: jest.fn().mockImplementation(() => Promise.resolve(makeQueueJob())),
+    addEmailJob: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(makeQueueJob())),
+    addDataSyncJob: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(makeQueueJob())),
   };
 
   const mockConfigService = {
@@ -168,6 +167,22 @@ describe('AuthService', () => {
                 fn: () => Promise<unknown>,
               ) => fn(),
             ),
+          },
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+          },
+        },
+        {
+          provide: EncryptedCacheService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
           },
         },
       ],
@@ -301,14 +316,17 @@ describe('AuthService', () => {
 
       mockQueueManagementService.addEmailJob.mockImplementationOnce(() =>
         Promise.resolve({
-          finished: jest.fn().mockRejectedValue(new Error('all retries exhausted')),
+          finished: jest
+            .fn()
+            .mockRejectedValue(new Error('all retries exhausted')),
         }),
       );
 
       const originalGet = mockConfigService.get.getMockImplementation();
-      mockConfigService.get.mockImplementation((key: string) =>
-        key === 'ALERT_ONCALL_EMAIL' ? 'oncall@chioma.app' : originalGet?.(key),
-      );
+      mockConfigService.get.mockImplementation(((key: string) =>
+        key === 'ALERT_ONCALL_EMAIL'
+          ? 'oncall@chioma.app'
+          : originalGet?.(key)) as never);
 
       try {
         await service.register(registerDto);

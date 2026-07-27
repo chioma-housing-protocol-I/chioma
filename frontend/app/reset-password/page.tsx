@@ -16,8 +16,7 @@ const labelClasses =
 
 // Must match backend ResetPasswordDto validation:
 // min 8 chars, uppercase + lowercase + (digit or special char)
-const PASSWORD_REGEX =
-  /((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/;
+const PASSWORD_REGEX = /((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/;
 
 type Status = 'form' | 'submitting' | 'success' | 'error';
 
@@ -32,7 +31,9 @@ function ResetPasswordInner() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [status, setStatus] = useState<Status>(token ? 'form' : 'error');
   const [errorMessage, setErrorMessage] = useState(
-    token ? '' : 'This reset link is missing its token. Please request a new one.',
+    token
+      ? ''
+      : 'This reset link is missing its token. Please request a new one.',
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,8 +10,6 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
-  ReceiptText,
-  AlertTriangle,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';

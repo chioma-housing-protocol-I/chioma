@@ -74,7 +74,7 @@ impl DisputeResolutionContract {
         env.storage().instance().set(&DataKey::State, &state);
         env.storage().instance().extend_ttl(500000, 500000);
 
-        events::contract_initialized(&env, admin, min_votes_required);
+        events::contract_initialized(&env, admin);
 
         Ok(())
     }

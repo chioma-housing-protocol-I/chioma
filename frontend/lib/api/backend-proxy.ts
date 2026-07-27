@@ -93,10 +93,16 @@ export async function proxyToBackend(
           headers: responseHeaders,
         });
       } catch (parseError) {
-        console.error(`Backend proxy JSON parse failed for ${path}:`, parseError);
-        console.error(`Response text (first 200 chars):`, text.substring(0, 200));
+        console.error(
+          `Backend proxy JSON parse failed for ${path}:`,
+          parseError,
+        );
+        console.error(
+          `Response text (first 200 chars):`,
+          text.substring(0, 200),
+        );
         return NextResponse.json(
-          { 
+          {
             message: 'Invalid JSON response from backend',
             details: 'Backend returned non-JSON response',
             contentType: responseContentType,

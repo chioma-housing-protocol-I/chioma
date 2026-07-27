@@ -23,9 +23,7 @@ describe('ErrorFallback', () => {
   it('renders a malicious error message as inert text in development mode', () => {
     vi.stubEnv('NODE_ENV', 'development');
     const payload = '<img src=x onerror=alert(1)>';
-    const { container } = render(
-      <ErrorFallback error={new Error(payload)} />,
-    );
+    const { container } = render(<ErrorFallback error={new Error(payload)} />);
 
     expect(screen.getByText(payload)).toBeDefined();
     expect(container.querySelector('img')).toBeNull();
@@ -34,9 +32,7 @@ describe('ErrorFallback', () => {
   it('renders a script-tag payload as inert text, not an executable script', () => {
     vi.stubEnv('NODE_ENV', 'development');
     const payload = '<script>alert(document.cookie)</script>';
-    const { container } = render(
-      <ErrorFallback error={new Error(payload)} />,
-    );
+    const { container } = render(<ErrorFallback error={new Error(payload)} />);
 
     expect(screen.getByText(payload)).toBeDefined();
     expect(container.querySelector('script')).toBeNull();

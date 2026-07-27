@@ -12,16 +12,8 @@ import {
 import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
 import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
-import {
-  GenerateReportDto,
-  ReportType,
-  ReportFormat,
-} from './dto/generate-report.dto';
-import {
-  ExportAnalyticsDto,
-  ExportType,
-  ExportFormat,
-} from './dto/export-analytics.dto';
+import { GenerateReportDto, ReportType } from './dto/generate-report.dto';
+import { ExportAnalyticsDto, ExportType } from './dto/export-analytics.dto';
 
 export interface CityAggregate {
   city: string;
@@ -475,7 +467,7 @@ export class AnalyticsService {
   }
 
   async generateReport(userId: string, dto: GenerateReportDto) {
-    const { reportType, format, days, startDate, endDate, propertyId } = dto;
+    const { reportType, format, days, startDate } = dto;
     const normalizedDays = days ? this.normalizeDays(days) : 30;
     const reportEndDate = new Date();
     const reportStartDate = startDate
@@ -517,7 +509,7 @@ export class AnalyticsService {
   }
 
   async exportAnalytics(userId: string, dto: ExportAnalyticsDto) {
-    const { exportType, format, days, startDate, endDate, propertyId } = dto;
+    const { exportType, format, days, startDate } = dto;
     const normalizedDays = days ? this.normalizeDays(days) : 30;
     const exportEndDate = new Date();
     const exportStartDate = startDate

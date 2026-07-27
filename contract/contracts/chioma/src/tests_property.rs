@@ -234,7 +234,10 @@ fn fixed_annual_rent(
     }
     let mut current = base_rent;
     for _ in 0..years_passed {
-        let increase = (current * annual_rate_bps as i128) / 10_000;
+        // Mirrors PaymentContract::calculate_rent_for_period: compounding
+        // saturates so an extreme rate/term combination clamps instead of
+        // overflowing i128.
+        let increase = current.saturating_mul(annual_rate_bps as i128) / 10_000;
         current = current.saturating_add(increase);
     }
     current

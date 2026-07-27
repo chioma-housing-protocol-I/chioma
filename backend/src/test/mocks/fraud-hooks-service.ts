@@ -4,7 +4,7 @@
  */
 
 export const mockFraudHooksService = {
-  checkPaymentFraud: jest.fn(async (params: any) => ({
+  checkPaymentFraud: jest.fn(async (_params: any) => ({
     isFraudulent: false,
     riskScore: 0.1,
     reason: null,
@@ -23,7 +23,7 @@ export const mockFraudHooksService = {
     reason: null,
   })),
 
-  checkRefundFraud: jest.fn(async (params: any) => ({
+  checkRefundFraud: jest.fn(async (_params: any) => ({
     isFraudulent: false,
     riskScore: 0.1,
     reason: null,

@@ -1,5 +1,5 @@
 use crate::Config;
-use soroban_sdk::{contractevent, topic, Address, Env, String};
+use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
@@ -784,7 +784,11 @@ pub(crate) fn extension_accepted(env: &Env, extension_id: String) {
 }
 
 pub(crate) fn extension_rejected(env: &Env, extension_id: String, reason: String) {
-    ExtensionRejected { extension_id, reason }.publish(env);
+    ExtensionRejected {
+        extension_id,
+        reason,
+    }
+    .publish(env);
 }
 
 pub(crate) fn extension_activated(env: &Env, extension_id: String) {
@@ -792,7 +796,11 @@ pub(crate) fn extension_activated(env: &Env, extension_id: String) {
 }
 
 pub(crate) fn extension_cancelled(env: &Env, extension_id: String, reason: String) {
-    ExtensionCancelled { extension_id, reason }.publish(env);
+    ExtensionCancelled {
+        extension_id,
+        reason,
+    }
+    .publish(env);
 }
 
 pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, eta: u64) {

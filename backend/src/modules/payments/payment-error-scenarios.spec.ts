@@ -312,6 +312,18 @@ describe('Payment module error scenarios', () => {
             provide: getRepositoryToken(Payment),
             useValue: paymentRepository,
           },
+          {
+            provide: IdempotencyService,
+            useValue: {
+              process: jest.fn(
+                async (
+                  _key: string,
+                  _ttlMs: number,
+                  fn: () => Promise<unknown>,
+                ) => fn(),
+              ),
+            },
+          },
         ],
       }).compile();
       service = module.get(PaymentWebhookService);

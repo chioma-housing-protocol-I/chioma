@@ -1,17 +1,17 @@
 import {
-    Body,
-    Controller,
-    Patch,
-    Param,
-    Request,
-    UseGuards,
-    UseInterceptors,
+  Body,
+  Controller,
+  Patch,
+  Param,
+  Request,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { DisputesService } from './disputes.service';
 import { AdminUpdateDisputeDto } from './dto/admin-update-dispute.dto';
@@ -32,38 +32,40 @@ import { ValidationError } from '../../common/errors/domain-errors';
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @UseInterceptors(AuditLogInterceptor)
 export class AdminDisputesController {
-    constructor(private readonly disputesService: DisputesService) { }
+  constructor(private readonly disputesService: DisputesService) {}
 
-    @Patch(':id')
-    @ApiOperation({
-        summary: 'Admin update dispute status and resolution',
-        description:
-            'Allows admins to update dispute status and add resolution. Validates status transitions.',
-    })
-    @ApiResponse({ status: 200, description: 'Dispute updated successfully' })
-    @ApiResponse({ status: 404, description: 'Dispute not found' })
-    @ApiResponse({ status: 400, description: 'Invalid status transition' })
-    @ApiResponse({ status: 403, description: 'Admin access required' })
-    @AuditLog({
-        action: AuditAction.UPDATE,
-        entityType: 'Dispute',
-        level: AuditLevel.SECURITY,
-        includeOldValues: true,
-        includeNewValues: true,
-    })
-    async updateDispute(
-        @Param('id') id: string,
-        @Body() adminUpdateDisputeDto: AdminUpdateDisputeDto,
-        @Request() req,
-    ) {
-        const numericId = parseInt(id, 10);
-        if (isNaN(numericId)) {
-            throw new ValidationError(`Invalid dispute ID: ${id}. Must be a valid number.`);
-        }
-        return this.disputesService.update(
-            numericId,
-            adminUpdateDisputeDto,
-            req.user.id,
-        );
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Admin update dispute status and resolution',
+    description:
+      'Allows admins to update dispute status and add resolution. Validates status transitions.',
+  })
+  @ApiResponse({ status: 200, description: 'Dispute updated successfully' })
+  @ApiResponse({ status: 404, description: 'Dispute not found' })
+  @ApiResponse({ status: 400, description: 'Invalid status transition' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'Dispute',
+    level: AuditLevel.SECURITY,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
+  async updateDispute(
+    @Param('id') id: string,
+    @Body() adminUpdateDisputeDto: AdminUpdateDisputeDto,
+    @Request() req,
+  ) {
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      throw new ValidationError(
+        `Invalid dispute ID: ${id}. Must be a valid number.`,
+      );
     }
+    return this.disputesService.update(
+      numericId,
+      adminUpdateDisputeDto,
+      req.user.id,
+    );
+  }
 }

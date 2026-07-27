@@ -69,9 +69,7 @@ export const queryCacheTtl: Record<QueryDomain, CacheTtl> = {
  * Resolve TTL for a query key by matching its root segment to a domain.
  * Falls back to `default` when the root is unknown.
  */
-export function resolveCacheTtl(
-  queryKey: readonly unknown[],
-): CacheTtl {
+export function resolveCacheTtl(queryKey: readonly unknown[]): CacheTtl {
   const root = queryKey[0];
   if (typeof root !== 'string') {
     return queryCacheTtl.default;

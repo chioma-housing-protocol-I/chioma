@@ -107,7 +107,13 @@ describe('DeveloperService', () => {
         status: ApiKeyStatus.ACTIVE,
       } as ApiKey);
 
-      const result = await service.createKey(userId, name, customExpiration);
+      const result = await service.createKey(
+        userId,
+        name,
+        undefined,
+        undefined,
+        customExpiration,
+      );
 
       expect(result.expiresAt).toEqual(customExpiration);
     });

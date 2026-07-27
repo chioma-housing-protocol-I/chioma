@@ -17,7 +17,11 @@ export class ThreatDetectionMiddleware implements NestMiddleware {
 
   constructor(private readonly threatDetection: ThreatDetectionService) {}
 
-  async use(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
+  async use(
+    req: AuthenticatedRequest,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const userId = req.user?.id;
       const decision = await this.threatDetection.analyzeRequest(req, userId);

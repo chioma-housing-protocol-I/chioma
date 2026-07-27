@@ -50,7 +50,6 @@ export default function PropertyListingForm() {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {

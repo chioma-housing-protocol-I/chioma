@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
@@ -727,7 +725,11 @@ describe('PaymentService', () => {
 
       await expect(
         service.handlePaymentGatewayWebhook(
-          { eventType: 'payment.completed', paymentId: 'pay_1', status: 'completed' },
+          {
+            eventType: 'payment.completed',
+            paymentId: 'pay_1',
+            status: 'completed',
+          },
           'any-secret',
         ),
       ).rejects.toThrow(UnauthorizedException);
@@ -740,7 +742,11 @@ describe('PaymentService', () => {
 
       await expect(
         service.handlePaymentGatewayWebhook(
-          { eventType: 'payment.completed', paymentId: 'pay_1', status: 'completed' },
+          {
+            eventType: 'payment.completed',
+            paymentId: 'pay_1',
+            status: 'completed',
+          },
           'wrong-secret',
         ),
       ).rejects.toThrow(UnauthorizedException);
@@ -890,5 +896,4 @@ describe('PaymentService', () => {
       expect(PAYMENT_STATUS_MAP['unknown-status']).toBeUndefined();
     });
   });
-
 });

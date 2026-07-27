@@ -4,7 +4,11 @@ import { LoggerService, LogContext } from './logger.service';
 interface LoggerLike {
   info?: (message: string, metadata: Record<string, unknown>) => void;
   log?: (message: string, metadata: Record<string, unknown>) => void;
-  error: (message: string, error: unknown, metadata?: Record<string, unknown>) => void;
+  error: (
+    message: string,
+    error: unknown,
+    metadata?: Record<string, unknown>,
+  ) => void;
 }
 
 export function Logging(contextInfo: Partial<LogContext> = {}) {
@@ -13,9 +17,18 @@ export function Logging(contextInfo: Partial<LogContext> = {}) {
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
-    descriptor.value = async function (this: { logger?: LoggerLike }, ...args: unknown[]) {
-      const logger: LoggerLike = this.logger ?? new LoggerService();
+    const originalMethod = descriptor.value as (
+      ...args: unknown[]
+    ) => Promise<unknown>;
+    descriptor.value = async function (
+      this: { logger?: LoggerLike },
+      ...args: unknown[]
+    ) {
+      // LoggerService declares a *private* log(), which structurally conflicts
+      // with LoggerLike's optional public log?(). Its public info() satisfies
+      // the shape logInfo() actually uses, so narrow to that here.
+      const logger: LoggerLike =
+        this.logger ?? (new LoggerService() as unknown as LoggerLike);
       const logInfo = (message: string, metadata: Record<string, unknown>) => {
         if (typeof logger.info === 'function') {
           logger.info(message, metadata);

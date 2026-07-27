@@ -32,13 +32,19 @@ async function loadLocaleFile(locale: string): Promise<TranslationDict> {
 /** Recursively flatten nested object to dot-separated keys. */
 function flattenKeys(obj: unknown, prefix = ''): string[] {
   if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return [];
-  return Object.entries(obj as Record<string, unknown>).flatMap(([key, value]) => {
-    const full = prefix ? `${prefix}.${key}` : key;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      return flattenKeys(value, full);
-    }
-    return [full];
-  });
+  return Object.entries(obj as Record<string, unknown>).flatMap(
+    ([key, value]) => {
+      const full = prefix ? `${prefix}.${key}` : key;
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
+        return flattenKeys(value, full);
+      }
+      return [full];
+    },
+  );
 }
 
 // Load all locales once before running tests
@@ -71,16 +77,19 @@ describe('[I18N] No missing keys (source coverage = 100%)', () => {
   for (const locale of TARGET_LOCALES) {
     it(`${locale}.json has all keys present in en.json`, () => {
       const targetKeys = new Set(flattenKeys(dicts[locale]));
-      const missing = sourceKeys.filter(k => !targetKeys.has(k));
+      const missing = sourceKeys.filter((k) => !targetKeys.has(k));
 
       if (missing.length > 0) {
         console.error(
           `\n[i18n] ${locale}: ${missing.length} missing key(s):\n` +
-            missing.map(k => `  • ${k}`).join('\n'),
+            missing.map((k) => `  • ${k}`).join('\n'),
         );
       }
 
-      expect(missing, `${locale} is missing ${missing.length} key(s)`).toHaveLength(0);
+      expect(
+        missing,
+        `${locale} is missing ${missing.length} key(s)`,
+      ).toHaveLength(0);
     });
   }
 });
@@ -92,16 +101,19 @@ describe('[I18N] No orphan keys (locale has no keys absent from source)', () => 
     it(`${locale}.json has no keys absent from en.json`, () => {
       const sourceSet = new Set(sourceKeys);
       const targetKeys = flattenKeys(dicts[locale]);
-      const orphans = targetKeys.filter(k => !sourceSet.has(k));
+      const orphans = targetKeys.filter((k) => !sourceSet.has(k));
 
       if (orphans.length > 0) {
         console.warn(
           `\n[i18n] ${locale}: ${orphans.length} orphan key(s):\n` +
-            orphans.map(k => `  • ${k}`).join('\n'),
+            orphans.map((k) => `  • ${k}`).join('\n'),
         );
       }
 
-      expect(orphans, `${locale} has ${orphans.length} orphan key(s)`).toHaveLength(0);
+      expect(
+        orphans,
+        `${locale} has ${orphans.length} orphan key(s)`,
+      ).toHaveLength(0);
     });
   }
 });
@@ -124,7 +136,9 @@ describe('[I18N] Key counts are consistent', () => {
 // ─── 5. Fallback to English ───────────────────────────────────────────────────
 
 describe('[I18N] translate() – fallback-to-en behavior', () => {
-  const enDict = { common: { search: 'Search', error: 'Error' } } as unknown as TranslationDict;
+  const enDict = {
+    common: { search: 'Search', error: 'Error' },
+  } as unknown as TranslationDict;
   const esDict = { common: { search: 'Buscar' } } as unknown as TranslationDict; // missing "error"
   const emptyDict = {} as TranslationDict;
 
@@ -153,32 +167,23 @@ describe('[I18N] translate() – fallback-to-en behavior', () => {
 
 describe('[I18N] translate() – interpolation', () => {
   it('replaces {{count}} placeholder in English', () => {
-    const result = translate(
-      'booking.nights',
-      dicts['en'],
-      dicts['en'],
-      { count: 5 },
-    );
+    const result = translate('booking.nights', dicts['en'], dicts['en'], {
+      count: 5,
+    });
     expect(result).toBe('5 nights');
   });
 
   it('replaces {{count}} placeholder in Spanish', () => {
-    const result = translate(
-      'booking.nights',
-      dicts['es'],
-      dicts['en'],
-      { count: 3 },
-    );
+    const result = translate('booking.nights', dicts['es'], dicts['en'], {
+      count: 3,
+    });
     expect(result).toBe('3 noches');
   });
 
   it('replaces {{count}} placeholder in French', () => {
-    const result = translate(
-      'booking.nights',
-      dicts['fr'],
-      dicts['en'],
-      { count: 2 },
-    );
+    const result = translate('booking.nights', dicts['fr'], dicts['en'], {
+      count: 2,
+    });
     expect(result).toBe('2 nuits');
   });
 
@@ -189,9 +194,9 @@ describe('[I18N] translate() – interpolation', () => {
 
   it('replaces {{count}} in showingAll key across all locales', () => {
     const counts: Record<string, string> = {
-      en: '42 listings',
-      es: '42 propiedades',
-      fr: '42 annonces',
+      en: 'Showing all 42 listings',
+      es: 'Mostrando todas las 42 propiedades',
+      fr: 'Affichage des 42 annonces',
     };
     for (const locale of ALL_LOCALES) {
       const result = translate(
@@ -209,12 +214,37 @@ describe('[I18N] translate() – interpolation', () => {
 
 describe('[I18N] Spot-check real translation values', () => {
   const checks: Array<{ key: string; en: string; es: string; fr: string }> = [
-    { key: 'common.search',       en: 'Search',       es: 'Buscar',       fr: 'Rechercher' },
-    { key: 'nav.properties',      en: 'Properties',   es: 'Propiedades',  fr: 'Propriétés' },
-    { key: 'nav.signIn',          en: 'Sign In',      es: 'Iniciar sesión', fr: 'Se connecter' },
-    { key: 'errors.notFound',     en: 'Page not found', es: 'Página no encontrada', fr: 'Page introuvable' },
-    { key: 'properties.verified', en: 'Verified',     es: 'Verificado',   fr: 'Vérifié' },
-    { key: 'dashboard.welcome',   en: 'Welcome back', es: 'Bienvenido de nuevo', fr: 'Bon retour' },
+    { key: 'common.search', en: 'Search', es: 'Buscar', fr: 'Rechercher' },
+    {
+      key: 'nav.properties',
+      en: 'Properties',
+      es: 'Propiedades',
+      fr: 'Propriétés',
+    },
+    {
+      key: 'nav.signIn',
+      en: 'Sign In',
+      es: 'Iniciar sesión',
+      fr: 'Se connecter',
+    },
+    {
+      key: 'errors.notFound',
+      en: 'Page not found',
+      es: 'Página no encontrada',
+      fr: 'Page introuvable',
+    },
+    {
+      key: 'properties.verified',
+      en: 'Verified',
+      es: 'Verificado',
+      fr: 'Vérifié',
+    },
+    {
+      key: 'dashboard.welcome',
+      en: 'Welcome back',
+      es: 'Bienvenido de nuevo',
+      fr: 'Bon retour',
+    },
   ];
 
   for (const { key, en, es, fr } of checks) {

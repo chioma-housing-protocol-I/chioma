@@ -78,7 +78,9 @@ describe('prefetchPropertyDetail', () => {
     resolveGet({ data: { id: 'prop-1', title: 'Loft' } });
     await Promise.all([a, b]);
 
-    expect(queryClient.getQueryData(queryKeys.properties.detail('prop-1'))).toEqual({
+    expect(
+      queryClient.getQueryData(queryKeys.properties.detail('prop-1')),
+    ).toEqual({
       id: 'prop-1',
       title: 'Loft',
     });

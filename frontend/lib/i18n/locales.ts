@@ -19,7 +19,9 @@ export function detectLocale(): SupportedLocale {
   if (typeof window === 'undefined') return FALLBACK_LOCALE;
 
   // 1. Previously saved preference
-  const stored = localStorage.getItem('chioma_locale') as SupportedLocale | null;
+  const stored = localStorage.getItem(
+    'chioma_locale',
+  ) as SupportedLocale | null;
   if (stored && SUPPORTED_LOCALES.includes(stored)) return stored;
 
   // 2. Browser language (first two chars)

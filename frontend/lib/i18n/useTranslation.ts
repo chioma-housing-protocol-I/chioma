@@ -51,7 +51,9 @@ export function useTranslation(): UseTranslationResult {
         // Always load English as the fallback dict
         const [active, fallback] = await Promise.all([
           loadLocale(locale),
-          locale !== FALLBACK_LOCALE ? loadLocale(FALLBACK_LOCALE) : Promise.resolve({} as TranslationDict),
+          locale !== FALLBACK_LOCALE
+            ? loadLocale(FALLBACK_LOCALE)
+            : Promise.resolve({} as TranslationDict),
         ]);
 
         if (!cancelled) {
@@ -66,7 +68,9 @@ export function useTranslation(): UseTranslationResult {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [locale]);
 
   const setLocale = useCallback((next: SupportedLocale) => {

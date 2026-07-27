@@ -40,6 +40,10 @@ export class AnalyticsController {
 
   @Get('landlord/fees-summary')
   @ApiOperation({ summary: 'Get landlord platform fees summary' })
+  async getLandlordFeesSummary(@CurrentUser() user: User) {
+    return this.analyticsService.getLandlordFeesSummary(user.id);
+  }
+
   @Get('dashboard/metrics')
   @ApiOperation({ summary: 'Get overall dashboard metrics' })
   async getDashboardMetrics(@CurrentUser() user: User) {
@@ -54,11 +58,6 @@ export class AnalyticsController {
     type: Number,
     description: 'Number of days to include (1-365)',
   })
-  async getLandlordFeesSummary(
-    @CurrentUser() user: User,
-    @Query() query: LandlordAnalyticsQueryDto,
-  ) {
-    return this.analyticsService.getLandlordFeesSummary(user.id);
   async getPaymentAnalytics(
     @CurrentUser() user: User,
     @Query() query: LandlordAnalyticsQueryDto,

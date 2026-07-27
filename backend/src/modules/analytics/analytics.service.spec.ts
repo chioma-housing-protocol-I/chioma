@@ -12,6 +12,9 @@ describe('AnalyticsService', () => {
   };
 
   const subletBookingRepository = {
+    find: jest.fn(),
+  };
+
   const paymentRepository = {
     find: jest.fn(),
   };

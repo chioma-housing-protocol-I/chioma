@@ -10,9 +10,9 @@ import { Logger } from '@nestjs/common';
 
 describe('ReferralService', () => {
   let service: ReferralService;
-  let referralRepository: Repository<Referral>;
   let userRepository: Repository<User>;
   let stellarService: StellarService;
+  let referralRepository: Repository<Referral>;
   let configService: ConfigService;
 
   const mockReferral: Partial<Referral> = {
@@ -36,7 +36,7 @@ describe('ReferralService', () => {
     walletAddress: 'GABC123...',
   };
 
-  const mockReferredUser: Partial<User> = {
+  const mockReferredUser = {
     id: 'referred-id',
     email: 'referred@example.com',
     firstName: 'Jane',

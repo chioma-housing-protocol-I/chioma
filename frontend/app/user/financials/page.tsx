@@ -16,15 +16,8 @@ const AreaChartWrapper = dynamic(
     ssr: false,
   },
 );
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { useFeesSummary } from '@/lib/query/hooks/use-fees-summary';
+import {
   useStellarNetworkAccount,
   readAssetBalance,
 } from '@/lib/query/hooks/use-stellar-account';
@@ -405,16 +398,8 @@ export default function FinancialsPage() {
 
   const totalRevenue =
     transactions.filter((t) => t.inflow).reduce((s, t) => s + t.amount, 0) +
-    37900000;
-  const feesRemitted = feesLoading
-    ? 0
-    : (feesData?.totalPlatformFees ?? 0);
-  const pendingPayout = 3800000;
     (usingMock ? 37900000 : 0);
-  const feesRemitted =
-    transactions
-      .filter((t) => t.type === 'Platform Fee')
-      .reduce((s, t) => s + t.amount, 0) + (usingMock ? 450000 : 0);
+  const feesRemitted = feesLoading ? 0 : (feesData?.totalPlatformFees ?? 0);
   const pendingPayout = usingMock
     ? 3800000
     : transactions

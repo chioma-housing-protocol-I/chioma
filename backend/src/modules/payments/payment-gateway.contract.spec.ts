@@ -5,6 +5,7 @@ import {
   GatewayRefundResponse,
 } from './payment-gateway.service';
 import { RetryService } from '../../common/services/retry.service';
+import { CircuitBreakerService } from '../../common/resilience/circuit-breaker.service';
 import { PaymentMethod } from './entities/payment-method.entity';
 
 /**
@@ -27,6 +28,12 @@ describe('PaymentGatewayService - Contract Tests', () => {
             execute: jest.fn((fn) => fn()),
           },
         },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            execute: jest.fn((_key: string, fn: () => unknown) => fn()),
+          },
+        },
       ],
     }).compile();
 
@@ -37,7 +44,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
   describe('Contract: chargePayment', () => {
     it('should return a response conforming to GatewayChargeResponse contract', async () => {
       const mockUser = { id: 'user_123' } as any;
-      const mockPaymentMethod: PaymentMethod = {
+      const mockPaymentMethod = {
         id: 1,
         user: mockUser,
         userId: 'user_123',
@@ -49,7 +56,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
         metadata: { authorizationCode: 'AUTH_code123' },
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as PaymentMethod;
+      } as unknown as PaymentMethod;
 
       const result: GatewayChargeResponse = await service.chargePayment({
         paymentMethod: mockPaymentMethod,
@@ -80,7 +87,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
 
     it('should handle payment method with required metadata fields', async () => {
       const mockUser = { id: 'user_456' } as any;
-      const mockPaymentMethod: PaymentMethod = {
+      const mockPaymentMethod = {
         id: 2,
         user: mockUser,
         userId: 'user_456',
@@ -92,7 +99,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
         metadata: { token: 'flw_token_xyz' },
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as PaymentMethod;
+      } as unknown as PaymentMethod;
 
       const result = await service.chargePayment({
         paymentMethod: mockPaymentMethod,

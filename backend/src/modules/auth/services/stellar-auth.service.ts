@@ -327,9 +327,6 @@ export class StellarAuthService {
       },
       {
         secret: jwtSecret,
-        expiresIn: '15m',
-        secret:
-          this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
         expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
@@ -343,10 +340,6 @@ export class StellarAuthService {
       },
       {
         secret: jwtRefreshSecret,
-        expiresIn: '7d',
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ||
-          'your-refresh-secret-key',
         expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );

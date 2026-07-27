@@ -14,9 +14,7 @@ import { RentalUnit } from '../entities/rental-unit.entity';
 import { PropertyListingDraft } from '../entities/property-listing-draft.entity';
 import { CacheService } from '../../../common/cache/cache.service';
 import { FraudHooksService } from '../../fraud/fraud-hooks.service';
-import { QueryPropertyDto } from '../dto/query-property.dto';
-import { User, UserRole, AuthMethod } from '../../users/entities/user.entity';
-import { KycStatus } from '../../kyc/kyc-status.enum';
+import { User } from '../../users/entities/user.entity';
 
 describe('PropertiesService – Pagination', () => {
   let service: PropertiesService;

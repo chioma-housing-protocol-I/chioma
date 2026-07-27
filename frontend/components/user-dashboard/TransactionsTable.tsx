@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
 import type { TransactionsTableProps, Transaction } from './types';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 

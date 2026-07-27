@@ -32,4 +32,4 @@ import { StellarModule } from '../stellar/stellar.module';
   providers: [DisputesService, DisputeBlockchainService],
   exports: [DisputesService, DisputeBlockchainService],
 })
-export class DisputesModule { }
+export class DisputesModule {}

@@ -34,6 +34,7 @@ import {
   DuplicateEntryError,
 } from '../../common/errors/domain-errors';
 import { ErrorCode } from '../../common/errors/error-codes';
+import { ValidationUtils } from '../../common/utils/validation/validation.utils';
 
 import {
   BCRYPT_SALT_ROUNDS,
@@ -609,9 +610,15 @@ export class AuthService {
 
     // Update known fingerprints (keep last 10 IPs and agents)
     const updatedIps = [...new Set([...(known?.ips ?? []), ip])].slice(-10);
-    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(-10);
+    const updatedAgents = [...new Set([...(known?.agents ?? []), ua])].slice(
+      -10,
+    );
     await this.encryptedCache
-      .set(knownKey, { ips: updatedIps, agents: updatedAgents }, 30 * 24 * 3600 * 1000)
+      .set(
+        knownKey,
+        { ips: updatedIps, agents: updatedAgents },
+        30 * 24 * 3600 * 1000,
+      )
       .catch(() => null);
   }
 
@@ -758,14 +765,12 @@ export class AuthService {
         },
       );
 
-      job
-        .finished()
-        .catch((error: unknown) =>
-          this.notifyCriticalFailure('verification_email', error, {
-            userId,
-            email,
-          }),
-        );
+      job.finished().catch((error: unknown) =>
+        this.notifyCriticalFailure('verification_email', error, {
+          userId,
+          email,
+        }),
+      );
     } catch (error) {
       await this.notifyCriticalFailure('verification_email_enqueue', error, {
         userId,
@@ -796,14 +801,12 @@ export class AuthService {
         data: { referralCode },
       });
 
-      job
-        .finished()
-        .catch((error: unknown) =>
-          this.notifyCriticalFailure('referral_tracking', error, {
-            userId,
-            referralCode,
-          }),
-        );
+      job.finished().catch((error: unknown) =>
+        this.notifyCriticalFailure('referral_tracking', error, {
+          userId,
+          referralCode,
+        }),
+      );
     } catch (error) {
       await this.notifyCriticalFailure('referral_tracking_enqueue', error, {
         userId,

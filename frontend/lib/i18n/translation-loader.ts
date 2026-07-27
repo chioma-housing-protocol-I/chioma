@@ -21,7 +21,9 @@ const cache = new Map<string, TranslationDict>();
  * - In Node (tests / scripts): uses `require` / dynamic `import` to read the
  *   file from the filesystem.
  */
-export async function loadLocale(locale: SupportedLocale): Promise<TranslationDict> {
+export async function loadLocale(
+  locale: SupportedLocale,
+): Promise<TranslationDict> {
   if (cache.has(locale)) return cache.get(locale)!;
 
   let dict: TranslationDict;
@@ -29,7 +31,8 @@ export async function loadLocale(locale: SupportedLocale): Promise<TranslationDi
   if (typeof window !== 'undefined') {
     // Browser path
     const res = await fetch(`/locales/${locale}.json`);
-    if (!res.ok) throw new Error(`Failed to load locale "${locale}": HTTP ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to load locale "${locale}": HTTP ${res.status}`);
     dict = (await res.json()) as TranslationDict;
   } else {
     // Node path — used by scripts and tests

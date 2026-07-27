@@ -56,10 +56,14 @@ export function prefetchPropertyDetail(
   id: string,
 ): Promise<Property | undefined> {
   if (!id) return Promise.resolve(undefined);
-  return prefetchOnce(queryClient, queryKeys.properties.detail(id), async () => {
-    const { data } = await apiClient.get<Property>(`/properties/${id}`);
-    return data;
-  });
+  return prefetchOnce(
+    queryClient,
+    queryKeys.properties.detail(id),
+    async () => {
+      const { data } = await apiClient.get<Property>(`/properties/${id}`);
+      return data;
+    },
+  );
 }
 
 /** Prefetch a payment detail payload. */
@@ -80,10 +84,14 @@ export function prefetchAgreementDetail(
   id: string,
 ): Promise<unknown> {
   if (!id) return Promise.resolve(undefined);
-  return prefetchOnce(queryClient, queryKeys.agreements.detail(id), async () => {
-    const { data } = await apiClient.get(`/agreements/${id}`);
-    return data;
-  });
+  return prefetchOnce(
+    queryClient,
+    queryKeys.agreements.detail(id),
+    async () => {
+      const { data } = await apiClient.get(`/agreements/${id}`);
+      return data;
+    },
+  );
 }
 
 /** Prefetch a maintenance request detail. */
@@ -141,4 +149,3 @@ export function clearPrefetchInFlight(): void {
 export function getPrefetchInFlightCount(): number {
   return inFlight.size;
 }
-

@@ -24,6 +24,7 @@ import { FraudHooksService } from '../../fraud/fraud-hooks.service';
 import { PaymentProcessingService } from '../../stellar/services/payment-processing.service';
 import { StellarService } from '../../stellar/services/stellar.service';
 import { RetryService } from '../../../common/services/retry.service';
+import { CircuitBreakerService } from '../../../common/resilience/circuit-breaker.service';
 
 /**
  * Utility Bill Integration Tests
@@ -93,6 +94,12 @@ describe('Utility Bill Integration Tests', () => {
         RefundService,
         PaymentGatewayService,
         RetryService,
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            execute: jest.fn((_key: string, fn: () => unknown) => fn()),
+          },
+        },
         {
           provide: NotificationsService,
           useValue: mockNotificationsService,
@@ -816,7 +823,7 @@ describe('Utility Bill Integration Tests', () => {
           },
           testUser.id,
         );
-      } catch (error) {
+      } catch (_error) {
         // Expected to fail
       }
 

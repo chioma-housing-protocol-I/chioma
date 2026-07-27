@@ -1,5 +1,6 @@
 {
   "common": {
+    "search": "Buscar",
     "filters": "Filtros",
     "save": "Guardar",
     "cancel": "Cancelar",

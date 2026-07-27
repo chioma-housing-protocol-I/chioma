@@ -11,6 +11,29 @@ import {
 import { ErrorNotificationService } from '../monitoring/error-notification.service';
 import { AlertPayload, EscalationTier } from '../monitoring/alert.types';
 
+/**
+ * Renders an unknown thrown value as a human-readable string. Plain objects are
+ * JSON-serialized so alert descriptions carry the payload instead of the
+ * useless '[object Object]' that default stringification would produce.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error === null || error === undefined) {
+    return 'Unknown error';
+  }
+  if (typeof error === 'object') {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unserializable error object';
+    }
+  }
+  // Everything object-like is handled above, so only primitives reach here.
+  return String(error as string | number | boolean | symbol | bigint);
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -73,8 +96,7 @@ export class NotificationsService {
       },
       annotations: {
         summary: `Notification "${title}" failed to send to user ${userId}`,
-        description:
-          error instanceof Error ? error.message : String(error ?? 'Unknown error'),
+        description: describeError(error),
       },
       startsAt: new Date().toISOString(),
       generatorURL: `notifications/${userId}`,

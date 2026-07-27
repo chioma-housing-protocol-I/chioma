@@ -55,7 +55,7 @@ describe('Chaos Engineering: Resilience (e2e)', () => {
       });
 
       const hold = new Promise<void>(() => {});
-      const slowCalls = Array.from({ length: 4 }, () =>
+      void Array.from({ length: 4 }, () =>
         bulkheadService.execute('chaos-slow', () => hold),
       );
 
@@ -90,7 +90,7 @@ describe('Chaos Engineering: Resilience (e2e)', () => {
       });
 
       const hold = new Promise<void>(() => {});
-      const first = bulkheadService.execute('chaos-tight', () => hold);
+      void bulkheadService.execute('chaos-tight', () => hold);
 
       await new Promise((r) => setImmediate(r));
 
@@ -286,7 +286,7 @@ describe('Chaos Engineering: Resilience (e2e)', () => {
 
       const neverResolve = new Promise<void>(() => {});
 
-      const stuck = bulkheadService.execute('chaos-leaky', () => neverResolve);
+      void bulkheadService.execute('chaos-leaky', () => neverResolve);
       await new Promise((r) => setImmediate(r));
 
       const healthyResults = await Promise.all(

@@ -124,7 +124,8 @@ export class HealthRecoveryService implements OnModuleInit, OnModuleDestroy {
       name: 'reconnect-if-db-stale',
       description: 'Reconnect to database if connection is stale',
       shouldExecute: async () => {
-        const isConnected = await this.databaseHealthIndicator.checkConnection();
+        const isConnected =
+          await this.databaseHealthIndicator.checkConnection();
         return !isConnected;
       },
       execute: async () => {

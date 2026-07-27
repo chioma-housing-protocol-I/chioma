@@ -266,7 +266,7 @@ describe('Rate Limiting Edge Cases', () => {
       // Simulate concurrent requests that might race
       const promises = Array(10)
         .fill(null)
-        .map(async (_, index) => {
+        .map(async (_, _index) => {
           // Simulate some delay to increase race condition likelihood
           await new Promise((resolve) =>
             setTimeout(resolve, Math.random() * 10),

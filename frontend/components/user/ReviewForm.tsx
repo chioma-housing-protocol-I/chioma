@@ -7,7 +7,7 @@ import {
   useUpdateReview,
   useDeleteReview,
 } from '@/lib/query/hooks/use-tenant-reviews';
-import { Loader2, Trash2, Wallet, Fingerprint } from 'lucide-react';
+import { Loader2, Trash2, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
 import toast from 'react-hot-toast';

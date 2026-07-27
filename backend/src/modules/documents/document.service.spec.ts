@@ -150,7 +150,7 @@ describe('DocumentService', () => {
     it('does not re-add an already shared tenant', async () => {
       const docWithShared = { ...mockDoc, sharedWith: ['tenant-1'] };
       mockRepo.findOne.mockResolvedValueOnce(docWithShared);
-      const result = await service.share('doc-1', 'tenant-1', 'user-1');
+      void (await service.share('doc-1', 'tenant-1', 'user-1'));
       expect(mockRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ sharedWith: ['tenant-1'] }),
       );

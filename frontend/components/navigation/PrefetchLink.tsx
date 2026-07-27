@@ -11,10 +11,7 @@ import {
   type PointerEvent,
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  prefetchDetailByKind,
-  type PrefetchKind,
-} from '@/lib/query/prefetch';
+import { prefetchDetailByKind, type PrefetchKind } from '@/lib/query/prefetch';
 
 /** Delay before treating hover/focus as real navigation intent (ms). */
 export const PREFETCH_INTENT_DELAY_MS = 120;
@@ -76,13 +73,7 @@ export function PrefetchLink({
     if (prefetchKind === 'none' || !prefetchId) return;
     clearIntent();
     timerRef.current = setTimeout(runPrefetch, intentDelayMs);
-  }, [
-    clearIntent,
-    intentDelayMs,
-    prefetchId,
-    prefetchKind,
-    runPrefetch,
-  ]);
+  }, [clearIntent, intentDelayMs, prefetchId, prefetchKind, runPrefetch]);
 
   useEffect(() => () => clearIntent(), [clearIntent]);
 

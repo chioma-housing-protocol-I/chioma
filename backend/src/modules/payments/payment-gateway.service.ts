@@ -138,7 +138,8 @@ export class PaymentGatewayService {
         );
         return {
           success: false,
-          error: 'Payment gateway is temporarily unavailable, please retry shortly',
+          error:
+            'Payment gateway is temporarily unavailable, please retry shortly',
         } as T;
       }
       throw error;
@@ -297,8 +298,7 @@ export class PaymentGatewayService {
 
           return {
             success: true,
-            refundId:
-              response.data?.data?.reference || `refund_${Date.now()}`,
+            refundId: response.data?.data?.reference || `refund_${Date.now()}`,
           };
         },
         { retryableErrors: [NetworkError, TimeoutError] },

@@ -47,7 +47,7 @@ export class DisputesService {
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
-  ) { }
+  ) {}
 
   /**
    * Create a new dispute

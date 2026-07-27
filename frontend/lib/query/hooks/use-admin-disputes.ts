@@ -255,11 +255,11 @@ export function useUpdateAdminDisputeStatus() {
           records.map((record) =>
             record.id === disputeId
               ? {
-                ...record,
-                status,
-                resolution: resolution ?? record.resolution,
-                updatedAt: new Date().toISOString(),
-              }
+                  ...record,
+                  status,
+                  resolution: resolution ?? record.resolution,
+                  updatedAt: new Date().toISOString(),
+                }
               : record,
           ),
         );

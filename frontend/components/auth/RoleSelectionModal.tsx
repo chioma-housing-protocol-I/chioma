@@ -14,7 +14,6 @@ interface RoleSelectionModalProps {
 export default function RoleSelectionModal({
   walletAddress,
   isOpen,
-  onClose,
 }: RoleSelectionModalProps) {
   const router = useRouter();
   const { setTokens } = useAuth();

@@ -62,7 +62,9 @@ export function translate(
   const fallback = resolvePath(fallbackDict, key);
   if (fallback !== undefined) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`[i18n] Missing key "${key}" in active locale; using English fallback.`);
+      console.warn(
+        `[i18n] Missing key "${key}" in active locale; using English fallback.`,
+      );
     }
     return vars ? interpolate(fallback, vars) : fallback;
   }

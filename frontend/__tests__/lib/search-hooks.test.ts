@@ -17,7 +17,7 @@ import {
   useSearchDocuments,
   useSearchSuggest,
 } from '@/lib/query/hooks';
-import type { SearchResult, User } from '@/types';
+import type { SearchResult } from '@/types';
 
 function createWrapper() {
   const queryClient = new QueryClient({
