@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Eye, ChevronLeft, ChevronRight, User as UserIcon } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, User as UserIcon, FileText } from 'lucide-react';
 import type { AuditLog, PaginatedResponse } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface ListProps {
   logs: PaginatedResponse<AuditLog> | undefined;
@@ -41,6 +42,17 @@ export const AuditLogList: React.FC<ListProps> = ({
     };
     return colors[action] || 'bg-white/5 text-blue-300/40 border-white/10';
   };
+
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No audit logs found"
+        description="There are no audit logs matching your criteria."
+        variant="dark"
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -115,16 +127,6 @@ export const AuditLogList: React.FC<ListProps> = ({
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-blue-200/40"
-                  >
-                    No audit logs found matching your criteria.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
