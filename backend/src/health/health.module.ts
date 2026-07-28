@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
@@ -9,11 +10,26 @@ import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
 import { HealthAutomationService } from './health-automation.service';
 import { MonitoringModule } from '../modules/monitoring/monitoring.module';
+import { CertificatePinningService } from '../common/security/certificate-pinning.service';
 
 @Module({
   imports: [
     TerminusModule,
-    HttpModule,
+    HttpModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService, CertificatePinningService],
+      useFactory: (
+        configService: ConfigService,
+        certificatePinningService: CertificatePinningService,
+      ) => ({
+        httpsAgent: certificatePinningService.getHttpsAgentForUrl(
+          configService.get<string>(
+            'STELLAR_HORIZON_URL',
+            'https://horizon-testnet.stellar.org',
+          ),
+        ),
+      }),
+    }),
     TypeOrmModule.forFeature([]),
     MonitoringModule,
   ],

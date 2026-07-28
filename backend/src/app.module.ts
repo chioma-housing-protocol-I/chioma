@@ -70,6 +70,9 @@ import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
+import { CertificatePinningModule } from './common/security/certificate-pinning.module';
+import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
+import { ResponseSchemaValidationInterceptor } from './common/interceptors/response-schema-validation.interceptor';
 
 const appLogger = new Logger('AppModule');
 
@@ -85,6 +88,8 @@ const appLogger = new Logger('AppModule');
     LockModule,
     IdempotencyModule,
     ResilienceModule,
+    CertificatePinningModule,
+    OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
     process.env.NODE_ENV === 'test'
       ? CacheModule.register({
@@ -288,6 +293,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseSchemaValidationInterceptor,
     },
   ],
 })

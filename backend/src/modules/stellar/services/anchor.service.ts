@@ -12,6 +12,7 @@ import { SupportedCurrency } from '../../transactions/entities/supported-currenc
 import { DepositRequestDto } from '../dto/deposit-request.dto';
 import { WithdrawRequestDto } from '../dto/withdraw-request.dto';
 import { QueryAnchorTransactionsDto } from '../dto/query-anchor-transactions.dto';
+import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 
 interface AnchorDepositResponse {
   id: string;
@@ -74,6 +75,7 @@ export class AnchorService {
     @InjectRepository(SupportedCurrency)
     private supportedCurrencyRepo: Repository<SupportedCurrency>,
     private configService: ConfigService,
+    private certificatePinningService: CertificatePinningService,
   ) {
     this.anchorApiUrl = this.configService.get<string>('ANCHOR_API_URL') || '';
     this.anchorApiKey = this.configService.get<string>('ANCHOR_API_KEY') || '';
@@ -89,6 +91,9 @@ export class AnchorService {
         'Content-Type': 'application/json',
       },
       timeout: 30000,
+      httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+        this.anchorApiUrl,
+      ),
     });
   }
 

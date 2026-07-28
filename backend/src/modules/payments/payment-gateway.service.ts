@@ -7,6 +7,7 @@ import {
   CircuitBreakerOpenError,
   CircuitBreakerService,
 } from '../../common/resilience/circuit-breaker.service';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 
 const GATEWAY_BREAKER_OPTIONS = {
   failureThreshold: 0.5,
@@ -44,6 +45,7 @@ export class PaymentGatewayService {
   constructor(
     private readonly retryService: RetryService,
     private readonly circuitBreaker: CircuitBreakerService,
+    private readonly certificatePinningService: CertificatePinningService,
   ) {
     this.gateway = (process.env.PAYMENT_GATEWAY || 'mock').toLowerCase();
     this.http = axios.create({
@@ -182,6 +184,9 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
+              httpsAgent: this.certificatePinningService.getHttpsAgent(
+                'api.paystack.co',
+              ),
             },
           );
 
@@ -242,6 +247,9 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
+              httpsAgent: this.certificatePinningService.getHttpsAgent(
+                'api.flutterwave.com',
+              ),
             },
           );
 
@@ -286,6 +294,9 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
+              httpsAgent: this.certificatePinningService.getHttpsAgent(
+                'api.paystack.co',
+              ),
             },
           );
 
@@ -330,6 +341,9 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
+              httpsAgent: this.certificatePinningService.getHttpsAgent(
+                'api.flutterwave.com',
+              ),
             },
           );
 
