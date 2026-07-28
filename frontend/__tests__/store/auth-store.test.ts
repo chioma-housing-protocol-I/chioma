@@ -95,16 +95,26 @@ describe('authStore', () => {
     expect(state.loading).toBe(false);
   });
 
-  it('hydrate clears corrupted localStorage data', () => {
+  it('hydrate clears corrupted localStorage data and attempts partial recovery', () => {
     localStorage.setItem('chioma_access_token', 'at-3');
     localStorage.setItem('chioma_user', '{invalid-json');
+    localStorage.setItem('chioma_wallet_address', '0xabc123');
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     useAuthStore.getState().hydrate();
 
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.isAuthenticated).toBe(false);
+    expect(state.walletAddress).toBe('0xabc123');
     expect(localStorage.getItem('chioma_access_token')).toBeNull();
+
+    const { useUIStore } = require('@/store/ui-store');
+    const uiState = useUIStore.getState();
+    expect(uiState.toasts.some((t: any) => t.title === 'Session Corrupted')).toBe(true);
+
+    consoleSpy.mockRestore();
   });
 
   it('caches the localStorage read so repeat hydrate() calls skip storage access', () => {

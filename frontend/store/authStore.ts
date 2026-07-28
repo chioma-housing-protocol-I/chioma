@@ -4,6 +4,7 @@ import { AppError } from '@/lib/errors';
 import { apiClient, setApiClientToken } from '@/lib/api-client';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
+import { useUIStore } from './ui-store';
 
 // --- Types -------------------------------------------------------------------
 
@@ -175,15 +176,36 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
       };
       return cachedAuthSnapshot;
     }
-  } catch {
+  } catch (error) {
+    console.error('[authStore] Failed to parse auth storage:', error);
+    
+    const storedWalletAddress = localStorage.getItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
-    localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+    // Partial recovery: preserve wallet address if it exists
     removeAuthCookie();
+
+    useUIStore.getState().addToast({
+      type: 'error',
+      title: 'Session Corrupted',
+      message: 'Your local session data was corrupted. You have been safely logged out.',
+    });
+
+    cachedAuthSnapshot = {
+      ...emptyAuthSnapshot(),
+      walletAddress: storedWalletAddress,
+    };
+    return cachedAuthSnapshot;
   }
 
-  cachedAuthSnapshot = emptyAuthSnapshot();
+  // If no stored token and user found
+  const storedWalletAddressFallback = localStorage.getItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+  cachedAuthSnapshot = {
+    ...emptyAuthSnapshot(),
+    walletAddress: storedWalletAddressFallback,
+  };
   return cachedAuthSnapshot;
 }
 
