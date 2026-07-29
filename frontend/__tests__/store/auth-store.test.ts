@@ -16,6 +16,7 @@ import {
   useAuthStore,
   __resetAuthStorageCacheForTests,
 } from '@/store/authStore';
+import { useUIStore } from '@/store/ui-store';
 
 // --- Helpers -----------------------------------------------------------------
 
@@ -110,9 +111,8 @@ describe('authStore', () => {
     expect(state.walletAddress).toBe('0xabc123');
     expect(localStorage.getItem('chioma_access_token')).toBeNull();
 
-    const { useUIStore } = require('@/store/ui-store');
     const uiState = useUIStore.getState();
-    expect(uiState.toasts.some((t: any) => t.title === 'Session Corrupted')).toBe(true);
+    expect(uiState.toasts.some((t) => t.title === 'Session Corrupted')).toBe(true);
 
     consoleSpy.mockRestore();
   });
