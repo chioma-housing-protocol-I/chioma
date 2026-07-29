@@ -48,11 +48,37 @@ export default function HostBookingsPage() {
       });
       if (!res.ok) throw new Error('Failed');
     },
+    onMutate: async ({ id, action }) => {
+      const nextStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
+      await queryClient.cancelQueries({ queryKey: ['host-bookings'] });
+      const snapshots = queryClient
+        .getQueriesData<Booking[]>({ queryKey: ['host-bookings'] })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<Booking[]>(
+        { queryKey: ['host-bookings'] },
+        (old) =>
+          old?.map((b) =>
+            b.id === id ? { ...b, status: nextStatus } : b,
+          ),
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      toast.error('Something went wrong');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['host-bookings'] });
       toast.success('Booking updated');
     },
-    onError: () => toast.error('Something went wrong'),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['host-bookings'] });
+    },
   });
 
   return (

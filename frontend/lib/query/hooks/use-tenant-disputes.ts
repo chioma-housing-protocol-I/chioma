@@ -9,6 +9,7 @@ import {
   type DisputeFilters,
   type DisputeListItem,
 } from '@/lib/disputes/api';
+import toast from 'react-hot-toast';
 
 export type TenantDisputeFilters = DisputeFilters & {
   sort?: 'createdAt' | 'updatedAt' | 'amount';
@@ -55,7 +56,33 @@ export function useUpdateTenantDisputeStatus() {
     }) => {
       await apiClient.put(`/disputes/${disputeId}`, { status });
     },
+    onMutate: async ({ disputeId, status }) => {
+      await queryClient.cancelQueries({ queryKey: TENANT_DISPUTES_QUERY_KEY });
+      const snapshots = queryClient
+        .getQueriesData<DisputeListItem[]>({ queryKey: TENANT_DISPUTES_QUERY_KEY })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<DisputeListItem[]>(
+        { queryKey: TENANT_DISPUTES_QUERY_KEY },
+        (old) =>
+          old?.map((d) =>
+            d.id === disputeId ? { ...d, status } : d,
+          ),
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
     onSuccess: () => {
+      toast.success('Dispute updated');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_DISPUTES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['tenant-dispute'] });
     },
