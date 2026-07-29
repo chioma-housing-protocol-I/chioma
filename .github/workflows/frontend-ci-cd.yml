@@ -89,7 +89,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend/.next/
+          path: .next/
           retention-days: 7
 
   bundle-size:
@@ -122,7 +122,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: frontend/.next/
+          path: .next/
 
       - name: Check bundle size budgets
         id: size_check
@@ -195,7 +195,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: frontend/.next/
+          path: .next/
 
       - name: Deploy to production
         run: |
