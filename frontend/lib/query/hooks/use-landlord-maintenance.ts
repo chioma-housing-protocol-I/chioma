@@ -260,16 +260,22 @@ export function useUpdateMaintenanceStatus() {
       await apiClient.patch(`/maintenance/${requestId}`, { status });
     },
     onMutate: async ({ requestId, status }) => {
-      await queryClient.cancelQueries({ queryKey: LANDLORD_MAINTENANCE_QUERY_KEY });
+      await queryClient.cancelQueries({
+        queryKey: LANDLORD_MAINTENANCE_QUERY_KEY,
+      });
       const snapshots = queryClient
-        .getQueriesData<MaintenanceRecord[]>({ queryKey: LANDLORD_MAINTENANCE_QUERY_KEY })
+        .getQueriesData<
+          MaintenanceRecord[]
+        >({ queryKey: LANDLORD_MAINTENANCE_QUERY_KEY })
         .map(([key, data]) => [key, data] as const);
 
       queryClient.setQueriesData<MaintenanceRecord[]>(
         { queryKey: LANDLORD_MAINTENANCE_QUERY_KEY },
         (old) =>
           old?.map((r) =>
-            r.id === requestId ? { ...r, status, updatedAt: new Date().toISOString() } : r,
+            r.id === requestId
+              ? { ...r, status, updatedAt: new Date().toISOString() }
+              : r,
           ),
       );
 
@@ -286,7 +292,9 @@ export function useUpdateMaintenanceStatus() {
       toast.success('Maintenance status updated');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: LANDLORD_MAINTENANCE_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: LANDLORD_MAINTENANCE_QUERY_KEY,
+      });
     },
   });
 }

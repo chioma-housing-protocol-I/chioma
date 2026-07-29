@@ -66,8 +66,12 @@ export function useSuspendUser() {
     },
     onMutate: async (userId) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.users.all });
-      await queryClient.cancelQueries({ queryKey: adminUserDetailBundleKey(userId) });
-      const bundle = queryClient.getQueryData<AdminUserBundle>(adminUserDetailBundleKey(userId));
+      await queryClient.cancelQueries({
+        queryKey: adminUserDetailBundleKey(userId),
+      });
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
       if (bundle) {
         queryClient.setQueryData(adminUserDetailBundleKey(userId), {
           ...bundle,
@@ -78,7 +82,10 @@ export function useSuspendUser() {
     },
     onError: (_err, userId, context) => {
       if (context?.bundle) {
-        queryClient.setQueryData(adminUserDetailBundleKey(userId), context.bundle);
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(userId),
+          context.bundle,
+        );
       }
     },
     onSuccess: () => {
@@ -107,8 +114,12 @@ export function useActivateUser() {
     },
     onMutate: async (userId) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.users.all });
-      await queryClient.cancelQueries({ queryKey: adminUserDetailBundleKey(userId) });
-      const bundle = queryClient.getQueryData<AdminUserBundle>(adminUserDetailBundleKey(userId));
+      await queryClient.cancelQueries({
+        queryKey: adminUserDetailBundleKey(userId),
+      });
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
       if (bundle) {
         queryClient.setQueryData(adminUserDetailBundleKey(userId), {
           ...bundle,
@@ -119,7 +130,10 @@ export function useActivateUser() {
     },
     onError: (_err, userId, context) => {
       if (context?.bundle) {
-        queryClient.setQueryData(adminUserDetailBundleKey(userId), context.bundle);
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(userId),
+          context.bundle,
+        );
       }
     },
     onSuccess: () => {
@@ -167,7 +181,9 @@ export function useVerifyUser() {
         },
       );
 
-      const bundle = queryClient.getQueryData<AdminUserBundle>(adminUserDetailBundleKey(userId));
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
       if (bundle) {
         queryClient.setQueryData(adminUserDetailBundleKey(userId), {
           ...bundle,
@@ -183,7 +199,10 @@ export function useVerifyUser() {
         }
       }
       if (context?.bundle) {
-        queryClient.setQueryData(adminUserDetailBundleKey(_userId), context.bundle);
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(_userId),
+          context.bundle,
+        );
       }
     },
     onSuccess: () => {

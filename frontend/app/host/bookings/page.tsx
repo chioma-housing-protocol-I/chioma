@@ -58,9 +58,7 @@ export default function HostBookingsPage() {
       queryClient.setQueriesData<Booking[]>(
         { queryKey: ['host-bookings'] },
         (old) =>
-          old?.map((b) =>
-            b.id === id ? { ...b, status: nextStatus } : b,
-          ),
+          old?.map((b) => (b.id === id ? { ...b, status: nextStatus } : b)),
       );
 
       return { snapshots };

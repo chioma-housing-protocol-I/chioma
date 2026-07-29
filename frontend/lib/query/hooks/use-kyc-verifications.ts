@@ -126,7 +126,9 @@ export function useApproveKycVerification() {
           return {
             ...old,
             data: old.data.map((v) =>
-              v.id === verificationId ? { ...v, status: 'APPROVED' as KycStatus } : v,
+              v.id === verificationId
+                ? { ...v, status: 'APPROVED' as KycStatus }
+                : v,
             ),
           };
         },
@@ -177,7 +179,9 @@ export function useRejectKycVerification() {
           return {
             ...old,
             data: old.data.map((v) =>
-              v.id === verificationId ? { ...v, status: 'REJECTED' as KycStatus } : v,
+              v.id === verificationId
+                ? { ...v, status: 'REJECTED' as KycStatus }
+                : v,
             ),
           };
         },

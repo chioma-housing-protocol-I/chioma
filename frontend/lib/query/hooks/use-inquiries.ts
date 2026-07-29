@@ -43,9 +43,13 @@ export function useMarkInquiryViewed() {
   return useMutation({
     mutationFn: (inquiryId: string) => markInquiryViewed(inquiryId),
     onMutate: async (inquiryId) => {
-      await queryClient.cancelQueries({ queryKey: INCOMING_INQUIRIES_QUERY_KEY });
+      await queryClient.cancelQueries({
+        queryKey: INCOMING_INQUIRIES_QUERY_KEY,
+      });
       const snapshots = queryClient
-        .getQueriesData<InquiryRecord[]>({ queryKey: INCOMING_INQUIRIES_QUERY_KEY })
+        .getQueriesData<
+          InquiryRecord[]
+        >({ queryKey: INCOMING_INQUIRIES_QUERY_KEY })
         .map(([key, data]) => [key, data] as const);
 
       queryClient.setQueriesData<InquiryRecord[]>(
