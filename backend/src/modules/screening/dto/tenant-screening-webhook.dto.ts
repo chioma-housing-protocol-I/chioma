@@ -6,30 +6,30 @@ import {
 } from '../screening.enums';
 
 export class TenantScreeningWebhookDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'provider_ref_abc123', description: 'Reference ID from the screening provider' })
   @IsString()
   providerReference: string;
 
-  @ApiProperty({ enum: UserScreeningStatus })
+  @ApiProperty({ example: 'COMPLETED', enum: UserScreeningStatus, description: 'Updated screening status' })
   @IsEnum(UserScreeningStatus)
   status: UserScreeningStatus;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'report_xyz789', description: 'Provider report ID for fetching the full report' })
   @IsOptional()
   @IsString()
   providerReportId?: string;
 
-  @ApiPropertyOptional({ enum: UserScreeningRiskLevel })
+  @ApiPropertyOptional({ example: 'LOW', enum: UserScreeningRiskLevel, description: 'Calculated risk level from the screening' })
   @IsOptional()
   @IsEnum(UserScreeningRiskLevel)
   riskLevel?: UserScreeningRiskLevel;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'Insufficient documentation provided', description: 'Reason for failure if screening was not completed' })
   @IsOptional()
   @IsString()
   failureReason?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: { summary: 'Clean record', score: 85 }, description: 'Full report object from the screening provider' })
   @IsOptional()
   @IsObject()
   report?: Record<string, unknown>;
