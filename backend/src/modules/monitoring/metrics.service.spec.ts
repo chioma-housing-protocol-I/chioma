@@ -75,8 +75,8 @@ describe('MetricsService', () => {
   });
 
   describe('Database metrics', () => {
-    it('setDatabaseConnections does not throw', () => {
-      expect(() => service.setDatabaseConnections(10)).not.toThrow();
+    it('setDatabasePoolUsage does not throw', () => {
+      expect(() => service.setDatabasePoolUsage(5, 3, 10, 1)).not.toThrow();
     });
 
     it('recordDatabaseQuery does not throw', () => {
