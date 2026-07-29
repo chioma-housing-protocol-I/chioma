@@ -18,13 +18,14 @@ import {
   type DeveloperWebhook,
 } from '@/lib/developer-webhooks';
 import { useAuth } from '@/store/authStore';
+import { useLoading } from '@/hooks/use-loading';
 
 export default function DeveloperWebhookDetailPage() {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
   const [webhooks, setWebhooks] = useState<DeveloperWebhook[]>([]);
   const [logs, setLogs] = useState(loadDeveloperWebhookLogs());
-  const [loading, setLoading] = useState(true);
+  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading('developer-webhook-detail');
 
   useEffect(() => {
     if (!user) return;
@@ -32,7 +33,7 @@ export default function DeveloperWebhookDetailPage() {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      setLoadingFlag(true);
 
       try {
         const response = await apiClient.get<DeveloperWebhook[]>(
@@ -48,7 +49,7 @@ export default function DeveloperWebhookDetailPage() {
         if (cancelled) return;
         setWebhooks(loadDeveloperWebhooks(user.id));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingFlag(false);
       }
     };
 

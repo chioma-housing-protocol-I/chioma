@@ -24,6 +24,7 @@ import {
   useKycStatus,
   useSubmitKyc,
 } from '@/lib/query/hooks/use-kyc-verifications';
+import { useLoading } from '@/hooks/use-loading';
 import type { KycStatus as BackendKycStatus } from '@/types';
 
 interface UserProfile {
@@ -77,18 +78,18 @@ export default function UserProfilePage() {
     }
   }, [kycStatusData]);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const { isLoading, setLoading: setLoadingFlag } = useLoading('user-profile');
+  const { isLoading: isUpdating, setLoading: setIsUpdatingFlag } = useLoading('user-profile-update');
+  const { isLoading: isConnectingWallet, setLoading: setIsConnectingWalletFlag } = useLoading('user-wallet-connect');
 
   useEffect(() => {
     const fetchData = async () => {
       if (!accessToken) {
-        setIsLoading(false);
+        setLoadingFlag(false);
         return;
       }
       try {
-        setIsLoading(true);
+        setLoadingFlag(true);
         const profileRes = await fetch('/api/profile', {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -99,7 +100,7 @@ export default function UserProfilePage() {
       } catch (error) {
         console.error('Error fetching profile data:', error);
       } finally {
-        setIsLoading(false);
+        setLoadingFlag(false);
       }
     };
     fetchData();
@@ -147,7 +148,7 @@ export default function UserProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsUpdating(true);
+    setIsUpdatingFlag(true);
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
@@ -167,12 +168,12 @@ export default function UserProfilePage() {
     } catch {
       toast.error('Update failed. Please try again.');
     } finally {
-      setIsUpdating(false);
+      setIsUpdatingFlag(false);
     }
   };
 
   const handleConnectWallet = async () => {
-    setIsConnectingWallet(true);
+    setIsConnectingWalletFlag(true);
     try {
       const publicKey = await getFreighterPublicKey();
       setProfile((prev) => ({ ...prev, walletAddress: publicKey }));
@@ -182,7 +183,7 @@ export default function UserProfilePage() {
         error instanceof Error ? error.message : 'Failed to connect wallet',
       );
     } finally {
-      setIsConnectingWallet(false);
+      setIsConnectingWalletFlag(false);
     }
   };
 

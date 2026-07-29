@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin-dispute-detail';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLoading } from '@/hooks/use-loading';
 
 export default function AdminDisputeDetailPage() {
   const params = useParams();
@@ -21,9 +22,9 @@ export default function AdminDisputeDetailPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [dispute, setDispute] = useState<AdminDisputeDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading('admin-dispute-detail');
   const [notFound, setNotFound] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading('admin-dispute-resolution');
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'admin') {
@@ -32,7 +33,7 @@ export default function AdminDisputeDetailPage() {
   }, [authLoading, user?.role, router]);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    setLoadingFlag(true);
     setNotFound(false);
     try {
       const d = await loadAdminDisputeDetail(id);
@@ -46,7 +47,7 @@ export default function AdminDisputeDetailPage() {
       setNotFound(true);
       setDispute(null);
     } finally {
-      setLoading(false);
+      setLoadingFlag(false);
     }
   }, [id]);
 
@@ -60,7 +61,7 @@ export default function AdminDisputeDetailPage() {
     action: 'approve' | 'reject';
   }) => {
     if (!dispute) return;
-    setSubmitting(true);
+    setSubmittingFlag(true);
     try {
       await submitAdminDisputeResolution(dispute.id, {
         resolutionNotes: args.resolutionNotes,
@@ -109,7 +110,7 @@ export default function AdminDisputeDetailPage() {
         e instanceof Error ? e.message : 'Failed to record resolution.',
       );
     } finally {
-      setSubmitting(false);
+      setSubmittingFlag(false);
     }
   };
 
