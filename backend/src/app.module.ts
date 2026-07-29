@@ -70,6 +70,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 
 const appLogger = new Logger('AppModule');
@@ -289,6 +290,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DeprecationInterceptor,
     },
   ],
 })
