@@ -18,7 +18,11 @@ export class QueryBookingsDto {
   @IsEnum(BookingRoleFilter)
   role?: BookingRoleFilter;
 
-  @ApiPropertyOptional({ enum: BookingStatus, example: 'CONFIRMED', description: 'Filter by booking status' })
+  @ApiPropertyOptional({
+    enum: BookingStatus,
+    example: 'CONFIRMED',
+    description: 'Filter by booking status',
+  })
   @IsOptional()
   @IsEnum(BookingStatus)
   status?: BookingStatus;
