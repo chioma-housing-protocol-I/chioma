@@ -37,7 +37,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
@@ -91,6 +91,7 @@ jobs:
           name: frontend-build
           path: frontend/.next/
           retention-days: 7
+          include-hidden-files: true
 
   bundle-size:
     name: Bundle Size Check
@@ -111,7 +112,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
