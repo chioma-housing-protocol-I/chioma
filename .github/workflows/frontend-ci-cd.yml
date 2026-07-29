@@ -148,7 +148,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.COMMENT_BOT_TOKEN }}
+          github-token: ${{ secrets.COMMENT_BOT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('/tmp/size-report.txt', 'utf8');
@@ -156,27 +156,32 @@ jobs:
             const status = exitCode === '0' ? '✅ Budgets OK' : '❌ Budget Exceeded';
             const body = `## 📦 Bundle Size Report — ${status}\n\n\`\`\`\n${report}\n\`\`\`\n\n> Update \`bundle-budgets.json\` to adjust thresholds. See [BUNDLE_ANALYZER.md](./docs/BUNDLE_ANALYZER.md) for guidance.`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existing = comments.find(c => c.body.includes('📦 Bundle Size Report'));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body,
               });
+
+              const existing = comments.find(c => c.body.includes('📦 Bundle Size Report'));
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body,
+                });
+              }
+            } catch (error) {
+              console.log('Failed to post PR comment. This is likely due to lack of write permissions for fork PRs.');
+              console.log('Error:', error.message);
             }
 
       - name: Fail if budgets exceeded
