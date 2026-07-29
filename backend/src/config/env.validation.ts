@@ -519,6 +519,7 @@ const requestSizeSchema = Joi.object({
   REQUEST_SIZE_LIMIT_JSON: Joi.string(),
   REQUEST_SIZE_LIMIT_MULTIPART: Joi.string(),
   REQUEST_SIZE_LIMIT_URLENCODED: Joi.string(),
+  QUERY_MAX_DEPTH: Joi.number().min(1).optional(),
 });
 
 const responseTimeSchema = Joi.object({
