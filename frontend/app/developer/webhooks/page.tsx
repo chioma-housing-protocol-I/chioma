@@ -35,8 +35,11 @@ export default function DeveloperWebhooksPage() {
   const [webhooks, setWebhooks] = useState<DeveloperWebhook[]>([]);
   const [logs, setLogs] = useState(loadDeveloperWebhookLogs());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading('developer-webhooks');
-  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading('developer-webhook-form');
+  const { isLoading: loading, setLoading: setLoadingFlag } =
+    useLoading('developer-webhooks');
+  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading(
+    'developer-webhook-form',
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<DeveloperWebhook | null>(
     null,

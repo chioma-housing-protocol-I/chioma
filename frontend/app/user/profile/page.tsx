@@ -79,8 +79,13 @@ export default function UserProfilePage() {
   }, [kycStatusData]);
   const [isEditing, setIsEditing] = useState(false);
   const { isLoading, setLoading: setLoadingFlag } = useLoading('user-profile');
-  const { isLoading: isUpdating, setLoading: setIsUpdatingFlag } = useLoading('user-profile-update');
-  const { isLoading: isConnectingWallet, setLoading: setIsConnectingWalletFlag } = useLoading('user-wallet-connect');
+  const { isLoading: isUpdating, setLoading: setIsUpdatingFlag } = useLoading(
+    'user-profile-update',
+  );
+  const {
+    isLoading: isConnectingWallet,
+    setLoading: setIsConnectingWalletFlag,
+  } = useLoading('user-wallet-connect');
 
   useEffect(() => {
     const fetchData = async () => {

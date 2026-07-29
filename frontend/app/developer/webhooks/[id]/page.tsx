@@ -25,7 +25,9 @@ export default function DeveloperWebhookDetailPage() {
   const { user } = useAuth();
   const [webhooks, setWebhooks] = useState<DeveloperWebhook[]>([]);
   const [logs, setLogs] = useState(loadDeveloperWebhookLogs());
-  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading('developer-webhook-detail');
+  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading(
+    'developer-webhook-detail',
+  );
 
   useEffect(() => {
     if (!user) return;

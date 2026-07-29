@@ -22,9 +22,13 @@ export default function AdminDisputeDetailPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [dispute, setDispute] = useState<AdminDisputeDetail | null>(null);
-  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading('admin-dispute-detail');
+  const { isLoading: loading, setLoading: setLoadingFlag } = useLoading(
+    'admin-dispute-detail',
+  );
   const [notFound, setNotFound] = useState(false);
-  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading('admin-dispute-resolution');
+  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading(
+    'admin-dispute-resolution',
+  );
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'admin') {
