@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, MapPin } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface StayProperty {
   id: string;
@@ -196,7 +196,12 @@ export default function StaysPage() {
 
 function StayCard({ property }: { property: StayProperty }) {
   return (
-    <Link href={`/stays/${property.id}`} className="block group">
+    <PrefetchLink
+      href={`/stays/${property.id}`}
+      prefetchKind="property"
+      prefetchId={property.id}
+      className="block group"
+    >
       <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 hover:shadow-2xl transition-all duration-300">
         <div className="aspect-video bg-slate-700 relative overflow-hidden">
           {property.image ? (
@@ -238,6 +243,6 @@ function StayCard({ property }: { property: StayProperty }) {
           </div>
         </div>
       </div>
-    </Link>
+    </PrefetchLink>
   );
 }

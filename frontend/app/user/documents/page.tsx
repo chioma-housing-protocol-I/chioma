@@ -8,7 +8,6 @@ import {
   useLandlordDocuments,
   useUploadDocument,
   useDeleteDocument,
-  useDocument,
 } from '@/lib/query/hooks/use-landlord-documents';
 
 const DocumentViewerModal = dynamic(

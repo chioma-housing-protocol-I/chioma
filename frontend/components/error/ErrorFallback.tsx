@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { AppError, ErrorSeverity } from '@/lib/errors';
 
@@ -27,6 +28,16 @@ export default function ErrorFallback({
   homeHref = '/',
   severity = 'error',
 }: ErrorFallbackProps) {
+  const errorDetailRef = useRef<HTMLPreElement>(null);
+
+  // Set via textContent (never JSX interpolation or innerHTML) so a message
+  // containing markup is always inserted as a literal text node, not parsed.
+  useEffect(() => {
+    if (errorDetailRef.current) {
+      errorDetailRef.current.textContent = error?.message ?? '';
+    }
+  }, [error]);
+
   const accent = getAccent(severity);
   const iconBg =
     accent === 'amber'
@@ -81,10 +92,9 @@ export default function ErrorFallback({
 
         {process.env.NODE_ENV === 'development' && error?.message && (
           <pre
+            ref={errorDetailRef}
             className={`mb-5 overflow-auto rounded-lg px-4 py-3 text-left text-xs ${detailBg}`}
-          >
-            {error.message}
-          </pre>
+          />
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">

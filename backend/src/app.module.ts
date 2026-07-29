@@ -30,6 +30,7 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
+import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { ThreatDetectionMiddleware } from './common/middleware/threat-detection.middleware';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -306,6 +307,9 @@ export class AppModule implements NestModule {
 
     // Request size limiting (applied to all routes)
     consumer.apply(RequestSizeLimitMiddleware).forRoutes('*');
+
+    // Query depth limiting (applied to all routes)
+    consumer.apply(QueryDepthLimitMiddleware).forRoutes('*');
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');

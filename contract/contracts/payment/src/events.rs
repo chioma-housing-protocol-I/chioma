@@ -1,6 +1,4 @@
-use soroban_sdk::{Address, BytesN, Env, String};
-use soroban_sdk::contractevent;
-use soroban_sdk::topic;
+use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when a recurring payment schedule is created
 /// Topics: ["recurring_payment_created", agreement_id: String]
@@ -8,53 +6,53 @@ use soroban_sdk::topic;
 pub struct RecurringPaymentCreated {
     #[topic]
     pub agreement_id: String,
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub amount: i128,
     pub created_at: u64,
 }
 
 /// Event emitted when a recurring payment is executed successfully
-/// Topics: ["recurring_payment_executed", recurring_id: BytesN]
+/// Topics: ["recurring_payment_executed", recurring_id: String]
 #[contractevent(topics = ["recurring_payment_executed"])]
 pub struct RecurringPaymentExecuted {
     #[topic]
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub executed_at: u64,
 }
 
 /// Event emitted when a recurring payment is paused
-/// Topics: ["recurring_payment_paused", recurring_id: BytesN]
+/// Topics: ["recurring_payment_paused", recurring_id: String]
 #[contractevent(topics = ["recurring_payment_paused"])]
 pub struct RecurringPaymentPaused {
     #[topic]
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub paused_at: u64,
 }
 
 /// Event emitted when a recurring payment is resumed
-/// Topics: ["recurring_payment_resumed", recurring_id: BytesN]
+/// Topics: ["recurring_payment_resumed", recurring_id: String]
 #[contractevent(topics = ["recurring_payment_resumed"])]
 pub struct RecurringPaymentResumed {
     #[topic]
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub resumed_at: u64,
 }
 
 /// Event emitted when a recurring payment is cancelled
-/// Topics: ["recurring_payment_cancelled", recurring_id: BytesN]
+/// Topics: ["recurring_payment_cancelled", recurring_id: String]
 #[contractevent(topics = ["recurring_payment_cancelled"])]
 pub struct RecurringPaymentCancelled {
     #[topic]
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub cancelled_at: u64,
 }
 
 /// Event emitted when a recurring payment fails
-/// Topics: ["recurring_payment_failed", recurring_id: BytesN]
+/// Topics: ["recurring_payment_failed", recurring_id: String]
 #[contractevent(topics = ["recurring_payment_failed"])]
 pub struct RecurringPaymentFailed {
     #[topic]
-    pub recurring_id: BytesN<32>,
+    pub recurring_id: String,
     pub failed_at: u64,
 }
 
@@ -65,7 +63,7 @@ pub struct LateFeeApplied {
     #[topic]
     pub payment_id: String,
     pub late_fee: i128,
-    pub days_over_grace: u64,
+    pub days_over_grace: u32,
     pub applied_at: u64,
 }
 
@@ -85,8 +83,8 @@ pub struct LateFeeWaived {
 pub struct LateFeeConfigSet {
     #[topic]
     pub agreement_id: String,
-    pub late_fee_percentage: u64,
-    pub grace_period_days: u64,
+    pub late_fee_percentage: u32,
+    pub grace_period_days: u32,
     pub set_at: u64,
 }
 
@@ -162,7 +160,7 @@ pub struct UpgradeExecuted {
 
 pub(crate) fn recurring_payment_created(
     env: &Env,
-    recurring_id: BytesN<32>,
+    recurring_id: String,
     agreement_id: String,
     amount: i128,
 ) {
@@ -175,7 +173,7 @@ pub(crate) fn recurring_payment_created(
     .publish(env);
 }
 
-pub(crate) fn recurring_payment_executed(env: &Env, recurring_id: BytesN<32>, executed_at: u64) {
+pub(crate) fn recurring_payment_executed(env: &Env, recurring_id: String, executed_at: u64) {
     RecurringPaymentExecuted {
         recurring_id,
         executed_at,
@@ -183,7 +181,7 @@ pub(crate) fn recurring_payment_executed(env: &Env, recurring_id: BytesN<32>, ex
     .publish(env);
 }
 
-pub(crate) fn recurring_payment_paused(env: &Env, recurring_id: BytesN<32>) {
+pub(crate) fn recurring_payment_paused(env: &Env, recurring_id: String) {
     RecurringPaymentPaused {
         recurring_id,
         paused_at: env.ledger().timestamp(),
@@ -191,7 +189,7 @@ pub(crate) fn recurring_payment_paused(env: &Env, recurring_id: BytesN<32>) {
     .publish(env);
 }
 
-pub(crate) fn recurring_payment_resumed(env: &Env, recurring_id: BytesN<32>) {
+pub(crate) fn recurring_payment_resumed(env: &Env, recurring_id: String) {
     RecurringPaymentResumed {
         recurring_id,
         resumed_at: env.ledger().timestamp(),
@@ -199,7 +197,7 @@ pub(crate) fn recurring_payment_resumed(env: &Env, recurring_id: BytesN<32>) {
     .publish(env);
 }
 
-pub(crate) fn recurring_payment_cancelled(env: &Env, recurring_id: BytesN<32>) {
+pub(crate) fn recurring_payment_cancelled(env: &Env, recurring_id: String) {
     RecurringPaymentCancelled {
         recurring_id,
         cancelled_at: env.ledger().timestamp(),
@@ -207,7 +205,7 @@ pub(crate) fn recurring_payment_cancelled(env: &Env, recurring_id: BytesN<32>) {
     .publish(env);
 }
 
-pub(crate) fn recurring_payment_failed(env: &Env, recurring_id: BytesN<32>) {
+pub(crate) fn recurring_payment_failed(env: &Env, recurring_id: String) {
     RecurringPaymentFailed {
         recurring_id,
         failed_at: env.ledger().timestamp(),
@@ -219,7 +217,7 @@ pub(crate) fn late_fee_applied(
     env: &Env,
     payment_id: String,
     late_fee: i128,
-    days_over_grace: u64,
+    days_over_grace: u32,
 ) {
     LateFeeApplied {
         payment_id,
@@ -242,8 +240,8 @@ pub(crate) fn late_fee_waived(env: &Env, payment_id: String, reason: String) {
 pub(crate) fn late_fee_config_set(
     env: &Env,
     agreement_id: String,
-    late_fee_percentage: u64,
-    grace_period_days: u64,
+    late_fee_percentage: u32,
+    grace_period_days: u32,
 ) {
     LateFeeConfigSet {
         agreement_id,
@@ -297,12 +295,7 @@ pub(crate) fn platform_fee_collector_updated(env: &Env, collector: Address) {
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

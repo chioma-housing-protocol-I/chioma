@@ -7,6 +7,7 @@ import {
   DEAD_LETTER_JOB_NAME,
   DEAD_LETTER_QUEUE_NAME,
 } from '../queues.constants';
+import { ErrorNotificationService } from '../../monitoring/error-notification.service';
 
 describe('DeadLetterQueueService', () => {
   let service: DeadLetterQueueService;
@@ -20,6 +21,7 @@ describe('DeadLetterQueueService', () => {
     getJobs: jest.Mock;
   };
   let emailQueue: { add: jest.Mock };
+  let errorNotificationService: { notifyAlert: jest.Mock };
 
   const config: Record<string, string> = {
     DEAD_LETTER_QUEUE_ENABLED: 'true',
@@ -41,6 +43,9 @@ describe('DeadLetterQueueService', () => {
       getJobs: jest.fn().mockResolvedValue([]),
     };
     emailQueue = { add: jest.fn().mockResolvedValue({ id: 'new-1' }) };
+    errorNotificationService = {
+      notifyAlert: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,6 +62,10 @@ describe('DeadLetterQueueService', () => {
         { provide: getQueueToken('documents'), useValue: { add: jest.fn() } },
         { provide: getQueueToken('blockchain'), useValue: { add: jest.fn() } },
         { provide: getQueueToken('data-sync'), useValue: { add: jest.fn() } },
+        {
+          provide: ErrorNotificationService,
+          useValue: errorNotificationService,
+        },
       ],
     }).compile();
 
@@ -89,6 +98,82 @@ describe('DeadLetterQueueService', () => {
       expect.objectContaining({ removeOnComplete: false }),
     );
     expect(job.remove).toHaveBeenCalled();
+  });
+
+  it('alerts on-call when a job exhausts its retries', async () => {
+    const job = {
+      id: '42',
+      data: { type: 'verification', email: 'test@example.com' },
+      attemptsMade: 3,
+      opts: { attempts: 3 },
+      stacktrace: ['Error: send failed'],
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
+
+    await service.moveToDeadLetter(
+      'email',
+      job as any,
+      new Error('send failed'),
+    );
+
+    expect(errorNotificationService.notifyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'firing',
+        labels: expect.objectContaining({
+          alertname: 'AsyncJobRetryExhausted',
+          queue: 'email',
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('does not throw when the alert notification itself fails', async () => {
+    errorNotificationService.notifyAlert.mockRejectedValueOnce(
+      new Error('smtp down'),
+    );
+    const job = {
+      id: '42',
+      data: {},
+      attemptsMade: 3,
+      opts: { attempts: 3 },
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
+
+    await expect(
+      service.moveToDeadLetter('email', job as any, new Error('fail')),
+    ).resolves.not.toThrow();
+  });
+
+  it('alerts when the dead letter backlog exceeds the threshold', async () => {
+    deadLetterQueue.getJobCounts.mockResolvedValue({
+      waiting: 15,
+      failed: 10,
+      completed: 0,
+    });
+
+    await service.monitorDeadLetterBacklog();
+
+    expect(errorNotificationService.notifyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        labels: expect.objectContaining({
+          alertname: 'DeadLetterQueueBacklogHigh',
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('does not alert when the dead letter backlog is within the threshold', async () => {
+    deadLetterQueue.getJobCounts.mockResolvedValue({
+      waiting: 2,
+      failed: 1,
+      completed: 0,
+    });
+
+    await service.monitorDeadLetterBacklog();
+
+    expect(errorNotificationService.notifyAlert).not.toHaveBeenCalled();
   });
 
   it('detects when a job has exhausted retries', () => {

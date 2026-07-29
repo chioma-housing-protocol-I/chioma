@@ -113,12 +113,7 @@ pub(crate) fn obligation_burned(env: &Env, token_id: String, owner: Address, rea
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

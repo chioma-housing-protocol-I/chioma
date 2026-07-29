@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
+import { clearRepositories } from './test-helpers';
 import { User } from '../src/modules/users/entities/user.entity';
 import {
   Referral,
@@ -164,7 +164,7 @@ describe('Referral (e2e)', () => {
         .send(referredUserData)
         .expect(201);
 
-      const referredToken = referredRegisterRes.body.accessToken;
+      void referredRegisterRes.body.accessToken;
 
       // Get referrer's referral code
       const codeRes = await request(app!.getHttpServer())
@@ -172,7 +172,7 @@ describe('Referral (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      const referralCode = codeRes.body.referralCode;
+      void codeRes.body.referralCode;
 
       // Simulate referral tracking (this would normally happen during registration with referral code)
       // For this test, we'll manually create the referral record

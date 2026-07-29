@@ -1,3 +1,8 @@
+// Some event definitions describe operations that are not yet exposed by the
+// contract's public API. They are kept here so the event schema stays in one
+// place; remove the allow once the corresponding entrypoints emit them.
+#![allow(dead_code)]
+
 use soroban_sdk::{contractevent, Address, BytesN, Env, String};
 
 use crate::types::EscrowStatus;
@@ -241,12 +246,7 @@ pub(crate) fn escrow_created(
 }
 
 /// Helper function to emit escrow funded event
-pub(crate) fn escrow_funded(
-    env: &Env,
-    escrow_id: BytesN<32>,
-    funder: Address,
-    amount: i128,
-) {
+pub(crate) fn escrow_funded(env: &Env, escrow_id: BytesN<32>, funder: Address, amount: i128) {
     EscrowFunded {
         escrow_id,
         funder,
@@ -302,12 +302,7 @@ pub(crate) fn escrow_timeout(env: &Env, escrow_id: BytesN<32>) {
 }
 
 /// Helper function to emit partial release event
-pub(crate) fn partial_release(
-    env: &Env,
-    escrow_id: BytesN<32>,
-    amount: i128,
-    recipient: Address,
-) {
+pub(crate) fn partial_release(env: &Env, escrow_id: BytesN<32>, amount: i128, recipient: Address) {
     PartialRelease {
         escrow_id,
         recipient,
@@ -351,12 +346,7 @@ pub(crate) fn escrow_frozen(
 }
 
 /// Helper function to emit escrow unfrozen event
-pub(crate) fn escrow_unfrozen(
-    env: &Env,
-    escrow_id: BytesN<32>,
-    caller: Address,
-    unfrozen_at: u64,
-) {
+pub(crate) fn escrow_unfrozen(env: &Env, escrow_id: BytesN<32>, caller: Address, unfrozen_at: u64) {
     EscrowUnfrozen {
         escrow_id,
         caller,
@@ -455,12 +445,7 @@ pub(crate) fn escrow_status_updated(
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { AutoRecoveryService } from './auto-recovery.service';
 import { HealthRecoveryService } from './health-recovery.service';
 import { TerminusModule } from '@nestjs/terminus';
+import { HealthModule } from '../../health/health.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TerminusModule } from '@nestjs/terminus';
     PropertiesModule,
     UsersModule,
     TerminusModule,
+    HealthModule,
   ],
   providers: [MaintenanceService, AutoRecoveryService, HealthRecoveryService],
   controllers: [MaintenanceController],

@@ -3,7 +3,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
+import { adminUserDetailBundleKey } from './use-admin-user-detail';
+import toast from 'react-hot-toast';
 import type { User, PaginatedResponse } from '@/types';
+import type { AdminUserDetailExtras } from '@/lib/admin-user-detail';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -14,6 +17,8 @@ export interface AdminUserListParams {
   search?: string;
   isVerified?: boolean;
 }
+
+type AdminUserBundle = { user: User; extras: AdminUserDetailExtras };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -59,7 +64,34 @@ export function useSuspendUser() {
         {},
       );
     },
-    onSuccess: (_, userId) => {
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.users.all });
+      await queryClient.cancelQueries({
+        queryKey: adminUserDetailBundleKey(userId),
+      });
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
+      if (bundle) {
+        queryClient.setQueryData(adminUserDetailBundleKey(userId), {
+          ...bundle,
+          extras: { ...bundle.extras, accountStatus: 'suspended' },
+        });
+      }
+      return { bundle };
+    },
+    onError: (_err, userId, context) => {
+      if (context?.bundle) {
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(userId),
+          context.bundle,
+        );
+      }
+    },
+    onSuccess: () => {
+      toast.success('User suspended');
+    },
+    onSettled: (_, __, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       queryClient.invalidateQueries({
         queryKey: ['admin-user-detail-bundle', userId],
@@ -80,7 +112,34 @@ export function useActivateUser() {
         {},
       );
     },
-    onSuccess: (_, userId) => {
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.users.all });
+      await queryClient.cancelQueries({
+        queryKey: adminUserDetailBundleKey(userId),
+      });
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
+      if (bundle) {
+        queryClient.setQueryData(adminUserDetailBundleKey(userId), {
+          ...bundle,
+          extras: { ...bundle.extras, accountStatus: 'active' },
+        });
+      }
+      return { bundle };
+    },
+    onError: (_err, userId, context) => {
+      if (context?.bundle) {
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(userId),
+          context.bundle,
+        );
+      }
+    },
+    onSuccess: () => {
+      toast.success('User activated');
+    },
+    onSettled: (_, __, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       queryClient.invalidateQueries({
         queryKey: ['admin-user-detail-bundle', userId],
@@ -101,7 +160,55 @@ export function useVerifyUser() {
         {},
       );
     },
-    onSuccess: (_, userId) => {
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.users.all });
+
+      const listData = queryClient.getQueriesData<PaginatedResponse<User>>({
+        queryKey: queryKeys.users.all,
+      });
+      const listSnapshots = listData.map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<PaginatedResponse<User>>(
+        { queryKey: queryKeys.users.all },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((u) =>
+              u.id === userId ? { ...u, isVerified: true } : u,
+            ),
+          };
+        },
+      );
+
+      const bundle = queryClient.getQueryData<AdminUserBundle>(
+        adminUserDetailBundleKey(userId),
+      );
+      if (bundle) {
+        queryClient.setQueryData(adminUserDetailBundleKey(userId), {
+          ...bundle,
+          user: { ...bundle.user, isVerified: true },
+        });
+      }
+      return { listSnapshots, bundle };
+    },
+    onError: (_err, _userId, context) => {
+      if (context?.listSnapshots) {
+        for (const [key, data] of context.listSnapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      if (context?.bundle) {
+        queryClient.setQueryData(
+          adminUserDetailBundleKey(_userId),
+          context.bundle,
+        );
+      }
+    },
+    onSuccess: () => {
+      toast.success('User verified');
+    },
+    onSettled: (_, __, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       queryClient.invalidateQueries({
         queryKey: ['admin-user-detail-bundle', userId],

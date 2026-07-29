@@ -14,6 +14,7 @@ import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
 import { LockService } from '../../common/lock';
+import { EncryptionService } from '../../common/services/encryption.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -30,6 +31,7 @@ describe('UsersService', () => {
     role: UserRole.USER,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -90,6 +92,13 @@ describe('UsersService', () => {
           useValue: mockNotificationPreferenceRepository,
         },
         { provide: AuditService, useValue: mockAuditService },
+        {
+          provide: EncryptionService,
+          useValue: {
+            encrypt: jest.fn(async (value: string) => value),
+            decrypt: jest.fn(async (value: string) => value),
+          },
+        },
         { provide: LockService, useValue: mockLockService },
       ],
     }).compile();

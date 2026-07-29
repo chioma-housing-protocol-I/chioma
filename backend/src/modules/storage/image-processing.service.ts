@@ -20,8 +20,11 @@ export interface ProcessImageResult {
 export interface ImageCacheMetrics {
   hits: number;
   misses: number;
+  evictions: number;
   size: number;
   maxSize: number;
+  hitRate: number;
+  missRate: number;
 }
 
 /**
@@ -48,6 +51,7 @@ class ImageVariantLruCache {
   private tail: LruNode | null = null; // least-recently used
   private hits = 0;
   private misses = 0;
+  private evictions = 0;
 
   constructor(private readonly maxSize: number) {}
 
@@ -82,12 +86,26 @@ class ImageVariantLruCache {
   }
 
   getMetrics(): ImageCacheMetrics {
+    const total = this.hits + this.misses;
     return {
       hits: this.hits,
       misses: this.misses,
+      evictions: this.evictions,
       size: this.map.size,
       maxSize: this.maxSize,
+      hitRate: total === 0 ? 0 : this.hits / total,
+      missRate: total === 0 ? 0 : this.misses / total,
     };
+  }
+
+  /** Test helper: clear entries and counters without changing maxSize. */
+  clear(): void {
+    this.map.clear();
+    this.head = null;
+    this.tail = null;
+    this.hits = 0;
+    this.misses = 0;
+    this.evictions = 0;
   }
 
   private moveToHead(node: LruNode): void {
@@ -107,6 +125,7 @@ class ImageVariantLruCache {
     if (this.tail.prev) this.tail.prev.next = null;
     this.tail = this.tail.prev;
     if (!this.tail) this.head = null;
+    this.evictions++;
   }
 }
 
@@ -220,5 +239,10 @@ export class ImageProcessingService {
   /** Returns cache hit/miss metrics for observability endpoints. */
   getCacheMetrics(): ImageCacheMetrics {
     return this.cache.getMetrics();
+  }
+
+  /** Clears the in-process variant cache (tests / admin maintenance). */
+  clearCache(): void {
+    this.cache.clear();
   }
 }

@@ -9,18 +9,11 @@ import {
   PropertyInquiry,
   PropertyInquiryStatus,
 } from '../inquiries/entities/property-inquiry.entity';
+import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
 import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
-import {
-  GenerateReportDto,
-  ReportType,
-  ReportFormat,
-} from './dto/generate-report.dto';
-import {
-  ExportAnalyticsDto,
-  ExportType,
-  ExportFormat,
-} from './dto/export-analytics.dto';
+import { GenerateReportDto, ReportType } from './dto/generate-report.dto';
+import { ExportAnalyticsDto, ExportType } from './dto/export-analytics.dto';
 
 export interface CityAggregate {
   city: string;
@@ -31,6 +24,11 @@ export interface CityAggregate {
   averageViewsPerProperty: number;
 }
 
+export interface LandlordFeesSummary {
+  totalPlatformFees: number;
+  bookingCount: number;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -38,6 +36,8 @@ export class AnalyticsService {
     private readonly propertyRepository: Repository<Property>,
     @InjectRepository(PropertyInquiry)
     private readonly inquiryRepository: Repository<PropertyInquiry>,
+    @InjectRepository(SubletBooking)
+    private readonly subletBookingRepository: Repository<SubletBooking>,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(AuditLog)
@@ -290,6 +290,22 @@ export class AnalyticsService {
       .slice(0, 8);
   }
 
+  async getLandlordFeesSummary(ownerId: string) {
+    const bookings = await this.subletBookingRepository.find({
+      where: { landlordId: ownerId },
+    });
+
+    const totalPlatformFees = bookings.reduce(
+      (sum, b) => sum + Number(b.platformFee),
+      0,
+    );
+
+    return {
+      totalPlatformFees,
+      bookingCount: bookings.length,
+    };
+  }
+
   private toDateKey(value: Date): string {
     return value.toISOString().slice(0, 10);
   }
@@ -451,7 +467,7 @@ export class AnalyticsService {
   }
 
   async generateReport(userId: string, dto: GenerateReportDto) {
-    const { reportType, format, days, startDate, endDate, propertyId } = dto;
+    const { reportType, format, days, startDate } = dto;
     const normalizedDays = days ? this.normalizeDays(days) : 30;
     const reportEndDate = new Date();
     const reportStartDate = startDate
@@ -493,7 +509,7 @@ export class AnalyticsService {
   }
 
   async exportAnalytics(userId: string, dto: ExportAnalyticsDto) {
-    const { exportType, format, days, startDate, endDate, propertyId } = dto;
+    const { exportType, format, days, startDate } = dto;
     const normalizedDays = days ? this.normalizeDays(days) : 30;
     const exportEndDate = new Date();
     const exportStartDate = startDate

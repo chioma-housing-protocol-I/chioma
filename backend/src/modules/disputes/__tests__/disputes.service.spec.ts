@@ -18,11 +18,9 @@ import { AuditService } from '../../audit/audit.service';
 import { CreateDisputeDto } from '../dto/create-dispute.dto';
 import {
   AgreementNotFoundError,
-  UserNotFoundError,
   AuthorizationError,
   BusinessRuleViolationError,
   DisputeNotFoundError,
-  ValidationError,
 } from '../../../common/errors/domain-errors';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';

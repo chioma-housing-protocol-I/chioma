@@ -98,7 +98,7 @@ describe('NotificationItem', () => {
       }),
     );
     expect(
-      screen.getByRole('button', { name: /mark read/i }),
+      screen.getByRole('button', { name: /mark .* as read/i }),
     ).toBeInTheDocument();
   });
 
@@ -111,7 +111,7 @@ describe('NotificationItem', () => {
       }),
     );
     expect(
-      screen.queryByRole('button', { name: /mark read/i }),
+      screen.queryByRole('button', { name: /mark .* as read/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -124,7 +124,7 @@ describe('NotificationItem', () => {
         variant: 'full',
       }),
     );
-    fireEvent.click(screen.getByRole('button', { name: /mark read/i }));
+    fireEvent.click(screen.getByRole('button', { name: /mark .* as read/i }));
     expect(onToggleRead).toHaveBeenCalledWith('n-1');
   });
 

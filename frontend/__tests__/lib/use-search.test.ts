@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { queryKeys } from '@/lib/query/keys';
 
 // The hooks themselves use @tanstack/react-query which requires a provider.

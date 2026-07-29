@@ -12,7 +12,6 @@ import {
 } from '@tanstack/react-query';
 import { cancellationManager, isCancellationError } from './manager';
 import { useCancellationMetricsStore } from '@/store/cancellation-metrics-store';
-import type { AppError } from '@/lib/errors/types';
 
 type CancellationState =
   | { status: 'idle' }

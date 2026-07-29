@@ -32,7 +32,6 @@ import {
 import { useAuth } from '@/store/authStore';
 import { apiClient } from '@/lib/api-client';
 import { useModal } from '@/contexts/ModalContext';
-import { processStellarRentPayment } from '@/lib/contracts/soroban-client';
 import toast from 'react-hot-toast';
 import {
   type DashboardPayment,

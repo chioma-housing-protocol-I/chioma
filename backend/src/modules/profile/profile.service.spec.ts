@@ -28,6 +28,7 @@ describe('ProfileService', () => {
     role: UserRole.USER,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,

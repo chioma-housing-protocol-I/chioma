@@ -1,6 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
+import { ReferralService } from '../../referral/referral.service';
 
 export interface DataSyncJobData {
   type:
@@ -9,7 +10,8 @@ export interface DataSyncJobData {
     | 'sync-agreement-status'
     | 'sync-payment-status'
     | 'cleanup-old-data'
-    | 'rebuild-search-index';
+    | 'rebuild-search-index'
+    | 'track-referral';
   entityId?: string;
   entityType?: string;
   data?: Record<string, any>;
@@ -18,6 +20,8 @@ export interface DataSyncJobData {
 @Processor('data-sync')
 export class DataSyncQueueProcessor {
   private readonly logger = new Logger(DataSyncQueueProcessor.name);
+
+  constructor(private readonly referralService: ReferralService) {}
 
   @Process()
   async handleDataSyncJob(job: Job<DataSyncJobData>): Promise<void> {
@@ -47,6 +51,10 @@ export class DataSyncQueueProcessor {
 
         case 'rebuild-search-index':
           await this.rebuildSearchIndex(job.data);
+          break;
+
+        case 'track-referral':
+          await this.trackReferral(job.data);
           break;
 
         default:
@@ -91,5 +99,16 @@ export class DataSyncQueueProcessor {
   private async rebuildSearchIndex(data: DataSyncJobData): Promise<void> {
     this.logger.debug(`Rebuilding search index for: ${data.entityType}`);
     // Search index rebuild logic
+  }
+
+  private async trackReferral(data: DataSyncJobData): Promise<void> {
+    const referredUserId = data.entityId;
+    const referralCode = data.data?.referralCode as string | undefined;
+
+    if (!referredUserId || !referralCode) {
+      throw new Error('track-referral job requires entityId and referralCode');
+    }
+
+    await this.referralService.trackReferral(referredUserId, referralCode);
   }
 }

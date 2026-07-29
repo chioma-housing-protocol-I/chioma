@@ -1,4 +1,4 @@
-import { isPlaceholder, checkAppUrls, type EnvCheckResult } from './networks';
+import { isPlaceholder, type EnvCheckResult } from './networks';
 export { checkAppUrls, checkNetworkConfig } from './networks';
 
 function looksLikeStellarId(value: string): boolean {

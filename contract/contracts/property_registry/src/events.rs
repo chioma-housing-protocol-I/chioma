@@ -1,3 +1,8 @@
+// Some event definitions describe operations that are not yet exposed by the
+// contract's public API. They are kept here so the event schema stays in one
+// place; remove the allow once the corresponding entrypoints emit them.
+#![allow(dead_code)]
+
 use soroban_sdk::{contractevent, Address, Bytes, Env, String};
 
 /// Event emitted when the contract is initialized
@@ -176,12 +181,7 @@ pub(crate) fn ownership_transferred(env: &Env, property_id: String, new_owner: A
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

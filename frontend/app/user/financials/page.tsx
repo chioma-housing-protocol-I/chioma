@@ -16,6 +16,7 @@ const AreaChartWrapper = dynamic(
     ssr: false,
   },
 );
+import { useFeesSummary } from '@/lib/query/hooks/use-fees-summary';
 import {
   useStellarNetworkAccount,
   readAssetBalance,
@@ -393,13 +394,12 @@ export default function FinancialsPage() {
       ? transactions
       : transactions.filter((t) => t.type === filter);
 
+  const { data: feesData, isLoading: feesLoading } = useFeesSummary();
+
   const totalRevenue =
     transactions.filter((t) => t.inflow).reduce((s, t) => s + t.amount, 0) +
     (usingMock ? 37900000 : 0);
-  const feesRemitted =
-    transactions
-      .filter((t) => t.type === 'Platform Fee')
-      .reduce((s, t) => s + t.amount, 0) + (usingMock ? 450000 : 0);
+  const feesRemitted = feesLoading ? 0 : (feesData?.totalPlatformFees ?? 0);
   const pendingPayout = usingMock
     ? 3800000
     : transactions

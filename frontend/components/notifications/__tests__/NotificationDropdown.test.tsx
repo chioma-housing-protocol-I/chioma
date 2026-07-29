@@ -132,7 +132,7 @@ describe('NotificationDropdown', () => {
       }),
     );
     expect(
-      screen.getByRole('button', { name: /mark all read/i }),
+      screen.getByRole('button', { name: /mark all notifications as read/i }),
     ).toBeInTheDocument();
   });
 
@@ -148,7 +148,7 @@ describe('NotificationDropdown', () => {
       }),
     );
     expect(
-      screen.queryByRole('button', { name: /mark all read/i }),
+      screen.queryByRole('button', { name: /mark all notifications as read/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -167,7 +167,9 @@ describe('NotificationDropdown', () => {
       }),
     );
     // Since markAllAsRead is async in the store, we need to wait for its effects
-    fireEvent.click(screen.getByRole('button', { name: /mark all read/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /mark all notifications as read/i }),
+    );
 
     // allow microtasks to flush
     await new Promise(process.nextTick);

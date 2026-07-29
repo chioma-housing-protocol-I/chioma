@@ -137,14 +137,16 @@ export class PropertyQueryBuilder {
   }
 
   /**
-   * Apply full-text search on title and description
+   * Apply indexed full-text search via the GIN-backed `search_vector` column
+   * (migration AddPropertySearchIndexes / issue #1407). Falls back to address
+   * ILIKE for street-level matches that may not be in the title/description
+   * tsvector, matching SearchService behavior.
    */
   applySearchFilter(search?: string): this {
     if (search) {
       this.queryBuilder.andWhere(
-        '(LOWER(property.title) LIKE LOWER(:search) OR ' +
-          'LOWER(property.description) LIKE LOWER(:search))',
-        { search: `%${search}%` },
+        `(property.search_vector @@ plainto_tsquery('english', :search) OR property.address ILIKE :likeSearch)`,
+        { search, likeSearch: `%${search}%` },
       );
     }
     return this;

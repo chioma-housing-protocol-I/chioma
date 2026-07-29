@@ -14,7 +14,6 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import {
-  ChevronDown,
   Search,
   Filter,
   Loader2,
@@ -51,7 +50,7 @@ import {
   useDeleteDocument,
   useArchiveDocument,
 } from '@/lib/query/hooks/use-landlord-documents';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 interface DocumentsListProps {
   className?: string;

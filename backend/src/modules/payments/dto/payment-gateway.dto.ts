@@ -121,6 +121,14 @@ export class PaymentGatewayWebhookDto {
   @IsNotEmpty()
   eventType: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Unique event identifier assigned by the gateway. Used to deduplicate retried webhook deliveries.',
+  })
+  @IsOptional()
+  @IsString()
+  eventId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

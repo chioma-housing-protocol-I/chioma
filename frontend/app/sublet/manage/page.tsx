@@ -9,7 +9,7 @@ export default function SubletManagePage() {
   const { data: sublets = [], isLoading } = useQuery({
     queryKey: ['sublets'],
     queryFn: async () => {
-      const res = await fetch('/api/sublets');
+      const res = await fetch('/api/subletting/requests');
       if (!res.ok) return [];
       const data = await res.json();
       return data.data ?? data ?? [];

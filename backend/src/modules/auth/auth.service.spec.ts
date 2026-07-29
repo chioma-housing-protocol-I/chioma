@@ -1,10 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import {} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { User, UserRole } from '../users/entities/user.entity';
 
@@ -24,14 +20,14 @@ import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { RegisterDto } from './dto/register.dto';
 import { Repository } from 'typeorm';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReferralService } from '../referral/referral.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { LockService } from '../../common/lock';
-import { REDIS_CLIENT } from '../../common/lock/redis-client.token';
-import { CompleteProfileDto } from './dto/complete-profile.dto';
+import { QueueManagementService } from '../queues/services/queue-management.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -73,6 +69,19 @@ describe('AuthService', () => {
   const mockJwtService = {
     sign: jest.fn(),
     verify: jest.fn(),
+  };
+
+  const makeQueueJob = () => ({
+    finished: jest.fn().mockResolvedValue(undefined),
+  });
+
+  const mockQueueManagementService = {
+    addEmailJob: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(makeQueueJob())),
+    addDataSyncJob: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(makeQueueJob())),
   };
 
   const mockConfigService = {
@@ -118,7 +127,12 @@ describe('AuthService', () => {
           useValue: {
             sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
             sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+            sendAlertEmail: jest.fn().mockResolvedValue(undefined),
           },
+        },
+        {
+          provide: QueueManagementService,
+          useValue: mockQueueManagementService,
         },
         {
           provide: MfaService,
@@ -153,6 +167,22 @@ describe('AuthService', () => {
                 fn: () => Promise<unknown>,
               ) => fn(),
             ),
+          },
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+          },
+        },
+        {
+          provide: EncryptedCacheService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
           },
         },
       ],
@@ -208,10 +238,18 @@ describe('AuthService', () => {
         }),
       );
       expect(mockUserRepository.save).toHaveBeenCalled();
-      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
-        registerDto.email,
-        expect.any(String),
+      expect(mockQueueManagementService.addEmailJob).toHaveBeenCalledWith(
+        {
+          type: 'verification',
+          email: registerDto.email,
+          token: expect.any(String),
+        },
+        expect.objectContaining({
+          attempts: expect.any(Number),
+          backoff: expect.objectContaining({ type: 'exponential' }),
+        }),
       );
+      expect(mockQueueManagementService.addDataSyncJob).not.toHaveBeenCalled();
     });
 
     it('should throw DuplicateEntryError if email already exists', async () => {
@@ -227,6 +265,110 @@ describe('AuthService', () => {
 
       await expect(service.register(registerDto)).rejects.toThrow(
         DuplicateEntryError,
+      );
+    });
+
+    it('should queue referral tracking with retry options when a referral code is provided', async () => {
+      const registerDto: RegisterDto = {
+        email: 'referred@example.com',
+        password: 'SecurePass123!',
+        firstName: 'Referred',
+        lastName: 'User',
+        role: UserRole.USER,
+        referralCode: 'ABC123',
+      };
+      const newUser = { ...mockUser, ...registerDto, id: 'referred-user-id' };
+
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue(newUser);
+      mockUserRepository.save.mockResolvedValue(newUser);
+      mockJwtService.sign
+        .mockReturnValueOnce('mock-access-token')
+        .mockReturnValueOnce('mock-refresh-token');
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+
+      await service.register(registerDto);
+
+      expect(mockQueueManagementService.addDataSyncJob).toHaveBeenCalledWith({
+        type: 'track-referral',
+        entityId: newUser.id,
+        data: { referralCode: 'ABC123' },
+      });
+    });
+
+    it('should send a critical-failure alert when the verification email job fails permanently', async () => {
+      const registerDto: RegisterDto = {
+        email: 'newuser@example.com',
+        password: 'SecurePass123!',
+        firstName: 'New',
+        lastName: 'User',
+        role: UserRole.USER,
+      };
+      const newUser = { ...mockUser, ...registerDto };
+
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue(newUser);
+      mockUserRepository.save.mockResolvedValue(newUser);
+      mockJwtService.sign
+        .mockReturnValueOnce('mock-access-token')
+        .mockReturnValueOnce('mock-refresh-token');
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+
+      mockQueueManagementService.addEmailJob.mockImplementationOnce(() =>
+        Promise.resolve({
+          finished: jest
+            .fn()
+            .mockRejectedValue(new Error('all retries exhausted')),
+        }),
+      );
+
+      const originalGet = mockConfigService.get.getMockImplementation();
+      mockConfigService.get.mockImplementation(((key: string) =>
+        key === 'ALERT_ONCALL_EMAIL'
+          ? 'oncall@chioma.app'
+          : originalGet?.(key)) as never);
+
+      try {
+        await service.register(registerDto);
+        // Let the detached job.finished().catch(...) chain run.
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(emailService.sendAlertEmail).toHaveBeenCalledWith(
+          'oncall@chioma.app',
+          expect.stringContaining('verification_email'),
+          expect.objectContaining({
+            message: expect.stringContaining('all retries exhausted'),
+          }),
+        );
+      } finally {
+        mockConfigService.get.mockImplementation(originalGet);
+      }
+    });
+
+    it('should not fail registration when the email queue itself is unavailable', async () => {
+      const registerDto: RegisterDto = {
+        email: 'newuser2@example.com',
+        password: 'SecurePass123!',
+        firstName: 'New',
+        lastName: 'User',
+        role: UserRole.USER,
+      };
+      const newUser = { ...mockUser, ...registerDto };
+
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue(newUser);
+      mockUserRepository.save.mockResolvedValue(newUser);
+      mockJwtService.sign
+        .mockReturnValueOnce('mock-access-token')
+        .mockReturnValueOnce('mock-refresh-token');
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+
+      mockQueueManagementService.addEmailJob.mockRejectedValueOnce(
+        new Error('redis unreachable'),
+      );
+
+      await expect(service.register(registerDto)).resolves.toHaveProperty(
+        'accessToken',
       );
     });
   });
@@ -404,6 +546,60 @@ describe('AuthService', () => {
       await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(
         ValidationError,
       );
+    });
+
+    it('should throw AuthenticationError when account is still locked', async () => {
+      const resetPasswordDto: ResetPasswordDto = {
+        token: 'reset-token',
+        newPassword: 'NewSecurePass123!',
+      };
+
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        resetTokenExpires: new Date(Date.now() + 3600000),
+        accountLockedUntil: new Date(Date.now() + 3600000),
+      });
+
+      await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(
+        AuthenticationError,
+      );
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkAccountLocked (shared helper)', () => {
+    const invoke = (user: Partial<User>) =>
+      (
+        service as unknown as {
+          checkAccountLocked: (u: Partial<User>) => void;
+        }
+      ).checkAccountLocked(user);
+
+    it('does nothing when the account has never been locked', () => {
+      const user = { ...mockUser, accountLockedUntil: null };
+
+      expect(() => invoke(user)).not.toThrow();
+    });
+
+    it('throws AuthenticationError while the lock window is still active', () => {
+      const user = {
+        ...mockUser,
+        accountLockedUntil: new Date(Date.now() + 3600000),
+      };
+
+      expect(() => invoke(user)).toThrow(AuthenticationError);
+    });
+
+    it('clears an expired lock instead of throwing', () => {
+      const user = {
+        ...mockUser,
+        accountLockedUntil: new Date(Date.now() - 1000),
+        failedLoginAttempts: 4,
+      };
+
+      expect(() => invoke(user)).not.toThrow();
+      expect(user.accountLockedUntil).toBeNull();
+      expect(user.failedLoginAttempts).toBe(0);
     });
   });
 

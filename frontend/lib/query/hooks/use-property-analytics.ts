@@ -5,13 +5,8 @@ import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
 import type { LandlordPropertyAnalytics } from '@/lib/property-analytics';
 import type {
-  DashboardMetrics,
-  PaymentAnalytics,
-  UserActivityAnalytics,
   GenerateReportDto,
-  GeneratedReport,
   ExportAnalyticsDto,
-  ExportedAnalytics,
 } from '@/lib/api/analytics';
 import { analyticsApi } from '@/lib/api/analytics';
 

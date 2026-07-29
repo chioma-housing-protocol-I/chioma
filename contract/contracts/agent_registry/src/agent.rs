@@ -237,7 +237,7 @@ pub fn complete_transaction(
         .persistent()
         .extend_ttl(&txn_key, 500000, 500000);
 
-    let agent_key = DataKey::Agent(agent);
+    let agent_key = DataKey::Agent(agent.clone());
     let mut agent_info: AgentInfo = env
         .storage()
         .persistent()

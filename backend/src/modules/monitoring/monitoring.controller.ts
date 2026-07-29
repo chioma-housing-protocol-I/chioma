@@ -11,6 +11,7 @@ import { MetricsService } from './metrics.service';
 import { AlertService } from './alert.service';
 import { CacheService } from '../../common/cache/cache.service';
 import { DatabaseMonitorService } from './database-monitor.service';
+import { ImageProcessingService } from '../storage/image-processing.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
@@ -23,6 +24,7 @@ export class MonitoringController {
     private readonly alertService: AlertService,
     private readonly cacheService: CacheService,
     private readonly databaseMonitorService: DatabaseMonitorService,
+    private readonly imageProcessingService: ImageProcessingService,
   ) {}
 
   @Get('metrics')
@@ -32,7 +34,10 @@ export class MonitoringController {
 
   @Get('cache/stats')
   getCacheStats() {
-    return this.cacheService.getStats();
+    return {
+      ...this.cacheService.getStats(),
+      imageProcessing: this.imageProcessingService.getCacheMetrics(),
+    };
   }
 
   @Get('api/database/health')

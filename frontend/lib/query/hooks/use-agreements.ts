@@ -2,7 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../keys';
+import { getDomainCacheTtl } from '../cache-ttl';
 import { agreementService } from '@/lib/services/agreement.service';
+
+const agreementsTtl = getDomainCacheTtl('agreements');
 import type {
   AgreementResponse,
   AgreementFilters,
@@ -12,7 +15,6 @@ import type {
   RenewAgreementPayload,
   SignaturePayload,
   RecordPaymentPayload,
-  AgreementFeeSnapshot,
 } from '@/lib/services/agreement.service';
 
 export interface AgreementSummary extends AgreementResponse {
@@ -55,7 +57,8 @@ export function useAgreements(filters: AgreementFilters = {}) {
       const list = (res.data ?? []).map(enrichAgreement);
       return { data: list, meta: res.meta };
     },
-    staleTime: 60_000,
+    staleTime: agreementsTtl.staleTime,
+    gcTime: agreementsTtl.gcTime,
   });
 }
 
@@ -67,7 +70,8 @@ export function useUserAgreements(filters: AgreementFilters = { limit: 50 }) {
       const list = (res.data ?? []).map(enrichAgreement);
       return { data: list, meta: res.meta };
     },
-    staleTime: 60_000,
+    staleTime: agreementsTtl.staleTime,
+    gcTime: agreementsTtl.gcTime,
   });
 }
 
@@ -79,6 +83,8 @@ export function useAgreement(agreementId: string | null) {
       const agreement = await agreementService.getById(agreementId!);
       return enrichAgreement(agreement);
     },
+    staleTime: agreementsTtl.staleTime,
+    gcTime: agreementsTtl.gcTime,
   });
 }
 

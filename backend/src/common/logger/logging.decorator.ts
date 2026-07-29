@@ -24,7 +24,11 @@ export function Logging(contextInfo: Partial<LogContext> = {}) {
       this: { logger?: LoggerLike },
       ...args: unknown[]
     ) {
-      const logger: LoggerLike = this.logger ?? new LoggerService();
+      // LoggerService declares a *private* log(), which structurally conflicts
+      // with LoggerLike's optional public log?(). Its public info() satisfies
+      // the shape logInfo() actually uses, so narrow to that here.
+      const logger: LoggerLike =
+        this.logger ?? (new LoggerService() as unknown as LoggerLike);
       const logInfo = (message: string, metadata: Record<string, unknown>) => {
         if (typeof logger.info === 'function') {
           logger.info(message, metadata);

@@ -1,6 +1,6 @@
-use soroban_sdk::{contractevent, Address, Bytes, Env, String};
+use soroban_sdk::{contractevent, Address, Env, String};
 
-use crate::types::{AppealOutcome, DisputeOutcome, DisputeStatus, Resolution, VoteResult};
+use crate::types::DisputeOutcome;
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
@@ -28,7 +28,7 @@ pub struct ArbiterAdded {
 pub struct DisputeRaised {
     #[topic]
     pub agreement_id: String,
-    pub details_hash: Bytes,
+    pub details_hash: String,
     pub raised_at: u64,
 }
 
@@ -50,7 +50,7 @@ pub struct VoteCast {
 pub struct DisputeResolved {
     #[topic]
     pub agreement_id: String,
-    pub result: VoteResult,
+    pub result: DisputeOutcome,
     pub voted_for_landlord_count: u32,
     pub voted_for_tenant_count: u32,
     pub resolved_at: u64,
@@ -119,7 +119,7 @@ pub struct AppealVoted {
 pub struct AppealResolved {
     #[topic]
     pub appeal_id: String,
-    pub outcome: AppealOutcome,
+    pub outcome: DisputeOutcome,
     pub resolved_at: u64,
 }
 
@@ -140,7 +140,7 @@ pub struct WeightedVoteCast {
     pub dispute_id: String,
     #[topic]
     pub arbiter: Address,
-    pub weight: u64,
+    pub weight: u32,
     pub voted_at: u64,
 }
 
@@ -151,7 +151,7 @@ pub struct DisputeResolvedByWeight {
     #[topic]
     pub dispute_id: String,
     pub outcome: DisputeOutcome,
-    pub total_weight: u64,
+    pub total_weight: u32,
     pub resolved_at: u64,
 }
 
@@ -206,7 +206,7 @@ pub(crate) fn arbiter_added(env: &Env, admin: Address, arbiter: Address) {
 }
 
 /// Helper function to emit dispute raised event
-pub(crate) fn dispute_raised(env: &Env, agreement_id: String, details_hash: Bytes) {
+pub(crate) fn dispute_raised(env: &Env, agreement_id: String, details_hash: String) {
     DisputeRaised {
         agreement_id,
         details_hash,
@@ -216,12 +216,7 @@ pub(crate) fn dispute_raised(env: &Env, agreement_id: String, details_hash: Byte
 }
 
 /// Helper function to emit vote cast event
-pub(crate) fn vote_cast(
-    env: &Env,
-    agreement_id: String,
-    arbiter: Address,
-    favor_landlord: bool,
-) {
+pub(crate) fn vote_cast(env: &Env, agreement_id: String, arbiter: Address, favor_landlord: bool) {
     VoteCast {
         agreement_id,
         arbiter,
@@ -235,7 +230,7 @@ pub(crate) fn vote_cast(
 pub(crate) fn dispute_resolved(
     env: &Env,
     agreement_id: String,
-    result: VoteResult,
+    result: DisputeOutcome,
     voted_for_landlord_count: u32,
     voted_for_tenant_count: u32,
 ) {
@@ -295,12 +290,7 @@ pub(crate) fn arbiter_stats_set(
 }
 
 /// Helper function to emit appeal created event
-pub(crate) fn appeal_created(
-    env: &Env,
-    appeal_id: String,
-    dispute_id: String,
-    appellant: Address,
-) {
+pub(crate) fn appeal_created(env: &Env, appeal_id: String, dispute_id: String, appellant: Address) {
     AppealCreated {
         appeal_id,
         dispute_id,
@@ -321,11 +311,7 @@ pub(crate) fn appeal_voted(env: &Env, appeal_id: String, arbiter: Address) {
 }
 
 /// Helper function to emit appeal resolved event
-pub(crate) fn appeal_resolved(
-    env: &Env,
-    appeal_id: String,
-    outcome: AppealOutcome,
-) {
+pub(crate) fn appeal_resolved(env: &Env, appeal_id: String, outcome: DisputeOutcome) {
     AppealResolved {
         appeal_id,
         outcome,
@@ -344,12 +330,7 @@ pub(crate) fn appeal_cancelled(env: &Env, appeal_id: String) {
 }
 
 /// Helper function to emit weighted vote cast event
-pub(crate) fn weighted_vote_cast(
-    env: &Env,
-    dispute_id: String,
-    arbiter: Address,
-    weight: u64,
-) {
+pub(crate) fn weighted_vote_cast(env: &Env, dispute_id: String, arbiter: Address, weight: u32) {
     WeightedVoteCast {
         dispute_id,
         arbiter,
@@ -364,7 +345,7 @@ pub(crate) fn dispute_resolved_by_weight(
     env: &Env,
     dispute_id: String,
     outcome: DisputeOutcome,
-    total_weight: u64,
+    total_weight: u32,
 ) {
     DisputeResolvedByWeight {
         dispute_id,
@@ -376,12 +357,7 @@ pub(crate) fn dispute_resolved_by_weight(
 }
 
 /// Helper function to emit upgrade proposed event
-pub(crate) fn upgrade_proposed(
-    env: &Env,
-    proposal_id: String,
-    proposer: Address,
-    eta: u64,
-) {
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
     UpgradeProposed {
         proposal_id,
         proposer,

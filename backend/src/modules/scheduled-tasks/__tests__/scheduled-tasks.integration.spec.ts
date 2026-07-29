@@ -19,6 +19,7 @@ import {
 import { EmailService } from '../../notifications/email.service';
 import { QueueMonitoringService } from '../../queues/services/queue-monitoring.service';
 import { DeadLetterQueueService } from '../../queues/services/dead-letter-queue.service';
+import { ErrorNotificationService } from '../../monitoring/error-notification.service';
 import {
   DEAD_LETTER_JOB_NAME,
   DEAD_LETTER_QUEUE_NAME,
@@ -105,6 +106,10 @@ describe('Scheduled Tasks Integration', () => {
         QueueMonitoringService,
         DeadLetterQueueService,
         SecurityPatchManagementService,
+        {
+          provide: ErrorNotificationService,
+          useValue: { notifyAlert: jest.fn() },
+        },
         { provide: getRepositoryToken(Property), useValue: propertyRepository },
         { provide: CacheService, useValue: cacheService },
         {

@@ -207,7 +207,7 @@ export class UsersService {
     updateProfileDto: UpdateUserProfileDto,
   ): Promise<User> {
     const user = await this.findById(userId);
-    
+
     // Encrypt PII fields before saving
     if (updateProfileDto.firstName !== undefined) {
       user.firstName = updateProfileDto.firstName;
@@ -217,7 +217,7 @@ export class UsersService {
         );
       }
     }
-    
+
     if (updateProfileDto.lastName !== undefined) {
       user.lastName = updateProfileDto.lastName;
       if (updateProfileDto.lastName) {
@@ -226,7 +226,7 @@ export class UsersService {
         );
       }
     }
-    
+
     if (updateProfileDto.phoneNumber !== undefined) {
       user.phoneNumber = updateProfileDto.phoneNumber;
       user.phoneNumberHash = updateProfileDto.phoneNumber
@@ -238,9 +238,9 @@ export class UsersService {
         );
       }
     }
-    
+
     const updatedUser = await this.userRepository.save(user);
-    
+
     // Audit log for PII access
     await this.auditService.log({
       action: AuditAction.UPDATE,
@@ -251,7 +251,7 @@ export class UsersService {
       level: AuditLevel.SECURITY,
       metadata: { type: 'PII_UPDATE', fields: Object.keys(updateProfileDto) },
     });
-    
+
     this.logger.log(`Profile updated for user: ${user.email}`);
     return updatedUser;
   }
@@ -301,7 +301,11 @@ export class UsersService {
       performedBy: userId,
       status: AuditStatus.SUCCESS,
       level: AuditLevel.SECURITY,
-      metadata: { type: 'EMAIL_CHANGE', oldEmail: user.email, newEmail: normalizedNew },
+      metadata: {
+        type: 'EMAIL_CHANGE',
+        oldEmail: user.email,
+        newEmail: normalizedNew,
+      },
     });
 
     this.logger.log(

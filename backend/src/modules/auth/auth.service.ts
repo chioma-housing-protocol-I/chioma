@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
@@ -24,6 +24,7 @@ import {
 import { PasswordPolicyService } from './services/password-policy.service';
 import { MfaService } from './services/mfa.service';
 import { ReferralService } from '../referral/referral.service';
+import { QueueManagementService } from '../queues/services/queue-management.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { Logging } from '../../common/logger/logging.decorator';
 import { Locked, LockService } from '../../common/lock';
@@ -33,12 +34,8 @@ import {
   DuplicateEntryError,
 } from '../../common/errors/domain-errors';
 import { ErrorCode } from '../../common/errors/error-codes';
+import { ValidationUtils } from '../../common/utils/validation/validation.utils';
 
-const SALT_ROUNDS = 12;
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 30;
-const RESET_TOKEN_EXPIRY_HOURS = 1;
-const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
 import {
   BCRYPT_SALT_ROUNDS,
   MAX_FAILED_LOGIN_ATTEMPTS,
@@ -51,6 +48,7 @@ import {
 const SALT_ROUNDS = BCRYPT_SALT_ROUNDS;
 const MAX_FAILED_ATTEMPTS = MAX_FAILED_LOGIN_ATTEMPTS;
 const RESET_TOKEN_EXPIRY_HOURS = PASSWORD_RESET_TOKEN_EXPIRY_HOURS;
+const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
 
 @Injectable()
 export class AuthService {
@@ -69,6 +67,8 @@ export class AuthService {
     private readonly lockService: LockService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly encryptedCache: EncryptedCacheService,
+    @Optional()
+    private readonly queueManagementService?: QueueManagementService,
   ) {}
 
   @Logging({ service: 'AuthService' })
@@ -117,28 +117,22 @@ export class AuthService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // Track referral if code provided
+    // Track referral if code provided. Queued with retry so a transient
+    // failure doesn't silently drop the referral; a permanent failure
+    // raises a critical alert instead of just a log line.
     if (referralCode) {
-      await this.referralService
-        .trackReferral(savedUser, referralCode)
-        .catch((err) => {
-          this.logger.error(
-            `Failed to track referral for user ${savedUser.id}: ${err.message}`,
-          );
-        });
+      void this.enqueueReferralTracking(savedUser.id, referralCode);
     }
 
     this.logger.log(`User registered successfully: ${savedUser.id}`);
 
-    // Send verification email asynchronously
-    this.emailService
-      .sendVerificationEmail(normalizedEmail, verificationToken)
-      .catch((error) =>
-        this.logger.error(
-          `Failed to send verification email for ${savedUser.email}`,
-          error,
-        ),
-      );
+    // Send verification email asynchronously via the retrying email queue
+    // rather than firing-and-forgetting the direct send.
+    void this.enqueueVerificationEmail(
+      savedUser.id,
+      normalizedEmail,
+      verificationToken,
+    );
 
     const { accessToken, refreshToken } = this.generateTokens(
       savedUser.id,
@@ -180,19 +174,7 @@ export class AuthService {
       );
     }
 
-    if (user.accountLockedUntil) {
-      const now = new Date();
-      if (user.accountLockedUntil > now) {
-        this.logger.warn(`Login attempt for locked account: ${email}`);
-        throw new AuthenticationError(
-          ErrorCode.AUTH_ACCOUNT_LOCKED,
-          'Invalid email or password',
-        );
-      } else {
-        user.accountLockedUntil = null;
-        user.failedLoginAttempts = 0;
-      }
-    }
+    this.checkAccountLocked(user);
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -405,6 +387,8 @@ export class AuthService {
       this.logger.warn(`Expired password reset token for user: ${user.id}`);
       throw new ValidationError('Reset token has expired');
     }
+
+    this.checkAccountLocked(user);
 
     // Validate new password against policy
     await this.passwordPolicyService.validatePassword(newPassword, user.id);
@@ -638,6 +622,30 @@ export class AuthService {
       .catch(() => null);
   }
 
+  /**
+   * Shared account-lockout check, used by both login and password reset so
+   * a locked account can't be used via either path until the lockout window
+   * expires. Throws AUTH_ACCOUNT_LOCKED while still locked; otherwise clears
+   * an expired lock in place (caller must persist the change alongside its
+   * own save). No-op if the account was never locked.
+   */
+  private checkAccountLocked(user: User): void {
+    if (!user.accountLockedUntil) {
+      return;
+    }
+
+    if (user.accountLockedUntil > new Date()) {
+      this.logger.warn(`Blocked attempt on locked account: ${user.id}`);
+      throw new AuthenticationError(
+        ErrorCode.AUTH_ACCOUNT_LOCKED,
+        'Invalid email or password',
+      );
+    }
+
+    user.accountLockedUntil = null;
+    user.failedLoginAttempts = 0;
+  }
+
   private async handleFailedLogin(user: User): Promise<void> {
     if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
       user.accountLockedUntil = new Date(
@@ -721,6 +729,124 @@ export class AuthService {
     );
 
     return verificationToken;
+  }
+
+  /**
+   * Queues the verification email with retry/backoff instead of sending it
+   * inline. If the job is never queued, or exhausts its retries and fails
+   * permanently, a critical-failure alert is raised so the missed email is
+   * visible instead of only appearing in a log line.
+   */
+  private async enqueueVerificationEmail(
+    userId: string,
+    email: string,
+    token: string,
+  ): Promise<void> {
+    if (!this.queueManagementService) {
+      this.logger.warn(
+        `Queue unavailable; verification email not queued for ${userId}`,
+      );
+      return;
+    }
+
+    try {
+      const job = await this.queueManagementService.addEmailJob(
+        { type: 'verification', email, token },
+        {
+          attempts:
+            this.configService.get<number>('BULL_QUEUE_EMAIL_ATTEMPTS') ?? 3,
+          backoff: {
+            type: 'exponential',
+            delay:
+              this.configService.get<number>(
+                'BULL_QUEUE_EMAIL_BACKOFF_DELAY',
+              ) ?? 2000,
+          },
+        },
+      );
+
+      job.finished().catch((error: unknown) =>
+        this.notifyCriticalFailure('verification_email', error, {
+          userId,
+          email,
+        }),
+      );
+    } catch (error) {
+      await this.notifyCriticalFailure('verification_email_enqueue', error, {
+        userId,
+        email,
+      });
+    }
+  }
+
+  /**
+   * Queues referral tracking with retry/backoff instead of running it
+   * inline. Same failure-visibility guarantee as {@link enqueueVerificationEmail}.
+   */
+  private async enqueueReferralTracking(
+    userId: string,
+    referralCode: string,
+  ): Promise<void> {
+    if (!this.queueManagementService) {
+      this.logger.warn(
+        `Queue unavailable; referral tracking not queued for ${userId}`,
+      );
+      return;
+    }
+
+    try {
+      const job = await this.queueManagementService.addDataSyncJob({
+        type: 'track-referral',
+        entityId: userId,
+        data: { referralCode },
+      });
+
+      job.finished().catch((error: unknown) =>
+        this.notifyCriticalFailure('referral_tracking', error, {
+          userId,
+          referralCode,
+        }),
+      );
+    } catch (error) {
+      await this.notifyCriticalFailure('referral_tracking_enqueue', error, {
+        userId,
+        referralCode,
+      });
+    }
+  }
+
+  /**
+   * Raises visibility on a background job that failed permanently (all
+   * retries exhausted) or couldn't be queued at all. Always logs at error
+   * level; additionally emails the on-call address if one is configured.
+   * Never throws — a broken alert path must not affect the caller.
+   */
+  private async notifyCriticalFailure(
+    context: string,
+    error: unknown,
+    meta: Record<string, unknown>,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(
+      `Critical background failure [${context}]: ${message} ${JSON.stringify(meta)}`,
+    );
+
+    const alertEmail = this.configService.get<string>('ALERT_ONCALL_EMAIL');
+    if (!alertEmail) {
+      return;
+    }
+
+    await this.emailService
+      .sendAlertEmail(alertEmail, `Critical failure: ${context}`, {
+        message,
+        details: meta,
+      })
+      .catch((alertError: unknown) =>
+        this.logger.error(
+          `Failed to send critical failure alert for ${context}`,
+          alertError instanceof Error ? alertError.stack : String(alertError),
+        ),
+      );
   }
 
   public sanitizeUser(user: User) {

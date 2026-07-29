@@ -1,15 +1,10 @@
 import { ErrorMapperUtils } from '../error-mapper.utils';
-import {
-  BadRequestException,
-  NotFoundException,
-  InternalServerErrorException,
-  HttpStatus,
-} from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import {
   ResourceNotFoundError,
   DuplicateEntryError,
   SystemError,
-} from '../../errors/domain-errors';
+} from '../../../errors/domain-errors';
 
 describe('ErrorMapperUtils', () => {
   describe('mapError', () => {

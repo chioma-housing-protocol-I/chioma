@@ -107,7 +107,7 @@ export class MessagingService {
     });
   }
 
-  async markRoomAsRead(roomId: string, userId: string): Promise<void> {
+  async markRoomAsRead(_roomId: string, _userId: string): Promise<void> {
     // Mark messages in this room as read for the given user
     // This is a best-effort operation — no readAt column exists yet
     // so we just return without error for now
