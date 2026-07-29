@@ -86,23 +86,6 @@
     "vite": "^6.4.2",
     "vitest": "^4.0.18"
   },
-  "overrides": {
-    "minimatch": "^9.0.8",
-    "ajv": "^8.12.0",
-    "next": "16.2.6",
-    "vite": "^6.4.2",
-    "protobufjs": "^7.5.6",
-    "defu": "^6.1.5",
-    "micromatch>picomatch": "^2.3.2",
-    "fdir>picomatch": "^4.0.4",
-    "tinyglobby>picomatch": "^4.0.4",
-    "vitest>picomatch": "^4.0.4",
-    "axios": "^1.15.2",
-    "fast-uri": "^3.1.2",
-    "ajv>fast-uri": "^3.1.2",
-    "ajv-keywords>ajv>fast-uri": "^3.1.2",
-    "schema-utils>ajv>fast-uri": "^3.1.2"
-  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
