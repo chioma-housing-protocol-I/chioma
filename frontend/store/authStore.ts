@@ -178,8 +178,10 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
     }
   } catch (error) {
     console.error('[authStore] Failed to parse auth storage:', error);
-    
-    const storedWalletAddress = localStorage.getItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+
+    const storedWalletAddress = localStorage.getItem(
+      AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+    );
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
@@ -190,7 +192,8 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
     useUIStore.getState().addToast({
       type: 'error',
       title: 'Session Corrupted',
-      message: 'Your local session data was corrupted. You have been safely logged out.',
+      message:
+        'Your local session data was corrupted. You have been safely logged out.',
     });
 
     cachedAuthSnapshot = {
@@ -201,7 +204,9 @@ function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
   }
 
   // If no stored token and user found
-  const storedWalletAddressFallback = localStorage.getItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+  const storedWalletAddressFallback = localStorage.getItem(
+    AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+  );
   cachedAuthSnapshot = {
     ...emptyAuthSnapshot(),
     walletAddress: storedWalletAddressFallback,

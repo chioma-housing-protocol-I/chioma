@@ -112,7 +112,9 @@ describe('authStore', () => {
     expect(localStorage.getItem('chioma_access_token')).toBeNull();
 
     const uiState = useUIStore.getState();
-    expect(uiState.toasts.some((t) => t.title === 'Session Corrupted')).toBe(true);
+    expect(uiState.toasts.some((t) => t.title === 'Session Corrupted')).toBe(
+      true,
+    );
 
     consoleSpy.mockRestore();
   });
