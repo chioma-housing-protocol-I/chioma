@@ -29,6 +29,28 @@ pub struct PropertyVerified {
     pub property_id: String,
 }
 
+/// Event emitted when a property's ownership is transferred
+/// Topics: ["property_transferred", previous_landlord: Address, property_id: String]
+#[contractevent(topics = ["property_transferred"])]
+pub struct PropertyTransferred {
+    #[topic]
+    pub previous_landlord: Address,
+    #[topic]
+    pub property_id: String,
+    pub new_landlord: Address,
+}
+
+/// Event emitted when a property's metadata is updated
+/// Topics: ["property_metadata_updated", landlord: Address, property_id: String]
+#[contractevent(topics = ["property_metadata_updated"])]
+pub struct PropertyMetadataUpdated {
+    #[topic]
+    pub landlord: Address,
+    #[topic]
+    pub property_id: String,
+    pub new_metadata_hash: String,
+}
+
 /// Helper function to emit contract initialized event
 pub(crate) fn contract_initialized(env: &Env, admin: Address) {
     ContractInitialized { admin }.publish(env);
@@ -52,4 +74,34 @@ pub(crate) fn property_registered(
 /// Helper function to emit property verified event
 pub(crate) fn property_verified(env: &Env, property_id: String, admin: Address) {
     PropertyVerified { admin, property_id }.publish(env);
+}
+
+/// Helper function to emit property transferred event
+pub(crate) fn property_transferred(
+    env: &Env,
+    property_id: String,
+    previous_landlord: Address,
+    new_landlord: Address,
+) {
+    PropertyTransferred {
+        previous_landlord,
+        property_id,
+        new_landlord,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit property metadata updated event
+pub(crate) fn property_metadata_updated(
+    env: &Env,
+    property_id: String,
+    landlord: Address,
+    new_metadata_hash: String,
+) {
+    PropertyMetadataUpdated {
+        landlord,
+        property_id,
+        new_metadata_hash,
+    }
+    .publish(env);
 }
