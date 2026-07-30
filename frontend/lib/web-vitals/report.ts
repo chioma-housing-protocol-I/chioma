@@ -16,10 +16,24 @@ export function setWebVitalSink(sink: WebVitalSink | null) {
   extraSink = sink;
 }
 
-function postToApi(payload: WebVitalPayload) {
-  if (typeof window === 'undefined') return;
+// ── Batching ────────────────────────────────────────────────────────────────
+// Metrics finalize one at a time (LCP, CLS, INP, ...), but sending each as
+// its own HTTP request multiplies network overhead for no benefit - the
+// server doesn't need to know the instant one lands. Queue them and flush
+// as a single request, either after a short coalescing window or
+// immediately when the page is hidden/unloaded, since late-finalizing
+// metrics like CLS often only settle right as the user navigates away.
 
-  const body = JSON.stringify(payload);
+const FLUSH_DELAY_MS = 300;
+const MAX_BATCH_SIZE = 10;
+
+let queue: WebVitalPayload[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function sendBatch(batch: WebVitalPayload[]) {
+  if (typeof window === 'undefined' || batch.length === 0) return;
+
+  const body = JSON.stringify(batch);
 
   try {
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
@@ -41,8 +55,34 @@ function postToApi(payload: WebVitalPayload) {
   });
 }
 
+/** Flush any queued metrics immediately, as a single batched request. */
+export function flushWebVitals() {
+  if (flushTimer !== null) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  if (queue.length === 0) return;
+
+  const batch = queue;
+  queue = [];
+  sendBatch(batch);
+}
+
+function scheduleFlush() {
+  if (flushTimer !== null) return;
+  flushTimer = setTimeout(flushWebVitals, FLUSH_DELAY_MS);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushWebVitals();
+  });
+  window.addEventListener('pagehide', flushWebVitals);
+}
+
 /**
  * Report a single Web Vital. Safe for production: no PII, non-throwing.
+ * Queued and sent to the server in a batch rather than one request per metric.
  */
 export function reportWebVital(
   metric: RawWebVitalMetric,
@@ -72,7 +112,12 @@ export function reportWebVital(
     }
   }
 
-  postToApi(payload);
+  queue.push(payload);
+  if (queue.length >= MAX_BATCH_SIZE) {
+    flushWebVitals();
+  } else {
+    scheduleFlush();
+  }
 
   return payload;
 }
