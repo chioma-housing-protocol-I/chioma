@@ -1,5 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { DatabasePerformanceService } from './database-performance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -57,5 +62,64 @@ export class DatabasePerformanceController {
   @ApiOperation({ summary: 'Get duplicate index candidates' })
   async getDuplicateIndexes() {
     return this.performanceService.getDuplicateIndexCandidates();
+  }
+
+  @Get('query-analysis')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Get real-time query analysis including slow query detection and N+1 alerts',
+  })
+  async getQueryAnalysis() {
+    return this.performanceService.getQueryAnalysis();
+  }
+
+  @Get('query-analysis/n-plus-one')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get N+1 query detection reports' })
+  @ApiQuery({
+    name: 'severity',
+    required: false,
+    enum: ['low', 'medium', 'high', 'critical'],
+  })
+  async getNPlusOneDetection(@Query('severity') severity?: string) {
+    return this.performanceService.getNPlusOneDetection(severity);
+  }
+
+  @Get('query-analysis/patterns')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get all tracked query patterns with statistics' })
+  @ApiQuery({ name: 'search', required: false })
+  async getQueryPatterns(@Query('search') search?: string) {
+    return this.performanceService.getQueryPatterns(search);
+  }
+
+  @Get('query-analysis/history')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get recent query execution history' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'minDuration', required: false })
+  async getQueryHistory(
+    @Query('limit') limit?: string,
+    @Query('minDuration') minDuration?: string,
+  ) {
+    return this.performanceService.getQueryHistory(
+      limit ? parseInt(limit, 10) : 100,
+      minDuration ? parseInt(minDuration, 10) : undefined,
+    );
+  }
+
+  @Get('query-analysis/stats')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get aggregated query execution statistics' })
+  async getQueryStats() {
+    return this.performanceService.getQueryStats();
+  }
+
+  @Get('query-analysis/reset')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Reset query analysis data' })
+  async resetQueryAnalysis() {
+    return this.performanceService.resetQueryAnalysis();
   }
 }
