@@ -15,7 +15,7 @@ describe('FeatureFlagsService', () => {
     description: 'Test feature flag',
     enabled: true,
     rolloutPercentage: 50,
-    metadata: null,
+    metadata: undefined,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

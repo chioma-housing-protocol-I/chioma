@@ -57,12 +57,15 @@ export class FeatureFlagsService implements OnModuleInit {
    * @param userId Optional user identifier
    */
   async isFeatureEnabled(flagKey: string, userId?: string): Promise<boolean> {
-    let flag = this.cache.get(flagKey);
+    let flag: FeatureFlag | null | undefined = this.cache.get(flagKey);
 
     if (!flag) {
-      flag = await this.flagRepository.findOne({ where: { key: flagKey } });
-      if (flag) {
-        this.cache.set(flag.key, flag);
+      const dbFlag = await this.flagRepository.findOne({
+        where: { key: flagKey },
+      });
+      if (dbFlag) {
+        this.cache.set(dbFlag.key, dbFlag);
+        flag = dbFlag;
       }
     }
 
