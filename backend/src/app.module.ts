@@ -73,6 +73,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 
 const appLogger = new Logger('AppModule');
 
@@ -250,6 +251,7 @@ const appLogger = new Logger('AppModule');
     AiModule,
     FraudModule,
     FavoritesModule,
+    FeatureFlagsModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,
