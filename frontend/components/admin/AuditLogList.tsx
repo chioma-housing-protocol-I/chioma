@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Eye, ChevronLeft, ChevronRight, User as UserIcon, FileText } from 'lucide-react';
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  User as UserIcon,
+  FileText,
+} from 'lucide-react';
 import type { AuditLog, PaginatedResponse } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 

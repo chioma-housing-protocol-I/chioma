@@ -21,35 +21,39 @@ export function EmptyState({
   variant = 'default',
 }: EmptyStateProps) {
   const isDark = variant === 'dark';
-  
+
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-12 text-center ${
-        isDark 
-          ? 'border-white/10 bg-white/5' 
+        isDark
+          ? 'border-white/10 bg-white/5'
           : 'border-neutral-200 bg-neutral-50'
       } ${className}`}
     >
       {Icon && (
-        <div className={`mb-6 rounded-2xl ${
-          isDark 
-            ? 'bg-blue-500/10 p-4' 
-            : 'bg-blue-50 p-4'
-        }`}>
-          <Icon 
-            className={isDark ? 'text-blue-400' : 'text-blue-500'} 
-            size={48} 
+        <div
+          className={`mb-6 rounded-2xl ${
+            isDark ? 'bg-blue-500/10 p-4' : 'bg-blue-50 p-4'
+          }`}
+        >
+          <Icon
+            className={isDark ? 'text-blue-400' : 'text-blue-500'}
+            size={48}
           />
         </div>
       )}
-      <h3 className={`text-xl font-bold mb-2 ${
-        isDark ? 'text-white' : 'text-neutral-900'
-      }`}>
+      <h3
+        className={`text-xl font-bold mb-2 ${
+          isDark ? 'text-white' : 'text-neutral-900'
+        }`}
+      >
         {title}
       </h3>
-      <p className={`mb-6 max-w-md ${
-        isDark ? 'text-blue-200/50' : 'text-neutral-500'
-      }`}>
+      <p
+        className={`mb-6 max-w-md ${
+          isDark ? 'text-blue-200/50' : 'text-neutral-500'
+        }`}
+      >
         {description}
       </p>
       {actionLabel && onAction && (

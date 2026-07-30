@@ -402,7 +402,9 @@ export function DocumentsList({
               actionLabel="Upload Document"
               onAction={() => {
                 // Trigger upload dialog - implementation depends on your upload mechanism
-                const uploadButton = document.querySelector('[data-upload-trigger]') as HTMLButtonElement;
+                const uploadButton = document.querySelector(
+                  '[data-upload-trigger]',
+                ) as HTMLButtonElement;
                 uploadButton?.click();
               }}
             />
