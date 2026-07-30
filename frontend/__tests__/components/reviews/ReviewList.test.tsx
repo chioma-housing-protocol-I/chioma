@@ -114,22 +114,24 @@ describe('ReviewList', () => {
   });
 
   it('shows empty state message when reviews array is empty', () => {
-  render(
-    <ReviewList
-      reviews={[]}
-      stats={{
-        average: 0,
-        total: 0,
-        distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-      }}
-      onSubmitReview={onSubmitReview}
-    />,
-  );
-  expect(screen.getByText('No reviews yet')).toBeDefined();
-  expect(
-    screen.getByText('Be the first to share your experience with this property!'),
-  ).toBeDefined();
-});
+    render(
+      <ReviewList
+        reviews={[]}
+        stats={{
+          average: 0,
+          total: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        }}
+        onSubmitReview={onSubmitReview}
+      />,
+    );
+    expect(screen.getByText('No reviews yet')).toBeDefined();
+    expect(
+      screen.getByText(
+        'Be the first to share your experience with this property!',
+      ),
+    ).toBeDefined();
+  });
 
   it('shows the "Write a Review" button initially', () => {
     render(
