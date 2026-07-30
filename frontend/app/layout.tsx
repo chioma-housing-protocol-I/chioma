@@ -77,8 +77,11 @@ export default function RootLayout({
         suppressHydrationWarning
         className="font-sans bg-ink-900 text-cream"
       >
-        {/* Accessibility: skip link */}
-        <a href="#main-content" className="skip-link">
+        {/* Accessibility: skip link for keyboard users */}
+        <a
+          href="#main-content"
+          className="skip-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+        >
           Skip to main content
         </a>
 

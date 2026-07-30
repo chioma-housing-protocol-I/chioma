@@ -254,7 +254,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <button
               onClick={onClose}
               disabled={isProcessing}
-              className="px-6 py-2.5 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+              aria-label="Cancel payment"
+              className="px-6 py-2.5 rounded-xl font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -266,16 +267,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 formData.paymentMethod === 'crypto' ||
                 (!selectedMethodId && !showAddForm)
               }
-              className="px-6 py-2.5 rounded-xl font-bold text-white bg-brand-blue hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-2"
+              aria-label="Submit payment"
+              aria-busy={isProcessing}
+              className="px-6 py-2.5 rounded-xl font-bold text-white bg-brand-blue hover:bg-blue-700 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" aria-hidden="true" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={18} />
+                  <CheckCircle2 size={18} aria-hidden="true" />
                   Pay Now
                 </>
               )}
@@ -297,9 +300,30 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </h3>
             </div>
 
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-neutral-500">
-                $
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-neutral-500">
+              $
+            </span>
+            <input
+              type="number"
+              id="payment-amount"
+              aria-label="Payment amount in dollars"
+              value={formData.amount}
+              onChange={(e) =>
+                handleChange('amount', parseFloat(e.target.value) || 0)
+              }
+              className="w-full pl-12 pr-4 py-4 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-3xl font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+
+          {formData.dueDate && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <Calendar size={16} />
+              <span>
+                Due: {format(new Date(formData.dueDate), 'MMMM d, yyyy')}
               </span>
               <input
                 type="number"
@@ -385,46 +409,83 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                   Saved{' '}
                   {formData.paymentMethod === 'card'
-                    ? 'Cards'
-                    : 'Bank Accounts'}
-                </label>
-                {!showAddForm && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(true)}
-                    className="text-xs font-bold text-brand-blue hover:text-blue-700 flex items-center gap-1"
-                  >
-                    <Plus size={14} /> Add New
-                  </button>
-                )}
-              </div>
-
-              {isLoadingMethods ? (
-                <div className="flex items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
-                  <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-                </div>
-              ) : showAddForm ? (
-                /* Add payment method form */
-                <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 space-y-3 bg-neutral-50 dark:bg-neutral-850">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                    New{' '}
-                    {formData.paymentMethod === 'card'
-                      ? 'Credit Card'
-                      : 'Bank Account'}
-                  </h4>
-                  {formData.paymentMethod === 'card' ? (
-                    <>
+                    ? 'Credit Card'
+                    : 'Bank Account'}
+                </h4>
+                {formData.paymentMethod === 'card' ? (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Cardholder Name"
+                      aria-label="Cardholder name"
+                      value={cardFields.cardholderName}
+                      onChange={(e) =>
+                        setCardFields({
+                          ...cardFields,
+                          cardholderName: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
                       <input
                         type="text"
-                        placeholder="Cardholder Name"
-                        value={cardFields.cardholderName}
+                        placeholder="Card Number"
+                        aria-label="Card number"
+                        maxLength={16}
+                        value={cardFields.cardNumber}
                         onChange={(e) =>
                           setCardFields({
                             ...cardFields,
-                            cardholderName: e.target.value,
+                            cardNumber: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                        className="col-span-2 px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      />
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        aria-label="Expiry date"
+                        maxLength={5}
+                        value={cardFields.expiryDate}
+                        onChange={(e) =>
+                          setCardFields({
+                            ...cardFields,
+                            expiryDate: e.target.value,
+                          })
+                        }
+                        className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Bank Name"
+                      aria-label="Bank name"
+                      value={bankFields.bankName}
+                      onChange={(e) =>
+                        setBankFields({
+                          ...bankFields,
+                          bankName: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Account Number"
+                        aria-label="Account number"
+                        value={bankFields.accountNumber}
+                        onChange={(e) =>
+                          setBankFields({
+                            ...bankFields,
+                            accountNumber: e.target.value,
+                          })
+                        }
+                        className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
                       />
                       <div className="grid grid-cols-3 gap-2">
                         <input
@@ -459,110 +520,98 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <>
                       <input
                         type="text"
-                        placeholder="Bank Name"
-                        value={bankFields.bankName}
+                        placeholder="Routing Number"
+                        aria-label="Routing number"
+                        value={bankFields.routingNumber}
                         onChange={(e) =>
                           setBankFields({
                             ...bankFields,
                             bankName: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                        className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
                       />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Account Number"
-                          value={bankFields.accountNumber}
-                          onChange={(e) =>
-                            setBankFields({
-                              ...bankFields,
-                              accountNumber: e.target.value,
-                            })
-                          }
-                          className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Routing Number"
-                          value={bankFields.routingNumber}
-                          onChange={(e) =>
-                            setBankFields({
-                              ...bankFields,
-                              routingNumber: e.target.value,
-                            })
-                          }
-                          className="px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddForm(false)}
-                      className="px-3 py-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/5 rounded-lg"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAddMethod}
-                      disabled={createMethodMutation.isPending}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue hover:bg-blue-600 rounded-lg flex items-center gap-1"
-                    >
-                      {createMethodMutation.isPending && (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      )}
-                      Save Method
-                    </button>
-                  </div>
-                </div>
-              ) : activeCategoryMethods.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl text-center">
-                  <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
-                    No saved payment methods
-                  </p>
-                  <p className="text-xs text-neutral-500 mb-3">
-                    Please add a payment method to continue.
-                  </p>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowAddForm(true)}
-                    className="px-3 py-1.5 text-xs font-bold text-white bg-brand-blue hover:bg-blue-600 rounded-lg"
+                    onClick={() => setShowAddForm(false)}
+                    aria-label="Cancel adding payment method"
+                    className="px-3 py-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 rounded-lg"
                   >
-                    Add Payment Method
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddMethod}
+                    disabled={createMethodMutation.isPending}
+                    aria-label="Save payment method"
+                    aria-busy={createMethodMutation.isPending}
+                    className="px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {createMethodMutation.isPending && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                    )}
+                    Save Method
                   </button>
                 </div>
-              ) : (
-                /* Payment method list */
-                <div className="space-y-2">
-                  {activeCategoryMethods.map((method) => {
-                    const isSelected = selectedMethodId === String(method.id);
-                    return (
-                      <button
-                        key={method.id}
-                        type="button"
-                        onClick={() => setSelectedMethodId(String(method.id))}
-                        className={`w-full p-3.5 rounded-xl border-2 text-left flex items-center justify-between gap-3 transition ${
-                          isSelected
-                            ? 'border-brand-blue bg-blue-50/50 dark:bg-blue-900/10'
-                            : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 shrink-0">
-                            {method.paymentType === 'CREDIT_CARD' ? (
-                              <CreditCard size={18} />
-                            ) : (
-                              <Building size={18} />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-neutral-900 dark:text-white">
-                              {method.paymentType === 'CREDIT_CARD'
-                                ? `•••• •••• •••• ${method.lastFour}`
-                                : `${(method.metadata as Record<string, string> | null)?.bankName || 'Bank'} ···· ${method.lastFour}`}
+              </div>
+            ) : activeCategoryMethods.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl text-center">
+                <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
+                  No saved payment methods
+                </p>
+                <p className="text-xs text-neutral-500 mb-3">
+                  Please add a payment method to continue.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(true)}
+                  aria-label="Add payment method"
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-brand-blue hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-lg"
+                >
+                  Add Payment Method
+                </button>
+              </div>
+            ) : (
+              /* Payment method list */
+              <div className="space-y-2">
+                {activeCategoryMethods.map((method) => {
+                  const isSelected = selectedMethodId === String(method.id);
+                  return (
+                    <button
+                      key={method.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={`Payment method ending in ${method.lastFour}${method.isDefault ? ', default' : ''}`}
+                      onClick={() => setSelectedMethodId(String(method.id))}
+                      className={`w-full p-3.5 rounded-xl border-2 text-left flex items-center justify-between gap-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 ${
+                        isSelected
+                          ? 'border-brand-blue bg-blue-50/50 dark:bg-blue-900/10'
+                          : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 shrink-0" aria-hidden="true">
+                          {method.paymentType === 'CREDIT_CARD' ? (
+                            <CreditCard size={18} />
+                          ) : (
+                            <Building size={18} />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                            {method.paymentType === 'CREDIT_CARD'
+                              ? `•••• •••• •••• ${method.lastFour}`
+                              : `${(method.metadata as Record<string, string> | null)?.bankName || 'Bank'} ···· ${method.lastFour}`}
+                          </p>
+                          {method.expiryDate && (
+                            <p className="text-xs text-neutral-500">
+                              Expires:{' '}
+                              {format(new Date(method.expiryDate), 'MM/yy')}
                             </p>
                             {method.expiryDate && (
                               <p className="text-xs text-neutral-500">

@@ -79,16 +79,22 @@ export default function RoleSelectionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="role-selection-title"
+      aria-describedby="role-selection-description"
+    >
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 max-w-2xl w-full border border-white/10 shadow-2xl">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">
+          <h2 id="role-selection-title" className="text-3xl font-bold text-white mb-2">
             Welcome to Chioma
           </h2>
-          <p className="text-blue-200/60">Select your role to get started</p>
+          <p id="role-selection-description" className="text-blue-200/60">Select your role to get started</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="radiogroup" aria-label="Account type selection">
           {roles.map((role) => {
             const Icon = role.icon;
             const isSelected = selectedRole === role.id;
@@ -98,15 +104,19 @@ export default function RoleSelectionModal({
                 key={role.id}
                 onClick={() => handleSelectRole(role.id)}
                 disabled={isLoading}
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`${role.label}: ${role.description}`}
                 className={`relative p-6 rounded-xl border-2 transition-all duration-300 group ${
                   isSelected
                     ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                    : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900'
                 } ${isLoading && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {/* Background gradient */}
                 <div
                   className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${role.color}`}
+                  aria-hidden="true"
                 />
 
                 {/* Content */}
@@ -117,6 +127,7 @@ export default function RoleSelectionModal({
                         ? `bg-gradient-to-br ${role.color} text-white`
                         : 'bg-white/10 text-blue-300 group-hover:bg-white/20'
                     }`}
+                    aria-hidden="true"
                   >
                     <Icon size={24} />
                   </div>
@@ -129,7 +140,7 @@ export default function RoleSelectionModal({
                   </p>
 
                   {isSelected && isLoading && (
-                    <div className="mt-4 flex items-center justify-center gap-2">
+                    <div className="mt-4 flex items-center justify-center gap-2" aria-live="polite">
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                       <span className="text-xs text-blue-300">
                         Redirecting...
