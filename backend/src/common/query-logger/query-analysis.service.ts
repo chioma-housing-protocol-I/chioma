@@ -80,13 +80,8 @@ export class QueryAnalysisService implements OnModuleInit {
       }
 
       const originalQuery = driver.query.bind(driver);
-      const self = this;
 
-      driver.query = function interceptedQuery(
-        query: string,
-        parameters: any[],
-        ...args: any[]
-      ) {
+      driver.query = (query: string, parameters: any[], ...args: any[]) => {
         const start = Date.now();
         const stackTrace = new Error().stack || '';
 
@@ -96,12 +91,12 @@ export class QueryAnalysisService implements OnModuleInit {
           return promise
             .then((result: any) => {
               const duration = Date.now() - start;
-              self.recordQuery(query, parameters, duration, stackTrace);
+              this.recordQuery(query, parameters, duration, stackTrace);
               return result;
             })
             .catch((error: any) => {
               const duration = Date.now() - start;
-              self.recordQuery(query, parameters, duration, stackTrace);
+              this.recordQuery(query, parameters, duration, stackTrace);
               throw error;
             });
         }

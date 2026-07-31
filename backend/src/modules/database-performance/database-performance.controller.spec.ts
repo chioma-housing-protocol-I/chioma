@@ -28,11 +28,9 @@ describe('DatabasePerformanceController', () => {
       getQueryPatterns: jest.fn().mockResolvedValue([]),
       getQueryHistory: jest.fn().mockResolvedValue([]),
       getQueryStats: jest.fn().mockResolvedValue({}),
-      resetQueryAnalysis: jest
-        .fn()
-        .mockResolvedValue({
-          message: 'Query analysis data reset successfully',
-        }),
+      resetQueryAnalysis: jest.fn().mockResolvedValue({
+        message: 'Query analysis data reset successfully',
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
