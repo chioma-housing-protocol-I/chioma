@@ -10,6 +10,8 @@ This contract allows landlords to register their properties on-chain with associ
 
 - **Property Registration**: Landlords can register properties with unique IDs and metadata
 - **Admin Verification**: Designated administrators can verify registered properties
+- **Ownership Transfer**: Landlords can transfer a property to a new owner
+- **Metadata Updates**: Landlords can update a property's metadata hash (revokes verification, pending re-verification)
 - **Property Queries**: Anyone can query property details and verification status
 - **Event Emission**: All major actions emit events for off-chain tracking
 - **Access Control**: Proper authentication and authorization checks
@@ -85,6 +87,45 @@ Verify a registered property. Only the admin can perform this action.
 **Example:**
 ```rust
 contract.verify_property(&admin, &String::from_str(&env, "PROP-001"));
+```
+
+#### `transfer_property(env: Env, current_landlord: Address, new_landlord: Address, property_id: String) -> Result<(), PropertyError>`
+
+Transfer ownership of a property to a new landlord. The current landlord on record must authorize this transaction. Verification status and metadata are left untouched by a transfer.
+
+**Arguments:**
+- `current_landlord`: The landlord currently on record for the property
+- `new_landlord`: The address that will become the new landlord
+- `property_id`: The ID of the property to transfer
+
+**Errors:**
+- `NotInitialized` - If the contract hasn't been initialized
+- `PropertyNotFound` - If the property doesn't exist
+- `Unauthorized` - If `current_landlord` is not the property's actual landlord
+
+**Example:**
+```rust
+contract.transfer_property(&landlord, &new_landlord, &String::from_str(&env, "PROP-001"));
+```
+
+#### `update_property_metadata(env: Env, landlord: Address, property_id: String, new_metadata_hash: String) -> Result<(), PropertyError>`
+
+Update the metadata hash of a registered property. Only the landlord on record may do this. Because the new metadata may describe a materially different property, verification is revoked (`verified` becomes `false`, `verified_at` becomes `None`) and must be re-granted by the admin.
+
+**Arguments:**
+- `landlord`: The landlord on record for the property
+- `property_id`: The ID of the property to update
+- `new_metadata_hash`: The new IPFS hash or metadata reference
+
+**Errors:**
+- `NotInitialized` - If the contract hasn't been initialized
+- `InvalidMetadata` - If the new metadata hash is empty
+- `PropertyNotFound` - If the property doesn't exist
+- `Unauthorized` - If `landlord` is not the property's actual landlord
+
+**Example:**
+```rust
+contract.update_property_metadata(&landlord, &String::from_str(&env, "PROP-001"), &String::from_str(&env, "QmNewHash..."));
 ```
 
 ---
@@ -167,6 +208,16 @@ Emitted when a new property is registered.
 ### PropertyVerified
 Emitted when a property is verified.
 - **Topics**: `["prop_ver", admin: Address, property_id: String]`
+
+### PropertyTransferred
+Emitted when a property's ownership is transferred.
+- **Topics**: `["property_transferred", previous_landlord: Address, property_id: String]`
+- **Data**: `new_landlord: Address`
+
+### PropertyMetadataUpdated
+Emitted when a property's metadata is updated.
+- **Topics**: `["property_metadata_updated", landlord: Address, property_id: String]`
+- **Data**: `new_metadata_hash: String`
 
 ---
 
@@ -264,6 +315,16 @@ contract.verify_property(&admin, &String::from_str(&env, "PROP-001"));
 // Query property details
 let property = contract.get_property(&String::from_str(&env, "PROP-001")).unwrap();
 assert!(property.verified);
+
+// Landlord sells the property to a new owner
+contract.transfer_property(&landlord, &new_landlord, &String::from_str(&env, "PROP-001"));
+
+// New landlord updates the metadata; verification is revoked until re-verified
+contract.update_property_metadata(
+    &new_landlord,
+    &String::from_str(&env, "PROP-001"),
+    &String::from_str(&env, "QmNewMetadataHash...")
+);
 ```
 
 ---

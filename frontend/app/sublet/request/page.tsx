@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 export default function SubletRequestPage() {
   const router = useRouter();
@@ -123,13 +124,13 @@ export default function SubletRequestPage() {
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-blue-300/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
             />
           </div>
-          <button
+          <LoadingButton
             type="submit"
-            disabled={isSubmitting}
+            loading={isSubmitting}
             className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-60"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Request'}
-          </button>
+            Submit Request
+          </LoadingButton>
         </form>
       </div>
     </div>

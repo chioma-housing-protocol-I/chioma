@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 export default function HostDashboardPage() {
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['host-stats'],
     queryFn: async () => {
       const res = await fetch('/api/properties?role=host');
@@ -22,7 +22,7 @@ export default function HostDashboardPage() {
     },
   });
 
-  const { data: pendingBookings } = useQuery({
+  const { data: pendingBookings, isLoading: loadingBookings } = useQuery({
     queryKey: ['host-pending-bookings'],
     queryFn: async () => {
       const res = await fetch('/api/bookings?role=host&status=pending');
@@ -33,7 +33,7 @@ export default function HostDashboardPage() {
     retry: false,
   });
 
-  const { data: avgRating } = useQuery({
+  const { data: avgRating, isLoading: loadingRating } = useQuery({
     queryKey: ['host-avg-rating'],
     queryFn: async () => {
       const res = await fetch('/api/reviews?role=host');
@@ -46,6 +46,8 @@ export default function HostDashboardPage() {
     },
     retry: false,
   });
+
+  const isLoadingKpis = loadingStats || loadingBookings || loadingRating;
 
   const kpis = [
     {
@@ -95,28 +97,33 @@ export default function HostDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon;
-          return (
-            <FeatureBoundary
-              key={kpi.label}
-              name={`host-dashboard:kpi-${kpi.label}`}
-              label={kpi.label}
-            >
-              <Link href={kpi.href} className="block">
-                <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-all">
-                  <div
-                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center mb-3`}
-                  >
-                    <Icon size={20} className="text-white" />
+        {isLoadingKpis
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/10 animate-pulse mb-3" />
+                <div className="h-7 w-16 bg-white/10 animate-pulse rounded" />
+                <div className="h-4 w-24 bg-white/10 animate-pulse rounded mt-2" />
+              </div>
+            ))
+          : kpis.map((kpi) => {
+              const Icon = kpi.icon;
+              return (
+                <Link key={kpi.label} href={kpi.href} className="block">
+                  <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-all">
+                    <div
+                      className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center mb-3`}
+                    >
+                      <Icon size={20} className="text-white" />
+                    </div>
+                    <p className="text-2xl font-bold">{kpi.value}</p>
+                    <p className="text-sm text-blue-300/60 mt-1">{kpi.label}</p>
                   </div>
-                  <p className="text-2xl font-bold">{kpi.value}</p>
-                  <p className="text-sm text-blue-300/60 mt-1">{kpi.label}</p>
-                </div>
-              </Link>
-            </FeatureBoundary>
-          );
-        })}
+                </Link>
+              );
+            })}
       </div>
 
       <FeatureBoundary name="host-dashboard:quick-links" label="Quick links">
