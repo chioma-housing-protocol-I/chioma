@@ -10,6 +10,7 @@ export enum BookingRoleFilter {
 export class QueryBookingsDto {
   @ApiPropertyOptional({
     enum: BookingRoleFilter,
+    example: 'guest',
     description:
       'host: bookings on properties the caller owns. guest: bookings the caller made. Defaults to guest.',
   })
@@ -17,7 +18,11 @@ export class QueryBookingsDto {
   @IsEnum(BookingRoleFilter)
   role?: BookingRoleFilter;
 
-  @ApiPropertyOptional({ enum: BookingStatus })
+  @ApiPropertyOptional({
+    enum: BookingStatus,
+    example: 'CONFIRMED',
+    description: 'Filter by booking status',
+  })
   @IsOptional()
   @IsEnum(BookingStatus)
   status?: BookingStatus;

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { MessagingService } from './messaging.service';
+import { Deprecated } from '../../common/decorators/deprecated.decorator';
 
 @ApiTags('Messaging')
 @Controller('messaging')
@@ -21,6 +22,17 @@ export class MessagingController {
   // ── Legacy history endpoint ──────────────────────────────────────────────
 
   @Get('history')
+  @ApiOperation({ summary: '[Deprecated] Get chat history for a chat group' })
+  @Deprecated({
+    sunsetDate: '2026-12-31T00:00:00Z',
+    migrationGuideUrl:
+      'https://docs.chioma.app/api/migrating-from-messaging-history',
+    replacementEndpoint: '/messaging/rooms/:roomId/messages',
+    message:
+      'Superseded by GET /messaging/rooms/:roomId/messages, which is ' +
+      'room-scoped and paginated consistently with the rest of the ' +
+      'messaging API.',
+  })
   async getHistory(
     @Query('chatGroupId') chatGroupId: string,
     @Query('page') page = 1,

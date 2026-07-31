@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Plus, Webhook } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Spinner } from '@/components/loading/Spinner';
 import { WebhookForm } from '@/components/developer/WebhookForm';
 import { WebhookLogs } from '@/components/developer/WebhookLogs';
 import { WebhookTest } from '@/components/developer/WebhookTest';
@@ -22,6 +23,7 @@ import {
   type DeveloperWebhookFormValues,
 } from '@/lib/developer-webhooks';
 import { useAuth } from '@/store/authStore';
+import { useLoading } from '@/hooks/use-loading';
 
 type PendingAction =
   | { type: 'delete'; webhook: DeveloperWebhook }
@@ -33,8 +35,11 @@ export default function DeveloperWebhooksPage() {
   const [webhooks, setWebhooks] = useState<DeveloperWebhook[]>([]);
   const [logs, setLogs] = useState(loadDeveloperWebhookLogs());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const { isLoading: loading, setLoading: setLoadingFlag } =
+    useLoading('developer-webhooks');
+  const { isLoading: submitting, setLoading: setSubmittingFlag } = useLoading(
+    'developer-webhook-form',
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<DeveloperWebhook | null>(
     null,
@@ -49,7 +54,7 @@ export default function DeveloperWebhooksPage() {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      setLoadingFlag(true);
 
       try {
         const response = await apiClient.get<DeveloperWebhook[]>(
@@ -68,7 +73,7 @@ export default function DeveloperWebhooksPage() {
         setWebhooks(fallback);
         setUsingFallback(true);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingFlag(false);
       }
     };
 
@@ -127,7 +132,7 @@ export default function DeveloperWebhooksPage() {
   const handleSaveWebhook = async (values: DeveloperWebhookFormValues) => {
     if (!user) return;
 
-    setSubmitting(true);
+    setSubmittingFlag(true);
 
     try {
       if (editingWebhook) {
@@ -180,7 +185,7 @@ export default function DeveloperWebhooksPage() {
     } catch {
       toast.error('Unable to save webhook');
     } finally {
-      setSubmitting(false);
+      setSubmittingFlag(false);
     }
   };
 
@@ -327,7 +332,8 @@ export default function DeveloperWebhooksPage() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-slate-200">
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-slate-200 flex items-center gap-3">
+        <Spinner size="sm" />
         Loading developer webhooks...
       </div>
     );

@@ -288,85 +288,11 @@ fn test_create_agreement_fails_with_unverified_property() {
 }
 ```
 
-## Optional Features
+## Property Transfer and Metadata Updates
 
-### Property Transfer
+`transfer_property` and `update_property_metadata` are implemented in `contracts/property_registry/src/property.rs` and exposed on `PropertyRegistryContract` (see `README.md` for their signatures, arguments and error conditions). Both follow the same authorization pattern as `register_property`/`verify_property`: the caller must `require_auth()` and must match the address already on record for the property, not merely provide a valid signature for themselves.
 
-Add functionality to transfer property ownership:
-
-```rust
-/// Transfer property ownership to a new landlord
-pub fn transfer_property(
-    env: Env,
-    current_landlord: Address,
-    new_landlord: Address,
-    property_id: String,
-) -> Result<(), PropertyError> {
-    current_landlord.require_auth();
-    
-    let key = DataKey::Property(property_id.clone());
-    let mut property: PropertyDetails = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .ok_or(PropertyError::PropertyNotFound)?;
-    
-    if property.landlord != current_landlord {
-        return Err(PropertyError::Unauthorized);
-    }
-    
-    property.landlord = new_landlord.clone();
-    
-    env.storage().persistent().set(&key, &property);
-    env.storage().persistent().extend_ttl(&key, 500000, 500000);
-    
-    events::property_transferred(&env, property_id, current_landlord, new_landlord);
-    
-    Ok(())
-}
-```
-
-### Property Metadata Updates
-
-Allow landlords to update property metadata (with re-verification requirement):
-
-```rust
-/// Update property metadata (requires re-verification)
-pub fn update_property_metadata(
-    env: Env,
-    landlord: Address,
-    property_id: String,
-    new_metadata_hash: String,
-) -> Result<(), PropertyError> {
-    landlord.require_auth();
-    
-    if new_metadata_hash.is_empty() {
-        return Err(PropertyError::InvalidMetadata);
-    }
-    
-    let key = DataKey::Property(property_id.clone());
-    let mut property: PropertyDetails = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .ok_or(PropertyError::PropertyNotFound)?;
-    
-    if property.landlord != landlord {
-        return Err(PropertyError::Unauthorized);
-    }
-    
-    property.metadata_hash = new_metadata_hash.clone();
-    property.verified = false; // Requires re-verification
-    property.verified_at = None;
-    
-    env.storage().persistent().set(&key, &property);
-    env.storage().persistent().extend_ttl(&key, 500000, 500000);
-    
-    events::property_metadata_updated(&env, property_id, landlord, new_metadata_hash);
-    
-    Ok(())
-}
-```
+Note for callers integrating from another contract: `update_property_metadata` resets `verified` to `false` and `verified_at` to `None`, since the new metadata may describe a materially different property. Any downstream contract relying on `PropertyDetails::verified` (see the `create_agreement` integration below) should account for a previously-verified property becoming unverified after a metadata update.
 
 ## Migration Strategy
 
