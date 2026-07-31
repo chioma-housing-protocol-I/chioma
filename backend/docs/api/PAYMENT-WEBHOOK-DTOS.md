@@ -14,14 +14,14 @@ also need a single reusable runtime schema for:
 
 ## PaymentWebhookDto
 
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `eventType` | string | yes | e.g. `payment.completed` |
-| `status` | string | yes | Gateway status string |
-| `paymentId` | string | one of* | Internal payment UUID |
-| `referenceNumber` | string | one of* | Gateway / ledger reference |
-| `transactionHash` | string | no | On-chain / gateway tx id |
-| `error` | string | no | Failure detail |
+| Field             | Type   | Required | Notes                      |
+| ----------------- | ------ | -------- | -------------------------- |
+| `eventType`       | string | yes      | e.g. `payment.completed`   |
+| `status`          | string | yes      | Gateway status string      |
+| `paymentId`       | string | one of\* | Internal payment UUID      |
+| `referenceNumber` | string | one of\* | Gateway / ledger reference |
+| `transactionHash` | string | no       | On-chain / gateway tx id   |
+| `error`           | string | no       | Failure detail             |
 
 \* At least one of `paymentId` or `referenceNumber` must be present.
 
@@ -30,17 +30,17 @@ also need a single reusable runtime schema for:
 
 ## RefundWebhookDto
 
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `eventType` | string | yes | e.g. `refund.completed` |
-| `status` | string | yes | Gateway refund status |
-| `paymentId` | string | one of* | Internal payment UUID |
-| `referenceNumber` | string | one of* | Gateway reference |
-| `refundId` | string | no | Gateway refund id |
-| `amount` | number | no | Positive refund amount |
-| `currency` | string | no | ISO currency code |
-| `reason` | string | no | Human-readable reason |
-| `error` | string | no | Failure detail |
+| Field             | Type   | Required | Notes                   |
+| ----------------- | ------ | -------- | ----------------------- |
+| `eventType`       | string | yes      | e.g. `refund.completed` |
+| `status`          | string | yes      | Gateway refund status   |
+| `paymentId`       | string | one of\* | Internal payment UUID   |
+| `referenceNumber` | string | one of\* | Gateway reference       |
+| `refundId`        | string | no       | Gateway refund id       |
+| `amount`          | number | no       | Positive refund amount  |
+| `currency`        | string | no       | ISO currency code       |
+| `reason`          | string | no       | Human-readable reason   |
+| `error`           | string | no       | Failure detail          |
 
 \* At least one of `paymentId` or `referenceNumber` must be present.
 

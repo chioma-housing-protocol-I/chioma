@@ -11,8 +11,8 @@
     "lint": "eslint .",
     "check": "pnpm run lint && pnpm run format:check && pnpm run build",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",
     "test": "vitest run",
     "test:watch": "vitest",
     "i18n:audit": "node scripts/i18n-audit.mjs",
@@ -86,28 +86,11 @@
     "vite": "^6.4.2",
     "vitest": "^4.0.18"
   },
-  "overrides": {
-    "minimatch": "^9.0.8",
-    "ajv": "^8.12.0",
-    "next": "16.2.6",
-    "vite": "^6.4.2",
-    "protobufjs": "^7.5.6",
-    "defu": "^6.1.5",
-    "micromatch>picomatch": "^2.3.2",
-    "fdir>picomatch": "^4.0.4",
-    "tinyglobby>picomatch": "^4.0.4",
-    "vitest>picomatch": "^4.0.4",
-    "axios": "^1.15.2",
-    "fast-uri": "^3.1.2",
-    "ajv>fast-uri": "^3.1.2",
-    "ajv-keywords>ajv>fast-uri": "^3.1.2",
-    "schema-utils>ajv>fast-uri": "^3.1.2"
-  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ],
-    "*.{ts,tsx,js,jsx,json,md}": [
+    "*.{js,jsx,ts,tsx,json,css,md}": [
       "prettier --write"
     ]
   }

@@ -26,11 +26,11 @@ All types use the `#[contracttype]` attribute for Soroban persistent storage com
 
 ### Type Categories
 
-| Category | Description |
-|---|---|
-| **Enums** | Discriminated unions for status, actions, and choices |
-| **Structs** | Composite data with named fields |
-| **Shared** | Reused across multiple contracts |
+| Category    | Description                                           |
+| ----------- | ----------------------------------------------------- |
+| **Enums**   | Discriminated unions for status, actions, and choices |
+| **Structs** | Composite data with named fields                      |
+| **Shared**  | Reused across multiple contracts                      |
 
 ---
 
@@ -51,6 +51,7 @@ pub enum AccountType {
 Defines user roles in the rental system. Used for access control and role-based permissions.
 
 **Fields:**
+
 - `Tenant` - Renter who pays for property use
 - `Landlord` - Property owner who receives rent
 - `Agent` - Intermediary facilitating rental agreements
@@ -71,6 +72,7 @@ pub struct UserProfile {
 SEP-29 compliant on-chain user profile. Minimal data stored on-chain for gas efficiency.
 
 **Fields:**
+
 - `account_id` - Stellar account address (identifies the user)
 - `version` - For future upgrades
 - `account_type` - Role classification
@@ -131,6 +133,7 @@ pub struct PropertyDetails {
 Records property registration and verification status.
 
 **Fields:**
+
 - `property_id` - Unique identifier
 - `landlord` - Owner address
 - `metadata_hash` - Off-chain property details reference
@@ -1033,28 +1036,28 @@ These types appear across multiple contracts with consistent definitions.
 
 ### RateLimitConfig
 
-| Field | Type | Description |
-|---|---|---|
-| `max_calls_per_block` | u32 | Maximum calls per block |
-| `max_calls_per_user_per_day` | u32 | Maximum calls per user per day |
-| `cooldown_blocks` | u32 | Blocks between calls |
+| Field                        | Type | Description                    |
+| ---------------------------- | ---- | ------------------------------ |
+| `max_calls_per_block`        | u32  | Maximum calls per block        |
+| `max_calls_per_user_per_day` | u32  | Maximum calls per user per day |
+| `cooldown_blocks`            | u32  | Blocks between calls           |
 
 ### UserCallCount
 
-| Field | Type | Description |
-|---|---|---|
-| `user` | Address | User address |
-| `call_count` | u32 | Current block call count |
-| `last_call_block` | u64 | Last call block number |
-| `daily_count` | u32 | Daily call count |
-| `daily_reset_block` | u64 | Block for daily reset |
+| Field               | Type    | Description              |
+| ------------------- | ------- | ------------------------ |
+| `user`              | Address | User address             |
+| `call_count`        | u32     | Current block call count |
+| `last_call_block`   | u64     | Last call block number   |
+| `daily_count`       | u32     | Daily call count         |
+| `daily_reset_block` | u64     | Block for daily reset    |
 
 ### ContractState
 
-| Field | Type | Description |
-|---|---|---|
-| `admin` | Address | Contract administrator |
-| `initialized` | bool | Initialization flag |
+| Field         | Type    | Description            |
+| ------------- | ------- | ---------------------- |
+| `admin`       | Address | Contract administrator |
+| `initialized` | bool    | Initialization flag    |
 
 ---
 
@@ -1133,6 +1136,7 @@ Add doc comments explaining the purpose of complex types.
 ### 5. Use Basis Points for Rates
 
 Use `u32` basis points (1/100 of 1%) for rates rather than decimals:
+
 - 500 bps = 5%
 - 10000 bps = 100%
 
@@ -1151,6 +1155,7 @@ Fields like `verified_at` should use `Option<u64>` instead of sentinel values.
 ### 9. Separate State from Data
 
 Keep `ContractState` minimal:
+
 ```rust
 pub struct ContractState {
     pub admin: Address,
@@ -1161,6 +1166,7 @@ pub struct ContractState {
 ### 10. Use Enums for Status
 
 Use enums for status fields instead of strings:
+
 ```rust
 pub enum EscrowStatus {
     Pending,

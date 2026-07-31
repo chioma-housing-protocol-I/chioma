@@ -86,7 +86,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex transition-all duration-300">
+    <div className="min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex transition-all duration-300">
       {/* Sidebar Overlay */}
       <div
         className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
@@ -195,7 +195,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-dvh overflow-y-auto transition-orientation">
         {/* Header */}
         <header className="sticky top-0 z-30 min-h-16 sm:min-h-20 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg">
           <div className="flex items-center gap-4 lg:hidden">

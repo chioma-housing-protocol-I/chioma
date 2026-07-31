@@ -14,6 +14,9 @@ interface ProtectedRouteProps {
  * Wraps dashboard content and redirects unauthenticated users to home.
  * Works as a second layer of protection alongside the Next.js middleware.
  *
+ * Wallet-only accounts (no email yet) are deliberately NOT gated here — they
+ * reach the dashboard and are prompted by WalletEmailBanner instead.
+ *
  * Usage:
  *   <ProtectedRoute>
  *     <DashboardContent />
@@ -25,7 +28,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated && !hasRedirected.current) {
+    if (loading || hasRedirected.current) return;
+
+    if (!isAuthenticated) {
       hasRedirected.current = true;
       router.replace('/');
     }

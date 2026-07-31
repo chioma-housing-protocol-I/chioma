@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Search } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
-import HeroFamilyScene from '@/components/landing/HeroFamilyScene';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 const trustPoints = [
   'Settles in seconds',
@@ -15,6 +16,9 @@ const trustPoints = [
 
 export default function Hero() {
   const { walletAddress } = useAuth();
+  // Already-authenticated visitors (e.g. a persisted session revisiting `/`)
+  // belong on their dashboard, not the marketing page.
+  useAuthRedirect();
   const router = useRouter();
   const [query, setQuery] = useState('');
 
@@ -132,7 +136,19 @@ export default function Hero() {
             className="relative mx-auto w-full max-w-md lg:max-w-lg"
           >
             <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border border-cream/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
-              <HeroFamilyScene />
+              <Image
+                src="/hero-home.webp"
+                alt="A warmly lit family home at dusk"
+                fill
+                priority
+                sizes="(min-width: 1024px) 32rem, 100vw"
+                className="object-cover"
+              />
+              {/* Warm grade so the photo sits inside the brass palette */}
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-ink-950/70 via-brass-600/10 to-transparent"
+                aria-hidden
+              />
             </div>
             {/* Floating settlement receipt card */}
             <motion.div

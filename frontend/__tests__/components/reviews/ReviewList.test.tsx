@@ -125,9 +125,11 @@ describe('ReviewList', () => {
         onSubmitReview={onSubmitReview}
       />,
     );
-    expect(screen.getByText('No reviews yet.')).toBeDefined();
+    expect(screen.getByText('No reviews yet')).toBeDefined();
     expect(
-      screen.getByText('Be the first to share your experience!'),
+      screen.getByText(
+        'Be the first to share your experience with this property!',
+      ),
     ).toBeDefined();
   });
 

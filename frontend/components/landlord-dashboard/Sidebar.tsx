@@ -56,7 +56,7 @@ export default function Sidebar() {
     // Desktop: full width (unchanged) on lg and up
     // Tablet (md): collapsed icon-only sidebar
     // Mobile (sm): hidden (mobile drawer is handled by Topbar)
-    <aside className="hidden md:flex md:flex-col md:w-20 lg:w-56 h-screen backdrop-blur-xl bg-slate-900/50 border-r border-white/10">
+    <aside className="hidden md:flex md:flex-col md:w-20 lg:w-56 h-dvh backdrop-blur-xl bg-slate-900/50 border-r border-white/10 transition-orientation">
       <Logo
         size="lg"
         href="/"

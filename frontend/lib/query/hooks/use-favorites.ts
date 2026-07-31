@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/store/authStore';
 import { queryKeys } from '../keys';
 import type { PaginatedResponse, Property } from '@/types';
 
@@ -23,43 +24,89 @@ function normalizeFavorites(response: FavoritesResponse): FavoriteItem[] {
   return Array.isArray(response) ? response : response.data;
 }
 
+/**
+ * Favorites are per-user, so every read here is pointless for a signed-out
+ * visitor — on a public listing page that meant one 404 per property card.
+ */
+function useFavoritesEnabled(): boolean {
+  return useAuthStore((state) => state.isAuthenticated);
+}
+
+/**
+ * The favorites service is optional: when it is not deployed the API answers
+ * 404. Treat that as "no favorites" rather than an error, so listing pages
+ * degrade quietly instead of filling the console with failures.
+ */
+function isNotFound(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (error as { status?: number }).status === 404
+  );
+}
+
 export function useFavorites() {
+  const isEnabled = useFavoritesEnabled();
+
   return useQuery({
     queryKey: queryKeys.favorites.list(),
     queryFn: async () => {
-      const { data } = await apiClient.get<FavoritesResponse>('/favorites');
-      return normalizeFavorites(data);
+      try {
+        const { data } = await apiClient.get<FavoritesResponse>('/favorites');
+        return normalizeFavorites(data);
+      } catch (error) {
+        if (isNotFound(error)) return [];
+        throw error;
+      }
     },
+    enabled: isEnabled,
     staleTime: 30_000,
   });
 }
 
 export function useFavoriteStatus(propertyId: string | number | null) {
   const id = propertyId ? String(propertyId) : '';
+  const isEnabled = useFavoritesEnabled();
 
   return useQuery({
     queryKey: queryKeys.favorites.status(id),
     queryFn: async () => {
-      const { data } = await apiClient.get<FavoriteStatus>(`/favorites/${id}`);
-      return data;
+      try {
+        const { data } = await apiClient.get<FavoriteStatus>(
+          `/favorites/${id}`,
+        );
+        return data;
+      } catch (error) {
+        if (isNotFound(error)) {
+          return { isFavorited: false, favoriteCount: 0 } satisfies FavoriteStatus;
+        }
+        throw error;
+      }
     },
-    enabled: Boolean(id),
+    enabled: isEnabled && Boolean(id),
     staleTime: 30_000,
   });
 }
 
 export function useFavoriteCount(propertyId: string | number | null) {
   const id = propertyId ? String(propertyId) : '';
+  const isEnabled = useFavoritesEnabled();
 
   return useQuery({
     queryKey: queryKeys.favorites.count(id),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ favoriteCount: number }>(
-        `/favorites/${id}/count`,
-      );
-      return data.favoriteCount;
+      try {
+        const { data } = await apiClient.get<{ favoriteCount: number }>(
+          `/favorites/${id}/count`,
+        );
+        return data.favoriteCount;
+      } catch (error) {
+        if (isNotFound(error)) return 0;
+        throw error;
+      }
     },
-    enabled: Boolean(id),
+    enabled: isEnabled && Boolean(id),
     staleTime: 30_000,
   });
 }

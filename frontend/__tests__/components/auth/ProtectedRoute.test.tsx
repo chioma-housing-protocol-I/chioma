@@ -10,6 +10,7 @@ const mockReplace = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => '/user',
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -108,5 +109,34 @@ describe('ProtectedRoute', () => {
     );
     const spinner = container.querySelector('.animate-spin');
     expect(spinner).not.toBeNull();
+  });
+
+  it('does not gate wallet-only accounts that have no email yet', () => {
+    // Those users reach the dashboard and are prompted by WalletEmailBanner,
+    // so this guard must let them through.
+    useAuthStore.setState({
+      user: {
+        id: 'u1',
+        email: '',
+        emailVerified: false,
+        firstName: 'Ada',
+        lastName: 'Okafor',
+        role: 'user',
+      },
+      accessToken: 'token',
+      refreshToken: null,
+      isAuthenticated: true,
+      loading: false,
+      walletAddress: 'GABC',
+    });
+
+    render(
+      <ProtectedRoute>
+        <div>Protected content</div>
+      </ProtectedRoute>,
+    );
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByText('Protected content')).toBeDefined();
   });
 });
