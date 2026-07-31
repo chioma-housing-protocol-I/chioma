@@ -6,6 +6,7 @@ import {
 } from './payment-gateway.service';
 import { RetryService } from '../../common/services/retry.service';
 import { CircuitBreakerService } from '../../common/resilience/circuit-breaker.service';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { PaymentMethod } from './entities/payment-method.entity';
 
 /**
@@ -16,7 +17,7 @@ import { PaymentMethod } from './entities/payment-method.entity';
  */
 describe('PaymentGatewayService - Contract Tests', () => {
   let service: PaymentGatewayService;
-  let retryService: RetryService;
+  let _retryService: RetryService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,11 +35,18 @@ describe('PaymentGatewayService - Contract Tests', () => {
             execute: jest.fn((_key: string, fn: () => unknown) => fn()),
           },
         },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<PaymentGatewayService>(PaymentGatewayService);
-    retryService = module.get<RetryService>(RetryService);
+    _retryService = module.get<RetryService>(RetryService);
   });
 
   describe('Contract: chargePayment', () => {

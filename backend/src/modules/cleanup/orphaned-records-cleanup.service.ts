@@ -237,8 +237,10 @@ export class OrphanedRecordsCleanupService {
   async runCleanup(): Promise<OrphanedRecordsCleanupStats> {
     const databaseType = String(this.dataSource.options.type);
     const deletionEnabled =
-      this.configService.get<string>('ORPHAN_CLEANUP_DELETE_ENABLED', 'false') ===
-      'true';
+      this.configService.get<string>(
+        'ORPHAN_CLEANUP_DELETE_ENABLED',
+        'false',
+      ) === 'true';
 
     const stats: OrphanedRecordsCleanupStats = {
       checkedAt: new Date().toISOString(),

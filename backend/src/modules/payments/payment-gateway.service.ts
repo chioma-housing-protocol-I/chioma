@@ -184,9 +184,8 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
-              httpsAgent: this.certificatePinningService.getHttpsAgent(
-                'api.paystack.co',
-              ),
+              httpsAgent:
+                this.certificatePinningService.getHttpsAgent('api.paystack.co'),
             },
           );
 
@@ -294,9 +293,8 @@ export class PaymentGatewayService {
                 Authorization: `Bearer ${secret}`,
                 'Content-Type': 'application/json',
               },
-              httpsAgent: this.certificatePinningService.getHttpsAgent(
-                'api.paystack.co',
-              ),
+              httpsAgent:
+                this.certificatePinningService.getHttpsAgent('api.paystack.co'),
             },
           );
 

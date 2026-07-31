@@ -85,7 +85,10 @@ export class CertificatePinningService {
     try {
       const parsed = JSON.parse(raw) as Record<string, string[]>;
       for (const [host, pins] of Object.entries(parsed)) {
-        map.set(host.toLowerCase(), pins.map((pin) => pin.toUpperCase()));
+        map.set(
+          host.toLowerCase(),
+          pins.map((pin) => pin.toUpperCase()),
+        );
       }
     } catch (error) {
       this.logger.error(

@@ -28,7 +28,9 @@ import { validateAgainstSchema } from '../validation/schema-validator';
  */
 @Injectable()
 export class ResponseSchemaValidationInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(ResponseSchemaValidationInterceptor.name);
+  private readonly logger = new Logger(
+    ResponseSchemaValidationInterceptor.name,
+  );
   private readonly strict: boolean;
 
   constructor(
