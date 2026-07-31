@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     // <ProtectedRoute>
-    <div className="flex h-screen overflow-x-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+    <div className="flex h-dvh overflow-x-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white transition-orientation">
       <AdminSidebar />
 
       <div className="flex flex-1 flex-col">

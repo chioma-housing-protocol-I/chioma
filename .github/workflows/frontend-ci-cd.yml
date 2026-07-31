@@ -53,7 +53,8 @@ jobs:
         run: pnpm run lint
 
       - name: Check Prettier formatting
-        run: pnpm exec prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
+        working-directory: .
+        run: cd frontend && pnpm run format:check
 
       - name: Run unit tests
         run: pnpm test
