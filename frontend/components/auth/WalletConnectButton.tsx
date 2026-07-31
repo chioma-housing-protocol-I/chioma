@@ -142,7 +142,11 @@ export default function WalletConnectButton({
           }
         }
 
-        setTokens(result.accessToken, result.refreshToken ?? null, userWithRole);
+        setTokens(
+          result.accessToken,
+          result.refreshToken ?? null,
+          userWithRole,
+        );
         setWalletAddress(address);
         // A deliberate reconnect starts the onboarding prompt fresh.
         clearEmailOnboardingSkip();

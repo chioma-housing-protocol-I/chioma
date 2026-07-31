@@ -63,7 +63,14 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
       message: initialMessage,
     });
     setErrors({});
-  }, [initialMessage, isOpen, propertyId, propertyTitle, isAuthenticated, user]);
+  }, [
+    initialMessage,
+    isOpen,
+    propertyId,
+    propertyTitle,
+    isAuthenticated,
+    user,
+  ]);
 
   const validate = () => {
     const nextErrors: FormErrors = {};

@@ -34,9 +34,11 @@ function hasSkipped(): boolean {
  * stellar-auth.service). Those users get routed through complete-profile
  * before the dashboard; everyone else passes straight through.
  */
-export function needsEmailOnboarding(user: {
-  email?: string | null;
-} | null): boolean {
+export function needsEmailOnboarding(
+  user: {
+    email?: string | null;
+  } | null,
+): boolean {
   if (!user) return false;
   return !user.email;
 }

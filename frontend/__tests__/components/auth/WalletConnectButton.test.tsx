@@ -103,9 +103,7 @@ describe('WalletConnectButton', () => {
   it('initializes the kit on click', async () => {
     render(<WalletConnectButton />);
     fireEvent.click(screen.getByRole('button'));
-    await waitFor(() =>
-      expect(initializeStellarWalletsKit).toHaveBeenCalled(),
-    );
+    await waitFor(() => expect(initializeStellarWalletsKit).toHaveBeenCalled());
   });
 
   it('opens the picker modal when no wallet is already connected, then completes login and redirects to the dashboard', async () => {
@@ -204,9 +202,7 @@ describe('WalletConnectButton', () => {
     render(<WalletConnectButton />);
     fireEvent.click(screen.getByRole('button'));
 
-    await waitFor(() =>
-      expect(screen.getByRole('button')).not.toBeDisabled(),
-    );
+    await waitFor(() => expect(screen.getByRole('button')).not.toBeDisabled());
     expect(toast.error).not.toHaveBeenCalled();
     expect(setTokens).not.toHaveBeenCalled();
   });

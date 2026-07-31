@@ -79,7 +79,10 @@ export function useFavoriteStatus(propertyId: string | number | null) {
         return data;
       } catch (error) {
         if (isNotFound(error)) {
-          return { isFavorited: false, favoriteCount: 0 } satisfies FavoriteStatus;
+          return {
+            isFavorited: false,
+            favoriteCount: 0,
+          } satisfies FavoriteStatus;
         }
         throw error;
       }
