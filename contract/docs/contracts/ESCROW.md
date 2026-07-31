@@ -29,16 +29,16 @@ The **Escrow** contract manages security deposit escrows for the Chioma housing 
 
 ### Key Features
 
-| Feature | Description |
-|---|---|
-| **2-of-3 Multi-Sig** | Any 2 of 3 parties (depositor, beneficiary, arbiter) must approve fund release |
-| **Dispute Resolution** | Either primary party can freeze funds; arbiter resolves disputes |
-| **Partial Releases** | Release a portion of escrowed funds with reason tracking |
-| **Damage Deductions** | Deduct damage amounts before releasing remaining funds |
-| **Timeout Recovery** | Automatic refund when escrow or dispute timeout is reached |
-| **Rate Limiting** | Per-user and per-block rate limits to prevent abuse |
-| **Release History** | Full audit trail of all partial releases |
-| **Access Control** | Role-based authorization (depositor, beneficiary, arbiter) |
+| Feature                | Description                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| **2-of-3 Multi-Sig**   | Any 2 of 3 parties (depositor, beneficiary, arbiter) must approve fund release |
+| **Dispute Resolution** | Either primary party can freeze funds; arbiter resolves disputes               |
+| **Partial Releases**   | Release a portion of escrowed funds with reason tracking                       |
+| **Damage Deductions**  | Deduct damage amounts before releasing remaining funds                         |
+| **Timeout Recovery**   | Automatic refund when escrow or dispute timeout is reached                     |
+| **Rate Limiting**      | Per-user and per-block rate limits to prevent abuse                            |
+| **Release History**    | Full audit trail of all partial releases                                       |
+| **Access Control**     | Role-based authorization (depositor, beneficiary, arbiter)                     |
 
 ### Architecture
 
@@ -83,18 +83,19 @@ pub fn create(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `depositor` | `Address` | Tenant depositing funds |
-| `beneficiary` | `Address` | Landlord who benefits from the deposit |
-| `arbiter` | `Address` | Admin/arbiter who can resolve disputes |
-| `amount` | `i128` | Deposit amount in token units |
-| `token` | `Address` | Token contract address (e.g., USDC, XLM) |
+| Parameter     | Type      | Description                              |
+| ------------- | --------- | ---------------------------------------- |
+| `env`         | `Env`     | Soroban environment                      |
+| `depositor`   | `Address` | Tenant depositing funds                  |
+| `beneficiary` | `Address` | Landlord who benefits from the deposit   |
+| `arbiter`     | `Address` | Admin/arbiter who can resolve disputes   |
+| `amount`      | `i128`    | Deposit amount in token units            |
+| `token`       | `Address` | Token contract address (e.g., USDC, XLM) |
 
 **Returns:** `Result<BytesN<32>, EscrowError>` — Unique 32-byte escrow ID
 
 **Errors:**
+
 - `InvalidAmount` (14) — Amount is zero or negative
 
 **Example:**
@@ -123,15 +124,16 @@ pub fn fund_escrow(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter   | Type         | Description                      |
+| ----------- | ------------ | -------------------------------- |
+| `env`       | `Env`        | Soroban environment              |
 | `escrow_id` | `BytesN<32>` | Escrow ID returned by `create()` |
-| `caller` | `Address` | Must be the depositor |
+| `caller`    | `Address`    | Must be the depositor            |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — No escrow with this ID
 - `NotAuthorized` (1) — Caller is not the depositor
 - `InvalidState` (2) — Escrow is not in `Pending` state
@@ -163,16 +165,17 @@ pub fn approve_release(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
-| `caller` | `Address` | One of the 3 parties |
-| `release_to` | `Address` | Must be either depositor or beneficiary |
+| Parameter    | Type         | Description                             |
+| ------------ | ------------ | --------------------------------------- |
+| `env`        | `Env`        | Soroban environment                     |
+| `escrow_id`  | `BytesN<32>` | Escrow ID                               |
+| `caller`     | `Address`    | One of the 3 parties                    |
+| `release_to` | `Address`    | Must be either depositor or beneficiary |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Funded` state
 - `InvalidSigner` (5) — Caller is not a party to this escrow
@@ -227,17 +230,18 @@ pub fn release_escrow_partial(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
-| `amount` | `i128` | Amount to release |
-| `recipient` | `Address` | Must be depositor or beneficiary |
-| `reason` | `String` | Reason for partial release |
+| Parameter   | Type         | Description                      |
+| ----------- | ------------ | -------------------------------- |
+| `env`       | `Env`        | Soroban environment              |
+| `escrow_id` | `BytesN<32>` | Escrow ID                        |
+| `amount`    | `i128`       | Amount to release                |
+| `recipient` | `Address`    | Must be depositor or beneficiary |
+| `reason`    | `String`     | Reason for partial release       |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Funded` state
 - `InvalidAmount` (14) — Amount exceeds balance or is zero/negative
@@ -272,16 +276,17 @@ pub fn release_with_deduction(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
-| `damage_amount` | `i128` | Amount to deduct for damages |
-| `reason` | `String` | Reason for the deduction |
+| Parameter       | Type         | Description                  |
+| --------------- | ------------ | ---------------------------- |
+| `env`           | `Env`        | Soroban environment          |
+| `escrow_id`     | `BytesN<32>` | Escrow ID                    |
+| `damage_amount` | `i128`       | Amount to deduct for damages |
+| `reason`        | `String`     | Reason for the deduction     |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Funded` state
 - `InvalidAmount` (14) — Damage amount exceeds balance or is negative
@@ -318,16 +323,17 @@ pub fn initiate_dispute(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
-| `caller` | `Address` | Must be depositor or beneficiary |
-| `reason` | `String` | Reason for the dispute |
+| Parameter   | Type         | Description                      |
+| ----------- | ------------ | -------------------------------- |
+| `env`       | `Env`        | Soroban environment              |
+| `escrow_id` | `BytesN<32>` | Escrow ID                        |
+| `caller`    | `Address`    | Must be depositor or beneficiary |
+| `reason`    | `String`     | Reason for the dispute           |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Funded` state
 - `NotAuthorized` (1) — Caller is not depositor or beneficiary
@@ -360,16 +366,17 @@ pub fn resolve_dispute(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
-| `caller` | `Address` | Must be the arbiter |
-| `release_to` | `Address` | Must be depositor or beneficiary |
+| Parameter    | Type         | Description                      |
+| ------------ | ------------ | -------------------------------- |
+| `env`        | `Env`        | Soroban environment              |
+| `escrow_id`  | `BytesN<32>` | Escrow ID                        |
+| `caller`     | `Address`    | Must be the arbiter              |
+| `release_to` | `Address`    | Must be depositor or beneficiary |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Disputed` state
 - `NotAuthorized` (1) — Caller is not the arbiter
@@ -401,14 +408,15 @@ pub fn release_escrow_on_timeout(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
+| Parameter   | Type         | Description         |
+| ----------- | ------------ | ------------------- |
+| `env`       | `Env`        | Soroban environment |
+| `escrow_id` | `BytesN<32>` | Escrow ID           |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Funded` state
 - `TimeoutNotReached` (12) — Timeout deadline has not passed
@@ -433,14 +441,15 @@ pub fn resolve_dispute_on_timeout(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `escrow_id` | `BytesN<32>` | Escrow ID |
+| Parameter   | Type         | Description         |
+| ----------- | ------------ | ------------------- |
+| `env`       | `Env`        | Soroban environment |
+| `escrow_id` | `BytesN<32>` | Escrow ID           |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — Escrow does not exist
 - `InvalidState` (2) — Escrow not in `Disputed` state
 - `TimeoutNotReached` (12) — Dispute timeout has not passed
@@ -463,15 +472,16 @@ pub fn set_timeout_config(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `caller` | `Address` | Caller address (requires auth) |
-| `config` | `TimeoutConfig` | Timeout configuration |
+| Parameter | Type            | Description                    |
+| --------- | --------------- | ------------------------------ |
+| `env`     | `Env`           | Soroban environment            |
+| `caller`  | `Address`       | Caller address (requires auth) |
+| `config`  | `TimeoutConfig` | Timeout configuration          |
 
 **Returns:** `Result<(), EscrowError>`
 
 **Errors:**
+
 - `InvalidTimeoutConfig` (13) — Timeout values are zero
 
 **Example:**
@@ -497,11 +507,11 @@ pub fn get_timeout_config(env: Env) -> TimeoutConfig
 
 **Default Values:**
 
-| Setting | Default | Description |
-|---|---|---|
-| `escrow_timeout_days` | 14 | Days before escrow can be auto-refunded |
-| `dispute_timeout_days` | 30 | Days before dispute auto-resolves |
-| `payment_timeout_days` | 7 | Days for payment timeout |
+| Setting                | Default | Description                             |
+| ---------------------- | ------- | --------------------------------------- |
+| `escrow_timeout_days`  | 14      | Days before escrow can be auto-refunded |
+| `dispute_timeout_days` | 30      | Days before dispute auto-resolves       |
+| `payment_timeout_days` | 7       | Days for payment timeout                |
 
 ---
 
@@ -521,6 +531,7 @@ pub fn get_escrow(
 **Returns:** `Result<Escrow, EscrowError>`
 
 **Errors:**
+
 - `EscrowNotFound` (9) — No escrow with this ID
 
 #### `get_approval_count`
@@ -586,18 +597,18 @@ pub enum DataKey {
 
 ### Storage Layout
 
-| Key | Storage Type | Value Type | Description |
-|---|---|---|---|
-| `Escrow(id)` | Persistent | `Escrow` | Main escrow data |
-| `Approvals(id)` | Persistent | `Vec<ReleaseApproval>` | List of release approvals |
-| `ApprovalCount(id, target)` | Persistent | `u32` | O(1) approval count per target |
-| `SignerApproved(id, signer, target)` | Persistent | `bool` | O(1) duplicate check |
-| `ReleaseHistory(id)` | Persistent | `Vec<ReleaseRecord>` | Partial release audit trail |
-| `EscrowCount` | Instance | `u32` | Total escrows created |
-| `TimeoutConfig` | Instance | `TimeoutConfig` | Timeout settings |
-| `RateLimitConfig` | Persistent | `RateLimitConfig` | Rate limit settings |
-| `UserCallCount(user, fn)` | Persistent | `UserCallCount` | Per-user rate tracking |
-| `BlockCallCount(block, fn)` | Temporary | `u32` | Per-block rate tracking |
+| Key                                  | Storage Type | Value Type             | Description                    |
+| ------------------------------------ | ------------ | ---------------------- | ------------------------------ |
+| `Escrow(id)`                         | Persistent   | `Escrow`               | Main escrow data               |
+| `Approvals(id)`                      | Persistent   | `Vec<ReleaseApproval>` | List of release approvals      |
+| `ApprovalCount(id, target)`          | Persistent   | `u32`                  | O(1) approval count per target |
+| `SignerApproved(id, signer, target)` | Persistent   | `bool`                 | O(1) duplicate check           |
+| `ReleaseHistory(id)`                 | Persistent   | `Vec<ReleaseRecord>`   | Partial release audit trail    |
+| `EscrowCount`                        | Instance     | `u32`                  | Total escrows created          |
+| `TimeoutConfig`                      | Instance     | `TimeoutConfig`        | Timeout settings               |
+| `RateLimitConfig`                    | Persistent   | `RateLimitConfig`      | Rate limit settings            |
+| `UserCallCount(user, fn)`            | Persistent   | `UserCallCount`        | Per-user rate tracking         |
+| `BlockCallCount(block, fn)`          | Temporary    | `u32`                  | Per-block rate tracking        |
 
 ### Data Structures
 
@@ -734,11 +745,20 @@ pub struct DamageDeduction {
 // Off-chain event listener example (JavaScript/Stellar SDK)
 const events = await server.getEvents({
   startLedger: ledgerNumber,
-  filters: [{
-    type: "contract",
-    contractIds: [escrowContractId],
-    topics: [["escrow_timeout", "dispute_timeout", "partial_release", "damage_deduction"]]
-  }]
+  filters: [
+    {
+      type: "contract",
+      contractIds: [escrowContractId],
+      topics: [
+        [
+          "escrow_timeout",
+          "dispute_timeout",
+          "partial_release",
+          "damage_deduction",
+        ],
+      ],
+    },
+  ],
 });
 
 for (const event of events.events) {
@@ -750,25 +770,25 @@ for (const event of events.events) {
 
 ## Error Codes
 
-| Code | Name | Description |
-|---|---|---|
-| 1 | `NotAuthorized` | Caller is not authorized for this action |
-| 2 | `InvalidState` | Escrow is in an invalid state for this operation |
-| 3 | `InsufficientFunds` | Insufficient funds for the operation |
-| 4 | `AlreadySigned` | Signer has already approved this release |
-| 5 | `InvalidSigner` | Signer is not a valid party to this escrow |
-| 6 | `DisputeActive` | Escrow is under active dispute |
-| 7 | `InvalidRelease` | Invalid release target address |
-| 8 | `InvalidEscrowId` | Invalid escrow ID |
-| 9 | `EscrowNotFound` | Escrow does not exist |
-| 10 | `EmptyDisputeReason` | Dispute reason string is empty |
-| 11 | `InvalidApprovalTarget` | Target is neither beneficiary nor depositor |
-| 12 | `TimeoutNotReached` | Timeout deadline has not been reached |
-| 13 | `InvalidTimeoutConfig` | Timeout configuration values are invalid |
-| 14 | `InvalidAmount` | Release amount is invalid (zero, negative, exceeds balance) |
-| 15 | `EmptyReleaseReason` | Release reason string is empty |
-| 16 | `RateLimitExceeded` | Rate limit exceeded for this operation |
-| 17 | `CooldownNotMet` | Cooldown period between calls not met |
+| Code | Name                    | Description                                                 |
+| ---- | ----------------------- | ----------------------------------------------------------- |
+| 1    | `NotAuthorized`         | Caller is not authorized for this action                    |
+| 2    | `InvalidState`          | Escrow is in an invalid state for this operation            |
+| 3    | `InsufficientFunds`     | Insufficient funds for the operation                        |
+| 4    | `AlreadySigned`         | Signer has already approved this release                    |
+| 5    | `InvalidSigner`         | Signer is not a valid party to this escrow                  |
+| 6    | `DisputeActive`         | Escrow is under active dispute                              |
+| 7    | `InvalidRelease`        | Invalid release target address                              |
+| 8    | `InvalidEscrowId`       | Invalid escrow ID                                           |
+| 9    | `EscrowNotFound`        | Escrow does not exist                                       |
+| 10   | `EmptyDisputeReason`    | Dispute reason string is empty                              |
+| 11   | `InvalidApprovalTarget` | Target is neither beneficiary nor depositor                 |
+| 12   | `TimeoutNotReached`     | Timeout deadline has not been reached                       |
+| 13   | `InvalidTimeoutConfig`  | Timeout configuration values are invalid                    |
+| 14   | `InvalidAmount`         | Release amount is invalid (zero, negative, exceeds balance) |
+| 15   | `EmptyReleaseReason`    | Release reason string is empty                              |
+| 16   | `RateLimitExceeded`     | Rate limit exceeded for this operation                      |
+| 17   | `CooldownNotMet`        | Cooldown period between calls not met                       |
 
 ---
 

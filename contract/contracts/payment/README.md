@@ -5,6 +5,7 @@
 This contract now supports automated recurring payments for rent agreements.
 
 ### Data Models
+
 - `RecurringPayment`
 - `PaymentFrequency`
 - `RecurringStatus`
@@ -12,6 +13,7 @@ This contract now supports automated recurring payments for rent agreements.
 - `ExecutionStatus`
 
 ### Functions
+
 - `create_recurring_payment`
 - `execute_recurring_payment`
 - `pause_recurring_payment`
@@ -25,6 +27,7 @@ This contract now supports automated recurring payments for rent agreements.
 - `get_failed_payments`
 
 ### Supported Frequencies
+
 - Daily
 - Weekly
 - BiWeekly
@@ -33,11 +36,13 @@ This contract now supports automated recurring payments for rent agreements.
 - Annually
 
 ### Notes
+
 - Creation derives payer/payee from the agreement (`tenant`/`landlord`).
 - `process_due_payments` is keeper/oracle style execution for due entries.
 - Failed recurring executions are tracked and can be retried.
 
 ### Test Command
+
 ```bash
 cargo test recurring_payments
 ```

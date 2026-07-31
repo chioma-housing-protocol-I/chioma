@@ -31,14 +31,14 @@ requirement. An external audit is a distinct, more fundamental control.
 
 ## 2. Current status
 
-| Item | Status |
-| --- | --- |
-| Third-party audit commissioned | ❌ Not yet |
+| Item                            | Status     |
+| ------------------------------- | ---------- |
+| Third-party audit commissioned  | ❌ Not yet |
 | Audit scope agreed with auditor | ❌ Not yet |
-| Audit in progress | ❌ Not yet |
-| Findings remediated | ❌ N/A |
-| Audit report published | ❌ Not yet |
-| **Cleared for mainnet** | ❌ **NO** |
+| Audit in progress               | ❌ Not yet |
+| Findings remediated             | ❌ N/A     |
+| Audit report published          | ❌ Not yet |
+| **Cleared for mainnet**         | ❌ **NO**  |
 
 > As of this document, **no third-party security audit exists** for any Chioma
 > contract. Mainnet deployment is therefore **blocked**.
@@ -110,8 +110,8 @@ Complete before handing code to an auditor (reduces cost and noise):
 _No audit reports yet._ Once an audit is complete, record it here:
 
 | Date | Auditor | Scope (contracts) | Commit | Report link | Critical/High resolved |
-| --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — |
+| ---- | ------- | ----------------- | ------ | ----------- | ---------------------- |
+| —    | —       | —                 | —      | —           | —                      |
 
 ---
 

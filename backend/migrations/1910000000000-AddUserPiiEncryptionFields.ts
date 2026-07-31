@@ -7,7 +7,7 @@ export class AddUserPiiEncryptionFields1910000000000 implements MigrationInterfa
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS first_name_encrypted ${process.env.DB_TYPE === 'sqlite' ? 'BLOB' : 'BYTEA'}
     `);
-    
+
     await queryRunner.query(`
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS last_name_encrypted ${process.env.DB_TYPE === 'sqlite' ? 'BLOB' : 'BYTEA'}
@@ -18,7 +18,7 @@ export class AddUserPiiEncryptionFields1910000000000 implements MigrationInterfa
     await queryRunner.query(`
       ALTER TABLE users DROP COLUMN IF EXISTS first_name_encrypted
     `);
-    
+
     await queryRunner.query(`
       ALTER TABLE users DROP COLUMN IF EXISTS last_name_encrypted
     `);

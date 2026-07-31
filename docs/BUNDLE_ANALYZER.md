@@ -14,6 +14,7 @@ pnpm run analyze
 ```
 
 This sets `ANALYZE=true` and runs `next build`. Once compilation completes, `@next/bundle-analyzer` will automatically open interactive HTML reports in your browser showing the breakdown of all chunks:
+
 - **`client.html`**: Client-side JS bundle composition.
 - **`server.html`**: Server-side JS bundle composition.
 
@@ -62,6 +63,7 @@ The script outputs a summary table with `PASS`, `WARN`, or `FAIL` statuses per r
 ## 4. CI/CD Integration
 
 In `.github/workflows/frontend-ci-cd.yml`, the **`bundle-size`** job automatically:
+
 1. Runs after the `build` job completes.
 2. Executes `pnpm run size:check`.
 3. Posts/updates a markdown summary comment on Pull Requests.
