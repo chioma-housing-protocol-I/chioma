@@ -111,6 +111,28 @@ pub struct UpgradeExecuted {
     pub executed_at: u64,
 }
 
+/// Event emitted when a property's ownership is transferred
+/// Topics: ["property_transferred", previous_landlord: Address, property_id: String]
+#[contractevent(topics = ["property_transferred"])]
+pub struct PropertyTransferred {
+    #[topic]
+    pub previous_landlord: Address,
+    #[topic]
+    pub property_id: String,
+    pub new_landlord: Address,
+}
+
+/// Event emitted when a property's metadata is updated
+/// Topics: ["property_metadata_updated", landlord: Address, property_id: String]
+#[contractevent(topics = ["property_metadata_updated"])]
+pub struct PropertyMetadataUpdated {
+    #[topic]
+    pub landlord: Address,
+    #[topic]
+    pub property_id: String,
+    pub new_metadata_hash: String,
+}
+
 /// Helper function to emit contract initialized event
 pub(crate) fn contract_initialized(env: &Env, admin: Address) {
     ContractInitialized {
@@ -212,6 +234,36 @@ pub(crate) fn upgrade_executed(env: &Env, proposal_id: String, executor: Address
         proposal_id,
         executor,
         executed_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit property transferred event
+pub(crate) fn property_transferred(
+    env: &Env,
+    property_id: String,
+    previous_landlord: Address,
+    new_landlord: Address,
+) {
+    PropertyTransferred {
+        previous_landlord,
+        property_id,
+        new_landlord,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit property metadata updated event
+pub(crate) fn property_metadata_updated(
+    env: &Env,
+    property_id: String,
+    landlord: Address,
+    new_metadata_hash: String,
+) {
+    PropertyMetadataUpdated {
+        landlord,
+        property_id,
+        new_metadata_hash,
     }
     .publish(env);
 }

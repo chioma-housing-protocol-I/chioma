@@ -58,6 +58,7 @@ booting safely):
 
 **Tier B — feature-conditional required**, via `Joi.when()` keyed on a
 selector var:
+
 - `PAYSTACK_SECRET_KEY` required iff `PAYMENT_GATEWAY=paystack`.
 - `FLUTTERWAVE_SECRET_KEY` required iff `PAYMENT_GATEWAY=flutterwave`.
 - `TRANSUNION_SMARTMOVE_API_URL`/`TRANSUNION_SMARTMOVE_API_KEY` required
@@ -68,6 +69,7 @@ selector var:
 **Tier C — format-validated when present, otherwise optional** (preserves
 today's graceful-degradation behavior — the app already boots without these
 and the specific feature self-disables at request time):
+
 - Contract IDs (`CHIOMA_CONTRACT_ID`, `ESCROW_CONTRACT_ID`,
   `DISPUTE_CONTRACT_ID`, `RENT_OBLIGATION_CONTRACT_ID`,
   `PAYMENT_PROCESSING_CONTRACT_ID`, `AGENT_REGISTRY_CONTRACT_ID`) — must
@@ -106,6 +108,7 @@ code already falls back to; never hard-required.
 ## Testing
 
 Extend `backend/src/config/env.validation.spec.ts` with cases per tier:
+
 - Tier A: missing in production → throws with that var named.
 - Tier B: gate active + var missing → throws; gate inactive → passes without
   the var.

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabasePerformanceService } from './database-performance.service';
 import { DataSource } from 'typeorm';
+import { QueryAnalysisService } from '../../common/query-logger/query-analysis.service';
 
 describe('DatabasePerformanceService', () => {
   let service: DatabasePerformanceService;
@@ -11,12 +12,46 @@ describe('DatabasePerformanceService', () => {
       query: jest.fn(),
     };
 
+    const mockQueryAnalysis = {
+      getQueryAnalysisReport: jest.fn().mockReturnValue({
+        generatedAt: '2023-01-01',
+        summary: {
+          totalQueriesTracked: 0,
+          uniquePatterns: 0,
+          nPlusOneDetected: 0,
+          slowQueries: 0,
+          slowQueryThresholdMs: 200,
+        },
+        frequentQueries: [],
+        slowestQueries: [],
+        nPlusOneAlerts: [],
+        recentSlowQueries: [],
+      }),
+      getNPlusOneReports: jest.fn().mockReturnValue([]),
+      getQueryPatterns: jest.fn().mockReturnValue([]),
+      getQueryHistory: jest.fn().mockReturnValue([]),
+      getQueryStats: jest.fn().mockReturnValue({
+        totalQueriesTracked: 0,
+        uniqueQueryPatterns: 0,
+        nPlusOneReports: 0,
+        slowQueryCount: 0,
+        slowQueryThresholdMs: 200,
+        topQueries: [],
+        slowestQueries: [],
+      }),
+      resetAnalysis: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DatabasePerformanceService,
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: QueryAnalysisService,
+          useValue: mockQueryAnalysis,
         },
       ],
     }).compile();

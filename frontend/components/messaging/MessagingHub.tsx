@@ -49,7 +49,7 @@ export function MessagingHub() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-dvh bg-white transition-orientation">
       {connectionBanner}
       <div className="flex flex-1 min-h-0">
         <div

@@ -167,13 +167,13 @@ This runs: install → format check → lint → typecheck → tests with covera
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `401 Unauthorized` | Token expired or missing; refresh or re-login |
-| `400 Bad Request` | Check request body against Swagger schemas |
-| `429 Too Many Requests` | Back off; check `retryAfter` in response |
-| CORS errors in browser | Add your origin to `CORS_ORIGINS` |
-| OpenAPI generate fails | Set `DB_TYPE=sqlite`, `JWT_SECRET`, and contract IDs (see `scripts/ci-local.sh`) |
+| Issue                   | Solution                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `401 Unauthorized`      | Token expired or missing; refresh or re-login                                    |
+| `400 Bad Request`       | Check request body against Swagger schemas                                       |
+| `429 Too Many Requests` | Back off; check `retryAfter` in response                                         |
+| CORS errors in browser  | Add your origin to `CORS_ORIGINS`                                                |
+| OpenAPI generate fails  | Set `DB_TYPE=sqlite`, `JWT_SECRET`, and contract IDs (see `scripts/ci-local.sh`) |
 
 ## Next steps
 

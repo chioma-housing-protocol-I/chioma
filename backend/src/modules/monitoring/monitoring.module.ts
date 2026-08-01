@@ -29,7 +29,6 @@ import { StorageModule } from '../storage/storage.module';
     HttpModule,
     ScheduleModule.forRoot(),
     forwardRef(() => NotificationsModule),
-    NotificationsModule,
     StorageModule,
     TypeOrmModule.forFeature([]),
   ],

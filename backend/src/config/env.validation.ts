@@ -287,6 +287,8 @@ const authExtraSchema = Joi.object({
   JWT_REFRESH_EXPIRATION: Joi.string().pattern(/^\d+[smhd]$/),
   AUTH_RATE_LIMIT_WINDOW_MS: Joi.number().min(1),
   AUTH_RATE_LIMIT_MAX_REQUESTS: Joi.number().min(1),
+  PASSWORD_RESET_EMAIL_LIMIT: Joi.number().min(1),
+  PASSWORD_RESET_EMAIL_WINDOW_SECONDS: Joi.number().min(1),
   MFA_REQUIRED: boolString,
 });
 

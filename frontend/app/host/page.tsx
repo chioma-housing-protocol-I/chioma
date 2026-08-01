@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 export default function HostDashboardPage() {
   const { data: stats, isLoading: loadingStats } = useQuery({
@@ -125,21 +126,23 @@ export default function HostDashboardPage() {
             })}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {quickLinks.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Link
-              key={link.label}
-              href={link.href}
-              className="flex items-center gap-3 p-4 backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 hover:bg-slate-700/50 transition-all"
-            >
-              <Icon size={18} className="text-blue-400 shrink-0" />
-              <span className="text-sm font-medium">{link.label}</span>
-            </Link>
-          );
-        })}
-      </div>
+      <FeatureBoundary name="host-dashboard:quick-links" label="Quick links">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {quickLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="flex items-center gap-3 p-4 backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 hover:bg-slate-700/50 transition-all"
+              >
+                <Icon size={18} className="text-blue-400 shrink-0" />
+                <span className="text-sm font-medium">{link.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </FeatureBoundary>
     </div>
   );
 }

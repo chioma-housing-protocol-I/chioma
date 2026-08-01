@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { QueryAnalysisService } from '../../common/query-logger/query-analysis.service';
 
 @Injectable()
 export class DatabasePerformanceService {
   private readonly logger = new Logger(DatabasePerformanceService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly queryAnalysis: QueryAnalysisService,
+  ) {}
 
   async getIndexUsage() {
     return this.dataSource.query(`
@@ -214,5 +218,42 @@ export class DatabasePerformanceService {
       settings,
       unusedIndexes: unused,
     };
+  }
+
+  async getQueryAnalysis() {
+    return this.queryAnalysis.getQueryAnalysisReport();
+  }
+
+  async getNPlusOneDetection(severity?: string) {
+    const reports = this.queryAnalysis.getNPlusOneReports(severity as any);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      totalDetected: reports.length,
+      reports,
+      summary: {
+        critical: reports.filter((r) => r.severity === 'critical').length,
+        high: reports.filter((r) => r.severity === 'high').length,
+        medium: reports.filter((r) => r.severity === 'medium').length,
+        low: reports.filter((r) => r.severity === 'low').length,
+      },
+    };
+  }
+
+  async getQueryPatterns(search?: string) {
+    return this.queryAnalysis.getQueryPatterns(search);
+  }
+
+  async getQueryHistory(limit = 100, minDuration?: number) {
+    return this.queryAnalysis.getQueryHistory(limit, minDuration);
+  }
+
+  async getQueryStats() {
+    return this.queryAnalysis.getQueryStats();
+  }
+
+  async resetQueryAnalysis() {
+    this.queryAnalysis.resetAnalysis();
+    return { message: 'Query analysis data reset successfully' };
   }
 }

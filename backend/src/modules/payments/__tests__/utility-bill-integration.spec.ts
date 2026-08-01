@@ -25,6 +25,7 @@ import { PaymentProcessingService } from '../../stellar/services/payment-process
 import { StellarService } from '../../stellar/services/stellar.service';
 import { RetryService } from '../../../common/services/retry.service';
 import { CircuitBreakerService } from '../../../common/resilience/circuit-breaker.service';
+import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 
 /**
  * Utility Bill Integration Tests
@@ -142,6 +143,13 @@ describe('Utility Bill Integration Tests', () => {
             process: jest.fn(
               (_key: string, _ttlMs: number, fn: () => unknown) => fn(),
             ),
+          },
+        },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
           },
         },
       ],

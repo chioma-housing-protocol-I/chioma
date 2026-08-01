@@ -16,7 +16,11 @@ import {
 } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
-import { PaymentFiltersDto } from './dto/payment-filters.dto';
+import {
+  PaymentFiltersDto,
+  PAYMENT_LIST_DEFAULT_LIMIT,
+  PAYMENT_LIST_MAX_LIMIT,
+} from './dto/payment-filters.dto';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
@@ -333,6 +337,15 @@ export class PaymentService {
     }
 
     query.orderBy('payment.createdAt', 'DESC');
+
+    // Always bound the result set — an unpaginated getMany() grows with the
+    // user's entire payment history.
+    const limit = Math.min(
+      filters.limit ?? PAYMENT_LIST_DEFAULT_LIMIT,
+      PAYMENT_LIST_MAX_LIMIT,
+    );
+    const page = filters.page ?? 1;
+    query.skip((page - 1) * limit).take(limit);
 
     return query.getMany();
   }

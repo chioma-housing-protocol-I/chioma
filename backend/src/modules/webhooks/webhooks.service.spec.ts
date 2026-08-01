@@ -6,6 +6,7 @@ import { WebhooksService } from './webhooks.service';
 import { WebhookEndpoint } from './entities/webhook-endpoint.entity';
 import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookSignatureService } from './webhook-signature.service';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { WebhookEvent } from './webhook-event';
 
 jest.mock('axios');
@@ -80,6 +81,13 @@ describe('WebhooksService', () => {
           useValue: deliveryRepository,
         },
         { provide: ConfigService, useValue: configService },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
+        },
       ],
     }).compile();
 

@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { LogIn } from 'lucide-react';
 import { BaseModal } from './BaseModal';
 import { notify } from '@/components/ui';
+import { useAuth } from '@/store/authStore';
 import type { PropertyInquiryData } from './types';
 
 interface PropertyInquiryModalProps {
@@ -32,6 +36,8 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const pathname = usePathname();
 
   const initialMessage = useMemo(
     () =>
@@ -41,16 +47,30 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
+    // Pre-fill from the signed-in account so returning users don't retype
+    // their own details; still editable for anyone sending on someone
+    // else's behalf, and blank for guests.
+    const knownName =
+      isAuthenticated && user
+        ? `${user.firstName} ${user.lastName}`.trim()
+        : '';
     setForm({
       propertyId,
       propertyTitle,
-      name: '',
-      email: '',
+      name: knownName,
+      email: isAuthenticated && user ? user.email : '',
       phone: '',
       message: initialMessage,
     });
     setErrors({});
-  }, [initialMessage, isOpen, propertyId, propertyTitle]);
+  }, [
+    initialMessage,
+    isOpen,
+    propertyId,
+    propertyTitle,
+    isAuthenticated,
+    user,
+  ]);
 
   const validate = () => {
     const nextErrors: FormErrors = {};
@@ -81,6 +101,44 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  if (!isAuthenticated) {
+    const loginHref = `/login?next=${encodeURIComponent(pathname || '/properties')}`;
+
+    return (
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Sign in required"
+        subtitle={`Sign in to contact the host about ${propertyTitle}`}
+        size="md"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-100"
+            >
+              Cancel
+            </button>
+            <Link
+              href={loginHref}
+              onClick={onClose}
+              className="flex items-center gap-2 rounded-xl bg-brand-blue px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              <LogIn size={16} />
+              Sign in
+            </Link>
+          </div>
+        }
+      >
+        <p className="text-sm text-neutral-600">
+          Create a free account or sign in so the host knows who they&apos;re
+          talking to and can reach you back.
+        </p>
+      </BaseModal>
+    );
+  }
 
   return (
     <BaseModal

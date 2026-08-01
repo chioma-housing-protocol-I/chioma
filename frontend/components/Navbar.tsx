@@ -134,7 +134,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   aria-haspopup="true"
                 >
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {user.firstName[0]?.toUpperCase() ?? <User size={14} />}
+                    {user.firstName?.[0]?.toUpperCase() ?? <User size={14} />}
                   </div>
                   <span className="text-sm text-white font-medium max-w-[100px] truncate">
                     {user.firstName}

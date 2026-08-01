@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/store/authStore';
+import {
+  needsEmailOnboarding,
+  skipEmailOnboarding,
+} from '@/hooks/useOnboardingGate';
 
 const inputClasses =
   'w-full px-4 py-3 bg-ink-800 border border-cream/10 rounded-xl text-cream placeholder:text-cream-dim/40 focus:outline-none focus:border-brass-500/60 transition-colors text-sm';
@@ -21,6 +25,13 @@ export default function CompleteProfilePage() {
   const [lastName, setLastName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  /**
+   * Latched before the save starts. completeProfile() writes the new email
+   * into the auth store, which re-renders this page while `submitted` state
+   * has not landed yet — without a ref the guard below sees "email present,
+   * not submitted" and redirects, so the confirmation screen never shows.
+   */
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -28,11 +39,14 @@ export default function CompleteProfilePage() {
       router.replace('/login');
       return;
     }
-    // Already has a verified email — nothing to complete here.
-    if (user?.email && user.emailVerified) {
-      router.replace(user.role === 'admin' ? '/admin' : '/user');
+    if (isSavingRef.current || submitted) return;
+    // Email already on file — nothing to collect here. Verification happens
+    // asynchronously via the emailed link, so an unverified address still
+    // counts as complete for onboarding purposes.
+    if (!needsEmailOnboarding(user ?? null)) {
+      router.replace(user?.role === 'admin' ? '/admin' : '/user');
     }
-  }, [loading, isAuthenticated, user, router]);
+  }, [loading, isAuthenticated, user, router, submitted]);
 
   useEffect(() => {
     if (user?.firstName) setFirstName(user.firstName);
@@ -47,17 +61,26 @@ export default function CompleteProfilePage() {
       return;
     }
     setIsSubmitting(true);
+    isSavingRef.current = true;
     const result = await completeProfile({ email, firstName, lastName });
     setIsSubmitting(false);
     if (result.success) {
       setSubmitted(true);
     } else {
+      isSavingRef.current = false;
       toast.error(result.error ?? 'Could not save your profile.');
     }
   };
 
   const goToDashboard = () => {
     router.push(user?.role === 'admin' ? '/admin' : '/user');
+  };
+
+  const handleSkip = () => {
+    // Suppress the gate for this session only — we still want the email, so
+    // the prompt returns on the next visit.
+    skipEmailOnboarding();
+    goToDashboard();
   };
 
   if (submitted) {
@@ -156,7 +179,7 @@ export default function CompleteProfilePage() {
 
       <button
         type="button"
-        onClick={goToDashboard}
+        onClick={handleSkip}
         className="w-full text-center text-sm text-cream-dim hover:text-cream mt-6 transition-colors"
       >
         Skip for now

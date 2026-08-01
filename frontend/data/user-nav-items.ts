@@ -4,6 +4,7 @@ import {
   HousePlus,
   MessageSquareQuote,
   Receipt,
+  Search,
   Settings,
   Wallet,
   PieChart,
@@ -19,6 +20,11 @@ export const userNavItems: navItems[] = [
     name: 'Overview',
     href: '/user',
     icon: Home,
+  },
+  {
+    name: 'Browse Properties',
+    href: '/properties',
+    icon: Search,
   },
   {
     name: 'Wallet',

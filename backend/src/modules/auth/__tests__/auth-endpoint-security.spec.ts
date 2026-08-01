@@ -21,7 +21,7 @@ import { ROLES_KEY } from '../guards/roles.guard';
 
 describe('Auth Endpoint Security', () => {
   let reflector: Reflector;
-  let guard: JwtAuthGuard;
+  let _guard: JwtAuthGuard;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +40,7 @@ describe('Auth Endpoint Security', () => {
     }
 
     beforeEach(() => {
-      guard = new MockJwtAuthGuard(reflector);
+      _guard = new MockJwtAuthGuard(reflector);
     });
 
     it('allows access to @Public() routes without authentication', () => {
