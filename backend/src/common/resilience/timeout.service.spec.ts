@@ -2,7 +2,7 @@ import { TimeoutService } from './timeout.service';
 import { ExternalCallTimeoutError } from './resilience.errors';
 
 /** Returns a promise that resolves after `ms` milliseconds. */
-function sleep(ms: number): Promise<void> {
+function _sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

@@ -10,10 +10,10 @@ import { Logger } from '@nestjs/common';
 
 describe('ReferralService', () => {
   let service: ReferralService;
-  let userRepository: Repository<User>;
-  let stellarService: StellarService;
-  let referralRepository: Repository<Referral>;
-  let configService: ConfigService;
+  let _userRepository: Repository<User>;
+  let _stellarService: StellarService;
+  let _referralRepository: Repository<Referral>;
+  let _configService: ConfigService;
 
   const mockReferral: Partial<Referral> = {
     id: 'test-referral-id',
@@ -108,12 +108,12 @@ describe('ReferralService', () => {
     }).compile();
 
     service = module.get<ReferralService>(ReferralService);
-    referralRepository = module.get<Repository<Referral>>(
+    _referralRepository = module.get<Repository<Referral>>(
       getRepositoryToken(Referral),
     );
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    stellarService = module.get<StellarService>(StellarService);
-    configService = module.get<ConfigService>(ConfigService);
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    _stellarService = module.get<StellarService>(StellarService);
+    _configService = module.get<ConfigService>(ConfigService);
 
     // Clear all mocks
     jest.clearAllMocks();

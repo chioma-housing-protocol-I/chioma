@@ -10,6 +10,7 @@ import { TempFileCleanupService } from './temp-file-cleanup.service';
 import { DataArchivalService } from './data-archival.service';
 import { SecurityPatchManagementService } from './security-patch-management.service';
 import { DatabaseMaintenanceService } from './database-maintenance.service';
+import { OrphanedRecordsCleanupService } from './orphaned-records-cleanup.service';
 import { TenantScreeningRequest } from '../screening/entities/tenant-screening-request.entity';
 import { TenantScreeningReport } from '../screening/entities/tenant-screening-report.entity';
 import { TenantScreeningConsent } from '../screening/entities/tenant-screening-consent.entity';
@@ -32,11 +33,13 @@ import { TenantScreeningConsent } from '../screening/entities/tenant-screening-c
     DataArchivalService,
     SecurityPatchManagementService,
     DatabaseMaintenanceService,
+    OrphanedRecordsCleanupService,
   ],
   exports: [
     DataArchivalService,
     SecurityPatchManagementService,
     DatabaseMaintenanceService,
+    OrphanedRecordsCleanupService,
   ],
 })
 export class CleanupModule {}

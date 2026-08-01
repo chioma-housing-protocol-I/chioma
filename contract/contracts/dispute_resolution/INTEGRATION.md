@@ -34,15 +34,15 @@ pub fn resolve_with_dispute_outcome(
     let dispute_client = DisputeResolutionContractClient::new(&env, &dispute_contract);
     let dispute = dispute_client.get_dispute(&agreement_id)
         .ok_or(EscrowError::DisputeNotFound)?;
-    
+
     if !dispute.resolved {
         return Err(EscrowError::DisputeNotResolved);
     }
-    
+
     // Get outcome
     let outcome = dispute.get_outcome()
         .ok_or(EscrowError::InvalidOutcome)?;
-    
+
     // Release funds based on outcome
     match outcome {
         DisputeOutcome::FavorLandlord => {
@@ -54,7 +54,7 @@ pub fn resolve_with_dispute_outcome(
             self.refund_to_tenant(env, agreement_id)?;
         },
     }
-    
+
     Ok(())
 }
 ```
@@ -76,7 +76,7 @@ pub fn raise_verified_dispute(
     let registry_client = PropertyRegistryContractClient::new(&env, &property_registry);
     let property = registry_client.get_property(&agreement_id)
         .ok_or(DisputeError::InvalidAgreement)?;
-    
+
     // Raise dispute
     raise_dispute(&env, agreement_id, details_hash)
 }
@@ -102,14 +102,14 @@ pub fn agent_raise_dispute(
     let agent_client = AgentRegistryContractClient::new(&env, &agent_registry);
     let agent_info = agent_client.get_agent_info(&agent)
         .ok_or(DisputeError::AgentNotFound)?;
-    
+
     if !agent_info.verified {
         return Err(DisputeError::AgentNotVerified);
     }
-    
+
     // Verify agent has authority to act for client
     client.require_auth();
-    
+
     // Raise dispute
     raise_dispute(&env, agreement_id, details_hash)
 }
@@ -195,19 +195,20 @@ Listen to events for real-time updates:
 
 ```javascript
 // Subscribe to dispute events
-contract.on('DisputeRaised', (event) => {
+contract.on("DisputeRaised", (event) => {
   const { agreement_id, details_hash } = event;
   // Fetch details from IPFS using details_hash
   // Update UI to show new dispute
 });
 
-contract.on('VoteCast', (event) => {
+contract.on("VoteCast", (event) => {
   const { agreement_id, arbiter, favor_landlord } = event;
   // Update vote tally in UI
 });
 
-contract.on('DisputeResolved', (event) => {
-  const { agreement_id, outcome, votes_favor_landlord, votes_favor_tenant } = event;
+contract.on("DisputeResolved", (event) => {
+  const { agreement_id, outcome, votes_favor_landlord, votes_favor_tenant } =
+    event;
   // Show resolution result
   // Trigger escrow release if applicable
 });
@@ -220,7 +221,7 @@ contract.on('DisputeResolved', (event) => {
 ```javascript
 // Upload evidence to IPFS
 async function uploadEvidence(evidence) {
-  const ipfs = create({ url: 'https://ipfs.infura.io:5001' });
+  const ipfs = create({ url: "https://ipfs.infura.io:5001" });
   const { cid } = await ipfs.add(JSON.stringify(evidence));
   return cid.toString();
 }
@@ -295,6 +296,7 @@ Recommended evidence format:
 ### 4. Time Constraints
 
 Consider implementing timeouts:
+
 - Maximum voting period (e.g., 7 days)
 - Minimum evidence review period (e.g., 48 hours)
 - Automatic resolution if timeout expires
@@ -302,6 +304,7 @@ Consider implementing timeouts:
 ### 5. Dispute Categories
 
 Categorize disputes for better arbiter assignment:
+
 - Security deposit disputes
 - Property damage claims
 - Lease violation disputes
@@ -318,6 +321,7 @@ Categorize disputes for better arbiter assignment:
 ### 2. Reentrancy Protection
 
 Soroban contracts are inherently protected against reentrancy, but:
+
 - Validate all inputs
 - Check state before external calls
 - Update state before emitting events
@@ -344,6 +348,7 @@ if dispute.resolved {
 ### 4. Economic Attacks
 
 Consider implementing:
+
 - Dispute fees to prevent spam
 - Arbiter staking requirements
 - Penalties for incorrect votes (requires appeal mechanism)
@@ -356,11 +361,11 @@ Consider implementing:
 #[test]
 fn test_full_dispute_resolution_flow() {
     let env = Env::default();
-    
+
     // Deploy contracts
     let dispute_contract = create_dispute_contract(&env);
     let escrow_contract = create_escrow_contract(&env);
-    
+
     // Setup
     let admin = Address::generate(&env);
     let landlord = Address::generate(&env);
@@ -368,38 +373,38 @@ fn test_full_dispute_resolution_flow() {
     let arbiter1 = Address::generate(&env);
     let arbiter2 = Address::generate(&env);
     let arbiter3 = Address::generate(&env);
-    
+
     env.mock_all_auths();
-    
+
     // Initialize
     dispute_contract.initialize(&admin, &3);
     dispute_contract.add_arbiter(&admin, &arbiter1);
     dispute_contract.add_arbiter(&admin, &arbiter2);
     dispute_contract.add_arbiter(&admin, &arbiter3);
-    
+
     // Create escrow
     let agreement_id = String::from_str(&env, "test_agreement");
     escrow_contract.create_escrow(&agreement_id, &landlord, &tenant, &1000);
-    
+
     // Raise dispute
     let details_hash = String::from_str(&env, "QmTest...");
     dispute_contract.raise_dispute(&agreement_id, &details_hash);
-    
+
     // Vote
     dispute_contract.vote_on_dispute(&arbiter1, &agreement_id, &true);
     dispute_contract.vote_on_dispute(&arbiter2, &agreement_id, &true);
     dispute_contract.vote_on_dispute(&arbiter3, &agreement_id, &false);
-    
+
     // Resolve
     let outcome = dispute_contract.resolve_dispute(&agreement_id);
     assert_eq!(outcome, DisputeOutcome::FavorLandlord);
-    
+
     // Release escrow based on outcome
     escrow_contract.resolve_with_dispute(
         &agreement_id,
         &dispute_contract.address
     );
-    
+
     // Verify funds released to landlord
     let escrow_state = escrow_contract.get_escrow(&agreement_id).unwrap();
     assert!(escrow_state.released_to_landlord);
@@ -418,6 +423,7 @@ fn test_full_dispute_resolution_flow() {
 ## Support
 
 For questions or issues:
+
 - GitHub Issues: [repository link]
 - Documentation: [docs link]
 - Community: [Discord/Telegram link]

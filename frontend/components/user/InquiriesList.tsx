@@ -11,6 +11,7 @@ import {
   MessageCircleQuestion,
   CheckCircle2,
   Circle,
+  Send,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -19,6 +20,7 @@ import {
   useMarkInquiryViewed,
 } from '@/lib/query/hooks/use-inquiries';
 import type { InquiryRecord, PropertyInquiryStatus } from '@/lib/inquiries/api';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const statusBadge: Record<PropertyInquiryStatus, string> = {
   pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -254,16 +256,17 @@ export function InquiriesList({
           <span className="text-blue-200/50">Loading inquiries...</span>
         </div>
       ) : inquiries.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-16 text-center">
-          <MessageCircleQuestion className="mx-auto mb-4 h-12 w-12 text-blue-300/20" />
-          <h3 className="mb-1 text-lg font-bold text-white">
-            No inquiries yet
-          </h3>
-          <p className="text-sm text-blue-200/40">
-            {direction === 'incoming'
-              ? 'Questions from prospective tenants about your listings will show up here.'
-              : "Inquiries you've sent to landlords will show up here."}
-          </p>
+        <div className="p-8">
+          <EmptyState
+            icon={MessageCircleQuestion}
+            title="No inquiries yet"
+            description={
+              direction === 'incoming'
+                ? 'Questions from prospective tenants about your listings will show up here.'
+                : "Inquiries you've sent to landlords will show up here."
+            }
+            variant="dark"
+          />
         </div>
       ) : (
         <div className="space-y-3">

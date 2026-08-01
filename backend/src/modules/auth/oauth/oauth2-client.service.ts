@@ -7,13 +7,17 @@ import {
   OAuth2TokenResponse,
   OAuth2UserProfile,
 } from './oauth2.types';
+import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 
 @Injectable()
 export class OAuth2ClientService {
   private readonly http: AxiosInstance;
   private readonly configs: Map<OAuth2Provider, OAuth2ProviderConfig>;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly certificatePinningService: CertificatePinningService,
+  ) {
     this.http = axios.create({ timeout: 10000 });
     this.configs = this.loadProviderConfigs();
   }
@@ -57,7 +61,12 @@ export class OAuth2ClientService {
         client_id: config.clientId,
         client_secret: config.clientSecret,
       }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          config.baseUrl,
+        ),
+      },
     );
     return response.data;
   }
@@ -75,7 +84,12 @@ export class OAuth2ClientService {
         client_id: config.clientId,
         client_secret: config.clientSecret,
       }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          config.baseUrl,
+        ),
+      },
     );
     return response.data;
   }
@@ -93,6 +107,9 @@ export class OAuth2ClientService {
       picture?: string;
     }>(`${config.baseUrl}/oauth/userinfo`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+        config.baseUrl,
+      ),
     });
 
     return {
@@ -109,7 +126,12 @@ export class OAuth2ClientService {
     await this.http.post(
       `${config.baseUrl}/oauth/revoke`,
       new URLSearchParams({ token }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          config.baseUrl,
+        ),
+      },
     );
   }
 

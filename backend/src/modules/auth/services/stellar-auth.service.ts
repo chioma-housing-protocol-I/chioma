@@ -357,14 +357,36 @@ export class StellarAuthService {
     });
   }
 
+  /**
+   * Allowlist rather than denylist. A rest-spread denylist leaks every new
+   * column added to the entity — this response was returning the encrypted
+   * PII blobs (emailEncrypted, phoneNumberEncrypted, …), their lookup hashes,
+   * the key version, and lockout counters straight to the browser.
+   */
   private sanitizeUser(user: User) {
-    const {
-      password: _password,
-      refreshToken: _refreshToken,
-      resetToken: _resetToken,
-      verificationToken: _verificationToken,
-      ...sanitized
-    } = user;
-    return sanitized;
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      avatarUrl: user.avatarUrl,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      kycStatus: user.kycStatus,
+      walletAddress: user.walletAddress,
+      authMethod: user.authMethod,
+      preferredLanguage: user.preferredLanguage,
+      timezone: user.timezone,
+      twoFactorEnabled: user.twoFactorEnabled,
+      emailNotifications: user.emailNotifications,
+      smsNotifications: user.smsNotifications,
+      marketingOptIn: user.marketingOptIn,
+      isActive: user.isActive,
+      referralCode: user.referralCode,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }

@@ -16,6 +16,7 @@ import { User, UserRole } from '../../../users/entities/user.entity';
 import { OAuthAccount } from '../entities/oauth-account.entity';
 import { MockOAuth2Provider } from '../providers/mock-oauth2.provider';
 import { OAuth2Provider } from '../oauth2.types';
+import { CertificatePinningService } from '../../../../common/security/certificate-pinning.service';
 
 describe('OAuth2 Integration (issue #1120)', () => {
   jest.setTimeout(30000);
@@ -186,6 +187,13 @@ describe('OAuth2 Integration (issue #1120)', () => {
         {
           provide: JwtService,
           useValue: { sign: jest.fn() },
+        },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
         },
       ],
     }).compile();

@@ -33,23 +33,23 @@ stellar keys fund testnet-deployer --network testnet
 
 ## `deploy-testnet.sh`
 
-| Flag | Description |
-|------|-------------|
-| `--skip-build` | Use existing `target/wasm32v1-none/release/*.wasm` |
-| `--skip-fund` | Skip Friendbot funding |
-| `--deploy-only` | Deploy only; skip `initialize` calls |
-| `--init-only` | Initialize from existing `.env.testnet` |
+| Flag            | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `--skip-build`  | Use existing `target/wasm32v1-none/release/*.wasm` |
+| `--skip-fund`   | Skip Friendbot funding                             |
+| `--deploy-only` | Deploy only; skip `initialize` calls               |
+| `--init-only`   | Initialize from existing `.env.testnet`            |
 
 **Environment variables**
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEPLOYER_KEY` | `testnet-deployer` | CLI identity that signs txs |
-| `NETWORK` | `testnet` | Network name in CLI config |
-| `PLATFORM_FEE_BPS` | `500` | Chioma `fee_bps` (5%) |
-| `MIN_DISPUTE_VOTES` | `3` | Dispute resolution quorum |
-| `WASM_DIR` | `target/wasm32v1-none/release` | Built WASM location |
-| `ENV_FILE` | `.env.testnet` | Output contract IDs |
+| Variable            | Default                        | Description                 |
+| ------------------- | ------------------------------ | --------------------------- |
+| `DEPLOYER_KEY`      | `testnet-deployer`             | CLI identity that signs txs |
+| `NETWORK`           | `testnet`                      | Network name in CLI config  |
+| `PLATFORM_FEE_BPS`  | `500`                          | Chioma `fee_bps` (5%)       |
+| `MIN_DISPUTE_VOTES` | `3`                            | Dispute resolution quorum   |
+| `WASM_DIR`          | `target/wasm32v1-none/release` | Built WASM location         |
+| `ENV_FILE`          | `.env.testnet`                 | Output contract IDs         |
 
 **Deploy order:** `user_profile` → `property_registry` → `agent_registry` → `rent_obligation` → `escrow` → `payment` → `dispute_resolution` → `chioma`
 

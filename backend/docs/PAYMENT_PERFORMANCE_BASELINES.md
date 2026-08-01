@@ -14,13 +14,13 @@ pnpm test -- payment.performance.spec.ts
 
 ## Baselines
 
-| Scenario | Metric | Baseline (soft ceiling) |
-| --- | --- | --- |
-| 100 sequential `recordPayment` | wall time | ≤ 5 000 ms |
-| 1000 concurrent unique-key `recordPayment` | wall time | ≤ 15 000 ms |
-| 1000 concurrent unique-key `recordPayment` | avg per call | ≤ 15 ms |
-| 1000 concurrent shared-key `recordPayment` | persisted rows | 1 (idempotent) |
-| `listPayments` query-builder path | wall time | ≤ 200 ms |
+| Scenario                                   | Metric         | Baseline (soft ceiling) |
+| ------------------------------------------ | -------------- | ----------------------- |
+| 100 sequential `recordPayment`             | wall time      | ≤ 5 000 ms              |
+| 1000 concurrent unique-key `recordPayment` | wall time      | ≤ 15 000 ms             |
+| 1000 concurrent unique-key `recordPayment` | avg per call   | ≤ 15 ms                 |
+| 1000 concurrent shared-key `recordPayment` | persisted rows | 1 (idempotent)          |
+| `listPayments` query-builder path          | wall time      | ≤ 200 ms                |
 
 ## Notes
 

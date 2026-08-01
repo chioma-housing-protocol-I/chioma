@@ -6,7 +6,7 @@ import { Document } from './document.entity';
 
 describe('DocumentService', () => {
   let service: DocumentService;
-  let repo: Repository<Document>;
+  let _repo: Repository<Document>;
 
   const mockDoc: Document = {
     id: 'doc-1',
@@ -55,7 +55,7 @@ describe('DocumentService', () => {
     }).compile();
 
     service = module.get<DocumentService>(DocumentService);
-    repo = module.get<Repository<Document>>(getRepositoryToken(Document));
+    _repo = module.get<Repository<Document>>(getRepositoryToken(Document));
   });
 
   it('should be defined', () => {

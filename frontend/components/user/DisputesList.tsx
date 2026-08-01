@@ -13,7 +13,7 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import Link from 'next/link';
-import { Search, Filter, Loader2, Eye, Flag } from 'lucide-react';
+import { Search, Filter, Loader2, Eye, Flag, Shield } from 'lucide-react';
 import { DisputeStatus } from '@/lib/dashboard-data';
 import {
   useTenantDisputes,
@@ -23,6 +23,7 @@ import { useUploadTenantDisputeEvidence } from '@/lib/query/hooks/use-tenant-dis
 import { formatDistanceToNow } from 'date-fns';
 import { useModal } from '@/contexts/ModalContext';
 import type { EvidenceUploadData } from '@/components/modals/EvidenceUploadModal';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const statusBadge: Record<DisputeStatus, string> = {
   OPEN: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -285,14 +286,13 @@ export function DisputesList({ className = '' }: DisputesListProps) {
             <span className="text-blue-200/50">Loading your disputes...</span>
           </div>
         ) : disputes.length === 0 ? (
-          <div className="p-16 text-center">
-            <Flag className="w-12 h-12 text-blue-300/20 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-white mb-1">
-              No disputes yet
-            </h3>
-            <p className="text-blue-200/40 text-sm">
-              All your rental agreements are running smoothly.
-            </p>
+          <div className="p-8">
+            <EmptyState
+              icon={Shield}
+              title="No disputes yet"
+              description="All your rental agreements are running smoothly."
+              variant="dark"
+            />
           </div>
         ) : (
           <>

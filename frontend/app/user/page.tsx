@@ -14,6 +14,7 @@ import {
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
+import { WalletEmailBanner } from '@/components/user/WalletEmailBanner';
 import { useAuth } from '@/store/authStore';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
@@ -89,7 +90,7 @@ const dashboardDisputes = [
 ];
 
 export default function UserDashboardOverview() {
-  useRoleRedirect(['user', 'admin']);
+  useRoleRedirect(['user', 'agent', 'admin']);
 
   const { openModal } = useModal();
   const router = useRouter();
@@ -222,6 +223,7 @@ export default function UserDashboardOverview() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
+      <WalletEmailBanner />
       <TenantOnboardingBanner />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">

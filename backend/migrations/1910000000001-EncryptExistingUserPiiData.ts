@@ -23,44 +23,50 @@ export class EncryptExistingUserPiiData1910000000001 implements MigrationInterfa
           const emailBuffer = Buffer.from(encryptedEmail);
           await queryRunner.query(
             `UPDATE users SET email_encrypted = $1 WHERE id = $2`,
-            [emailBuffer, user.id]
+            [emailBuffer, user.id],
           );
         }
 
         // Encrypt first name
         if (user.first_name && !user.first_name_encrypted) {
-          const encryptedFirstName = await encryptionService.encrypt(user.first_name);
+          const encryptedFirstName = await encryptionService.encrypt(
+            user.first_name,
+          );
           const firstNameBuffer = Buffer.from(encryptedFirstName);
           await queryRunner.query(
             `UPDATE users SET first_name_encrypted = $1 WHERE id = $2`,
-            [firstNameBuffer, user.id]
+            [firstNameBuffer, user.id],
           );
         }
 
         // Encrypt last name
         if (user.last_name && !user.last_name_encrypted) {
-          const encryptedLastName = await encryptionService.encrypt(user.last_name);
+          const encryptedLastName = await encryptionService.encrypt(
+            user.last_name,
+          );
           const lastNameBuffer = Buffer.from(encryptedLastName);
           await queryRunner.query(
             `UPDATE users SET last_name_encrypted = $1 WHERE id = $2`,
-            [lastNameBuffer, user.id]
+            [lastNameBuffer, user.id],
           );
         }
 
         // Encrypt phone number
         if (user.phone_number && !user.phone_number_encrypted) {
-          const encryptedPhone = await encryptionService.encrypt(user.phone_number);
+          const encryptedPhone = await encryptionService.encrypt(
+            user.phone_number,
+          );
           const phoneBuffer = Buffer.from(encryptedPhone);
           await queryRunner.query(
             `UPDATE users SET phone_number_encrypted = $1 WHERE id = $2`,
-            [phoneBuffer, user.id]
+            [phoneBuffer, user.id],
           );
         }
 
         // Update encryption key version
         await queryRunner.query(
           `UPDATE users SET encryption_key_version = 1 WHERE id = $1`,
-          [user.id]
+          [user.id],
         );
       } catch (error) {
         console.error(`Failed to encrypt PII for user ${user.id}:`, error);

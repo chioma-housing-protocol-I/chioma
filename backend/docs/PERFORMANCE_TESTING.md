@@ -53,11 +53,13 @@ node scripts/load-test.mjs local --report-format=html
 Simple autocannon-based benchmark for critical endpoints.
 
 **Usage:**
+
 ```bash
 node scripts/performance-benchmark.mjs [BASE_URL]
 ```
 
 **Features:**
+
 - Tests health endpoints, API docs, security.txt
 - Configurable thresholds
 - Exit codes for CI/CD integration
@@ -67,15 +69,18 @@ node scripts/performance-benchmark.mjs [BASE_URL]
 Advanced benchmarking with detailed metrics and reporting.
 
 **Usage:**
+
 ```bash
 node scripts/performance-benchmark-enhanced.mjs [BASE_URL] [OPTIONS]
 ```
 
 **Options:**
+
 - `--report-format=FORMAT`: console, json, html, csv
 - Environment variables for configuration
 
 **Features:**
+
 - Multiple test scenarios
 - Detailed performance metrics (P50, P90, P95, P99)
 - System information collection
@@ -88,16 +93,19 @@ node scripts/performance-benchmark-enhanced.mjs [BASE_URL] [OPTIONS]
 Comprehensive load testing with configurable scenarios.
 
 **Usage:**
+
 ```bash
 node scripts/load-test.mjs [environment] [options]
 ```
 
 **Environments:**
+
 - `local`: http://localhost:5000
 - `staging`: https://staging-api.chioma.com
 - `production`: https://api.chioma.com
 
 **Options:**
+
 - `--scenario=NAME`: Run specific scenario
 - `--report-format=FORMAT`: Output format
 - `--duration=SECONDS`: Override test duration
@@ -108,11 +116,13 @@ node scripts/load-test.mjs [environment] [options]
 Jest-based E2E performance tests with detailed assertions.
 
 **Usage:**
+
 ```bash
 pnpm run test:e2e -- --testPathPattern=performance-comprehensive
 ```
 
 **Features:**
+
 - Memory usage monitoring
 - Database performance testing
 - Rate limiting performance
@@ -154,42 +164,50 @@ Available endpoints:
 ## Performance Thresholds
 
 ### Critical Endpoints
+
 - `/health`: P99 ≤ 100ms, RPS ≥ 500
 - `/health/detailed`: P99 ≤ 200ms, RPS ≥ 200
 - `/security.txt`: P99 ≤ 50ms, RPS ≥ 1000
 
 ### Important Endpoints
+
 - `/api/docs-json`: P99 ≤ 500ms, RPS ≥ 100
 - `/api/auth/login`: P99 ≤ 1000ms, RPS ≥ 50
 - `/api/properties`: P99 ≤ 1500ms, RPS ≥ 30
 
 ### Standard Endpoints
+
 - `/api/users/profile`: P99 ≤ 2000ms, RPS ≥ 20
 - `/api/payments`: P99 ≤ 3000ms, RPS ≥ 10
 
 ## Load Testing Scenarios
 
 ### 1. Health Check Burst
+
 - **Purpose**: Test system resilience under high-frequency health checks
 - **Configuration**: 50 connections, 5 seconds
 - **Expected**: P99 ≤ 100ms, RPS ≥ 500
 
 ### 2. Authentication Load
+
 - **Purpose**: Test authentication system under load
 - **Configuration**: 10 connections, 8 seconds
 - **Expected**: P99 ≤ 1000ms, RPS ≥ 20
 
 ### 3. Property Listing Performance
+
 - **Purpose**: Test property listing retrieval performance
 - **Configuration**: 15 connections, 10 seconds
 - **Expected**: P99 ≤ 1500ms, RPS ≥ 30
 
 ### 4. Property Search Performance
+
 - **Purpose**: Test search functionality with filters
 - **Configuration**: 12 connections, 8 seconds
 - **Expected**: P99 ≤ 2000ms, RPS ≥ 25
 
 ### 5. Payment Processing Simulation
+
 - **Purpose**: Test payment-related endpoints
 - **Configuration**: 8 connections, 10 seconds
 - **Expected**: P99 ≤ 3000ms, RPS ≥ 15
@@ -199,6 +217,7 @@ Available endpoints:
 Use performance tracking decorators in your code:
 
 ### @PerformanceTrack
+
 ```typescript
 import { PerformanceTrack } from '../monitoring/performance.middleware';
 
@@ -212,6 +231,7 @@ export class PropertyService {
 ```
 
 ### @DatabasePerformanceTrack
+
 ```typescript
 import { DatabasePerformanceTrack } from '../monitoring/performance.middleware';
 
@@ -225,6 +245,7 @@ export class PropertyRepository {
 ```
 
 ### @BlockchainPerformanceTrack
+
 ```typescript
 import { BlockchainPerformanceTrack } from '../monitoring/performance.middleware';
 
@@ -253,33 +274,33 @@ on:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'pnpm'
-    
-    - name: Install dependencies
-      run: pnpm install
-    
-    - name: Start application
-      run: |
-        pnpm run build
-        pnpm run start:prod &
-        sleep 30
-    
-    - name: Run performance tests
-      run: pnpm run perf:ci
-    
-    - name: Upload performance report
-      uses: actions/upload-artifact@v3
-      with:
-        name: performance-report
-        path: performance-report-*.json
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Start application
+        run: |
+          pnpm run build
+          pnpm run start:prod &
+          sleep 30
+
+      - name: Run performance tests
+        run: pnpm run perf:ci
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: performance-report-*.json
 ```
 
 ### Performance Gates
@@ -322,26 +343,31 @@ private readonly performanceThresholds: PerformanceThreshold[] = [
 ## Best Practices
 
 ### 1. Regular Performance Testing
+
 - Run performance tests on every deployment
 - Include performance tests in your CI/CD pipeline
 - Monitor performance trends over time
 
 ### 2. Performance Budgets
+
 - Set and maintain performance budgets for critical endpoints
 - Use performance gates to prevent regressions
 - Review and update thresholds regularly
 
 ### 3. Load Testing Strategy
+
 - Test with realistic load patterns
 - Include burst, sustained, and ramp-up scenarios
 - Test both happy path and error scenarios
 
 ### 4. Monitoring and Observability
+
 - Monitor key performance metrics continuously
 - Set up alerts for performance degradation
 - Use distributed tracing for complex operations
 
 ### 5. Performance Optimization
+
 - Profile slow endpoints regularly
 - Optimize database queries
 - Implement caching strategies
@@ -374,26 +400,30 @@ private readonly performanceThresholds: PerformanceThreshold[] = [
 ### Performance Debugging
 
 1. **Enable Verbose Logging**
+
    ```bash
    node scripts/load-test.mjs local --verbose
    ```
 
 2. **Check Performance Dashboard**
+
    ```bash
    curl -H "Authorization: Bearer $TOKEN" \
         http://localhost:5000/api/performance/dashboard
    ```
 
 3. **Generate Detailed Report**
+
    ```bash
    BENCHMARK_REPORT_FORMAT=html pnpm run perf:enhanced
    ```
 
 4. **Monitor System Resources**
+
    ```bash
    # Check memory usage
    curl http://localhost:5000/api/performance/system
-   
+
    # Check endpoint statistics
    curl http://localhost:5000/api/performance/endpoints
    ```

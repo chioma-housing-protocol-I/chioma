@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 
 describe('SecurityHeadersMiddleware', () => {
   let middleware: SecurityHeadersMiddleware;
-  let configService: ConfigService;
+  let _configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,7 +28,7 @@ describe('SecurityHeadersMiddleware', () => {
     middleware = module.get<SecurityHeadersMiddleware>(
       SecurityHeadersMiddleware,
     );
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

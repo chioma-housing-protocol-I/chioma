@@ -27,6 +27,7 @@ import { RateLimitInterceptor } from './common/interceptors/rate-limit.intercept
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './common/services/logger.service';
 import { registerGracefulShutdown } from './config/graceful-shutdown';
+import { OpenApiDocumentRegistryService } from './common/validation/openapi-document-registry.service';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -200,6 +201,11 @@ async function bootstrap() {
     operationIdFactory: (controllerKey: string, methodKey: string) =>
       `${controllerKey}_${methodKey}`,
   });
+
+  // Make the generated schema available to ResponseSchemaValidationInterceptor
+  // so handlers annotated with @ValidateResponseSchema can be checked against
+  // it at runtime (see common/interceptors/response-schema-validation.interceptor.ts).
+  app.get(OpenApiDocumentRegistryService).setDocument(document);
 
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {

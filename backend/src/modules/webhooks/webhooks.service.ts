@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository, In } from 'typeorm';
 import axios from 'axios';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { WebhookEndpoint } from './entities/webhook-endpoint.entity';
 import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookEvent } from './webhook-event';
@@ -31,6 +32,7 @@ export class WebhooksService {
     private readonly deliveryRepository: Repository<WebhookDelivery>,
     private readonly configService: ConfigService,
     private readonly webhookSignatureService: WebhookSignatureService,
+    private readonly certificatePinningService: CertificatePinningService,
   ) {}
 
   async dispatchEvent(
@@ -84,6 +86,9 @@ export class WebhooksService {
           secret,
         ),
         timeout: 10000,
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          endpoint.url,
+        ),
       });
 
       delivery.successful = true;

@@ -22,6 +22,7 @@ import { IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
 import { REDIS_CLIENT } from '../../common/lock/redis-client.token';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
+import { PAYMENT_LIST_DEFAULT_LIMIT } from './dto/payment-filters.dto';
 
 /** Soft ceiling used as a regression guard (ms). Documented in baselines. */
 export const PAYMENT_BENCHMARK_BASELINES = {
@@ -184,6 +185,8 @@ describe('PaymentService performance benchmarks', () => {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([]),
     };
     paymentRepository.createQueryBuilder.mockReturnValue(qb);
@@ -195,6 +198,10 @@ describe('PaymentService performance benchmarks', () => {
     expect(elapsed).toBeLessThan(PAYMENT_BENCHMARK_BASELINES.listPaymentsMs);
     expect(paymentRepository.createQueryBuilder).toHaveBeenCalled();
     expect(qb.getMany).toHaveBeenCalled();
+    // Unfiltered listing must still be bounded rather than selecting the
+    // caller's entire payment history.
+    expect(qb.take).toHaveBeenCalledWith(PAYMENT_LIST_DEFAULT_LIMIT);
+    expect(qb.skip).toHaveBeenCalledWith(0);
   });
 
   it('dedupes 1000 concurrent calls that share one idempotency key', async () => {

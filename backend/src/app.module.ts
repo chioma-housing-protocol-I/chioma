@@ -74,6 +74,8 @@ import { DeprecationInterceptor } from './common/interceptors/deprecation.interc
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
+import { CertificatePinningModule } from './common/security/certificate-pinning.module';
+import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 
 const appLogger = new Logger('AppModule');
 
@@ -89,6 +91,8 @@ const appLogger = new Logger('AppModule');
     LockModule,
     IdempotencyModule,
     ResilienceModule,
+    CertificatePinningModule,
+    OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
     process.env.NODE_ENV === 'test'
       ? CacheModule.register({

@@ -14,7 +14,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
   let moduleRef: TestingModule;
   let rateLimitService: RateLimitService;
   let abuseDetectionService: AbuseDetectionService;
-  let dataSource: DataSource;
+  let _dataSource: DataSource;
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -43,7 +43,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
     abuseDetectionService = moduleRef.get<AbuseDetectionService>(
       AbuseDetectionService,
     );
-    dataSource = moduleRef.get<DataSource>(DataSource);
+    _dataSource = moduleRef.get<DataSource>(DataSource);
   });
 
   afterAll(async () => {

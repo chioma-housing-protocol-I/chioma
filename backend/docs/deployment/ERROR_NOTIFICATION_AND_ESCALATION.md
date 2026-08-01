@@ -35,16 +35,16 @@ ErrorNotificationService.notifyHealthDegradation()
 
 Set these environment variables (see `.env.example`):
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ERROR_NOTIFICATION_ENABLED` | Enable outbound notifications | `false` |
-| `ALERT_ONCALL_EMAIL` | Primary on-call recipient(s), comma-separated | — |
-| `ALERT_ESCALATION_EMAIL` | Tier-2 escalation recipient(s) | falls back to on-call |
-| `ALERT_MANAGEMENT_EMAIL` | Tier-3 management recipient(s) | optional |
-| `SLACK_ALERT_WEBHOOK_URL` | Slack incoming webhook for alerts | optional |
-| `ALERT_ESCALATION_MINUTES` | Minutes before tier-2 escalation | `15` |
-| `ALERT_ESCALATION_TIER2_MINUTES` | Minutes before tier-3 escalation | `30` |
-| `ALERT_WEBHOOK_SECRET` | HMAC secret for Alertmanager webhook | required in prod |
+| Variable                         | Description                                   | Default               |
+| -------------------------------- | --------------------------------------------- | --------------------- |
+| `ERROR_NOTIFICATION_ENABLED`     | Enable outbound notifications                 | `false`               |
+| `ALERT_ONCALL_EMAIL`             | Primary on-call recipient(s), comma-separated | —                     |
+| `ALERT_ESCALATION_EMAIL`         | Tier-2 escalation recipient(s)                | falls back to on-call |
+| `ALERT_MANAGEMENT_EMAIL`         | Tier-3 management recipient(s)                | optional              |
+| `SLACK_ALERT_WEBHOOK_URL`        | Slack incoming webhook for alerts             | optional              |
+| `ALERT_ESCALATION_MINUTES`       | Minutes before tier-2 escalation              | `15`                  |
+| `ALERT_ESCALATION_TIER2_MINUTES` | Minutes before tier-3 escalation              | `30`                  |
+| `ALERT_WEBHOOK_SECRET`           | HMAC secret for Alertmanager webhook          | required in prod      |
 
 Enable in staging/production:
 
@@ -58,11 +58,11 @@ ALERT_WEBHOOK_SECRET=<strong-random-secret>
 
 ## Escalation tiers
 
-| Tier | When | Recipients | Channels |
-|------|------|------------|----------|
-| 1 — On-call | Alert fires (critical/high/warning) | `ALERT_ONCALL_EMAIL` | Email; Slack for critical/high |
-| 2 — Team | Unresolved after `ALERT_ESCALATION_MINUTES` | `ALERT_ESCALATION_EMAIL` | Email + Slack |
-| 3 — Management | Unresolved after `ALERT_ESCALATION_TIER2_MINUTES` | `ALERT_MANAGEMENT_EMAIL` | Email + Slack |
+| Tier           | When                                              | Recipients               | Channels                       |
+| -------------- | ------------------------------------------------- | ------------------------ | ------------------------------ |
+| 1 — On-call    | Alert fires (critical/high/warning)               | `ALERT_ONCALL_EMAIL`     | Email; Slack for critical/high |
+| 2 — Team       | Unresolved after `ALERT_ESCALATION_MINUTES`       | `ALERT_ESCALATION_EMAIL` | Email + Slack                  |
+| 3 — Management | Unresolved after `ALERT_ESCALATION_TIER2_MINUTES` | `ALERT_MANAGEMENT_EMAIL` | Email + Slack                  |
 
 Resolved alerts clear tracking state and send a resolution notice to on-call recipients.
 

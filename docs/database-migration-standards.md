@@ -25,6 +25,7 @@ Standards, procedures, and best practices for creating, testing, deploying, and 
 Database migrations are versioned, incremental scripts that evolve the database schema in a controlled and repeatable way. They are the single source of truth for schema state.
 
 **Why migrations matter:**
+
 - Reproducible schema across all environments (local, staging, production)
 - Tracked history of every structural change
 - Safe, reversible updates via rollback
@@ -109,13 +110,13 @@ Examples:
 
 **Rules:**
 
-| Rule | Example |
-|---|---|
-| Use PascalCase for TypeScript migration class names | `AddPropertyAmenities` |
-| Use present-tense verb + entity + detail | `AddPropertyAmenities`, `RemoveUserLegacyField` |
-| Never use vague names | `UpdateSchema`, `FixBug` ❌ |
-| Never reuse a timestamp | Each migration must have a unique timestamp |
-| Prefix with sequence for raw SQL files | `001_`, `002_` |
+| Rule                                                | Example                                         |
+| --------------------------------------------------- | ----------------------------------------------- |
+| Use PascalCase for TypeScript migration class names | `AddPropertyAmenities`                          |
+| Use present-tense verb + entity + detail            | `AddPropertyAmenities`, `RemoveUserLegacyField` |
+| Never use vague names                               | `UpdateSchema`, `FixBug` ❌                     |
+| Never reuse a timestamp                             | Each migration must have a unique timestamp     |
+| Prefix with sequence for raw SQL files              | `001_`, `002_`                                  |
 
 ### Class Naming
 
@@ -135,17 +136,17 @@ export class AddPropertyAmenities1736000000000 implements MigrationInterface {
 Every migration must implement both `up` (apply) and `down` (revert):
 
 ```typescript
-import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
 
 export class AddPropertyAmenities1736000000000 implements MigrationInterface {
-  name = 'AddPropertyAmenities1736000000000';
+  name = "AddPropertyAmenities1736000000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.addColumn(
-      'properties',
+      "properties",
       new TableColumn({
-        name: 'amenities',
-        type: 'jsonb',
+        name: "amenities",
+        type: "jsonb",
         isNullable: true,
         default: "'[]'",
       }),
@@ -153,7 +154,7 @@ export class AddPropertyAmenities1736000000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn('properties', 'amenities');
+    await queryRunner.dropColumn("properties", "amenities");
   }
 }
 ```
@@ -164,26 +165,33 @@ When adding a `NOT NULL` column to a table with existing rows, always provide a 
 
 ```typescript
 // ✅ Safe: provides a server-side default for existing rows
-await queryRunner.addColumn('payments', new TableColumn({
-  name: 'currency',
-  type: 'varchar',
-  length: '10',
-  isNullable: false,
-  default: "'USDC'",
-}));
+await queryRunner.addColumn(
+  "payments",
+  new TableColumn({
+    name: "currency",
+    type: "varchar",
+    length: "10",
+    isNullable: false,
+    default: "'USDC'",
+  }),
+);
 ```
 
 Then, in a follow-up migration after the backfill is confirmed:
 
 ```typescript
 // Optional: remove the default once all rows are populated
-await queryRunner.changeColumn('payments', 'currency', new TableColumn({
-  name: 'currency',
-  type: 'varchar',
-  length: '10',
-  isNullable: false,
-  // No default — now enforced at application level
-}));
+await queryRunner.changeColumn(
+  "payments",
+  "currency",
+  new TableColumn({
+    name: "currency",
+    type: "varchar",
+    length: "10",
+    isNullable: false,
+    // No default — now enforced at application level
+  }),
+);
 ```
 
 ### 4.3 Renaming a Column (Zero-Downtime)
@@ -193,11 +201,14 @@ Never rename a column in a single step on a live table. Use the expand/contract 
 **Step 1 — Expand:** Add the new column alongside the old one.
 
 ```typescript
-await queryRunner.addColumn('users', new TableColumn({
-  name: 'phone_number',   // new name
-  type: 'varchar',
-  isNullable: true,
-}));
+await queryRunner.addColumn(
+  "users",
+  new TableColumn({
+    name: "phone_number", // new name
+    type: "varchar",
+    isNullable: true,
+  }),
+);
 ```
 
 **Step 2 — Backfill:** Copy data from old column to new.
@@ -213,7 +224,7 @@ await queryRunner.query(`
 **Step 4 — Contract:** Drop the old column once traffic no longer touches it.
 
 ```typescript
-await queryRunner.dropColumn('users', 'phone');
+await queryRunner.dropColumn("users", "phone");
 ```
 
 ### 4.4 Adding an Index
@@ -260,7 +271,10 @@ export class BackfillPropertySlugs1736000001000 implements MigrationInterface {
       if (rows.length === 0) break;
 
       for (const row of rows) {
-        const slug = row.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const slug = row.title
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "");
         await queryRunner.query(
           `UPDATE properties SET slug = $1 WHERE id = $2`,
           [slug, row.id],
@@ -308,15 +322,15 @@ Write an integration test that exercises the migrated schema:
 
 ```typescript
 // backend/test/migrations/add-property-amenities.spec.ts
-describe('AddPropertyAmenities migration', () => {
-  it('should add amenities column to properties table', async () => {
+describe("AddPropertyAmenities migration", () => {
+  it("should add amenities column to properties table", async () => {
     const result = await dataSource.query(`
       SELECT column_name, data_type
       FROM information_schema.columns
       WHERE table_name = 'properties' AND column_name = 'amenities'
     `);
     expect(result).toHaveLength(1);
-    expect(result[0].data_type).toBe('jsonb');
+    expect(result[0].data_type).toBe("jsonb");
   });
 });
 ```
@@ -438,11 +452,11 @@ curl https://api.chioma.app/health/detailed
 
 The safest approach for any breaking schema change:
 
-| Phase | Action | Risk |
-|---|---|---|
-| Expand | Add new column/table alongside old | None |
-| Migrate | Copy data; update app to write to both | Low |
-| Contract | Remove old column/table | Low (old code gone) |
+| Phase    | Action                                 | Risk                |
+| -------- | -------------------------------------- | ------------------- |
+| Expand   | Add new column/table alongside old     | None                |
+| Migrate  | Copy data; update app to write to both | Low                 |
+| Contract | Remove old column/table                | Low (old code gone) |
 
 ### 8.2 Non-Breaking Changes (Safe to Deploy Anytime)
 
@@ -531,23 +545,23 @@ if (!table.findColumnByName('amenities')) {
 
 ```typescript
 export class AddStellarMemoToPayments1736100000000 implements MigrationInterface {
-  name = 'AddStellarMemoToPayments1736100000000';
+  name = "AddStellarMemoToPayments1736100000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.addColumn(
-      'payments',
+      "payments",
       new TableColumn({
-        name: 'stellar_memo',
-        type: 'varchar',
-        length: '28',
+        name: "stellar_memo",
+        type: "varchar",
+        length: "28",
         isNullable: true,
-        comment: 'Stellar transaction memo for payment matching',
+        comment: "Stellar transaction memo for payment matching",
       }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn('payments', 'stellar_memo');
+    await queryRunner.dropColumn("payments", "stellar_memo");
   }
 }
 ```
@@ -556,28 +570,36 @@ export class AddStellarMemoToPayments1736100000000 implements MigrationInterface
 
 ```typescript
 export class AddAgentToProperties1736200000000 implements MigrationInterface {
-  name = 'AddAgentToProperties1736200000000';
+  name = "AddAgentToProperties1736200000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.addColumn('properties', new TableColumn({
-      name: 'agent_id',
-      type: 'uuid',
-      isNullable: true,
-    }));
+    await queryRunner.addColumn(
+      "properties",
+      new TableColumn({
+        name: "agent_id",
+        type: "uuid",
+        isNullable: true,
+      }),
+    );
 
-    await queryRunner.createForeignKey('properties', new TableForeignKey({
-      columnNames: ['agent_id'],
-      referencedTableName: 'users',
-      referencedColumnNames: ['id'],
-      onDelete: 'SET NULL',
-    }));
+    await queryRunner.createForeignKey(
+      "properties",
+      new TableForeignKey({
+        columnNames: ["agent_id"],
+        referencedTableName: "users",
+        referencedColumnNames: ["id"],
+        onDelete: "SET NULL",
+      }),
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    const table = await queryRunner.getTable('properties');
-    const fk = table.foreignKeys.find(fk => fk.columnNames.includes('agent_id'));
-    if (fk) await queryRunner.dropForeignKey('properties', fk);
-    await queryRunner.dropColumn('properties', 'agent_id');
+    const table = await queryRunner.getTable("properties");
+    const fk = table.foreignKeys.find((fk) =>
+      fk.columnNames.includes("agent_id"),
+    );
+    if (fk) await queryRunner.dropForeignKey("properties", fk);
+    await queryRunner.dropColumn("properties", "agent_id");
   }
 }
 ```
@@ -586,25 +608,41 @@ export class AddAgentToProperties1736200000000 implements MigrationInterface {
 
 ```typescript
 export class CreateMaintenanceRequests1736300000000 implements MigrationInterface {
-  name = 'CreateMaintenanceRequests1736300000000';
+  name = "CreateMaintenanceRequests1736300000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.createTable(new Table({
-      name: 'maintenance_requests',
-      columns: [
-        { name: 'id', type: 'uuid', isPrimary: true, default: 'uuid_generate_v4()' },
-        { name: 'property_id', type: 'uuid', isNullable: false },
-        { name: 'tenant_id', type: 'uuid', isNullable: false },
-        { name: 'description', type: 'text', isNullable: false },
-        { name: 'status', type: 'varchar', length: '20', default: "'open'" },
-        { name: 'created_at', type: 'timestamp with time zone', default: 'CURRENT_TIMESTAMP' },
-        { name: 'updated_at', type: 'timestamp with time zone', default: 'CURRENT_TIMESTAMP' },
-      ],
-    }), true);
+    await queryRunner.createTable(
+      new Table({
+        name: "maintenance_requests",
+        columns: [
+          {
+            name: "id",
+            type: "uuid",
+            isPrimary: true,
+            default: "uuid_generate_v4()",
+          },
+          { name: "property_id", type: "uuid", isNullable: false },
+          { name: "tenant_id", type: "uuid", isNullable: false },
+          { name: "description", type: "text", isNullable: false },
+          { name: "status", type: "varchar", length: "20", default: "'open'" },
+          {
+            name: "created_at",
+            type: "timestamp with time zone",
+            default: "CURRENT_TIMESTAMP",
+          },
+          {
+            name: "updated_at",
+            type: "timestamp with time zone",
+            default: "CURRENT_TIMESTAMP",
+          },
+        ],
+      }),
+      true,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('maintenance_requests', true);
+    await queryRunner.dropTable("maintenance_requests", true);
   }
 }
 ```

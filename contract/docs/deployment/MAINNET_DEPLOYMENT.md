@@ -60,17 +60,17 @@ mainnet flow share the same build, deploy order, and initialization calls. Only
 the environment and the key-handling change. Every value that differs is
 captured in [`.env.mainnet.example`](../../.env.mainnet.example).
 
-| Setting | Testnet | Mainnet (pubnet) |
-| --- | --- | --- |
-| Network name (CLI config) | `testnet` | `mainnet` |
-| Network passphrase | `Test SDF Network ; September 2015` | `Public Global Stellar Network ; September 2015` |
-| RPC URL | `https://soroban-testnet.stellar.org:443` | A production RPC you control or trust (self-hosted, or a provider such as Blockdaemon / Validation Cloud / QuickNode). **There is no free "Friendbot" RPC for mainnet.** |
-| Account funding | Friendbot (free) | Fund the deployer with **real XLM** — Friendbot does **not** exist on mainnet. Run the deploy with `--skip-fund`. |
-| Deployer key | Locally generated CLI identity | Hardware-backed / offline signer, ideally handed off to a multisig immediately after init |
-| Admin address | Deployer public key | **Multisig** (see [Key custody and admin model](#key-custody-and-admin-model)) |
-| `ENV_FILE` | `.env.testnet` | `.env.mainnet` (populated from `.env.mainnet.example`) |
-| Contract aliases | `chioma_testnet_*` | `chioma_mainnet_*` |
-| `PLATFORM_FEE_BPS` / `MIN_DISPUTE_VOTES` | dev defaults (`500` / `3`) | production-reviewed values, sign-off required |
+| Setting                                  | Testnet                                   | Mainnet (pubnet)                                                                                                                                                         |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Network name (CLI config)                | `testnet`                                 | `mainnet`                                                                                                                                                                |
+| Network passphrase                       | `Test SDF Network ; September 2015`       | `Public Global Stellar Network ; September 2015`                                                                                                                         |
+| RPC URL                                  | `https://soroban-testnet.stellar.org:443` | A production RPC you control or trust (self-hosted, or a provider such as Blockdaemon / Validation Cloud / QuickNode). **There is no free "Friendbot" RPC for mainnet.** |
+| Account funding                          | Friendbot (free)                          | Fund the deployer with **real XLM** — Friendbot does **not** exist on mainnet. Run the deploy with `--skip-fund`.                                                        |
+| Deployer key                             | Locally generated CLI identity            | Hardware-backed / offline signer, ideally handed off to a multisig immediately after init                                                                                |
+| Admin address                            | Deployer public key                       | **Multisig** (see [Key custody and admin model](#key-custody-and-admin-model))                                                                                           |
+| `ENV_FILE`                               | `.env.testnet`                            | `.env.mainnet` (populated from `.env.mainnet.example`)                                                                                                                   |
+| Contract aliases                         | `chioma_testnet_*`                        | `chioma_mainnet_*`                                                                                                                                                       |
+| `PLATFORM_FEE_BPS` / `MIN_DISPUTE_VOTES` | dev defaults (`500` / `3`)                | production-reviewed values, sign-off required                                                                                                                            |
 
 ---
 
@@ -207,16 +207,16 @@ stellar contract deploy \
 
 Initializers (admin = your multisig where the call takes an admin):
 
-| Contract | Initialization call |
-| --- | --- |
-| `user_profile` | `initialize --admin <MULTISIG>` |
-| `property_registry` | `initialize --admin <MULTISIG>` |
-| `agent_registry` | `initialize --admin <MULTISIG>` |
-| `rent_obligation` | `initialize` |
-| `escrow` | `initialize_admin --admin <MULTISIG>` |
-| `payment` | `set_platform_fee_collector --collector <FEE_COLLECTOR>` |
-| `chioma` | `initialize --admin <MULTISIG> --config '{"fee_bps": 500, "fee_collector": "<FEE_COLLECTOR>", "paused": false}'` |
-| `dispute_resolution` | `initialize --admin <MULTISIG> --min_votes_required 3 --chioma_contract <CHIOMA_CONTRACT_ID>` |
+| Contract             | Initialization call                                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `user_profile`       | `initialize --admin <MULTISIG>`                                                                                  |
+| `property_registry`  | `initialize --admin <MULTISIG>`                                                                                  |
+| `agent_registry`     | `initialize --admin <MULTISIG>`                                                                                  |
+| `rent_obligation`    | `initialize`                                                                                                     |
+| `escrow`             | `initialize_admin --admin <MULTISIG>`                                                                            |
+| `payment`            | `set_platform_fee_collector --collector <FEE_COLLECTOR>`                                                         |
+| `chioma`             | `initialize --admin <MULTISIG> --config '{"fee_bps": 500, "fee_collector": "<FEE_COLLECTOR>", "paused": false}'` |
+| `dispute_resolution` | `initialize --admin <MULTISIG> --min_votes_required 3 --chioma_contract <CHIOMA_CONTRACT_ID>`                    |
 
 Example invoke:
 

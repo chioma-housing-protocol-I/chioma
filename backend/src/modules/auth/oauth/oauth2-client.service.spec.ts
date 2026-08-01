@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as nock from 'nock';
 import { OAuth2ClientService } from './oauth2-client.service';
 import { OAuth2Provider } from './oauth2.types';
+import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 
 describe('OAuth2ClientService', () => {
   let service: OAuth2ClientService;
@@ -26,6 +27,13 @@ describe('OAuth2ClientService', () => {
       providers: [
         OAuth2ClientService,
         { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
+        },
       ],
     }).compile();
 

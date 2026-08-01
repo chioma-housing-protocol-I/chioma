@@ -29,15 +29,15 @@ The **Payment** contract handles rent payment processing for the Chioma housing 
 
 ### Key Features
 
-| Feature | Description |
-|---|---|
-| **Rent Payment Processing** | 90/10 split between landlord and platform |
-| **Recurring Payments** | Automated payment schedules with multiple frequencies |
-| **Late Fee Management** | Configurable late fees with grace periods and caps |
-| **Fee Splitting** | Automatic commission split (landlord/agent or landlord/platform) |
-| **Failed Payment Tracking** | Track and retry failed recurring payments |
-| **Rate Limiting** | Per-user and per-block rate limits to prevent abuse |
-| **Payment History** | Full audit trail of all payments and executions |
+| Feature                     | Description                                                      |
+| --------------------------- | ---------------------------------------------------------------- |
+| **Rent Payment Processing** | 90/10 split between landlord and platform                        |
+| **Recurring Payments**      | Automated payment schedules with multiple frequencies            |
+| **Late Fee Management**     | Configurable late fees with grace periods and caps               |
+| **Fee Splitting**           | Automatic commission split (landlord/agent or landlord/platform) |
+| **Failed Payment Tracking** | Track and retry failed recurring payments                        |
+| **Rate Limiting**           | Per-user and per-block rate limits to prevent abuse              |
+| **Payment History**         | Full audit trail of all payments and executions                  |
 
 ### Architecture
 
@@ -80,16 +80,17 @@ pub fn pay_rent(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `from` | `Address` | Tenant making the payment (requires auth) |
-| `agreement_id` | `String` | Rental agreement identifier |
-| `payment_amount` | `i128` | Amount to pay (must match monthly rent) |
+| Parameter        | Type      | Description                               |
+| ---------------- | --------- | ----------------------------------------- |
+| `env`            | `Env`     | Soroban environment                       |
+| `from`           | `Address` | Tenant making the payment (requires auth) |
+| `agreement_id`   | `String`  | Rental agreement identifier               |
+| `payment_amount` | `i128`    | Amount to pay (must match monthly rent)   |
 
 **Returns:** `Result<(), PaymentError>`
 
 **Errors:**
+
 - `AgreementNotFound` (13) — Agreement does not exist
 - `AgreementNotActive` (10) — Agreement is not in `Active` status
 - `NotTenant` (14) — Caller is not the tenant on this agreement
@@ -102,6 +103,7 @@ pub fn pay_rent(
 **Authorization:** Requires `from.require_auth()`
 
 **Payment Split:**
+
 - 90% → Landlord
 - 10% → Platform fee collector
 
@@ -125,9 +127,9 @@ pub fn set_platform_fee_collector(env: Env, collector: Address)
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter   | Type      | Description                    |
+| ----------- | --------- | ------------------------------ |
+| `env`       | `Env`     | Soroban environment            |
 | `collector` | `Address` | Platform fee collector address |
 
 **Authorization:** Requires `collector.require_auth()`
@@ -153,6 +155,7 @@ pub fn get_payment(env: Env, payment_id: String) -> Result<PaymentRecord, Paymen
 **Returns:** `Result<PaymentRecord, PaymentError>`
 
 **Errors:**
+
 - `PaymentNotFound` (11) — No payment with this ID
 
 #### `get_payment_count`
@@ -189,15 +192,16 @@ pub fn get_payment_split(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `agreement_id` | `String` | Agreement identifier |
-| `month` | `u32` | Month index (0-based) |
+| Parameter      | Type     | Description           |
+| -------------- | -------- | --------------------- |
+| `env`          | `Env`    | Soroban environment   |
+| `agreement_id` | `String` | Agreement identifier  |
+| `month`        | `u32`    | Month index (0-based) |
 
 **Returns:** `Result<PaymentSplit, PaymentError>`
 
 **Errors:**
+
 - `AgreementNotFound` (13) — Agreement does not exist
 - `PaymentNotFound` (11) — No payment for this month
 
@@ -223,19 +227,20 @@ pub fn create_recurring_payment(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `agreement_id` | `String` | Rental agreement identifier |
-| `amount` | `i128` | Payment amount (must match monthly rent) |
-| `frequency` | `PaymentFrequency` | Payment frequency |
-| `start_date` | `u64` | First payment date (Unix timestamp) |
-| `end_date` | `u64` | Schedule end date (Unix timestamp) |
-| `auto_renew` | `bool` | Whether to auto-renew after end date |
+| Parameter      | Type               | Description                              |
+| -------------- | ------------------ | ---------------------------------------- |
+| `env`          | `Env`              | Soroban environment                      |
+| `agreement_id` | `String`           | Rental agreement identifier              |
+| `amount`       | `i128`             | Payment amount (must match monthly rent) |
+| `frequency`    | `PaymentFrequency` | Payment frequency                        |
+| `start_date`   | `u64`              | First payment date (Unix timestamp)      |
+| `end_date`     | `u64`              | Schedule end date (Unix timestamp)       |
+| `auto_renew`   | `bool`             | Whether to auto-renew after end date     |
 
 **Returns:** `Result<String, PaymentError>` — Recurring payment ID
 
 **Errors:**
+
 - `AgreementNotFound` (13) — Agreement does not exist
 - `InvalidPaymentAmount` (17) — Amount is invalid or doesn't match rent
 - `InvalidRecurringDates` (20) — Start date >= end date
@@ -264,6 +269,7 @@ pub fn execute_recurring_payment(env: Env, recurring_id: String) -> Result<(), P
 ```
 
 **Errors:**
+
 - `RecurringPaymentNotFound` (19) — Recurring payment does not exist
 - `RecurringPaymentNotActive` (21) — Payment is not in `Active` status
 - `RecurringPaymentAlreadyCompleted` (24) — Payment schedule is complete
@@ -280,6 +286,7 @@ pub fn pause_recurring_payment(env: Env, recurring_id: String) -> Result<(), Pay
 ```
 
 **Errors:**
+
 - `RecurringPaymentNotFound` (19) — Not found
 - `RecurringPaymentNotActive` (21) — Not in `Active` status
 - `RecurringPaymentAlreadyCancelled` (23) — Already cancelled
@@ -296,6 +303,7 @@ pub fn resume_recurring_payment(env: Env, recurring_id: String) -> Result<(), Pa
 ```
 
 **Errors:**
+
 - `RecurringPaymentNotFound` (19) — Not found
 - `RecurringPaymentNotPaused` (22) — Not in `Paused` status
 
@@ -310,6 +318,7 @@ pub fn cancel_recurring_payment(env: Env, recurring_id: String) -> Result<(), Pa
 ```
 
 **Errors:**
+
 - `RecurringPaymentNotFound` (19) — Not found
 - `RecurringPaymentAlreadyCancelled` (23) — Already cancelled
 
@@ -366,6 +375,7 @@ pub fn retry_failed_payment(env: Env, recurring_id: String) -> Result<(), Paymen
 ```
 
 **Errors:**
+
 - `RecurringPaymentNotFound` (19) — Not found
 - `RecurringPaymentNotFailed` (26) — Not in `Failed` status
 - `RecurringPaymentExecutionFailed` (25) — Retry execution failed
@@ -401,16 +411,17 @@ pub fn set_late_fee_config(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `agreement_id` | `String` | Agreement identifier |
-| `late_fee_percentage` | `u32` | Fee percentage (1-100) |
-| `grace_period_days` | `u32` | Days after due date before fee applies |
-| `max_late_fee` | `i128` | Maximum fee cap (0 = no cap) |
-| `compounding` | `bool` | Whether to compound daily |
+| Parameter             | Type     | Description                            |
+| --------------------- | -------- | -------------------------------------- |
+| `env`                 | `Env`    | Soroban environment                    |
+| `agreement_id`        | `String` | Agreement identifier                   |
+| `late_fee_percentage` | `u32`    | Fee percentage (1-100)                 |
+| `grace_period_days`   | `u32`    | Days after due date before fee applies |
+| `max_late_fee`        | `i128`   | Maximum fee cap (0 = no cap)           |
+| `compounding`         | `bool`   | Whether to compound daily              |
 
 **Errors:**
+
 - `AgreementNotFound` (13) — Agreement does not exist
 - `InvalidLateFeePercentage` (33) — Percentage is 0 or > 100
 
@@ -440,6 +451,7 @@ pub fn get_late_fee_config(
 ```
 
 **Errors:**
+
 - `LateFeeConfigNotFound` (29) — No config set for this agreement
 
 #### `calculate_late_fee`
@@ -472,6 +484,7 @@ pub fn apply_late_fee(
 **Returns:** `Result<LateFeeRecord, PaymentError>`
 
 **Errors:**
+
 - `LateFeeAlreadyApplied` (31) — Fee already applied to this payment
 - `AgreementNotFound` (13) — Agreement does not exist
 - `LateFeeConfigNotFound` (29) — No late fee config
@@ -489,6 +502,7 @@ pub fn get_late_fee_record(
 ```
 
 **Errors:**
+
 - `LateFeeRecordNotFound` (30) — No late fee record for this payment
 
 #### `waive_late_fee`
@@ -505,6 +519,7 @@ pub fn waive_late_fee(
 ```
 
 **Errors:**
+
 - `AgreementNotFound` (13) — Agreement does not exist
 - `LateFeeRecordNotFound` (30) — No late fee record
 - `LateFeeAlreadyWaived` (32) — Fee already waived
@@ -553,22 +568,22 @@ pub enum DataKey {
 
 ### Storage Layout
 
-| Key | Storage Type | Value Type | Description |
-|---|---|---|---|
-| `Payment(id)` | Persistent | `PaymentRecord` | Individual payment record |
-| `PaymentRecord(agr, num)` | Persistent | `PaymentRecord` | Payment by agreement + number |
-| `Agreement(id)` | Persistent | `RentAgreement` | Rent agreement data |
-| `RecurringPayment(id)` | Persistent | `RecurringPayment` | Recurring payment schedule |
-| `PaymentExecutions(id)` | Persistent | `Vec<PaymentExecution>` | Execution history |
-| `FailedRecurringPayments` | Persistent | `Vec<String>` | Failed payment IDs |
-| `LateFeeConfig(id)` | Persistent | `LateFeeConfig` | Late fee configuration |
-| `LateFeeRecord(id)` | Persistent | `LateFeeRecord` | Applied late fee record |
-| `PaymentCount` | Instance | `u32` | Total payment counter |
-| `RecurringPaymentCount` | Instance | `u32` | Recurring payment counter |
-| `PlatformFeeCollector` | Instance | `Address` | Fee collector address |
-| `RateLimitConfig` | Persistent | `RateLimitConfig` | Rate limit settings |
-| `UserCallCount(user, fn)` | Persistent | `UserCallCount` | Per-user rate tracking |
-| `BlockCallCount(block, fn)` | Temporary | `u32` | Per-block rate tracking |
+| Key                         | Storage Type | Value Type              | Description                   |
+| --------------------------- | ------------ | ----------------------- | ----------------------------- |
+| `Payment(id)`               | Persistent   | `PaymentRecord`         | Individual payment record     |
+| `PaymentRecord(agr, num)`   | Persistent   | `PaymentRecord`         | Payment by agreement + number |
+| `Agreement(id)`             | Persistent   | `RentAgreement`         | Rent agreement data           |
+| `RecurringPayment(id)`      | Persistent   | `RecurringPayment`      | Recurring payment schedule    |
+| `PaymentExecutions(id)`     | Persistent   | `Vec<PaymentExecution>` | Execution history             |
+| `FailedRecurringPayments`   | Persistent   | `Vec<String>`           | Failed payment IDs            |
+| `LateFeeConfig(id)`         | Persistent   | `LateFeeConfig`         | Late fee configuration        |
+| `LateFeeRecord(id)`         | Persistent   | `LateFeeRecord`         | Applied late fee record       |
+| `PaymentCount`              | Instance     | `u32`                   | Total payment counter         |
+| `RecurringPaymentCount`     | Instance     | `u32`                   | Recurring payment counter     |
+| `PlatformFeeCollector`      | Instance     | `Address`               | Fee collector address         |
+| `RateLimitConfig`           | Persistent   | `RateLimitConfig`       | Rate limit settings           |
+| `UserCallCount(user, fn)`   | Persistent   | `UserCallCount`         | Per-user rate tracking        |
+| `BlockCallCount(block, fn)` | Temporary    | `u32`                   | Per-block rate tracking       |
 
 ### Data Structures
 
@@ -843,11 +858,13 @@ pub struct LateFeeWaived {
 // Off-chain event listener example (JavaScript/Stellar SDK)
 const events = await server.getEvents({
   startLedger: ledgerNumber,
-  filters: [{
-    type: "contract",
-    contractIds: [paymentContractId],
-    topics: [["recurring_payment_executed", "late_fee_applied"]]
-  }]
+  filters: [
+    {
+      type: "contract",
+      contractIds: [paymentContractId],
+      topics: [["recurring_payment_executed", "late_fee_applied"]],
+    },
+  ],
 });
 
 for (const event of events.events) {
@@ -859,33 +876,33 @@ for (const event of events.events) {
 
 ## Error Codes
 
-| Code | Name | Description |
-|---|---|---|
-| 5 | `InvalidAmount` | Amount is invalid |
-| 10 | `AgreementNotActive` | Agreement is not in active status |
-| 11 | `PaymentNotFound` | Payment record not found |
-| 12 | `PaymentFailed` | Payment processing failed |
-| 13 | `AgreementNotFound` | Agreement does not exist |
-| 14 | `NotTenant` | Caller is not the tenant |
-| 17 | `InvalidPaymentAmount` | Payment amount is invalid or doesn't match rent |
-| 18 | `PaymentNotDue` | Payment is not yet due |
-| 19 | `RecurringPaymentNotFound` | Recurring payment not found |
-| 20 | `InvalidRecurringDates` | Start date >= end date |
-| 21 | `RecurringPaymentNotActive` | Recurring payment not active |
-| 22 | `RecurringPaymentNotPaused` | Recurring payment not paused |
-| 23 | `RecurringPaymentAlreadyCancelled` | Already cancelled |
-| 24 | `RecurringPaymentAlreadyCompleted` | Schedule completed |
-| 25 | `RecurringPaymentExecutionFailed` | Execution failed on retry |
-| 26 | `RecurringPaymentNotFailed` | Not in failed status |
-| 27 | `RateLimitExceeded` | Rate limit exceeded |
-| 28 | `CooldownNotMet` | Cooldown period not met |
-| 29 | `LateFeeConfigNotFound` | No late fee config for agreement |
-| 30 | `LateFeeRecordNotFound` | No late fee record for payment |
-| 31 | `LateFeeAlreadyApplied` | Late fee already applied |
-| 32 | `LateFeeAlreadyWaived` | Late fee already waived |
-| 33 | `InvalidLateFeePercentage` | Percentage must be 1-100 |
-| 34 | `PaymentNotLate` | Payment is within grace period |
-| 35 | `NotLandlord` | Caller is not the landlord |
+| Code | Name                               | Description                                     |
+| ---- | ---------------------------------- | ----------------------------------------------- |
+| 5    | `InvalidAmount`                    | Amount is invalid                               |
+| 10   | `AgreementNotActive`               | Agreement is not in active status               |
+| 11   | `PaymentNotFound`                  | Payment record not found                        |
+| 12   | `PaymentFailed`                    | Payment processing failed                       |
+| 13   | `AgreementNotFound`                | Agreement does not exist                        |
+| 14   | `NotTenant`                        | Caller is not the tenant                        |
+| 17   | `InvalidPaymentAmount`             | Payment amount is invalid or doesn't match rent |
+| 18   | `PaymentNotDue`                    | Payment is not yet due                          |
+| 19   | `RecurringPaymentNotFound`         | Recurring payment not found                     |
+| 20   | `InvalidRecurringDates`            | Start date >= end date                          |
+| 21   | `RecurringPaymentNotActive`        | Recurring payment not active                    |
+| 22   | `RecurringPaymentNotPaused`        | Recurring payment not paused                    |
+| 23   | `RecurringPaymentAlreadyCancelled` | Already cancelled                               |
+| 24   | `RecurringPaymentAlreadyCompleted` | Schedule completed                              |
+| 25   | `RecurringPaymentExecutionFailed`  | Execution failed on retry                       |
+| 26   | `RecurringPaymentNotFailed`        | Not in failed status                            |
+| 27   | `RateLimitExceeded`                | Rate limit exceeded                             |
+| 28   | `CooldownNotMet`                   | Cooldown period not met                         |
+| 29   | `LateFeeConfigNotFound`            | No late fee config for agreement                |
+| 30   | `LateFeeRecordNotFound`            | No late fee record for payment                  |
+| 31   | `LateFeeAlreadyApplied`            | Late fee already applied                        |
+| 32   | `LateFeeAlreadyWaived`             | Late fee already waived                         |
+| 33   | `InvalidLateFeePercentage`         | Percentage must be 1-100                        |
+| 34   | `PaymentNotLate`                   | Payment is within grace period                  |
+| 35   | `NotLandlord`                      | Caller is not the landlord                      |
 
 ---
 
@@ -988,11 +1005,11 @@ Payment Amount: 1,000 USDC (commission_rate = 500 = 5%)
 The commission rate is specified in **basis points** (1 basis point = 0.01%):
 
 | Basis Points | Percentage | Agent Amount (per 1000) |
-|---|---|---|
-| 100 | 1% | 10 |
-| 250 | 2.5% | 25 |
-| 500 | 5% | 50 |
-| 1000 | 10% | 100 |
+| ------------ | ---------- | ----------------------- |
+| 100          | 1%         | 10                      |
+| 250          | 2.5%       | 25                      |
+| 500          | 5%         | 50                      |
+| 1000         | 10%        | 100                     |
 
 ### Late Fee Calculation
 
@@ -1036,12 +1053,12 @@ The Payment contract does not implement direct refund functions for completed pa
 
 ### Refund Scenarios
 
-| Scenario | Mechanism |
-|---|---|
-| **Overpayment** | Use Escrow contract's `release_escrow_partial` for partial refunds |
+| Scenario              | Mechanism                                                              |
+| --------------------- | ---------------------------------------------------------------------- |
+| **Overpayment**       | Use Escrow contract's `release_escrow_partial` for partial refunds     |
 | **Early Termination** | Use Escrow contract's damage deduction to calculate and refund deposit |
-| **Failed Recurring** | Mark as `Failed`, retry with `retry_failed_payment`, or cancel |
-| **Waived Late Fee** | Use `waive_late_fee` to remove late fee from total due |
+| **Failed Recurring**  | Mark as `Failed`, retry with `retry_failed_payment`, or cancel         |
+| **Waived Late Fee**   | Use `waive_late_fee` to remove late fee from total due                 |
 
 ### Cancelling Recurring Payments
 

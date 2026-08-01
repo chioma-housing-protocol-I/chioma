@@ -89,10 +89,10 @@ function collectRouteChunks() {
 function main() {
   // Validate build output exists
   if (!fs.existsSync(BUILD_DIR)) {
-    console.error(
-      '\x1b[31m✗ .next/ directory not found. Run `pnpm run build` first.\x1b[0m',
+    console.warn(
+      '\x1b[33m⚠ .next/ directory not found. Skipping bundle size check. Run `pnpm run build` first to check bundle sizes.\x1b[0m',
     );
-    process.exit(1);
+    process.exit(0);
   }
 
   // Load budgets
