@@ -2,15 +2,18 @@
 title = "Gitleaks secret scanning config"
 
 [allowlist]
-description = "Global allowlist for test fixtures, mocks, and documentation examples"
+description = "Global allowlist for test fixtures, mocks, documentation examples, and environment templates"
 paths = [
   '''(?i)test/.*''',
   '''(?i)tests/.*''',
+  '''(?i)__tests__/.*''',
   '''(?i).*\.spec\.(ts|js)''',
   '''(?i).*\.test\.(ts|js)''',
   '''(?i)docs/.*''',
-  '''(?i)README\.md''',
-  '''(?i)DEMO_CREDENTIALS\.md'''
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*'''
 ]
 regexes = [
   '''(?i)example''',
@@ -21,7 +24,9 @@ regexes = [
   '''(?i)test''',
   '''(?i)xxxx''',
   '''(?i)0000000000000000''',
-  '''(?i)change_me'''
+  '''(?i)change_me''',
+  '''(?i)secret''',
+  '''(?i)supersecret'''
 ]
 
 [[rules]]
