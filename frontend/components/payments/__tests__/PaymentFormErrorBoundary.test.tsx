@@ -20,7 +20,6 @@ function Bomb({ shouldThrow }: { shouldThrow: boolean }) {
 }
 
 function withSuppressedConsoleError<T>(fn: () => T): T {
-   
   const originalError = console.error;
   console.error = () => {};
   try {
