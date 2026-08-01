@@ -4,10 +4,10 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogIn } from 'lucide-react';
-import { BaseModal } from './BaseModal';
+import { BaseModal } from '@/components/modals/BaseModal';
 import { notify } from '@/components/ui';
 import { useAuth } from '@/store/authStore';
-import type { PropertyInquiryData } from './types';
+import type { PropertyInquiryData } from '@/components/modals/types';
 
 interface PropertyInquiryModalProps {
   isOpen: boolean;

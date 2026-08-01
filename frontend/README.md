@@ -23,6 +23,16 @@ The property listing flow is available at `/user/properties/add` with:
 - resume-later behavior through server-backed draft records
 - preview-and-publish action for completed listings
 
+### Component Organization
+
+Frontend components are organized by domain/feature rather than by type to make it easier to find related functionality:
+
+- `components/properties/`: All property-related components (cards, details, modals, wizards, maps)
+- `components/payments/`: Payment flows, checkout interfaces, and related error boundaries
+- `components/auth/`: Authentication buttons, login forms, role selection, and protected routes
+
+New components should be placed within their respective domain folders. General utility components can be placed in `components/ui/` or `components/common/`.
+
 ### Running the Development Server
 
 First, run the development server:

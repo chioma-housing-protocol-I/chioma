@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { TransactionSigningModal } from '@/components/blockchain/TransactionSigningModal';
 import { BlockchainStatusBadge } from '@/components/blockchain/BlockchainStatusBadge';
-import PaymentFormErrorBoundary from '@/components/forms/PaymentFormErrorBoundary';
+import PaymentFormErrorBoundary from '@/components/payments/PaymentFormErrorBoundary';
 import { ChevronRight, Loader2 } from 'lucide-react';
 
 export type PaymentFlowStep = 'amount' | 'review' | 'sign';

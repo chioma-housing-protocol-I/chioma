@@ -13,8 +13,8 @@ import {
   PawPrint,
   Car,
 } from 'lucide-react';
-import { BaseModal } from './BaseModal';
-import type { PropertyDetailData } from './types';
+import { BaseModal } from '@/components/modals/BaseModal';
+import type { PropertyDetailData } from '@/components/modals/types';
 import Image from 'next/image';
 import {
   useRecordPropertyFavorite,

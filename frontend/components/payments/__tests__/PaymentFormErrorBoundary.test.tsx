@@ -20,7 +20,7 @@ function Bomb({ shouldThrow }: { shouldThrow: boolean }) {
 }
 
 function withSuppressedConsoleError<T>(fn: () => T): T {
-  // eslint-disable-next-line no-console
+   
   const originalError = console.error;
   console.error = () => {};
   try {
