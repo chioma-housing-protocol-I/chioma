@@ -8,4 +8,9 @@ export {
   type WebVitalRating,
 } from './types';
 export { sanitizeRoute, toWebVitalPayload } from './sanitize';
-export { reportWebVital, setWebVitalSink, type WebVitalSink } from './report';
+export {
+  reportWebVital,
+  flushWebVitals,
+  setWebVitalSink,
+  type WebVitalSink,
+} from './report';

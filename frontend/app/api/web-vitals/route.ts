@@ -7,6 +7,8 @@ import {
 } from '@/lib/web-vitals';
 
 const MAX_BUFFER = 200;
+/** Hard cap on items accepted from a single batched request. */
+const MAX_BATCH_ITEMS = 25;
 
 /** In-process ring buffer for local aggregation / GET dashboard. */
 const buffer: WebVitalPayload[] = [];
@@ -16,10 +18,9 @@ function push(payload: WebVitalPayload) {
   if (buffer.length > MAX_BUFFER) buffer.length = MAX_BUFFER;
 }
 
-function isValidBody(body: unknown): body is RawWebVitalMetric & {
-  route?: string;
-  timestamp?: string;
-} {
+type RawWebVitalBody = RawWebVitalMetric & { route?: string; timestamp?: string };
+
+function isValidBody(body: unknown): body is RawWebVitalBody {
   if (!body || typeof body !== 'object') return false;
   const b = body as Record<string, unknown>;
   return (
@@ -30,22 +31,7 @@ function isValidBody(body: unknown): body is RawWebVitalMetric & {
   );
 }
 
-/**
- * Ingest anonymized Web Vitals from the browser (sendBeacon / fetch).
- * Re-sanitizes on the server so query strings / entries never stick.
- */
-export async function POST(request: NextRequest) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  if (!isValidBody(body)) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
-  }
-
+function buildPayload(body: RawWebVitalBody): WebVitalPayload {
   const payload = toWebVitalPayload(
     {
       name: body.name,
@@ -66,17 +52,54 @@ export async function POST(request: NextRequest) {
     payload.route = sanitizeRoute(body.route);
   }
 
-  push(payload);
+  return payload;
+}
 
-  // Structured log for terminal / log aggregation
-  console.info(
-    JSON.stringify({
-      type: 'web_vital',
-      ...payload,
-    }),
+/**
+ * Ingest anonymized Web Vitals from the browser (sendBeacon / fetch).
+ * Re-sanitizes on the server so query strings / entries never stick.
+ *
+ * Accepts either a single metric object (legacy shape) or an array of
+ * metrics (the client batches multiple metrics into one request rather
+ * than sending one per event). Invalid items within a batch are skipped
+ * rather than failing the whole request; only an empty/all-invalid body
+ * is rejected.
+ */
+export async function POST(request: NextRequest) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const items = (Array.isArray(body) ? body : [body]).slice(
+    0,
+    MAX_BATCH_ITEMS,
   );
+  const validItems = items.filter(isValidBody);
 
-  return NextResponse.json({ ok: true }, { status: 202 });
+  if (validItems.length === 0) {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  }
+
+  for (const item of validItems) {
+    const payload = buildPayload(item);
+    push(payload);
+
+    // Structured log for terminal / log aggregation
+    console.info(
+      JSON.stringify({
+        type: 'web_vital',
+        ...payload,
+      }),
+    );
+  }
+
+  return NextResponse.json(
+    { ok: true, received: validItems.length },
+    { status: 202 },
+  );
 }
 
 /**
