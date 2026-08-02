@@ -138,11 +138,11 @@ Always verify an agent before including them in a rent agreement:
 fn validate_agent(registry: &AgentRegistryClient, agent: &Address) -> Result<(), Error> {
     let info = registry.get_agent_info(agent)
         .ok_or(Error::AgentNotFound)?;
-    
+
     if !info.verified {
         return Err(Error::AgentNotVerified);
     }
-    
+
     Ok(())
 }
 ```
@@ -161,11 +161,11 @@ pub fn create_agreement(
     // ... other params
 ) -> Result<String, Error> {
     let agreement_id = generate_agreement_id(&env);
-    
+
     // If agent is included, register the transaction
     if let Some(agent_addr) = agent {
         let parties = vec![&env, tenant.clone(), landlord.clone()];
-        
+
         // Call agent registry contract
         let agent_registry = AgentRegistryClient::new(&env, &registry_contract_id);
         agent_registry.register_transaction(
@@ -174,10 +174,10 @@ pub fn create_agreement(
             &parties
         )?;
     }
-    
+
     // Create the agreement
     // ...
-    
+
     Ok(agreement_id)
 }
 ```
@@ -185,6 +185,7 @@ pub fn create_agreement(
 ### 3. Rating Access Control
 
 The contract automatically enforces:
+
 - Only transaction parties can rate
 - Each party can only rate once per transaction
 - Transaction must be completed before rating
@@ -208,13 +209,13 @@ interface AgentInfo {
 
 function AgentCard({ agentAddress }: { agentAddress: string }) {
   const agentInfo = useAgentInfo(agentAddress);
-  
+
   if (!agentInfo) return <div>Agent not found</div>;
-  
-  const averageRating = agentInfo.totalRatings > 0 
-    ? agentInfo.totalScore / agentInfo.totalRatings 
+
+  const averageRating = agentInfo.totalRatings > 0
+    ? agentInfo.totalScore / agentInfo.totalRatings
     : 0;
-  
+
   return (
     <div className="agent-card">
       <h3>Agent Information</h3>
@@ -235,15 +236,15 @@ function AgentCard({ agentAddress }: { agentAddress: string }) {
 ### Rating Form
 
 ```typescript
-function RateAgentForm({ 
-  agentAddress, 
-  transactionId 
-}: { 
-  agentAddress: string; 
+function RateAgentForm({
+  agentAddress,
+  transactionId
+}: {
+  agentAddress: string;
   transactionId: string;
 }) {
   const [rating, setRating] = useState(5);
-  
+
   const handleSubmit = async () => {
     try {
       await agentRegistry.rateAgent({
@@ -252,13 +253,13 @@ function RateAgentForm({
         score: rating,
         transactionId,
       });
-      
+
       showSuccess("Agent rated successfully!");
     } catch (error) {
       showError("Failed to rate agent: " + error.message);
     }
   };
-  
+
   return (
     <div>
       <h3>Rate Agent</h3>
@@ -315,13 +316,13 @@ let total_agents = agent_registry.get_agent_count();
 // For each agent, check verification status
 for agent_addr in pending_agents {
     let info = agent_registry.get_agent_info(&agent_addr);
-    
+
     if let Some(agent_info) = info {
         if !agent_info.verified {
             // Admin can verify after reviewing external profile
             // Fetch and verify external profile from IPFS
             let profile = fetch_ipfs(&agent_info.external_profile_hash);
-            
+
             // After manual verification
             agent_registry.verify_agent(&admin_address, &agent_addr)?;
         }
@@ -339,19 +340,19 @@ fn test_complete_agent_flow() {
     let env = Env::default();
     let agent_registry = create_agent_registry(&env);
     let rent_contract = create_rent_contract(&env);
-    
+
     let admin = Address::generate(&env);
     let agent = Address::generate(&env);
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
-    
+
     env.mock_all_auths();
-    
+
     // Setup
     agent_registry.initialize(&admin);
     agent_registry.register_agent(&agent, &"profile_hash");
     agent_registry.verify_agent(&admin, &agent);
-    
+
     // Create rent agreement with verified agent
     let agreement_id = rent_contract.create_agreement(
         &tenant,
@@ -359,19 +360,19 @@ fn test_complete_agent_flow() {
         &Some(agent.clone()),
         // ... other params
     ).unwrap();
-    
+
     // Register transaction
     let parties = vec![&env, tenant.clone(), landlord.clone()];
     agent_registry.register_transaction(&agreement_id, &agent, &parties).unwrap();
-    
+
     // Complete transaction
     rent_contract.complete_agreement(&agreement_id).unwrap();
     agent_registry.complete_transaction(&agreement_id, &agent).unwrap();
-    
+
     // Rate agent
     agent_registry.rate_agent(&tenant, &agent, &5, &agreement_id).unwrap();
     agent_registry.rate_agent(&landlord, &agent, &4, &agreement_id).unwrap();
-    
+
     // Verify reputation
     let info = agent_registry.get_agent_info(&agent).unwrap();
     assert_eq!(info.average_rating(), 4);

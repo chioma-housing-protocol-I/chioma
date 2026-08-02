@@ -10,12 +10,11 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
-  ReceiptText,
-  AlertTriangle,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { MicroCharts } from '@/components/dashboard/MicroCharts';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
+import { WalletEmailBanner } from '@/components/user/WalletEmailBanner';
 import { useAuth } from '@/store/authStore';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
@@ -91,7 +90,7 @@ const dashboardDisputes = [
 ];
 
 export default function UserDashboardOverview() {
-  useRoleRedirect(['user', 'admin']);
+  useRoleRedirect(['user', 'agent', 'admin']);
 
   const { openModal } = useModal();
   const router = useRouter();
@@ -224,6 +223,7 @@ export default function UserDashboardOverview() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
+      <WalletEmailBanner />
       <TenantOnboardingBanner />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -414,7 +414,10 @@ export default function UserDashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <Link
+              href="/user/inquiries"
+              className="block bg-white/5 rounded-2xl p-4 border border-white/5 transition-colors hover:bg-white/10"
+            >
               <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
                 Inquiries
               </p>
@@ -425,7 +428,7 @@ export default function UserDashboardOverview() {
                   +8%
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>

@@ -49,7 +49,7 @@ pub fn register_property(
         .persistent()
         .extend_ttl(&count_key, 500000, 500000);
 
-    events::property_registered(env, property_id, landlord, metadata_hash);
+    events::property_registered(env, property_id, landlord);
 
     Ok(())
 }

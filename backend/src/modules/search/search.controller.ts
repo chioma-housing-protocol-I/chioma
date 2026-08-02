@@ -12,6 +12,7 @@ import {
 } from '../properties/entities/property.entity';
 import { UserRole } from '../users/entities/user.entity';
 import { AgreementStatus } from '../rent/entities/rent-contract.entity';
+import {} from '../../common/constants/business-rules.constants';
 
 @ApiTags('Search')
 @Controller('search')

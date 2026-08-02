@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, DeepPartial, FindOneOptions, Repository } from 'typeorm';
 import { BookingsService } from './bookings.service';
+import { Payment } from '../payments/entities/payment.entity';
+import { PaymentService } from '../payments/payment.service';
+import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
+import { StellarService } from '../stellar/services/stellar.service';
 import {
   Booking,
   BookingStatus,
@@ -28,6 +32,19 @@ describe('BookingsService', () => {
     currency: 'USD',
   } as unknown as Property;
 
+  const mockQueryRunner = {
+    connect: jest.fn(),
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    rollbackTransaction: jest.fn(),
+    release: jest.fn(),
+    manager: {
+      create: jest.fn((_entity: unknown, data: unknown) => data),
+      save: jest.fn((data: unknown) => Promise.resolve(data)),
+      findOne: jest.fn(),
+    },
+  };
+
   const mockQueryBuilder = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -48,6 +65,7 @@ describe('BookingsService', () => {
               Promise.resolve({ id: 'booking-1', ...data }),
             ),
             findOne: jest.fn(),
+            exists: jest.fn().mockResolvedValue(false),
             createQueryBuilder: jest.fn(() => mockQueryBuilder),
           },
         },
@@ -55,6 +73,41 @@ describe('BookingsService', () => {
           provide: getRepositoryToken(Property),
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Payment),
+          useValue: {
+            create: jest.fn((data) => data),
+            save: jest.fn((data) => Promise.resolve(data)),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(StellarEscrow),
+          useValue: {
+            create: jest.fn((data) => data),
+            save: jest.fn((data) => Promise.resolve(data)),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: PaymentService,
+          useValue: {
+            createPayment: jest.fn(),
+            chargePayment: jest.fn(),
+          },
+        },
+        {
+          provide: StellarService,
+          useValue: {
+            createEscrow: jest.fn(),
+          },
+        },
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: jest.fn(() => mockQueryRunner),
           },
         },
       ],
@@ -68,6 +121,20 @@ describe('BookingsService', () => {
     mockQueryBuilder.orderBy.mockReturnThis();
     mockQueryBuilder.where.mockReturnThis();
     mockQueryBuilder.andWhere.mockReturnThis();
+    bookingRepository.exists.mockResolvedValue(false);
+    // The service performs booking reads/writes inside a transaction, so route
+    // the query runner's manager at the same repository mocks the tests set up.
+    mockQueryRunner.manager.create.mockImplementation(
+      (_entity: unknown, data: DeepPartial<Booking>) =>
+        bookingRepository.create(data),
+    );
+    mockQueryRunner.manager.save.mockImplementation(
+      (data: DeepPartial<Booking>) => bookingRepository.save(data),
+    );
+    mockQueryRunner.manager.findOne.mockImplementation(
+      (_entity: unknown, options: FindOneOptions<Booking>) =>
+        bookingRepository.findOne(options),
+    );
   });
 
   describe('create', () => {

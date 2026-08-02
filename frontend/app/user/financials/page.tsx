@@ -4,15 +4,19 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format, subMonths } from 'date-fns';
 import { Eye, ShieldCheck } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { useTransactions } from '@/lib/query/hooks/use-transactions';
+import dynamic from 'next/dynamic';
+
+const AreaChartWrapper = dynamic(
+  () => import('@/components/charts/AreaChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
+import { useFeesSummary } from '@/lib/query/hooks/use-fees-summary';
 import {
   useStellarNetworkAccount,
   readAssetBalance,
@@ -380,9 +384,7 @@ export default function FinancialsPage() {
   }, [txPage]);
   const revenueData = useMemo(() => {
     const items = txPage?.data ?? [];
-    return items.length === 0
-      ? MOCK_REVENUE_DATA
-      : deriveMonthlyRevenue(items);
+    return items.length === 0 ? MOCK_REVENUE_DATA : deriveMonthlyRevenue(items);
   }, [txPage]);
 
   const xlmBalance = readAssetBalance(networkAccount, 'XLM');
@@ -392,13 +394,12 @@ export default function FinancialsPage() {
       ? transactions
       : transactions.filter((t) => t.type === filter);
 
+  const { data: feesData, isLoading: feesLoading } = useFeesSummary();
+
   const totalRevenue =
     transactions.filter((t) => t.inflow).reduce((s, t) => s + t.amount, 0) +
     (usingMock ? 37900000 : 0);
-  const feesRemitted =
-    transactions
-      .filter((t) => t.type === 'Platform Fee')
-      .reduce((s, t) => s + t.amount, 0) + (usingMock ? 450000 : 0);
+  const feesRemitted = feesLoading ? 0 : (feesData?.totalPlatformFees ?? 0);
   const pendingPayout = usingMock
     ? 3800000
     : transactions
@@ -487,54 +488,16 @@ export default function FinancialsPage() {
             ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart
+        <div className="h-[280px]">
+          <AreaChartWrapper
             data={revenueData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: 'rgba(147, 197, 253, 0.4)',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-              dy={15}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: 'rgba(147, 197, 253, 0.4)',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-              tickFormatter={(v: number) => fmt(v)}
-              width={50}
-            />
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ stroke: 'rgba(59, 130, 246, 0.2)', strokeWidth: 2 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#60a5fa"
-              strokeWidth={3}
-              fill="url(#revenueGrad)"
-              dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#1e293b' }}
-              activeDot={{ r: 6, fill: '#60a5fa', strokeWidth: 0 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+            dataKeyX="month"
+            dataKeyY="revenue"
+            strokeColor="#60a5fa"
+            name="Revenue"
+            formatter={(v) => fmt(v)}
+          />
+        </div>
       </div>
 
       {/* ── Transaction Ledger ── */}

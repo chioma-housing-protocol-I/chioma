@@ -5,6 +5,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { HealthCheckService } from '@nestjs/terminus';
+import { DatabaseHealthIndicator } from '../../health/indicators/database.indicator';
 
 export interface HealthRecoveryStrategy {
   name: string;
@@ -25,7 +26,10 @@ export class HealthRecoveryService implements OnModuleInit, OnModuleDestroy {
   private healingInterval?: NodeJS.Timeout;
   private readonly HEALING_INTERVAL_MS = 60_000; // Heal every 60 seconds
 
-  constructor(private readonly health: HealthCheckService) {}
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly databaseHealthIndicator: DatabaseHealthIndicator,
+  ) {}
 
   onModuleInit(): void {
     this.registerDefaultStrategies();
@@ -120,11 +124,15 @@ export class HealthRecoveryService implements OnModuleInit, OnModuleDestroy {
       name: 'reconnect-if-db-stale',
       description: 'Reconnect to database if connection is stale',
       shouldExecute: async () => {
-        // This would be implemented with database-specific logic
-        // For now, always return false (requires database integration)
-        return false;
+        const isConnected =
+          await this.databaseHealthIndicator.checkConnection();
+        return !isConnected;
       },
       execute: async () => {
+        const reconnected = await this.databaseHealthIndicator.reconnect();
+        if (!reconnected) {
+          throw new Error('Database reconnect attempt failed');
+        }
         this.logger.log('Database connection refreshed');
       },
     });

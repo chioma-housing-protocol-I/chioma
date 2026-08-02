@@ -30,6 +30,7 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
+import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { ThreatDetectionMiddleware } from './common/middleware/threat-detection.middleware';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -69,7 +70,11 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { CertificatePinningModule } from './common/security/certificate-pinning.module';
+import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 
 const appLogger = new Logger('AppModule');
 
@@ -85,6 +90,8 @@ const appLogger = new Logger('AppModule');
     LockModule,
     IdempotencyModule,
     ResilienceModule,
+    CertificatePinningModule,
+    OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
     process.env.NODE_ENV === 'test'
       ? CacheModule.register({
@@ -199,18 +206,17 @@ const appLogger = new Logger('AppModule');
         const debugConfig = config as {
           host?: string;
           port?: number;
-          username?: string;
           database?: string;
           replication?: unknown;
           synchronize?: boolean;
           logging?: boolean;
           extra?: unknown;
         };
-        console.log('[DEBUG] TypeORM Config:', {
+        appLogger.debug({
           host: debugConfig.host,
           port: debugConfig.port,
-          username: debugConfig.username,
           database: debugConfig.database,
+          // Removed username to prevent credential exposure in logs
           replicationEnabled: Boolean(debugConfig.replication),
           synchronize: debugConfig.synchronize,
           logging: debugConfig.logging,
@@ -247,6 +253,7 @@ const appLogger = new Logger('AppModule');
     CleanupModule,
     AiModule,
     FraudModule,
+    FavoritesModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,
@@ -290,6 +297,10 @@ const appLogger = new Logger('AppModule');
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DeprecationInterceptor,
+    },
   ],
 })
 export class AppModule implements NestModule {
@@ -305,6 +316,9 @@ export class AppModule implements NestModule {
 
     // Request size limiting (applied to all routes)
     consumer.apply(RequestSizeLimitMiddleware).forRoutes('*');
+
+    // Query depth limiting (applied to all routes)
+    consumer.apply(QueryDepthLimitMiddleware).forRoutes('*');
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   Gift,
@@ -16,6 +16,7 @@ import {
   Linkedin,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useReferrals } from '@/lib/query/hooks/use-referrals';
 
 interface Referral {
   id: string;
@@ -25,73 +26,15 @@ interface Referral {
   rewardAmount?: number;
 }
 
-interface ReferralStats {
-  totalReferrals: number;
-  completedReferrals: number;
-  totalRewards: number;
-  referrals: Referral[];
-  referralCode: string;
-}
-
-const generateMockReferralStats = (): ReferralStats => ({
-  totalReferrals: 12,
-  completedReferrals: 8,
-  totalRewards: 80,
-  referrals: [
-    {
-      id: '1',
-      referredName: 'John Doe',
-      status: 'REWARDED',
-      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-      rewardAmount: 10,
-    },
-    {
-      id: '2',
-      referredName: 'Jane Smith',
-      status: 'REWARDED',
-      createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-      rewardAmount: 10,
-    },
-    {
-      id: '3',
-      referredName: 'Michael Brown',
-      status: 'COMPLETED',
-      createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-      rewardAmount: 10,
-    },
-    {
-      id: '4',
-      referredName: 'Emily Davis',
-      status: 'PENDING',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: '5',
-      referredName: 'Chris Wilson',
-      status: 'PENDING',
-      createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-    },
-  ],
-  referralCode: 'CHIOMA-TRUST-2024',
-});
-
 export default function TenantReferralsPage() {
-  const [stats, setStats] = useState<ReferralStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { referralCode, stats, isLoading, isError } = useReferrals();
   const [isCopying, setIsCopying] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setStats(generateMockReferralStats());
-      setIsLoading(false);
-    }, 1200);
-  }, []);
-
   const referralLink = useMemo(() => {
-    if (typeof window !== 'undefined' && stats)
-      return `${window.location.origin}/register?ref=${stats.referralCode}`;
+    if (typeof window !== 'undefined' && referralCode)
+      return `${window.location.origin}/register?ref=${referralCode}`;
     return '';
-  }, [stats]);
+  }, [referralCode]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -100,7 +43,7 @@ export default function TenantReferralsPage() {
     setTimeout(() => setIsCopying(false), 2000);
   };
 
-  if (isLoading || !stats) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="relative">
@@ -111,6 +54,16 @@ export default function TenantReferralsPage() {
         </div>
         <p className="text-blue-200/50 font-medium animate-pulse">
           Loading your referral rewards...
+        </p>
+      </div>
+    );
+  }
+
+  if (isError || !stats || !referralCode) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-blue-200/50 font-medium">
+          Failed to load referral data. Please try again later.
         </p>
       </div>
     );
@@ -149,11 +102,11 @@ export default function TenantReferralsPage() {
                 Your Referral Code
               </p>
               <div className="text-2xl font-black text-white tracking-tight uppercase">
-                {stats.referralCode}
+                {referralCode}
               </div>
             </div>
             <button
-              onClick={() => handleCopy(stats.referralCode)}
+              onClick={() => handleCopy(referralCode ?? '')}
               className="w-full py-3.5 bg-white text-blue-900 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all active:scale-95"
             >
               {isCopying ? <CheckCircle2 size={18} /> : <Copy size={18} />}

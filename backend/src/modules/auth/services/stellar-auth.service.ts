@@ -20,10 +20,16 @@ import {
 import { User, AuthMethod } from '../../users/entities/user.entity';
 import { StellarAuthVerifyDto } from '../dto/stellar-auth.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import {
+  BCRYPT_SALT_ROUNDS,
+  STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES,
+  JWT_ACCESS_TOKEN_EXPIRY,
+  JWT_REFRESH_TOKEN_EXPIRY,
+} from '../../../common/constants/business-rules.constants';
 
-const CHALLENGE_EXPIRY_MINUTES = 5;
+const CHALLENGE_EXPIRY_MINUTES = STELLAR_AUTH_CHALLENGE_EXPIRY_MINUTES;
 const CHALLENGE_NONCE_LENGTH = 32;
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = BCRYPT_SALT_ROUNDS;
 
 interface StoredChallenge {
   walletAddress: string;
@@ -301,6 +307,17 @@ export class StellarAuthService {
     email: string,
     role: string,
   ): { accessToken: string; refreshToken: string } {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is required');
+    }
+
+    const jwtRefreshSecret =
+      this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!jwtRefreshSecret) {
+      throw new Error('JWT_REFRESH_SECRET is required');
+    }
+
     const accessToken = this.jwtService.sign(
       {
         sub: userId,
@@ -309,9 +326,8 @@ export class StellarAuthService {
         type: 'access',
       },
       {
-        secret:
-          this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
-        expiresIn: '15m',
+        secret: jwtSecret,
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
       },
     );
 
@@ -323,10 +339,8 @@ export class StellarAuthService {
         type: 'refresh',
       },
       {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ||
-          'your-refresh-secret-key',
-        expiresIn: '7d',
+        secret: jwtRefreshSecret,
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
       },
     );
 
@@ -343,14 +357,36 @@ export class StellarAuthService {
     });
   }
 
+  /**
+   * Allowlist rather than denylist. A rest-spread denylist leaks every new
+   * column added to the entity — this response was returning the encrypted
+   * PII blobs (emailEncrypted, phoneNumberEncrypted, …), their lookup hashes,
+   * the key version, and lockout counters straight to the browser.
+   */
   private sanitizeUser(user: User) {
-    const {
-      password: _password,
-      refreshToken: _refreshToken,
-      resetToken: _resetToken,
-      verificationToken: _verificationToken,
-      ...sanitized
-    } = user;
-    return sanitized;
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      avatarUrl: user.avatarUrl,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      kycStatus: user.kycStatus,
+      walletAddress: user.walletAddress,
+      authMethod: user.authMethod,
+      preferredLanguage: user.preferredLanguage,
+      timezone: user.timezone,
+      twoFactorEnabled: user.twoFactorEnabled,
+      emailNotifications: user.emailNotifications,
+      smsNotifications: user.smsNotifications,
+      marketingOptIn: user.marketingOptIn,
+      isActive: user.isActive,
+      referralCode: user.referralCode,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }

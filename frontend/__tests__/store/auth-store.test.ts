@@ -8,9 +8,15 @@ vi.mock('@/lib/api-client', () => ({
   apiClient: {
     post: postMock,
   },
+  setApiClientToken: vi.fn(),
 }));
 
-import { useAuth, useAuthStore } from '@/store/authStore';
+import {
+  useAuth,
+  useAuthStore,
+  __resetAuthStorageCacheForTests,
+} from '@/store/authStore';
+import { useUIStore } from '@/store/ui-store';
 
 // --- Helpers -----------------------------------------------------------------
 
@@ -41,6 +47,7 @@ describe('authStore', () => {
     document.cookie = '';
     postMock.mockReset();
     resetStore();
+    __resetAuthStorageCacheForTests();
   });
 
   it('starts with SSR-safe defaults', () => {
@@ -89,16 +96,53 @@ describe('authStore', () => {
     expect(state.loading).toBe(false);
   });
 
-  it('hydrate clears corrupted localStorage data', () => {
+  it('hydrate clears corrupted localStorage data and attempts partial recovery', () => {
     localStorage.setItem('chioma_access_token', 'at-3');
     localStorage.setItem('chioma_user', '{invalid-json');
+    localStorage.setItem('chioma_wallet_address', '0xabc123');
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     useAuthStore.getState().hydrate();
 
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.isAuthenticated).toBe(false);
+    expect(state.walletAddress).toBe('0xabc123');
     expect(localStorage.getItem('chioma_access_token')).toBeNull();
+
+    const uiState = useUIStore.getState();
+    expect(uiState.toasts.some((t) => t.title === 'Session Corrupted')).toBe(
+      true,
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('caches the localStorage read so repeat hydrate() calls skip storage access', () => {
+    localStorage.setItem('chioma_access_token', 'at-cached');
+    localStorage.setItem('chioma_user', JSON.stringify(mockUser));
+
+    useAuthStore.getState().hydrate();
+
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    useAuthStore.getState().hydrate();
+
+    expect(getItemSpy).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().accessToken).toBe('at-cached');
+
+    getItemSpy.mockRestore();
+  });
+
+  it('hydrate(true) forces a fresh localStorage read, bypassing the cache', () => {
+    localStorage.setItem('chioma_access_token', 'at-stale');
+    localStorage.setItem('chioma_user', JSON.stringify(mockUser));
+    useAuthStore.getState().hydrate();
+
+    localStorage.setItem('chioma_access_token', 'at-fresh');
+    useAuthStore.getState().hydrate(true);
+
+    expect(useAuthStore.getState().accessToken).toBe('at-fresh');
   });
 
   it('login authenticates against the backend response', async () => {
@@ -145,6 +189,24 @@ describe('authStore', () => {
       success: false,
       error: 'Multi-factor authentication is required to finish signing in.',
     });
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('rejects authentication if an invalid role is provided', async () => {
+    postMock.mockResolvedValueOnce({
+      data: {
+        accessToken: 'at-login-invalid',
+        user: { ...mockUser, role: 'superuser' },
+      },
+      status: 200,
+    });
+
+    const result = await useAuthStore
+      .getState()
+      .login('test@chioma.local', 'pass');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Invalid role assigned: superuser');
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 

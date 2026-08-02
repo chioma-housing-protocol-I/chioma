@@ -169,6 +169,34 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  private readonly blockchainConnectivityUp = new Gauge({
+    name: 'blockchain_connectivity_up',
+    help: 'Whether the blockchain RPC/Horizon endpoint is reachable (1) or not (0)',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityResponseTime = new Gauge({
+    name: 'blockchain_connectivity_response_time_ms',
+    help: 'Latency of the last blockchain connectivity check in milliseconds',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityConsecutiveFailures = new Gauge({
+    name: 'blockchain_connectivity_consecutive_failures',
+    help: 'Number of consecutive failed blockchain connectivity checks',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityLastSuccess = new Gauge({
+    name: 'blockchain_connectivity_last_success_timestamp',
+    help: 'Unix timestamp (seconds) of the last successful blockchain connectivity check',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
   onModuleInit(): void {
     collectDefaultMetrics({ register: this.registry });
     this.logger.log('MetricsService initialised with prom-client');
@@ -205,8 +233,6 @@ export class MetricsService implements OnModuleInit {
   recordBlockchainDuration(type: string, durationMs: number): void {
     this.blockchainDuration.observe({ type }, durationMs);
   }
-
-  setDatabaseConnections(_count: number): void {}
 
   setDatabasePoolUsage(
     active: number,
@@ -266,6 +292,26 @@ export class MetricsService implements OnModuleInit {
 
   recordDispute(type: string, status: string): void {
     this.disputes.inc({ type, status });
+  }
+
+  recordBlockchainConnectivityCheck(
+    network: string,
+    healthy: boolean,
+    responseTimeMs: number,
+    consecutiveFailures: number,
+  ): void {
+    this.blockchainConnectivityUp.set({ network }, healthy ? 1 : 0);
+    this.blockchainConnectivityResponseTime.set({ network }, responseTimeMs);
+    this.blockchainConnectivityConsecutiveFailures.set(
+      { network },
+      consecutiveFailures,
+    );
+    if (healthy) {
+      this.blockchainConnectivityLastSuccess.set(
+        { network },
+        Math.floor(Date.now() / 1000),
+      );
+    }
   }
 
   async getMetrics(): Promise<string> {

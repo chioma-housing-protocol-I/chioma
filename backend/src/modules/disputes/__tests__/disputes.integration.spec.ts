@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { DisputesService } from '../disputes.service';
-import { DisputesModule } from '../disputes.module';
 import {
   Dispute,
   DisputeStatus,
@@ -867,7 +866,7 @@ describe.skip('DisputesService - Integration Tests', () => {
           },
           tenantUser.id,
         );
-      } catch (error) {
+      } catch (_error) {
         // Expected to fail
       }
 

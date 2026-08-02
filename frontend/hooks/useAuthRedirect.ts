@@ -6,6 +6,9 @@ import { getDashboardRoute } from '@/lib/navigation/role-navigation';
 /**
  * Hook to redirect authenticated users to their role-based dashboard
  * Useful on landing page to prevent authenticated users from seeing the login flow
+ *
+ * Wallet-only accounts (no email yet) go to the dashboard like everyone else;
+ * WalletEmailBanner asks for the email once they are there.
  */
 export function useAuthRedirect() {
   const router = useRouter();
@@ -13,23 +16,11 @@ export function useAuthRedirect() {
 
   useEffect(() => {
     // Wait for auth to load
-    if (loading) {
-      console.log('⏳ Auth still loading...');
-      return;
-    }
+    if (loading) return;
+    if (!isAuthenticated || !user) return;
 
-    // If user is authenticated, redirect to their dashboard
-    if (isAuthenticated && user) {
-      const userRole = (user.role as string).toLowerCase();
-      const dashboardRoute = getDashboardRoute(userRole as any);
-
-      console.log('🚀 User authenticated, redirecting to dashboard:', {
-        userRole,
-        dashboardRoute,
-      });
-
-      router.push(dashboardRoute);
-    }
+    const userRole = (user.role as string).toLowerCase();
+    router.push(getDashboardRoute(userRole as any));
   }, [user, isAuthenticated, loading, router]);
 
   return { user, isAuthenticated, loading };

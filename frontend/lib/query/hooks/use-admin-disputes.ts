@@ -76,7 +76,7 @@ const ADMIN_DISPUTES_QUERY_KEY = ['admin-disputes'] as const;
 
 const mockDisputes: AdminDisputeRecord[] = [
   {
-    id: 'dis-101',
+    id: '1',
     disputeId: 'DSP-2026-004',
     agreementReference: 'AGR-2025-021',
     propertyName: 'Glover Road, Ikoyi',
@@ -94,7 +94,7 @@ const mockDisputes: AdminDisputeRecord[] = [
     updatedAt: '2026-03-04T08:45:00.000Z',
   },
   {
-    id: 'dis-102',
+    id: '2',
     disputeId: 'DSP-2026-002',
     agreementReference: 'AGR-2025-010',
     propertyName: 'Admiralty Way, Block 4',
@@ -112,7 +112,7 @@ const mockDisputes: AdminDisputeRecord[] = [
     updatedAt: '2026-03-03T10:00:00.000Z',
   },
   {
-    id: 'dis-103',
+    id: '3',
     disputeId: 'DSP-2026-001',
     agreementReference: 'AGR-2025-014',
     propertyName: 'Sunset Apartments, Unit 4B',
@@ -228,11 +228,14 @@ export function useUpdateAdminDisputeStatus() {
       resolution?: string;
     }) => {
       try {
+        // disputeId here is the numeric database ID (as a string), not the string disputeId field
+        // The backend route is PATCH /admin/disputes/:id where :id is the numeric database ID
         await apiClient.patch(`/admin/disputes/${disputeId}`, {
           status,
           resolution,
         });
-      } catch {
+      } catch (error) {
+        console.error('Failed to update dispute status:', error);
         return { localOnly: true };
       }
 

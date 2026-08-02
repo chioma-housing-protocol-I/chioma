@@ -6,7 +6,7 @@ import { Document } from './document.entity';
 
 describe('DocumentService', () => {
   let service: DocumentService;
-  let repo: Repository<Document>;
+  let _repo: Repository<Document>;
 
   const mockDoc: Document = {
     id: 'doc-1',
@@ -55,7 +55,7 @@ describe('DocumentService', () => {
     }).compile();
 
     service = module.get<DocumentService>(DocumentService);
-    repo = module.get<Repository<Document>>(getRepositoryToken(Document));
+    _repo = module.get<Repository<Document>>(getRepositoryToken(Document));
   });
 
   it('should be defined', () => {
@@ -150,7 +150,7 @@ describe('DocumentService', () => {
     it('does not re-add an already shared tenant', async () => {
       const docWithShared = { ...mockDoc, sharedWith: ['tenant-1'] };
       mockRepo.findOne.mockResolvedValueOnce(docWithShared);
-      const result = await service.share('doc-1', 'tenant-1', 'user-1');
+      void (await service.share('doc-1', 'tenant-1', 'user-1'));
       expect(mockRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ sharedWith: ['tenant-1'] }),
       );

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DisputesController } from './disputes.controller';
+import { AdminDisputesController } from './admin-disputes.controller';
 import { DisputesService } from './disputes.service';
 import { DisputeBlockchainService } from './dispute-blockchain.service';
 import { Dispute } from './entities/dispute.entity';
@@ -27,7 +28,7 @@ import { StellarModule } from '../stellar/stellar.module';
     AuditModule,
     StellarModule,
   ],
-  controllers: [DisputesController],
+  controllers: [DisputesController, AdminDisputesController],
   providers: [DisputesService, DisputeBlockchainService],
   exports: [DisputesService, DisputeBlockchainService],
 })

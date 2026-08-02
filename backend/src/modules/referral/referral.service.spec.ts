@@ -10,10 +10,10 @@ import { Logger } from '@nestjs/common';
 
 describe('ReferralService', () => {
   let service: ReferralService;
-  let referralRepository: Repository<Referral>;
-  let userRepository: Repository<User>;
-  let stellarService: StellarService;
-  let configService: ConfigService;
+  let _userRepository: Repository<User>;
+  let _stellarService: StellarService;
+  let _referralRepository: Repository<Referral>;
+  let _configService: ConfigService;
 
   const mockReferral: Partial<Referral> = {
     id: 'test-referral-id',
@@ -36,7 +36,7 @@ describe('ReferralService', () => {
     walletAddress: 'GABC123...',
   };
 
-  const mockReferredUser: Partial<User> = {
+  const mockReferredUser = {
     id: 'referred-id',
     email: 'referred@example.com',
     firstName: 'Jane',
@@ -108,12 +108,12 @@ describe('ReferralService', () => {
     }).compile();
 
     service = module.get<ReferralService>(ReferralService);
-    referralRepository = module.get<Repository<Referral>>(
+    _referralRepository = module.get<Repository<Referral>>(
       getRepositoryToken(Referral),
     );
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    stellarService = module.get<StellarService>(StellarService);
-    configService = module.get<ConfigService>(ConfigService);
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    _stellarService = module.get<StellarService>(StellarService);
+    _configService = module.get<ConfigService>(ConfigService);
 
     // Clear all mocks
     jest.clearAllMocks();
@@ -158,7 +158,7 @@ describe('ReferralService', () => {
       mockReferralRepository.create.mockReturnValue(mockReferral);
       mockReferralRepository.save.mockResolvedValue(mockReferral);
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { referralCode: 'ABC123' },
@@ -182,7 +182,7 @@ describe('ReferralService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await service.trackReferral(mockReferredUser as User, 'INVALID');
+      await service.trackReferral(mockReferredUser.id, 'INVALID');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Referral code INVALID not found for user referred-id',
@@ -203,7 +203,7 @@ describe('ReferralService', () => {
         id: mockReferredUser.id, // Same user
       });
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'User referred-id tried to refer themselves',

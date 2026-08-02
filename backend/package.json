@@ -17,7 +17,7 @@
     "test:cov": "jest --coverage --forceExit",
     "test:leaks": "jest --detectOpenHandles --forceExit",
     "test:mutation": "stryker run",
-    "test:mutation:fast": "stryker run --mutate src/common/utils/*.ts",
+    "test:mutation:fast": "stryker run --mutate src/common/utils/**/*.ts",
     "test:contract": "jest --config ./test/jest-contract.json --forceExit",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "DB_TYPE=postgres jest --config ./test/jest-e2e.json --runInBand",
@@ -51,6 +51,7 @@
     "migration:list": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts show",
     "db:index-review": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts",
     "db:index-review:all": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts --all",
+    "db:verify-payment-status-index": "ts-node -r tsconfig-paths/register scripts/verify-payment-status-index.ts",
     "db:monitor:health": "ts-node -r tsconfig-paths/register scripts/db-monitor-snapshot.ts",
     "kyc:migrate": "ts-node -r tsconfig-paths/register scripts/kyc-data-migration.ts migrate",
     "kyc:migrate:verify": "ts-node -r tsconfig-paths/register scripts/kyc-data-migration.ts verify",
@@ -125,6 +126,7 @@
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "ioredis": "^5.9.3",
+    "joi": "^18.2.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
@@ -148,7 +150,8 @@
     "uuid": "^8.3.2",
     "validator": "^13.11.0",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -166,6 +169,7 @@
     "@types/helmet": "^4.0.0",
     "@types/jest": "^29.5.14",
     "@types/jest-json-schema": "^6.1.5",
+    "@types/ms": "^2.1.0",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^7.0.11",
     "@types/passport-jwt": "^4.0.1",

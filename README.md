@@ -133,6 +133,21 @@ We welcome:
 
 ---
 
+## Security
+
+If you discover a security vulnerability, **please do not open a public issue.**
+
+Report it privately through one of the channels described in [SECURITY.md](./SECURITY.md):
+
+- **GitHub private vulnerability reporting** — Security tab → "Report a vulnerability"
+- **Email** — security@chioma.dev
+
+We follow a coordinated disclosure model and aim to acknowledge reports within 48 hours. See
+[SECURITY.md](./SECURITY.md) for full details on scope, response timelines, and responsible
+disclosure.
+
+---
+
 ## You Should Know
 
 Chioma is not just a rental app.

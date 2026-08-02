@@ -129,7 +129,7 @@ function LoginForm() {
           </div>
           <div className="flex justify-end mt-2">
             <Link
-              href="#"
+              href="/forgot-password"
               className="text-xs text-brass-400 hover:text-brass-300 transition-colors"
             >
               Forgot password?

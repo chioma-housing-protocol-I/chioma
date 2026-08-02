@@ -1,5 +1,4 @@
 import { apiClient } from '@/lib/api-client';
-import type { LandlordPropertyAnalytics } from '@/lib/property-analytics';
 
 export interface DashboardMetrics {
   totalProperties: number;

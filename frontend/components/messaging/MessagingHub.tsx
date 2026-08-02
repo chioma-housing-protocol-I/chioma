@@ -49,7 +49,7 @@ export function MessagingHub() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-dvh bg-white transition-orientation">
       {connectionBanner}
       <div className="flex flex-1 min-h-0">
         <div
@@ -137,7 +137,7 @@ export function MessagingHub() {
             <div className="flex-1 flex flex-col items-center justify-center bg-neutral-50 p-8">
               <button
                 onClick={() => setShowSidebar(true)}
-                className="md:hidden mb-6 text-sm text-blue-600 font-medium hover:underline"
+                className="md:hidden mb-6 text-sm text-blue-800 font-medium hover:underline"
               >
                 Back to conversations
               </button>

@@ -159,7 +159,7 @@ pub fn rate_agent(
         .persistent()
         .extend_ttl(&agent_key, 500000, 500000);
 
-    events::agent_rated(env, agent, rater, score);
+    events::agent_rated(env, agent, rater, score, transaction_id.clone());
 
     Ok(())
 }
@@ -237,7 +237,7 @@ pub fn complete_transaction(
         .persistent()
         .extend_ttl(&txn_key, 500000, 500000);
 
-    let agent_key = DataKey::Agent(agent);
+    let agent_key = DataKey::Agent(agent.clone());
     let mut agent_info: AgentInfo = env
         .storage()
         .persistent()
@@ -250,6 +250,8 @@ pub fn complete_transaction(
     env.storage()
         .persistent()
         .extend_ttl(&agent_key, 500000, 500000);
+
+    events::transaction_completed(env, transaction_id, agent);
 
     Ok(())
 }

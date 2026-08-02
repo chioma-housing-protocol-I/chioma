@@ -96,7 +96,8 @@ export function useRetryState(): RetryState {
   return useSyncExternalStore(subscribe, getCachedSnapshot, getCachedSnapshot);
 }
 
-const cachedEndpointMetrics: Map<string, RetryEndpointMetrics | null> = new Map();
+const cachedEndpointMetrics: Map<string, RetryEndpointMetrics | null> =
+  new Map();
 
 export function useEndpointRetryMetrics(
   endpoint: string,

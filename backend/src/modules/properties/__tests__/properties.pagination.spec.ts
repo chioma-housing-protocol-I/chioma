@@ -14,9 +14,7 @@ import { RentalUnit } from '../entities/rental-unit.entity';
 import { PropertyListingDraft } from '../entities/property-listing-draft.entity';
 import { CacheService } from '../../../common/cache/cache.service';
 import { FraudHooksService } from '../../fraud/fraud-hooks.service';
-import { QueryPropertyDto } from '../dto/query-property.dto';
-import { User, UserRole, AuthMethod } from '../../users/entities/user.entity';
-import { KycStatus } from '../../kyc/kyc-status.enum';
+import { User } from '../../users/entities/user.entity';
 
 describe('PropertiesService – Pagination', () => {
   let service: PropertiesService;
@@ -378,15 +376,18 @@ describe('PropertiesService – Pagination', () => {
       );
     });
 
-    it('should apply full-text search on title and description', async () => {
+    it('should apply indexed full-text search via search_vector', async () => {
       mockQb = makeQueryBuilder([], 0);
       mockPropertyRepository.createQueryBuilder.mockReturnValue(mockQb);
 
       await service.findAll({ search: 'modern apartment' });
 
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('LOWER(property.title) LIKE LOWER(:search)'),
-        { search: '%modern apartment%' },
+        expect.stringContaining('search_vector @@ plainto_tsquery'),
+        {
+          search: 'modern apartment',
+          likeSearch: '%modern apartment%',
+        },
       );
     });
 

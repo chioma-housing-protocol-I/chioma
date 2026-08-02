@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import nextDynamic from 'next/dynamic';
 import Footer from '@/components/landing/Footer';
 import Navbar from '@/components/Navbar';
-import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
 import { PropertyListingHeader } from '@/components/properties/PropertyListingHeader';
 import { Filter, Bell, List, Map, ChevronLeft } from 'lucide-react';

@@ -4,10 +4,7 @@ import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
 import { useModal } from '@/contexts/ModalContext';
-import type {
-  PropertyDetailData,
-  PropertyInquiryData,
-} from '@/components/modals/types';
+import type { PropertyDetailData } from '@/components/modals/types';
 
 interface PropertyCardProps {
   property: {

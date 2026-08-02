@@ -9,6 +9,7 @@ import { EncryptionService } from '../security/encryption.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import {
   ScreeningCheckType,
   UserScreeningProvider,
@@ -81,6 +82,13 @@ describe('ScreeningService', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: AuditService, useValue: mockAuditService },
         { provide: WebhooksService, useValue: mockWebhooksService },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
+        },
       ],
     }).compile();
 

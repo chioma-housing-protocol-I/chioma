@@ -28,6 +28,7 @@ describe('PropertiesController', () => {
     role: UserRole.ADMIN,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,

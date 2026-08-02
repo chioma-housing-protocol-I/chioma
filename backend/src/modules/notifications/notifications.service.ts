@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
@@ -8,6 +8,31 @@ import {
   UserPreferences,
   UserNotificationPreference,
 } from '../users/entities/user-notification-preference.entity';
+import { ErrorNotificationService } from '../monitoring/error-notification.service';
+import { AlertPayload, EscalationTier } from '../monitoring/alert.types';
+
+/**
+ * Renders an unknown thrown value as a human-readable string. Plain objects are
+ * JSON-serialized so alert descriptions carry the payload instead of the
+ * useless '[object Object]' that default stringification would produce.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error === null || error === undefined) {
+    return 'Unknown error';
+  }
+  if (typeof error === 'object') {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unserializable error object';
+    }
+  }
+  // Everything object-like is handled above, so only primitives reach here.
+  return String(error as string | number | boolean | symbol | bigint);
+}
 
 @Injectable()
 export class NotificationsService {
@@ -19,6 +44,8 @@ export class NotificationsService {
     @InjectRepository(UserNotificationPreference)
     private readonly preferencesRepository: Repository<UserNotificationPreference>,
     private readonly realtimeService: NotificationsRealtimeService,
+    @Inject(forwardRef(() => ErrorNotificationService))
+    private readonly errorNotificationService: ErrorNotificationService,
   ) {}
 
   async notify(
@@ -27,22 +54,65 @@ export class NotificationsService {
     message: string,
     type: string,
   ): Promise<Notification> {
-    const notification = this.notificationRepository.create({
-      userId,
-      title,
-      message,
-      type,
-    });
+    try {
+      const notification = this.notificationRepository.create({
+        userId,
+        title,
+        message,
+        type,
+      });
 
-    const saved = await this.notificationRepository.save(notification);
+      const saved = await this.notificationRepository.save(notification);
 
-    const preferences = await this.getUserPreferences(userId);
-    if (this.shouldDeliverRealtime(preferences, type)) {
-      this.realtimeService.emitToUser(userId, saved);
+      const preferences = await this.getUserPreferences(userId);
+      if (this.shouldDeliverRealtime(preferences, type)) {
+        this.realtimeService.emitToUser(userId, saved);
+      }
+
+      this.logger.log(`Notification sent to user ${userId}: ${title}`);
+      return saved;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send notification "${title}" to user ${userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      await this.alertNotificationFailure(userId, title, type, error);
+      throw error;
     }
+  }
 
-    this.logger.log(`Notification sent to user ${userId}: ${title}`);
-    return saved;
+  private async alertNotificationFailure(
+    userId: string,
+    title: string,
+    type: string,
+    error: unknown,
+  ): Promise<void> {
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'NotificationDeliveryFailed',
+        notificationType: type,
+        severity: 'warning',
+      },
+      annotations: {
+        summary: `Notification "${title}" failed to send to user ${userId}`,
+        description: describeError(error),
+      },
+      startsAt: new Date().toISOString(),
+      generatorURL: `notifications/${userId}`,
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.TEAM,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        'Failed to send notification-failure alert',
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
   }
 
   async getUserNotifications(

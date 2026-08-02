@@ -18,12 +18,12 @@ By the end of this guide you will have:
 
 Before you begin, ensure you have the following:
 
-| Requirement       | Details                                                   |
-| ----------------- | --------------------------------------------------------- |
-| **Operating System** | Windows 10/11, macOS 12+, or Linux (Ubuntu 20.04+)     |
-| **Terminal**       | PowerShell (Windows), Terminal (macOS), or Bash (Linux)   |
-| **Git**            | Version 2.30+ — [Download Git](https://git-scm.com/)    |
-| **Internet Access** | Required for downloading toolchains and dependencies     |
+| Requirement          | Details                                                 |
+| -------------------- | ------------------------------------------------------- |
+| **Operating System** | Windows 10/11, macOS 12+, or Linux (Ubuntu 20.04+)      |
+| **Terminal**         | PowerShell (Windows), Terminal (macOS), or Bash (Linux) |
+| **Git**              | Version 2.30+ — [Download Git](https://git-scm.com/)    |
+| **Internet Access**  | Required for downloading toolchains and dependencies    |
 
 ---
 
@@ -407,13 +407,13 @@ Some Rust/Cargo dependency trees can exceed the Windows 260-character path limit
 
 ## Summary
 
-| Step | Command                                         | Purpose                          |
-| ---- | ----------------------------------------------- | -------------------------------- |
-| 1    | `curl ... \| sh` or `rustup-init.exe`           | Install Rust via `rustup`        |
-| 2    | `rustup target add wasm32-unknown-unknown`      | Add WASM compilation target      |
-| 3    | `cargo install --locked stellar-cli`            | Install Soroban CLI              |
-| 4    | `git clone ... && cd chioma/contract`           | Clone the repository             |
-| 5    | `cargo build --release && cargo test`           | Verify the environment           |
+| Step | Command                                    | Purpose                     |
+| ---- | ------------------------------------------ | --------------------------- |
+| 1    | `curl ... \| sh` or `rustup-init.exe`      | Install Rust via `rustup`   |
+| 2    | `rustup target add wasm32-unknown-unknown` | Add WASM compilation target |
+| 3    | `cargo install --locked stellar-cli`       | Install Soroban CLI         |
+| 4    | `git clone ... && cd chioma/contract`      | Clone the repository        |
+| 5    | `cargo build --release && cargo test`      | Verify the environment      |
 
 ---
 
@@ -425,4 +425,4 @@ Your environment is ready! Continue to the next guide:
 
 ---
 
-*Last updated: April 2026 · Chioma Housing Protocol · [CONTRIBUTING.md](../../CONTRIBUTING.md)*
+_Last updated: April 2026 · Chioma Housing Protocol · [CONTRIBUTING.md](../../CONTRIBUTING.md)_

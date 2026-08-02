@@ -14,7 +14,6 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import {
-  ChevronDown,
   Search,
   Filter,
   Loader2,
@@ -24,10 +23,12 @@ import {
   Archive,
   FileText,
   FolderOpen,
+  Upload,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Select,
   SelectContent,
@@ -51,7 +52,7 @@ import {
   useDeleteDocument,
   useArchiveDocument,
 } from '@/lib/query/hooks/use-landlord-documents';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 interface DocumentsListProps {
   className?: string;
@@ -393,14 +394,20 @@ export function DocumentsList({
             <span className="text-neutral-500">Loading documents...</span>
           </div>
         ) : documents.length === 0 ? (
-          <div className="p-16 text-center border-2 border-dashed border-neutral-200 rounded-3xl">
-            <FolderOpen className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-              No documents yet
-            </h3>
-            <p className="text-neutral-500 mb-6">
-              Upload your first document to get started.
-            </p>
+          <div className="p-8">
+            <EmptyState
+              icon={Upload}
+              title="No documents yet"
+              description="Upload your first document to get started managing your property files."
+              actionLabel="Upload Document"
+              onAction={() => {
+                // Trigger upload dialog - implementation depends on your upload mechanism
+                const uploadButton = document.querySelector(
+                  '[data-upload-trigger]',
+                ) as HTMLButtonElement;
+                uploadButton?.click();
+              }}
+            />
           </div>
         ) : (
           <>

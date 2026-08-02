@@ -12,7 +12,6 @@ import {
   User,
   Phone,
   Mail,
-  MapPin,
   AlertTriangle,
   Wrench,
   Image,

@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { queryKeys } from '../keys';
 import { getCacheMetrics, getCacheHitRate, resetCacheMetrics } from '../client';
+import { resolveCacheTtl } from '../cache-ttl';
 
 export interface CacheStrategyConfig {
   staleTime?: number;
@@ -32,9 +33,13 @@ export function useCacheStrategy() {
       queryFn: () => Promise<any>,
       ...args: any[]
     ) => {
+      const queryKey = keyFactory(...args);
+      const ttl = resolveCacheTtl(queryKey);
       queryClient.prefetchQuery({
-        queryKey: keyFactory(...args),
+        queryKey,
         queryFn,
+        staleTime: ttl.staleTime,
+        gcTime: ttl.gcTime,
       });
     },
     [queryClient],
@@ -45,12 +50,15 @@ export function useCacheStrategy() {
       queries: Array<{ key: readonly any[]; queryFn: () => Promise<any> }>,
     ) => {
       await Promise.all(
-        queries.map(({ key, queryFn }) =>
-          queryClient.prefetchQuery({
+        queries.map(({ key, queryFn }) => {
+          const ttl = resolveCacheTtl(key);
+          return queryClient.prefetchQuery({
             queryKey: key,
             queryFn,
-          }),
-        ),
+            staleTime: ttl.staleTime,
+            gcTime: ttl.gcTime,
+          });
+        }),
       );
     },
     [queryClient],

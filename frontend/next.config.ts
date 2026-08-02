@@ -1,4 +1,14 @@
 import type { NextConfig } from 'next';
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const bundleAnalyzer = withBundleAnalyzer({
+  // Only open the visual HTML report when explicitly requested.
+  // Usage: ANALYZE=true pnpm run build
+  enabled: process.env.ANALYZE === 'true',
+  // Always emit the JSON stats file so `scripts/check-bundle-size.js`
+  // can parse chunk sizes in CI without requiring a browser.
+  openAnalyzer: process.env.ANALYZE === 'true',
+});
 
 const nextConfig: NextConfig = {
   // Using webpack for better compatibility
@@ -47,7 +57,7 @@ const nextConfig: NextConfig = {
           {
             key: 'Access-Control-Allow-Headers',
             value:
-              'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+              'Content-Content, Authorization, X-Requested-With, Idempotency-Key',
           },
         ],
       },
@@ -119,4 +129,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default bundleAnalyzer(nextConfig);

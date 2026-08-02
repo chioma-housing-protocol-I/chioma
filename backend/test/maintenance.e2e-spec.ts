@@ -216,7 +216,7 @@ describe('Maintenance E2E Tests', () => {
 
   describe('GET /api/maintenance', () => {
     it('should list all maintenance requests', async () => {
-      const req1 = await maintenanceRepository.save(
+      void (await maintenanceRepository.save(
         maintenanceRepository.create({
           propertyId: testProperty.id,
           tenantId: testTenant.id,
@@ -225,9 +225,9 @@ describe('Maintenance E2E Tests', () => {
           description: 'Sink leak',
           status: MaintenanceStatus.OPEN,
         }),
-      );
+      ));
 
-      const req2 = await maintenanceRepository.save(
+      void (await maintenanceRepository.save(
         maintenanceRepository.create({
           propertyId: testProperty.id,
           tenantId: testTenant.id,
@@ -236,7 +236,7 @@ describe('Maintenance E2E Tests', () => {
           description: 'Light not working',
           status: MaintenanceStatus.IN_PROGRESS,
         }),
-      );
+      ));
 
       return request(app.getHttpServer())
         .get('/api/maintenance')

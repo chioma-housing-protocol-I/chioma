@@ -2,7 +2,7 @@
 
 **Status:** Completed  
 **Category:** Documentation  
-**Type:** Integration Guide  
+**Type:** Integration Guide
 
 ## Overview
 
@@ -31,7 +31,7 @@ impl ExternalContractClient {
         amount: u128,
     ) -> Result<Val, Val> {
         let client = ChiomaPaymentClient::new(&env, &chioma_payment_addr);
-        
+
         client.process_payment(
             &agreement_id,
             &amount,
@@ -76,7 +76,7 @@ impl ChiomaPaymentClient {
             &Symbol::short("query_balance"),
             (&account,),
         )?;
-        
+
         result.try_into()
     }
 }
@@ -128,7 +128,7 @@ pub fn verify_payment(
     let status = env.storage()
         .persistent()
         .get::<_, u32>(
-            &Symbol::short(&format!("payment:record:{}:status", 
+            &Symbol::short(&format!("payment:record:{}:status",
                 agreement_id.to_string()))
         )
         .map_err(|_| 404u32)?;
@@ -220,12 +220,12 @@ pub fn create_cross_contract_escrow(
 
 fn generate_escrow_id(env: &Env, payer: &Address, payee: &Address) -> String {
     use sha2::{Sha256, Digest};
-    
+
     let mut hasher = Sha256::new();
     hasher.update(payer.to_string().as_bytes());
     hasher.update(payee.to_string().as_bytes());
     hasher.update(env.ledger().sequence().to_string().as_bytes());
-    
+
     format!("{:x}", hasher.finalize())
 }
 ```
@@ -280,30 +280,31 @@ Backend systems monitor contract events:
 
 ```typescript
 // services/contractEventService.ts
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdk from "@stellar/stellar-sdk";
 
 export async function listenToContractEvents(
   contractId: string,
-  eventType: string
+  eventType: string,
 ): Promise<void> {
   const server = new StellarSdk.Horizon.Server(horizonUrl);
 
-  server.operations()
+  server
+    .operations()
     .forAccount(contractId)
     .stream({
       onmessage: (operation) => {
-        if (operation.type === 'invoke_host_function') {
+        if (operation.type === "invoke_host_function") {
           handleContractEvent(operation, eventType);
         }
-      }
+      },
     });
 }
 
 function handleContractEvent(operation: any, expectedType: string): void {
   const topics = operation.function_data?.topics || [];
-  
-  if (topics.some(t => t.includes(expectedType))) {
-    console.log('Contract event detected:', operation);
+
+  if (topics.some((t) => t.includes(expectedType))) {
+    console.log("Contract event detected:", operation);
   }
 }
 ```
@@ -412,15 +413,15 @@ pub fn retry_payment_with_backoff(
 
 ```typescript
 // test/mocks/mockChiomaContract.ts
-import { mockContractClient } from '@stellar/soroban-test-utils';
+import { mockContractClient } from "@stellar/soroban-test-utils";
 
 export const mockPaymentContract = mockContractClient({
   process_payment: async (agreementId, amount) => {
-    return Symbol.short('payment_processed');
+    return Symbol.short("payment_processed");
   },
   query_balance: async (account) => {
     return BigInt(1000000000); // 10 XLM in stroops
-  }
+  },
 });
 
 export const mockEscrowContract = mockContractClient({
@@ -428,8 +429,8 @@ export const mockEscrowContract = mockContractClient({
     return id;
   },
   release_escrow: async (id) => {
-    return Symbol.short('released');
-  }
+    return Symbol.short("released");
+  },
 });
 ```
 
@@ -551,20 +552,20 @@ pub fn listen_and_react(
 // config/contracts.ts
 export const contractConfig = {
   payment: {
-    id: process.env.CHIOMA_PAYMENT_CONTRACT_ID || '',
-    network: 'testnet',
-    timeout: 30000
+    id: process.env.CHIOMA_PAYMENT_CONTRACT_ID || "",
+    network: "testnet",
+    timeout: 30000,
   },
   property: {
-    id: process.env.CHIOMA_PROPERTY_CONTRACT_ID || '',
-    network: 'testnet',
-    timeout: 30000
+    id: process.env.CHIOMA_PROPERTY_CONTRACT_ID || "",
+    network: "testnet",
+    timeout: 30000,
   },
   escrow: {
-    id: process.env.CHIOMA_ESCROW_CONTRACT_ID || '',
-    network: 'testnet',
-    timeout: 30000
-  }
+    id: process.env.CHIOMA_ESCROW_CONTRACT_ID || "",
+    network: "testnet",
+    timeout: 30000,
+  },
 };
 ```
 

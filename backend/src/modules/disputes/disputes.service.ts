@@ -134,7 +134,7 @@ export class DisputesService {
         metadata: createDisputeDto.metadata
           ? JSON.parse(createDisputeDto.metadata)
           : null,
-      } as any);
+      });
 
       const savedDispute = await queryRunner.manager.save(dispute);
 
@@ -308,6 +308,17 @@ export class DisputesService {
     }
 
     Object.assign(dispute, updateDisputeDto);
+
+    // When a dispute is resolved with a resolution, track who resolved it
+    if (
+      updateDisputeDto.status === DisputeStatus.RESOLVED &&
+      'resolution' in updateDisputeDto &&
+      updateDisputeDto.resolution
+    ) {
+      dispute.resolvedBy = userId;
+      dispute.resolvedAt = new Date();
+    }
+
     return this.disputeRepository.save(dispute);
   }
 

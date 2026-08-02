@@ -84,7 +84,9 @@
   --color-slate-100: #ece9e0;
   --color-slate-200: #d9d5c9;
   --color-slate-300: #b9b3a4;
-  --color-slate-400: #8e897c;
+  /* slate-400 darkened #8e897c → #6b6760 for WCAG AA compliance:
+     5.62:1 on white · 5.20:1 on slate-50 · 4.63:1 on slate-100 */
+  --color-slate-400: #6b6760;
   --color-slate-500: #646056;
   --color-slate-600: #45423c;
   --color-slate-700: #2c2b28;
@@ -97,7 +99,9 @@
   --color-neutral-100: #ece9e0;
   --color-neutral-200: #d9d5c9;
   --color-neutral-300: #b9b3a4;
-  --color-neutral-400: #8e897c;
+  /* neutral-400 darkened #8e897c → #6b6760 for WCAG AA compliance:
+     5.62:1 on white · 5.20:1 on neutral-50 · 4.63:1 on neutral-100 */
+  --color-neutral-400: #6b6760;
   --color-neutral-500: #646056;
   --color-neutral-600: #45423c;
   --color-neutral-700: #2c2b28;
@@ -246,6 +250,40 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* ── Dynamic viewport height utility ── */
+  /* Use dvh-* classes instead of h-screen on mobile layouts.
+     The --dvh variable is set by OrientationHandler and updates on
+     resize / orientationchange / visualViewport change. */
+  .h-dvh {
+    height: var(--dvh, 100dvh);
+  }
+
+  .min-h-dvh {
+    min-height: var(--dvh, 100dvh);
+  }
+
+  /* ── Orientation-aware responsive helpers ── */
+  /* Hide or compact on short landscape screens (e.g., phone in landscape) */
+  /* max-height: 500px targets small mobile devices in landscape orientation */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .hide-landscape-short {
+      display: none !important;
+    }
+
+    .landscape-compact {
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+    }
+  }
+
+  /* Smooth orientation transition helper */
+  .transition-orientation {
+    transition:
+      width 0.3s ease,
+      height 0.3s ease,
+      min-height 0.3s ease;
   }
 }
 

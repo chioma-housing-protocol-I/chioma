@@ -5,6 +5,7 @@ import {
   IsDateString,
   MaxLength,
   MinLength,
+  IsArray,
 } from 'class-validator';
 
 export class UpdateApiKeyDto {
@@ -20,12 +21,29 @@ export class UpdateApiKeyDto {
   name?: string;
 
   @ApiPropertyOptional({
+    example: 'Updated description',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  description?: string;
+
+  @ApiPropertyOptional({
     description: 'Expiration date in ISO 8601 format',
     example: '2026-06-25T12:00:00Z',
   })
   @IsOptional()
   @IsDateString()
   expiresAt?: string;
+
+  @ApiPropertyOptional({
+    example: ['properties:read', 'properties:write'],
+    description: 'List of permissions/scopes for this key',
+  })
+  @IsOptional()
+  @IsArray()
+  permissions?: string[];
 }
 
 export class RotateApiKeyDto {

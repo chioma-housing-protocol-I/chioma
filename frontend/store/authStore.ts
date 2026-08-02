@@ -1,21 +1,30 @@
 'use client';
 
 import { AppError } from '@/lib/errors';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, setApiClientToken } from '@/lib/api-client';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
+import { useUIStore } from './ui-store';
 
 // --- Types -------------------------------------------------------------------
 
-export interface User {
+export type Role = 'admin' | 'user' | 'agent';
+
+export interface BaseUser {
   id: string;
   email: string;
   emailVerified: boolean;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
   avatar?: string;
+  locale?: string;
 }
+
+export type AdminUser = BaseUser & { role: 'admin' };
+export type RegularUser = BaseUser & { role: 'user' };
+export type AgentUser = BaseUser & { role: 'agent' };
+
+export type User = AdminUser | RegularUser | AgentUser;
 
 interface AuthState {
   user: User | null;
@@ -84,7 +93,8 @@ interface AuthActions {
     firstName?: string;
     lastName?: string;
   }) => Promise<AuthResult>;
-  hydrate: () => void;
+  updatePreferences: (preferences: { locale: string }) => Promise<void>;
+  hydrate: (forceRefresh?: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -116,15 +126,32 @@ function removeAuthCookie() {
 
 // --- Storage Helpers ---------------------------------------------------------
 
-function readStoredAuth(): Omit<AuthState, 'loading'> {
+/**
+ * Closure cache for the parsed localStorage snapshot. localStorage.getItem()
+ * is synchronous and blocks the main thread, so repeat reads within the same
+ * page session (e.g. a re-mounted hydrator) reuse this instead of hitting
+ * storage again. Only refreshed when readStoredAuth is called with
+ * `forceRefresh: true`, which `hydrate()` does not do by default.
+ */
+let cachedAuthSnapshot: Omit<AuthState, 'loading'> | null = null;
+
+function emptyAuthSnapshot(): Omit<AuthState, 'loading'> {
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    walletAddress: null,
+  };
+}
+
+function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
+  if (cachedAuthSnapshot && !forceRefresh) {
+    return cachedAuthSnapshot;
+  }
+
   if (typeof window === 'undefined') {
-    return {
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      walletAddress: null,
-    };
+    return emptyAuthSnapshot();
   }
 
   try {
@@ -140,29 +167,56 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     );
 
     if (storedAccessToken && storedUser) {
-      return {
+      cachedAuthSnapshot = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
         isAuthenticated: true,
         walletAddress: storedWalletAddress,
       };
+      return cachedAuthSnapshot;
     }
-  } catch {
+  } catch (error) {
+    console.error('[authStore] Failed to parse auth storage:', error);
+
+    const storedWalletAddress = localStorage.getItem(
+      AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+    );
+
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
-    localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+    // Partial recovery: preserve wallet address if it exists
     removeAuthCookie();
+
+    useUIStore.getState().addToast({
+      type: 'error',
+      title: 'Session Corrupted',
+      message:
+        'Your local session data was corrupted. You have been safely logged out.',
+    });
+
+    cachedAuthSnapshot = {
+      ...emptyAuthSnapshot(),
+      walletAddress: storedWalletAddress,
+    };
+    return cachedAuthSnapshot;
   }
 
-  return {
-    user: null,
-    accessToken: null,
-    refreshToken: null,
-    isAuthenticated: false,
-    walletAddress: null,
+  // If no stored token and user found
+  const storedWalletAddressFallback = localStorage.getItem(
+    AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+  );
+  cachedAuthSnapshot = {
+    ...emptyAuthSnapshot(),
+    walletAddress: storedWalletAddressFallback,
   };
+  return cachedAuthSnapshot;
+}
+
+/** Test-only escape hatch to reset the closure cache between test cases. */
+export function __resetAuthStorageCacheForTests(): void {
+  cachedAuthSnapshot = null;
 }
 
 function clearStorage() {
@@ -173,6 +227,8 @@ function clearStorage() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
+
+  cachedAuthSnapshot = emptyAuthSnapshot();
 }
 
 function persistAuth(
@@ -190,17 +246,31 @@ function persistAuth(
 
   localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
   setAuthCookie(accessToken);
+
+  // Keep the closure cache in sync so subsequent reads skip localStorage
+  cachedAuthSnapshot = {
+    user,
+    accessToken,
+    refreshToken,
+    isAuthenticated: true,
+    walletAddress: cachedAuthSnapshot?.walletAddress ?? null,
+  };
 }
 
 function normalizeUser(user: AuthApiUser): User {
+  if (user.role !== 'admin' && user.role !== 'user' && user.role !== 'agent') {
+    throw new Error(`Invalid role assigned: ${user.role}`);
+  }
+
   return {
     id: user.id,
     email: user.email ?? '',
     emailVerified: user.emailVerified ?? false,
     firstName: user.firstName ?? '',
     lastName: user.lastName ?? '',
-    role: user.role === 'admin' ? 'admin' : 'user',
+    role: user.role,
     avatar: user.avatar,
+    locale: (user as any).locale,
   };
 }
 
@@ -228,8 +298,9 @@ export const useAuthStore = create<AuthStore>()(
       loading: true,
       walletAddress: null,
 
-      hydrate: () => {
-        const stored = readStoredAuth();
+      hydrate: (forceRefresh = false) => {
+        const stored = readStoredAuth(forceRefresh);
+        setApiClientToken(stored.accessToken);
         set((state) => {
           state.user = stored.user;
           state.accessToken = stored.accessToken;
@@ -246,6 +317,7 @@ export const useAuthStore = create<AuthStore>()(
         user: User,
       ) => {
         persistAuth(accessToken, refreshToken, user);
+        setApiClientToken(accessToken);
         set((state) => {
           state.user = user;
           state.accessToken = accessToken;
@@ -260,6 +332,14 @@ export const useAuthStore = create<AuthStore>()(
           localStorage.setItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS, address);
         } else {
           localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+        }
+
+        // Keep closure cache in sync
+        if (cachedAuthSnapshot) {
+          cachedAuthSnapshot = {
+            ...cachedAuthSnapshot,
+            walletAddress: address,
+          };
         }
 
         set((state) => {
@@ -287,6 +367,9 @@ export const useAuthStore = create<AuthStore>()(
               AUTH_STORAGE_KEYS.USER,
               JSON.stringify(updatedUser),
             );
+            if (cachedAuthSnapshot) {
+              cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+            }
             set((state) => {
               state.user = updatedUser;
             });
@@ -301,6 +384,33 @@ export const useAuthStore = create<AuthStore>()(
               'Could not save your profile. Please try again.',
             ),
           };
+        }
+      },
+
+      updatePreferences: async (preferences) => {
+        try {
+          // Attempt to update backend if API exists. We gracefully fail if it doesn't.
+          await apiClient.post('/auth/preferences', preferences);
+        } catch {
+          // Silent catch for mock environments or missing endpoint
+        }
+
+        const currentUser = get().user;
+        if (currentUser) {
+          const updatedUser: User = {
+            ...currentUser,
+            ...preferences,
+          };
+          localStorage.setItem(
+            AUTH_STORAGE_KEYS.USER,
+            JSON.stringify(updatedUser),
+          );
+          if (cachedAuthSnapshot) {
+            cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+          }
+          set((state) => {
+            state.user = updatedUser;
+          });
         }
       },
 
@@ -418,6 +528,7 @@ export const useAuthStore = create<AuthStore>()(
         }
 
         clearStorage();
+        setApiClientToken(null);
 
         set((state) => {
           state.user = null;

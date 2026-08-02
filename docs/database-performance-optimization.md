@@ -39,15 +39,15 @@ Do **not** add an index when:
 
 ### 1.2 Index Types
 
-| Type | Use Case | Example |
-|---|---|---|
-| B-tree (default) | Equality and range queries | `WHERE status = 'published'` |
-| GIN | JSONB, arrays, full-text search | `WHERE amenities @> '["parking"]'` |
-| GiST | Geometric / PostGIS data | Geographic proximity search |
-| Hash | Exact equality only | High-traffic PK lookups (rarely needed) |
-| Partial | Subset of rows | `WHERE status = 'published'` — index only published rows |
-| Composite | Multiple column filters | `WHERE city = 'Lagos' AND status = 'published'` |
-| Expression | Computed values | `LOWER(email)` for case-insensitive lookup |
+| Type             | Use Case                        | Example                                                  |
+| ---------------- | ------------------------------- | -------------------------------------------------------- |
+| B-tree (default) | Equality and range queries      | `WHERE status = 'published'`                             |
+| GIN              | JSONB, arrays, full-text search | `WHERE amenities @> '["parking"]'`                       |
+| GiST             | Geometric / PostGIS data        | Geographic proximity search                              |
+| Hash             | Exact equality only             | High-traffic PK lookups (rarely needed)                  |
+| Partial          | Subset of rows                  | `WHERE status = 'published'` — index only published rows |
+| Composite        | Multiple column filters         | `WHERE city = 'Lagos' AND status = 'published'`          |
+| Expression       | Computed values                 | `LOWER(email)` for case-insensitive lookup               |
 
 ### 1.3 Key Indexes in Chioma
 
@@ -57,9 +57,12 @@ CREATE INDEX idx_properties_city_status_created
   ON properties (city, status, created_at DESC)
   WHERE status = 'published';
 
--- Payments: tenant history lookup
-CREATE INDEX idx_payments_tenant_created
-  ON payments (tenant_id, created_at DESC);
+-- Payments: status filters + createdAt sort (issue #1405)
+-- Covers PaymentService.listPayments: WHERE user_id + status, ORDER BY created_at DESC
+CREATE INDEX "IDX_payments_user_status_created_at"
+  ON payments (user_id, status, created_at);
+-- Verify planner: pnpm --dir backend run db:verify-payment-status-index
+-- Benchmark (~2M rows): Bitmap Heap Scan + Sort ~41.9ms → Index Scan Backward ~0.37ms (~114x)
 
 -- Users: email login (case-insensitive)
 CREATE UNIQUE INDEX idx_users_email_lower
@@ -69,9 +72,12 @@ CREATE UNIQUE INDEX idx_users_email_lower
 CREATE INDEX idx_stellar_txns_account_created
   ON stellar_transactions (account_id, created_at DESC);
 
--- Full-text property search (if not using Elasticsearch)
-CREATE INDEX idx_properties_fts
-  ON properties USING GIN (to_tsvector('english', title || ' ' || COALESCE(description, '')));
+-- Full-text property search (GIN on stored search_vector — issue #1407)
+-- Used by PropertyQueryBuilder.applySearchFilter and SearchService
+CREATE INDEX "IDX_properties_search_vector"
+  ON properties USING GIN (search_vector);
+-- Strategy: prefer search_vector @@ plainto_tsquery over LIKE '%…%' so the
+-- planner can use the GIN index. Address ILIKE remains as a narrow fallback.
 
 -- JSONB amenities filter
 CREATE INDEX idx_properties_amenities
@@ -114,9 +120,9 @@ const properties = await this.propertyRepo.find();
 
 // ✅ Select only what the API response needs
 const properties = await this.propertyRepo
-  .createQueryBuilder('p')
-  .select(['p.id', 'p.title', 'p.price', 'p.city', 'p.status'])
-  .where('p.status = :status', { status: 'published' })
+  .createQueryBuilder("p")
+  .select(["p.id", "p.title", "p.price", "p.city", "p.status"])
+  .where("p.status = :status", { status: "published" })
   .getMany();
 ```
 
@@ -131,9 +137,9 @@ for (const p of properties) {
 
 // ✅ Single query with JOIN
 const properties = await this.propertyRepo
-  .createQueryBuilder('p')
-  .leftJoinAndSelect('p.landlord', 'landlord')
-  .where('p.status = :status', { status: 'published' })
+  .createQueryBuilder("p")
+  .leftJoinAndSelect("p.landlord", "landlord")
+  .where("p.status = :status", { status: "published" })
   .getMany();
 ```
 
@@ -144,18 +150,18 @@ Always paginate large result sets. Use cursor-based pagination for stable orderi
 ```typescript
 // Offset-based (simple, use for low page numbers)
 const [properties, total] = await this.propertyRepo.findAndCount({
-  where: { status: 'published' },
+  where: { status: "published" },
   take: 20,
   skip: (page - 1) * 20,
-  order: { createdAt: 'DESC' },
+  order: { createdAt: "DESC" },
 });
 
 // Cursor-based (efficient for large datasets)
 const properties = await this.propertyRepo
-  .createQueryBuilder('p')
-  .where('p.created_at < :cursor', { cursor: lastSeenCreatedAt })
-  .andWhere('p.status = :status', { status: 'published' })
-  .orderBy('p.created_at', 'DESC')
+  .createQueryBuilder("p")
+  .where("p.created_at < :cursor", { cursor: lastSeenCreatedAt })
+  .andWhere("p.status = :status", { status: "published" })
+  .orderBy("p.created_at", "DESC")
   .limit(20)
   .getMany();
 ```
@@ -182,7 +188,8 @@ await this.paymentRepo
 TypeORM ORM layer adds overhead for aggregate queries. Use raw SQL:
 
 ```typescript
-const stats = await this.dataSource.query(`
+const stats = await this.dataSource.query(
+  `
   SELECT
     DATE_TRUNC('month', created_at) AS month,
     COUNT(*) AS payment_count,
@@ -194,7 +201,9 @@ const stats = await this.dataSource.query(`
     AND created_at >= NOW() - INTERVAL '12 months'
   GROUP BY 1
   ORDER BY 1 DESC
-`, [tenantId]);
+`,
+  [tenantId],
+);
 ```
 
 ### 2.6 Avoid Functions on Indexed Columns in WHERE
@@ -228,15 +237,15 @@ LIMIT 20;
 
 **Key nodes to understand:**
 
-| Node | What it means |
-|---|---|
-| `Seq Scan` | Full table scan — consider adding an index |
-| `Index Scan` | Uses an index — generally good |
-| `Index Only Scan` | All data served from the index — best case |
-| `Bitmap Heap Scan` | Index + heap fetch — common for range queries |
-| `Hash Join` | Efficient for large datasets |
-| `Nested Loop` | Efficient for small inner sets; expensive for large ones |
-| `Sort` | Sorting without an index — consider adding one |
+| Node               | What it means                                            |
+| ------------------ | -------------------------------------------------------- |
+| `Seq Scan`         | Full table scan — consider adding an index               |
+| `Index Scan`       | Uses an index — generally good                           |
+| `Index Only Scan`  | All data served from the index — best case               |
+| `Bitmap Heap Scan` | Index + heap fetch — common for range queries            |
+| `Hash Join`        | Efficient for large datasets                             |
+| `Nested Loop`      | Efficient for small inner sets; expensive for large ones |
+| `Sort`             | Sorting without an index — consider adding one           |
 
 **Red flags:**
 
@@ -277,13 +286,13 @@ Chioma uses Redis (or Upstash) via `NestJS CacheManager`. Cache queries that are
 - Acceptable to be stale for a short period
 
 ```typescript
-import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheKey, CacheTTL } from "@nestjs/cache-manager";
 
-@Controller('properties')
+@Controller("properties")
 export class PropertyController {
-  @Get('featured')
-  @CacheKey('properties:featured')
-  @CacheTTL(300)  // 5 minutes
+  @Get("featured")
+  @CacheKey("properties:featured")
+  @CacheTTL(300) // 5 minutes
   getFeatured() {
     return this.propertyService.getFeatured();
   }
@@ -327,14 +336,14 @@ async updateProperty(id: string, dto: UpdatePropertyDto): Promise<Property> {
 
 ### 4.4 Caching Decision Matrix
 
-| Data | TTL | Strategy |
-|---|---|---|
-| Property details | 5 min | Cache on read, invalidate on update |
-| Featured listings | 5 min | Time-based expiry |
-| User profile | 10 min | Cache on read, invalidate on update |
-| Payment history | 1 min | Short TTL (frequently updated) |
-| Auth tokens | Per JWT expiry | Do not cache — validate live |
-| Stellar balances | 30 sec | Short TTL (on-chain data) |
+| Data              | TTL            | Strategy                            |
+| ----------------- | -------------- | ----------------------------------- |
+| Property details  | 5 min          | Cache on read, invalidate on update |
+| Featured listings | 5 min          | Time-based expiry                   |
+| User profile      | 10 min         | Cache on read, invalidate on update |
+| Payment history   | 1 min          | Short TTL (frequently updated)      |
+| Auth tokens       | Per JWT expiry | Do not cache — validate live        |
+| Stellar balances  | 30 sec         | Short TTL (on-chain data)           |
 
 ---
 
@@ -345,7 +354,7 @@ async updateProperty(id: string, dto: UpdatePropertyDto): Promise<Property> {
 ```typescript
 // backend/src/database/data-source.ts
 TypeOrmModule.forRoot({
-  type: 'postgres',
+  type: "postgres",
   host: process.env.DB_HOST,
   port: +process.env.DB_PORT,
   username: process.env.DB_USERNAME,
@@ -353,12 +362,12 @@ TypeOrmModule.forRoot({
   database: process.env.DB_NAME,
   extra: {
     // Pool settings
-    max: 20,          // Maximum connections in the pool
-    min: 2,           // Minimum idle connections
-    acquire: 30000,   // Max ms to wait for a connection
-    idle: 10000,      // ms before idle connection is released
+    max: 20, // Maximum connections in the pool
+    min: 2, // Minimum idle connections
+    acquire: 30000, // Max ms to wait for a connection
+    idle: 10000, // ms before idle connection is released
   },
-})
+});
 ```
 
 ### 5.2 Sizing the Connection Pool
@@ -414,11 +423,11 @@ METRICS_ENABLED=true
 
 Key metrics exposed at `GET /metrics`:
 
-| Metric | Alert Threshold |
-|---|---|
-| `http_request_duration_seconds{quantile="0.95"}` | > 500ms |
-| `pg_stat_activity_count` | > 80% of max pool |
-| `nodejs_heap_used_bytes` | > 80% of heap |
+| Metric                                           | Alert Threshold   |
+| ------------------------------------------------ | ----------------- |
+| `http_request_duration_seconds{quantile="0.95"}` | > 500ms           |
+| `pg_stat_activity_count`                         | > 80% of max pool |
+| `nodejs_heap_used_bytes`                         | > 80% of heap     |
 
 ### 6.2 pg_stat_statements
 
@@ -510,13 +519,13 @@ autocannon \
 
 ### 7.3 Interpreting Benchmark Results
 
-| Metric | Target |
-|---|---|
-| Latency p50 | < 50ms |
-| Latency p95 | < 200ms |
-| Latency p99 | < 500ms |
-| Throughput | > 500 req/s for listing endpoints |
-| Error rate | 0% |
+| Metric      | Target                            |
+| ----------- | --------------------------------- |
+| Latency p50 | < 50ms                            |
+| Latency p95 | < 200ms                           |
+| Latency p99 | < 500ms                           |
+| Throughput  | > 500 req/s for listing endpoints |
+| Error rate  | 0%                                |
 
 ### 7.4 Baseline and Track Over Time
 
@@ -543,9 +552,9 @@ TypeORM slow query logging:
 ```typescript
 TypeOrmModule.forRoot({
   // ...
-  maxQueryExecutionTime: 500,   // Log queries slower than 500ms
-  logging: ['error', 'warn', 'query'],
-})
+  maxQueryExecutionTime: 500, // Log queries slower than 500ms
+  logging: ["error", "warn", "query"],
+});
 ```
 
 ### 8.2 Profile a Specific Query
@@ -680,6 +689,7 @@ DELETE FROM payments WHERE created_at < NOW() - INTERVAL '2 years';
 ## 11. Performance Checklist
 
 ### Index Health
+
 - [ ] All foreign key columns have indexes
 - [ ] Composite indexes match the column order of common `WHERE` clauses
 - [ ] Unused indexes identified and dropped
@@ -687,6 +697,7 @@ DELETE FROM payments WHERE created_at < NOW() - INTERVAL '2 years';
 - [ ] Partial indexes used for status-filtered queries
 
 ### Query Quality
+
 - [ ] No `SELECT *` in production code paths
 - [ ] No N+1 query patterns (use eager loading or DataLoader)
 - [ ] All list endpoints are paginated
@@ -694,17 +705,20 @@ DELETE FROM payments WHERE created_at < NOW() - INTERVAL '2 years';
 - [ ] No functions on indexed columns in `WHERE` clauses
 
 ### Caching
+
 - [ ] Frequently-read, rarely-updated data is cached in Redis
 - [ ] Cache TTLs are appropriate for data freshness requirements
 - [ ] Cache invalidation is triggered on every write to cached data
 - [ ] PostgreSQL `shared_buffers` sized to 25% of available RAM
 
 ### Connection Pooling
+
 - [ ] Connection pool `max` is within PostgreSQL `max_connections` limit
 - [ ] Pool minimum idle connections set to avoid cold-start latency
 - [ ] PgBouncer considered for high-concurrency deployments
 
 ### Monitoring
+
 - [ ] `pg_stat_statements` extension enabled
 - [ ] Slow query logging configured (> 500ms threshold)
 - [ ] Prometheus metrics collected and dashboarded

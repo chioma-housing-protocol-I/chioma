@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  forwardRef,
+} from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -17,12 +22,14 @@ import { DatabaseReplicationService } from './database-replication.service';
 import { WebhookSignatureService } from '../webhooks/webhook-signature.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     HttpModule,
     ScheduleModule.forRoot(),
-    NotificationsModule,
+    forwardRef(() => NotificationsModule),
+    StorageModule,
     TypeOrmModule.forFeature([]),
   ],
   controllers: [MonitoringController, PerformanceController],

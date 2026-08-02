@@ -9,15 +9,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import {
   UpdateUserProfileDto,
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
+import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
+import { Locked, LockService } from '../../common/lock';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   UserPreferences,
@@ -28,8 +30,29 @@ import {
   AuditLevel,
   AuditStatus,
 } from '../audit/entities/audit-log.entity';
+import { EncryptionService } from '../../common/services/encryption.service';
 
 const SALT_ROUNDS = 12;
+
+export interface AdminUserView {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  phone: string | null;
+  avatar: string | null;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginatedAdminUsersResult {
+  data: AdminUserView[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Injectable()
 export class UsersService {
@@ -41,6 +64,8 @@ export class UsersService {
     @InjectRepository(UserNotificationPreference)
     private readonly userNotificationPreferenceRepository: Repository<UserNotificationPreference>,
     private readonly auditService: AuditService,
+    private readonly encryptionService: EncryptionService,
+    private readonly lockService: LockService,
   ) {}
 
   async getNotificationPreferences(userId: string): Promise<UserPreferences> {
@@ -182,17 +207,59 @@ export class UsersService {
     updateProfileDto: UpdateUserProfileDto,
   ): Promise<User> {
     const user = await this.findById(userId);
-    Object.assign(user, updateProfileDto);
+
+    // Encrypt PII fields before saving
+    if (updateProfileDto.firstName !== undefined) {
+      user.firstName = updateProfileDto.firstName;
+      if (updateProfileDto.firstName) {
+        user.firstNameEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.firstName),
+        );
+      }
+    }
+
+    if (updateProfileDto.lastName !== undefined) {
+      user.lastName = updateProfileDto.lastName;
+      if (updateProfileDto.lastName) {
+        user.lastNameEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.lastName),
+        );
+      }
+    }
+
     if (updateProfileDto.phoneNumber !== undefined) {
+      user.phoneNumber = updateProfileDto.phoneNumber;
       user.phoneNumberHash = updateProfileDto.phoneNumber
         ? this.hashLookupValue(updateProfileDto.phoneNumber)
         : null;
+      if (updateProfileDto.phoneNumber) {
+        user.phoneNumberEncrypted = Buffer.from(
+          await this.encryptionService.encrypt(updateProfileDto.phoneNumber),
+        );
+      }
     }
+
     const updatedUser = await this.userRepository.save(user);
+
+    // Audit log for PII access
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      performedBy: userId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      metadata: { type: 'PII_UPDATE', fields: Object.keys(updateProfileDto) },
+    });
+
     this.logger.log(`Profile updated for user: ${user.email}`);
     return updatedUser;
   }
 
+  @Locked({
+    key: (userId: string) => `user:change-email:${userId}`,
+    ttlMs: 5000,
+  })
   async changeEmail(
     userId: string,
     changeEmailDto: ChangeEmailDto,
@@ -215,11 +282,30 @@ export class UsersService {
 
     const verificationToken = randomBytes(32).toString('hex');
 
+    // Encrypt new email
+    const encryptedEmail = await this.encryptionService.encrypt(normalizedNew);
+
     await this.userRepository.update(userId, {
       email: normalizedNew,
+      emailEncrypted: Buffer.from(encryptedEmail),
       emailHash: this.hashLookupValue(normalizedNew),
       emailVerified: false,
       verificationToken,
+    });
+
+    // Audit log for PII access
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      performedBy: userId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      metadata: {
+        type: 'EMAIL_CHANGE',
+        oldEmail: user.email,
+        newEmail: normalizedNew,
+      },
     });
 
     this.logger.log(
@@ -312,6 +398,138 @@ export class UsersService {
     this.logger.log(`Account restored for user: ${user.email}`);
 
     return { message: 'Account restored successfully. You can now log in.' };
+  }
+
+  async findAllForAdmin(
+    query: AdminUserQueryDto,
+  ): Promise<PaginatedAdminUsersResult> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const qb = this.userRepository.createQueryBuilder('user');
+
+    if (query.role) {
+      qb.andWhere('user.role = :role', { role: query.role });
+    }
+
+    if (query.isVerified !== undefined) {
+      qb.andWhere('user.emailVerified = :isVerified', {
+        isVerified: query.isVerified,
+      });
+    }
+
+    if (query.search) {
+      qb.andWhere(
+        '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+
+    qb.orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [rows, total] = await qb.getManyAndCount();
+
+    return {
+      data: rows.map((user) => this.toAdminUserView(user)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(Math.ceil(total / limit), 1),
+    };
+  }
+
+  async adminDeactivateAccount(
+    userId: string,
+    adminId: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findById(userId);
+
+    await this.userRepository.update(userId, {
+      isActive: false,
+      refreshToken: null,
+    });
+
+    await this.auditService.log({
+      action: AuditAction.USER_SUSPENDED,
+      entityType: 'User',
+      entityId: userId,
+      performedBy: adminId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      oldValues: { isActive: user.isActive },
+      newValues: { isActive: false },
+    });
+
+    this.logger.log(`Account suspended by admin ${adminId}: ${user.email}`);
+
+    return { message: 'User suspended successfully' };
+  }
+
+  async adminVerifyAccount(
+    userId: string,
+    adminId: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findById(userId);
+
+    await this.userRepository.update(userId, { emailVerified: true });
+
+    await this.auditService.log({
+      action: AuditAction.USER_VERIFIED,
+      entityType: 'User',
+      entityId: userId,
+      performedBy: adminId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      oldValues: { emailVerified: user.emailVerified },
+      newValues: { emailVerified: true },
+    });
+
+    this.logger.log(`Account verified by admin ${adminId}: ${user.email}`);
+
+    return { message: 'User verified successfully' };
+  }
+
+  async adminRestoreAccount(
+    userId: string,
+    adminId: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findById(userId, true);
+
+    if (user.deletedAt) {
+      await this.userRepository.restore(userId);
+    }
+    await this.userRepository.update(userId, { isActive: true });
+
+    await this.auditService.log({
+      action: AuditAction.USER_RESTORED,
+      entityType: 'User',
+      entityId: userId,
+      performedBy: adminId,
+      status: AuditStatus.SUCCESS,
+      level: AuditLevel.SECURITY,
+      oldValues: { isActive: user.isActive, deletedAt: user.deletedAt ?? null },
+      newValues: { isActive: true, deletedAt: null },
+    });
+
+    this.logger.log(`Account restored by admin ${adminId}: ${user.email}`);
+
+    return { message: 'User restored successfully' };
+  }
+
+  private toAdminUserView(user: User): AdminUserView {
+    return {
+      id: user.id,
+      email: user.email ?? '',
+      name: [user.firstName, user.lastName].filter(Boolean).join(' '),
+      role: user.role,
+      phone: user.phoneNumber,
+      avatar: user.avatarUrl,
+      isVerified: user.emailVerified,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
   }
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {

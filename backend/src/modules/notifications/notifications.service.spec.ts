@@ -24,6 +24,10 @@ describe('NotificationsService', () => {
     emitToUser: jest.fn(),
   };
 
+  const errorNotificationService = {
+    notifyAlert: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: NotificationsService;
 
   beforeEach(() => {
@@ -32,6 +36,7 @@ describe('NotificationsService', () => {
       notificationRepo as any,
       preferenceRepo as any,
       realtimeService as any,
+      errorNotificationService as any,
     );
   });
 
@@ -152,6 +157,24 @@ describe('NotificationsService', () => {
 
     await service.notify('user-3', 'New message', 'hello', 'NEW_MESSAGE');
     expect(realtimeService.emitToUser).not.toHaveBeenCalled();
+  });
+
+  it('alerts and rethrows when saving a notification fails', async () => {
+    notificationRepo.create.mockReturnValue({});
+    notificationRepo.save.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.notify('user-6', 'Payment received', 'Done', 'PAYMENT_RECEIVED'),
+    ).rejects.toThrow('db down');
+
+    expect(errorNotificationService.notifyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        labels: expect.objectContaining({
+          alertname: 'NotificationDeliveryFailed',
+        }),
+      }),
+      expect.anything(),
+    );
   });
 
   it('marks all unread notifications as read', async () => {

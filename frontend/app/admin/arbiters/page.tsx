@@ -108,7 +108,7 @@ export default function AdminArbitersPage() {
         stakeAmount: '',
         specialization: '',
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to register arbiter');
     }
   };
@@ -120,7 +120,7 @@ export default function AdminArbitersPage() {
       await deregisterMutation.mutateAsync({ arbiterAddress: address });
       toast.success('Arbiter deregistered successfully');
       setSelected(null);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to deregister arbiter');
     }
   };
@@ -158,7 +158,7 @@ export default function AdminArbitersPage() {
         user: null,
       });
       toast.success('User unlinked from arbiter');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to unlink user from arbiter');
     }
   };

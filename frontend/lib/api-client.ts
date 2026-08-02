@@ -53,6 +53,24 @@ function getApiBaseUrl(): string {
   );
 }
 
+/**
+ * Module-level token cache so getAuthToken() does not hit localStorage on
+ * every HTTP request. Populated by setApiClientToken() which is called by
+ * the authStore whenever tokens change (login, refresh, logout).
+ *
+ * Falls back to localStorage on the first call (e.g. page reload before the
+ * store has had a chance to call setApiClientToken).
+ */
+let _cachedToken: string | null | undefined = undefined;
+
+/**
+ * Updates the api-client's in-memory token cache.
+ * Call this from the authStore on login, token refresh, and logout.
+ */
+export function setApiClientToken(token: string | null): void {
+  _cachedToken = token;
+}
+
 class ApiClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
@@ -67,10 +85,16 @@ class ApiClient {
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
 
-    return (
+    // Use in-memory cache if already populated (avoids synchronous localStorage
+    // I/O on every request — localStorage reads block the main thread).
+    if (_cachedToken !== undefined) return _cachedToken;
+
+    // Cold-start fallback: read from localStorage once and cache the result.
+    const token =
       localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN) ||
-      localStorage.getItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN)
-    );
+      localStorage.getItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
+    _cachedToken = token;
+    return token;
   }
 
   private async parseResponse<T>(response: Response): Promise<T> {
@@ -87,6 +111,7 @@ class ApiClient {
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
+    _cachedToken = null;
   }
 
   private async request<T>(

@@ -56,4 +56,19 @@ export class ErrorResponseDto {
     required: false,
   })
   retryAfter?: number;
+
+  @ApiProperty({
+    example: 25,
+    description:
+      'Amount actually available for the operation (e.g. remaining refundable amount)',
+    required: false,
+  })
+  available?: number;
+
+  @ApiProperty({
+    example: 100,
+    description: 'Amount that was requested for the operation',
+    required: false,
+  })
+  requested?: number;
 }

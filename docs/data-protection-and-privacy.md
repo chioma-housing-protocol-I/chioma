@@ -1,6 +1,7 @@
 # Data Protection and Privacy Policy
 
 ## 1. Overview
+
 This document defines the data protection and privacy practices for the Chioma platform. It outlines how user data is collected, processed, stored, protected, and deleted in alignment with industry standards and regulatory expectations.
 
 The platform may process personal data related to housing services, including user identification, communication, and property-related information.
@@ -39,13 +40,16 @@ The platform aligns with core GDPR principles:
 Data is categorized into:
 
 ### Public Data
+
 - Non-sensitive, publicly available information
 
 ### Internal Data
+
 - System logs
 - Operational data
 
 ### Sensitive Data
+
 - Full name
 - Email address
 - Phone number
@@ -96,9 +100,11 @@ Data is used for:
   - Processed within a defined timeframe
 
 Exceptions:
+
 - Legal or compliance requirements may require retention.
 
 Deletion methods:
+
 - Permanent removal from database
 - Secure deletion practices to prevent recovery
 
@@ -122,6 +128,7 @@ Privacy must be integrated into system development:
 - All access should follow the **principle of least privilege**.
 
 Examples:
+
 - Admins: full access
 - Staff: limited operational access
 - Users: access only to their own data
@@ -148,11 +155,13 @@ The system must log:
 - Administrative actions
 
 Logs should include:
+
 - Timestamp
 - User ID
 - Action performed
 
 Logs must be:
+
 - Secure
 - Tamper-resistant
 - Reviewed periodically

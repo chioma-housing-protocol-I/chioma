@@ -17,7 +17,7 @@ export default function AdminSidebar() {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
   return (
-    <aside className="hidden h-screen border-r border-white/10 bg-slate-900/50 backdrop-blur-xl md:flex md:w-20 md:flex-col lg:w-56">
+    <aside className="hidden h-dvh border-r border-white/10 bg-slate-900/50 backdrop-blur-xl md:flex md:w-20 md:flex-col lg:w-56 transition-orientation">
       <Logo
         size="lg"
         href="/"

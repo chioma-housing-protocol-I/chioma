@@ -38,6 +38,12 @@ export class AnalyticsController {
     );
   }
 
+  @Get('landlord/fees-summary')
+  @ApiOperation({ summary: 'Get landlord platform fees summary' })
+  async getLandlordFeesSummary(@CurrentUser() user: User) {
+    return this.analyticsService.getLandlordFeesSummary(user.id);
+  }
+
   @Get('dashboard/metrics')
   @ApiOperation({ summary: 'Get overall dashboard metrics' })
   async getDashboardMetrics(@CurrentUser() user: User) {

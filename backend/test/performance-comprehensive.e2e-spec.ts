@@ -10,11 +10,10 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { clearDatabase, getTestDatabaseConfig } from './test-helpers';
+import { clearDatabase } from './test-helpers';
 import { DataSource } from 'typeorm';
 import { User } from '../src/modules/users/entities/user.entity';
 import { Property } from '../src/modules/properties/entities/property.entity';
-import { Payment } from '../src/modules/payments/entities/payment.entity';
 
 interface PerformanceMetrics {
   endpoint: string;

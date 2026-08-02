@@ -1,8 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  PaymentGatewayService,
-  GatewayChargeResponse,
-} from '../../src/modules/payments/payment-gateway.service';
+import { PaymentGatewayService } from '../../src/modules/payments/payment-gateway.service';
 import * as nock from 'nock';
 import { matchers } from 'jest-json-schema';
 import 'jest-json-schema';

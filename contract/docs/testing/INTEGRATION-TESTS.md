@@ -6,15 +6,15 @@ Integration tests validate realistic workflows across multiple actors, state cha
 
 ## Core Workflows
 
-| Workflow | Required assertions |
-|---|---|
-| Escrow creation and release | Deposit is created, approvals are recorded, release threshold is enforced, funds/state move once |
-| Escrow timeout | Timeout cannot execute early, succeeds at the correct boundary, emits timeout event |
-| Dispute lifecycle | Dispute opens, evidence is stored, arbiter decision updates final status, duplicate resolution is blocked |
-| Payment processing | Valid payment records state, failed payment does not mutate final balances, events are emitted |
-| Emergency pause | Paused contract rejects mutating calls and allows approved recovery/unpause flow |
-| Property registration | Owner can create/update property, unrelated users cannot mutate it |
-| User profile | Profile creation, update, and lookup remain consistent across repeated calls |
+| Workflow                    | Required assertions                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Escrow creation and release | Deposit is created, approvals are recorded, release threshold is enforced, funds/state move once          |
+| Escrow timeout              | Timeout cannot execute early, succeeds at the correct boundary, emits timeout event                       |
+| Dispute lifecycle           | Dispute opens, evidence is stored, arbiter decision updates final status, duplicate resolution is blocked |
+| Payment processing          | Valid payment records state, failed payment does not mutate final balances, events are emitted            |
+| Emergency pause             | Paused contract rejects mutating calls and allows approved recovery/unpause flow                          |
+| Property registration       | Owner can create/update property, unrelated users cannot mutate it                                        |
+| User profile                | Profile creation, update, and lookup remain consistent across repeated calls                              |
 
 ## Actor Model
 

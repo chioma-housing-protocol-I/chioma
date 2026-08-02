@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
+import toast from 'react-hot-toast';
 import type { KycStatus, KycVerification, PaginatedResponse } from '@/types';
 
 export interface KycVerificationListParams {
@@ -110,7 +111,42 @@ export function useApproveKycVerification() {
         reason,
       });
     },
+    onMutate: async ({ verificationId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.kyc.all });
+      const snapshots = queryClient
+        .getQueriesData<PaginatedResponse<KycVerification>>({
+          queryKey: queryKeys.kyc.all,
+        })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<PaginatedResponse<KycVerification>>(
+        { queryKey: queryKeys.kyc.all },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((v) =>
+              v.id === verificationId
+                ? { ...v, status: 'APPROVED' as KycStatus }
+                : v,
+            ),
+          };
+        },
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
     onSuccess: () => {
+      toast.success('KYC approved');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.kyc.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     },
@@ -128,7 +164,42 @@ export function useRejectKycVerification() {
         reason,
       });
     },
+    onMutate: async ({ verificationId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.kyc.all });
+      const snapshots = queryClient
+        .getQueriesData<PaginatedResponse<KycVerification>>({
+          queryKey: queryKeys.kyc.all,
+        })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<PaginatedResponse<KycVerification>>(
+        { queryKey: queryKeys.kyc.all },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((v) =>
+              v.id === verificationId
+                ? { ...v, status: 'REJECTED' as KycStatus }
+                : v,
+            ),
+          };
+        },
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
     onSuccess: () => {
+      toast.success('KYC rejected');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.kyc.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     },

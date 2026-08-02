@@ -1,98 +1,200 @@
+/**
+ * Tenant screening API client.
+ *
+ * Wraps the live backend routes under @Controller('screenings/tenant'):
+ *   POST  /screenings/tenant/request         – submit a new screening request
+ *   POST  /screenings/tenant/:id/consent     – grant tenant consent
+ *   GET   /screenings/tenant/:id             – fetch screening status
+ *   GET   /screenings/tenant/:id/report      – fetch the completed report
+ *
+ * Note: the webhook endpoint (POST /screenings/tenant/webhook) is a
+ * server-to-server route and should never be called from the frontend.
+ */
+
 import { apiClient } from '../api-client';
 
-export type ScreeningStatus =
-  | 'pending'
-  | 'in_progress'
-  | 'completed'
-  | 'failed'
-  | 'error';
+// ---------------------------------------------------------------------------
+// Enums (mirror backend screening.enums.ts)
+// ---------------------------------------------------------------------------
 
-export interface ScreeningRequest {
+export enum ScreeningProvider {
+  TRANSUNION_SMARTMOVE = 'TRANSUNION_SMARTMOVE',
+  EXPERIAN_CONNECT = 'EXPERIAN_CONNECT',
+}
+
+export enum ScreeningStatus {
+  PENDING_CONSENT = 'PENDING_CONSENT',
+  CONSENTED = 'CONSENTED',
+  SUBMITTED = 'SUBMITTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  REVOKED = 'REVOKED',
+}
+
+export enum ScreeningCheckType {
+  CREDIT = 'CREDIT',
+  BACKGROUND = 'BACKGROUND',
+  RENTAL_HISTORY = 'RENTAL_HISTORY',
+}
+
+export enum RiskLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  REVIEW = 'REVIEW',
+}
+
+// ---------------------------------------------------------------------------
+// Request / response shapes
+// ---------------------------------------------------------------------------
+
+export interface CreateScreeningRequestPayload {
   tenantId: string;
-  propertyId: string;
+  requestedChecks: ScreeningCheckType[];
+  /**
+   * PII payload collected under tenant consent, submitted only to the
+   * screening provider. Never log or persist client-side.
+   */
+  applicantData: Record<string, unknown>;
+  consentVersion: string;
+  provider?: ScreeningProvider;
+  propertyId?: string;
+  notes?: string;
+}
+
+export interface GrantConsentPayload {
+  consentTextVersion: string;
+  expiresAt?: string;
+}
+
+/** Returned by POST /screenings/tenant/request and GET /screenings/tenant/:id */
+export interface ScreeningRecord {
+  id: string;
+  tenantId: string;
+  status: ScreeningStatus;
+  requestedChecks: ScreeningCheckType[];
+  provider?: ScreeningProvider;
+  propertyId?: string;
   consentGranted: boolean;
-}
-
-export interface ScreeningSubmission {
-  screeningId: string;
-  status: ScreeningStatus;
-  estimatedCompletionMs: number;
+  consentGrantedAt?: string;
+  submittedAt?: string;
+  completedAt?: string;
+  expiresAt?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface ScreeningResult {
+/** Returned by GET /screenings/tenant/:id/report */
+export interface ScreeningReport {
+  id: string;
   screeningId: string;
   tenantId: string;
-  status: ScreeningStatus;
-  creditScore: number | null;
-  incomeVerified: boolean;
-  backgroundClear: boolean;
-  recommendation: 'approve' | 'decline' | 'review';
-  completedAt: string | null;
-  expiresAt: string | null;
+  riskLevel?: RiskLevel;
+  creditScore?: number;
+  backgroundClear?: boolean;
+  rentalHistoryClear?: boolean;
+  summary?: string;
+  rawReport?: Record<string, unknown>;
+  generatedAt: string;
 }
 
-const POLL_INTERVAL_MS = 3_000;
-const MAX_POLL_ATTEMPTS = 60;
+// ---------------------------------------------------------------------------
+// Polling helpers
+// ---------------------------------------------------------------------------
+
+const TERMINAL_STATUSES: ScreeningStatus[] = [
+  ScreeningStatus.COMPLETED,
+  ScreeningStatus.FAILED,
+  ScreeningStatus.EXPIRED,
+  ScreeningStatus.REVOKED,
+];
+
+const POLL_INTERVAL_MS = 5_000;
+const MAX_POLL_ATTEMPTS = 60; // 5 min ceiling
+
+// ---------------------------------------------------------------------------
+// API client
+// ---------------------------------------------------------------------------
 
 export const tenantScreeningApi = {
+  /**
+   * Submit a new screening request.
+   * Requires ADMIN or USER role on the backend (JwtAuthGuard + RolesGuard).
+   */
   submitRequest: async (
-    payload: ScreeningRequest,
-  ): Promise<ScreeningSubmission> => {
-    const response = await apiClient.post<ScreeningSubmission>(
-      '/screening/requests',
+    payload: CreateScreeningRequestPayload,
+  ): Promise<ScreeningRecord> => {
+    const res = await apiClient.post<ScreeningRecord>(
+      '/screenings/tenant/request',
       payload,
     );
-    return response.data;
+    return res.data;
   },
 
-  getStatus: async (screeningId: string): Promise<ScreeningSubmission> => {
-    const response = await apiClient.get<ScreeningSubmission>(
-      `/screening/requests/${encodeURIComponent(screeningId)}/status`,
+  /**
+   * Grant tenant consent for a pending screening request.
+   * Must be called by the tenant whose ID matches the request.
+   */
+  grantConsent: async (
+    screeningId: string,
+    payload: GrantConsentPayload,
+  ): Promise<ScreeningRecord> => {
+    const res = await apiClient.post<ScreeningRecord>(
+      `/screenings/tenant/${encodeURIComponent(screeningId)}/consent`,
+      payload,
     );
-    return response.data;
+    return res.data;
   },
 
-  getResults: async (screeningId: string): Promise<ScreeningResult> => {
-    const response = await apiClient.get<ScreeningResult>(
-      `/screening/requests/${encodeURIComponent(screeningId)}/results`,
+  /**
+   * Fetch the current status of a screening request.
+   */
+  getScreening: async (screeningId: string): Promise<ScreeningRecord> => {
+    const res = await apiClient.get<ScreeningRecord>(
+      `/screenings/tenant/${encodeURIComponent(screeningId)}`,
     );
-    return response.data;
+    return res.data;
   },
 
-  /** Poll until status is terminal or MAX_POLL_ATTEMPTS is reached. */
+  /**
+   * Fetch the completed screening report.
+   * Only available once status is COMPLETED.
+   */
+  getReport: async (screeningId: string): Promise<ScreeningReport> => {
+    const res = await apiClient.get<ScreeningReport>(
+      `/screenings/tenant/${encodeURIComponent(screeningId)}/report`,
+    );
+    return res.data;
+  },
+
+  /**
+   * Poll getScreening until a terminal status is reached, then return the
+   * report. Throws if the polling window is exhausted before completion.
+   */
   pollUntilComplete: async (
     screeningId: string,
     onProgress?: (status: ScreeningStatus) => void,
-  ): Promise<ScreeningResult> => {
-    const TERMINAL: ScreeningStatus[] = ['completed', 'failed', 'error'];
+  ): Promise<ScreeningReport> => {
     let attempts = 0;
 
     while (attempts < MAX_POLL_ATTEMPTS) {
-      const submission = await tenantScreeningApi.getStatus(screeningId);
-      onProgress?.(submission.status);
+      const screening = await tenantScreeningApi.getScreening(screeningId);
+      onProgress?.(screening.status);
 
-      if (TERMINAL.includes(submission.status)) {
-        return tenantScreeningApi.getResults(screeningId);
+      if (TERMINAL_STATUSES.includes(screening.status)) {
+        return tenantScreeningApi.getReport(screeningId);
       }
 
-      await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, POLL_INTERVAL_MS),
+      );
       attempts++;
     }
 
     throw new Error(
-      `Screening ${screeningId} did not complete within the polling window`,
+      `Screening ${screeningId} did not reach a terminal status within the polling window.`,
     );
-  },
-
-  getCache: async (tenantId: string): Promise<ScreeningResult | null> => {
-    try {
-      const response = await apiClient.get<ScreeningResult>(
-        `/screening/cache/${encodeURIComponent(tenantId)}`,
-      );
-      return response.data;
-    } catch {
-      return null;
-    }
   },
 };

@@ -6,6 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReferralModule } from '../referral/referral.module';
 import { AuditModule } from '../audit/audit.module';
+import { QueuesModule } from '../queues/queues.module';
+import { JWT_ACCESS_TOKEN_EXPIRY } from '../../common/constants/business-rules.constants';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthMetricsService } from './services/auth-metrics.service';
@@ -39,7 +41,7 @@ import { OAuthAccount } from './oauth/entities/oauth-account.entity';
         return {
           secret,
           signOptions: {
-            expiresIn: '15m',
+            expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
           },
         };
       },
@@ -48,6 +50,9 @@ import { OAuthAccount } from './oauth/entities/oauth-account.entity';
     NotificationsModule,
     ReferralModule,
     AuditModule,
+    // Excluded during static OpenAPI generation (no Redis available there),
+    // matching how QueuesModule is already gated in app.module.ts.
+    ...(process.env.OPENAPI_GENERATE !== 'true' ? [QueuesModule] : []),
   ],
   controllers: [
     AuthController,

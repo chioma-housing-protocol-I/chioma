@@ -11,6 +11,10 @@ describe('AnalyticsService', () => {
     find: jest.fn(),
   };
 
+  const subletBookingRepository = {
+    find: jest.fn(),
+  };
+
   const paymentRepository = {
     find: jest.fn(),
   };
@@ -26,6 +30,7 @@ describe('AnalyticsService', () => {
     service = new AnalyticsService(
       propertyRepository as any,
       inquiryRepository as any,
+      subletBookingRepository as any,
       paymentRepository as any,
       auditLogRepository as any,
     );
@@ -101,5 +106,27 @@ describe('AnalyticsService', () => {
     expect(result.performance.averageViewsPerProperty).toBe(0);
     expect(result.marketTrends.cityTrends).toEqual([]);
     expect(result.marketTrends.inquiryTrend).toHaveLength(15);
+  });
+
+  it('sums platform fees from sublet bookings for a landlord', async () => {
+    subletBookingRepository.find.mockResolvedValue([
+      { platformFee: 50000, landlordId: 'landlord-1' },
+      { platformFee: 35000, landlordId: 'landlord-1' },
+      { platformFee: 15000, landlordId: 'landlord-1' },
+    ]);
+
+    const result = await service.getLandlordFeesSummary('landlord-1');
+
+    expect(result.totalPlatformFees).toBe(100000);
+    expect(result.bookingCount).toBe(3);
+  });
+
+  it('returns zero fees when landlord has no sublet bookings', async () => {
+    subletBookingRepository.find.mockResolvedValue([]);
+
+    const result = await service.getLandlordFeesSummary('landlord-2');
+
+    expect(result.totalPlatformFees).toBe(0);
+    expect(result.bookingCount).toBe(0);
   });
 });
