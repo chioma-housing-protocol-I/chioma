@@ -292,6 +292,7 @@ fn test_create_agreement_fails_with_unverified_property() {
 
 `transfer_property` and `update_property_metadata` are implemented in `contracts/property_registry/src/property.rs` and exposed on `PropertyRegistryContract` (see `README.md` for their signatures, arguments and error conditions). Both follow the same authorization pattern as `register_property`/`verify_property`: the caller must `require_auth()` and must match the address already on record for the property, not merely provide a valid signature for themselves.
 
+Note for callers integrating from another contract: `update_property_metadata` resets `verified` to `false` and `verified_at` to `None`, since the new metadata may describe a materially different property. Any downstream contract relying on `PropertyDetails::verified` (see the `create_agreement` integration below) should account for a previously-verified property becoming unverified after a metadata update.
 Add functionality to transfer property ownership:
 
 ```rust

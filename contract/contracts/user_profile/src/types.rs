@@ -12,7 +12,7 @@ pub enum AccountType {
 /// On-chain user profile structure (SEP-29 compliant)
 /// Minimal data stored on-chain for gas efficiency
 #[contracttype]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UserProfile {
     /// Stellar account address
     pub account_id: Address,
