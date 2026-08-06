@@ -13,7 +13,9 @@ paths = [
   '''(?i).*\.md''',
   '''(?i).*\.env.*''',
   '''(?i).*docker-compose.*''',
-  '''(?i)\.github/workflows/.*'''
+  '''(?i)\.github/workflows/.*''',
+  '''(?i)scripts/.*''',
+  '''(?i).*/scripts/.*'''
 ]
 regexes = [
   '''(?i)example''',
@@ -26,7 +28,8 @@ regexes = [
   '''(?i)0000000000000000''',
   '''(?i)change_me''',
   '''(?i)secret''',
-  '''(?i)supersecret'''
+  '''(?i)supersecret''',
+  '''(?i)password'''
 ]
 
 [[rules]]
