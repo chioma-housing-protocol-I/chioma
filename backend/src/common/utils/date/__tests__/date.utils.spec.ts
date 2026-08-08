@@ -1,7 +1,7 @@
 import { DateUtils } from '../date.utils';
 
 describe('DateUtils', () => {
-  const testDateStr = '2026-03-25T10:00:00Z';
+  const testDateStr = '2026-03-25T12:00:00Z';
   const testDate = new Date(testDateStr);
 
   describe('formatDate', () => {
