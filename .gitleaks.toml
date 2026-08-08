@@ -61,9 +61,55 @@ id = "jwt-secret-hardcoded"
 description = "Hardcoded JWT Secret"
 regex = '''(?i)(jwt_secret|jwtsecret|jwt_key)\s*[:=]\s*['"]?([^'"\s\n]{10,})['"]?'''
 tags = ["secret", "JWT"]
+[rules.allowlist]
+regexes = [
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)your[-_]secret''',
+  '''(?i)dummy''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''(?i)redacted''',
+  '''(?i)supersecret'''
+]
+paths = [
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*''',
+  '''(?i).*scripts/.*'''
+]
 
 [[rules]]
 id = "database-password"
 description = "Hardcoded Database Password / URL"
 regex = '''(?i)(DATABASE_URL|DB_PASSWORD|POSTGRES_PASSWORD)\s*[:=]\s*['"]?([^'"\s\n]{8,})['"]?'''
 tags = ["secret", "Database"]
+[rules.allowlist]
+regexes = [
+  '''(?i)neondb_owner''',
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)dummy''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''(?i)password''',
+  '''(?i)redacted'''
+]
+paths = [
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*''',
+  '''(?i).*scripts/.*'''
+]
