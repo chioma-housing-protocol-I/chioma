@@ -1,8 +1,8 @@
 import { DateUtils } from '../date.utils';
 
 describe('DateUtils', () => {
-  const testDateStr = '2026-03-25T12:00:00Z';
-  const testDate = new Date(testDateStr);
+  // Use local Date constructor so timezone offsets don't shift the day
+  const testDate = new Date(2026, 2, 25, 12, 0, 0);
 
   describe('formatDate', () => {
     it('should format date correctly with default format', () => {

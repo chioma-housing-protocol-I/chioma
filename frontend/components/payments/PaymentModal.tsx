@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { BaseModal } from './BaseModal';
+import { BaseModal } from '@/components/modals/BaseModal';
 import {
   CreditCard,
   DollarSign,
@@ -19,7 +19,7 @@ import {
   useDeletePaymentMethod,
 } from '@/lib/query/hooks/use-payments';
 import { formatCurrency } from '@/lib/utils/format';
-import PaymentFormErrorBoundary from '@/components/forms/PaymentFormErrorBoundary';
+import PaymentFormErrorBoundary from '@/components/payments/PaymentFormErrorBoundary';
 
 interface PaymentData {
   agreementId: string;

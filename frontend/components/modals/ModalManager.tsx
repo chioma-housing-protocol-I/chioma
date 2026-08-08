@@ -13,16 +13,24 @@ import dynamic from 'next/dynamic';
 
 // Dynamically import all modals to keep them out of the initial bundle load
 const PropertyDetailModal = dynamic(
-  () => import('./PropertyDetailModal').then((m) => m.PropertyDetailModal),
+  () =>
+    import('@/components/properties/PropertyDetailModal').then(
+      (m) => m.PropertyDetailModal,
+    ),
   { ssr: false },
 );
 const PropertyInquiryModal = dynamic(
-  () => import('./PropertyInquiryModal').then((m) => m.PropertyInquiryModal),
+  () =>
+    import('@/components/properties/PropertyInquiryModal').then(
+      (m) => m.PropertyInquiryModal,
+    ),
   { ssr: false },
 );
 const PropertyAgreementModal = dynamic(
   () =>
-    import('./PropertyAgreementModal').then((m) => m.PropertyAgreementModal),
+    import('@/components/properties/PropertyAgreementModal').then(
+      (m) => m.PropertyAgreementModal,
+    ),
   { ssr: false },
 );
 const AgreementViewModal = dynamic(
@@ -55,7 +63,8 @@ const EvidenceUploadModal = dynamic(
   { ssr: false },
 );
 const PaymentModal = dynamic(
-  () => import('./PaymentModal').then((m) => m.PaymentModal),
+  () =>
+    import('@/components/payments/PaymentModal').then((m) => m.PaymentModal),
   { ssr: false },
 );
 const RefundModal = dynamic(
@@ -106,11 +115,7 @@ interface DisputeData {
   description: string;
   priority: 'low' | 'medium' | 'high';
   category:
-    | 'payment'
-    | 'property_damage'
-    | 'lease_violation'
-    | 'maintenance'
-    | 'other';
+    'payment' | 'property_damage' | 'lease_violation' | 'maintenance' | 'other';
   evidence?: File[];
 }
 
@@ -240,8 +245,8 @@ export const ModalManager: React.FC = () => {
           propertyTitle={modalState.data?.propertyTitle as string | undefined}
           onSubmit={
             (modalState.data?.onSubmit as
-              | ((data: PropertyInquiryData) => Promise<void>)
-              | undefined) ?? submitPropertyInquiry
+              ((data: PropertyInquiryData) => Promise<void>) | undefined) ??
+            submitPropertyInquiry
           }
         />
       );
@@ -255,8 +260,7 @@ export const ModalManager: React.FC = () => {
           mode={(modalState.data?.mode as 'view' | 'create' | 'edit') || 'view'}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: PropertyAgreementData) => Promise<void>)
-              | undefined
+              ((data: PropertyAgreementData) => Promise<void>) | undefined
           }
         />
       );
@@ -286,8 +290,7 @@ export const ModalManager: React.FC = () => {
           signerName={modalState.data?.signerName as string | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: AgreementSigningData) => Promise<void>)
-              | undefined
+              ((data: AgreementSigningData) => Promise<void>) | undefined
           }
         />
       );
@@ -300,8 +303,7 @@ export const ModalManager: React.FC = () => {
           agreementId={modalState.data?.agreementId as string | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: DisputeData) => Promise<void>)
-              | undefined
+              ((data: DisputeData) => Promise<void>) | undefined
           }
         />
       );
@@ -314,8 +316,7 @@ export const ModalManager: React.FC = () => {
           agreementId={modalState.data?.agreementId as string | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: DisputeFilingData) => Promise<void>)
-              | undefined
+              ((data: DisputeFilingData) => Promise<void>) | undefined
           }
         />
       );
@@ -328,8 +329,7 @@ export const ModalManager: React.FC = () => {
           dispute={modalState.data?.dispute as DashboardDispute | null}
           onUploadEvidence={
             modalState.data?.onUploadEvidence as
-              | ((disputeId: string) => void)
-              | undefined
+              ((disputeId: string) => void) | undefined
           }
         />
       );
@@ -343,8 +343,7 @@ export const ModalManager: React.FC = () => {
           disputeTitle={modalState.data?.disputeTitle as string | undefined}
           onUpload={
             modalState.data?.onUpload as
-              | ((data: EvidenceUploadData) => Promise<void>)
-              | undefined
+              ((data: EvidenceUploadData) => Promise<void>) | undefined
           }
         />
       );
@@ -378,8 +377,7 @@ export const ModalManager: React.FC = () => {
           dueDate={modalState.data?.dueDate as string | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: PaymentData) => Promise<void>)
-              | undefined
+              ((data: PaymentData) => Promise<void>) | undefined
           }
         />
       );
@@ -393,8 +391,7 @@ export const ModalManager: React.FC = () => {
           maxAmount={modalState.data?.maxAmount as number | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: RefundData) => Promise<void>)
-              | undefined
+              ((data: RefundData) => Promise<void>) | undefined
           }
         />
       );
@@ -408,18 +405,15 @@ export const ModalManager: React.FC = () => {
           mode={(modalState.data?.mode as 'create' | 'edit' | 'view') || 'view'}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: UserData) => Promise<void>)
-              | undefined
+              ((data: UserData) => Promise<void>) | undefined
           }
           onSuspend={
             modalState.data?.onSuspend as
-              | ((userId: string) => Promise<void>)
-              | undefined
+              ((userId: string) => Promise<void>) | undefined
           }
           onDelete={
             modalState.data?.onDelete as
-              | ((userId: string) => Promise<void>)
-              | undefined
+              ((userId: string) => Promise<void>) | undefined
           }
         />
       );
@@ -434,8 +428,7 @@ export const ModalManager: React.FC = () => {
           propertyName={modalState.data?.propertyName as string | undefined}
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: RefundRequestData) => Promise<void>)
-              | undefined
+              ((data: RefundRequestData) => Promise<void>) | undefined
           }
         />
       );
@@ -450,8 +443,7 @@ export const ModalManager: React.FC = () => {
           }
           onSubmit={
             modalState.data?.onSubmit as
-              | ((data: UserProfileData) => Promise<void>)
-              | undefined
+              ((data: UserProfileData) => Promise<void>) | undefined
           }
         />
       );
@@ -466,8 +458,7 @@ export const ModalManager: React.FC = () => {
           }
           onSaveSettings={
             modalState.data?.onSaveSettings as
-              | ((data: AccountSettingsData) => Promise<void>)
-              | undefined
+              ((data: AccountSettingsData) => Promise<void>) | undefined
           }
           onChangePassword={
             modalState.data?.onChangePassword as
@@ -479,8 +470,7 @@ export const ModalManager: React.FC = () => {
           }
           onDeleteAccount={
             modalState.data?.onDeleteAccount as
-              | (() => Promise<void>)
-              | undefined
+              (() => Promise<void>) | undefined
           }
         />
       );
@@ -492,8 +482,7 @@ export const ModalManager: React.FC = () => {
           onClose={closeModal}
           onDownload={
             modalState.data?.onDownload as
-              | ((documentId: string) => void)
-              | undefined
+              ((documentId: string) => void) | undefined
           }
         />
       );
@@ -524,13 +513,11 @@ export const ModalManager: React.FC = () => {
           onView={modalState.data?.onView as (document: Document) => void}
           onDownload={
             modalState.data?.onDownload as
-              | ((documentId: string) => void)
-              | undefined
+              ((documentId: string) => void) | undefined
           }
           onDelete={
             modalState.data?.onDelete as
-              | ((documentId: string) => void)
-              | undefined
+              ((documentId: string) => void) | undefined
           }
           onUploadClick={
             modalState.data?.onUploadClick as (() => void) | undefined

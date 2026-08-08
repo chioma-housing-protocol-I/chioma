@@ -63,7 +63,7 @@ vi.mock('@/components/Navbar', () => ({
 vi.mock('@/components/Footer', () => ({
   default: () => React.createElement('footer', { 'data-testid': 'footer' }),
 }));
-vi.mock('@/components/PropertyCardSkeleton', () => ({
+vi.mock('@/components/properties/PropertyCardSkeleton', () => ({
   default: () => React.createElement('div', { 'data-testid': 'skeleton' }),
 }));
 vi.mock('@/components/properties/PropertyListingHeader', () => ({
