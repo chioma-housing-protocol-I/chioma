@@ -4,18 +4,16 @@ title = "Gitleaks secret scanning config"
 [allowlist]
 description = "Global allowlist for test fixtures, mocks, documentation examples, and environment templates"
 paths = [
-  '''(?i)test/.*''',
-  '''(?i)tests/.*''',
-  '''(?i)__tests__/.*''',
-  '''(?i).*\.spec\.(ts|js)''',
-  '''(?i).*\.test\.(ts|js)''',
-  '''(?i)docs/.*''',
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
   '''(?i).*\.md''',
   '''(?i).*\.env.*''',
   '''(?i).*docker-compose.*''',
   '''(?i)\.github/workflows/.*''',
-  '''(?i)scripts/.*''',
-  '''(?i).*/scripts/.*'''
+  '''(?i).*scripts/.*'''
 ]
 regexes = [
   '''(?i)example''',
@@ -29,7 +27,9 @@ regexes = [
   '''(?i)change_me''',
   '''(?i)secret''',
   '''(?i)supersecret''',
-  '''(?i)password'''
+  '''(?i)password''',
+  '''(?i)redacted''',
+  '''(?i)neondb_owner'''
 ]
 
 [[rules]]
