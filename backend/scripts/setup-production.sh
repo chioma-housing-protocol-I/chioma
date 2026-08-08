@@ -26,7 +26,10 @@ echo "✅ Dependencies installed"
 echo ""
 
 echo "🔄 Running database migrations..."
-export DATABASE_URL="postgresql://neondb_owner:npg_4wpNJ8cnBQtg@ep-square-butterfly-aiinrpcp-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+if [ -z "$DATABASE_URL" ]; then
+  echo "⚠️ DATABASE_URL not set. Please set DATABASE_URL environment variable."
+  exit 1
+fi
 export DB_SSL=true
 export NODE_ENV=production
 

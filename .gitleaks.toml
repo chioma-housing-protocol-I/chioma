@@ -1,0 +1,115 @@
+# Gitleaks Configuration
+title = "Gitleaks secret scanning config"
+
+[allowlist]
+description = "Global allowlist for test fixtures, mocks, documentation examples, and environment templates"
+paths = [
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*''',
+  '''(?i).*scripts/.*'''
+]
+regexes = [
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)your[-_]secret''',
+  '''(?i)dummy''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''(?i)xxxx''',
+  '''(?i)0000000000000000''',
+  '''(?i)change_me''',
+  '''(?i)secret''',
+  '''(?i)supersecret''',
+  '''(?i)password''',
+  '''(?i)redacted''',
+  '''(?i)neondb_owner'''
+]
+
+[[rules]]
+id = "aws-access-key-id"
+description = "AWS Access Key ID"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "aws-secret-access-key"
+description = "AWS Secret Access Key"
+regex = '''(?i)(aws_secret_access_key|aws_secret_key)\s*[:=]\s*['"]?([A-Za-z0-9\/+=]{40})['"]?'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "stellar-secret-key"
+description = "Stellar Secret Key (S...)"
+regex = '''S[A-Z2-7]{55}'''
+tags = ["key", "Stellar"]
+
+[[rules]]
+id = "private-key-block"
+description = "Private Key Block"
+regex = '''-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'''
+tags = ["key", "Private Key"]
+
+[[rules]]
+id = "jwt-secret-hardcoded"
+description = "Hardcoded JWT Secret"
+regex = '''(?i)(jwt_secret|jwtsecret|jwt_key)\s*[:=]\s*['"]?([^'"\s\n]{10,})['"]?'''
+tags = ["secret", "JWT"]
+[rules.allowlist]
+regexes = [
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)your[-_]secret''',
+  '''(?i)dummy''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''(?i)redacted''',
+  '''(?i)supersecret'''
+]
+paths = [
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*''',
+  '''(?i).*scripts/.*'''
+]
+
+[[rules]]
+id = "database-password"
+description = "Hardcoded Database Password / URL"
+regex = '''(?i)(DATABASE_URL|DB_PASSWORD|POSTGRES_PASSWORD)\s*[:=]\s*['"]?([^'"\s\n]{8,})['"]?'''
+tags = ["secret", "Database"]
+[rules.allowlist]
+regexes = [
+  '''(?i)neondb_owner''',
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)dummy''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''(?i)password''',
+  '''(?i)redacted'''
+]
+paths = [
+  '''(?i).*test.*''',
+  '''(?i).*spec.*''',
+  '''(?i).*mock.*''',
+  '''(?i).*fixture.*''',
+  '''(?i).*docs/.*''',
+  '''(?i).*\.md''',
+  '''(?i).*\.env.*''',
+  '''(?i).*docker-compose.*''',
+  '''(?i)\.github/workflows/.*''',
+  '''(?i).*scripts/.*'''
+]
