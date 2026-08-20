@@ -174,4 +174,107 @@ describe('ReviewForm', () => {
       expect(screen.getByText('0/500')).toBeDefined();
     });
   });
+
+  // ─── Edit mode (initialValues) ─────────────────────────────────────────────
+
+  it('prefills fields from initialValues for edit mode', async () => {
+    render(
+      <ReviewForm
+        onSubmit={onSubmit}
+        initialValues={{ rating: 4, comment: 'An existing review text.' }}
+      />,
+    );
+    await waitFor(() => {
+      expect(getCommentTextarea()).toHaveValue('An existing review text.');
+    });
+  });
+
+  it('disables the submit button when no rating is prefilled in edit mode', () => {
+    render(
+      <ReviewForm
+        onSubmit={onSubmit}
+        initialValues={{ rating: 0, comment: '' }}
+      />,
+    );
+    expect(getSubmitButton()).toHaveProperty('disabled', true);
+  });
+
+  it('renders title and description when provided', () => {
+    render(
+      <ReviewForm
+        onSubmit={onSubmit}
+        title="Edit Review"
+        description="Update your review below."
+      />,
+    );
+    expect(screen.getByText('Edit Review')).toBeDefined();
+    expect(screen.getByText('Update your review below.')).toBeDefined();
+  });
+
+  it('does not render title when not provided', () => {
+    render(<ReviewForm onSubmit={onSubmit} />);
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
+
+  it('renders a delete button only when onDelete is provided', () => {
+    const { unmount } = render(<ReviewForm onSubmit={onSubmit} />);
+    expect(screen.queryByRole('button', { name: /delete/i })).toBeNull();
+    unmount();
+    render(
+      <ReviewForm onSubmit={onSubmit} onDelete={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDefined();
+  });
+
+  it('calls onDelete after confirmation and does not submit the form', async () => {
+    const onDeleteSpy = vi.fn().mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ReviewForm onSubmit={onSubmit} onDelete={onDeleteSpy} />);
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    await waitFor(() => {
+      expect(onDeleteSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmitSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('does not call onDelete when confirmation is cancelled', () => {
+    const onDeleteSpy = vi.fn().mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<ReviewForm onSubmit={onSubmit} onDelete={onDeleteSpy} />);
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(onDeleteSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('disables delete button while isDeleting', () => {
+    render(
+      <ReviewForm
+        onSubmit={onSubmit}
+        onDelete={vi.fn()}
+        isDeleting
+      />,
+    );
+    const deleteBtn = screen.getByRole('button', { name: /delete/i });
+    expect(deleteBtn).toHaveProperty('disabled', true);
+  });
+
+  it('uses a custom submit label when provided', () => {
+    render(
+      <ReviewForm onSubmit={onSubmit} submitLabel="Update Review" />,
+    );
+    expect(
+      screen.getByRole('button', { name: /update review/i }),
+    ).toBeDefined();
+  });
+
+  it('uses a custom cancel label when provided', () => {
+    const onCancel = vi.fn();
+    render(
+      <ReviewForm onSubmit={onSubmit} onCancel={onCancel} cancelLabel="Back" />,
+    );
+    const backBtn = screen.getByRole('button', { name: /back/i });
+    fireEvent.click(backBtn);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
 });
