@@ -3,21 +3,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Mail, MessageSquare, Phone, Send, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import {
+  contactSchema,
+  type ContactFormData,
+} from '@/lib/validation/forms';
 
-const contactSchema = z.object({
-  name: z.string().min(2, 'Enter your name'),
-  email: z.email('Enter a valid email address'),
-  phone: z
-    .string()
-    .min(7, 'Enter a valid phone number')
-    .optional()
-    .or(z.literal('')),
-  subject: z.string().min(4, 'Enter a subject'),
-  message: z.string().min(12, 'Message should be at least 12 characters'),
-});
-
-export type ContactFormData = z.infer<typeof contactSchema>;
+export type { ContactFormData };
 
 interface ContactFormProps {
   onSubmit: (data: ContactFormData) => Promise<void>;
