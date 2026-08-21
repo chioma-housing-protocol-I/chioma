@@ -56,3 +56,5 @@ pr.md
 checks.md
 create-github-issues.sh
 /issues/frontend/storybook-static/
+frontend/node_modules
+node_modules
