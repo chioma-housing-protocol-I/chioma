@@ -1,6 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bull';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { QueueManagementService } from './queue-management.service';
+import {
+  BlockchainQueueProcessor,
+  BlockchainJobData,
+} from '../processors/blockchain.processor';
+import { PaymentProcessingService } from '../../stellar/services/payment-processing.service';
+import { EscrowIntegrationService } from '../../agreements/escrow-integration.service';
+import { RentObligationNftService } from '../../stellar/services/rent-obligation-nft.service';
+import { Job } from 'bull';
 
 /**
  * Integration Tests: Queue Processing
@@ -124,5 +133,137 @@ describe('Queue Processing Integration', () => {
     await expect(service.removeJob('email', 'nonexistent-id')).rejects.toThrow(
       'Job nonexistent-id not found in queue email',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Integration: BlockchainQueueProcessor dispatches jobs to real services
+//
+// Instantiates the processor with mock services (no Redis, no Stellar node)
+// and asserts that each job type calls the correct service method with the
+// correct payload — and that service errors propagate as processor failures.
+// ---------------------------------------------------------------------------
+
+describe('BlockchainQueueProcessor — service dispatch integration', () => {
+  let processor: BlockchainQueueProcessor;
+  let fromSecretSpy: jest.SpyInstance;
+
+  const mockPaymentProcessingService = { processRentPayment: jest.fn() };
+  const mockEscrowIntegrationService = {
+    createEscrowForAgreement: jest.fn(),
+    approveEscrowRelease: jest.fn(),
+  };
+  const mockRentObligationNftService = { mintObligation: jest.fn() };
+
+  /** Minimal Bull Job stub */
+  const makeJob = (data: BlockchainJobData): Job<BlockchainJobData> =>
+    ({ id: 'integ-job-1', data } as Job<BlockchainJobData>);
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    fromSecretSpy = jest
+      .spyOn(StellarSdk.Keypair, 'fromSecret')
+      .mockReturnValue({ publicKey: () => 'GFAKE_PUBLIC_KEY' } as any);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BlockchainQueueProcessor,
+        {
+          provide: PaymentProcessingService,
+          useValue: mockPaymentProcessingService,
+        },
+        {
+          provide: EscrowIntegrationService,
+          useValue: mockEscrowIntegrationService,
+        },
+        {
+          provide: RentObligationNftService,
+          useValue: mockRentObligationNftService,
+        },
+      ],
+    }).compile();
+
+    processor = module.get<BlockchainQueueProcessor>(BlockchainQueueProcessor);
+  });
+
+  afterEach(() => {
+    fromSecretSpy.mockRestore();
+  });
+
+  it('send-payment: enqueue-to-service round-trip calls PaymentProcessingService', async () => {
+    mockPaymentProcessingService.processRentPayment.mockResolvedValue('tx-hash');
+
+    await processor.handleBlockchainJob(
+      makeJob({
+        type: 'send-payment',
+        data: {
+          from: 'GSENDER',
+          agreementId: 'ag-1',
+          amount: '500000',
+          callerSecret:
+            'SCZANGBA5AKIA5OEDUXV4T4UVIEXN7BXSRMTUGWTCXHQLQM3BUXQNBDE',
+        },
+      }),
+    );
+
+    expect(mockPaymentProcessingService.processRentPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it('create-escrow: enqueue-to-service round-trip calls EscrowIntegrationService', async () => {
+    mockEscrowIntegrationService.createEscrowForAgreement.mockResolvedValue({ id: 1 });
+
+    await processor.handleBlockchainJob(
+      makeJob({ type: 'create-escrow', data: { agreementId: 'ag-2' } }),
+    );
+
+    expect(
+      mockEscrowIntegrationService.createEscrowForAgreement,
+    ).toHaveBeenCalledWith('ag-2');
+  });
+
+  it('release-escrow: enqueue-to-service round-trip calls EscrowIntegrationService', async () => {
+    mockEscrowIntegrationService.approveEscrowRelease.mockResolvedValue(undefined);
+
+    await processor.handleBlockchainJob(
+      makeJob({
+        type: 'release-escrow',
+        data: { escrowId: 7, releaseTo: 'GRECEIVER' },
+      }),
+    );
+
+    expect(
+      mockEscrowIntegrationService.approveEscrowRelease,
+    ).toHaveBeenCalledWith(7, 'GRECEIVER');
+  });
+
+  it('mint-nft: enqueue-to-service round-trip calls RentObligationNftService', async () => {
+    mockRentObligationNftService.mintObligation.mockResolvedValue({
+      txHash: 'nft-hash',
+      obligationId: 'ag-3',
+    });
+
+    await processor.handleBlockchainJob(
+      makeJob({
+        type: 'mint-nft',
+        data: { agreementId: 'ag-3', adminAddress: 'GADMIN' },
+      }),
+    );
+
+    expect(mockRentObligationNftService.mintObligation).toHaveBeenCalledWith({
+      agreementId: 'ag-3',
+      adminAddress: 'GADMIN',
+    });
+  });
+
+  it('propagates service failure so Bull marks the job as failed', async () => {
+    mockEscrowIntegrationService.createEscrowForAgreement.mockRejectedValue(
+      new Error('on-chain escrow creation failed'),
+    );
+
+    await expect(
+      processor.handleBlockchainJob(
+        makeJob({ type: 'create-escrow', data: { agreementId: 'ag-fail' } }),
+      ),
+    ).rejects.toThrow('on-chain escrow creation failed');
   });
 });

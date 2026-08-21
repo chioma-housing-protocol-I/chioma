@@ -17,6 +17,7 @@ import { QueuesController } from './controllers/queues.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { AgreementsModule } from '../agreements/agreements.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
 import { ReferralModule } from '../referral/referral.module';
 import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
@@ -61,6 +62,7 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
     NotificationsModule,
     StorageModule,
     StellarModule,
+    AgreementsModule,
     MonitoringModule,
     ReferralModule,
   ],
