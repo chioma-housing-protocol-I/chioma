@@ -4,7 +4,7 @@ import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 interface PieChartWrapperProps {
-  data: Record<string, unknown>[];
+  data: unknown[];
   dataKey: string;
   nameKey: string;
   colors: string[];

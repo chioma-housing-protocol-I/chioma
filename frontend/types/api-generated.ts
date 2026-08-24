@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /** Health check */
-        get: operations["getHello"];
+        get: operations["App_getHello"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32,7 +32,7 @@ export interface paths {
          * Security policy information
          * @description Returns security contact and policy information per RFC 9116
          */
-        get: operations["getSecurityTxt"];
+        get: operations["Security_getSecurityTxt"];
         put?: never;
         post?: never;
         delete?: never;
@@ -49,7 +49,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get recent security events */
-        get: operations["getSecurityEvents"];
+        get: operations["Security_getSecurityEvents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -66,7 +66,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get security events for a specific user */
-        get: operations["getUserEvents"];
+        get: operations["Security_getUserEvents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -83,7 +83,7 @@ export interface paths {
             cookie?: never;
         };
         /** Check for suspicious activity on a user account */
-        get: operations["detectSuspicious"];
+        get: operations["Security_detectSuspicious"];
         put?: never;
         post?: never;
         delete?: never;
@@ -100,7 +100,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get recent threat events */
-        get: operations["getThreats"];
+        get: operations["Security_getThreats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -117,7 +117,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get threat detection statistics */
-        get: operations["getThreatStats"];
+        get: operations["Security_getThreatStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -140,7 +140,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark a threat event as false positive */
-        patch: operations["markFalsePositive"];
+        patch: operations["Security_markFalsePositive"];
         trace?: never;
     };
     "/api/v1/security/incidents": {
@@ -151,7 +151,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get open security incidents */
-        get: operations["getIncidents"];
+        get: operations["Security_getIncidents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -168,7 +168,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get incident response KPIs (MTTD / MTTR) */
-        get: operations["getIncidentMetrics"];
+        get: operations["Security_getIncidentMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -187,7 +187,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Resolve a security incident */
-        post: operations["resolveIncident"];
+        post: operations["Security_resolveIncident"];
         delete?: never;
         options?: never;
         head?: never;
@@ -202,7 +202,7 @@ export interface paths {
             cookie?: never;
         };
         /** Generate a post-incident report */
-        get: operations["getIncidentReport"];
+        get: operations["Security_getIncidentReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -219,7 +219,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get overall security compliance score */
-        get: operations["getComplianceScore"];
+        get: operations["Security_getComplianceScore"];
         put?: never;
         post?: never;
         delete?: never;
@@ -236,7 +236,7 @@ export interface paths {
             cookie?: never;
         };
         /** Generate GDPR compliance report */
-        get: operations["getGdprReport"];
+        get: operations["Security_getGdprReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -253,7 +253,7 @@ export interface paths {
             cookie?: never;
         };
         /** Generate SOC2 Type II compliance report */
-        get: operations["getSoc2Report"];
+        get: operations["Security_getSoc2Report"];
         put?: never;
         post?: never;
         delete?: never;
@@ -270,7 +270,7 @@ export interface paths {
             cookie?: never;
         };
         /** Generate PCI-DSS compliance report */
-        get: operations["getPciDssReport"];
+        get: operations["Security_getPciDssReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -287,7 +287,7 @@ export interface paths {
             cookie?: never;
         };
         /** List all RBAC roles with permissions */
-        get: operations["getRoles"];
+        get: operations["Security_getRoles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -304,7 +304,7 @@ export interface paths {
             cookie?: never;
         };
         /** List all permissions */
-        get: operations["getPermissions"];
+        get: operations["Security_getPermissions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -323,7 +323,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Seed default RBAC roles and permissions */
-        post: operations["seedRbac"];
+        post: operations["Security_seedRbac"];
         delete?: never;
         options?: never;
         head?: never;
@@ -340,7 +340,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Anchor latest audit log batch to blockchain */
-        post: operations["anchorAuditLogs"];
+        post: operations["Security_anchorAuditLogs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -355,7 +355,7 @@ export interface paths {
             cookie?: never;
         };
         /** Query audit logs with filtering and pagination */
-        get: operations["queryAuditLogs"];
+        get: operations["Audit_queryAuditLogs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -372,7 +372,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get audit trail for a specific entity */
-        get: operations["getAuditTrail"];
+        get: operations["Audit_getAuditTrail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -389,7 +389,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get activity logs for a specific user */
-        get: operations["getUserActivity"];
+        get: operations["Audit_getUserActivity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -406,7 +406,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get audit log statistics */
-        get: operations["getLogStatistics"];
+        get: operations["Audit_getLogStatistics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -426,7 +426,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Manually cleanup old audit logs (admin only) */
-        delete: operations["cleanupOldLogs"];
+        delete: operations["Audit_cleanupOldLogs"];
         options?: never;
         head?: never;
         patch?: never;
@@ -442,7 +442,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Manually trigger log retention cleanup (admin only) */
-        post: operations["runRetentionCleanup"];
+        post: operations["Audit_runRetentionCleanup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -456,9 +456,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["findAll"];
+        get: operations["Agreements_findAll"];
         put?: never;
-        post: operations["create"];
+        post: operations["Agreements_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -472,7 +472,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["downloadAgreement"];
+        get: operations["Agreements_downloadAgreement"];
         put?: never;
         post?: never;
         delete?: never;
@@ -492,7 +492,7 @@ export interface paths {
          * Lease fee snapshot
          * @description Returns configured early termination fee, late fee %, grace period, and an optional estimated late fee when daysPastDue is provided.
          */
-        get: operations["getFees"];
+        get: operations["Agreements_getFees"];
         put?: never;
         post?: never;
         delete?: never;
@@ -508,17 +508,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["findOne"];
-        put: operations["update"];
+        get: operations["Agreements_findOne"];
+        put: operations["Agreements_update"];
         post?: never;
-        delete: operations["terminate"];
+        delete: operations["Agreements_terminate"];
         options?: never;
         head?: never;
         /**
          * Partially update agreement
          * @description Same payload rules as PUT; use for partial updates.
          */
-        patch: operations["patchUpdate"];
+        patch: operations["Agreements_patchUpdate"];
         trace?: never;
     };
     "/api/v1/agreements/{id}/renew": {
@@ -534,7 +534,7 @@ export interface paths {
          * Renew lease term
          * @description Extends endDate by extendMonths (default 12) from the current end date when renewalOption is true.
          */
-        post: operations["renew"];
+        post: operations["Agreements_renew"];
         delete?: never;
         options?: never;
         head?: never;
@@ -550,7 +550,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["recordPayment"];
+        post: operations["Agreements_recordPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -565,7 +565,7 @@ export interface paths {
             cookie?: never;
         };
         /** List payments for an agreement */
-        get: operations["getPaymentsForAgreement"];
+        get: operations["AgreementPayment_getPaymentsForAgreement"];
         put?: never;
         post?: never;
         delete?: never;
@@ -583,7 +583,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["mintNft"];
+        post: operations["AgreementNft_mintNft"];
         delete?: never;
         options?: never;
         head?: never;
@@ -599,7 +599,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["transferNft"];
+        post: operations["AgreementNft_transferNft"];
         delete?: never;
         options?: never;
         head?: never;
@@ -613,7 +613,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getNftByAgreement"];
+        get: operations["AgreementNft_getNftByAgreement"];
         put?: never;
         post?: never;
         delete?: never;
@@ -629,7 +629,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getNftsByOwner"];
+        get: operations["AgreementNft_getNftsByOwner"];
         put?: never;
         post?: never;
         delete?: never;
@@ -645,7 +645,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getAnalytics"];
+        get: operations["AgreementNft_getAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -661,7 +661,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getOwnerPortfolio"];
+        get: operations["AgreementNft_getOwnerPortfolio"];
         put?: never;
         post?: never;
         delete?: never;
@@ -679,7 +679,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["syncOwnership"];
+        post: operations["AgreementNft_syncOwnership"];
         delete?: never;
         options?: never;
         head?: never;
@@ -694,13 +694,13 @@ export interface paths {
             cookie?: never;
         };
         /** Get reviews for the authenticated user with pagination and filters */
-        get: operations["getMyReviews"];
+        get: operations["Reviews_getMyReviews"];
         put?: never;
         /**
          * Create a review
          * @description Submit a review for a user (e.g. landlord/tenant) in a given context (LEASE, MAINTENANCE).
          */
-        post: operations["createReview"];
+        post: operations["Reviews_createReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -715,7 +715,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get reviews for a user */
-        get: operations["getUserReviews"];
+        get: operations["Reviews_getUserReviews"];
         put?: never;
         post?: never;
         delete?: never;
@@ -732,7 +732,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get reviews for a property */
-        get: operations["getPropertyReviews"];
+        get: operations["Reviews_getPropertyReviews"];
         put?: never;
         post?: never;
         delete?: never;
@@ -754,7 +754,7 @@ export interface paths {
          * Report a review
          * @description Flag a review for moderation (e.g. inappropriate content).
          */
-        post: operations["reportReview"];
+        post: operations["Reviews_reportReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -770,7 +770,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["postGuestReview"];
+        post: operations["Reviews_postGuestReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -786,7 +786,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["postHostReview"];
+        post: operations["Reviews_postHostReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -800,7 +800,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getGuestReviews"];
+        get: operations["Reviews_getGuestReviews"];
         put?: never;
         post?: never;
         delete?: never;
@@ -816,7 +816,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getHostReviews"];
+        get: operations["Reviews_getHostReviews"];
         put?: never;
         post?: never;
         delete?: never;
@@ -832,7 +832,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getReputation"];
+        get: operations["Reviews_getReputation"];
         put?: never;
         post?: never;
         delete?: never;
@@ -851,10 +851,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["deleteReview"];
+        delete: operations["Reviews_deleteReview"];
         options?: never;
         head?: never;
-        patch: operations["updateReview"];
+        patch: operations["Reviews_updateReview"];
         trace?: never;
     };
     "/api/v1/stellar/accounts": {
@@ -867,7 +867,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a managed Stellar account */
-        post: operations["createAccount"];
+        post: operations["Stellar_createAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -882,7 +882,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get account by ID */
-        get: operations["getAccountById"];
+        get: operations["Stellar_getAccountById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -898,7 +898,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getAccountByPublicKey"];
+        get: operations["Stellar_getAccountByPublicKey"];
         put?: never;
         post?: never;
         delete?: never;
@@ -914,7 +914,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getAccountsByUserId"];
+        get: operations["Stellar_getAccountsByUserId"];
         put?: never;
         post?: never;
         delete?: never;
@@ -933,7 +933,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Fund account via Friendbot (testnet only) */
-        post: operations["fundAccount"];
+        post: operations["Stellar_fundAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -949,7 +949,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["syncAccount"];
+        post: operations["Stellar_syncAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -963,7 +963,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getNetworkAccountInfo"];
+        get: operations["Stellar_getNetworkAccountInfo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -982,7 +982,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Send a Stellar payment */
-        post: operations["sendPayment"];
+        post: operations["Stellar_sendPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -996,7 +996,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listTransactions"];
+        get: operations["Stellar_listTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1012,7 +1012,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getTransactionById"];
+        get: operations["Stellar_getTransactionById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1028,7 +1028,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getTransactionByHash"];
+        get: operations["Stellar_getTransactionByHash"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1047,7 +1047,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create an escrow */
-        post: operations["createEscrow"];
+        post: operations["Stellar_createEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1063,7 +1063,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["releaseEscrow"];
+        post: operations["Stellar_releaseEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1079,7 +1079,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["refundEscrow"];
+        post: operations["Stellar_refundEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1093,7 +1093,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getEscrowById"];
+        get: operations["Stellar_getEscrowById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1109,7 +1109,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listEscrows"];
+        get: operations["Stellar_listEscrows"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1128,7 +1128,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a multi-signature escrow */
-        post: operations["createMultiSigEscrow"];
+        post: operations["Stellar_createMultiSigEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1145,7 +1145,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Add signature to multi-sig escrow */
-        post: operations["addSignature"];
+        post: operations["Stellar_addSignature"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1162,7 +1162,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Release escrow with multi-signatures */
-        post: operations["releaseWithSignatures"];
+        post: operations["Stellar_releaseWithSignatures"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1179,7 +1179,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a time-locked escrow */
-        post: operations["createTimeLockedEscrow"];
+        post: operations["Stellar_createTimeLockedEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1194,7 +1194,7 @@ export interface paths {
             cookie?: never;
         };
         /** Check if time-lock conditions are met */
-        get: operations["checkTimeLockConditions"];
+        get: operations["Stellar_checkTimeLockConditions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1213,7 +1213,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a conditional escrow */
-        post: operations["createConditionalEscrow"];
+        post: operations["Stellar_createConditionalEscrow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1228,7 +1228,7 @@ export interface paths {
             cookie?: never;
         };
         /** Validate all escrow conditions */
-        get: operations["validateConditions"];
+        get: operations["Stellar_validateConditions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1247,7 +1247,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Integrate escrow with dispute resolution */
-        post: operations["integrateWithDispute"];
+        post: operations["Stellar_integrateWithDispute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1264,7 +1264,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Release escrow based on dispute outcome */
-        post: operations["releaseOnDisputeResolution"];
+        post: operations["Stellar_releaseOnDisputeResolution"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1284,7 +1284,7 @@ export interface paths {
          * Initiate fiat deposit
          * @description Start a fiat deposit flow via Stellar anchor.
          */
-        post: operations["deposit"];
+        post: operations["Anchor_deposit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1304,7 +1304,7 @@ export interface paths {
          * Initiate fiat withdrawal
          * @description Start a fiat withdrawal via Stellar anchor.
          */
-        post: operations["withdraw"];
+        post: operations["Anchor_withdraw"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1319,7 +1319,7 @@ export interface paths {
             cookie?: never;
         };
         /** [Admin] List anchor transactions */
-        get: operations["listTransactions"];
+        get: operations["Anchor_listTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1336,7 +1336,7 @@ export interface paths {
             cookie?: never;
         };
         /** [Admin] Get anchor transaction statistics */
-        get: operations["getTransactionStats"];
+        get: operations["Anchor_getTransactionStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1353,7 +1353,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get anchor transaction status */
-        get: operations["getTransactionStatus"];
+        get: operations["Anchor_getTransactionStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1375,7 +1375,7 @@ export interface paths {
          * Anchor webhook
          * @description Called by anchor to notify status. Not for client use.
          */
-        post: operations["handleWebhook"];
+        post: operations["Anchor_handleWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1390,7 +1390,7 @@ export interface paths {
             cookie?: never;
         };
         /** [Admin] List indexed transactions */
-        get: operations["listTransactions"];
+        get: operations["IndexedTransactions_listTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1407,7 +1407,7 @@ export interface paths {
             cookie?: never;
         };
         /** [Admin] Get indexed transaction statistics */
-        get: operations["getStats"];
+        get: operations["IndexedTransactions_getStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1424,7 +1424,7 @@ export interface paths {
             cookie?: never;
         };
         /** [Admin] Get indexed transaction detail */
-        get: operations["getTransaction"];
+        get: operations["IndexedTransactions_getTransaction"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1443,7 +1443,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Register agent on-chain */
-        post: operations["registerAgent"];
+        post: operations["AgentRegistry_registerAgent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1460,7 +1460,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** [Admin] Verify agent on-chain */
-        post: operations["verifyAgent"];
+        post: operations["AgentRegistry_verifyAgent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1477,7 +1477,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Rate agent after transaction completion */
-        post: operations["rateAgent"];
+        post: operations["AgentRegistry_rateAgent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1492,7 +1492,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get agent information from blockchain */
-        get: operations["getAgentInfo"];
+        get: operations["AgentRegistry_getAgentInfo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1509,7 +1509,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get total agent count */
-        get: operations["getAgentCount"];
+        get: operations["AgentRegistry_getAgentCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1528,7 +1528,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Register transaction for agent */
-        post: operations["registerTransaction"];
+        post: operations["AgentRegistry_registerTransaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1543,7 +1543,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get transactions for an agent */
-        get: operations["getAgentTransactions"];
+        get: operations["AgentRegistry_getAgentTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1562,7 +1562,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Register a new arbiter */
-        post: operations["registerArbiter"];
+        post: operations["Dispute_registerArbiter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1579,7 +1579,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Deregister an arbiter */
-        post: operations["deregisterArbiter"];
+        post: operations["Dispute_deregisterArbiter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1594,7 +1594,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get all active arbiters */
-        get: operations["getArbiterPool"];
+        get: operations["Dispute_getArbiterPool"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1613,7 +1613,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Select arbiters for a dispute */
-        post: operations["selectArbiters"];
+        post: operations["Dispute_selectArbiters"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1628,7 +1628,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get arbiter information */
-        get: operations["getArbiter"];
+        get: operations["Dispute_getArbiter"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1645,7 +1645,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get arbiter reputation score */
-        get: operations["getArbiterReputation"];
+        get: operations["Dispute_getArbiterReputation"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1664,7 +1664,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Track a vote on a dispute */
-        post: operations["trackVote"];
+        post: operations["Dispute_trackVote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1681,7 +1681,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Cast a vote on blockchain */
-        post: operations["castVote"];
+        post: operations["Dispute_castVote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1696,7 +1696,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get vote results for a dispute */
-        get: operations["getVoteResults"];
+        get: operations["Dispute_getVoteResults"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1715,7 +1715,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Resolve a dispute on blockchain */
-        post: operations["resolveDispute"];
+        post: operations["Dispute_resolveDispute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1732,7 +1732,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Enforce dispute resolution */
-        post: operations["enforceResolution"];
+        post: operations["Dispute_enforceResolution"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1747,7 +1747,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get dispute information */
-        get: operations["getDispute"];
+        get: operations["Dispute_getDispute"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1764,7 +1764,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get dispute event timeline */
-        get: operations["getDisputeTimeline"];
+        get: operations["Dispute_getDisputeTimeline"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1783,7 +1783,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Process rent payment */
-        post: operations["processRentPayment"];
+        post: operations["PaymentProcessing_processRentPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1800,7 +1800,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Set platform fee collector */
-        post: operations["setPlatformFeeCollector"];
+        post: operations["PaymentProcessing_setPlatformFeeCollector"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1815,7 +1815,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get total payment count */
-        get: operations["getPaymentCount"];
+        get: operations["PaymentProcessing_getPaymentCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1832,7 +1832,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get total amount paid for a specific agreement */
-        get: operations["getTotalPaid"];
+        get: operations["PaymentProcessing_getTotalPaid"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1850,7 +1850,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["registerProperty"];
+        post: operations["PropertyRegistry_registerProperty"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1866,7 +1866,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["transferProperty"];
+        post: operations["PropertyRegistry_transferProperty"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1882,7 +1882,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["verifyProperty"];
+        post: operations["PropertyRegistry_verifyProperty"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1896,7 +1896,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getProperty"];
+        get: operations["PropertyRegistry_getProperty"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1912,7 +1912,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getPropertyCount"];
+        get: operations["PropertyRegistry_getPropertyCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1928,7 +1928,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getPropertyHistory"];
+        get: operations["PropertyRegistry_getPropertyHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1945,13 +1945,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your webhook endpoints */
-        get: operations["list"];
+        get: operations["Webhooks_list"];
         put?: never;
         /**
          * Register a webhook endpoint
          * @description Register a URL to receive Chioma events. A signing secret is generated to use if none is provided.
          */
-        post: operations["create"];
+        post: operations["Webhooks_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1966,7 +1966,7 @@ export interface paths {
             cookie?: never;
         };
         /** View delivery history for a webhook endpoint */
-        get: operations["listDeliveries"];
+        get: operations["Webhooks_listDeliveries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1984,10 +1984,10 @@ export interface paths {
         };
         get?: never;
         /** Update a webhook endpoint */
-        put: operations["update"];
+        put: operations["Webhooks_update"];
         post?: never;
         /** Delete a webhook endpoint */
-        delete: operations["remove"];
+        delete: operations["Webhooks_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2006,7 +2006,7 @@ export interface paths {
          * Send a test event to a webhook endpoint
          * @description Delivers a signed test payload to the endpoint immediately and records the attempt.
          */
-        post: operations["test"];
+        post: operations["Webhooks_test"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2026,7 +2026,7 @@ export interface paths {
          * Retry a webhook delivery
          * @description Redelivers an existing delivery by deliveryId, or triggers a new delivery attempt using the provided event and payload.
          */
-        post: operations["retry"];
+        post: operations["Webhooks_retry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2046,7 +2046,7 @@ export interface paths {
          * Register a new user
          * @description Create a new user account with secure password hashing
          */
-        post: operations["register"];
+        post: operations["Auth_register"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2066,7 +2066,7 @@ export interface paths {
          * Login user
          * @description Authenticate user with email and password. Returns MFA token if MFA is enabled.
          */
-        post: operations["login"];
+        post: operations["Auth_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2086,7 +2086,7 @@ export interface paths {
          * Complete MFA login
          * @description Complete login after MFA verification
          */
-        post: operations["completeMfaLogin"];
+        post: operations["Auth_completeMfaLogin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2106,7 +2106,7 @@ export interface paths {
          * Refresh access token
          * @description Get a new access token using refresh token from cookie or body
          */
-        post: operations["refreshTokens"];
+        post: operations["Auth_refreshTokens"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2126,7 +2126,7 @@ export interface paths {
          * Logout user
          * @description Invalidate user refresh token
          */
-        post: operations["logout"];
+        post: operations["Auth_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2146,7 +2146,7 @@ export interface paths {
          * Request password reset
          * @description Send password reset email to registered email address
          */
-        post: operations["forgotPassword"];
+        post: operations["Auth_forgotPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2166,7 +2166,7 @@ export interface paths {
          * Reset password
          * @description Reset password using reset token received via email
          */
-        post: operations["resetPassword"];
+        post: operations["Auth_resetPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2184,7 +2184,7 @@ export interface paths {
          * Verify email with token
          * @description Verify user email address using token sent via email
          */
-        get: operations["verifyEmail"];
+        get: operations["Auth_verifyEmail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2206,7 +2206,7 @@ export interface paths {
          * Resend email verification link
          * @description Re-sends the verification email for the current user. Idempotent: an existing, unexpired token is reused so previously sent links keep working.
          */
-        post: operations["resendVerification"];
+        post: operations["Auth_resendVerification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2226,7 +2226,7 @@ export interface paths {
          * Attach an email to a wallet-only account
          * @description Completes onboarding for wallet-based sign-ins by adding an email address and sending a verification link.
          */
-        post: operations["completeProfile"];
+        post: operations["Auth_completeProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2246,7 +2246,7 @@ export interface paths {
          * Enable MFA
          * @description Generate MFA secret and QR code for TOTP setup
          */
-        post: operations["enableMfa"];
+        post: operations["Auth_enableMfa"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2266,7 +2266,7 @@ export interface paths {
          * Verify MFA token
          * @description Verify TOTP token or backup code
          */
-        post: operations["verifyMfa"];
+        post: operations["Auth_verifyMfa"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2286,7 +2286,7 @@ export interface paths {
          * Disable MFA
          * @description Disable MFA for the current user
          */
-        post: operations["disableMfa"];
+        post: operations["Auth_disableMfa"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2306,7 +2306,7 @@ export interface paths {
          * Regenerate backup codes
          * @description Generate new backup codes for MFA
          */
-        post: operations["regenerateBackupCodes"];
+        post: operations["Auth_regenerateBackupCodes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2324,7 +2324,7 @@ export interface paths {
          * Get MFA status
          * @description Check if MFA is enabled for the current user
          */
-        get: operations["getMfaStatus"];
+        get: operations["Auth_getMfaStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2346,7 +2346,7 @@ export interface paths {
          * Generate Stellar authentication challenge
          * @description Generate a challenge transaction for the client to sign with their Stellar wallet
          */
-        post: operations["generateChallenge"];
+        post: operations["StellarAuth_generateChallenge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2366,7 +2366,7 @@ export interface paths {
          * Verify Stellar signature and authenticate
          * @description Verify the signed challenge and authenticate the user with their Stellar wallet
          */
-        post: operations["verifySignature"];
+        post: operations["StellarAuth_verifySignature"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2384,7 +2384,7 @@ export interface paths {
          * Get authentication statistics
          * @description Retrieve comprehensive authentication metrics including success rates, method breakdown, and trends
          */
-        get: operations["getAuthStats"];
+        get: operations["AuthMetrics_getAuthStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2404,7 +2404,7 @@ export interface paths {
          * Get authentication performance metrics
          * @description Retrieve performance metrics including response time percentiles for each authentication method
          */
-        get: operations["getPerformanceMetrics"];
+        get: operations["AuthMetrics_getPerformanceMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2424,7 +2424,7 @@ export interface paths {
          * Get hourly authentication usage
          * @description Retrieve hourly breakdown of authentication attempts by method for the specified period
          */
-        get: operations["getHourlyUsage"];
+        get: operations["AuthMetrics_getHourlyUsage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2444,7 +2444,7 @@ export interface paths {
          * Get authentication system health
          * @description Quick health check of authentication system with key metrics
          */
-        get: operations["getHealth"];
+        get: operations["AuthMetrics_getHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2461,7 +2461,7 @@ export interface paths {
             cookie?: never;
         };
         /** Start OAuth2 authorization code flow */
-        get: operations["initiateAuthorization"];
+        get: operations["OAuth2_initiateAuthorization"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2480,7 +2480,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Complete OAuth2 callback and issue session tokens */
-        post: operations["completeAuthorization"];
+        post: operations["OAuth2_completeAuthorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2495,7 +2495,7 @@ export interface paths {
             cookie?: never;
         };
         /** Fetch user profile from OAuth2 provider */
-        get: operations["getProfile"];
+        get: operations["OAuth2_getProfile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2514,7 +2514,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Link an OAuth2 provider to the current account */
-        post: operations["linkAccount"];
+        post: operations["OAuth2_linkAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2531,7 +2531,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Start OAuth2 flow for account linking */
-        post: operations["initiateAccountLink"];
+        post: operations["OAuth2_initiateAccountLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2548,7 +2548,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Logout and revoke OAuth2 provider tokens */
-        post: operations["logout"];
+        post: operations["OAuth2_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2565,7 +2565,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Revoke an OAuth2 provider token */
-        post: operations["revokeToken"];
+        post: operations["OAuth2_revokeToken"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2579,7 +2579,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getNotifications"];
+        get: operations["Notifications_getNotifications"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2595,7 +2595,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getUnreadCount"];
+        get: operations["Notifications_getUnreadCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2617,7 +2617,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["markAsRead"];
+        patch: operations["Notifications_markAsRead"];
         trace?: never;
     };
     "/api/v1/notifications/read-all": {
@@ -2633,7 +2633,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["markAllAsRead"];
+        patch: operations["Notifications_markAllAsRead"];
         trace?: never;
     };
     "/api/v1/notifications/{id}": {
@@ -2646,7 +2646,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["deleteNotification"];
+        delete: operations["Notifications_deleteNotification"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2662,7 +2662,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["clearAll"];
+        delete: operations["Notifications_clearAll"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2679,7 +2679,7 @@ export interface paths {
          * [Deprecated] Get chat history for a chat group
          * @deprecated
          */
-        get: operations["getHistory"];
+        get: operations["Messaging_getHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2696,10 +2696,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get all chat rooms for the current user */
-        get: operations["getRooms"];
+        get: operations["Messaging_getRooms"];
         put?: never;
         /** Create or find a direct message room */
-        post: operations["createRoom"];
+        post: operations["Messaging_createRoom"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2714,7 +2714,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get messages for a room */
-        get: operations["getMessages"];
+        get: operations["Messaging_getMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2737,7 +2737,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark all messages in a room as read */
-        patch: operations["markRoomAsRead"];
+        patch: operations["Messaging_markRoomAsRead"];
         trace?: never;
     };
     "/api/v1/metrics": {
@@ -2747,7 +2747,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getMetrics"];
+        get: operations["Monitoring_getMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2763,7 +2763,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getCacheStats"];
+        get: operations["Monitoring_getCacheStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2780,7 +2780,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get database health snapshot */
-        get: operations["getDatabaseHealth"];
+        get: operations["Monitoring_getDatabaseHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2797,7 +2797,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get database health history */
-        get: operations["getDatabaseHistory"];
+        get: operations["Monitoring_getDatabaseHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2814,7 +2814,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get database connection pool metrics */
-        get: operations["getDatabasePoolMetrics"];
+        get: operations["Monitoring_getDatabasePoolMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2831,7 +2831,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get database size metrics */
-        get: operations["getDatabaseSizeMetrics"];
+        get: operations["Monitoring_getDatabaseSizeMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2848,7 +2848,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get database query performance metrics */
-        get: operations["getDatabaseQueryMetrics"];
+        get: operations["Monitoring_getDatabaseQueryMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2866,7 +2866,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["handleAlert"];
+        post: operations["Monitoring_handleAlert"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2881,7 +2881,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get performance dashboard data */
-        get: operations["getDashboard"];
+        get: operations["Performance_getDashboard"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2901,7 +2901,7 @@ export interface paths {
          * Get database query performance statistics
          * @description Per-operation query timings (avg/p95), the slowest operations, and recent slow queries.
          */
-        get: operations["getDatabaseStats"];
+        get: operations["Performance_getDatabaseStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2918,7 +2918,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get performance statistics for all endpoints */
-        get: operations["getEndpointStats"];
+        get: operations["Performance_getEndpointStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2935,7 +2935,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get performance statistics for a specific endpoint */
-        get: operations["getEndpointStat"];
+        get: operations["Performance_getEndpointStat"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2952,7 +2952,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get system performance metrics */
-        get: operations["getSystemMetrics"];
+        get: operations["Performance_getSystemMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2969,7 +2969,7 @@ export interface paths {
             cookie?: never;
         };
         /** Generate comprehensive performance report */
-        get: operations["generateReport"];
+        get: operations["Performance_generateReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2986,7 +2986,7 @@ export interface paths {
             cookie?: never;
         };
         /** Performance monitoring health check */
-        get: operations["healthCheck"];
+        get: operations["Performance_healthCheck"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3003,7 +3003,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get recent performance alerts */
-        get: operations["getAlerts"];
+        get: operations["Performance_getAlerts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3020,7 +3020,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get performance trends over time */
-        get: operations["getTrends"];
+        get: operations["Performance_getTrends"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3037,7 +3037,7 @@ export interface paths {
             cookie?: never;
         };
         /** Per-route response-time summary for a sliding window */
-        get: operations["getResponseTimes"];
+        get: operations["Performance_getResponseTimes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3054,7 +3054,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get the slowest API endpoints by average response time */
-        get: operations["getSlowEndpoints"];
+        get: operations["Performance_getSlowEndpoints"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3071,7 +3071,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get response-time percentile breakdown for all endpoints, or a specific one */
-        get: operations["getPercentiles"];
+        get: operations["Performance_getPercentiles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3093,7 +3093,7 @@ export interface paths {
          * Get pre-signed upload URL
          * @description Returns a pre-signed S3 URL for uploading a file. Use the returned key with GET /storage/download-url to get a download URL.
          */
-        post: operations["getUploadUrl"];
+        post: operations["Storage_getUploadUrl"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3111,7 +3111,7 @@ export interface paths {
          * Get pre-signed download URL
          * @description Returns a pre-signed URL to download a file by its storage key.
          */
-        get: operations["getDownloadUrl"];
+        get: operations["Storage_getDownloadUrl"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3131,21 +3131,21 @@ export interface paths {
          * List files
          * @description Returns a list of all files owned by the authenticated user.
          */
-        get: operations["listFiles"];
+        get: operations["Storage_listFiles"];
         put?: never;
         post?: never;
         /**
          * Delete file
          * @description Deletes a file from storage and removes its metadata.
          */
-        delete: operations["deleteFile"];
+        delete: operations["Storage_deleteFile"];
         options?: never;
         head?: never;
         /**
          * Update file metadata
          * @description Updates file metadata like file name for a given key.
          */
-        patch: operations["updateMetadata"];
+        patch: operations["Storage_updateMetadata"];
         trace?: never;
     };
     "/api/v1/referrals/stats": {
@@ -3156,7 +3156,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get referral statistics for current user */
-        get: operations["getStats"];
+        get: operations["Referral_getStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3173,7 +3173,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get current user referral code */
-        get: operations["getCode"];
+        get: operations["Referral_getCode"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3190,12 +3190,12 @@ export interface paths {
             cookie?: never;
         };
         /** Get current user profile */
-        get: operations["getProfile"];
+        get: operations["Users_getProfile"];
         /** Update current user profile */
-        put: operations["updateProfile"];
+        put: operations["Users_updateProfile"];
         post?: never;
         /** Delete user account */
-        delete: operations["deleteAccount"];
+        delete: operations["Users_deleteAccount"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3211,7 +3211,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Change email address */
-        post: operations["changeEmail"];
+        post: operations["Users_changeEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3228,7 +3228,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Change password */
-        post: operations["changePassword"];
+        post: operations["Users_changePassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3245,7 +3245,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Deactivate user account */
-        post: operations["deactivateAccount"];
+        post: operations["Users_deactivateAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3260,7 +3260,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get user activity history */
-        get: operations["getUserActivity"];
+        get: operations["Users_getUserActivity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3277,7 +3277,7 @@ export interface paths {
             cookie?: never;
         };
         /** Export all user data (GDPR) */
-        get: operations["exportUserData"];
+        get: operations["Users_exportUserData"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3297,7 +3297,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Delete user account and anonymize data (GDPR) */
-        delete: operations["gdprDeleteAccount"];
+        delete: operations["Users_gdprDeleteAccount"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3313,7 +3313,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Update user consent preferences (GDPR) */
-        post: operations["updateConsent"];
+        post: operations["Users_updateConsent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3328,7 +3328,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get user privacy settings (GDPR) */
-        get: operations["getPrivacySettings"];
+        get: operations["Users_getPrivacySettings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3345,14 +3345,14 @@ export interface paths {
             cookie?: never;
         };
         /** Get user notification preferences */
-        get: operations["getPreferences"];
+        get: operations["Users_getPreferences"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Update user notification preferences */
-        patch: operations["updatePreferences"];
+        patch: operations["Users_updatePreferences"];
         trace?: never;
     };
     "/api/v1/users/restore": {
@@ -3365,7 +3365,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Restore soft-deleted user account */
-        post: operations["restoreAccount"];
+        post: operations["Users_restoreAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3383,7 +3383,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Permanently delete user account (Admin only) */
-        delete: operations["hardDeleteAccount"];
+        delete: operations["Users_hardDeleteAccount"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3397,7 +3397,7 @@ export interface paths {
             cookie?: never;
         };
         /** List users (admin) */
-        get: operations["list"];
+        get: operations["AdminUsers_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3416,7 +3416,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Suspend a user account (admin) */
-        post: operations["deactivate"];
+        post: operations["AdminUsers_deactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3433,7 +3433,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Mark a user as verified (admin) */
-        post: operations["verify"];
+        post: operations["AdminUsers_verify"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3450,7 +3450,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Restore/reactivate a user account (admin) */
-        post: operations["restore"];
+        post: operations["AdminUsers_restore"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3468,13 +3468,13 @@ export interface paths {
          * List all properties
          * @description Retrieve a paginated list of property listings with optional filtering. By default, returns only published properties for public access.
          */
-        get: operations["findAll"];
+        get: operations["Properties_findAll"];
         put?: never;
         /**
          * Create a new property listing
          * @description Creates a new property listing. Only agents (landlords) and admins can create properties.
          */
-        post: operations["create"];
+        post: operations["Properties_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3492,7 +3492,7 @@ export interface paths {
          * List current user properties
          * @description Retrieve all properties owned by the authenticated user.
          */
-        get: operations["findMyProperties"];
+        get: operations["Properties_findMyProperties"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3514,7 +3514,7 @@ export interface paths {
          * Record a property view
          * @description Increments view count and updates last viewed time for published listings.
          */
-        post: operations["recordView"];
+        post: operations["Properties_recordView"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3534,7 +3534,7 @@ export interface paths {
          * Record a favorite
          * @description Increments favorite count for a published listing.
          */
-        post: operations["recordFavorite"];
+        post: operations["Properties_recordFavorite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3552,21 +3552,21 @@ export interface paths {
          * Get a specific property
          * @description Retrieve detailed information about a specific property by its ID. Only published properties are publicly accessible.
          */
-        get: operations["findOne"];
+        get: operations["Properties_findOne"];
         put?: never;
         post?: never;
         /**
          * Delete a property
          * @description Delete a property listing. Only the owner or admin can delete a property.
          */
-        delete: operations["remove"];
+        delete: operations["Properties_remove"];
         options?: never;
         head?: never;
         /**
          * Update a property
          * @description Update an existing property. Only the owner or admin can update a property.
          */
-        patch: operations["update"];
+        patch: operations["Properties_update"];
         trace?: never;
     };
     "/api/v1/properties/{id}/publish": {
@@ -3582,7 +3582,7 @@ export interface paths {
          * Publish a property
          * @description Change property status from draft to published. Only the owner or admin can publish.
          */
-        post: operations["publish"];
+        post: operations["Properties_publish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3602,7 +3602,7 @@ export interface paths {
          * Archive a property
          * @description Archive a property listing. Only the owner or admin can archive.
          */
-        post: operations["archive"];
+        post: operations["Properties_archive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3622,7 +3622,7 @@ export interface paths {
          * Mark a property as rented
          * @description Mark a property as rented. Only the owner or admin can change this status.
          */
-        post: operations["markAsRented"];
+        post: operations["Properties_markAsRented"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3642,7 +3642,7 @@ export interface paths {
          * Start property listing wizard
          * @description Creates a server-side draft for the property listing wizard.
          */
-        post: operations["startListingWizard"];
+        post: operations["Properties_startListingWizard"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3666,7 +3666,7 @@ export interface paths {
          * Update a wizard step
          * @description Persists the current step payload and step progress.
          */
-        patch: operations["updateListingWizardStep"];
+        patch: operations["Properties_updateListingWizardStep"];
         trace?: never;
     };
     "/api/v1/properties/property-listings/wizard/{id}/draft": {
@@ -3680,14 +3680,14 @@ export interface paths {
          * Get wizard draft
          * @description Returns an existing draft for resume-later functionality.
          */
-        get: operations["getListingWizardDraft"];
+        get: operations["Properties_getListingWizardDraft"];
         put?: never;
         post?: never;
         /**
          * Delete wizard draft
          * @description Deletes a wizard draft for the current user.
          */
-        delete: operations["deleteListingWizardDraft"];
+        delete: operations["Properties_deleteListingWizardDraft"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3706,7 +3706,7 @@ export interface paths {
          * Publish wizard draft
          * @description Validates the wizard draft, creates a property listing, and publishes it.
          */
-        post: operations["publishListingWizard"];
+        post: operations["Properties_publishListingWizard"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3723,7 +3723,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Start a new property listing wizard */
-        post: operations["start"];
+        post: operations["PropertyWizard_start"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3738,11 +3738,11 @@ export interface paths {
             cookie?: never;
         };
         /** Get draft content */
-        get: operations["findOne"];
+        get: operations["PropertyWizard_findOne"];
         put?: never;
         post?: never;
         /** Delete a draft */
-        delete: operations["remove"];
+        delete: operations["PropertyWizard_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3762,7 +3762,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Save progress and validate step */
-        patch: operations["updateStep"];
+        patch: operations["PropertyWizard_updateStep"];
         trace?: never;
     };
     "/api/v1/property-listings/wizard/{id}/publish": {
@@ -3775,7 +3775,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Publish draft */
-        post: operations["publish"];
+        post: operations["PropertyWizard_publish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3790,7 +3790,7 @@ export interface paths {
             cookie?: never;
         };
         /** AI pricing suggestion */
-        get: operations["getPricingSuggestion"];
+        get: operations["PropertyWizard_getPricingSuggestion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3807,7 +3807,7 @@ export interface paths {
             cookie?: never;
         };
         /** AI description suggestion */
-        get: operations["getDescriptionSuggestion"];
+        get: operations["PropertyWizard_getDescriptionSuggestion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3824,7 +3824,7 @@ export interface paths {
             cookie?: never;
         };
         /** AI completeness score */
-        get: operations["getCompletenessScore"];
+        get: operations["PropertyWizard_getCompletenessScore"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3841,14 +3841,14 @@ export interface paths {
             cookie?: never;
         };
         /** Get current rental mode and settings */
-        get: operations["getMode"];
+        get: operations["PropertyModes_getMode"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Update rental mode and settings */
-        patch: operations["updateMode"];
+        patch: operations["PropertyModes_updateMode"];
         trace?: never;
     };
     "/api/v1/api/properties/{propertyId}/mode/recommendations": {
@@ -3859,7 +3859,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get AI-powered mode recommendations */
-        get: operations["getModeRecommendations"];
+        get: operations["PropertyModes_getModeRecommendations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3878,7 +3878,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Switch mode (flexible properties only) */
-        post: operations["switchMode"];
+        post: operations["PropertyModes_switchMode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3893,9 +3893,9 @@ export interface paths {
             cookie?: never;
         };
         /** Get availability calendar for a date range */
-        get: operations["getCalendar"];
+        get: operations["Availability_getCalendar"];
         /** Update availability for a date range */
-        put: operations["updateAvailability"];
+        put: operations["Availability_updateAvailability"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3913,7 +3913,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Block a list of dates */
-        post: operations["blockDates"];
+        post: operations["Availability_blockDates"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3930,7 +3930,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Unblock a list of dates */
-        post: operations["unblockDates"];
+        post: operations["Availability_unblockDates"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3947,7 +3947,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Set custom price for a specific date */
-        post: operations["setPrice"];
+        post: operations["Availability_setPrice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3962,7 +3962,7 @@ export interface paths {
             cookie?: never;
         };
         /** Check user fraud risk */
-        get: operations["checkUserFraud"];
+        get: operations["Fraud_checkUserFraud"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3979,7 +3979,7 @@ export interface paths {
             cookie?: never;
         };
         /** Check listing fraud risk */
-        get: operations["checkListingFraud"];
+        get: operations["Fraud_checkListingFraud"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3996,7 +3996,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get fraud alerts */
-        get: operations["getFraudAlerts"];
+        get: operations["Fraud_getFraudAlerts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4019,7 +4019,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Resolve a fraud alert */
-        patch: operations["resolveFraudAlert"];
+        patch: operations["Fraud_resolveFraudAlert"];
         trace?: never;
     };
     "/api/v1/fraud/transaction": {
@@ -4032,7 +4032,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Check transaction fraud risk */
-        post: operations["checkTransactionFraud"];
+        post: operations["Fraud_checkTransactionFraud"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4047,10 +4047,10 @@ export interface paths {
             cookie?: never;
         };
         /** List disputes with filters */
-        get: operations["findAll"];
+        get: operations["Disputes_findAll"];
         put?: never;
         /** Create a dispute */
-        post: operations["createDispute"];
+        post: operations["Disputes_createDispute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4065,8 +4065,8 @@ export interface paths {
             cookie?: never;
         };
         /** Get dispute by ID */
-        get: operations["findOne"];
-        put: operations["update"];
+        get: operations["Disputes_findOne"];
+        put: operations["Disputes_update"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4081,7 +4081,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["findByDisputeId"];
+        get: operations["Disputes_findByDisputeId"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4099,7 +4099,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["addEvidence"];
+        post: operations["Disputes_addEvidence"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4115,7 +4115,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["addComment"];
+        post: operations["Disputes_addComment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4131,7 +4131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["resolveDispute"];
+        post: operations["Disputes_resolveDispute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4145,7 +4145,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getAgreementDisputes"];
+        get: operations["Disputes_getAgreementDisputes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4171,7 +4171,7 @@ export interface paths {
          * Admin update dispute status and resolution
          * @description Allows admins to update dispute status and add resolution. Validates status transitions.
          */
-        patch: operations["updateDispute"];
+        patch: operations["AdminDisputes_updateDispute"];
         trace?: never;
     };
     "/api/v1/bookings": {
@@ -4185,10 +4185,10 @@ export interface paths {
          * List bookings for the current user
          * @description role=host returns bookings on properties the caller owns; role=guest (default) returns bookings the caller made.
          */
-        get: operations["findMine"];
+        get: operations["Bookings_findMine"];
         put?: never;
         /** Create a short-stay booking request */
-        post: operations["create"];
+        post: operations["Bookings_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4209,7 +4209,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Host confirms a pending booking */
-        patch: operations["confirm"];
+        patch: operations["Bookings_confirm"];
         trace?: never;
     };
     "/api/v1/bookings/{id}/cancel": {
@@ -4226,7 +4226,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Host declines/cancels a pending booking */
-        patch: operations["cancel"];
+        patch: operations["Bookings_cancel"];
         trace?: never;
     };
     "/api/v1/payments": {
@@ -4237,10 +4237,10 @@ export interface paths {
             cookie?: never;
         };
         /** List payments with filters */
-        get: operations["listPayments"];
+        get: operations["Payment_listPayments"];
         put?: never;
         /** Record a payment */
-        post: operations["recordPayment"];
+        post: operations["Payment_recordPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4257,7 +4257,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Process Stellar rent payment */
-        post: operations["processStellarRent"];
+        post: operations["Payment_processStellarRent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4274,7 +4274,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create Stellar escrow deposit */
-        post: operations["createEscrowDeposit"];
+        post: operations["Payment_createEscrowDeposit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4291,7 +4291,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Release Stellar escrow deposit */
-        post: operations["releaseEscrowDeposit"];
+        post: operations["Payment_releaseEscrowDeposit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4308,7 +4308,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Refund Stellar escrow deposit */
-        post: operations["refundEscrowDeposit"];
+        post: operations["Payment_refundEscrowDeposit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4325,7 +4325,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Reconcile Stellar-backed payments */
-        post: operations["reconcilePayments"];
+        post: operations["Payment_reconcilePayments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4342,7 +4342,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Retry failed payment records */
-        post: operations["retryFailedPayments"];
+        post: operations["Payment_retryFailedPayments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4357,7 +4357,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get payment analytics summary */
-        get: operations["getPaymentAnalytics"];
+        get: operations["Payment_getPaymentAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4374,7 +4374,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get payment by ID */
-        get: operations["getPayment"];
+        get: operations["Payment_getPayment"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4392,7 +4392,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["processRefund"];
+        post: operations["Payment_processRefund"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4406,7 +4406,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["generateReceipt"];
+        get: operations["Payment_generateReceipt"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4422,9 +4422,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listPaymentMethods"];
+        get: operations["PaymentMethod_listPaymentMethods"];
         put?: never;
-        post: operations["createPaymentMethod"];
+        post: operations["PaymentMethod_createPaymentMethod"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4441,10 +4441,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["deletePaymentMethod"];
+        delete: operations["PaymentMethod_deletePaymentMethod"];
         options?: never;
         head?: never;
-        patch: operations["updatePaymentMethod"];
+        patch: operations["PaymentMethod_updatePaymentMethod"];
         trace?: never;
     };
     "/api/v1/payments/schedules": {
@@ -4454,10 +4454,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listSchedules"];
+        get: operations["PaymentSchedule_listSchedules"];
         put?: never;
         /** Create payment schedule */
-        post: operations["createSchedule"];
+        post: operations["PaymentSchedule_createSchedule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4477,7 +4477,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["updateSchedule"];
+        patch: operations["PaymentSchedule_updateSchedule"];
         trace?: never;
     };
     "/api/v1/payments/schedules/{id}/run": {
@@ -4489,7 +4489,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["runSchedule"];
+        post: operations["PaymentSchedule_runSchedule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4505,7 +4505,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["processDueSchedules"];
+        post: operations["PaymentSchedule_processDueSchedules"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4525,7 +4525,7 @@ export interface paths {
          * Handle payment gateway webhook events
          * @description Called by external payment gateways to notify of status changes. Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and a timestamp in X-Webhook-Timestamp. Not for direct client use.
          */
-        post: operations["handleGatewayWebhook"];
+        post: operations["PaymentWebhook_handleGatewayWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4545,7 +4545,7 @@ export interface paths {
          * Handle payment gateway refund webhook events
          * @description Called by external payment gateways to notify of refund status changes. Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and a timestamp in X-Webhook-Timestamp. Payload is validated with RefundWebhookDto (Zod).
          */
-        post: operations["handleRefundWebhook"];
+        post: operations["PaymentWebhook_handleRefundWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4560,7 +4560,7 @@ export interface paths {
             cookie?: never;
         };
         /** List admin refund requests */
-        get: operations["listRefundRequests"];
+        get: operations["AdminRefunds_listRefundRequests"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4577,7 +4577,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get admin refund request detail */
-        get: operations["getRefundRequest"];
+        get: operations["AdminRefunds_getRefundRequest"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4596,7 +4596,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Approve or reject a refund request */
-        post: operations["decideRefundRequest"];
+        post: operations["AdminRefunds_decideRefundRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4614,7 +4614,7 @@ export interface paths {
          * Public status page
          * @description Overall service status, per-component health, and uptime — for status-page integrations and uptime monitors.
          */
-        get: operations["getStatus"];
+        get: operations["Status_getStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4631,7 +4631,7 @@ export interface paths {
             cookie?: never;
         };
         /** Service uptime */
-        get: operations["getUptime"];
+        get: operations["Status_getUptime"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4648,7 +4648,7 @@ export interface paths {
             cookie?: never;
         };
         /** Evaluate a single feature flag for a user */
-        get: operations["evaluateFlag"];
+        get: operations["FeatureFlags_evaluateFlag"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4665,7 +4665,7 @@ export interface paths {
             cookie?: never;
         };
         /** Evaluate all feature flags for a user */
-        get: operations["evaluateAllFlags"];
+        get: operations["FeatureFlags_evaluateAllFlags"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4682,10 +4682,10 @@ export interface paths {
             cookie?: never;
         };
         /** List all feature flags (Admin) */
-        get: operations["getAllFlags"];
+        get: operations["FeatureFlags_getAllFlags"];
         put?: never;
         /** Create a new feature flag (Admin) */
-        post: operations["createFlag"];
+        post: operations["FeatureFlags_createFlag"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4700,15 +4700,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get feature flag details by key (Admin) */
-        get: operations["getFlagByKey"];
+        get: operations["FeatureFlags_getFlagByKey"];
         put?: never;
         post?: never;
         /** Delete a feature flag (Admin) */
-        delete: operations["deleteFlag"];
+        delete: operations["FeatureFlags_deleteFlag"];
         options?: never;
         head?: never;
         /** Update a feature flag rollout/status (Admin) */
-        patch: operations["updateFlag"];
+        patch: operations["FeatureFlags_updateFlag"];
         trace?: never;
     };
     "/api/v1/admin/feature-flags/{key}/rollout": {
@@ -4725,7 +4725,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update rollout percentage for a feature flag (Admin) */
-        patch: operations["setRolloutPercentage"];
+        patch: operations["FeatureFlags_setRolloutPercentage"];
         trace?: never;
     };
     "/api/v1/admin/feature-flags/{key}/kill": {
@@ -4738,7 +4738,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Trigger emergency kill switch for a feature flag (Admin) */
-        post: operations["killSwitch"];
+        post: operations["FeatureFlags_killSwitch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4756,17 +4756,17 @@ export interface paths {
          * Get current user profile
          * @description Retrieves the on-chain and off-chain profile data for the authenticated user.
          */
-        get: operations["getProfile"];
+        get: operations["Profile_getProfile"];
         /**
          * Update profile
          * @description Updates the authenticated user's profile. If the data hash changes, the on-chain data will be updated.
          */
-        put: operations["updateProfile"];
+        put: operations["Profile_updateProfile"];
         /**
          * Create profile
          * @description Creates a new on-chain profile for the authenticated user. Requires a connected Stellar wallet.
          */
-        post: operations["createProfile"];
+        post: operations["Profile_createProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4784,7 +4784,7 @@ export interface paths {
          * Get profile by wallet address
          * @description Retrieves the on-chain and off-chain profile data for a given wallet address. This is a public endpoint.
          */
-        get: operations["getProfileByWallet"];
+        get: operations["Profile_getProfileByWallet"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4804,7 +4804,7 @@ export interface paths {
          * Verify data integrity
          * @description Verifies that the off-chain profile data matches the hash stored on-chain.
          */
-        get: operations["verifyDataIntegrity"];
+        get: operations["Profile_verifyDataIntegrity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4821,7 +4821,7 @@ export interface paths {
             cookie?: never;
         };
         /** List supported languages and coverage */
-        get: operations["getLanguages"];
+        get: operations["I18n_getLanguages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4838,7 +4838,7 @@ export interface paths {
             cookie?: never;
         };
         /** Translate a key for a given language */
-        get: operations["translate"];
+        get: operations["I18n_translate"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4855,7 +4855,7 @@ export interface paths {
             cookie?: never;
         };
         /** Show currency/date/number localization sample */
-        get: operations["formatDemo"];
+        get: operations["I18n_formatDemo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4872,10 +4872,10 @@ export interface paths {
             cookie?: never;
         };
         /** List documents with filtering and pagination */
-        get: operations["findAll"];
+        get: operations["Document_findAll"];
         put?: never;
         /** Create a document record */
-        post: operations["create"];
+        post: operations["Document_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4890,15 +4890,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get a single document */
-        get: operations["findOne"];
+        get: operations["Document_findOne"];
         put?: never;
         post?: never;
         /** Delete a document */
-        delete: operations["remove"];
+        delete: operations["Document_remove"];
         options?: never;
         head?: never;
         /** Update document metadata */
-        patch: operations["update"];
+        patch: operations["Document_update"];
         trace?: never;
     };
     "/api/v1/documents/{id}/share": {
@@ -4911,7 +4911,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Share a document with a tenant */
-        post: operations["share"];
+        post: operations["Document_share"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4926,7 +4926,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get document download URL */
-        get: operations["getDownloadUrl"];
+        get: operations["Document_getDownloadUrl"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4948,7 +4948,7 @@ export interface paths {
          * Submit feedback
          * @description Submit bug reports, feature requests, or general feedback. Optional auth to associate with your account.
          */
-        post: operations["submit"];
+        post: operations["Feedback_submit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4966,13 +4966,13 @@ export interface paths {
          * List API keys
          * @description List your API keys (masked). Includes expiration status and warnings. Requires JWT.
          */
-        get: operations["listKeys"];
+        get: operations["Developer_listKeys"];
         put?: never;
         /**
          * Create API key
          * @description Create a new API key for use with X-API-Key header. The raw key is returned only once. Key expires in 90 days by default.
          */
-        post: operations["createKey"];
+        post: operations["Developer_createKey"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4990,7 +4990,7 @@ export interface paths {
          * Get keys expiring soon
          * @description Get API keys that will expire within the next 30 days. Useful for proactive rotation reminders.
          */
-        get: operations["getKeysExpiringSoon"];
+        get: operations["Developer_getKeysExpiringSoon"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5010,18 +5010,18 @@ export interface paths {
          * Get API key details
          * @description Get detailed information about a specific API key.
          */
-        get: operations["getKey"];
+        get: operations["Developer_getKey"];
         put?: never;
         post?: never;
         /** Revoke API key */
-        delete: operations["revokeKey"];
+        delete: operations["Developer_revokeKey"];
         options?: never;
         head?: never;
         /**
          * Update API key
          * @description Update API key name, description, permissions and/or expiration date.
          */
-        patch: operations["updateKey"];
+        patch: operations["Developer_updateKey"];
         trace?: never;
     };
     "/api/v1/developer/api-keys/{id}/rotate": {
@@ -5037,7 +5037,7 @@ export interface paths {
          * Rotate API key
          * @description Generate a new API key while keeping the old one active for a transition period (7 days). The new raw key is returned only once.
          */
-        post: operations["rotateKey"];
+        post: operations["Developer_rotateKey"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5055,7 +5055,7 @@ export interface paths {
          * Get rotation history
          * @description View the rotation history for a specific API key.
          */
-        get: operations["getRotationHistory"];
+        get: operations["Developer_getRotationHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5071,7 +5071,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getPortal"];
+        get: operations["DeveloperPortal_getPortal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5088,7 +5088,7 @@ export interface paths {
             cookie?: never;
         };
         /** Full-text property search with faceted filtering */
-        get: operations["searchProperties"];
+        get: operations["Search_searchProperties"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5105,7 +5105,7 @@ export interface paths {
             cookie?: never;
         };
         /** Search users with filters */
-        get: operations["searchUsers"];
+        get: operations["Search_searchUsers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5122,7 +5122,7 @@ export interface paths {
             cookie?: never;
         };
         /** Search documents (agreements) with filters */
-        get: operations["searchDocuments"];
+        get: operations["Search_searchDocuments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5139,7 +5139,7 @@ export interface paths {
             cookie?: never;
         };
         /** Autocomplete suggestions for search */
-        get: operations["suggest"];
+        get: operations["Search_suggest"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5156,7 +5156,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get technical debt cleanup report */
-        get: operations["getReport"];
+        get: operations["Cleanup_getReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5175,7 +5175,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Scan for orphaned database records and delete them if ORPHAN_CLEANUP_DELETE_ENABLED is set */
-        post: operations["runOrphanedRecordsCleanup"];
+        post: operations["Cleanup_runOrphanedRecordsCleanup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5190,7 +5190,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get archival statistics */
-        get: operations["getArchivalStats"];
+        get: operations["DataArchival_getArchivalStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5209,7 +5209,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Manually trigger archival for specific entity type */
-        post: operations["manualArchive"];
+        post: operations["DataArchival_manualArchive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5226,7 +5226,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Trigger scheduled archival process manually */
-        post: operations["triggerScheduledArchival"];
+        post: operations["DataArchival_triggerScheduledArchival"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5241,7 +5241,7 @@ export interface paths {
             cookie?: never;
         };
         /** List available ML models */
-        get: operations["getModels"];
+        get: operations["Ai_getModels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5260,7 +5260,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Score a transaction for fraud risk */
-        post: operations["scoreFraud"];
+        post: operations["Ai_scoreFraud"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5277,7 +5277,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Generate ranked property recommendations */
-        post: operations["getRecommendations"];
+        post: operations["Ai_getRecommendations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5292,7 +5292,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get personalized property recommendations */
-        get: operations["getRecommendations"];
+        get: operations["MatchingAi_getRecommendations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5309,7 +5309,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get match score for a specific property */
-        get: operations["getMatchScore"];
+        get: operations["MatchingAi_getMatchScore"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5326,7 +5326,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get similar properties */
-        get: operations["getSimilarProperties"];
+        get: operations["MatchingAi_getSimilarProperties"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5343,10 +5343,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get current user preferences */
-        get: operations["getPreferences"];
+        get: operations["MatchingAi_getPreferences"];
         put?: never;
         /** Update user matching preferences */
-        post: operations["updatePreferences"];
+        post: operations["MatchingAi_updatePreferences"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5364,13 +5364,13 @@ export interface paths {
          * Get current user's favorited properties
          * @description Retrieves a list of all properties favorited by the current user.
          */
-        get: operations["getFavorites"];
+        get: operations["Favorites_getFavorites"];
         put?: never;
         /**
          * Add a property to favorites
          * @description Saves a property to the current user's favorites list.
          */
-        post: operations["addFavorite"];
+        post: operations["Favorites_addFavorite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5388,14 +5388,14 @@ export interface paths {
          * Get favorite status for a property
          * @description Check if the current user has favorited a property and view the total favorite count.
          */
-        get: operations["getFavoriteStatus"];
+        get: operations["Favorites_getFavoriteStatus"];
         put?: never;
         post?: never;
         /**
          * Remove a property from favorites
          * @description Removes a property from the current user's favorites list.
          */
-        delete: operations["removeFavorite"];
+        delete: operations["Favorites_removeFavorite"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5412,7 +5412,7 @@ export interface paths {
          * Get favorite count for a property
          * @description Get the total number of favorites for a property.
          */
-        get: operations["getFavoriteCount"];
+        get: operations["Favorites_getFavoriteCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5431,7 +5431,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a tenant screening request */
-        post: operations["createRequest"];
+        post: operations["Screening_createRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5448,7 +5448,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Grant consent for a tenant screening request */
-        post: operations["grantConsent"];
+        post: operations["Screening_grantConsent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5463,7 +5463,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get tenant screening status */
-        get: operations["getScreening"];
+        get: operations["Screening_getScreening"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5480,7 +5480,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get a securely stored tenant screening report */
-        get: operations["getReport"];
+        get: operations["Screening_getReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5499,7 +5499,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Tenant screening provider webhook */
-        post: operations["handleProviderWebhook"];
+        post: operations["Screening_handleProviderWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5516,7 +5516,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create property inquiry */
-        post: operations["create"];
+        post: operations["Inquiries_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5531,7 +5531,7 @@ export interface paths {
             cookie?: never;
         };
         /** List inquiries sent to current user properties */
-        get: operations["incoming"];
+        get: operations["Inquiries_incoming"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5548,7 +5548,7 @@ export interface paths {
             cookie?: never;
         };
         /** List inquiries created by current user */
-        get: operations["outgoing"];
+        get: operations["Inquiries_outgoing"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5571,7 +5571,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark an incoming inquiry as viewed */
-        patch: operations["markViewed"];
+        patch: operations["Inquiries_markViewed"];
         trace?: never;
     };
     "/api/v1/analytics/landlord/dashboard": {
@@ -5582,7 +5582,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get landlord property analytics dashboard data */
-        get: operations["getLandlordDashboard"];
+        get: operations["Analytics_getLandlordDashboard"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5599,7 +5599,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get landlord platform fees summary */
-        get: operations["getLandlordFeesSummary"];
+        get: operations["Analytics_getLandlordFeesSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5616,7 +5616,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get overall dashboard metrics */
-        get: operations["getDashboardMetrics"];
+        get: operations["Analytics_getDashboardMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5633,7 +5633,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get payment analytics data */
-        get: operations["getPaymentAnalytics"];
+        get: operations["Analytics_getPaymentAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5650,7 +5650,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get user activity analytics */
-        get: operations["getUserActivityAnalytics"];
+        get: operations["Analytics_getUserActivityAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5669,7 +5669,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Generate analytics report */
-        post: operations["generateReport"];
+        post: operations["Analytics_generateReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5686,7 +5686,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Export analytics data */
-        post: operations["exportAnalytics"];
+        post: operations["Analytics_exportAnalytics"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5701,7 +5701,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get a comprehensive database performance report */
-        get: operations["getPerformanceReport"];
+        get: operations["DatabasePerformance_getPerformanceReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5718,7 +5718,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get slow query statistics from pg_stat_statements */
-        get: operations["getSlowQueries"];
+        get: operations["DatabasePerformance_getSlowQueries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5735,7 +5735,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get index usage statistics */
-        get: operations["getIndexUsage"];
+        get: operations["DatabasePerformance_getIndexUsage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5752,7 +5752,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get unused or rarely-used indexes */
-        get: operations["getUnusedIndexes"];
+        get: operations["DatabasePerformance_getUnusedIndexes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5769,7 +5769,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get index optimization recommendations */
-        get: operations["getIndexRecommendations"];
+        get: operations["DatabasePerformance_getIndexRecommendations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5786,7 +5786,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get duplicate index candidates */
-        get: operations["getDuplicateIndexes"];
+        get: operations["DatabasePerformance_getDuplicateIndexes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5803,7 +5803,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get real-time query analysis including slow query detection and N+1 alerts */
-        get: operations["getQueryAnalysis"];
+        get: operations["DatabasePerformance_getQueryAnalysis"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5820,7 +5820,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get N+1 query detection reports */
-        get: operations["getNPlusOneDetection"];
+        get: operations["DatabasePerformance_getNPlusOneDetection"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5837,7 +5837,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get all tracked query patterns with statistics */
-        get: operations["getQueryPatterns"];
+        get: operations["DatabasePerformance_getQueryPatterns"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5854,7 +5854,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get recent query execution history */
-        get: operations["getQueryHistory"];
+        get: operations["DatabasePerformance_getQueryHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5871,7 +5871,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get aggregated query execution statistics */
-        get: operations["getQueryStats"];
+        get: operations["DatabasePerformance_getQueryStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5888,7 +5888,7 @@ export interface paths {
             cookie?: never;
         };
         /** Reset query analysis data */
-        get: operations["resetQueryAnalysis"];
+        get: operations["DatabasePerformance_resetQueryAnalysis"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5905,10 +5905,10 @@ export interface paths {
             cookie?: never;
         };
         /** List maintenance requests with filters */
-        get: operations["findAll"];
+        get: operations["Maintenance_findAll"];
         put?: never;
         /** Create a new maintenance request (Tenants only) */
-        post: operations["create"];
+        post: operations["Maintenance_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5923,7 +5923,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get detailed maintenance request info */
-        get: operations["findOne"];
+        get: operations["Maintenance_findOne"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5946,7 +5946,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update maintenance request status (Landlords/Admins only) */
-        patch: operations["updateStatus"];
+        patch: operations["Maintenance_updateStatus"];
         trace?: never;
     };
     "/v1/health": {
@@ -5960,7 +5960,7 @@ export interface paths {
          * Basic health check
          * @description Returns overall status and per-service health (database, stellar, memory).
          */
-        get: operations["check"];
+        get: operations["Health_check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5980,7 +5980,7 @@ export interface paths {
          * Detailed health check
          * @description Includes system details (Node version, memory, PID).
          */
-        get: operations["detailedCheck"];
+        get: operations["Health_detailedCheck"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6002,7 +6002,7 @@ export interface paths {
          * Submit KYC data
          * @description Submit identity/address data for KYC verification (SEP-9 style).
          */
-        post: operations["submitKyc"];
+        post: operations["Kyc_submitKyc"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6020,7 +6020,7 @@ export interface paths {
          * Get KYC status
          * @description Returns current KYC verification status for the authenticated user.
          */
-        get: operations["getKycStatus"];
+        get: operations["Kyc_getKycStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6042,7 +6042,7 @@ export interface paths {
          * KYC provider webhook
          * @description Called by KYC provider to notify status changes. Not for client use.
          */
-        post: operations["webhook"];
+        post: operations["Kyc_webhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6057,7 +6057,7 @@ export interface paths {
             cookie?: never;
         };
         /** List pending KYC verifications */
-        get: operations["listPending"];
+        get: operations["AdminKyc_listPending"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6074,7 +6074,7 @@ export interface paths {
             cookie?: never;
         };
         /** List rejected KYC verifications */
-        get: operations["listRejected"];
+        get: operations["AdminKyc_listRejected"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6091,7 +6091,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get KYC verification detail */
-        get: operations["getDetail"];
+        get: operations["AdminKyc_getDetail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6110,7 +6110,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Approve a KYC verification */
-        post: operations["approve"];
+        post: operations["AdminKyc_approve"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6127,7 +6127,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Reject a KYC verification */
-        post: operations["reject"];
+        post: operations["AdminKyc_reject"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8211,7 +8211,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getHello: {
+    App_getHello: {
         parameters: {
             query?: never;
             header?: never;
@@ -8229,7 +8229,7 @@ export interface operations {
             };
         };
     };
-    getSecurityTxt: {
+    Security_getSecurityTxt: {
         parameters: {
             query?: never;
             header?: never;
@@ -8249,7 +8249,7 @@ export interface operations {
             };
         };
     };
-    getSecurityEvents: {
+    Security_getSecurityEvents: {
         parameters: {
             query?: {
                 hours?: number;
@@ -8270,7 +8270,7 @@ export interface operations {
             };
         };
     };
-    getUserEvents: {
+    Security_getUserEvents: {
         parameters: {
             query: {
                 limit: number;
@@ -8292,7 +8292,7 @@ export interface operations {
             };
         };
     };
-    detectSuspicious: {
+    Security_detectSuspicious: {
         parameters: {
             query?: never;
             header?: never;
@@ -8311,7 +8311,7 @@ export interface operations {
             };
         };
     };
-    getThreats: {
+    Security_getThreats: {
         parameters: {
             query?: {
                 limit?: number;
@@ -8330,7 +8330,7 @@ export interface operations {
             };
         };
     };
-    getThreatStats: {
+    Security_getThreatStats: {
         parameters: {
             query?: {
                 hours?: number;
@@ -8349,7 +8349,7 @@ export interface operations {
             };
         };
     };
-    markFalsePositive: {
+    Security_markFalsePositive: {
         parameters: {
             query?: never;
             header?: never;
@@ -8368,7 +8368,7 @@ export interface operations {
             };
         };
     };
-    getIncidents: {
+    Security_getIncidents: {
         parameters: {
             query?: never;
             header?: never;
@@ -8385,7 +8385,7 @@ export interface operations {
             };
         };
     };
-    getIncidentMetrics: {
+    Security_getIncidentMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -8402,7 +8402,7 @@ export interface operations {
             };
         };
     };
-    resolveIncident: {
+    Security_resolveIncident: {
         parameters: {
             query?: never;
             header?: never;
@@ -8421,7 +8421,7 @@ export interface operations {
             };
         };
     };
-    getIncidentReport: {
+    Security_getIncidentReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -8440,7 +8440,7 @@ export interface operations {
             };
         };
     };
-    getComplianceScore: {
+    Security_getComplianceScore: {
         parameters: {
             query?: never;
             header?: never;
@@ -8457,7 +8457,7 @@ export interface operations {
             };
         };
     };
-    getGdprReport: {
+    Security_getGdprReport: {
         parameters: {
             query?: {
                 /** @description ISO date */
@@ -8479,7 +8479,7 @@ export interface operations {
             };
         };
     };
-    getSoc2Report: {
+    Security_getSoc2Report: {
         parameters: {
             query?: {
                 from?: string;
@@ -8499,7 +8499,7 @@ export interface operations {
             };
         };
     };
-    getPciDssReport: {
+    Security_getPciDssReport: {
         parameters: {
             query?: {
                 from?: string;
@@ -8519,7 +8519,7 @@ export interface operations {
             };
         };
     };
-    getRoles: {
+    Security_getRoles: {
         parameters: {
             query?: never;
             header?: never;
@@ -8536,7 +8536,7 @@ export interface operations {
             };
         };
     };
-    getPermissions: {
+    Security_getPermissions: {
         parameters: {
             query?: never;
             header?: never;
@@ -8553,7 +8553,7 @@ export interface operations {
             };
         };
     };
-    seedRbac: {
+    Security_seedRbac: {
         parameters: {
             query?: never;
             header?: never;
@@ -8570,7 +8570,7 @@ export interface operations {
             };
         };
     };
-    anchorAuditLogs: {
+    Security_anchorAuditLogs: {
         parameters: {
             query?: {
                 batchSize?: number;
@@ -8589,7 +8589,7 @@ export interface operations {
             };
         };
     };
-    queryAuditLogs: {
+    Audit_queryAuditLogs: {
         parameters: {
             query?: {
                 /** @description Start date for filtering audit logs (ISO 8601) */
@@ -8638,7 +8638,7 @@ export interface operations {
             };
         };
     };
-    getAuditTrail: {
+    Audit_getAuditTrail: {
         parameters: {
             query: {
                 limit: number;
@@ -8663,7 +8663,7 @@ export interface operations {
             };
         };
     };
-    getUserActivity: {
+    Audit_getUserActivity: {
         parameters: {
             query: {
                 limit: number;
@@ -8687,7 +8687,7 @@ export interface operations {
             };
         };
     };
-    getLogStatistics: {
+    Audit_getLogStatistics: {
         parameters: {
             query?: never;
             header?: never;
@@ -8705,7 +8705,7 @@ export interface operations {
             };
         };
     };
-    cleanupOldLogs: {
+    Audit_cleanupOldLogs: {
         parameters: {
             query: {
                 daysToKeep: number;
@@ -8725,7 +8725,7 @@ export interface operations {
             };
         };
     };
-    runRetentionCleanup: {
+    Audit_runRetentionCleanup: {
         parameters: {
             query?: never;
             header?: never;
@@ -8743,7 +8743,7 @@ export interface operations {
             };
         };
     };
-    findAll: {
+    Agreements_findAll: {
         parameters: {
             query?: {
                 /** @description Filter by agreement status */
@@ -8779,7 +8779,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Agreements_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -8800,7 +8800,7 @@ export interface operations {
             };
         };
     };
-    downloadAgreement: {
+    Agreements_downloadAgreement: {
         parameters: {
             query?: never;
             header?: never;
@@ -8819,7 +8819,7 @@ export interface operations {
             };
         };
     };
-    getFees: {
+    Agreements_getFees: {
         parameters: {
             query?: {
                 /** @description Whole days after due date (for late fee estimate) */
@@ -8842,7 +8842,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    Agreements_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -8861,7 +8861,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    Agreements_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -8884,7 +8884,7 @@ export interface operations {
             };
         };
     };
-    terminate: {
+    Agreements_terminate: {
         parameters: {
             query?: never;
             header?: never;
@@ -8907,7 +8907,7 @@ export interface operations {
             };
         };
     };
-    patchUpdate: {
+    Agreements_patchUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -8930,7 +8930,7 @@ export interface operations {
             };
         };
     };
-    renew: {
+    Agreements_renew: {
         parameters: {
             query?: never;
             header?: never;
@@ -8953,7 +8953,7 @@ export interface operations {
             };
         };
     };
-    recordPayment: {
+    Agreements_recordPayment: {
         parameters: {
             query?: never;
             header?: never;
@@ -8976,7 +8976,7 @@ export interface operations {
             };
         };
     };
-    getPaymentsForAgreement: {
+    AgreementPayment_getPaymentsForAgreement: {
         parameters: {
             query?: never;
             header?: never;
@@ -8997,7 +8997,7 @@ export interface operations {
             };
         };
     };
-    mintNft: {
+    AgreementNft_mintNft: {
         parameters: {
             query?: never;
             header?: never;
@@ -9018,7 +9018,7 @@ export interface operations {
             };
         };
     };
-    transferNft: {
+    AgreementNft_transferNft: {
         parameters: {
             query?: never;
             header?: never;
@@ -9039,7 +9039,7 @@ export interface operations {
             };
         };
     };
-    getNftByAgreement: {
+    AgreementNft_getNftByAgreement: {
         parameters: {
             query?: never;
             header?: never;
@@ -9058,7 +9058,7 @@ export interface operations {
             };
         };
     };
-    getNftsByOwner: {
+    AgreementNft_getNftsByOwner: {
         parameters: {
             query?: never;
             header?: never;
@@ -9077,7 +9077,7 @@ export interface operations {
             };
         };
     };
-    getAnalytics: {
+    AgreementNft_getAnalytics: {
         parameters: {
             query?: never;
             header?: never;
@@ -9094,7 +9094,7 @@ export interface operations {
             };
         };
     };
-    getOwnerPortfolio: {
+    AgreementNft_getOwnerPortfolio: {
         parameters: {
             query?: never;
             header?: never;
@@ -9113,7 +9113,7 @@ export interface operations {
             };
         };
     };
-    syncOwnership: {
+    AgreementNft_syncOwnership: {
         parameters: {
             query?: never;
             header?: never;
@@ -9132,7 +9132,7 @@ export interface operations {
             };
         };
     };
-    getMyReviews: {
+    Reviews_getMyReviews: {
         parameters: {
             query: {
                 role: string;
@@ -9154,7 +9154,7 @@ export interface operations {
             };
         };
     };
-    createReview: {
+    Reviews_createReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9183,7 +9183,7 @@ export interface operations {
             };
         };
     };
-    getUserReviews: {
+    Reviews_getUserReviews: {
         parameters: {
             query?: never;
             header?: never;
@@ -9204,7 +9204,7 @@ export interface operations {
             };
         };
     };
-    getPropertyReviews: {
+    Reviews_getPropertyReviews: {
         parameters: {
             query?: never;
             header?: never;
@@ -9225,7 +9225,7 @@ export interface operations {
             };
         };
     };
-    reportReview: {
+    Reviews_reportReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9250,7 +9250,7 @@ export interface operations {
             };
         };
     };
-    postGuestReview: {
+    Reviews_postGuestReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9271,7 +9271,7 @@ export interface operations {
             };
         };
     };
-    postHostReview: {
+    Reviews_postHostReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9292,7 +9292,7 @@ export interface operations {
             };
         };
     };
-    getGuestReviews: {
+    Reviews_getGuestReviews: {
         parameters: {
             query?: never;
             header?: never;
@@ -9311,7 +9311,7 @@ export interface operations {
             };
         };
     };
-    getHostReviews: {
+    Reviews_getHostReviews: {
         parameters: {
             query?: never;
             header?: never;
@@ -9330,7 +9330,7 @@ export interface operations {
             };
         };
     };
-    getReputation: {
+    Reviews_getReputation: {
         parameters: {
             query?: never;
             header?: never;
@@ -9349,7 +9349,7 @@ export interface operations {
             };
         };
     };
-    deleteReview: {
+    Reviews_deleteReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9368,7 +9368,7 @@ export interface operations {
             };
         };
     };
-    updateReview: {
+    Reviews_updateReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -9391,7 +9391,7 @@ export interface operations {
             };
         };
     };
-    createAccount: {
+    Stellar_createAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -9422,7 +9422,7 @@ export interface operations {
             };
         };
     };
-    getAccountById: {
+    Stellar_getAccountById: {
         parameters: {
             query?: never;
             header?: never;
@@ -9450,7 +9450,7 @@ export interface operations {
             };
         };
     };
-    getAccountByPublicKey: {
+    Stellar_getAccountByPublicKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -9469,7 +9469,7 @@ export interface operations {
             };
         };
     };
-    getAccountsByUserId: {
+    Stellar_getAccountsByUserId: {
         parameters: {
             query?: never;
             header?: never;
@@ -9488,7 +9488,7 @@ export interface operations {
             };
         };
     };
-    fundAccount: {
+    Stellar_fundAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -9510,7 +9510,7 @@ export interface operations {
             };
         };
     };
-    syncAccount: {
+    Stellar_syncAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -9529,7 +9529,7 @@ export interface operations {
             };
         };
     };
-    getNetworkAccountInfo: {
+    Stellar_getNetworkAccountInfo: {
         parameters: {
             query?: never;
             header?: never;
@@ -9548,7 +9548,7 @@ export interface operations {
             };
         };
     };
-    sendPayment: {
+    Stellar_sendPayment: {
         parameters: {
             query?: never;
             header?: never;
@@ -9578,7 +9578,7 @@ export interface operations {
             };
         };
     };
-    listTransactions: {
+    Stellar_listTransactions: {
         parameters: {
             query?: never;
             header?: never;
@@ -9595,7 +9595,7 @@ export interface operations {
             };
         };
     };
-    getTransactionById: {
+    Stellar_getTransactionById: {
         parameters: {
             query?: never;
             header?: never;
@@ -9614,7 +9614,7 @@ export interface operations {
             };
         };
     };
-    getTransactionByHash: {
+    Stellar_getTransactionByHash: {
         parameters: {
             query?: never;
             header?: never;
@@ -9633,7 +9633,7 @@ export interface operations {
             };
         };
     };
-    createEscrow: {
+    Stellar_createEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9663,7 +9663,7 @@ export interface operations {
             };
         };
     };
-    releaseEscrow: {
+    Stellar_releaseEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9684,7 +9684,7 @@ export interface operations {
             };
         };
     };
-    refundEscrow: {
+    Stellar_refundEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9705,7 +9705,7 @@ export interface operations {
             };
         };
     };
-    getEscrowById: {
+    Stellar_getEscrowById: {
         parameters: {
             query?: never;
             header?: never;
@@ -9724,7 +9724,7 @@ export interface operations {
             };
         };
     };
-    listEscrows: {
+    Stellar_listEscrows: {
         parameters: {
             query?: never;
             header?: never;
@@ -9741,7 +9741,7 @@ export interface operations {
             };
         };
     };
-    createMultiSigEscrow: {
+    Stellar_createMultiSigEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9763,7 +9763,7 @@ export interface operations {
             };
         };
     };
-    addSignature: {
+    Stellar_addSignature: {
         parameters: {
             query?: never;
             header?: never;
@@ -9785,7 +9785,7 @@ export interface operations {
             };
         };
     };
-    releaseWithSignatures: {
+    Stellar_releaseWithSignatures: {
         parameters: {
             query?: never;
             header?: never;
@@ -9807,7 +9807,7 @@ export interface operations {
             };
         };
     };
-    createTimeLockedEscrow: {
+    Stellar_createTimeLockedEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9829,7 +9829,7 @@ export interface operations {
             };
         };
     };
-    checkTimeLockConditions: {
+    Stellar_checkTimeLockConditions: {
         parameters: {
             query?: never;
             header?: never;
@@ -9849,7 +9849,7 @@ export interface operations {
             };
         };
     };
-    createConditionalEscrow: {
+    Stellar_createConditionalEscrow: {
         parameters: {
             query?: never;
             header?: never;
@@ -9871,7 +9871,7 @@ export interface operations {
             };
         };
     };
-    validateConditions: {
+    Stellar_validateConditions: {
         parameters: {
             query?: never;
             header?: never;
@@ -9891,7 +9891,7 @@ export interface operations {
             };
         };
     };
-    integrateWithDispute: {
+    Stellar_integrateWithDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -9913,7 +9913,7 @@ export interface operations {
             };
         };
     };
-    releaseOnDisputeResolution: {
+    Stellar_releaseOnDisputeResolution: {
         parameters: {
             query?: never;
             header?: never;
@@ -9935,7 +9935,7 @@ export interface operations {
             };
         };
     };
-    deposit: {
+    Anchor_deposit: {
         parameters: {
             query?: never;
             header?: never;
@@ -9971,7 +9971,7 @@ export interface operations {
             };
         };
     };
-    withdraw: {
+    Anchor_withdraw: {
         parameters: {
             query?: never;
             header?: never;
@@ -10007,7 +10007,7 @@ export interface operations {
             };
         };
     };
-    listTransactions: {
+    Anchor_listTransactions: {
         parameters: {
             query?: {
                 /** @description Filter by anchor transaction type */
@@ -10047,7 +10047,7 @@ export interface operations {
             };
         };
     };
-    getTransactionStats: {
+    Anchor_getTransactionStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -10072,7 +10072,7 @@ export interface operations {
             };
         };
     };
-    getTransactionStatus: {
+    Anchor_getTransactionStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -10100,7 +10100,7 @@ export interface operations {
             };
         };
     };
-    handleWebhook: {
+    Anchor_handleWebhook: {
         parameters: {
             query?: never;
             header?: never;
@@ -10118,7 +10118,7 @@ export interface operations {
             };
         };
     };
-    listTransactions: {
+    IndexedTransactions_listTransactions: {
         parameters: {
             query?: {
                 /** @description Filter by derived indexing status */
@@ -10156,7 +10156,7 @@ export interface operations {
             };
         };
     };
-    getStats: {
+    IndexedTransactions_getStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -10181,7 +10181,7 @@ export interface operations {
             };
         };
     };
-    getTransaction: {
+    IndexedTransactions_getTransaction: {
         parameters: {
             query?: never;
             header?: never;
@@ -10209,7 +10209,7 @@ export interface operations {
             };
         };
     };
-    registerAgent: {
+    AgentRegistry_registerAgent: {
         parameters: {
             query?: never;
             header?: never;
@@ -10230,7 +10230,7 @@ export interface operations {
             };
         };
     };
-    verifyAgent: {
+    AgentRegistry_verifyAgent: {
         parameters: {
             query?: never;
             header?: never;
@@ -10251,7 +10251,7 @@ export interface operations {
             };
         };
     };
-    rateAgent: {
+    AgentRegistry_rateAgent: {
         parameters: {
             query?: never;
             header?: never;
@@ -10272,7 +10272,7 @@ export interface operations {
             };
         };
     };
-    getAgentInfo: {
+    AgentRegistry_getAgentInfo: {
         parameters: {
             query?: never;
             header?: never;
@@ -10291,7 +10291,7 @@ export interface operations {
             };
         };
     };
-    getAgentCount: {
+    AgentRegistry_getAgentCount: {
         parameters: {
             query?: never;
             header?: never;
@@ -10308,7 +10308,7 @@ export interface operations {
             };
         };
     };
-    registerTransaction: {
+    AgentRegistry_registerTransaction: {
         parameters: {
             query?: never;
             header?: never;
@@ -10329,7 +10329,7 @@ export interface operations {
             };
         };
     };
-    getAgentTransactions: {
+    AgentRegistry_getAgentTransactions: {
         parameters: {
             query?: never;
             header?: never;
@@ -10348,7 +10348,7 @@ export interface operations {
             };
         };
     };
-    registerArbiter: {
+    Dispute_registerArbiter: {
         parameters: {
             query?: never;
             header?: never;
@@ -10370,7 +10370,7 @@ export interface operations {
             };
         };
     };
-    deregisterArbiter: {
+    Dispute_deregisterArbiter: {
         parameters: {
             query?: never;
             header?: never;
@@ -10392,7 +10392,7 @@ export interface operations {
             };
         };
     };
-    getArbiterPool: {
+    Dispute_getArbiterPool: {
         parameters: {
             query?: never;
             header?: never;
@@ -10412,7 +10412,7 @@ export interface operations {
             };
         };
     };
-    selectArbiters: {
+    Dispute_selectArbiters: {
         parameters: {
             query?: never;
             header?: never;
@@ -10434,7 +10434,7 @@ export interface operations {
             };
         };
     };
-    getArbiter: {
+    Dispute_getArbiter: {
         parameters: {
             query?: never;
             header?: never;
@@ -10454,7 +10454,7 @@ export interface operations {
             };
         };
     };
-    getArbiterReputation: {
+    Dispute_getArbiterReputation: {
         parameters: {
             query?: never;
             header?: never;
@@ -10476,7 +10476,7 @@ export interface operations {
             };
         };
     };
-    trackVote: {
+    Dispute_trackVote: {
         parameters: {
             query?: never;
             header?: never;
@@ -10498,7 +10498,7 @@ export interface operations {
             };
         };
     };
-    castVote: {
+    Dispute_castVote: {
         parameters: {
             query?: never;
             header?: never;
@@ -10520,7 +10520,7 @@ export interface operations {
             };
         };
     };
-    getVoteResults: {
+    Dispute_getVoteResults: {
         parameters: {
             query?: never;
             header?: never;
@@ -10542,7 +10542,7 @@ export interface operations {
             };
         };
     };
-    resolveDispute: {
+    Dispute_resolveDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -10564,7 +10564,7 @@ export interface operations {
             };
         };
     };
-    enforceResolution: {
+    Dispute_enforceResolution: {
         parameters: {
             query?: never;
             header?: never;
@@ -10588,7 +10588,7 @@ export interface operations {
             };
         };
     };
-    getDispute: {
+    Dispute_getDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -10608,7 +10608,7 @@ export interface operations {
             };
         };
     };
-    getDisputeTimeline: {
+    Dispute_getDisputeTimeline: {
         parameters: {
             query?: never;
             header?: never;
@@ -10630,7 +10630,7 @@ export interface operations {
             };
         };
     };
-    processRentPayment: {
+    PaymentProcessing_processRentPayment: {
         parameters: {
             query?: never;
             header?: never;
@@ -10652,7 +10652,7 @@ export interface operations {
             };
         };
     };
-    setPlatformFeeCollector: {
+    PaymentProcessing_setPlatformFeeCollector: {
         parameters: {
             query?: never;
             header?: never;
@@ -10674,7 +10674,7 @@ export interface operations {
             };
         };
     };
-    getPaymentCount: {
+    PaymentProcessing_getPaymentCount: {
         parameters: {
             query?: never;
             header?: never;
@@ -10692,7 +10692,7 @@ export interface operations {
             };
         };
     };
-    getTotalPaid: {
+    PaymentProcessing_getTotalPaid: {
         parameters: {
             query?: never;
             header?: never;
@@ -10712,7 +10712,7 @@ export interface operations {
             };
         };
     };
-    registerProperty: {
+    PropertyRegistry_registerProperty: {
         parameters: {
             query?: never;
             header: {
@@ -10735,7 +10735,7 @@ export interface operations {
             };
         };
     };
-    transferProperty: {
+    PropertyRegistry_transferProperty: {
         parameters: {
             query?: never;
             header?: never;
@@ -10756,7 +10756,7 @@ export interface operations {
             };
         };
     };
-    verifyProperty: {
+    PropertyRegistry_verifyProperty: {
         parameters: {
             query?: never;
             header?: never;
@@ -10777,7 +10777,7 @@ export interface operations {
             };
         };
     };
-    getProperty: {
+    PropertyRegistry_getProperty: {
         parameters: {
             query?: never;
             header?: never;
@@ -10796,7 +10796,7 @@ export interface operations {
             };
         };
     };
-    getPropertyCount: {
+    PropertyRegistry_getPropertyCount: {
         parameters: {
             query?: never;
             header?: never;
@@ -10813,7 +10813,7 @@ export interface operations {
             };
         };
     };
-    getPropertyHistory: {
+    PropertyRegistry_getPropertyHistory: {
         parameters: {
             query?: never;
             header?: never;
@@ -10832,7 +10832,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    Webhooks_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -10850,7 +10850,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Webhooks_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -10872,7 +10872,7 @@ export interface operations {
             };
         };
     };
-    listDeliveries: {
+    Webhooks_listDeliveries: {
         parameters: {
             query?: never;
             header?: never;
@@ -10900,7 +10900,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    Webhooks_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -10932,7 +10932,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    Webhooks_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -10960,7 +10960,7 @@ export interface operations {
             };
         };
     };
-    test: {
+    Webhooks_test: {
         parameters: {
             query?: never;
             header?: never;
@@ -10992,7 +10992,7 @@ export interface operations {
             };
         };
     };
-    retry: {
+    Webhooks_retry: {
         parameters: {
             query?: never;
             header?: never;
@@ -11031,7 +11031,7 @@ export interface operations {
             };
         };
     };
-    register: {
+    Auth_register: {
         parameters: {
             query?: never;
             header?: never;
@@ -11073,7 +11073,7 @@ export interface operations {
             };
         };
     };
-    login: {
+    Auth_login: {
         parameters: {
             query?: never;
             header?: never;
@@ -11106,7 +11106,7 @@ export interface operations {
             };
         };
     };
-    completeMfaLogin: {
+    Auth_completeMfaLogin: {
         parameters: {
             query?: never;
             header?: never;
@@ -11139,7 +11139,7 @@ export interface operations {
             };
         };
     };
-    refreshTokens: {
+    Auth_refreshTokens: {
         parameters: {
             query?: never;
             header?: never;
@@ -11172,7 +11172,7 @@ export interface operations {
             };
         };
     };
-    logout: {
+    Auth_logout: {
         parameters: {
             query?: never;
             header?: never;
@@ -11201,7 +11201,7 @@ export interface operations {
             };
         };
     };
-    forgotPassword: {
+    Auth_forgotPassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -11225,7 +11225,7 @@ export interface operations {
             };
         };
     };
-    resetPassword: {
+    Auth_resetPassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -11258,7 +11258,7 @@ export interface operations {
             };
         };
     };
-    verifyEmail: {
+    Auth_verifyEmail: {
         parameters: {
             query: {
                 /** @description Email verification token */
@@ -11290,7 +11290,7 @@ export interface operations {
             };
         };
     };
-    resendVerification: {
+    Auth_resendVerification: {
         parameters: {
             query?: never;
             header?: never;
@@ -11319,7 +11319,7 @@ export interface operations {
             };
         };
     };
-    completeProfile: {
+    Auth_completeProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -11352,7 +11352,7 @@ export interface operations {
             };
         };
     };
-    enableMfa: {
+    Auth_enableMfa: {
         parameters: {
             query?: never;
             header?: never;
@@ -11383,7 +11383,7 @@ export interface operations {
             };
         };
     };
-    verifyMfa: {
+    Auth_verifyMfa: {
         parameters: {
             query?: never;
             header?: never;
@@ -11414,7 +11414,7 @@ export interface operations {
             };
         };
     };
-    disableMfa: {
+    Auth_disableMfa: {
         parameters: {
             query?: never;
             header?: never;
@@ -11436,7 +11436,7 @@ export interface operations {
             };
         };
     };
-    regenerateBackupCodes: {
+    Auth_regenerateBackupCodes: {
         parameters: {
             query?: never;
             header?: never;
@@ -11463,7 +11463,7 @@ export interface operations {
             };
         };
     };
-    getMfaStatus: {
+    Auth_getMfaStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -11481,7 +11481,7 @@ export interface operations {
             };
         };
     };
-    generateChallenge: {
+    StellarAuth_generateChallenge: {
         parameters: {
             query?: never;
             header?: never;
@@ -11519,7 +11519,7 @@ export interface operations {
             };
         };
     };
-    verifySignature: {
+    StellarAuth_verifySignature: {
         parameters: {
             query?: never;
             header?: never;
@@ -11564,7 +11564,7 @@ export interface operations {
             };
         };
     };
-    getAuthStats: {
+    AuthMetrics_getAuthStats: {
         parameters: {
             query?: {
                 /** @description Number of days to analyze (default: 30, max: 365) */
@@ -11601,7 +11601,7 @@ export interface operations {
             };
         };
     };
-    getPerformanceMetrics: {
+    AuthMetrics_getPerformanceMetrics: {
         parameters: {
             query?: {
                 /** @description Number of days to analyze (default: 30, max: 365) */
@@ -11638,7 +11638,7 @@ export interface operations {
             };
         };
     };
-    getHourlyUsage: {
+    AuthMetrics_getHourlyUsage: {
         parameters: {
             query?: {
                 /** @description Number of days to analyze (default: 7, max: 30) */
@@ -11675,7 +11675,7 @@ export interface operations {
             };
         };
     };
-    getHealth: {
+    AuthMetrics_getHealth: {
         parameters: {
             query?: never;
             header?: never;
@@ -11709,7 +11709,7 @@ export interface operations {
             };
         };
     };
-    initiateAuthorization: {
+    OAuth2_initiateAuthorization: {
         parameters: {
             query?: never;
             header?: never;
@@ -11726,7 +11726,7 @@ export interface operations {
             };
         };
     };
-    completeAuthorization: {
+    OAuth2_completeAuthorization: {
         parameters: {
             query?: never;
             header?: never;
@@ -11747,10 +11747,9 @@ export interface operations {
             };
         };
     };
-    getProfile: {
+    OAuth2_getProfile: {
         parameters: {
             query: {
-                provider: string;
                 accessToken: string;
             };
             header?: never;
@@ -11767,7 +11766,7 @@ export interface operations {
             };
         };
     };
-    linkAccount: {
+    OAuth2_linkAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -11788,7 +11787,7 @@ export interface operations {
             };
         };
     };
-    initiateAccountLink: {
+    OAuth2_initiateAccountLink: {
         parameters: {
             query?: never;
             header?: never;
@@ -11809,11 +11808,9 @@ export interface operations {
             };
         };
     };
-    logout: {
+    OAuth2_logout: {
         parameters: {
-            query: {
-                provider: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -11828,7 +11825,7 @@ export interface operations {
             };
         };
     };
-    revokeToken: {
+    OAuth2_revokeToken: {
         parameters: {
             query?: never;
             header?: never;
@@ -11849,7 +11846,7 @@ export interface operations {
             };
         };
     };
-    getNotifications: {
+    Notifications_getNotifications: {
         parameters: {
             query: {
                 page: string;
@@ -11871,7 +11868,7 @@ export interface operations {
             };
         };
     };
-    getUnreadCount: {
+    Notifications_getUnreadCount: {
         parameters: {
             query?: never;
             header?: never;
@@ -11888,7 +11885,7 @@ export interface operations {
             };
         };
     };
-    markAsRead: {
+    Notifications_markAsRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -11907,7 +11904,7 @@ export interface operations {
             };
         };
     };
-    markAllAsRead: {
+    Notifications_markAllAsRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -11924,7 +11921,7 @@ export interface operations {
             };
         };
     };
-    deleteNotification: {
+    Notifications_deleteNotification: {
         parameters: {
             query?: never;
             header?: never;
@@ -11943,7 +11940,7 @@ export interface operations {
             };
         };
     };
-    clearAll: {
+    Notifications_clearAll: {
         parameters: {
             query?: never;
             header?: never;
@@ -11960,7 +11957,7 @@ export interface operations {
             };
         };
     };
-    getHistory: {
+    Messaging_getHistory: {
         parameters: {
             query: {
                 chatGroupId: string;
@@ -11979,7 +11976,7 @@ export interface operations {
             };
         };
     };
-    getRooms: {
+    Messaging_getRooms: {
         parameters: {
             query: {
                 userId: string;
@@ -11998,7 +11995,7 @@ export interface operations {
             };
         };
     };
-    createRoom: {
+    Messaging_createRoom: {
         parameters: {
             query?: never;
             header?: never;
@@ -12015,7 +12012,7 @@ export interface operations {
             };
         };
     };
-    getMessages: {
+    Messaging_getMessages: {
         parameters: {
             query?: never;
             header?: never;
@@ -12034,7 +12031,7 @@ export interface operations {
             };
         };
     };
-    markRoomAsRead: {
+    Messaging_markRoomAsRead: {
         parameters: {
             query: {
                 userId: string;
@@ -12055,7 +12052,7 @@ export interface operations {
             };
         };
     };
-    getMetrics: {
+    Monitoring_getMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -12072,7 +12069,7 @@ export interface operations {
             };
         };
     };
-    getCacheStats: {
+    Monitoring_getCacheStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -12089,7 +12086,7 @@ export interface operations {
             };
         };
     };
-    getDatabaseHealth: {
+    Monitoring_getDatabaseHealth: {
         parameters: {
             query?: never;
             header?: never;
@@ -12106,7 +12103,7 @@ export interface operations {
             };
         };
     };
-    getDatabaseHistory: {
+    Monitoring_getDatabaseHistory: {
         parameters: {
             query?: {
                 count?: string;
@@ -12125,7 +12122,7 @@ export interface operations {
             };
         };
     };
-    getDatabasePoolMetrics: {
+    Monitoring_getDatabasePoolMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -12142,7 +12139,7 @@ export interface operations {
             };
         };
     };
-    getDatabaseSizeMetrics: {
+    Monitoring_getDatabaseSizeMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -12159,7 +12156,7 @@ export interface operations {
             };
         };
     };
-    getDatabaseQueryMetrics: {
+    Monitoring_getDatabaseQueryMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -12176,7 +12173,7 @@ export interface operations {
             };
         };
     };
-    handleAlert: {
+    Monitoring_handleAlert: {
         parameters: {
             query?: never;
             header?: never;
@@ -12193,7 +12190,7 @@ export interface operations {
             };
         };
     };
-    getDashboard: {
+    Performance_getDashboard: {
         parameters: {
             query?: never;
             header?: never;
@@ -12211,7 +12208,7 @@ export interface operations {
             };
         };
     };
-    getDatabaseStats: {
+    Performance_getDatabaseStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -12229,7 +12226,7 @@ export interface operations {
             };
         };
     };
-    getEndpointStats: {
+    Performance_getEndpointStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -12247,7 +12244,7 @@ export interface operations {
             };
         };
     };
-    getEndpointStat: {
+    Performance_getEndpointStat: {
         parameters: {
             query: {
                 /** @description HTTP method */
@@ -12277,7 +12274,7 @@ export interface operations {
             };
         };
     };
-    getSystemMetrics: {
+    Performance_getSystemMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -12295,7 +12292,7 @@ export interface operations {
             };
         };
     };
-    generateReport: {
+    Performance_generateReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -12313,7 +12310,7 @@ export interface operations {
             };
         };
     };
-    healthCheck: {
+    Performance_healthCheck: {
         parameters: {
             query?: never;
             header?: never;
@@ -12331,7 +12328,7 @@ export interface operations {
             };
         };
     };
-    getAlerts: {
+    Performance_getAlerts: {
         parameters: {
             query?: {
                 /** @description Number of alerts to return */
@@ -12352,7 +12349,7 @@ export interface operations {
             };
         };
     };
-    getTrends: {
+    Performance_getTrends: {
         parameters: {
             query?: {
                 /** @description Time period */
@@ -12373,7 +12370,7 @@ export interface operations {
             };
         };
     };
-    getResponseTimes: {
+    Performance_getResponseTimes: {
         parameters: {
             query?: {
                 /** @description Sliding window in seconds */
@@ -12394,7 +12391,7 @@ export interface operations {
             };
         };
     };
-    getSlowEndpoints: {
+    Performance_getSlowEndpoints: {
         parameters: {
             query?: {
                 /** @description Maximum number of endpoints to return */
@@ -12417,7 +12414,7 @@ export interface operations {
             };
         };
     };
-    getPercentiles: {
+    Performance_getPercentiles: {
         parameters: {
             query?: {
                 /** @description HTTP method (omit for all endpoints) */
@@ -12440,7 +12437,7 @@ export interface operations {
             };
         };
     };
-    getUploadUrl: {
+    Storage_getUploadUrl: {
         parameters: {
             query?: never;
             header?: never;
@@ -12471,7 +12468,7 @@ export interface operations {
             };
         };
     };
-    getDownloadUrl: {
+    Storage_getDownloadUrl: {
         parameters: {
             query: {
                 /** @description Storage key returned from upload-url */
@@ -12508,7 +12505,7 @@ export interface operations {
             };
         };
     };
-    listFiles: {
+    Storage_listFiles: {
         parameters: {
             query?: never;
             header?: never;
@@ -12528,7 +12525,7 @@ export interface operations {
             };
         };
     };
-    deleteFile: {
+    Storage_deleteFile: {
         parameters: {
             query: {
                 key: string;
@@ -12548,7 +12545,7 @@ export interface operations {
             };
         };
     };
-    updateMetadata: {
+    Storage_updateMetadata: {
         parameters: {
             query: {
                 key: string;
@@ -12574,7 +12571,7 @@ export interface operations {
             };
         };
     };
-    getStats: {
+    Referral_getStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -12592,7 +12589,7 @@ export interface operations {
             };
         };
     };
-    getCode: {
+    Referral_getCode: {
         parameters: {
             query?: never;
             header?: never;
@@ -12610,7 +12607,7 @@ export interface operations {
             };
         };
     };
-    getProfile: {
+    Users_getProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -12635,7 +12632,7 @@ export interface operations {
             };
         };
     };
-    updateProfile: {
+    Users_updateProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -12671,7 +12668,7 @@ export interface operations {
             };
         };
     };
-    deleteAccount: {
+    Users_deleteAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -12696,7 +12693,7 @@ export interface operations {
             };
         };
     };
-    changeEmail: {
+    Users_changeEmail: {
         parameters: {
             query?: never;
             header?: never;
@@ -12732,7 +12729,7 @@ export interface operations {
             };
         };
     };
-    changePassword: {
+    Users_changePassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -12768,7 +12765,7 @@ export interface operations {
             };
         };
     };
-    deactivateAccount: {
+    Users_deactivateAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -12793,7 +12790,7 @@ export interface operations {
             };
         };
     };
-    getUserActivity: {
+    Users_getUserActivity: {
         parameters: {
             query?: never;
             header?: never;
@@ -12818,7 +12815,7 @@ export interface operations {
             };
         };
     };
-    exportUserData: {
+    Users_exportUserData: {
         parameters: {
             query?: never;
             header?: never;
@@ -12843,7 +12840,7 @@ export interface operations {
             };
         };
     };
-    gdprDeleteAccount: {
+    Users_gdprDeleteAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -12868,7 +12865,7 @@ export interface operations {
             };
         };
     };
-    updateConsent: {
+    Users_updateConsent: {
         parameters: {
             query?: never;
             header?: never;
@@ -12893,7 +12890,7 @@ export interface operations {
             };
         };
     };
-    getPrivacySettings: {
+    Users_getPrivacySettings: {
         parameters: {
             query?: never;
             header?: never;
@@ -12918,7 +12915,7 @@ export interface operations {
             };
         };
     };
-    getPreferences: {
+    Users_getPreferences: {
         parameters: {
             query?: never;
             header?: never;
@@ -12943,7 +12940,7 @@ export interface operations {
             };
         };
     };
-    updatePreferences: {
+    Users_updatePreferences: {
         parameters: {
             query?: never;
             header?: never;
@@ -12972,7 +12969,7 @@ export interface operations {
             };
         };
     };
-    restoreAccount: {
+    Users_restoreAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -13008,7 +13005,7 @@ export interface operations {
             };
         };
     };
-    hardDeleteAccount: {
+    Users_hardDeleteAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -13042,7 +13039,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    AdminUsers_list: {
         parameters: {
             query?: {
                 page?: number;
@@ -13076,7 +13073,7 @@ export interface operations {
             };
         };
     };
-    deactivate: {
+    AdminUsers_deactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -13110,7 +13107,7 @@ export interface operations {
             };
         };
     };
-    verify: {
+    AdminUsers_verify: {
         parameters: {
             query?: never;
             header?: never;
@@ -13144,7 +13141,7 @@ export interface operations {
             };
         };
     };
-    restore: {
+    AdminUsers_restore: {
         parameters: {
             query?: never;
             header?: never;
@@ -13178,7 +13175,7 @@ export interface operations {
             };
         };
     };
-    findAll: {
+    Properties_findAll: {
         parameters: {
             query?: {
                 /** @description Filter by property type */
@@ -13299,7 +13296,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Properties_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -13375,7 +13372,7 @@ export interface operations {
             };
         };
     };
-    findMyProperties: {
+    Properties_findMyProperties: {
         parameters: {
             query?: {
                 /** @description Filter by property type */
@@ -13496,7 +13493,7 @@ export interface operations {
             };
         };
     };
-    recordView: {
+    Properties_recordView: {
         parameters: {
             query?: never;
             header?: never;
@@ -13571,7 +13568,7 @@ export interface operations {
             };
         };
     };
-    recordFavorite: {
+    Properties_recordFavorite: {
         parameters: {
             query?: never;
             header?: never;
@@ -13644,7 +13641,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    Properties_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -13717,7 +13714,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    Properties_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -13786,7 +13783,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    Properties_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -13857,7 +13854,7 @@ export interface operations {
             };
         };
     };
-    publish: {
+    Properties_publish: {
         parameters: {
             query?: never;
             header?: never;
@@ -13924,7 +13921,7 @@ export interface operations {
             };
         };
     };
-    archive: {
+    Properties_archive: {
         parameters: {
             query?: never;
             header?: never;
@@ -13993,7 +13990,7 @@ export interface operations {
             };
         };
     };
-    markAsRented: {
+    Properties_markAsRented: {
         parameters: {
             query?: never;
             header?: never;
@@ -14062,7 +14059,7 @@ export interface operations {
             };
         };
     };
-    startListingWizard: {
+    Properties_startListingWizard: {
         parameters: {
             query?: never;
             header?: never;
@@ -14137,7 +14134,7 @@ export interface operations {
             };
         };
     };
-    updateListingWizardStep: {
+    Properties_updateListingWizardStep: {
         parameters: {
             query?: never;
             header?: never;
@@ -14214,7 +14211,7 @@ export interface operations {
             };
         };
     };
-    getListingWizardDraft: {
+    Properties_getListingWizardDraft: {
         parameters: {
             query?: never;
             header?: never;
@@ -14287,7 +14284,7 @@ export interface operations {
             };
         };
     };
-    deleteListingWizardDraft: {
+    Properties_deleteListingWizardDraft: {
         parameters: {
             query?: never;
             header?: never;
@@ -14360,7 +14357,7 @@ export interface operations {
             };
         };
     };
-    publishListingWizard: {
+    Properties_publishListingWizard: {
         parameters: {
             query?: never;
             header?: never;
@@ -14433,7 +14430,7 @@ export interface operations {
             };
         };
     };
-    start: {
+    PropertyWizard_start: {
         parameters: {
             query?: never;
             header?: never;
@@ -14450,7 +14447,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    PropertyWizard_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -14469,7 +14466,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    PropertyWizard_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -14488,7 +14485,7 @@ export interface operations {
             };
         };
     };
-    updateStep: {
+    PropertyWizard_updateStep: {
         parameters: {
             query?: never;
             header?: never;
@@ -14507,7 +14504,7 @@ export interface operations {
             };
         };
     };
-    publish: {
+    PropertyWizard_publish: {
         parameters: {
             query?: never;
             header?: never;
@@ -14526,7 +14523,7 @@ export interface operations {
             };
         };
     };
-    getPricingSuggestion: {
+    PropertyWizard_getPricingSuggestion: {
         parameters: {
             query?: never;
             header?: never;
@@ -14545,7 +14542,7 @@ export interface operations {
             };
         };
     };
-    getDescriptionSuggestion: {
+    PropertyWizard_getDescriptionSuggestion: {
         parameters: {
             query?: never;
             header?: never;
@@ -14564,7 +14561,7 @@ export interface operations {
             };
         };
     };
-    getCompletenessScore: {
+    PropertyWizard_getCompletenessScore: {
         parameters: {
             query?: never;
             header?: never;
@@ -14583,7 +14580,7 @@ export interface operations {
             };
         };
     };
-    getMode: {
+    PropertyModes_getMode: {
         parameters: {
             query?: never;
             header?: never;
@@ -14603,7 +14600,7 @@ export interface operations {
             };
         };
     };
-    updateMode: {
+    PropertyModes_updateMode: {
         parameters: {
             query?: never;
             header?: never;
@@ -14641,7 +14638,7 @@ export interface operations {
             };
         };
     };
-    getModeRecommendations: {
+    PropertyModes_getModeRecommendations: {
         parameters: {
             query?: never;
             header?: never;
@@ -14661,7 +14658,7 @@ export interface operations {
             };
         };
     };
-    switchMode: {
+    PropertyModes_switchMode: {
         parameters: {
             query?: never;
             header?: never;
@@ -14692,7 +14689,7 @@ export interface operations {
             };
         };
     };
-    getCalendar: {
+    Availability_getCalendar: {
         parameters: {
             query: {
                 /** @description Start date (YYYY-MM-DD) */
@@ -14716,7 +14713,7 @@ export interface operations {
             };
         };
     };
-    updateAvailability: {
+    Availability_updateAvailability: {
         parameters: {
             query?: never;
             header?: never;
@@ -14739,7 +14736,7 @@ export interface operations {
             };
         };
     };
-    blockDates: {
+    Availability_blockDates: {
         parameters: {
             query?: never;
             header?: never;
@@ -14762,7 +14759,7 @@ export interface operations {
             };
         };
     };
-    unblockDates: {
+    Availability_unblockDates: {
         parameters: {
             query?: never;
             header?: never;
@@ -14785,7 +14782,7 @@ export interface operations {
             };
         };
     };
-    setPrice: {
+    Availability_setPrice: {
         parameters: {
             query?: never;
             header?: never;
@@ -14808,7 +14805,7 @@ export interface operations {
             };
         };
     };
-    checkUserFraud: {
+    Fraud_checkUserFraud: {
         parameters: {
             query?: never;
             header?: never;
@@ -14828,7 +14825,7 @@ export interface operations {
             };
         };
     };
-    checkListingFraud: {
+    Fraud_checkListingFraud: {
         parameters: {
             query?: never;
             header?: never;
@@ -14848,7 +14845,7 @@ export interface operations {
             };
         };
     };
-    getFraudAlerts: {
+    Fraud_getFraudAlerts: {
         parameters: {
             query?: {
                 status?: "open" | "resolved";
@@ -14867,7 +14864,7 @@ export interface operations {
             };
         };
     };
-    resolveFraudAlert: {
+    Fraud_resolveFraudAlert: {
         parameters: {
             query?: never;
             header?: never;
@@ -14895,7 +14892,7 @@ export interface operations {
             };
         };
     };
-    checkTransactionFraud: {
+    Fraud_checkTransactionFraud: {
         parameters: {
             query?: never;
             header?: never;
@@ -14916,7 +14913,7 @@ export interface operations {
             };
         };
     };
-    findAll: {
+    Disputes_findAll: {
         parameters: {
             query?: {
                 /** @description Filter by dispute status */
@@ -14953,7 +14950,7 @@ export interface operations {
             };
         };
     };
-    createDispute: {
+    Disputes_createDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -14989,7 +14986,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    Disputes_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -15016,7 +15013,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    Disputes_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -15039,7 +15036,7 @@ export interface operations {
             };
         };
     };
-    findByDisputeId: {
+    Disputes_findByDisputeId: {
         parameters: {
             query?: never;
             header?: never;
@@ -15058,7 +15055,7 @@ export interface operations {
             };
         };
     };
-    addEvidence: {
+    Disputes_addEvidence: {
         parameters: {
             query?: never;
             header?: never;
@@ -15081,7 +15078,7 @@ export interface operations {
             };
         };
     };
-    addComment: {
+    Disputes_addComment: {
         parameters: {
             query?: never;
             header?: never;
@@ -15104,7 +15101,7 @@ export interface operations {
             };
         };
     };
-    resolveDispute: {
+    Disputes_resolveDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -15127,7 +15124,7 @@ export interface operations {
             };
         };
     };
-    getAgreementDisputes: {
+    Disputes_getAgreementDisputes: {
         parameters: {
             query?: never;
             header?: never;
@@ -15146,7 +15143,7 @@ export interface operations {
             };
         };
     };
-    updateDispute: {
+    AdminDisputes_updateDispute: {
         parameters: {
             query?: never;
             header?: never;
@@ -15191,7 +15188,7 @@ export interface operations {
             };
         };
     };
-    findMine: {
+    Bookings_findMine: {
         parameters: {
             query?: {
                 /** @description host: bookings on properties the caller owns. guest: bookings the caller made. Defaults to guest. */
@@ -15214,7 +15211,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Bookings_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -15236,7 +15233,7 @@ export interface operations {
             };
         };
     };
-    confirm: {
+    Bookings_confirm: {
         parameters: {
             query?: never;
             header?: never;
@@ -15256,7 +15253,7 @@ export interface operations {
             };
         };
     };
-    cancel: {
+    Bookings_cancel: {
         parameters: {
             query?: never;
             header?: never;
@@ -15276,7 +15273,7 @@ export interface operations {
             };
         };
     };
-    listPayments: {
+    Payment_listPayments: {
         parameters: {
             query?: never;
             header?: never;
@@ -15301,7 +15298,7 @@ export interface operations {
             };
         };
     };
-    recordPayment: {
+    Payment_recordPayment: {
         parameters: {
             query?: never;
             header: {
@@ -15339,7 +15336,7 @@ export interface operations {
             };
         };
     };
-    processStellarRent: {
+    Payment_processStellarRent: {
         parameters: {
             query?: never;
             header?: never;
@@ -15360,7 +15357,7 @@ export interface operations {
             };
         };
     };
-    createEscrowDeposit: {
+    Payment_createEscrowDeposit: {
         parameters: {
             query?: never;
             header?: never;
@@ -15381,7 +15378,7 @@ export interface operations {
             };
         };
     };
-    releaseEscrowDeposit: {
+    Payment_releaseEscrowDeposit: {
         parameters: {
             query?: never;
             header?: never;
@@ -15404,7 +15401,7 @@ export interface operations {
             };
         };
     };
-    refundEscrowDeposit: {
+    Payment_refundEscrowDeposit: {
         parameters: {
             query?: never;
             header?: never;
@@ -15427,7 +15424,7 @@ export interface operations {
             };
         };
     };
-    reconcilePayments: {
+    Payment_reconcilePayments: {
         parameters: {
             query?: never;
             header?: never;
@@ -15448,7 +15445,7 @@ export interface operations {
             };
         };
     };
-    retryFailedPayments: {
+    Payment_retryFailedPayments: {
         parameters: {
             query?: never;
             header?: never;
@@ -15469,7 +15466,7 @@ export interface operations {
             };
         };
     };
-    getPaymentAnalytics: {
+    Payment_getPaymentAnalytics: {
         parameters: {
             query?: never;
             header?: never;
@@ -15486,7 +15483,7 @@ export interface operations {
             };
         };
     };
-    getPayment: {
+    Payment_getPayment: {
         parameters: {
             query?: never;
             header?: never;
@@ -15513,7 +15510,7 @@ export interface operations {
             };
         };
     };
-    processRefund: {
+    Payment_processRefund: {
         parameters: {
             query?: never;
             header?: never;
@@ -15536,7 +15533,7 @@ export interface operations {
             };
         };
     };
-    generateReceipt: {
+    Payment_generateReceipt: {
         parameters: {
             query?: never;
             header?: never;
@@ -15555,7 +15552,7 @@ export interface operations {
             };
         };
     };
-    listPaymentMethods: {
+    PaymentMethod_listPaymentMethods: {
         parameters: {
             query?: never;
             header?: never;
@@ -15572,7 +15569,7 @@ export interface operations {
             };
         };
     };
-    createPaymentMethod: {
+    PaymentMethod_createPaymentMethod: {
         parameters: {
             query?: never;
             header?: never;
@@ -15593,7 +15590,7 @@ export interface operations {
             };
         };
     };
-    deletePaymentMethod: {
+    PaymentMethod_deletePaymentMethod: {
         parameters: {
             query?: never;
             header?: never;
@@ -15612,7 +15609,7 @@ export interface operations {
             };
         };
     };
-    updatePaymentMethod: {
+    PaymentMethod_updatePaymentMethod: {
         parameters: {
             query?: never;
             header?: never;
@@ -15635,7 +15632,7 @@ export interface operations {
             };
         };
     };
-    listSchedules: {
+    PaymentSchedule_listSchedules: {
         parameters: {
             query?: never;
             header?: never;
@@ -15652,7 +15649,7 @@ export interface operations {
             };
         };
     };
-    createSchedule: {
+    PaymentSchedule_createSchedule: {
         parameters: {
             query?: never;
             header?: never;
@@ -15674,7 +15671,7 @@ export interface operations {
             };
         };
     };
-    updateSchedule: {
+    PaymentSchedule_updateSchedule: {
         parameters: {
             query?: never;
             header?: never;
@@ -15697,7 +15694,7 @@ export interface operations {
             };
         };
     };
-    runSchedule: {
+    PaymentSchedule_runSchedule: {
         parameters: {
             query?: never;
             header?: never;
@@ -15716,7 +15713,7 @@ export interface operations {
             };
         };
     };
-    processDueSchedules: {
+    PaymentSchedule_processDueSchedules: {
         parameters: {
             query?: never;
             header?: never;
@@ -15733,7 +15730,7 @@ export interface operations {
             };
         };
     };
-    handleGatewayWebhook: {
+    PaymentWebhook_handleGatewayWebhook: {
         parameters: {
             query?: never;
             header: {
@@ -15756,7 +15753,7 @@ export interface operations {
             };
         };
     };
-    handleRefundWebhook: {
+    PaymentWebhook_handleRefundWebhook: {
         parameters: {
             query?: never;
             header: {
@@ -15779,7 +15776,7 @@ export interface operations {
             };
         };
     };
-    listRefundRequests: {
+    AdminRefunds_listRefundRequests: {
         parameters: {
             query?: never;
             header?: never;
@@ -15796,7 +15793,7 @@ export interface operations {
             };
         };
     };
-    getRefundRequest: {
+    AdminRefunds_getRefundRequest: {
         parameters: {
             query?: never;
             header?: never;
@@ -15815,7 +15812,7 @@ export interface operations {
             };
         };
     };
-    decideRefundRequest: {
+    AdminRefunds_decideRefundRequest: {
         parameters: {
             query?: never;
             header?: never;
@@ -15838,7 +15835,7 @@ export interface operations {
             };
         };
     };
-    getStatus: {
+    Status_getStatus: {
         parameters: {
             query?: {
                 userId?: string;
@@ -15858,7 +15855,7 @@ export interface operations {
             };
         };
     };
-    getUptime: {
+    Status_getUptime: {
         parameters: {
             query?: never;
             header?: never;
@@ -15876,7 +15873,7 @@ export interface operations {
             };
         };
     };
-    evaluateFlag: {
+    FeatureFlags_evaluateFlag: {
         parameters: {
             query: {
                 key: string;
@@ -15896,7 +15893,7 @@ export interface operations {
             };
         };
     };
-    evaluateAllFlags: {
+    FeatureFlags_evaluateAllFlags: {
         parameters: {
             query?: {
                 userId?: string;
@@ -15915,7 +15912,7 @@ export interface operations {
             };
         };
     };
-    getAllFlags: {
+    FeatureFlags_getAllFlags: {
         parameters: {
             query?: never;
             header?: never;
@@ -15932,7 +15929,7 @@ export interface operations {
             };
         };
     };
-    createFlag: {
+    FeatureFlags_createFlag: {
         parameters: {
             query?: never;
             header?: never;
@@ -15954,7 +15951,7 @@ export interface operations {
             };
         };
     };
-    getFlagByKey: {
+    FeatureFlags_getFlagByKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -15973,7 +15970,7 @@ export interface operations {
             };
         };
     };
-    deleteFlag: {
+    FeatureFlags_deleteFlag: {
         parameters: {
             query?: never;
             header?: never;
@@ -15992,7 +15989,7 @@ export interface operations {
             };
         };
     };
-    updateFlag: {
+    FeatureFlags_updateFlag: {
         parameters: {
             query?: never;
             header?: never;
@@ -16015,7 +16012,7 @@ export interface operations {
             };
         };
     };
-    setRolloutPercentage: {
+    FeatureFlags_setRolloutPercentage: {
         parameters: {
             query?: never;
             header?: never;
@@ -16034,7 +16031,7 @@ export interface operations {
             };
         };
     };
-    killSwitch: {
+    FeatureFlags_killSwitch: {
         parameters: {
             query?: never;
             header?: never;
@@ -16053,7 +16050,7 @@ export interface operations {
             };
         };
     };
-    getProfile: {
+    Profile_getProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -16087,7 +16084,7 @@ export interface operations {
             };
         };
     };
-    updateProfile: {
+    Profile_updateProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -16132,7 +16129,7 @@ export interface operations {
             };
         };
     };
-    createProfile: {
+    Profile_createProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -16177,7 +16174,7 @@ export interface operations {
             };
         };
     };
-    getProfileByWallet: {
+    Profile_getProfileByWallet: {
         parameters: {
             query?: never;
             header?: never;
@@ -16207,7 +16204,7 @@ export interface operations {
             };
         };
     };
-    verifyDataIntegrity: {
+    Profile_verifyDataIntegrity: {
         parameters: {
             query?: never;
             header?: never;
@@ -16248,7 +16245,7 @@ export interface operations {
             };
         };
     };
-    getLanguages: {
+    I18n_getLanguages: {
         parameters: {
             query?: never;
             header?: never;
@@ -16265,7 +16262,7 @@ export interface operations {
             };
         };
     };
-    translate: {
+    I18n_translate: {
         parameters: {
             query: {
                 key: string;
@@ -16285,7 +16282,7 @@ export interface operations {
             };
         };
     };
-    formatDemo: {
+    I18n_formatDemo: {
         parameters: {
             query: {
                 lang: string;
@@ -16304,7 +16301,7 @@ export interface operations {
             };
         };
     };
-    findAll: {
+    Document_findAll: {
         parameters: {
             query?: {
                 status?: string;
@@ -16332,7 +16329,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Document_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -16356,7 +16353,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    Document_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -16377,7 +16374,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    Document_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -16397,7 +16394,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    Document_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -16422,7 +16419,7 @@ export interface operations {
             };
         };
     };
-    share: {
+    Document_share: {
         parameters: {
             query?: never;
             header?: never;
@@ -16447,7 +16444,7 @@ export interface operations {
             };
         };
     };
-    getDownloadUrl: {
+    Document_getDownloadUrl: {
         parameters: {
             query?: never;
             header?: never;
@@ -16467,7 +16464,7 @@ export interface operations {
             };
         };
     };
-    submit: {
+    Feedback_submit: {
         parameters: {
             query?: never;
             header?: never;
@@ -16500,7 +16497,7 @@ export interface operations {
             };
         };
     };
-    listKeys: {
+    Developer_listKeys: {
         parameters: {
             query?: never;
             header?: never;
@@ -16518,7 +16515,7 @@ export interface operations {
             };
         };
     };
-    createKey: {
+    Developer_createKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -16555,7 +16552,7 @@ export interface operations {
             };
         };
     };
-    getKeysExpiringSoon: {
+    Developer_getKeysExpiringSoon: {
         parameters: {
             query?: never;
             header?: never;
@@ -16573,7 +16570,7 @@ export interface operations {
             };
         };
     };
-    getKey: {
+    Developer_getKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -16601,7 +16598,7 @@ export interface operations {
             };
         };
     };
-    revokeKey: {
+    Developer_revokeKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -16629,7 +16626,7 @@ export interface operations {
             };
         };
     };
-    updateKey: {
+    Developer_updateKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -16661,7 +16658,7 @@ export interface operations {
             };
         };
     };
-    rotateKey: {
+    Developer_rotateKey: {
         parameters: {
             query?: never;
             header?: never;
@@ -16708,7 +16705,7 @@ export interface operations {
             };
         };
     };
-    getRotationHistory: {
+    Developer_getRotationHistory: {
         parameters: {
             query?: never;
             header?: never;
@@ -16736,7 +16733,7 @@ export interface operations {
             };
         };
     };
-    getPortal: {
+    DeveloperPortal_getPortal: {
         parameters: {
             query?: never;
             header?: never;
@@ -16753,15 +16750,13 @@ export interface operations {
             };
         };
     };
-    searchProperties: {
+    Search_searchProperties: {
         parameters: {
             query: {
                 q?: string;
                 city?: string;
                 state: string;
                 country: string;
-                type?: "apartment" | "house" | "commercial" | "land" | "other";
-                status: string;
                 minPrice?: string;
                 maxPrice?: string;
                 bedrooms?: string;
@@ -16775,6 +16770,7 @@ export interface operations {
                 page?: string;
                 limit?: string;
                 amenities?: unknown[];
+                type?: "apartment" | "house" | "commercial" | "land" | "other";
             };
             header?: never;
             path?: never;
@@ -16790,17 +16786,17 @@ export interface operations {
             };
         };
     };
-    searchUsers: {
+    Search_searchUsers: {
         parameters: {
             query?: {
                 q?: string;
-                role?: "user" | "admin" | "agent" | "super_admin";
                 isActive?: string;
                 kycVerified?: string;
                 page?: string;
                 limit?: string;
                 sortBy?: string;
                 sortOrder?: "asc" | "desc";
+                role?: "user" | "admin" | "agent" | "super_admin";
             };
             header?: never;
             path?: never;
@@ -16816,11 +16812,10 @@ export interface operations {
             };
         };
     };
-    searchDocuments: {
+    Search_searchDocuments: {
         parameters: {
             query?: {
                 q?: string;
-                status?: "draft" | "pending_deposit" | "signed" | "active" | "expired" | "terminated" | "disputed";
                 propertyId?: string;
                 userId?: string;
                 adminId?: string;
@@ -16832,6 +16827,7 @@ export interface operations {
                 limit?: string;
                 sortBy?: string;
                 sortOrder?: "asc" | "desc";
+                status?: "draft" | "pending_deposit" | "signed" | "active" | "expired" | "terminated" | "disputed";
             };
             header?: never;
             path?: never;
@@ -16847,7 +16843,7 @@ export interface operations {
             };
         };
     };
-    suggest: {
+    Search_suggest: {
         parameters: {
             query: {
                 q: string;
@@ -16866,7 +16862,7 @@ export interface operations {
             };
         };
     };
-    getReport: {
+    Cleanup_getReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -16883,7 +16879,7 @@ export interface operations {
             };
         };
     };
-    runOrphanedRecordsCleanup: {
+    Cleanup_runOrphanedRecordsCleanup: {
         parameters: {
             query?: never;
             header?: never;
@@ -16901,7 +16897,7 @@ export interface operations {
             };
         };
     };
-    getArchivalStats: {
+    DataArchival_getArchivalStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -16919,7 +16915,7 @@ export interface operations {
             };
         };
     };
-    manualArchive: {
+    DataArchival_manualArchive: {
         parameters: {
             query?: never;
             header?: never;
@@ -16941,7 +16937,7 @@ export interface operations {
             };
         };
     };
-    triggerScheduledArchival: {
+    DataArchival_triggerScheduledArchival: {
         parameters: {
             query?: never;
             header?: never;
@@ -16959,7 +16955,7 @@ export interface operations {
             };
         };
     };
-    getModels: {
+    Ai_getModels: {
         parameters: {
             query?: never;
             header?: never;
@@ -16976,7 +16972,7 @@ export interface operations {
             };
         };
     };
-    scoreFraud: {
+    Ai_scoreFraud: {
         parameters: {
             query?: never;
             header?: never;
@@ -16993,7 +16989,7 @@ export interface operations {
             };
         };
     };
-    getRecommendations: {
+    Ai_getRecommendations: {
         parameters: {
             query?: never;
             header?: never;
@@ -17010,7 +17006,7 @@ export interface operations {
             };
         };
     };
-    getRecommendations: {
+    MatchingAi_getRecommendations: {
         parameters: {
             query?: {
                 limit?: number;
@@ -17030,7 +17026,7 @@ export interface operations {
             };
         };
     };
-    getMatchScore: {
+    MatchingAi_getMatchScore: {
         parameters: {
             query?: never;
             header?: never;
@@ -17050,7 +17046,7 @@ export interface operations {
             };
         };
     };
-    getSimilarProperties: {
+    MatchingAi_getSimilarProperties: {
         parameters: {
             query?: {
                 limit?: number;
@@ -17072,7 +17068,7 @@ export interface operations {
             };
         };
     };
-    getPreferences: {
+    MatchingAi_getPreferences: {
         parameters: {
             query?: never;
             header?: never;
@@ -17090,7 +17086,7 @@ export interface operations {
             };
         };
     };
-    updatePreferences: {
+    MatchingAi_updatePreferences: {
         parameters: {
             query?: never;
             header?: never;
@@ -17112,7 +17108,7 @@ export interface operations {
             };
         };
     };
-    getFavorites: {
+    Favorites_getFavorites: {
         parameters: {
             query?: never;
             header?: never;
@@ -17139,7 +17135,7 @@ export interface operations {
             };
         };
     };
-    addFavorite: {
+    Favorites_addFavorite: {
         parameters: {
             query?: never;
             header?: never;
@@ -17177,7 +17173,7 @@ export interface operations {
             };
         };
     };
-    getFavoriteStatus: {
+    Favorites_getFavoriteStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -17214,7 +17210,7 @@ export interface operations {
             };
         };
     };
-    removeFavorite: {
+    Favorites_removeFavorite: {
         parameters: {
             query?: never;
             header?: never;
@@ -17249,7 +17245,7 @@ export interface operations {
             };
         };
     };
-    getFavoriteCount: {
+    Favorites_getFavoriteCount: {
         parameters: {
             query?: never;
             header?: never;
@@ -17289,7 +17285,7 @@ export interface operations {
             };
         };
     };
-    createRequest: {
+    Screening_createRequest: {
         parameters: {
             query?: never;
             header?: never;
@@ -17311,7 +17307,7 @@ export interface operations {
             };
         };
     };
-    grantConsent: {
+    Screening_grantConsent: {
         parameters: {
             query?: never;
             header?: never;
@@ -17334,7 +17330,7 @@ export interface operations {
             };
         };
     };
-    getScreening: {
+    Screening_getScreening: {
         parameters: {
             query?: never;
             header?: never;
@@ -17353,7 +17349,7 @@ export interface operations {
             };
         };
     };
-    getReport: {
+    Screening_getReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -17372,7 +17368,7 @@ export interface operations {
             };
         };
     };
-    handleProviderWebhook: {
+    Screening_handleProviderWebhook: {
         parameters: {
             query?: never;
             header?: never;
@@ -17393,7 +17389,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Inquiries_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -17415,7 +17411,7 @@ export interface operations {
             };
         };
     };
-    incoming: {
+    Inquiries_incoming: {
         parameters: {
             query?: never;
             header?: never;
@@ -17432,7 +17428,7 @@ export interface operations {
             };
         };
     };
-    outgoing: {
+    Inquiries_outgoing: {
         parameters: {
             query?: never;
             header?: never;
@@ -17449,7 +17445,7 @@ export interface operations {
             };
         };
     };
-    markViewed: {
+    Inquiries_markViewed: {
         parameters: {
             query?: never;
             header?: never;
@@ -17468,7 +17464,7 @@ export interface operations {
             };
         };
     };
-    getLandlordDashboard: {
+    Analytics_getLandlordDashboard: {
         parameters: {
             query?: {
                 /** @description Number of days to include in trend data (1-365) */
@@ -17488,7 +17484,7 @@ export interface operations {
             };
         };
     };
-    getLandlordFeesSummary: {
+    Analytics_getLandlordFeesSummary: {
         parameters: {
             query?: never;
             header?: never;
@@ -17505,7 +17501,7 @@ export interface operations {
             };
         };
     };
-    getDashboardMetrics: {
+    Analytics_getDashboardMetrics: {
         parameters: {
             query?: never;
             header?: never;
@@ -17522,7 +17518,7 @@ export interface operations {
             };
         };
     };
-    getPaymentAnalytics: {
+    Analytics_getPaymentAnalytics: {
         parameters: {
             query?: {
                 /** @description Number of days to include (1-365) */
@@ -17542,7 +17538,7 @@ export interface operations {
             };
         };
     };
-    getUserActivityAnalytics: {
+    Analytics_getUserActivityAnalytics: {
         parameters: {
             query?: {
                 /** @description Number of days to include (1-365) */
@@ -17562,7 +17558,7 @@ export interface operations {
             };
         };
     };
-    generateReport: {
+    Analytics_generateReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -17583,7 +17579,7 @@ export interface operations {
             };
         };
     };
-    exportAnalytics: {
+    Analytics_exportAnalytics: {
         parameters: {
             query?: never;
             header?: never;
@@ -17604,7 +17600,7 @@ export interface operations {
             };
         };
     };
-    getPerformanceReport: {
+    DatabasePerformance_getPerformanceReport: {
         parameters: {
             query?: never;
             header?: never;
@@ -17621,7 +17617,7 @@ export interface operations {
             };
         };
     };
-    getSlowQueries: {
+    DatabasePerformance_getSlowQueries: {
         parameters: {
             query?: never;
             header?: never;
@@ -17638,7 +17634,7 @@ export interface operations {
             };
         };
     };
-    getIndexUsage: {
+    DatabasePerformance_getIndexUsage: {
         parameters: {
             query?: never;
             header?: never;
@@ -17655,7 +17651,7 @@ export interface operations {
             };
         };
     };
-    getUnusedIndexes: {
+    DatabasePerformance_getUnusedIndexes: {
         parameters: {
             query?: never;
             header?: never;
@@ -17672,7 +17668,7 @@ export interface operations {
             };
         };
     };
-    getIndexRecommendations: {
+    DatabasePerformance_getIndexRecommendations: {
         parameters: {
             query?: never;
             header?: never;
@@ -17689,7 +17685,7 @@ export interface operations {
             };
         };
     };
-    getDuplicateIndexes: {
+    DatabasePerformance_getDuplicateIndexes: {
         parameters: {
             query?: never;
             header?: never;
@@ -17706,7 +17702,7 @@ export interface operations {
             };
         };
     };
-    getQueryAnalysis: {
+    DatabasePerformance_getQueryAnalysis: {
         parameters: {
             query?: never;
             header?: never;
@@ -17723,7 +17719,7 @@ export interface operations {
             };
         };
     };
-    getNPlusOneDetection: {
+    DatabasePerformance_getNPlusOneDetection: {
         parameters: {
             query?: {
                 severity?: "low" | "medium" | "high" | "critical";
@@ -17742,7 +17738,7 @@ export interface operations {
             };
         };
     };
-    getQueryPatterns: {
+    DatabasePerformance_getQueryPatterns: {
         parameters: {
             query?: {
                 search?: string;
@@ -17761,7 +17757,7 @@ export interface operations {
             };
         };
     };
-    getQueryHistory: {
+    DatabasePerformance_getQueryHistory: {
         parameters: {
             query?: {
                 limit?: string;
@@ -17781,7 +17777,7 @@ export interface operations {
             };
         };
     };
-    getQueryStats: {
+    DatabasePerformance_getQueryStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -17798,7 +17794,7 @@ export interface operations {
             };
         };
     };
-    resetQueryAnalysis: {
+    DatabasePerformance_resetQueryAnalysis: {
         parameters: {
             query?: never;
             header?: never;
@@ -17815,7 +17811,7 @@ export interface operations {
             };
         };
     };
-    findAll: {
+    Maintenance_findAll: {
         parameters: {
             query?: {
                 priority?: unknown;
@@ -17837,7 +17833,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    Maintenance_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -17859,7 +17855,7 @@ export interface operations {
             };
         };
     };
-    findOne: {
+    Maintenance_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -17879,7 +17875,7 @@ export interface operations {
             };
         };
     };
-    updateStatus: {
+    Maintenance_updateStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -17903,7 +17899,7 @@ export interface operations {
             };
         };
     };
-    check: {
+    Health_check: {
         parameters: {
             query?: never;
             header?: never;
@@ -18021,7 +18017,7 @@ export interface operations {
             };
         };
     };
-    detailedCheck: {
+    Health_detailedCheck: {
         parameters: {
             query?: never;
             header?: never;
@@ -18139,7 +18135,7 @@ export interface operations {
             };
         };
     };
-    submitKyc: {
+    Kyc_submitKyc: {
         parameters: {
             query?: never;
             header?: never;
@@ -18168,7 +18164,7 @@ export interface operations {
             };
         };
     };
-    getKycStatus: {
+    Kyc_getKycStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -18195,7 +18191,7 @@ export interface operations {
             };
         };
     };
-    webhook: {
+    Kyc_webhook: {
         parameters: {
             query?: never;
             header?: never;
@@ -18217,7 +18213,7 @@ export interface operations {
             };
         };
     };
-    listPending: {
+    AdminKyc_listPending: {
         parameters: {
             query?: {
                 page?: number;
@@ -18249,7 +18245,7 @@ export interface operations {
             };
         };
     };
-    listRejected: {
+    AdminKyc_listRejected: {
         parameters: {
             query?: {
                 page?: number;
@@ -18281,7 +18277,7 @@ export interface operations {
             };
         };
     };
-    getDetail: {
+    AdminKyc_getDetail: {
         parameters: {
             query?: never;
             header?: never;
@@ -18308,7 +18304,7 @@ export interface operations {
             };
         };
     };
-    approve: {
+    AdminKyc_approve: {
         parameters: {
             query?: never;
             header?: never;
@@ -18339,7 +18335,7 @@ export interface operations {
             };
         };
     };
-    reject: {
+    AdminKyc_reject: {
         parameters: {
             query?: never;
             header?: never;

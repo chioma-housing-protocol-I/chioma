@@ -84,12 +84,12 @@ function manageCacheSize(queryCache: QueryCache): void {
   if (queries.length > MAX_CACHE_SIZE) {
     // Evict oldest queries that are not currently active
     const inactiveQueries = queries
-      .filter((query) => !query.state.isFetching)
+      .filter((query) => query.state.fetchStatus !== 'fetching')
       .sort((a, b) => a.state.dataUpdatedAt - b.state.dataUpdatedAt);
 
     const toRemove = inactiveQueries.slice(0, queries.length - MAX_CACHE_SIZE);
     toRemove.forEach((query) => {
-      queryCache.remove(query.queryKey);
+      queryCache.remove(query);
       cacheMetrics.evictions++;
     });
 

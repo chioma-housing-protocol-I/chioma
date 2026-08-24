@@ -84,7 +84,8 @@ async function generate() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
   });
 
   await app.close();

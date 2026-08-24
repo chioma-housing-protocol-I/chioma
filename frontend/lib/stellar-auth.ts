@@ -77,7 +77,7 @@ export async function signChallengeXdr(challengeXdr: string): Promise<string> {
   }
 }
 
-import type { User } from '@/types';
+import type { User } from '@/store/authStore';
 
 export interface AuthResponse {
   accessToken?: string;

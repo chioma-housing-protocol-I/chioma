@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 
 interface BarChartWrapperProps {
-  data: Record<string, unknown>[];
+  data: unknown[];
   dataKeyX: string;
   dataKeyY: string;
   fillColor?: string;

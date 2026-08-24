@@ -3,7 +3,7 @@
   "paths": {
     "/api/v1": {
       "get": {
-        "operationId": "getHello",
+        "operationId": "App_getHello",
         "parameters": [],
         "responses": {
           "200": {
@@ -19,7 +19,7 @@
     "/v1/security.txt": {
       "get": {
         "description": "Returns security contact and policy information per RFC 9116",
-        "operationId": "getSecurityTxt",
+        "operationId": "Security_getSecurityTxt",
         "parameters": [],
         "responses": {
           "200": {
@@ -41,7 +41,7 @@
     },
     "/api/v1/security/events": {
       "get": {
-        "operationId": "getSecurityEvents",
+        "operationId": "Security_getSecurityEvents",
         "parameters": [
           {
             "name": "hours",
@@ -78,7 +78,7 @@
     },
     "/api/v1/security/events/user/{userId}": {
       "get": {
-        "operationId": "getUserEvents",
+        "operationId": "Security_getUserEvents",
         "parameters": [
           {
             "name": "userId",
@@ -123,7 +123,7 @@
     },
     "/api/v1/security/events/suspicious/{userId}": {
       "get": {
-        "operationId": "detectSuspicious",
+        "operationId": "Security_detectSuspicious",
         "parameters": [
           {
             "name": "userId",
@@ -152,7 +152,7 @@
     },
     "/api/v1/security/threats": {
       "get": {
-        "operationId": "getThreats",
+        "operationId": "Security_getThreats",
         "parameters": [
           {
             "name": "limit",
@@ -181,7 +181,7 @@
     },
     "/api/v1/security/threats/stats": {
       "get": {
-        "operationId": "getThreatStats",
+        "operationId": "Security_getThreatStats",
         "parameters": [
           {
             "name": "hours",
@@ -210,7 +210,7 @@
     },
     "/api/v1/security/threats/{id}/false-positive": {
       "patch": {
-        "operationId": "markFalsePositive",
+        "operationId": "Security_markFalsePositive",
         "parameters": [
           {
             "name": "id",
@@ -239,7 +239,7 @@
     },
     "/api/v1/security/incidents": {
       "get": {
-        "operationId": "getIncidents",
+        "operationId": "Security_getIncidents",
         "parameters": [],
         "responses": {
           "200": {
@@ -259,7 +259,7 @@
     },
     "/api/v1/security/incidents/metrics": {
       "get": {
-        "operationId": "getIncidentMetrics",
+        "operationId": "Security_getIncidentMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -279,7 +279,7 @@
     },
     "/api/v1/security/incidents/{id}/resolve": {
       "post": {
-        "operationId": "resolveIncident",
+        "operationId": "Security_resolveIncident",
         "parameters": [
           {
             "name": "id",
@@ -308,7 +308,7 @@
     },
     "/api/v1/security/incidents/{id}/report": {
       "get": {
-        "operationId": "getIncidentReport",
+        "operationId": "Security_getIncidentReport",
         "parameters": [
           {
             "name": "id",
@@ -337,7 +337,7 @@
     },
     "/api/v1/security/compliance/score": {
       "get": {
-        "operationId": "getComplianceScore",
+        "operationId": "Security_getComplianceScore",
         "parameters": [],
         "responses": {
           "200": {
@@ -357,7 +357,7 @@
     },
     "/api/v1/security/compliance/gdpr": {
       "get": {
-        "operationId": "getGdprReport",
+        "operationId": "Security_getGdprReport",
         "parameters": [
           {
             "name": "from",
@@ -396,7 +396,7 @@
     },
     "/api/v1/security/compliance/soc2": {
       "get": {
-        "operationId": "getSoc2Report",
+        "operationId": "Security_getSoc2Report",
         "parameters": [
           {
             "name": "from",
@@ -433,7 +433,7 @@
     },
     "/api/v1/security/compliance/pci-dss": {
       "get": {
-        "operationId": "getPciDssReport",
+        "operationId": "Security_getPciDssReport",
         "parameters": [
           {
             "name": "from",
@@ -470,7 +470,7 @@
     },
     "/api/v1/security/rbac/roles": {
       "get": {
-        "operationId": "getRoles",
+        "operationId": "Security_getRoles",
         "parameters": [],
         "responses": {
           "200": {
@@ -490,7 +490,7 @@
     },
     "/api/v1/security/rbac/permissions": {
       "get": {
-        "operationId": "getPermissions",
+        "operationId": "Security_getPermissions",
         "parameters": [],
         "responses": {
           "200": {
@@ -510,7 +510,7 @@
     },
     "/api/v1/security/rbac/seed": {
       "post": {
-        "operationId": "seedRbac",
+        "operationId": "Security_seedRbac",
         "parameters": [],
         "responses": {
           "204": {
@@ -530,7 +530,7 @@
     },
     "/api/v1/security/audit/anchor": {
       "post": {
-        "operationId": "anchorAuditLogs",
+        "operationId": "Security_anchorAuditLogs",
         "parameters": [
           {
             "name": "batchSize",
@@ -559,7 +559,7 @@
     },
     "/api/v1/audit": {
       "get": {
-        "operationId": "queryAuditLogs",
+        "operationId": "Audit_queryAuditLogs",
         "parameters": [
           {
             "name": "startDate",
@@ -766,7 +766,7 @@
     },
     "/api/v1/audit/trail/{entityType}/{entityId}": {
       "get": {
-        "operationId": "getAuditTrail",
+        "operationId": "Audit_getAuditTrail",
         "parameters": [
           {
             "name": "entityType",
@@ -821,7 +821,7 @@
     },
     "/api/v1/audit/user-activity/{userId}": {
       "get": {
-        "operationId": "getUserActivity",
+        "operationId": "Audit_getUserActivity",
         "parameters": [
           {
             "name": "userId",
@@ -868,7 +868,7 @@
     },
     "/api/v1/audit/stats": {
       "get": {
-        "operationId": "getLogStatistics",
+        "operationId": "Audit_getLogStatistics",
         "parameters": [],
         "responses": {
           "200": {
@@ -888,7 +888,7 @@
     },
     "/api/v1/audit/cleanup": {
       "delete": {
-        "operationId": "cleanupOldLogs",
+        "operationId": "Audit_cleanupOldLogs",
         "parameters": [
           {
             "name": "daysToKeep",
@@ -917,7 +917,7 @@
     },
     "/api/v1/audit/retention/run": {
       "post": {
-        "operationId": "runRetentionCleanup",
+        "operationId": "Audit_runRetentionCleanup",
         "parameters": [],
         "responses": {
           "200": {
@@ -937,7 +937,7 @@
     },
     "/api/v1/agreements": {
       "post": {
-        "operationId": "create",
+        "operationId": "Agreements_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -964,7 +964,7 @@
         ]
       },
       "get": {
-        "operationId": "findAll",
+        "operationId": "Agreements_findAll",
         "parameters": [
           {
             "name": "status",
@@ -1094,7 +1094,7 @@
     },
     "/api/v1/agreements/{id}/download": {
       "get": {
-        "operationId": "downloadAgreement",
+        "operationId": "Agreements_downloadAgreement",
         "parameters": [
           {
             "name": "id",
@@ -1123,7 +1123,7 @@
     "/api/v1/agreements/{id}/fees": {
       "get": {
         "description": "Returns configured early termination fee, late fee %, grace period, and an optional estimated late fee when daysPastDue is provided.",
-        "operationId": "getFees",
+        "operationId": "Agreements_getFees",
         "parameters": [
           {
             "name": "id",
@@ -1164,7 +1164,7 @@
     },
     "/api/v1/agreements/{id}": {
       "get": {
-        "operationId": "findOne",
+        "operationId": "Agreements_findOne",
         "parameters": [
           {
             "name": "id",
@@ -1190,7 +1190,7 @@
         ]
       },
       "put": {
-        "operationId": "update",
+        "operationId": "Agreements_update",
         "parameters": [
           {
             "name": "id",
@@ -1227,7 +1227,7 @@
       },
       "patch": {
         "description": "Same payload rules as PUT; use for partial updates.",
-        "operationId": "patchUpdate",
+        "operationId": "Agreements_patchUpdate",
         "parameters": [
           {
             "name": "id",
@@ -1264,7 +1264,7 @@
         ]
       },
       "delete": {
-        "operationId": "terminate",
+        "operationId": "Agreements_terminate",
         "parameters": [
           {
             "name": "id",
@@ -1303,7 +1303,7 @@
     "/api/v1/agreements/{id}/renew": {
       "post": {
         "description": "Extends endDate by extendMonths (default 12) from the current end date when renewalOption is true.",
-        "operationId": "renew",
+        "operationId": "Agreements_renew",
         "parameters": [
           {
             "name": "id",
@@ -1342,7 +1342,7 @@
     },
     "/api/v1/agreements/{id}/pay": {
       "post": {
-        "operationId": "recordPayment",
+        "operationId": "Agreements_recordPayment",
         "parameters": [
           {
             "name": "id",
@@ -1380,7 +1380,7 @@
     },
     "/api/v1/agreements/{id}/payments": {
       "get": {
-        "operationId": "getPaymentsForAgreement",
+        "operationId": "AgreementPayment_getPaymentsForAgreement",
         "parameters": [
           {
             "name": "id",
@@ -1410,7 +1410,7 @@
     },
     "/api/v1/agreements/nfts/mint": {
       "post": {
-        "operationId": "mintNft",
+        "operationId": "AgreementNft_mintNft",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1434,7 +1434,7 @@
     },
     "/api/v1/agreements/nfts/transfer": {
       "post": {
-        "operationId": "transferNft",
+        "operationId": "AgreementNft_transferNft",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1458,7 +1458,7 @@
     },
     "/api/v1/agreements/nfts/agreement/{agreementId}": {
       "get": {
-        "operationId": "getNftByAgreement",
+        "operationId": "AgreementNft_getNftByAgreement",
         "parameters": [
           {
             "name": "agreementId",
@@ -1481,7 +1481,7 @@
     },
     "/api/v1/agreements/nfts/owner/{ownerAddress}": {
       "get": {
-        "operationId": "getNftsByOwner",
+        "operationId": "AgreementNft_getNftsByOwner",
         "parameters": [
           {
             "name": "ownerAddress",
@@ -1504,7 +1504,7 @@
     },
     "/api/v1/agreements/nfts/analytics": {
       "get": {
-        "operationId": "getAnalytics",
+        "operationId": "AgreementNft_getAnalytics",
         "parameters": [],
         "responses": {
           "200": {
@@ -1518,7 +1518,7 @@
     },
     "/api/v1/agreements/nfts/analytics/owner/{ownerAddress}": {
       "get": {
-        "operationId": "getOwnerPortfolio",
+        "operationId": "AgreementNft_getOwnerPortfolio",
         "parameters": [
           {
             "name": "ownerAddress",
@@ -1541,7 +1541,7 @@
     },
     "/api/v1/agreements/nfts/sync/{agreementId}": {
       "post": {
-        "operationId": "syncOwnership",
+        "operationId": "AgreementNft_syncOwnership",
         "parameters": [
           {
             "name": "agreementId",
@@ -1565,7 +1565,7 @@
     "/api/v1/reviews": {
       "post": {
         "description": "Submit a review for a user (e.g. landlord/tenant) in a given context (LEASE, MAINTENANCE).",
-        "operationId": "createReview",
+        "operationId": "Reviews_createReview",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1591,7 +1591,7 @@
         ]
       },
       "get": {
-        "operationId": "getMyReviews",
+        "operationId": "Reviews_getMyReviews",
         "parameters": [
           {
             "name": "role",
@@ -1639,7 +1639,7 @@
     },
     "/api/v1/reviews/user/{userId}": {
       "get": {
-        "operationId": "getUserReviews",
+        "operationId": "Reviews_getUserReviews",
         "parameters": [
           {
             "name": "userId",
@@ -1664,7 +1664,7 @@
     },
     "/api/v1/reviews/property/{propertyId}": {
       "get": {
-        "operationId": "getPropertyReviews",
+        "operationId": "Reviews_getPropertyReviews",
         "parameters": [
           {
             "name": "propertyId",
@@ -1690,7 +1690,7 @@
     "/api/v1/reviews/report/{reviewId}": {
       "post": {
         "description": "Flag a review for moderation (e.g. inappropriate content).",
-        "operationId": "reportReview",
+        "operationId": "Reviews_reportReview",
         "parameters": [
           {
             "name": "reviewId",
@@ -1727,7 +1727,7 @@
     },
     "/api/v1/reviews/guest": {
       "post": {
-        "operationId": "postGuestReview",
+        "operationId": "Reviews_postGuestReview",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1751,7 +1751,7 @@
     },
     "/api/v1/reviews/host": {
       "post": {
-        "operationId": "postHostReview",
+        "operationId": "Reviews_postHostReview",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1775,7 +1775,7 @@
     },
     "/api/v1/reviews/guest/{userId}": {
       "get": {
-        "operationId": "getGuestReviews",
+        "operationId": "Reviews_getGuestReviews",
         "parameters": [
           {
             "name": "userId",
@@ -1798,7 +1798,7 @@
     },
     "/api/v1/reviews/host/{userId}": {
       "get": {
-        "operationId": "getHostReviews",
+        "operationId": "Reviews_getHostReviews",
         "parameters": [
           {
             "name": "userId",
@@ -1821,7 +1821,7 @@
     },
     "/api/v1/reviews/reputation/{userId}": {
       "get": {
-        "operationId": "getReputation",
+        "operationId": "Reviews_getReputation",
         "parameters": [
           {
             "name": "userId",
@@ -1844,7 +1844,7 @@
     },
     "/api/v1/reviews/{id}": {
       "patch": {
-        "operationId": "updateReview",
+        "operationId": "Reviews_updateReview",
         "parameters": [
           {
             "name": "id",
@@ -1875,7 +1875,7 @@
         ]
       },
       "delete": {
-        "operationId": "deleteReview",
+        "operationId": "Reviews_deleteReview",
         "parameters": [
           {
             "name": "id",
@@ -1898,7 +1898,7 @@
     },
     "/api/v1/stellar/accounts": {
       "post": {
-        "operationId": "createAccount",
+        "operationId": "Stellar_createAccount",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1933,7 +1933,7 @@
     },
     "/api/v1/stellar/accounts/{id}": {
       "get": {
-        "operationId": "getAccountById",
+        "operationId": "Stellar_getAccountById",
         "parameters": [
           {
             "name": "id",
@@ -1967,7 +1967,7 @@
     },
     "/api/v1/stellar/accounts/public-key/{publicKey}": {
       "get": {
-        "operationId": "getAccountByPublicKey",
+        "operationId": "Stellar_getAccountByPublicKey",
         "parameters": [
           {
             "name": "publicKey",
@@ -1990,7 +1990,7 @@
     },
     "/api/v1/stellar/accounts/user/{userId}": {
       "get": {
-        "operationId": "getAccountsByUserId",
+        "operationId": "Stellar_getAccountsByUserId",
         "parameters": [
           {
             "name": "userId",
@@ -2013,7 +2013,7 @@
     },
     "/api/v1/stellar/accounts/fund": {
       "post": {
-        "operationId": "fundAccount",
+        "operationId": "Stellar_fundAccount",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2038,7 +2038,7 @@
     },
     "/api/v1/stellar/accounts/{publicKey}/sync": {
       "post": {
-        "operationId": "syncAccount",
+        "operationId": "Stellar_syncAccount",
         "parameters": [
           {
             "name": "publicKey",
@@ -2061,7 +2061,7 @@
     },
     "/api/v1/stellar/accounts/{publicKey}/network": {
       "get": {
-        "operationId": "getNetworkAccountInfo",
+        "operationId": "Stellar_getNetworkAccountInfo",
         "parameters": [
           {
             "name": "publicKey",
@@ -2084,7 +2084,7 @@
     },
     "/api/v1/stellar/payments": {
       "post": {
-        "operationId": "sendPayment",
+        "operationId": "Stellar_sendPayment",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2119,7 +2119,7 @@
     },
     "/api/v1/stellar/transactions": {
       "get": {
-        "operationId": "listTransactions",
+        "operationId": "Stellar_listTransactions",
         "parameters": [],
         "responses": {
           "200": {
@@ -2133,7 +2133,7 @@
     },
     "/api/v1/stellar/transactions/{id}": {
       "get": {
-        "operationId": "getTransactionById",
+        "operationId": "Stellar_getTransactionById",
         "parameters": [
           {
             "name": "id",
@@ -2156,7 +2156,7 @@
     },
     "/api/v1/stellar/transactions/hash/{hash}": {
       "get": {
-        "operationId": "getTransactionByHash",
+        "operationId": "Stellar_getTransactionByHash",
         "parameters": [
           {
             "name": "hash",
@@ -2179,7 +2179,7 @@
     },
     "/api/v1/stellar/escrow": {
       "post": {
-        "operationId": "createEscrow",
+        "operationId": "Stellar_createEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2214,7 +2214,7 @@
     },
     "/api/v1/stellar/escrow/release": {
       "post": {
-        "operationId": "releaseEscrow",
+        "operationId": "Stellar_releaseEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2238,7 +2238,7 @@
     },
     "/api/v1/stellar/escrow/refund": {
       "post": {
-        "operationId": "refundEscrow",
+        "operationId": "Stellar_refundEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2262,7 +2262,7 @@
     },
     "/api/v1/stellar/escrow/{id}": {
       "get": {
-        "operationId": "getEscrowById",
+        "operationId": "Stellar_getEscrowById",
         "parameters": [
           {
             "name": "id",
@@ -2285,7 +2285,7 @@
     },
     "/api/v1/stellar/escrows": {
       "get": {
-        "operationId": "listEscrows",
+        "operationId": "Stellar_listEscrows",
         "parameters": [],
         "responses": {
           "200": {
@@ -2299,7 +2299,7 @@
     },
     "/api/v1/stellar/escrow/multi-sig": {
       "post": {
-        "operationId": "createMultiSigEscrow",
+        "operationId": "Stellar_createMultiSigEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2324,7 +2324,7 @@
     },
     "/api/v1/stellar/escrow/signature": {
       "post": {
-        "operationId": "addSignature",
+        "operationId": "Stellar_addSignature",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2349,7 +2349,7 @@
     },
     "/api/v1/stellar/escrow/release-with-signatures": {
       "post": {
-        "operationId": "releaseWithSignatures",
+        "operationId": "Stellar_releaseWithSignatures",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2374,7 +2374,7 @@
     },
     "/api/v1/stellar/escrow/time-locked": {
       "post": {
-        "operationId": "createTimeLockedEscrow",
+        "operationId": "Stellar_createTimeLockedEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2399,7 +2399,7 @@
     },
     "/api/v1/stellar/escrow/{escrowId}/time-lock-status": {
       "get": {
-        "operationId": "checkTimeLockConditions",
+        "operationId": "Stellar_checkTimeLockConditions",
         "parameters": [
           {
             "name": "escrowId",
@@ -2423,7 +2423,7 @@
     },
     "/api/v1/stellar/escrow/conditional": {
       "post": {
-        "operationId": "createConditionalEscrow",
+        "operationId": "Stellar_createConditionalEscrow",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2448,7 +2448,7 @@
     },
     "/api/v1/stellar/escrow/{escrowId}/conditions": {
       "get": {
-        "operationId": "validateConditions",
+        "operationId": "Stellar_validateConditions",
         "parameters": [
           {
             "name": "escrowId",
@@ -2472,7 +2472,7 @@
     },
     "/api/v1/stellar/escrow/integrate-dispute": {
       "post": {
-        "operationId": "integrateWithDispute",
+        "operationId": "Stellar_integrateWithDispute",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2497,7 +2497,7 @@
     },
     "/api/v1/stellar/escrow/release-dispute-resolution": {
       "post": {
-        "operationId": "releaseOnDisputeResolution",
+        "operationId": "Stellar_releaseOnDisputeResolution",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2523,7 +2523,7 @@
     "/api/v1/anchor/deposit": {
       "post": {
         "description": "Start a fiat deposit flow via Stellar anchor.",
-        "operationId": "deposit",
+        "operationId": "Anchor_deposit",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2560,7 +2560,7 @@
     "/api/v1/anchor/withdraw": {
       "post": {
         "description": "Start a fiat withdrawal via Stellar anchor.",
-        "operationId": "withdraw",
+        "operationId": "Anchor_withdraw",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2596,7 +2596,7 @@
     },
     "/api/v1/anchor/transactions": {
       "get": {
-        "operationId": "listTransactions",
+        "operationId": "Anchor_listTransactions",
         "parameters": [
           {
             "name": "type",
@@ -2701,7 +2701,7 @@
     },
     "/api/v1/anchor/transactions/stats": {
       "get": {
-        "operationId": "getTransactionStats",
+        "operationId": "Anchor_getTransactionStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -2724,7 +2724,7 @@
     },
     "/api/v1/anchor/transactions/{id}": {
       "get": {
-        "operationId": "getTransactionStatus",
+        "operationId": "Anchor_getTransactionStatus",
         "parameters": [
           {
             "name": "id",
@@ -2758,7 +2758,7 @@
     "/api/v1/anchor/webhook": {
       "post": {
         "description": "Called by anchor to notify status. Not for client use.",
-        "operationId": "handleWebhook",
+        "operationId": "Anchor_handleWebhook",
         "parameters": [],
         "responses": {
           "200": {
@@ -2778,7 +2778,7 @@
     },
     "/api/v1/v1/indexed-transactions": {
       "get": {
-        "operationId": "listTransactions",
+        "operationId": "IndexedTransactions_listTransactions",
         "parameters": [
           {
             "name": "status",
@@ -2868,7 +2868,7 @@
     },
     "/api/v1/v1/indexed-transactions/stats": {
       "get": {
-        "operationId": "getStats",
+        "operationId": "IndexedTransactions_getStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -2891,7 +2891,7 @@
     },
     "/api/v1/v1/indexed-transactions/{id}": {
       "get": {
-        "operationId": "getTransaction",
+        "operationId": "IndexedTransactions_getTransaction",
         "parameters": [
           {
             "name": "id",
@@ -2924,7 +2924,7 @@
     },
     "/api/v1/agents/registry/register": {
       "post": {
-        "operationId": "registerAgent",
+        "operationId": "AgentRegistry_registerAgent",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2954,7 +2954,7 @@
     },
     "/api/v1/agents/registry/verify": {
       "post": {
-        "operationId": "verifyAgent",
+        "operationId": "AgentRegistry_verifyAgent",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2984,7 +2984,7 @@
     },
     "/api/v1/agents/registry/rate": {
       "post": {
-        "operationId": "rateAgent",
+        "operationId": "AgentRegistry_rateAgent",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3014,7 +3014,7 @@
     },
     "/api/v1/agents/registry/{agentAddress}": {
       "get": {
-        "operationId": "getAgentInfo",
+        "operationId": "AgentRegistry_getAgentInfo",
         "parameters": [
           {
             "name": "agentAddress",
@@ -3043,7 +3043,7 @@
     },
     "/api/v1/agents/registry": {
       "get": {
-        "operationId": "getAgentCount",
+        "operationId": "AgentRegistry_getAgentCount",
         "parameters": [],
         "responses": {
           "200": {
@@ -3063,7 +3063,7 @@
     },
     "/api/v1/agents/registry/transactions/register": {
       "post": {
-        "operationId": "registerTransaction",
+        "operationId": "AgentRegistry_registerTransaction",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3093,7 +3093,7 @@
     },
     "/api/v1/agents/registry/transactions/{agentAddress}": {
       "get": {
-        "operationId": "getAgentTransactions",
+        "operationId": "AgentRegistry_getAgentTransactions",
         "parameters": [
           {
             "name": "agentAddress",
@@ -3122,7 +3122,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/register": {
       "post": {
-        "operationId": "registerArbiter",
+        "operationId": "Dispute_registerArbiter",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3147,7 +3147,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/deregister": {
       "post": {
-        "operationId": "deregisterArbiter",
+        "operationId": "Dispute_deregisterArbiter",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3172,7 +3172,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/pool": {
       "get": {
-        "operationId": "getArbiterPool",
+        "operationId": "Dispute_getArbiterPool",
         "parameters": [],
         "responses": {
           "200": {
@@ -3197,7 +3197,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/select": {
       "post": {
-        "operationId": "selectArbiters",
+        "operationId": "Dispute_selectArbiters",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3222,7 +3222,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/{address}": {
       "get": {
-        "operationId": "getArbiter",
+        "operationId": "Dispute_getArbiter",
         "parameters": [
           {
             "name": "address",
@@ -3246,7 +3246,7 @@
     },
     "/api/v1/stellar/disputes/arbiters/{address}/reputation": {
       "get": {
-        "operationId": "getArbiterReputation",
+        "operationId": "Dispute_getArbiterReputation",
         "parameters": [
           {
             "name": "address",
@@ -3277,7 +3277,7 @@
     },
     "/api/v1/stellar/disputes/votes/track": {
       "post": {
-        "operationId": "trackVote",
+        "operationId": "Dispute_trackVote",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3302,7 +3302,7 @@
     },
     "/api/v1/stellar/disputes/votes/cast": {
       "post": {
-        "operationId": "castVote",
+        "operationId": "Dispute_castVote",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3327,7 +3327,7 @@
     },
     "/api/v1/stellar/disputes/{disputeId}/votes": {
       "get": {
-        "operationId": "getVoteResults",
+        "operationId": "Dispute_getVoteResults",
         "parameters": [
           {
             "name": "disputeId",
@@ -3358,7 +3358,7 @@
     },
     "/api/v1/stellar/disputes/resolve": {
       "post": {
-        "operationId": "resolveDispute",
+        "operationId": "Dispute_resolveDispute",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3383,7 +3383,7 @@
     },
     "/api/v1/stellar/disputes/enforce": {
       "post": {
-        "operationId": "enforceResolution",
+        "operationId": "Dispute_enforceResolution",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3415,7 +3415,7 @@
     },
     "/api/v1/stellar/disputes/{disputeId}": {
       "get": {
-        "operationId": "getDispute",
+        "operationId": "Dispute_getDispute",
         "parameters": [
           {
             "name": "disputeId",
@@ -3439,7 +3439,7 @@
     },
     "/api/v1/stellar/disputes/{disputeId}/timeline": {
       "get": {
-        "operationId": "getDisputeTimeline",
+        "operationId": "Dispute_getDisputeTimeline",
         "parameters": [
           {
             "name": "disputeId",
@@ -3470,7 +3470,7 @@
     },
     "/api/v1/stellar/payment-processing/rent": {
       "post": {
-        "operationId": "processRentPayment",
+        "operationId": "PaymentProcessing_processRentPayment",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3495,7 +3495,7 @@
     },
     "/api/v1/stellar/payment-processing/fee-collector": {
       "post": {
-        "operationId": "setPlatformFeeCollector",
+        "operationId": "PaymentProcessing_setPlatformFeeCollector",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3520,7 +3520,7 @@
     },
     "/api/v1/stellar/payment-processing/count": {
       "get": {
-        "operationId": "getPaymentCount",
+        "operationId": "PaymentProcessing_getPaymentCount",
         "parameters": [],
         "responses": {
           "200": {
@@ -3535,7 +3535,7 @@
     },
     "/api/v1/stellar/payment-processing/total-paid/{agreementId}": {
       "get": {
-        "operationId": "getTotalPaid",
+        "operationId": "PaymentProcessing_getTotalPaid",
         "parameters": [
           {
             "name": "agreementId",
@@ -3559,7 +3559,7 @@
     },
     "/api/v1/property-registry/register": {
       "post": {
-        "operationId": "registerProperty",
+        "operationId": "PropertyRegistry_registerProperty",
         "parameters": [
           {
             "name": "x-signer-public-key",
@@ -3592,7 +3592,7 @@
     },
     "/api/v1/property-registry/transfer": {
       "post": {
-        "operationId": "transferProperty",
+        "operationId": "PropertyRegistry_transferProperty",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3616,7 +3616,7 @@
     },
     "/api/v1/property-registry/verify": {
       "post": {
-        "operationId": "verifyProperty",
+        "operationId": "PropertyRegistry_verifyProperty",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3640,7 +3640,7 @@
     },
     "/api/v1/property-registry/{id}": {
       "get": {
-        "operationId": "getProperty",
+        "operationId": "PropertyRegistry_getProperty",
         "parameters": [
           {
             "name": "id",
@@ -3663,7 +3663,7 @@
     },
     "/api/v1/property-registry/stats/count": {
       "get": {
-        "operationId": "getPropertyCount",
+        "operationId": "PropertyRegistry_getPropertyCount",
         "parameters": [],
         "responses": {
           "200": {
@@ -3677,7 +3677,7 @@
     },
     "/api/v1/property-registry/{id}/history": {
       "get": {
-        "operationId": "getPropertyHistory",
+        "operationId": "PropertyRegistry_getPropertyHistory",
         "parameters": [
           {
             "name": "id",
@@ -3701,7 +3701,7 @@
     "/api/v1/developer/webhooks": {
       "post": {
         "description": "Register a URL to receive Chioma events. A signing secret is generated to use if none is provided.",
-        "operationId": "create",
+        "operationId": "Webhooks_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -3729,7 +3729,7 @@
         ]
       },
       "get": {
-        "operationId": "list",
+        "operationId": "Webhooks_list",
         "parameters": [],
         "responses": {
           "200": {
@@ -3749,7 +3749,7 @@
     },
     "/api/v1/developer/webhooks/{id}/deliveries": {
       "get": {
-        "operationId": "listDeliveries",
+        "operationId": "Webhooks_listDeliveries",
         "parameters": [
           {
             "name": "id",
@@ -3782,7 +3782,7 @@
     },
     "/api/v1/developer/webhooks/{id}": {
       "put": {
-        "operationId": "update",
+        "operationId": "Webhooks_update",
         "parameters": [
           {
             "name": "id",
@@ -3823,7 +3823,7 @@
         ]
       },
       "delete": {
-        "operationId": "remove",
+        "operationId": "Webhooks_remove",
         "parameters": [
           {
             "name": "id",
@@ -3857,7 +3857,7 @@
     "/api/v1/developer/webhooks/{id}/test": {
       "post": {
         "description": "Delivers a signed test payload to the endpoint immediately and records the attempt.",
-        "operationId": "test",
+        "operationId": "Webhooks_test",
         "parameters": [
           {
             "name": "id",
@@ -3901,7 +3901,7 @@
     "/api/v1/developer/webhooks/{id}/retry": {
       "post": {
         "description": "Redelivers an existing delivery by deliveryId, or triggers a new delivery attempt using the provided event and payload.",
-        "operationId": "retry",
+        "operationId": "Webhooks_retry",
         "parameters": [
           {
             "name": "id",
@@ -3948,7 +3948,7 @@
     "/api/v1/auth/register": {
       "post": {
         "description": "Create a new user account with secure password hashing",
-        "operationId": "register",
+        "operationId": "Auth_register",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4001,7 +4001,7 @@
     "/api/v1/auth/login": {
       "post": {
         "description": "Authenticate user with email and password. Returns MFA token if MFA is enabled.",
-        "operationId": "login",
+        "operationId": "Auth_login",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4044,7 +4044,7 @@
     "/api/v1/auth/login/mfa/complete": {
       "post": {
         "description": "Complete login after MFA verification",
-        "operationId": "completeMfaLogin",
+        "operationId": "Auth_completeMfaLogin",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4087,7 +4087,7 @@
     "/api/v1/auth/refresh": {
       "post": {
         "description": "Get a new access token using refresh token from cookie or body",
-        "operationId": "refreshTokens",
+        "operationId": "Auth_refreshTokens",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4130,7 +4130,7 @@
     "/api/v1/auth/logout": {
       "post": {
         "description": "Invalidate user refresh token",
-        "operationId": "logout",
+        "operationId": "Auth_logout",
         "parameters": [],
         "responses": {
           "200": {
@@ -4168,7 +4168,7 @@
     "/api/v1/auth/forgot-password": {
       "post": {
         "description": "Send password reset email to registered email address",
-        "operationId": "forgotPassword",
+        "operationId": "Auth_forgotPassword",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4201,7 +4201,7 @@
     "/api/v1/auth/reset-password": {
       "post": {
         "description": "Reset password using reset token received via email",
-        "operationId": "resetPassword",
+        "operationId": "Auth_resetPassword",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4244,7 +4244,7 @@
     "/api/v1/auth/verify-email": {
       "get": {
         "description": "Verify user email address using token sent via email",
-        "operationId": "verifyEmail",
+        "operationId": "Auth_verifyEmail",
         "parameters": [
           {
             "name": "token",
@@ -4288,7 +4288,7 @@
     "/api/v1/auth/resend-verification": {
       "post": {
         "description": "Re-sends the verification email for the current user. Idempotent: an existing, unexpired token is reused so previously sent links keep working.",
-        "operationId": "resendVerification",
+        "operationId": "Auth_resendVerification",
         "parameters": [],
         "responses": {
           "200": {
@@ -4326,7 +4326,7 @@
     "/api/v1/auth/complete-profile": {
       "post": {
         "description": "Completes onboarding for wallet-based sign-ins by adding an email address and sending a verification link.",
-        "operationId": "completeProfile",
+        "operationId": "Auth_completeProfile",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4374,7 +4374,7 @@
     "/api/v1/auth/mfa/enable": {
       "post": {
         "description": "Generate MFA secret and QR code for TOTP setup",
-        "operationId": "enableMfa",
+        "operationId": "Auth_enableMfa",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4415,7 +4415,7 @@
     "/api/v1/auth/mfa/verify": {
       "post": {
         "description": "Verify TOTP token or backup code",
-        "operationId": "verifyMfa",
+        "operationId": "Auth_verifyMfa",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4456,7 +4456,7 @@
     "/api/v1/auth/mfa/disable": {
       "post": {
         "description": "Disable MFA for the current user",
-        "operationId": "disableMfa",
+        "operationId": "Auth_disableMfa",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4487,7 +4487,7 @@
     "/api/v1/auth/mfa/backup-codes": {
       "post": {
         "description": "Generate new backup codes for MFA",
-        "operationId": "regenerateBackupCodes",
+        "operationId": "Auth_regenerateBackupCodes",
         "parameters": [],
         "responses": {
           "200": {
@@ -4518,7 +4518,7 @@
     "/api/v1/auth/mfa/status": {
       "get": {
         "description": "Check if MFA is enabled for the current user",
-        "operationId": "getMfaStatus",
+        "operationId": "Auth_getMfaStatus",
         "parameters": [],
         "responses": {
           "200": {
@@ -4539,7 +4539,7 @@
     "/api/v1/auth/stellar/challenge": {
       "post": {
         "description": "Generate a challenge transaction for the client to sign with their Stellar wallet",
-        "operationId": "generateChallenge",
+        "operationId": "StellarAuth_generateChallenge",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4578,7 +4578,7 @@
     "/api/v1/auth/stellar/verify": {
       "post": {
         "description": "Verify the signed challenge and authenticate the user with their Stellar wallet",
-        "operationId": "verifySignature",
+        "operationId": "StellarAuth_verifySignature",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4620,7 +4620,7 @@
     "/api/v1/auth/metrics/stats": {
       "get": {
         "description": "Retrieve comprehensive authentication metrics including success rates, method breakdown, and trends",
-        "operationId": "getAuthStats",
+        "operationId": "AuthMetrics_getAuthStats",
         "parameters": [
           {
             "name": "days",
@@ -4707,7 +4707,7 @@
     "/api/v1/auth/metrics/performance": {
       "get": {
         "description": "Retrieve performance metrics including response time percentiles for each authentication method",
-        "operationId": "getPerformanceMetrics",
+        "operationId": "AuthMetrics_getPerformanceMetrics",
         "parameters": [
           {
             "name": "days",
@@ -4771,7 +4771,7 @@
     "/api/v1/auth/metrics/hourly-usage": {
       "get": {
         "description": "Retrieve hourly breakdown of authentication attempts by method for the specified period",
-        "operationId": "getHourlyUsage",
+        "operationId": "AuthMetrics_getHourlyUsage",
         "parameters": [
           {
             "name": "days",
@@ -4829,7 +4829,7 @@
     "/api/v1/auth/metrics/health": {
       "get": {
         "description": "Quick health check of authentication system with key metrics",
-        "operationId": "getHealth",
+        "operationId": "AuthMetrics_getHealth",
         "parameters": [],
         "responses": {
           "200": {
@@ -4869,7 +4869,7 @@
     },
     "/api/v1/auth/oauth/authorize": {
       "get": {
-        "operationId": "initiateAuthorization",
+        "operationId": "OAuth2_initiateAuthorization",
         "parameters": [],
         "responses": {
           "200": {
@@ -4884,7 +4884,7 @@
     },
     "/api/v1/auth/oauth/callback": {
       "post": {
-        "operationId": "completeAuthorization",
+        "operationId": "OAuth2_completeAuthorization",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4909,16 +4909,8 @@
     },
     "/api/v1/auth/oauth/profile": {
       "get": {
-        "operationId": "getProfile",
+        "operationId": "OAuth2_getProfile",
         "parameters": [
-          {
-            "name": "provider",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "accessToken",
             "required": true,
@@ -4941,7 +4933,7 @@
     },
     "/api/v1/auth/oauth/link": {
       "post": {
-        "operationId": "linkAccount",
+        "operationId": "OAuth2_linkAccount",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -4971,7 +4963,7 @@
     },
     "/api/v1/auth/oauth/link/authorize": {
       "post": {
-        "operationId": "initiateAccountLink",
+        "operationId": "OAuth2_initiateAccountLink",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -5001,17 +4993,8 @@
     },
     "/api/v1/auth/oauth/logout": {
       "post": {
-        "operationId": "logout",
-        "parameters": [
-          {
-            "name": "provider",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "OAuth2_logout",
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -5030,7 +5013,7 @@
     },
     "/api/v1/auth/oauth/revoke": {
       "post": {
-        "operationId": "revokeToken",
+        "operationId": "OAuth2_revokeToken",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -5055,7 +5038,7 @@
     },
     "/api/v1/notifications": {
       "get": {
-        "operationId": "getNotifications",
+        "operationId": "Notifications_getNotifications",
         "parameters": [
           {
             "name": "page",
@@ -5102,7 +5085,7 @@
     },
     "/api/v1/notifications/unread/count": {
       "get": {
-        "operationId": "getUnreadCount",
+        "operationId": "Notifications_getUnreadCount",
         "parameters": [],
         "responses": {
           "200": {
@@ -5116,7 +5099,7 @@
     },
     "/api/v1/notifications/{id}/read": {
       "patch": {
-        "operationId": "markAsRead",
+        "operationId": "Notifications_markAsRead",
         "parameters": [
           {
             "name": "id",
@@ -5139,7 +5122,7 @@
     },
     "/api/v1/notifications/read-all": {
       "patch": {
-        "operationId": "markAllAsRead",
+        "operationId": "Notifications_markAllAsRead",
         "parameters": [],
         "responses": {
           "200": {
@@ -5153,7 +5136,7 @@
     },
     "/api/v1/notifications/{id}": {
       "delete": {
-        "operationId": "deleteNotification",
+        "operationId": "Notifications_deleteNotification",
         "parameters": [
           {
             "name": "id",
@@ -5176,7 +5159,7 @@
     },
     "/api/v1/notifications/clear-all": {
       "delete": {
-        "operationId": "clearAll",
+        "operationId": "Notifications_clearAll",
         "parameters": [],
         "responses": {
           "200": {
@@ -5191,7 +5174,7 @@
     "/api/v1/messaging/history": {
       "get": {
         "deprecated": true,
-        "operationId": "getHistory",
+        "operationId": "Messaging_getHistory",
         "parameters": [
           {
             "name": "chatGroupId",
@@ -5215,7 +5198,7 @@
     },
     "/api/v1/messaging/rooms": {
       "get": {
-        "operationId": "getRooms",
+        "operationId": "Messaging_getRooms",
         "parameters": [
           {
             "name": "userId",
@@ -5237,7 +5220,7 @@
         ]
       },
       "post": {
-        "operationId": "createRoom",
+        "operationId": "Messaging_createRoom",
         "parameters": [],
         "responses": {
           "201": {
@@ -5252,7 +5235,7 @@
     },
     "/api/v1/messaging/rooms/{roomId}/messages": {
       "get": {
-        "operationId": "getMessages",
+        "operationId": "Messaging_getMessages",
         "parameters": [
           {
             "name": "roomId",
@@ -5276,7 +5259,7 @@
     },
     "/api/v1/messaging/rooms/{roomId}/read": {
       "patch": {
-        "operationId": "markRoomAsRead",
+        "operationId": "Messaging_markRoomAsRead",
         "parameters": [
           {
             "name": "roomId",
@@ -5308,7 +5291,7 @@
     },
     "/api/v1/metrics": {
       "get": {
-        "operationId": "getMetrics",
+        "operationId": "Monitoring_getMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -5322,7 +5305,7 @@
     },
     "/api/v1/cache/stats": {
       "get": {
-        "operationId": "getCacheStats",
+        "operationId": "Monitoring_getCacheStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -5336,7 +5319,7 @@
     },
     "/api/v1/api/database/health": {
       "get": {
-        "operationId": "getDatabaseHealth",
+        "operationId": "Monitoring_getDatabaseHealth",
         "parameters": [],
         "responses": {
           "200": {
@@ -5351,7 +5334,7 @@
     },
     "/api/v1/api/database/history": {
       "get": {
-        "operationId": "getDatabaseHistory",
+        "operationId": "Monitoring_getDatabaseHistory",
         "parameters": [
           {
             "name": "count",
@@ -5376,7 +5359,7 @@
     },
     "/api/v1/api/database/pool": {
       "get": {
-        "operationId": "getDatabasePoolMetrics",
+        "operationId": "Monitoring_getDatabasePoolMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -5391,7 +5374,7 @@
     },
     "/api/v1/api/database/size": {
       "get": {
-        "operationId": "getDatabaseSizeMetrics",
+        "operationId": "Monitoring_getDatabaseSizeMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -5406,7 +5389,7 @@
     },
     "/api/v1/api/database/queries": {
       "get": {
-        "operationId": "getDatabaseQueryMetrics",
+        "operationId": "Monitoring_getDatabaseQueryMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -5421,7 +5404,7 @@
     },
     "/api/v1/api/alerts/webhook": {
       "post": {
-        "operationId": "handleAlert",
+        "operationId": "Monitoring_handleAlert",
         "parameters": [],
         "responses": {
           "200": {
@@ -5435,7 +5418,7 @@
     },
     "/api/v1/api/performance/dashboard": {
       "get": {
-        "operationId": "getDashboard",
+        "operationId": "Performance_getDashboard",
         "parameters": [],
         "responses": {
           "200": {
@@ -5456,7 +5439,7 @@
     "/api/v1/api/performance/database": {
       "get": {
         "description": "Per-operation query timings (avg/p95), the slowest operations, and recent slow queries.",
-        "operationId": "getDatabaseStats",
+        "operationId": "Performance_getDatabaseStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -5476,7 +5459,7 @@
     },
     "/api/v1/api/performance/endpoints": {
       "get": {
-        "operationId": "getEndpointStats",
+        "operationId": "Performance_getEndpointStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -5496,7 +5479,7 @@
     },
     "/api/v1/api/performance/endpoint": {
       "get": {
-        "operationId": "getEndpointStat",
+        "operationId": "Performance_getEndpointStat",
         "parameters": [
           {
             "name": "method",
@@ -5540,7 +5523,7 @@
     },
     "/api/v1/api/performance/system": {
       "get": {
-        "operationId": "getSystemMetrics",
+        "operationId": "Performance_getSystemMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -5560,7 +5543,7 @@
     },
     "/api/v1/api/performance/report": {
       "get": {
-        "operationId": "generateReport",
+        "operationId": "Performance_generateReport",
         "parameters": [],
         "responses": {
           "200": {
@@ -5580,7 +5563,7 @@
     },
     "/api/v1/api/performance/health-check": {
       "get": {
-        "operationId": "healthCheck",
+        "operationId": "Performance_healthCheck",
         "parameters": [],
         "responses": {
           "200": {
@@ -5600,7 +5583,7 @@
     },
     "/api/v1/api/performance/alerts": {
       "get": {
-        "operationId": "getAlerts",
+        "operationId": "Performance_getAlerts",
         "parameters": [
           {
             "name": "limit",
@@ -5631,7 +5614,7 @@
     },
     "/api/v1/api/performance/trends": {
       "get": {
-        "operationId": "getTrends",
+        "operationId": "Performance_getTrends",
         "parameters": [
           {
             "name": "period",
@@ -5662,7 +5645,7 @@
     },
     "/api/v1/api/performance/response-times": {
       "get": {
-        "operationId": "getResponseTimes",
+        "operationId": "Performance_getResponseTimes",
         "parameters": [
           {
             "name": "window",
@@ -5693,7 +5676,7 @@
     },
     "/api/v1/api/performance/slow-endpoints": {
       "get": {
-        "operationId": "getSlowEndpoints",
+        "operationId": "Performance_getSlowEndpoints",
         "parameters": [
           {
             "name": "limit",
@@ -5734,7 +5717,7 @@
     },
     "/api/v1/api/performance/percentiles": {
       "get": {
-        "operationId": "getPercentiles",
+        "operationId": "Performance_getPercentiles",
         "parameters": [
           {
             "name": "method",
@@ -5776,7 +5759,7 @@
     "/api/v1/storage/upload-url": {
       "post": {
         "description": "Returns a pre-signed S3 URL for uploading a file. Use the returned key with GET /storage/download-url to get a download URL.",
-        "operationId": "getUploadUrl",
+        "operationId": "Storage_getUploadUrl",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -5817,7 +5800,7 @@
     "/api/v1/storage/download-url": {
       "get": {
         "description": "Returns a pre-signed URL to download a file by its storage key.",
-        "operationId": "getDownloadUrl",
+        "operationId": "Storage_getDownloadUrl",
         "parameters": [
           {
             "name": "key",
@@ -5861,7 +5844,7 @@
     "/api/v1/storage": {
       "get": {
         "description": "Returns a list of all files owned by the authenticated user.",
-        "operationId": "listFiles",
+        "operationId": "Storage_listFiles",
         "parameters": [],
         "responses": {
           "200": {
@@ -5890,7 +5873,7 @@
       },
       "patch": {
         "description": "Updates file metadata like file name for a given key.",
-        "operationId": "updateMetadata",
+        "operationId": "Storage_updateMetadata",
         "parameters": [
           {
             "name": "key",
@@ -5935,7 +5918,7 @@
       },
       "delete": {
         "description": "Deletes a file from storage and removes its metadata.",
-        "operationId": "deleteFile",
+        "operationId": "Storage_deleteFile",
         "parameters": [
           {
             "name": "key",
@@ -5964,7 +5947,7 @@
     },
     "/api/v1/referrals/stats": {
       "get": {
-        "operationId": "getStats",
+        "operationId": "Referral_getStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -5984,7 +5967,7 @@
     },
     "/api/v1/referrals/code": {
       "get": {
-        "operationId": "getCode",
+        "operationId": "Referral_getCode",
         "parameters": [],
         "responses": {
           "200": {
@@ -6004,7 +5987,7 @@
     },
     "/api/v1/users/me": {
       "get": {
-        "operationId": "getProfile",
+        "operationId": "Users_getProfile",
         "parameters": [],
         "responses": {
           "200": {
@@ -6025,7 +6008,7 @@
         ]
       },
       "put": {
-        "operationId": "updateProfile",
+        "operationId": "Users_updateProfile",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6059,7 +6042,7 @@
         ]
       },
       "delete": {
-        "operationId": "deleteAccount",
+        "operationId": "Users_deleteAccount",
         "parameters": [],
         "responses": {
           "200": {
@@ -6082,7 +6065,7 @@
     },
     "/api/v1/users/me/email": {
       "post": {
-        "operationId": "changeEmail",
+        "operationId": "Users_changeEmail",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6118,7 +6101,7 @@
     },
     "/api/v1/users/me/password": {
       "post": {
-        "operationId": "changePassword",
+        "operationId": "Users_changePassword",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6154,7 +6137,7 @@
     },
     "/api/v1/users/me/deactivate": {
       "post": {
-        "operationId": "deactivateAccount",
+        "operationId": "Users_deactivateAccount",
         "parameters": [],
         "responses": {
           "200": {
@@ -6177,7 +6160,7 @@
     },
     "/api/v1/users/me/activity": {
       "get": {
-        "operationId": "getUserActivity",
+        "operationId": "Users_getUserActivity",
         "parameters": [],
         "responses": {
           "200": {
@@ -6200,7 +6183,7 @@
     },
     "/api/v1/users/me/export": {
       "get": {
-        "operationId": "exportUserData",
+        "operationId": "Users_exportUserData",
         "parameters": [],
         "responses": {
           "200": {
@@ -6223,7 +6206,7 @@
     },
     "/api/v1/users/me/gdpr": {
       "delete": {
-        "operationId": "gdprDeleteAccount",
+        "operationId": "Users_gdprDeleteAccount",
         "parameters": [],
         "responses": {
           "200": {
@@ -6246,7 +6229,7 @@
     },
     "/api/v1/users/me/consent": {
       "post": {
-        "operationId": "updateConsent",
+        "operationId": "Users_updateConsent",
         "parameters": [],
         "responses": {
           "200": {
@@ -6269,7 +6252,7 @@
     },
     "/api/v1/users/me/privacy-settings": {
       "get": {
-        "operationId": "getPrivacySettings",
+        "operationId": "Users_getPrivacySettings",
         "parameters": [],
         "responses": {
           "200": {
@@ -6292,7 +6275,7 @@
     },
     "/api/v1/users/preferences": {
       "get": {
-        "operationId": "getPreferences",
+        "operationId": "Users_getPreferences",
         "parameters": [],
         "responses": {
           "200": {
@@ -6313,7 +6296,7 @@
         ]
       },
       "patch": {
-        "operationId": "updatePreferences",
+        "operationId": "Users_updatePreferences",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6346,7 +6329,7 @@
     },
     "/api/v1/users/restore": {
       "post": {
-        "operationId": "restoreAccount",
+        "operationId": "Users_restoreAccount",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6382,7 +6365,7 @@
     },
     "/api/v1/users/{id}/permanent": {
       "delete": {
-        "operationId": "hardDeleteAccount",
+        "operationId": "Users_hardDeleteAccount",
         "parameters": [
           {
             "name": "id",
@@ -6417,7 +6400,7 @@
     },
     "/api/v1/admin/users": {
       "get": {
-        "operationId": "list",
+        "operationId": "AdminUsers_list",
         "parameters": [
           {
             "name": "page",
@@ -6486,7 +6469,7 @@
     },
     "/api/v1/admin/users/{id}/deactivate": {
       "post": {
-        "operationId": "deactivate",
+        "operationId": "AdminUsers_deactivate",
         "parameters": [
           {
             "name": "id",
@@ -6521,7 +6504,7 @@
     },
     "/api/v1/admin/users/{id}/verify": {
       "post": {
-        "operationId": "verify",
+        "operationId": "AdminUsers_verify",
         "parameters": [
           {
             "name": "id",
@@ -6556,7 +6539,7 @@
     },
     "/api/v1/admin/users/{id}/restore": {
       "post": {
-        "operationId": "restore",
+        "operationId": "AdminUsers_restore",
         "parameters": [
           {
             "name": "id",
@@ -6592,7 +6575,7 @@
     "/api/v1/properties": {
       "post": {
         "description": "Creates a new property listing. Only agents (landlords) and admins can create properties.",
-        "operationId": "create",
+        "operationId": "Properties_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6681,7 +6664,7 @@
       },
       "get": {
         "description": "Retrieve a paginated list of property listings with optional filtering. By default, returns only published properties for public access.",
-        "operationId": "findAll",
+        "operationId": "Properties_findAll",
         "parameters": [
           {
             "name": "type",
@@ -7028,7 +7011,7 @@
     "/api/v1/properties/my-properties": {
       "get": {
         "description": "Retrieve all properties owned by the authenticated user.",
-        "operationId": "findMyProperties",
+        "operationId": "Properties_findMyProperties",
         "parameters": [
           {
             "name": "type",
@@ -7380,7 +7363,7 @@
     "/api/v1/properties/{id}/view": {
       "post": {
         "description": "Increments view count and updates last viewed time for published listings.",
-        "operationId": "recordView",
+        "operationId": "Properties_recordView",
         "parameters": [
           {
             "name": "id",
@@ -7467,7 +7450,7 @@
     "/api/v1/properties/{id}/favorite": {
       "post": {
         "description": "Increments favorite count for a published listing.",
-        "operationId": "recordFavorite",
+        "operationId": "Properties_recordFavorite",
         "parameters": [
           {
             "name": "id",
@@ -7547,7 +7530,7 @@
     "/api/v1/properties/{id}": {
       "get": {
         "description": "Retrieve detailed information about a specific property by its ID. Only published properties are publicly accessible.",
-        "operationId": "findOne",
+        "operationId": "Properties_findOne",
         "parameters": [
           {
             "name": "id",
@@ -7625,7 +7608,7 @@
       },
       "patch": {
         "description": "Update an existing property. Only the owner or admin can update a property.",
-        "operationId": "update",
+        "operationId": "Properties_update",
         "parameters": [
           {
             "name": "id",
@@ -7697,7 +7680,7 @@
       },
       "delete": {
         "description": "Delete a property listing. Only the owner or admin can delete a property.",
-        "operationId": "remove",
+        "operationId": "Properties_remove",
         "parameters": [
           {
             "name": "id",
@@ -7768,7 +7751,7 @@
     "/api/v1/properties/{id}/publish": {
       "post": {
         "description": "Change property status from draft to published. Only the owner or admin can publish.",
-        "operationId": "publish",
+        "operationId": "Properties_publish",
         "parameters": [
           {
             "name": "id",
@@ -7832,7 +7815,7 @@
     "/api/v1/properties/{id}/archive": {
       "post": {
         "description": "Archive a property listing. Only the owner or admin can archive.",
-        "operationId": "archive",
+        "operationId": "Properties_archive",
         "parameters": [
           {
             "name": "id",
@@ -7903,7 +7886,7 @@
     "/api/v1/properties/{id}/mark-rented": {
       "post": {
         "description": "Mark a property as rented. Only the owner or admin can change this status.",
-        "operationId": "markAsRented",
+        "operationId": "Properties_markAsRented",
         "parameters": [
           {
             "name": "id",
@@ -7974,7 +7957,7 @@
     "/api/v1/properties/property-listings/wizard/start": {
       "post": {
         "description": "Creates a server-side draft for the property listing wizard.",
-        "operationId": "startListingWizard",
+        "operationId": "Properties_startListingWizard",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -8065,7 +8048,7 @@
     "/api/v1/properties/property-listings/wizard/{id}/step": {
       "patch": {
         "description": "Persists the current step payload and step progress.",
-        "operationId": "updateListingWizardStep",
+        "operationId": "Properties_updateListingWizardStep",
         "parameters": [
           {
             "name": "id",
@@ -8165,7 +8148,7 @@
     "/api/v1/properties/property-listings/wizard/{id}/draft": {
       "get": {
         "description": "Returns an existing draft for resume-later functionality.",
-        "operationId": "getListingWizardDraft",
+        "operationId": "Properties_getListingWizardDraft",
         "parameters": [
           {
             "name": "id",
@@ -8253,7 +8236,7 @@
       },
       "delete": {
         "description": "Deletes a wizard draft for the current user.",
-        "operationId": "deleteListingWizardDraft",
+        "operationId": "Properties_deleteListingWizardDraft",
         "parameters": [
           {
             "name": "id",
@@ -8343,7 +8326,7 @@
     "/api/v1/properties/property-listings/wizard/{id}/publish": {
       "post": {
         "description": "Validates the wizard draft, creates a property listing, and publishes it.",
-        "operationId": "publishListingWizard",
+        "operationId": "Properties_publishListingWizard",
         "parameters": [
           {
             "name": "id",
@@ -8432,7 +8415,7 @@
     },
     "/api/v1/property-listings/wizard/start": {
       "post": {
-        "operationId": "start",
+        "operationId": "PropertyWizard_start",
         "parameters": [],
         "responses": {
           "201": {
@@ -8452,7 +8435,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/draft": {
       "get": {
-        "operationId": "findOne",
+        "operationId": "PropertyWizard_findOne",
         "parameters": [
           {
             "name": "id",
@@ -8479,7 +8462,7 @@
         ]
       },
       "delete": {
-        "operationId": "remove",
+        "operationId": "PropertyWizard_remove",
         "parameters": [
           {
             "name": "id",
@@ -8508,7 +8491,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/step": {
       "patch": {
-        "operationId": "updateStep",
+        "operationId": "PropertyWizard_updateStep",
         "parameters": [
           {
             "name": "id",
@@ -8537,7 +8520,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/publish": {
       "post": {
-        "operationId": "publish",
+        "operationId": "PropertyWizard_publish",
         "parameters": [
           {
             "name": "id",
@@ -8566,7 +8549,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/ai/pricing-suggestion": {
       "get": {
-        "operationId": "getPricingSuggestion",
+        "operationId": "PropertyWizard_getPricingSuggestion",
         "parameters": [
           {
             "name": "id",
@@ -8595,7 +8578,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/ai/description-suggestion": {
       "get": {
-        "operationId": "getDescriptionSuggestion",
+        "operationId": "PropertyWizard_getDescriptionSuggestion",
         "parameters": [
           {
             "name": "id",
@@ -8624,7 +8607,7 @@
     },
     "/api/v1/property-listings/wizard/{id}/ai/completeness-score": {
       "get": {
-        "operationId": "getCompletenessScore",
+        "operationId": "PropertyWizard_getCompletenessScore",
         "parameters": [
           {
             "name": "id",
@@ -8653,7 +8636,7 @@
     },
     "/api/v1/api/properties/{propertyId}/mode": {
       "get": {
-        "operationId": "getMode",
+        "operationId": "PropertyModes_getMode",
         "parameters": [
           {
             "name": "propertyId",
@@ -8680,7 +8663,7 @@
         ]
       },
       "patch": {
-        "operationId": "updateMode",
+        "operationId": "PropertyModes_updateMode",
         "parameters": [
           {
             "name": "propertyId",
@@ -8725,7 +8708,7 @@
     },
     "/api/v1/api/properties/{propertyId}/mode/recommendations": {
       "get": {
-        "operationId": "getModeRecommendations",
+        "operationId": "PropertyModes_getModeRecommendations",
         "parameters": [
           {
             "name": "propertyId",
@@ -8754,7 +8737,7 @@
     },
     "/api/v1/api/properties/{propertyId}/mode/switch": {
       "post": {
-        "operationId": "switchMode",
+        "operationId": "PropertyModes_switchMode",
         "parameters": [
           {
             "name": "propertyId",
@@ -8796,7 +8779,7 @@
     },
     "/api/v1/properties/{propertyId}/availability": {
       "get": {
-        "operationId": "getCalendar",
+        "operationId": "Availability_getCalendar",
         "parameters": [
           {
             "name": "propertyId",
@@ -8843,7 +8826,7 @@
         ]
       },
       "put": {
-        "operationId": "updateAvailability",
+        "operationId": "Availability_updateAvailability",
         "parameters": [
           {
             "name": "propertyId",
@@ -8882,7 +8865,7 @@
     },
     "/api/v1/properties/{propertyId}/availability/block": {
       "post": {
-        "operationId": "blockDates",
+        "operationId": "Availability_blockDates",
         "parameters": [
           {
             "name": "propertyId",
@@ -8921,7 +8904,7 @@
     },
     "/api/v1/properties/{propertyId}/availability/unblock": {
       "post": {
-        "operationId": "unblockDates",
+        "operationId": "Availability_unblockDates",
         "parameters": [
           {
             "name": "propertyId",
@@ -8960,7 +8943,7 @@
     },
     "/api/v1/properties/{propertyId}/availability/price": {
       "post": {
-        "operationId": "setPrice",
+        "operationId": "Availability_setPrice",
         "parameters": [
           {
             "name": "propertyId",
@@ -8999,7 +8982,7 @@
     },
     "/api/v1/fraud/user/{userId}": {
       "get": {
-        "operationId": "checkUserFraud",
+        "operationId": "Fraud_checkUserFraud",
         "parameters": [
           {
             "name": "userId",
@@ -9029,7 +9012,7 @@
     },
     "/api/v1/fraud/listing/{listingId}": {
       "get": {
-        "operationId": "checkListingFraud",
+        "operationId": "Fraud_checkListingFraud",
         "parameters": [
           {
             "name": "listingId",
@@ -9059,7 +9042,7 @@
     },
     "/api/v1/fraud/alerts": {
       "get": {
-        "operationId": "getFraudAlerts",
+        "operationId": "Fraud_getFraudAlerts",
         "parameters": [
           {
             "name": "status",
@@ -9092,7 +9075,7 @@
     },
     "/api/v1/fraud/alerts/{alertId}/resolve": {
       "patch": {
-        "operationId": "resolveFraudAlert",
+        "operationId": "Fraud_resolveFraudAlert",
         "parameters": [
           {
             "name": "alertId",
@@ -9125,7 +9108,7 @@
     },
     "/api/v1/fraud/transaction": {
       "post": {
-        "operationId": "checkTransactionFraud",
+        "operationId": "Fraud_checkTransactionFraud",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9155,7 +9138,7 @@
     },
     "/api/v1/disputes": {
       "post": {
-        "operationId": "createDispute",
+        "operationId": "Disputes_createDispute",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9189,7 +9172,7 @@
         ]
       },
       "get": {
-        "operationId": "findAll",
+        "operationId": "Disputes_findAll",
         "parameters": [
           {
             "name": "status",
@@ -9324,7 +9307,7 @@
     },
     "/api/v1/disputes/{id}": {
       "get": {
-        "operationId": "findOne",
+        "operationId": "Disputes_findOne",
         "parameters": [
           {
             "name": "id",
@@ -9354,7 +9337,7 @@
         ]
       },
       "put": {
-        "operationId": "update",
+        "operationId": "Disputes_update",
         "parameters": [
           {
             "name": "id",
@@ -9392,7 +9375,7 @@
     },
     "/api/v1/disputes/dispute/{disputeId}": {
       "get": {
-        "operationId": "findByDisputeId",
+        "operationId": "Disputes_findByDisputeId",
         "parameters": [
           {
             "name": "disputeId",
@@ -9420,7 +9403,7 @@
     },
     "/api/v1/disputes/{disputeId}/evidence": {
       "post": {
-        "operationId": "addEvidence",
+        "operationId": "Disputes_addEvidence",
         "parameters": [
           {
             "name": "disputeId",
@@ -9458,7 +9441,7 @@
     },
     "/api/v1/disputes/{disputeId}/comment": {
       "post": {
-        "operationId": "addComment",
+        "operationId": "Disputes_addComment",
         "parameters": [
           {
             "name": "disputeId",
@@ -9496,7 +9479,7 @@
     },
     "/api/v1/disputes/{disputeId}/resolve": {
       "post": {
-        "operationId": "resolveDispute",
+        "operationId": "Disputes_resolveDispute",
         "parameters": [
           {
             "name": "disputeId",
@@ -9534,7 +9517,7 @@
     },
     "/api/v1/disputes/agreement/{agreementId}/disputes": {
       "get": {
-        "operationId": "getAgreementDisputes",
+        "operationId": "Disputes_getAgreementDisputes",
         "parameters": [
           {
             "name": "agreementId",
@@ -9563,7 +9546,7 @@
     "/api/v1/admin/disputes/{id}": {
       "patch": {
         "description": "Allows admins to update dispute status and add resolution. Validates status transitions.",
-        "operationId": "updateDispute",
+        "operationId": "AdminDisputes_updateDispute",
         "parameters": [
           {
             "name": "id",
@@ -9611,7 +9594,7 @@
     },
     "/api/v1/bookings": {
       "post": {
-        "operationId": "create",
+        "operationId": "Bookings_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9640,7 +9623,7 @@
       },
       "get": {
         "description": "role=host returns bookings on properties the caller owns; role=guest (default) returns bookings the caller made.",
-        "operationId": "findMine",
+        "operationId": "Bookings_findMine",
         "parameters": [
           {
             "name": "role",
@@ -9691,7 +9674,7 @@
     },
     "/api/v1/bookings/{id}/confirm": {
       "patch": {
-        "operationId": "confirm",
+        "operationId": "Bookings_confirm",
         "parameters": [
           {
             "name": "id",
@@ -9720,7 +9703,7 @@
     },
     "/api/v1/bookings/{id}/cancel": {
       "patch": {
-        "operationId": "cancel",
+        "operationId": "Bookings_cancel",
         "parameters": [
           {
             "name": "id",
@@ -9749,7 +9732,7 @@
     },
     "/api/v1/payments": {
       "post": {
-        "operationId": "recordPayment",
+        "operationId": "Payment_recordPayment",
         "parameters": [
           {
             "name": "idempotency-key",
@@ -9792,7 +9775,7 @@
         ]
       },
       "get": {
-        "operationId": "listPayments",
+        "operationId": "Payment_listPayments",
         "parameters": [],
         "responses": {
           "200": {
@@ -9815,7 +9798,7 @@
     },
     "/api/v1/payments/stellar/rent": {
       "post": {
-        "operationId": "processStellarRent",
+        "operationId": "Payment_processStellarRent",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9845,7 +9828,7 @@
     },
     "/api/v1/payments/stellar/escrow": {
       "post": {
-        "operationId": "createEscrowDeposit",
+        "operationId": "Payment_createEscrowDeposit",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9875,7 +9858,7 @@
     },
     "/api/v1/payments/stellar/escrow/{escrowId}/release": {
       "post": {
-        "operationId": "releaseEscrowDeposit",
+        "operationId": "Payment_releaseEscrowDeposit",
         "parameters": [
           {
             "name": "escrowId",
@@ -9914,7 +9897,7 @@
     },
     "/api/v1/payments/stellar/escrow/{escrowId}/refund": {
       "post": {
-        "operationId": "refundEscrowDeposit",
+        "operationId": "Payment_refundEscrowDeposit",
         "parameters": [
           {
             "name": "escrowId",
@@ -9953,7 +9936,7 @@
     },
     "/api/v1/payments/reconciliation/run": {
       "post": {
-        "operationId": "reconcilePayments",
+        "operationId": "Payment_reconcilePayments",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -9983,7 +9966,7 @@
     },
     "/api/v1/payments/retry-failed": {
       "post": {
-        "operationId": "retryFailedPayments",
+        "operationId": "Payment_retryFailedPayments",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10013,7 +9996,7 @@
     },
     "/api/v1/payments/analytics/summary": {
       "get": {
-        "operationId": "getPaymentAnalytics",
+        "operationId": "Payment_getPaymentAnalytics",
         "parameters": [],
         "responses": {
           "200": {
@@ -10033,7 +10016,7 @@
     },
     "/api/v1/payments/{id}": {
       "get": {
-        "operationId": "getPayment",
+        "operationId": "Payment_getPayment",
         "parameters": [
           {
             "name": "id",
@@ -10065,7 +10048,7 @@
     },
     "/api/v1/payments/{id}/refund": {
       "post": {
-        "operationId": "processRefund",
+        "operationId": "Payment_processRefund",
         "parameters": [
           {
             "name": "id",
@@ -10103,7 +10086,7 @@
     },
     "/api/v1/payments/{id}/receipt": {
       "get": {
-        "operationId": "generateReceipt",
+        "operationId": "Payment_generateReceipt",
         "parameters": [
           {
             "name": "id",
@@ -10131,7 +10114,7 @@
     },
     "/api/v1/payment-methods": {
       "post": {
-        "operationId": "createPaymentMethod",
+        "operationId": "PaymentMethod_createPaymentMethod",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10153,7 +10136,7 @@
         ]
       },
       "get": {
-        "operationId": "listPaymentMethods",
+        "operationId": "PaymentMethod_listPaymentMethods",
         "parameters": [],
         "responses": {
           "200": {
@@ -10167,7 +10150,7 @@
     },
     "/api/v1/payment-methods/{id}": {
       "patch": {
-        "operationId": "updatePaymentMethod",
+        "operationId": "PaymentMethod_updatePaymentMethod",
         "parameters": [
           {
             "name": "id",
@@ -10198,7 +10181,7 @@
         ]
       },
       "delete": {
-        "operationId": "deletePaymentMethod",
+        "operationId": "PaymentMethod_deletePaymentMethod",
         "parameters": [
           {
             "name": "id",
@@ -10221,7 +10204,7 @@
     },
     "/api/v1/payments/schedules": {
       "post": {
-        "operationId": "createSchedule",
+        "operationId": "PaymentSchedule_createSchedule",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10249,7 +10232,7 @@
         ]
       },
       "get": {
-        "operationId": "listSchedules",
+        "operationId": "PaymentSchedule_listSchedules",
         "parameters": [],
         "responses": {
           "200": {
@@ -10268,7 +10251,7 @@
     },
     "/api/v1/payments/schedules/{id}": {
       "patch": {
-        "operationId": "updateSchedule",
+        "operationId": "PaymentSchedule_updateSchedule",
         "parameters": [
           {
             "name": "id",
@@ -10306,7 +10289,7 @@
     },
     "/api/v1/payments/schedules/{id}/run": {
       "post": {
-        "operationId": "runSchedule",
+        "operationId": "PaymentSchedule_runSchedule",
         "parameters": [
           {
             "name": "id",
@@ -10334,7 +10317,7 @@
     },
     "/api/v1/payments/schedules/process-due": {
       "post": {
-        "operationId": "processDueSchedules",
+        "operationId": "PaymentSchedule_processDueSchedules",
         "parameters": [],
         "responses": {
           "201": {
@@ -10354,7 +10337,7 @@
     "/api/v1/payments/webhooks/gateway": {
       "post": {
         "description": "Called by external payment gateways to notify of status changes. Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and a timestamp in X-Webhook-Timestamp. Not for direct client use.",
-        "operationId": "handleGatewayWebhook",
+        "operationId": "PaymentWebhook_handleGatewayWebhook",
         "parameters": [
           {
             "name": "x-chioma-payment-secret",
@@ -10389,7 +10372,7 @@
     "/api/v1/payments/webhooks/refund": {
       "post": {
         "description": "Called by external payment gateways to notify of refund status changes. Requires a valid HMAC-SHA256 signature in X-Webhook-Signature and a timestamp in X-Webhook-Timestamp. Payload is validated with RefundWebhookDto (Zod).",
-        "operationId": "handleRefundWebhook",
+        "operationId": "PaymentWebhook_handleRefundWebhook",
         "parameters": [
           {
             "name": "x-chioma-payment-secret",
@@ -10423,7 +10406,7 @@
     },
     "/api/v1/admin/refunds": {
       "get": {
-        "operationId": "listRefundRequests",
+        "operationId": "AdminRefunds_listRefundRequests",
         "parameters": [],
         "responses": {
           "200": {
@@ -10443,7 +10426,7 @@
     },
     "/api/v1/admin/refunds/{id}": {
       "get": {
-        "operationId": "getRefundRequest",
+        "operationId": "AdminRefunds_getRefundRequest",
         "parameters": [
           {
             "name": "id",
@@ -10472,7 +10455,7 @@
     },
     "/api/v1/admin/refunds/{id}/decision": {
       "post": {
-        "operationId": "decideRefundRequest",
+        "operationId": "AdminRefunds_decideRefundRequest",
         "parameters": [
           {
             "name": "id",
@@ -10512,7 +10495,7 @@
     "/api/v1/status": {
       "get": {
         "description": "Overall service status, per-component health, and uptime — for status-page integrations and uptime monitors.",
-        "operationId": "getStatus",
+        "operationId": "Status_getStatus",
         "parameters": [
           {
             "name": "userId",
@@ -10536,7 +10519,7 @@
     },
     "/api/v1/status/uptime": {
       "get": {
-        "operationId": "getUptime",
+        "operationId": "Status_getUptime",
         "parameters": [],
         "responses": {
           "200": {
@@ -10551,7 +10534,7 @@
     },
     "/api/v1/feature-flags/eval": {
       "get": {
-        "operationId": "evaluateFlag",
+        "operationId": "FeatureFlags_evaluateFlag",
         "parameters": [
           {
             "name": "key",
@@ -10583,7 +10566,7 @@
     },
     "/api/v1/feature-flags/eval-all": {
       "get": {
-        "operationId": "evaluateAllFlags",
+        "operationId": "FeatureFlags_evaluateAllFlags",
         "parameters": [
           {
             "name": "userId",
@@ -10607,7 +10590,7 @@
     },
     "/api/v1/admin/feature-flags": {
       "get": {
-        "operationId": "getAllFlags",
+        "operationId": "FeatureFlags_getAllFlags",
         "parameters": [],
         "responses": {
           "200": {
@@ -10620,7 +10603,7 @@
         ]
       },
       "post": {
-        "operationId": "createFlag",
+        "operationId": "FeatureFlags_createFlag",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10645,7 +10628,7 @@
     },
     "/api/v1/admin/feature-flags/{key}": {
       "get": {
-        "operationId": "getFlagByKey",
+        "operationId": "FeatureFlags_getFlagByKey",
         "parameters": [
           {
             "name": "key",
@@ -10667,7 +10650,7 @@
         ]
       },
       "patch": {
-        "operationId": "updateFlag",
+        "operationId": "FeatureFlags_updateFlag",
         "parameters": [
           {
             "name": "key",
@@ -10699,7 +10682,7 @@
         ]
       },
       "delete": {
-        "operationId": "deleteFlag",
+        "operationId": "FeatureFlags_deleteFlag",
         "parameters": [
           {
             "name": "key",
@@ -10723,7 +10706,7 @@
     },
     "/api/v1/admin/feature-flags/{key}/rollout": {
       "patch": {
-        "operationId": "setRolloutPercentage",
+        "operationId": "FeatureFlags_setRolloutPercentage",
         "parameters": [
           {
             "name": "key",
@@ -10747,7 +10730,7 @@
     },
     "/api/v1/admin/feature-flags/{key}/kill": {
       "post": {
-        "operationId": "killSwitch",
+        "operationId": "FeatureFlags_killSwitch",
         "parameters": [
           {
             "name": "key",
@@ -10772,7 +10755,7 @@
     "/api/v1/profile": {
       "post": {
         "description": "Creates a new on-chain profile for the authenticated user. Requires a connected Stellar wallet.",
-        "operationId": "createProfile",
+        "operationId": "Profile_createProfile",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10817,7 +10800,7 @@
       },
       "put": {
         "description": "Updates the authenticated user's profile. If the data hash changes, the on-chain data will be updated.",
-        "operationId": "updateProfile",
+        "operationId": "Profile_updateProfile",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -10862,7 +10845,7 @@
       },
       "get": {
         "description": "Retrieves the on-chain and off-chain profile data for the authenticated user.",
-        "operationId": "getProfile",
+        "operationId": "Profile_getProfile",
         "parameters": [],
         "responses": {
           "200": {
@@ -10896,7 +10879,7 @@
     "/api/v1/profile/wallet/{address}": {
       "get": {
         "description": "Retrieves the on-chain and off-chain profile data for a given wallet address. This is a public endpoint.",
-        "operationId": "getProfileByWallet",
+        "operationId": "Profile_getProfileByWallet",
         "parameters": [
           {
             "name": "address",
@@ -10933,7 +10916,7 @@
     "/api/v1/profile/verify": {
       "get": {
         "description": "Verifies that the off-chain profile data matches the hash stored on-chain.",
-        "operationId": "verifyDataIntegrity",
+        "operationId": "Profile_verifyDataIntegrity",
         "parameters": [],
         "responses": {
           "200": {
@@ -10969,7 +10952,7 @@
     },
     "/api/v1/i18n/languages": {
       "get": {
-        "operationId": "getLanguages",
+        "operationId": "I18n_getLanguages",
         "parameters": [],
         "responses": {
           "200": {
@@ -10984,7 +10967,7 @@
     },
     "/api/v1/i18n/translate": {
       "get": {
-        "operationId": "translate",
+        "operationId": "I18n_translate",
         "parameters": [
           {
             "name": "key",
@@ -11016,7 +10999,7 @@
     },
     "/api/v1/i18n/format-demo": {
       "get": {
-        "operationId": "formatDemo",
+        "operationId": "I18n_formatDemo",
         "parameters": [
           {
             "name": "lang",
@@ -11040,7 +11023,7 @@
     },
     "/api/v1/documents": {
       "post": {
-        "operationId": "create",
+        "operationId": "Document_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -11075,7 +11058,7 @@
         ]
       },
       "get": {
-        "operationId": "findAll",
+        "operationId": "Document_findAll",
         "parameters": [
           {
             "name": "status",
@@ -11161,7 +11144,7 @@
     },
     "/api/v1/documents/{id}": {
       "get": {
-        "operationId": "findOne",
+        "operationId": "Document_findOne",
         "parameters": [
           {
             "name": "id",
@@ -11195,7 +11178,7 @@
         ]
       },
       "patch": {
-        "operationId": "update",
+        "operationId": "Document_update",
         "parameters": [
           {
             "name": "id",
@@ -11239,7 +11222,7 @@
         ]
       },
       "delete": {
-        "operationId": "remove",
+        "operationId": "Document_remove",
         "parameters": [
           {
             "name": "id",
@@ -11268,7 +11251,7 @@
     },
     "/api/v1/documents/{id}/share": {
       "post": {
-        "operationId": "share",
+        "operationId": "Document_share",
         "parameters": [
           {
             "name": "id",
@@ -11314,7 +11297,7 @@
     },
     "/api/v1/documents/{id}/download": {
       "get": {
-        "operationId": "getDownloadUrl",
+        "operationId": "Document_getDownloadUrl",
         "parameters": [
           {
             "name": "id",
@@ -11344,7 +11327,7 @@
     "/api/v1/feedback": {
       "post": {
         "description": "Submit bug reports, feature requests, or general feedback. Optional auth to associate with your account.",
-        "operationId": "submit",
+        "operationId": "Feedback_submit",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -11385,7 +11368,7 @@
     "/api/v1/developer/api-keys": {
       "post": {
         "description": "Create a new API key for use with X-API-Key header. The raw key is returned only once. Key expires in 90 days by default.",
-        "operationId": "createKey",
+        "operationId": "Developer_createKey",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -11439,7 +11422,7 @@
       },
       "get": {
         "description": "List your API keys (masked). Includes expiration status and warnings. Requires JWT.",
-        "operationId": "listKeys",
+        "operationId": "Developer_listKeys",
         "parameters": [],
         "responses": {
           "200": {
@@ -11460,7 +11443,7 @@
     "/api/v1/developer/api-keys/expiring-soon": {
       "get": {
         "description": "Get API keys that will expire within the next 30 days. Useful for proactive rotation reminders.",
-        "operationId": "getKeysExpiringSoon",
+        "operationId": "Developer_getKeysExpiringSoon",
         "parameters": [],
         "responses": {
           "200": {
@@ -11481,7 +11464,7 @@
     "/api/v1/developer/api-keys/{id}": {
       "get": {
         "description": "Get detailed information about a specific API key.",
-        "operationId": "getKey",
+        "operationId": "Developer_getKey",
         "parameters": [
           {
             "name": "id",
@@ -11513,7 +11496,7 @@
       },
       "patch": {
         "description": "Update API key name, description, permissions and/or expiration date.",
-        "operationId": "updateKey",
+        "operationId": "Developer_updateKey",
         "parameters": [
           {
             "name": "id",
@@ -11554,7 +11537,7 @@
         ]
       },
       "delete": {
-        "operationId": "revokeKey",
+        "operationId": "Developer_revokeKey",
         "parameters": [
           {
             "name": "id",
@@ -11588,7 +11571,7 @@
     "/api/v1/developer/api-keys/{id}/rotate": {
       "post": {
         "description": "Generate a new API key while keeping the old one active for a transition period (7 days). The new raw key is returned only once.",
-        "operationId": "rotateKey",
+        "operationId": "Developer_rotateKey",
         "parameters": [
           {
             "name": "id",
@@ -11657,7 +11640,7 @@
     "/api/v1/developer/api-keys/{id}/rotation-history": {
       "get": {
         "description": "View the rotation history for a specific API key.",
-        "operationId": "getRotationHistory",
+        "operationId": "Developer_getRotationHistory",
         "parameters": [
           {
             "name": "id",
@@ -11690,7 +11673,7 @@
     },
     "/api/v1/developer-portal": {
       "get": {
-        "operationId": "getPortal",
+        "operationId": "DeveloperPortal_getPortal",
         "parameters": [],
         "responses": {
           "200": {
@@ -11704,7 +11687,7 @@
     },
     "/api/v1/search/properties": {
       "get": {
-        "operationId": "searchProperties",
+        "operationId": "Search_searchProperties",
         "parameters": [
           {
             "name": "q",
@@ -11732,29 +11715,6 @@
           },
           {
             "name": "country",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "apartment",
-                "house",
-                "commercial",
-                "land",
-                "other"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
             "required": true,
             "in": "query",
             "schema": {
@@ -11865,6 +11825,21 @@
               "type": "array",
               "items": {}
             }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "apartment",
+                "house",
+                "commercial",
+                "land",
+                "other"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -11880,27 +11855,13 @@
     },
     "/api/v1/search/users": {
       "get": {
-        "operationId": "searchUsers",
+        "operationId": "Search_searchUsers",
         "parameters": [
           {
             "name": "q",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "role",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "user",
-                "admin",
-                "agent",
-                "super_admin"
-              ],
               "type": "string"
             }
           },
@@ -11955,6 +11916,20 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "user",
+                "admin",
+                "agent",
+                "super_admin"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -11970,30 +11945,13 @@
     },
     "/api/v1/search/documents": {
       "get": {
-        "operationId": "searchDocuments",
+        "operationId": "Search_searchDocuments",
         "parameters": [
           {
             "name": "q",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "draft",
-                "pending_deposit",
-                "signed",
-                "active",
-                "expired",
-                "terminated",
-                "disputed"
-              ],
               "type": "string"
             }
           },
@@ -12088,6 +12046,23 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "pending_deposit",
+                "signed",
+                "active",
+                "expired",
+                "terminated",
+                "disputed"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12103,7 +12078,7 @@
     },
     "/api/v1/search/suggest": {
       "get": {
-        "operationId": "suggest",
+        "operationId": "Search_suggest",
         "parameters": [
           {
             "name": "q",
@@ -12127,7 +12102,7 @@
     },
     "/api/v1/cleanup/report": {
       "get": {
-        "operationId": "getReport",
+        "operationId": "Cleanup_getReport",
         "parameters": [],
         "responses": {
           "200": {
@@ -12142,7 +12117,7 @@
     },
     "/api/v1/cleanup/orphaned-records/run": {
       "post": {
-        "operationId": "runOrphanedRecordsCleanup",
+        "operationId": "Cleanup_runOrphanedRecordsCleanup",
         "parameters": [],
         "responses": {
           "200": {
@@ -12157,7 +12132,7 @@
     },
     "/api/v1/data-archival/stats": {
       "get": {
-        "operationId": "getArchivalStats",
+        "operationId": "DataArchival_getArchivalStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -12172,7 +12147,7 @@
     },
     "/api/v1/data-archival/manual-archive": {
       "post": {
-        "operationId": "manualArchive",
+        "operationId": "DataArchival_manualArchive",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12197,7 +12172,7 @@
     },
     "/api/v1/data-archival/trigger-scheduled": {
       "post": {
-        "operationId": "triggerScheduledArchival",
+        "operationId": "DataArchival_triggerScheduledArchival",
         "parameters": [],
         "responses": {
           "200": {
@@ -12212,7 +12187,7 @@
     },
     "/api/v1/ai/models": {
       "get": {
-        "operationId": "getModels",
+        "operationId": "Ai_getModels",
         "parameters": [],
         "responses": {
           "200": {
@@ -12227,7 +12202,7 @@
     },
     "/api/v1/ai/fraud/score": {
       "post": {
-        "operationId": "scoreFraud",
+        "operationId": "Ai_scoreFraud",
         "parameters": [],
         "responses": {
           "201": {
@@ -12242,7 +12217,7 @@
     },
     "/api/v1/ai/recommendations/properties": {
       "post": {
-        "operationId": "getRecommendations",
+        "operationId": "Ai_getRecommendations",
         "parameters": [],
         "responses": {
           "201": {
@@ -12257,7 +12232,7 @@
     },
     "/api/v1/api/ai/matching/recommendations": {
       "get": {
-        "operationId": "getRecommendations",
+        "operationId": "MatchingAi_getRecommendations",
         "parameters": [
           {
             "name": "limit",
@@ -12287,7 +12262,7 @@
     },
     "/api/v1/api/ai/matching/match-score/{propertyId}": {
       "get": {
-        "operationId": "getMatchScore",
+        "operationId": "MatchingAi_getMatchScore",
         "parameters": [
           {
             "name": "propertyId",
@@ -12316,7 +12291,7 @@
     },
     "/api/v1/api/ai/matching/similar/{propertyId}": {
       "get": {
-        "operationId": "getSimilarProperties",
+        "operationId": "MatchingAi_getSimilarProperties",
         "parameters": [
           {
             "name": "propertyId",
@@ -12354,7 +12329,7 @@
     },
     "/api/v1/api/ai/matching/preferences": {
       "post": {
-        "operationId": "updatePreferences",
+        "operationId": "MatchingAi_updatePreferences",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12382,7 +12357,7 @@
         ]
       },
       "get": {
-        "operationId": "getPreferences",
+        "operationId": "MatchingAi_getPreferences",
         "parameters": [],
         "responses": {
           "200": {
@@ -12403,7 +12378,7 @@
     "/api/v1/favorites": {
       "get": {
         "description": "Retrieves a list of all properties favorited by the current user.",
-        "operationId": "getFavorites",
+        "operationId": "Favorites_getFavorites",
         "parameters": [],
         "responses": {
           "200": {
@@ -12435,7 +12410,7 @@
       },
       "post": {
         "description": "Saves a property to the current user's favorites list.",
-        "operationId": "addFavorite",
+        "operationId": "Favorites_addFavorite",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12479,7 +12454,7 @@
     "/api/v1/favorites/{propertyId}": {
       "get": {
         "description": "Check if the current user has favorited a property and view the total favorite count.",
-        "operationId": "getFavoriteStatus",
+        "operationId": "Favorites_getFavoriteStatus",
         "parameters": [
           {
             "name": "propertyId",
@@ -12522,7 +12497,7 @@
       },
       "delete": {
         "description": "Removes a property from the current user's favorites list.",
-        "operationId": "removeFavorite",
+        "operationId": "Favorites_removeFavorite",
         "parameters": [
           {
             "name": "propertyId",
@@ -12560,7 +12535,7 @@
     "/api/v1/favorites/{propertyId}/count": {
       "get": {
         "description": "Get the total number of favorites for a property.",
-        "operationId": "getFavoriteCount",
+        "operationId": "Favorites_getFavoriteCount",
         "parameters": [
           {
             "name": "propertyId",
@@ -12609,7 +12584,7 @@
     },
     "/api/v1/screenings/tenant/request": {
       "post": {
-        "operationId": "createRequest",
+        "operationId": "Screening_createRequest",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12639,7 +12614,7 @@
     },
     "/api/v1/screenings/tenant/{id}/consent": {
       "post": {
-        "operationId": "grantConsent",
+        "operationId": "Screening_grantConsent",
         "parameters": [
           {
             "name": "id",
@@ -12678,7 +12653,7 @@
     },
     "/api/v1/screenings/tenant/{id}": {
       "get": {
-        "operationId": "getScreening",
+        "operationId": "Screening_getScreening",
         "parameters": [
           {
             "name": "id",
@@ -12707,7 +12682,7 @@
     },
     "/api/v1/screenings/tenant/{id}/report": {
       "get": {
-        "operationId": "getReport",
+        "operationId": "Screening_getReport",
         "parameters": [
           {
             "name": "id",
@@ -12736,7 +12711,7 @@
     },
     "/api/v1/screenings/tenant/webhook": {
       "post": {
-        "operationId": "handleProviderWebhook",
+        "operationId": "Screening_handleProviderWebhook",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12761,7 +12736,7 @@
     },
     "/api/v1/inquiries": {
       "post": {
-        "operationId": "create",
+        "operationId": "Inquiries_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -12791,7 +12766,7 @@
     },
     "/api/v1/inquiries/incoming": {
       "get": {
-        "operationId": "incoming",
+        "operationId": "Inquiries_incoming",
         "parameters": [],
         "responses": {
           "200": {
@@ -12811,7 +12786,7 @@
     },
     "/api/v1/inquiries/outgoing": {
       "get": {
-        "operationId": "outgoing",
+        "operationId": "Inquiries_outgoing",
         "parameters": [],
         "responses": {
           "200": {
@@ -12831,7 +12806,7 @@
     },
     "/api/v1/inquiries/{id}/viewed": {
       "patch": {
-        "operationId": "markViewed",
+        "operationId": "Inquiries_markViewed",
         "parameters": [
           {
             "name": "id",
@@ -12860,7 +12835,7 @@
     },
     "/api/v1/analytics/landlord/dashboard": {
       "get": {
-        "operationId": "getLandlordDashboard",
+        "operationId": "Analytics_getLandlordDashboard",
         "parameters": [
           {
             "name": "days",
@@ -12890,7 +12865,7 @@
     },
     "/api/v1/analytics/landlord/fees-summary": {
       "get": {
-        "operationId": "getLandlordFeesSummary",
+        "operationId": "Analytics_getLandlordFeesSummary",
         "parameters": [],
         "responses": {
           "200": {
@@ -12910,7 +12885,7 @@
     },
     "/api/v1/analytics/dashboard/metrics": {
       "get": {
-        "operationId": "getDashboardMetrics",
+        "operationId": "Analytics_getDashboardMetrics",
         "parameters": [],
         "responses": {
           "200": {
@@ -12930,7 +12905,7 @@
     },
     "/api/v1/analytics/payment/analytics": {
       "get": {
-        "operationId": "getPaymentAnalytics",
+        "operationId": "Analytics_getPaymentAnalytics",
         "parameters": [
           {
             "name": "days",
@@ -12960,7 +12935,7 @@
     },
     "/api/v1/analytics/user/activity": {
       "get": {
-        "operationId": "getUserActivityAnalytics",
+        "operationId": "Analytics_getUserActivityAnalytics",
         "parameters": [
           {
             "name": "days",
@@ -12990,7 +12965,7 @@
     },
     "/api/v1/analytics/reports/generate": {
       "post": {
-        "operationId": "generateReport",
+        "operationId": "Analytics_generateReport",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -13020,7 +12995,7 @@
     },
     "/api/v1/analytics/export": {
       "post": {
-        "operationId": "exportAnalytics",
+        "operationId": "Analytics_exportAnalytics",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -13050,7 +13025,7 @@
     },
     "/api/v1/database-performance/report": {
       "get": {
-        "operationId": "getPerformanceReport",
+        "operationId": "DatabasePerformance_getPerformanceReport",
         "parameters": [],
         "responses": {
           "200": {
@@ -13070,7 +13045,7 @@
     },
     "/api/v1/database-performance/slow-queries": {
       "get": {
-        "operationId": "getSlowQueries",
+        "operationId": "DatabasePerformance_getSlowQueries",
         "parameters": [],
         "responses": {
           "200": {
@@ -13090,7 +13065,7 @@
     },
     "/api/v1/database-performance/indexes/usage": {
       "get": {
-        "operationId": "getIndexUsage",
+        "operationId": "DatabasePerformance_getIndexUsage",
         "parameters": [],
         "responses": {
           "200": {
@@ -13110,7 +13085,7 @@
     },
     "/api/v1/database-performance/indexes/unused": {
       "get": {
-        "operationId": "getUnusedIndexes",
+        "operationId": "DatabasePerformance_getUnusedIndexes",
         "parameters": [],
         "responses": {
           "200": {
@@ -13130,7 +13105,7 @@
     },
     "/api/v1/database-performance/indexes/recommendations": {
       "get": {
-        "operationId": "getIndexRecommendations",
+        "operationId": "DatabasePerformance_getIndexRecommendations",
         "parameters": [],
         "responses": {
           "200": {
@@ -13150,7 +13125,7 @@
     },
     "/api/v1/database-performance/indexes/duplicates": {
       "get": {
-        "operationId": "getDuplicateIndexes",
+        "operationId": "DatabasePerformance_getDuplicateIndexes",
         "parameters": [],
         "responses": {
           "200": {
@@ -13170,7 +13145,7 @@
     },
     "/api/v1/database-performance/query-analysis": {
       "get": {
-        "operationId": "getQueryAnalysis",
+        "operationId": "DatabasePerformance_getQueryAnalysis",
         "parameters": [],
         "responses": {
           "200": {
@@ -13190,7 +13165,7 @@
     },
     "/api/v1/database-performance/query-analysis/n-plus-one": {
       "get": {
-        "operationId": "getNPlusOneDetection",
+        "operationId": "DatabasePerformance_getNPlusOneDetection",
         "parameters": [
           {
             "name": "severity",
@@ -13225,7 +13200,7 @@
     },
     "/api/v1/database-performance/query-analysis/patterns": {
       "get": {
-        "operationId": "getQueryPatterns",
+        "operationId": "DatabasePerformance_getQueryPatterns",
         "parameters": [
           {
             "name": "search",
@@ -13254,7 +13229,7 @@
     },
     "/api/v1/database-performance/query-analysis/history": {
       "get": {
-        "operationId": "getQueryHistory",
+        "operationId": "DatabasePerformance_getQueryHistory",
         "parameters": [
           {
             "name": "limit",
@@ -13291,7 +13266,7 @@
     },
     "/api/v1/database-performance/query-analysis/stats": {
       "get": {
-        "operationId": "getQueryStats",
+        "operationId": "DatabasePerformance_getQueryStats",
         "parameters": [],
         "responses": {
           "200": {
@@ -13311,7 +13286,7 @@
     },
     "/api/v1/database-performance/query-analysis/reset": {
       "get": {
-        "operationId": "resetQueryAnalysis",
+        "operationId": "DatabasePerformance_resetQueryAnalysis",
         "parameters": [],
         "responses": {
           "200": {
@@ -13331,7 +13306,7 @@
     },
     "/api/v1/maintenance": {
       "post": {
-        "operationId": "create",
+        "operationId": "Maintenance_create",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -13359,7 +13334,7 @@
         ]
       },
       "get": {
-        "operationId": "findAll",
+        "operationId": "Maintenance_findAll",
         "parameters": [
           {
             "name": "priority",
@@ -13398,7 +13373,7 @@
     },
     "/api/v1/maintenance/{id}": {
       "get": {
-        "operationId": "findOne",
+        "operationId": "Maintenance_findOne",
         "parameters": [
           {
             "name": "id",
@@ -13427,7 +13402,7 @@
     },
     "/api/v1/maintenance/{id}/status": {
       "patch": {
-        "operationId": "updateStatus",
+        "operationId": "Maintenance_updateStatus",
         "parameters": [
           {
             "name": "id",
@@ -13467,7 +13442,7 @@
     "/v1/health": {
       "get": {
         "description": "Returns overall status and per-service health (database, stellar, memory).",
-        "operationId": "check",
+        "operationId": "Health_check",
         "parameters": [],
         "responses": {
           "200": {
@@ -13637,7 +13612,7 @@
     "/v1/health/detailed": {
       "get": {
         "description": "Includes system details (Node version, memory, PID).",
-        "operationId": "detailedCheck",
+        "operationId": "Health_detailedCheck",
         "parameters": [],
         "responses": {
           "200": {
@@ -13807,7 +13782,7 @@
     "/api/v1/kyc/submit": {
       "post": {
         "description": "Submit identity/address data for KYC verification (SEP-9 style).",
-        "operationId": "submitKyc",
+        "operationId": "Kyc_submitKyc",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -13841,7 +13816,7 @@
     "/api/v1/kyc/status": {
       "get": {
         "description": "Returns current KYC verification status for the authenticated user.",
-        "operationId": "getKycStatus",
+        "operationId": "Kyc_getKycStatus",
         "parameters": [],
         "responses": {
           "200": {
@@ -13872,7 +13847,7 @@
     "/api/v1/kyc/webhook": {
       "post": {
         "description": "Called by KYC provider to notify status changes. Not for client use.",
-        "operationId": "webhook",
+        "operationId": "Kyc_webhook",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -13897,7 +13872,7 @@
     },
     "/api/v1/admin/kyc/pending": {
       "get": {
-        "operationId": "listPending",
+        "operationId": "AdminKyc_listPending",
         "parameters": [
           {
             "name": "page",
@@ -13973,7 +13948,7 @@
     },
     "/api/v1/admin/kyc/rejected": {
       "get": {
-        "operationId": "listRejected",
+        "operationId": "AdminKyc_listRejected",
         "parameters": [
           {
             "name": "page",
@@ -14049,7 +14024,7 @@
     },
     "/api/v1/admin/kyc/{id}": {
       "get": {
-        "operationId": "getDetail",
+        "operationId": "AdminKyc_getDetail",
         "parameters": [
           {
             "name": "id",
@@ -14081,7 +14056,7 @@
     },
     "/api/v1/admin/kyc/{id}/approve": {
       "post": {
-        "operationId": "approve",
+        "operationId": "AdminKyc_approve",
         "parameters": [
           {
             "name": "id",
@@ -14123,7 +14098,7 @@
     },
     "/api/v1/admin/kyc/{id}/reject": {
       "post": {
-        "operationId": "reject",
+        "operationId": "AdminKyc_reject",
         "parameters": [
           {
             "name": "id",

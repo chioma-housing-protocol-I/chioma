@@ -50,7 +50,10 @@ export function useCacheStrategy() {
 
   const warmCache = useCallback(
     async (
-      queries: Array<{ key: readonly any[]; queryFn: () => Promise<any> }>,
+      queries: Array<{
+        key: readonly unknown[];
+        queryFn: () => Promise<unknown>;
+      }>,
     ) => {
       await Promise.all(
         queries.map(({ key, queryFn }) => {
@@ -95,32 +98,27 @@ export function useCacheInvalidation() {
 
   return {
     invalidateProperties: (id?: string) =>
-      invalidateCache(
-        id ? queryKeys.properties.detail : queryKeys.properties.lists,
-        id,
-      ),
+      id
+        ? invalidateCache(queryKeys.properties.detail, id)
+        : invalidateCache(queryKeys.properties.lists),
     invalidatePayments: (id?: string) =>
-      invalidateCache(
-        id ? queryKeys.payments.detail : queryKeys.payments.lists,
-        id,
-      ),
+      id
+        ? invalidateCache(queryKeys.payments.detail, id)
+        : invalidateCache(queryKeys.payments.lists),
     invalidateAgreements: (id?: string) =>
-      invalidateCache(
-        id ? queryKeys.agreements.detail : queryKeys.agreements.lists,
-        id,
-      ),
+      id
+        ? invalidateCache(queryKeys.agreements.detail, id)
+        : invalidateCache(queryKeys.agreements.lists),
     invalidateNotifications: () =>
       invalidateCache(queryKeys.notifications.list),
     invalidateFavorites: (propertyId?: string) =>
-      invalidateCache(
-        propertyId ? queryKeys.favorites.status : queryKeys.favorites.list,
-        propertyId,
-      ),
+      propertyId
+        ? invalidateCache(queryKeys.favorites.status, propertyId)
+        : invalidateCache(queryKeys.favorites.list),
     invalidateMaintenance: (id?: string) =>
-      invalidateCache(
-        id ? queryKeys.maintenance.detail : queryKeys.maintenance.lists,
-        id,
-      ),
+      id
+        ? invalidateCache(queryKeys.maintenance.detail, id)
+        : invalidateCache(queryKeys.maintenance.lists),
     invalidateAnalytics: (days?: number) =>
       invalidateCache(queryKeys.analytics.landlordOverview, days ?? 30),
   };

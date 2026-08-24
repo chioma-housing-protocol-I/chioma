@@ -52,13 +52,14 @@ export default function RoleSelectionModal({
 
     try {
       // Create a user object with selected role
+      const authRole: 'user' | 'agent' = role === 'agent' ? 'agent' : 'user';
       const mockUser = {
         id: 'user-' + Date.now(),
         email: walletAddress,
         emailVerified: false,
         firstName: 'User',
         lastName: 'Account',
-        role: role as 'tenant' | 'landlord' | 'agent' | 'admin',
+        role: authRole,
       };
 
       setTokens('mock-token', 'mock-refresh', mockUser);

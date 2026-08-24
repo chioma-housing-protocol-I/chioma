@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/store/authStore';
+import { useAuth, type User } from '@/store/authStore';
 import {
   initializeStellarWalletsKit,
   StellarWalletsKit,
@@ -117,25 +117,19 @@ export default function WalletConnectButton({
         // login path (password, OAuth) normalizes these before setTokens;
         // do the same here so consumers that index user.firstName[0]
         // (e.g. the navbar avatar initial) don't crash on null.
-        let userWithRole = {
-          ...result.user,
-          firstName: result.user.firstName ?? '',
-          lastName: result.user.lastName ?? '',
-        };
+        const rawUser = result.user;
+        let userRole = rawUser.role;
 
         // Use the role from the backend response directly
         // The backend already determines the role based on the wallet address
-        if (!userWithRole.role) {
+        if (!userRole) {
           // Only detect role if backend didn't provide one (shouldn't happen)
           toast.loading('Detecting user role...', { id: 'role-detect' });
           const detectedRole = await detectRoleFromWallet(address);
           toast.dismiss('role-detect');
 
           if (detectedRole) {
-            userWithRole = {
-              ...userWithRole,
-              role: detectedRole as User['role'],
-            };
+            userRole = detectedRole === 'agent' ? 'agent' : 'user';
           } else {
             // No role found - this shouldn't happen in production
             // but handle gracefully
@@ -145,11 +139,18 @@ export default function WalletConnectButton({
           }
         }
 
-        setTokens(
-          result.accessToken,
-          result.refreshToken ?? null,
-          userWithRole,
-        );
+        const userWithRole: User = {
+          id: rawUser.id,
+          email: rawUser.email ?? '',
+          emailVerified: rawUser.emailVerified ?? false,
+          firstName: rawUser.firstName ?? '',
+          lastName: rawUser.lastName ?? '',
+          avatar: rawUser.avatar,
+          locale: rawUser.locale,
+          role: (userRole as 'admin' | 'user' | 'agent') ?? 'user',
+        };
+
+        setTokens(result.accessToken, result.refreshToken ?? '', userWithRole);
         setWalletAddress(address);
         // A deliberate reconnect starts the onboarding prompt fresh.
         clearEmailOnboardingSkip();

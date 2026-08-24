@@ -18,7 +18,7 @@ interface BarSeries {
 }
 
 interface MultiBarChartWrapperProps {
-  data: Record<string, unknown>[];
+  data: unknown[];
   dataKeyX: string;
   series: BarSeries[];
 }

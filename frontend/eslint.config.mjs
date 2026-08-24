@@ -30,7 +30,7 @@ export default [
   },
   {
     // Test utilities and mock setups may use unknown or explicit any with justification
-    files: ['**/__tests__/**', 'test/**'],
+    files: ['**/__tests__/**', 'test/**', 'mocks/**'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
     },
