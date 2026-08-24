@@ -14,5 +14,16 @@
     "/signup": { "maxKB": 500, "warnKB": 400 },
     "/messages": { "maxKB": 500, "warnKB": 400 },
     "shared-chunks": { "maxKB": 7000, "warnKB": 5500 }
+  },
+  "baseline": {
+    "_comment": "Reference sizes (KB) for PR delta reporting. Update after intentional bundle changes.",
+    "/": 250,
+    "/properties": 250,
+    "/user": 250,
+    "/admin": 250,
+    "/login": 200,
+    "/signup": 200,
+    "/messages": 200,
+    "shared-chunks": 5500
   }
 }
