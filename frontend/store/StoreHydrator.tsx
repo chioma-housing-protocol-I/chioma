@@ -6,7 +6,7 @@ import { useUIStore } from './ui-store';
 import { useRealtime } from '@/lib/websocket/use-realtime';
 import { registerServiceWorker } from '@/lib/offline/register-sw';
 import { setupAutoSync } from '@/lib/offline/background-sync';
-import { useI18nStore, type SupportedLocale } from '@/lib/i18n';
+import { useI18nStore, LOCALE_OPTIONS, type SupportedLocale } from '@/lib/i18n';
 
 /**
  * StoreHydrator — Bootstraps client-side state on mount.
@@ -36,8 +36,10 @@ export function StoreHydrator() {
   // This ensures that if the user had saved a preference server-side,
   // it overrides the browser-detected or previously stored local preference.
   useEffect(() => {
-    const SUPPORTED = ['en', 'es', 'fr'] as const;
-    if (user?.locale && SUPPORTED.includes(user.locale as SupportedLocale)) {
+    const isSupportedLocale = LOCALE_OPTIONS.some(
+      (option) => option.code === user?.locale,
+    );
+    if (user?.locale && isSupportedLocale) {
       setLocale(user.locale as SupportedLocale);
     }
   }, [user?.locale, setLocale]);

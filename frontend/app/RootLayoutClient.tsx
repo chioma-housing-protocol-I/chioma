@@ -14,6 +14,7 @@ import { ToastProvider } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
+import { HtmlAttributesSync } from '@/components/i18n';
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       <ModalProvider>
         <ErrorProvider>
           <StoreHydrator />
+          <HtmlAttributesSync />
           <ErrorMonitoringProvider />
           <WebVitalsReporter />
           <PwaController />
