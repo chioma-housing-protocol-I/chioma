@@ -3,6 +3,7 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  DeleteDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -60,4 +61,7 @@ export class Document {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt: Date | null;
 }

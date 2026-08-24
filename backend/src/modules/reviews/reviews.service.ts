@@ -327,7 +327,7 @@ export class ReviewsService {
       if (review.reviewerId !== userId) {
         throw new AuthorizationError('Not authorized');
       }
-      await this.reviewRepository.delete({ id });
+      await this.reviewRepository.softDelete({ id });
       return { deleted: true };
     }
 
@@ -338,7 +338,7 @@ export class ReviewsService {
       if (guestReview.hostId !== userId) {
         throw new AuthorizationError('Not authorized');
       }
-      await this.guestReviewRepository.delete({ id });
+      await this.guestReviewRepository.softDelete({ id });
       return { deleted: true };
     }
 
@@ -349,7 +349,7 @@ export class ReviewsService {
       if (hostReview.guestId !== userId) {
         throw new AuthorizationError('Not authorized');
       }
-      await this.hostReviewRepository.delete({ id });
+      await this.hostReviewRepository.softDelete({ id });
       return { deleted: true };
     }
 

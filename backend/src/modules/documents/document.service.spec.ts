@@ -24,6 +24,7 @@ describe('DocumentService', () => {
     sharedWith: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockRepo = {
@@ -32,6 +33,7 @@ describe('DocumentService', () => {
     findOne: jest.fn().mockResolvedValue(mockDoc),
     find: jest.fn().mockResolvedValue([mockDoc]),
     remove: jest.fn().mockResolvedValue(mockDoc),
+    softRemove: jest.fn().mockResolvedValue(mockDoc),
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
