@@ -14,7 +14,10 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "test:watch": "vitest",
+    "types:generate": "openapi-typescript ../backend/openapi.json -o ./types/api-generated.ts",
+    "types:check": "openapi-typescript ../backend/openapi.json -o ./types/api-generated.ts && git diff --exit-code types/api-generated.ts",
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "i18n:audit:fix": "node scripts/i18n-audit.mjs --fix"
   },
@@ -78,6 +81,7 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "16.1.3",
     "jsdom": "^28.1.0",
+    "openapi-typescript": "^7.13.0",
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "schema-utils": "^4.3.3",

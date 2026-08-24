@@ -2,6 +2,7 @@ import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { StorageService } from '../../storage/storage.service';
+import { requestContext } from '../../../common/request-context/request-context';
 
 export interface DocumentJobData {
   type:
@@ -14,6 +15,9 @@ export interface DocumentJobData {
   fileName: string;
   contentType: string;
   options?: Record<string, any>;
+  correlationId?: string;
+  requestId?: string;
+  userId?: string;
 }
 
 @Processor('documents')
@@ -24,40 +28,46 @@ export class DocumentQueueProcessor {
 
   @Process()
   async handleDocumentJob(job: Job<DocumentJobData>): Promise<void> {
-    this.logger.log(
-      `Processing document job ${job.id}: ${job.data.type} for file ${job.data.fileKey}`,
-    );
+    const correlationId = job.data?.correlationId || job.data?.requestId;
+    const requestId = job.data?.requestId || correlationId;
+    const userId = job.data?.userId;
 
-    try {
-      switch (job.data.type) {
-        case 'process-image':
-          await this.processImage(job.data);
-          break;
-
-        case 'generate-thumbnail':
-          await this.generateThumbnail(job.data);
-          break;
-
-        case 'convert-format':
-          await this.convertFormat(job.data);
-          break;
-
-        case 'extract-metadata':
-          await this.extractMetadata(job.data);
-          break;
-
-        default:
-          throw new Error(`Unknown document type: ${String(job.data.type)}`);
-      }
-
-      this.logger.log(`Document job ${job.id} completed successfully`);
-    } catch (error) {
-      this.logger.error(
-        `Document job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : '',
+    return requestContext.run({ correlationId, requestId, userId }, async () => {
+      this.logger.log(
+        `Processing document job ${job.id}: ${job.data.type} for file ${job.data.fileKey}`,
       );
-      throw error;
-    }
+
+      try {
+        switch (job.data.type) {
+          case 'process-image':
+            await this.processImage(job.data);
+            break;
+
+          case 'generate-thumbnail':
+            await this.generateThumbnail(job.data);
+            break;
+
+          case 'convert-format':
+            await this.convertFormat(job.data);
+            break;
+
+          case 'extract-metadata':
+            await this.extractMetadata(job.data);
+            break;
+
+          default:
+            throw new Error(`Unknown document type: ${String(job.data.type)}`);
+        }
+
+        this.logger.log(`Document job ${job.id} completed successfully`);
+      } catch (error) {
+        this.logger.error(
+          `Document job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error instanceof Error ? error.stack : '',
+        );
+        throw error;
+      }
+    });
   }
 
   private async processImage(data: DocumentJobData): Promise<void> {

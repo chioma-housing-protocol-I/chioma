@@ -5,6 +5,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { PaymentProcessingService } from '../../stellar/services/payment-processing.service';
 import { RentObligationNftService } from '../../stellar/services/rent-obligation-nft.service';
 import { EscrowIntegrationService } from '../../agreements/escrow-integration.service';
+import { requestContext } from '../../../common/request-context/request-context';
 
 // ---------------------------------------------------------------------------
 // Discriminated payload types for each blockchain job variant.
@@ -55,6 +56,9 @@ export interface BlockchainJobData {
   transactionId?: string;
   agreementId?: string;
   paymentId?: string;
+  correlationId?: string;
+  requestId?: string;
+  userId?: string;
   data: SendPaymentData | CreateEscrowData | ReleaseEscrowData | MintNftData | Record<string, any>;
 }
 
@@ -70,47 +74,53 @@ export class BlockchainQueueProcessor {
 
   @Process()
   async handleBlockchainJob(job: Job<BlockchainJobData>): Promise<void> {
-    this.logger.log(`Processing blockchain job ${job.id}: ${job.data.type}`);
+    const correlationId = job.data?.correlationId || (job.data as any)?.requestId;
+    const requestId = job.data?.requestId || correlationId;
+    const userId = job.data?.userId;
 
-    try {
-      switch (job.data.type) {
-        case 'send-payment':
-          await this.sendPayment(job.data);
-          break;
+    return requestContext.run({ correlationId, requestId, userId }, async () => {
+      this.logger.log(`Processing blockchain job ${job.id}: ${job.data.type}`);
 
-        case 'create-escrow':
-          await this.createEscrow(job.data);
-          break;
+      try {
+        switch (job.data.type) {
+          case 'send-payment':
+            await this.sendPayment(job.data);
+            break;
 
-        case 'release-escrow':
-          await this.releaseEscrow(job.data);
-          break;
+          case 'create-escrow':
+            await this.createEscrow(job.data);
+            break;
 
-        case 'mint-nft':
-          await this.mintNft(job.data);
-          break;
+          case 'release-escrow':
+            await this.releaseEscrow(job.data);
+            break;
 
-        case 'sync-transaction':
-          await this.syncTransaction(job.data);
-          break;
+          case 'mint-nft':
+            await this.mintNft(job.data);
+            break;
 
-        case 'process-anchor-transaction':
-          await this.processAnchorTransaction(job.data);
-          break;
+          case 'sync-transaction':
+            await this.syncTransaction(job.data);
+            break;
 
-        default:
-          throw new Error(`Unknown blockchain type: ${String(job.data.type)}`);
+          case 'process-anchor-transaction':
+            await this.processAnchorTransaction(job.data);
+            break;
+
+          default:
+            throw new Error(`Unknown blockchain type: ${String(job.data.type)}`);
+        }
+
+        this.logger.log(`Blockchain job ${job.id} completed successfully`);
+      } catch (error) {
+        this.logger.error(
+          `Blockchain job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error instanceof Error ? error.stack : '',
+        );
+        // Re-throw so Bull marks the job as failed, triggering retry/backoff/DLQ.
+        throw error;
       }
-
-      this.logger.log(`Blockchain job ${job.id} completed successfully`);
-    } catch (error) {
-      this.logger.error(
-        `Blockchain job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : '',
-      );
-      // Re-throw so Bull marks the job as failed, triggering retry/backoff/DLQ.
-      throw error;
-    }
+    });
   }
 
   // ---------------------------------------------------------------------------

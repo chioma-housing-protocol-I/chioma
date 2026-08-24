@@ -132,7 +132,10 @@ export default function WalletConnectButton({
           toast.dismiss('role-detect');
 
           if (detectedRole) {
-            userWithRole = { ...userWithRole, role: detectedRole as any };
+            userWithRole = {
+              ...userWithRole,
+              role: detectedRole as User['role'],
+            };
           } else {
             // No role found - this shouldn't happen in production
             // but handle gracefully

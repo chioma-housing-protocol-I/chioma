@@ -84,11 +84,11 @@ function manageCacheSize(queryCache: QueryCache): void {
   if (queries.length > MAX_CACHE_SIZE) {
     // Evict oldest queries that are not currently active
     const inactiveQueries = queries
-      .filter((query: any) => !query.state.isFetching)
-      .sort((a: any, b: any) => a.state.dataUpdatedAt - b.state.dataUpdatedAt);
+      .filter((query) => !query.state.isFetching)
+      .sort((a, b) => a.state.dataUpdatedAt - b.state.dataUpdatedAt);
 
     const toRemove = inactiveQueries.slice(0, queries.length - MAX_CACHE_SIZE);
-    toRemove.forEach((query: any) => {
+    toRemove.forEach((query) => {
       queryCache.remove(query.queryKey);
       cacheMetrics.evictions++;
     });
@@ -135,9 +135,13 @@ function handleGlobalError(error: unknown, source: string, action?: string) {
  */
 export function createQueryClient(): QueryClient {
   const queryCache = new QueryCache({
-    onError: (error: any, query: any) => {
+    onError: (error: Error, query) => {
       recordCacheMiss();
-      if (query.meta?.disableGlobalError) return;
+      if (
+        (query.meta as { disableGlobalError?: boolean } | undefined)
+          ?.disableGlobalError
+      )
+        return;
       handleGlobalError(error, 'QueryCache', query.queryKey.join(' / '));
     },
     onSuccess: () => {
@@ -146,8 +150,12 @@ export function createQueryClient(): QueryClient {
   });
 
   const mutationCache = new MutationCache({
-    onError: (error: any, variables: any, context: any, mutation: any) => {
-      if (mutation.meta?.disableGlobalError) return;
+    onError: (error: Error, _variables, _context, mutation) => {
+      if (
+        (mutation.meta as { disableGlobalError?: boolean } | undefined)
+          ?.disableGlobalError
+      )
+        return;
       handleGlobalError(error, 'MutationCache');
     },
   });

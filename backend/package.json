@@ -23,7 +23,7 @@
     "test:e2e": "DB_TYPE=postgres jest --config ./test/jest-e2e.json --runInBand",
     "ci": "pnpm run lint && npx prettier --check \"src/**/*.ts\" \"test/**/*.ts\" && pnpm exec tsc --noEmit && pnpm run test && pnpm run test:cov",
     "ci:local": "./scripts/ci-local.sh",
-    "openapi:generate": "OPENAPI_GENERATE=true ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
+    "openapi:generate": "OPENAPI_GENERATE=true ts-node -T -r tsconfig-paths/register scripts/generate-openapi.ts",
     "perf": "node scripts/performance-benchmark.mjs",
     "perf:enhanced": "node scripts/performance-benchmark-enhanced.mjs",
     "perf:load": "node scripts/load-test.mjs",

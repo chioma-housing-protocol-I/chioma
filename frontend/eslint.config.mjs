@@ -25,9 +25,13 @@ export default [
       'react-hooks/purity': 'warn',
       'react-hooks/incompatible-library': 'warn',
       'react-hooks/preserve-manual-memoization': 'warn',
-      // 71 pre-existing instances across generics, test mocks, and API
-      // wrappers — real debt, but fixing each needs a per-call-site type,
-      // not a mechanical rule change. Tracked as warning, not blocking.
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+  {
+    // Test utilities and mock setups may use unknown or explicit any with justification
+    files: ['**/__tests__/**', 'test/**'],
+    rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },

@@ -17,7 +17,10 @@ export function useCacheStrategy() {
   const queryClient = useQueryClient();
 
   const invalidateCache = useCallback(
-    (keyFactory: (...args: any[]) => readonly any[], ...args: any[]) => {
+    <TArgs extends unknown[]>(
+      keyFactory: (...args: TArgs) => readonly unknown[],
+      ...args: TArgs
+    ) => {
       queryClient.invalidateQueries({ queryKey: keyFactory(...args) });
     },
     [queryClient],
@@ -28,10 +31,10 @@ export function useCacheStrategy() {
   }, [queryClient]);
 
   const prefetchQuery = useCallback(
-    (
-      keyFactory: (...args: any[]) => readonly any[],
-      queryFn: () => Promise<any>,
-      ...args: any[]
+    <TArgs extends unknown[], TData>(
+      keyFactory: (...args: TArgs) => readonly unknown[],
+      queryFn: () => Promise<TData>,
+      ...args: TArgs
     ) => {
       const queryKey = keyFactory(...args);
       const ttl = resolveCacheTtl(queryKey);

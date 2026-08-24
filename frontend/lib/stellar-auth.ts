@@ -77,11 +77,12 @@ export async function signChallengeXdr(challengeXdr: string): Promise<string> {
   }
 }
 
+import type { User } from '@/types';
+
 export interface AuthResponse {
   accessToken?: string;
   refreshToken?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  user?: any;
+  user?: User;
 }
 
 export async function verifySignature(

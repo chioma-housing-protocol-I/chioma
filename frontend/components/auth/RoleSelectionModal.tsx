@@ -58,7 +58,7 @@ export default function RoleSelectionModal({
         emailVerified: false,
         firstName: 'User',
         lastName: 'Account',
-        role: role as any,
+        role: role as 'tenant' | 'landlord' | 'agent' | 'admin',
       };
 
       setTokens('mock-token', 'mock-refresh', mockUser);

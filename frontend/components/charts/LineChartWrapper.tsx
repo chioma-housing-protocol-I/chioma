@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 
 interface LineChartWrapperProps {
-  data: any[];
+  data: Record<string, unknown>[];
   dataKeyX: string;
   dataKeyY: string;
   strokeColor?: string;

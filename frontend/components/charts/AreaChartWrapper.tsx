@@ -11,13 +11,13 @@ import {
 } from 'recharts';
 
 interface AreaChartWrapperProps {
-  data: any[];
+  data: Record<string, unknown>[];
   dataKeyX: string;
   dataKeyY: string;
   fillColor?: string;
   strokeColor?: string;
   name?: string;
-  formatter?: (value: any) => string;
+  formatter?: (value: unknown) => string;
 }
 
 export default function AreaChartWrapper({
