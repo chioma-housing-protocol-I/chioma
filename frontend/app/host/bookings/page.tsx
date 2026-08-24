@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Users, CheckCircle, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -25,6 +27,7 @@ interface Booking {
 }
 
 export default function HostBookingsPage() {
+  const router = useRouter();
   const [status, setStatus] = useState('all');
   const queryClient = useQueryClient();
 
@@ -106,9 +109,14 @@ export default function HostBookingsPage() {
           <LoadingSpinner />
         </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          No bookings found
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="No bookings found"
+          description="Bookings from guests will show up here once your listings start getting reservations."
+          actionLabel="Manage listings"
+          onAction={() => router.push('/host/listings')}
+          variant="dark"
+        />
       ) : (
         <div className="space-y-4">
           {bookings.map((b: Booking) => (

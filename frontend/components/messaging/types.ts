@@ -26,6 +26,8 @@ export interface ChatRoom {
   unreadCount?: number;
 }
 
+export type MessageStatus = 'pending' | 'sent' | 'failed';
+
 export interface Message {
   id: string;
   content: string;
@@ -39,12 +41,23 @@ export interface Message {
     lastName: string;
     role: 'user' | 'admin';
   };
+  // Client-side only: present while a message is optimistically rendered
+  // ahead of server acknowledgement, or once it has failed to send.
+  status?: MessageStatus;
 }
 
 // Socket.io event payloads (matching the backend gateway)
 export interface SendMessagePayload {
   roomId: string;
   content: string;
+  // Echoed back by the server (if supported) so the client can reconcile
+  // the optimistic message with its authoritative record.
+  clientId?: string;
+}
+
+export interface SendMessageAck {
+  message?: Message;
+  error?: string;
 }
 
 export interface TypingPayload {

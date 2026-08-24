@@ -2,8 +2,11 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Mail, MessageSquare, Phone, Send, User } from 'lucide-react';
+import { cloneElement, isValidElement, type ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Enter your name'),
@@ -33,7 +36,7 @@ export function ContactForm({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     reset,
   } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
@@ -70,15 +73,22 @@ export function ContactForm({
         </p>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Field label="Name" icon={User} error={errors.name?.message}>
+        <Field name="name" label="Name" icon={User} error={errors.name?.message}>
           <input
             {...register('name')}
             className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/30 focus:border-blue-400/60"
             placeholder="Jane Doe"
           />
         </Field>
-        <Field label="Email" icon={Mail} error={errors.email?.message}>
+        <Field
+          name="email"
+          label="Email"
+          icon={Mail}
+          error={errors.email?.message}
+        >
           <input
             type="email"
             {...register('email')}
@@ -86,7 +96,12 @@ export function ContactForm({
             placeholder="jane@example.com"
           />
         </Field>
-        <Field label="Phone" icon={Phone} error={errors.phone?.message}>
+        <Field
+          name="phone"
+          label="Phone"
+          icon={Phone}
+          error={errors.phone?.message}
+        >
           <input
             {...register('phone')}
             className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/30 focus:border-blue-400/60"
@@ -94,6 +109,7 @@ export function ContactForm({
           />
         </Field>
         <Field
+          name="subject"
           label="Subject"
           icon={MessageSquare}
           error={errors.subject?.message}
@@ -107,6 +123,7 @@ export function ContactForm({
       </div>
 
       <Field
+        name="message"
         label="Message"
         icon={Send}
         error={errors.message?.message}
@@ -139,26 +156,44 @@ export function ContactForm({
 }
 
 function Field({
+  name,
   label,
   icon: Icon,
   error,
   children,
   className = '',
 }: {
+  name: string;
   label: string;
   icon: typeof User;
   error?: string;
-  children: React.ReactNode;
+  children: ReactElement;
   className?: string;
 }) {
+  const errorId = fieldErrorId(name);
+  const child = isValidElement(children)
+    ? cloneElement(children, {
+        id: name,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': error ? errorId : undefined,
+      } as Record<string, unknown>)
+    : children;
+
   return (
     <div className={className}>
-      <label className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100/45">
+      <label
+        htmlFor={name}
+        className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100/45"
+      >
         <Icon className="h-3.5 w-3.5" />
         {label}
       </label>
-      {children}
-      {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
+      {child}
+      {error ? (
+        <p id={errorId} className="mt-2 text-xs text-rose-300">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

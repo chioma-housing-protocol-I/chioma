@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCheck, Check, MessageCircle } from 'lucide-react';
+import { CheckCheck, Check, Clock, AlertCircle, MessageCircle } from 'lucide-react';
 import type { Message } from './types';
 import { UserAvatar } from './UserAvatar';
 import { useAuthStore } from '@/store/authStore';
@@ -11,6 +11,7 @@ interface MessageListProps {
   messages: Message[];
   typingUsers: Set<string>;
   isLoading: boolean;
+  onRetry?: (clientId: string) => void;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -55,6 +56,7 @@ export function MessageList({
   messages,
   typingUsers,
   isLoading,
+  onRetry,
 }: MessageListProps) {
   const { user } = useAuthStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,10 @@ export function MessageList({
                         isMine
                           ? 'bg-blue-600 text-white'
                           : 'bg-neutral-100 text-neutral-900'
+                      } ${message.status === 'pending' ? 'opacity-60' : ''} ${
+                        message.status === 'failed'
+                          ? 'ring-1 ring-red-400'
+                          : ''
                       } ${
                         isMine
                           ? isFirstInSequence && isLastInSequence
@@ -187,25 +193,56 @@ export function MessageList({
                       {message.content}
                     </div>
 
-                    {/* Timestamp — shows on hover */}
+                    {/* Timestamp/status — pending & failed stay visible; sent shows on hover */}
                     {isLastInSequence && (
                       <div
-                        className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        className={`flex items-center gap-1 mt-1 transition-opacity ${
                           isMine ? 'flex-row-reverse' : ''
+                        } ${
+                          isMine &&
+                          (message.status === 'pending' ||
+                            message.status === 'failed')
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         <span className="text-[10px] text-neutral-400">
-                          {formatMessageTime(message.createdAt)}
+                          {message.status === 'pending'
+                            ? 'Sending…'
+                            : message.status === 'failed'
+                              ? 'Not delivered'
+                              : formatMessageTime(message.createdAt)}
                         </span>
-                        {isMine && (
-                          <span aria-label={message.readAt ? 'Read' : 'Sent'}>
-                            {message.readAt ? (
-                              <CheckCheck size={11} className="text-blue-400" />
-                            ) : (
-                              <Check size={11} className="text-neutral-400" />
-                            )}
-                          </span>
-                        )}
+                        {isMine &&
+                          (message.status === 'pending' ? (
+                            <Clock
+                              size={11}
+                              className="text-neutral-400 animate-pulse"
+                              aria-label="Sending"
+                            />
+                          ) : message.status === 'failed' ? (
+                            <button
+                              type="button"
+                              onClick={() => onRetry?.(message.id)}
+                              className="flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline"
+                            >
+                              <AlertCircle size={11} />
+                              <span className="text-[10px] font-medium">
+                                Retry
+                              </span>
+                            </button>
+                          ) : (
+                            <span aria-label={message.readAt ? 'Read' : 'Sent'}>
+                              {message.readAt ? (
+                                <CheckCheck
+                                  size={11}
+                                  className="text-blue-400"
+                                />
+                              ) : (
+                                <Check size={11} className="text-neutral-400" />
+                              )}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>

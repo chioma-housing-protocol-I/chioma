@@ -11,6 +11,8 @@ import { SettingsCard } from './SettingsCard';
 import { PreferenceSwitch } from './PreferenceSwitch';
 import { ThemeSelector } from './ThemeSelector';
 import { MfaSetupPayload, ThemePreference, UserPreferences } from './types';
+import { fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 interface SettingsPageClientProps {
   embedded?: boolean;
@@ -182,7 +184,7 @@ export function SettingsPageClient({
     reset,
     watch,
     handleSubmit,
-    formState: { errors, isSubmitting: isUpdatingPassword },
+    formState: { errors, isSubmitting: isUpdatingPassword, submitCount },
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     mode: 'onBlur',
@@ -717,6 +719,8 @@ export function SettingsPageClient({
             className="space-y-4"
             noValidate
           >
+            <FormErrorSummary errors={errors} submitCount={submitCount} />
+
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <label
@@ -729,11 +733,20 @@ export function SettingsPageClient({
                   id="currentPassword"
                   type="password"
                   autoComplete="current-password"
+                  aria-invalid={errors.currentPassword ? true : undefined}
+                  aria-describedby={
+                    errors.currentPassword
+                      ? fieldErrorId('currentPassword')
+                      : undefined
+                  }
                   {...register('currentPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.currentPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('currentPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.currentPassword.message}
                   </p>
                 )}
@@ -749,11 +762,18 @@ export function SettingsPageClient({
                   id="newPassword"
                   type="password"
                   autoComplete="new-password"
+                  aria-invalid={errors.newPassword ? true : undefined}
+                  aria-describedby={
+                    errors.newPassword ? fieldErrorId('newPassword') : undefined
+                  }
                   {...register('newPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.newPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('newPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.newPassword.message}
                   </p>
                 )}
@@ -769,11 +789,20 @@ export function SettingsPageClient({
                   id="confirmPassword"
                   type="password"
                   autoComplete="new-password"
+                  aria-invalid={errors.confirmPassword ? true : undefined}
+                  aria-describedby={
+                    errors.confirmPassword
+                      ? fieldErrorId('confirmPassword')
+                      : undefined
+                  }
                   {...register('confirmPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('confirmPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.confirmPassword.message}
                   </p>
                 )}

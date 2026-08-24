@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { MapPin, Bed, Bath, Plus, Eye, Pencil, Building2 } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { PrefetchLink } from '@/components/navigation/PrefetchLink';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
   const [error, setError] = useState(false);
@@ -33,6 +35,7 @@ function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
 }
 
 export default function HostListingsPage() {
+  const router = useRouter();
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ['host-listings'],
     queryFn: async () => {
@@ -62,15 +65,14 @@ export default function HostListingsPage() {
           <LoadingSpinner />
         </div>
       ) : listings.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          <p className="text-xl mb-4">No listings yet</p>
-          <PrefetchLink
-            href="/properties/new"
-            className="text-blue-400 hover:underline"
-          >
-            Create your first listing →
-          </PrefetchLink>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="No listings yet"
+          description="Create your first listing to start accepting bookings from guests."
+          actionLabel="Create your first listing"
+          onAction={() => router.push('/properties/new')}
+          variant="dark"
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map(

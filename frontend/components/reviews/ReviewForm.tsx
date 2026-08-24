@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { StarRatingInput } from './StarRatingInput';
 import { Loader2, Fingerprint, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const reviewSchema = z.object({
   rating: z.number().min(1, 'Please select a rating').max(5),
@@ -33,7 +35,7 @@ export function ReviewForm({
     handleSubmit,
     setValue,
     control,
-    formState: { errors },
+    formState: { errors, submitCount },
     reset,
   } = useForm<ReviewFormData>({
     resolver: zodResolver(reviewSchema),
@@ -64,11 +66,24 @@ export function ReviewForm({
     >
       <div className="absolute -right-20 -top-20 w-48 h-48 rounded-full bg-blue-600 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="relative z-10">
-        <label className="mb-3 block text-[10px] font-bold uppercase tracking-widest text-blue-200/60">
+        <label
+          id="rating-label"
+          className="mb-3 block text-[10px] font-bold uppercase tracking-widest text-blue-200/60"
+        >
           Rate your experience
         </label>
-        <div className="bg-white/5 rounded-xl p-3 border border-white/5 inline-block">
+        <div
+          role="group"
+          aria-labelledby="rating-label"
+          aria-invalid={errors.rating ? true : undefined}
+          aria-describedby={
+            errors.rating ? fieldErrorId('rating') : undefined
+          }
+          className="bg-white/5 rounded-xl p-3 border border-white/5 inline-block"
+        >
           <StarRatingInput
             value={ratingValue}
             onChange={(val) =>
@@ -78,7 +93,10 @@ export function ReviewForm({
           />
         </div>
         {errors.rating && (
-          <p className="mt-2 text-xs font-bold text-red-400/80 uppercase tracking-tight">
+          <p
+            id={fieldErrorId('rating')}
+            className="mt-2 text-xs font-bold text-red-400/80 uppercase tracking-tight"
+          >
             {errors.rating.message}
           </p>
         )}
@@ -92,7 +110,6 @@ export function ReviewForm({
           Write a detailed review
         </label>
         <textarea
-          id="comment"
           rows={4}
           className={`
             w-full resize-none rounded-xl border px-4 py-4 transition-all duration-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 text-sm font-medium
@@ -104,10 +121,14 @@ export function ReviewForm({
           `}
           placeholder="Share details of your own experience at this place..."
           {...register('comment')}
+          {...fieldA11yProps('comment', errors.comment)}
         />
         <div className="mt-3 flex items-center justify-between">
           {errors.comment ? (
-            <p className="text-xs font-bold text-red-400/80 uppercase tracking-tight">
+            <p
+              id={fieldErrorId('comment')}
+              className="text-xs font-bold text-red-400/80 uppercase tracking-tight"
+            >
               {errors.comment.message}
             </p>
           ) : (

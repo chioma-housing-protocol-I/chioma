@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Users, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const TABS = [
   { label: 'Upcoming', value: 'confirmed' },
@@ -25,6 +27,7 @@ interface Trip {
 }
 
 export default function GuestTripsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState('confirmed');
 
   const { data: trips = [], isLoading } = useQuery({
@@ -62,12 +65,14 @@ export default function GuestTripsPage() {
           <LoadingSpinner />
         </div>
       ) : trips.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          <p className="text-xl mb-4">No trips here</p>
-          <Link href="/stays" className="text-blue-400 hover:underline">
-            Browse stays →
-          </Link>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="No trips here"
+          description="Once you book a stay, it will show up here so you can track upcoming and past trips."
+          actionLabel="Browse stays"
+          onAction={() => router.push('/stays')}
+          variant="dark"
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {trips.map((trip: Trip) => (

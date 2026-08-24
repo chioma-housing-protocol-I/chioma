@@ -2,7 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Review {
   id: string;
@@ -15,6 +17,7 @@ interface Review {
 }
 
 export default function GuestReviewsPage() {
+  const router = useRouter();
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['guest-reviews'],
     queryFn: async () => {
@@ -34,13 +37,14 @@ export default function GuestReviewsPage() {
           <LoadingSpinner />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          <Star size={48} className="mx-auto mb-4 text-blue-300/20" />
-          <p className="text-xl">No reviews written yet</p>
-          <p className="text-sm mt-2">
-            After your stay, you can leave a review for the host
-          </p>
-        </div>
+        <EmptyState
+          icon={Star}
+          title="No reviews written yet"
+          description="After your stay, you can leave a review for the host."
+          actionLabel="View your trips"
+          onAction={() => router.push('/guest/trips')}
+          variant="dark"
+        />
       ) : (
         <div className="space-y-4">
           {reviews.map((r: Review) => (

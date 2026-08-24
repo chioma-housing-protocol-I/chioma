@@ -3,6 +3,7 @@
 import { Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function HostReviewsPage() {
   const { data: reviews = [], isLoading } = useQuery({
@@ -40,7 +41,12 @@ export default function HostReviewsPage() {
           <LoadingSpinner />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">No reviews yet</div>
+        <EmptyState
+          icon={Star}
+          title="No reviews yet"
+          description="Guest reviews for your listings will appear here after they check out."
+          variant="dark"
+        />
       ) : (
         <div className="space-y-4">
           {reviews.map((r: { id: string; [key: string]: unknown }) => (

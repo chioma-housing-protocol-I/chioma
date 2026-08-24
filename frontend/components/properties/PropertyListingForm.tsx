@@ -21,6 +21,8 @@ import {
   useCreateProperty,
   useUploadPropertyImage,
 } from '@/lib/query/hooks/use-properties';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -49,7 +51,7 @@ export default function PropertyListingForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -122,11 +124,12 @@ export default function PropertyListingForm() {
                   </label>
                   <input
                     {...register('title')}
+                    {...fieldA11yProps('title', errors.title)}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                     placeholder="e.g. Modern Luxury Apartment with City View"
                   />
                   {errors.title && (
-                    <p className="text-red-400 text-xs mt-1 ml-1">
+                    <p id={fieldErrorId('title')} className="text-red-400 text-xs mt-1 ml-1">
                       {errors.title.message}
                     </p>
                   )}
@@ -137,12 +140,16 @@ export default function PropertyListingForm() {
                   </label>
                   <textarea
                     {...register('description')}
+                    {...fieldA11yProps('description', errors.description)}
                     rows={4}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                     placeholder="Describe the property's best features..."
                   />
                   {errors.description && (
-                    <p className="text-red-400 text-xs mt-1 ml-1">
+                    <p
+                      id={fieldErrorId('description')}
+                      className="text-red-400 text-xs mt-1 ml-1"
+                    >
                       {errors.description.message}
                     </p>
                   )}
@@ -175,11 +182,12 @@ export default function PropertyListingForm() {
                   </label>
                   <input
                     {...register('address')}
+                    {...fieldA11yProps('address', errors.address)}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                     placeholder="123 Main Street, Apt 4B"
                   />
                   {errors.address && (
-                    <p className="text-red-400 text-xs mt-1 ml-1">
+                    <p id={fieldErrorId('address')} className="text-red-400 text-xs mt-1 ml-1">
                       {errors.address.message}
                     </p>
                   )}
@@ -190,11 +198,12 @@ export default function PropertyListingForm() {
                   </label>
                   <input
                     {...register('city')}
+                    {...fieldA11yProps('city', errors.city)}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                     placeholder="New York"
                   />
                   {errors.city && (
-                    <p className="text-red-400 text-xs mt-1 ml-1">
+                    <p id={fieldErrorId('city')} className="text-red-400 text-xs mt-1 ml-1">
                       {errors.city.message}
                     </p>
                   )}
@@ -217,12 +226,13 @@ export default function PropertyListingForm() {
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-200/30" />
                     <input
                       {...register('price')}
+                      {...fieldA11yProps('price', errors.price)}
                       className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                       placeholder="2500"
                     />
                   </div>
                   {errors.price && (
-                    <p className="text-red-400 text-xs mt-1 ml-1">
+                    <p id={fieldErrorId('price')} className="text-red-400 text-xs mt-1 ml-1">
                       {errors.price.message}
                     </p>
                   )}
@@ -426,6 +436,8 @@ export default function PropertyListingForm() {
           </div>
         </div>
       )}
+
+      {step < 4 && <FormErrorSummary errors={errors} submitCount={submitCount} />}
 
       {renderStep()}
     </div>
