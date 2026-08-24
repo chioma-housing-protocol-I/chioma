@@ -39,4 +39,22 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    // Mock data must stay in tests and mock infrastructure — never in shipped UI.
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/mocks', '**/mocks/**', '@/mocks', '@/mocks/**'],
+              message:
+                'Mock modules must not be imported from app/ or components/. Use real API clients or keep mocks in tests.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
