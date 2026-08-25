@@ -12,6 +12,7 @@ import { MessagingModule } from '../messaging/messaging.module';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsRealtimeService } from './notifications-realtime.service';
 import { MonitoringModule } from '../monitoring/monitoring.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MonitoringModule } from '../monitoring/monitoring.module';
     }),
     MessagingModule,
     forwardRef(() => MonitoringModule),
+    AuditModule,
   ],
   controllers: [NotificationsController],
   providers: [
