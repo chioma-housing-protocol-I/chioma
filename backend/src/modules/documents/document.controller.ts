@@ -23,6 +23,8 @@ import {
   CreateDocumentDto,
   UpdateDocumentDto,
   ShareDocumentDto,
+  SignDocumentDto,
+  SignatureVerificationDto,
   DocumentFilterDto,
   DocumentResponseDto,
 } from './dto/document.dto';
@@ -121,6 +123,36 @@ export class DocumentController {
     return this.toResponse(doc);
   }
 
+  @Post(':id/sign')
+  @ApiOperation({ summary: 'Sign a document as one of its parties' })
+  @ApiResponse({ status: 200, type: DocumentResponseDto })
+  @ApiResponse({ status: 403, description: 'Not a party to the document' })
+  @ApiResponse({ status: 409, description: 'Already signed by this user' })
+  async sign(
+    @Param('id') id: string,
+    @Body() dto: SignDocumentDto,
+    @Req() req: { user: { id: string } },
+  ) {
+    const doc = await this.documentService.sign(
+      id,
+      req.user.id,
+      dto.signatureData,
+    );
+    return this.toResponse(doc);
+  }
+
+  @Get(':id/signatures')
+  @ApiOperation({
+    summary: 'Verify the integrity of all signatures on a document',
+  })
+  @ApiResponse({ status: 200, type: SignatureVerificationDto })
+  async verifySignatures(
+    @Param('id') id: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.documentService.verifySignatures(id, req.user.id);
+  }
+
   @Get(':id/download')
   @ApiOperation({ summary: 'Get document download URL' })
   @ApiResponse({ status: 200, description: 'Download URL' })
@@ -147,6 +179,12 @@ export class DocumentController {
       ownerId: doc.ownerId,
       description: doc.description,
       sharedWith: doc.sharedWith,
+      // Expose who signed and when, but never the raw signature payloads.
+      signatures:
+        doc.signatures?.map(({ signerId, signedAt }) => ({
+          signerId,
+          signedAt,
+        })) ?? null,
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
     };

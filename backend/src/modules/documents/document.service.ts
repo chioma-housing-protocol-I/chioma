@@ -2,15 +2,18 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { Document, DocumentType } from './document.entity';
 import {
   CreateDocumentDto,
   UpdateDocumentDto,
   DocumentFilterDto,
+  SignatureVerificationDto,
 } from './dto/document.dto';
 
 @Injectable()
@@ -88,15 +91,25 @@ export class DocumentService {
     return { documents, total, page, limit };
   }
 
-  async findOne(id: string, ownerId: string): Promise<Document> {
+  /**
+   * The parties to a document: its owner, the tenant it concerns, and any
+   * user it has been explicitly shared with. Only parties may retrieve or
+   * sign the document.
+   */
+  private isParty(doc: Document, userId: string): boolean {
+    return (
+      doc.ownerId === userId ||
+      doc.tenantId === userId ||
+      (doc.sharedWith ?? []).includes(userId)
+    );
+  }
+
+  async findOne(id: string, userId: string): Promise<Document> {
     const doc = await this.documentRepo.findOne({ where: { id } });
     if (!doc) {
       throw new NotFoundException('Document not found');
     }
-    if (
-      doc.ownerId !== ownerId &&
-      (!doc.sharedWith || !doc.sharedWith.includes(ownerId))
-    ) {
+    if (!this.isParty(doc, userId)) {
       throw new ForbiddenException('Access denied');
     }
     return doc;
@@ -161,5 +174,106 @@ export class DocumentService {
       .where('doc.sharedWith LIKE :userId', { userId: `%${userId}%` })
       .orderBy('doc.createdAt', 'DESC')
       .getMany();
+  }
+
+  /**
+   * Capture a signature from one of the document's parties.
+   *
+   * The stored `payloadHash` binds the signature payload to the document's
+   * content identifiers (`fileKey`, `fileSize`, `fileType`) at signing time;
+   * `verifySignatures` recomputes it to detect tampering.
+   */
+  async sign(
+    id: string,
+    signerId: string,
+    signatureData: string,
+  ): Promise<Document> {
+    const doc = await this.documentRepo.findOne({ where: { id } });
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+    if (!this.isParty(doc, signerId)) {
+      throw new ForbiddenException('Only parties to the document can sign it');
+    }
+    if (doc.status !== 'ACTIVE') {
+      throw new ConflictException('Only active documents can be signed');
+    }
+
+    const signatures = doc.signatures ?? [];
+    if (signatures.some((s) => s.signerId === signerId)) {
+      throw new ConflictException('Document already signed by this user');
+    }
+
+    const signedAt = new Date().toISOString();
+    signatures.push({
+      signerId,
+      signedAt,
+      signatureData,
+      payloadHash: this.computeSignatureHash(
+        doc,
+        signerId,
+        signedAt,
+        signatureData,
+      ),
+    });
+    doc.signatures = signatures;
+
+    this.logger.log(`Document ${id} signed by ${signerId}`);
+    return this.documentRepo.save(doc);
+  }
+
+  /**
+   * Verify the integrity of every captured signature. A signature is valid
+   * only if its stored hash matches a hash recomputed from the document's
+   * current content identifiers — so any post-signing change to the file
+   * reference invalidates it.
+   */
+  async verifySignatures(
+    id: string,
+    userId: string,
+  ): Promise<SignatureVerificationDto> {
+    const doc = await this.findOne(id, userId);
+    const signatures = doc.signatures ?? [];
+
+    const results = signatures.map((signature) => ({
+      signerId: signature.signerId,
+      signedAt: signature.signedAt,
+      valid:
+        signature.payloadHash ===
+        this.computeSignatureHash(
+          doc,
+          signature.signerId,
+          signature.signedAt,
+          signature.signatureData,
+        ),
+    }));
+
+    return {
+      documentId: doc.id,
+      signatureCount: results.length,
+      allValid: results.length > 0 && results.every((r) => r.valid),
+      signatures: results,
+    };
+  }
+
+  private computeSignatureHash(
+    doc: Document,
+    signerId: string,
+    signedAt: string,
+    signatureData: string,
+  ): string {
+    return createHash('sha256')
+      .update(
+        [
+          doc.id,
+          doc.fileKey,
+          String(doc.fileSize),
+          doc.fileType,
+          signerId,
+          signedAt,
+          signatureData,
+        ].join('|'),
+      )
+      .digest('hex');
   }
 }
