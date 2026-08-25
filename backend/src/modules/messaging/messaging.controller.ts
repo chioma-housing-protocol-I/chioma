@@ -13,6 +13,10 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { MessagingService } from './messaging.service';
 import { Deprecated } from '../../common/decorators/deprecated.decorator';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UserIdQueryDto } from './dto/user-id-query.dto';
+import { RoomIdParamsDto } from './dto/room-id-params.dto';
+import { PaginationQueryDto } from './dto/pagination.dto';
 
 @ApiTags('Messaging')
 @Controller('messaging')
@@ -35,13 +39,12 @@ export class MessagingController {
   })
   async getHistory(
     @Query('chatGroupId') chatGroupId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() pagination: PaginationQueryDto,
   ) {
     return this.messagingService.getHistory(
       chatGroupId,
-      Number(page),
-      Number(limit),
+      pagination.page ?? 1,
+      pagination.limit ?? 20,
     );
   }
 
@@ -49,14 +52,14 @@ export class MessagingController {
 
   @Get('rooms')
   @ApiOperation({ summary: 'Get all chat rooms for the current user' })
-  async getRooms(@Query('userId') userId: string) {
-    return this.messagingService.getRoomsForUser(userId);
+  async getRooms(@Query() query: UserIdQueryDto) {
+    return this.messagingService.getRoomsForUser(query.userId);
   }
 
   @Post('rooms')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create or find a direct message room' })
-  async createRoom(@Body() body: { userId: string; participantId: string }) {
+  async createRoom(@Body() body: CreateRoomDto) {
     return this.messagingService.findOrCreateRoom(
       body.userId,
       body.participantId,
@@ -68,14 +71,13 @@ export class MessagingController {
   @Get('rooms/:roomId/messages')
   @ApiOperation({ summary: 'Get messages for a room' })
   async getMessages(
-    @Param('roomId') roomId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 50,
+    @Param() params: RoomIdParamsDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     return this.messagingService.getMessagesForRoom(
-      roomId,
-      Number(page),
-      Number(limit),
+      params.roomId,
+      pagination.page ?? 1,
+      pagination.limit ?? 50,
     );
   }
 
@@ -83,9 +85,9 @@ export class MessagingController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark all messages in a room as read' })
   async markRoomAsRead(
-    @Param('roomId') roomId: string,
-    @Query('userId') userId: string,
+    @Param() params: RoomIdParamsDto,
+    @Query() query: UserIdQueryDto,
   ) {
-    await this.messagingService.markRoomAsRead(roomId, userId);
+    await this.messagingService.markRoomAsRead(params.roomId, query.userId);
   }
 }
