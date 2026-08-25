@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Review {

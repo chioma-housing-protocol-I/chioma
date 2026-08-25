@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Users, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 const TABS = [

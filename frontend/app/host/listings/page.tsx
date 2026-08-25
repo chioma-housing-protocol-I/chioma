@@ -5,7 +5,7 @@ import { MapPin, Bed, Bath, Plus, Eye, Pencil, Building2 } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 import { EmptyState } from '@/components/ui/EmptyState';
 

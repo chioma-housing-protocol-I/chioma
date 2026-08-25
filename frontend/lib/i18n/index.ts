@@ -9,6 +9,7 @@ import {
   formatCurrency,
   formatCrypto,
 } from '../utils/format';
+import { createVersionedPersistConfig } from '@/store/persistence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

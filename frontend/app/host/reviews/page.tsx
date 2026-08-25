@@ -2,7 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function HostReviewsPage() {

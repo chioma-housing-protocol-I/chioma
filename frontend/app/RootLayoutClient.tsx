@@ -1,7 +1,6 @@
 'use client';
 
 import { QueryProvider } from '@/lib/query/provider';
-import { AuthHydrator } from '@/store/AuthHydrator';
 import { StoreHydrator } from '@/store/StoreHydrator';
 import { InitialAuthProvider } from '@/store/InitialAuthContext';
 import type { AuthHint } from '@/store/authStore';
@@ -27,18 +26,19 @@ export function RootLayoutClient({
   authHint: AuthHint | null;
 }) {
   return (
-    <QueryProvider>
-      <ModalProvider>
-        <ErrorProvider>
-          <StoreHydrator />
-          <HtmlAttributesSync />
-          <ErrorMonitoringProvider />
-          <WebVitalsReporter />
-          <PwaController />
-          <OrientationHandler />
-          <NetworkStatusBanner />
-          <RateLimitNotifier />
-          <RouteAnnouncer />
+    <InitialAuthProvider value={authHint}>
+      <QueryProvider>
+        <ModalProvider>
+          <ErrorProvider>
+            <StoreHydrator />
+            <HtmlAttributesSync />
+            <ErrorMonitoringProvider />
+            <WebVitalsReporter />
+            <PwaController />
+            <OrientationHandler />
+            <NetworkStatusBanner />
+            <RateLimitNotifier />
+            <RouteAnnouncer />
 
             {/* Page content - individual pages provide their own #main-content landmark */}
             {children}

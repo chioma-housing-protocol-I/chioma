@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Users, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
