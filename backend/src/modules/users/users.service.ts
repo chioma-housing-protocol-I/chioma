@@ -574,6 +574,19 @@ export class UsersService {
     return this.findById(userId, withDeleted);
   }
 
+  /**
+   * IDs of active admin/super-admin users, for internal escalation flows
+   * (e.g. SLA breach notifications) that need to reach "the admins" rather
+   * than a specific user.
+   */
+  async findAdminIds(): Promise<string[]> {
+    const admins = await this.userRepository.find({
+      where: [{ role: UserRole.ADMIN }, { role: UserRole.SUPER_ADMIN }],
+      select: ['id'],
+    });
+    return admins.map((admin) => admin.id);
+  }
+
   private hashLookupValue(value: string): string {
     return createHash('sha256')
       .update(value.trim().toLowerCase())

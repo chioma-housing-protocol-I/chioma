@@ -56,6 +56,7 @@ describe('UsersService', () => {
 
   const mockUserRepository = {
     findOne: jest.fn(),
+    find: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
     softDelete: jest.fn(),
@@ -131,6 +132,29 @@ describe('UsersService', () => {
       await expect(service.getUserById('999')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findAdminIds', () => {
+    it('returns the ids of admin and super-admin users', async () => {
+      mockUserRepository.find.mockResolvedValue([
+        { id: 'admin-1' },
+        { id: 'admin-2' },
+      ]);
+
+      const result = await service.findAdminIds();
+
+      expect(result).toEqual(['admin-1', 'admin-2']);
+      expect(mockUserRepository.find).toHaveBeenCalledWith({
+        where: [{ role: UserRole.ADMIN }, { role: UserRole.SUPER_ADMIN }],
+        select: ['id'],
+      });
+    });
+
+    it('returns an empty array when there are no admins', async () => {
+      mockUserRepository.find.mockResolvedValue([]);
+
+      await expect(service.findAdminIds()).resolves.toEqual([]);
     });
   });
 
