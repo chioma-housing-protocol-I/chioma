@@ -15,6 +15,10 @@ Thanks for contributing to this project.
 - Include a short test plan.
 - Match existing code style.
 
+## Frontend components
+
+Before adding or moving a component under `frontend/components/`, read the [Component Authoring Conventions](frontend/README.md#component-authoring-conventions) in the frontend README (placement, naming, prop typing, server/client boundary). The full guide, with examples, lives in [frontend/CONTRIBUTING.md](frontend/CONTRIBUTING.md#component-architecture).
+
 ## Conduct
 
 Be respectful and constructive in reviews and discussions.
