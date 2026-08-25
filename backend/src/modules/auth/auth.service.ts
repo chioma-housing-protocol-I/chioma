@@ -98,7 +98,6 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const userReferralCode = await this.referralService.generateReferralCode();
 
     const user = this.userRepository.create({
       email: normalizedEmail,
@@ -110,12 +109,20 @@ export class AuthService {
       emailVerified: false,
       failedLoginAttempts: 0,
       isActive: true,
-      referralCode: userReferralCode,
     });
 
     const verificationToken = this.issueVerificationToken(user);
 
-    const savedUser = await this.userRepository.save(user);
+    // The pre-check in generateReferralCode() is racy under concurrent
+    // registration, so the actual save is retried on a genuine unique
+    // constraint collision with a fresh code — bounded, so a run of
+    // collisions surfaces as a domain error instead of an infinite loop
+    // or a raw database error reaching the client.
+    const { result: savedUser } =
+      await this.referralService.assignUniqueReferralCode((code) => {
+        user.referralCode = code;
+        return this.userRepository.save(user);
+      });
 
     // Track referral if code provided. Queued with retry so a transient
     // failure doesn't silently drop the referral; a permanent failure

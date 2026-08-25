@@ -1,11 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Referral, ReferralStatus } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
 import { StellarService } from '../stellar/services/stellar.service';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { SystemError } from '../../common/errors/domain-errors';
+import { ErrorCode } from '../../common/errors/error-codes';
+
+/** Postgres unique_violation error code. */
+const POSTGRES_UNIQUE_VIOLATION = '23505';
+
+/** Bounded attempts for referral code generation before giving up. */
+const MAX_CODE_GENERATION_ATTEMPTS = 5;
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof QueryFailedError &&
+    (error as unknown as { code?: string }).code === POSTGRES_UNIQUE_VIOLATION
+  );
+}
 
 @Injectable()
 export class ReferralService {
@@ -25,6 +40,15 @@ export class ReferralService {
     private readonly dataSource: DataSource,
   ) {}
 
+  /**
+   * Generates a referral code that is not currently in use. This is a
+   * best-effort pre-check only (find-then-generate is inherently racy
+   * under concurrent registration) — the code returned here can still
+   * collide with one assigned by a concurrent request between this check
+   * and the eventual save. Callers that persist the code MUST use
+   * {@link assignUniqueReferralCode} (or otherwise retry on a `23505`
+   * unique-violation) rather than trusting this method's result alone.
+   */
   async generateReferralCode(): Promise<string> {
     let code: string;
     let exists = true;
@@ -39,6 +63,59 @@ export class ReferralService {
       }
     }
     return ''; // Should not happen
+  }
+
+  /**
+   * Generates a referral code and persists it via `save`, retrying with a
+   * fresh code on a genuine unique-constraint collision (Postgres
+   * `23505`) — the only way to definitively detect a collision, since the
+   * pre-check in {@link generateReferralCode} can race with a concurrent
+   * registration. Bounded to {@link MAX_CODE_GENERATION_ATTEMPTS} attempts;
+   * exhausting them raises a {@link SystemError} rather than looping
+   * forever or leaking a raw database constraint error to the caller.
+   *
+   * `save` is the caller-supplied persistence step (e.g.
+   * `userRepository.save`) so this helper stays agnostic to what entity
+   * the code is being assigned to.
+   */
+  async assignUniqueReferralCode<T>(
+    save: (code: string) => Promise<T>,
+  ): Promise<{ code: string; result: T }> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
+      const code = await this.generateReferralCode();
+      try {
+        const result = await save(code);
+        if (attempt > 1) {
+          this.logger.warn(
+            `Referral code assigned after ${attempt} attempts (collision retry)`,
+          );
+        }
+        return { code, result };
+      } catch (error) {
+        if (!isUniqueViolation(error)) {
+          throw error;
+        }
+        lastError = error;
+        this.logger.warn(
+          `Referral code collision on attempt ${attempt}/${MAX_CODE_GENERATION_ATTEMPTS} (code: ${code})`,
+        );
+      }
+    }
+
+    this.logger.error(
+      `Failed to generate a unique referral code after ${MAX_CODE_GENERATION_ATTEMPTS} attempts`,
+    );
+    throw new SystemError(
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      'Could not generate a unique referral code. Please try again.',
+      true,
+      {
+        attempts: MAX_CODE_GENERATION_ATTEMPTS,
+        cause: (lastError as Error)?.message,
+      },
+    );
   }
 
   async trackReferral(
