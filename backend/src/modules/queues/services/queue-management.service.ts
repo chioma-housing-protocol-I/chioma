@@ -30,6 +30,7 @@ export class QueueManagementService {
     @InjectQueue('documents') private documentsQueue: Queue,
     @InjectQueue('blockchain') private blockchainQueue: Queue,
     @InjectQueue('data-sync') private dataSyncQueue: Queue,
+    @InjectQueue('analytics') private analyticsQueue: Queue,
   ) {}
 
   private enrichJobData<T extends Record<string, any>>(data: T): T & { correlationId?: string; requestId?: string } {
@@ -127,6 +128,28 @@ export class QueueManagementService {
   }
 
   /**
+   * Add analytics event job to queue
+   * Events are processed asynchronously to avoid impacting request latency.
+   * Event loss on queue failure is bounded by retry attempts.
+   */
+  async addAnalyticsJob(data: JobData, options?: QueueJobOptions): Promise<Job> {
+    const defaultOptions = {
+      attempts: 2,
+      backoff: {
+        type: 'exponential' as const,
+        delay: 1000,
+      },
+      removeOnComplete: true,
+      removeOnFail: false,
+      ...options,
+    };
+
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(`Adding analytics job: ${JSON.stringify(enrichedData)}`);
+    return this.analyticsQueue.add(enrichedData, defaultOptions);
+  }
+
+  /**
    * Get queue statistics
    */
   async getQueueStats(queueName: string): Promise<any> {
@@ -148,7 +171,7 @@ export class QueueManagementService {
    * Get all queue statistics
    */
   async getAllQueueStats(): Promise<any[]> {
-    const queues = ['email', 'documents', 'blockchain', 'data-sync'];
+    const queues = ['email', 'documents', 'blockchain', 'data-sync', 'analytics'];
     return Promise.all(queues.map((q) => this.getQueueStats(q)));
   }
 
@@ -255,6 +278,8 @@ export class QueueManagementService {
         return this.blockchainQueue;
       case 'data-sync':
         return this.dataSyncQueue;
+      case 'analytics':
+        return this.analyticsQueue;
       default:
         throw new Error(`Unknown queue: ${queueName}`);
     }

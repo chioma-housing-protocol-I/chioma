@@ -20,6 +20,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
+import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -67,6 +68,7 @@ export class PropertiesController {
   }
 
   @Get()
+  @UseReplica({ maxStaleness: '30s', reason: 'Browse listings tolerate brief replication lag' })
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -141,6 +143,7 @@ export class PropertiesController {
   }
 
   @Get(':id')
+  @UseReplica({ maxStaleness: '30s', reason: 'Property detail view tolerates brief replication lag' })
   @ApiOperation({
     summary: 'Get a specific property',
     description:

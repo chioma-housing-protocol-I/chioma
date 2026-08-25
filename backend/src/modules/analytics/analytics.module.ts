@@ -7,6 +7,7 @@ import { PropertyInquiry } from '../inquiries/entities/property-inquiry.entity';
 import { SubletBooking } from '../subletting/entities/sublet-booking.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
+import { QueuesModule } from '../queues/queues.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
       Payment,
       AuditLog,
     ]),
+    QueuesModule,
   ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],

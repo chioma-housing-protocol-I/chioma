@@ -11,9 +11,8 @@ const bundleAnalyzer = withBundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
-  // Using webpack for better compatibility
   turbopack: {
-    root: process.cwd(), // Fix workspace root warning
+    root: process.cwd(),
   },
   async headers() {
     return [
@@ -118,6 +117,7 @@ const nextConfig: NextConfig = {
       'framer-motion',
     ],
   },
+  // Webpack fallback for client-side builds (not used by Turbopack)
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

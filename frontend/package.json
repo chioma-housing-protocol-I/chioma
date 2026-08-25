@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
     "size:check": "node scripts/check-bundle-size.js",

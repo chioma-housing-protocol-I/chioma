@@ -25,6 +25,7 @@ export class QueueMonitoringService {
     @InjectQueue('documents') private documentsQueue: Queue,
     @InjectQueue('blockchain') private blockchainQueue: Queue,
     @InjectQueue('data-sync') private dataSyncQueue: Queue,
+    @InjectQueue('analytics') private analyticsQueue: Queue,
   ) {
     this.initializeMetrics();
   }
@@ -34,6 +35,7 @@ export class QueueMonitoringService {
     this.metrics.set('documents', []);
     this.metrics.set('blockchain', []);
     this.metrics.set('data-sync', []);
+    this.metrics.set('analytics', []);
   }
 
   /**
@@ -46,6 +48,7 @@ export class QueueMonitoringService {
       { name: 'documents', queue: this.documentsQueue },
       { name: 'blockchain', queue: this.blockchainQueue },
       { name: 'data-sync', queue: this.dataSyncQueue },
+      { name: 'analytics', queue: this.analyticsQueue },
     ];
 
     for (const { name, queue } of queues) {

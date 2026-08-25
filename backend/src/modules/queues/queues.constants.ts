@@ -3,6 +3,7 @@ export const WORKER_QUEUE_NAMES = [
   'documents',
   'blockchain',
   'data-sync',
+  'analytics',
 ] as const;
 
 export type WorkerQueueName = (typeof WORKER_QUEUE_NAMES)[number];
