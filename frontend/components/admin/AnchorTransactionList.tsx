@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import {
   formatAnchorAmount,
@@ -47,6 +48,7 @@ export function AnchorTransactionList({
   onSelect,
   onPageChange,
 }: AnchorTransactionListProps) {
+  const dateFnsLocale = useDateFnsLocale();
   const rows = transactions?.data ?? [];
   const totalPages = Math.max(transactions?.totalPages ?? 1, 1);
 
@@ -153,6 +155,7 @@ export function AnchorTransactionList({
                     {format(
                       new Date(transaction.createdAt),
                       'MMM d, yyyy HH:mm',
+                      { locale: dateFnsLocale },
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">

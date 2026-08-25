@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { FileDown, PenSquare } from 'lucide-react';
 import { BaseModal } from './BaseModal';
 import type { AgreementViewData } from './types';
+import { formatNumber } from '@/lib/utils/format';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface AgreementViewModalProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
   agreement,
   onSignClick,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
+
   if (!agreement) return null;
 
   return (
@@ -86,7 +90,7 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
               Monthly Rent
             </p>
             <p className="text-sm font-bold text-green-600">
-              ${agreement.monthlyRent.toLocaleString()}
+              ${formatNumber(agreement.monthlyRent)}
             </p>
           </div>
           <div>
@@ -94,7 +98,7 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
               Security Deposit
             </p>
             <p className="text-sm font-bold text-green-600">
-              ${agreement.securityDeposit.toLocaleString()}
+              ${formatNumber(agreement.securityDeposit)}
             </p>
           </div>
           <div>
@@ -102,7 +106,9 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
               Start Date
             </p>
             <p className="text-sm font-medium text-neutral-900">
-              {format(new Date(agreement.startDate), 'MMMM d, yyyy')}
+              {format(new Date(agreement.startDate), 'MMMM d, yyyy', {
+                locale: dateFnsLocale,
+              })}
             </p>
           </div>
           <div>
@@ -110,7 +116,9 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
               End Date
             </p>
             <p className="text-sm font-medium text-neutral-900">
-              {format(new Date(agreement.endDate), 'MMMM d, yyyy')}
+              {format(new Date(agreement.endDate), 'MMMM d, yyyy', {
+                locale: dateFnsLocale,
+              })}
             </p>
           </div>
           {agreement.renewalOption != null && (
@@ -129,7 +137,9 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
                 Renewal notice by
               </p>
               <p className="text-sm font-medium text-neutral-900">
-                {format(new Date(agreement.renewalNoticeDate), 'MMMM d, yyyy')}
+                {format(new Date(agreement.renewalNoticeDate), 'MMMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </p>
             </div>
           )}
@@ -139,7 +149,9 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
                 Move-in
               </p>
               <p className="text-sm font-medium text-neutral-900">
-                {format(new Date(agreement.moveInDate), 'MMMM d, yyyy')}
+                {format(new Date(agreement.moveInDate), 'MMMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </p>
             </div>
           )}
@@ -149,7 +161,9 @@ export const AgreementViewModal: React.FC<AgreementViewModalProps> = ({
                 Move-out
               </p>
               <p className="text-sm font-medium text-neutral-900">
-                {format(new Date(agreement.moveOutDate), 'MMMM d, yyyy')}
+                {format(new Date(agreement.moveOutDate), 'MMMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </p>
             </div>
           )}

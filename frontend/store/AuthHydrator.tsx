@@ -9,6 +9,12 @@ import { useAuthStore } from './authStore';
  * Place this once inside the root layout's <body>. Unlike the old
  * AuthProvider (React Context), it does NOT wrap children -- Zustand
  * stores are global singletons accessible from any component.
+ *
+ * This still only runs after the first paint (localStorage isn't
+ * available during SSR), so components that need to be correct on the
+ * very first paint should prefer `useAuthDisplay()` / `useInitialAuthHint()`,
+ * which fall back to the server-derived `InitialAuthProvider` hint until
+ * this hydration completes.
  */
 export function AuthHydrator() {
   const hydrate = useAuthStore((s) => s.hydrate);

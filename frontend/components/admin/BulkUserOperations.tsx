@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   ChevronLeft,
   ChevronRight,
@@ -107,6 +108,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | 'suspend' | 'activate'>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   const data = users?.data ?? [];
   const totalPages = users?.totalPages ?? 1;
@@ -294,7 +296,9 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-blue-200/60">
-                      {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                      {format(new Date(user.createdAt), 'MMM d, yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </td>
                   </tr>
                 ))}

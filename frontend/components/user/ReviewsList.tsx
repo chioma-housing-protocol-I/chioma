@@ -20,6 +20,7 @@ import {
   TenantReviewRecord,
 } from '@/lib/query/hooks/use-tenant-reviews';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface ReviewsListProps {
   className?: string;
@@ -32,6 +33,7 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
   );
   const [ratingFilter, setRatingFilter] = React.useState<string>('ALL');
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: reviews = [],
@@ -107,6 +109,7 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
           <span className="text-blue-200/50 text-sm">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </span>
         ),
@@ -129,7 +132,7 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
         ),
       },
     ],
-    [],
+    [dateFnsLocale],
   );
 
   const table = useReactTable({

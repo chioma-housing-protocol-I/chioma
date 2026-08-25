@@ -115,7 +115,7 @@ export function formatCurrency(
 export function formatCrypto(
   amount: number | string | null | undefined,
   symbolOrLocale?: string | SupportedLocale,
-  localeOrOptions?: SupportedLocale | Intl.NumberFormatOptions,
+  localeOrOptions?: string | Intl.NumberFormatOptions,
   options?: Intl.NumberFormatOptions,
 ): string {
   if (amount === null || amount === undefined || amount === '') return '';

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 interface Review {
   id: string;
@@ -30,8 +30,10 @@ export default function GuestReviewsPage() {
       <h1 className="text-3xl font-bold">My Reviews</h1>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : reviews.length === 0 ? (
         <div className="text-center py-20 text-blue-300/60">

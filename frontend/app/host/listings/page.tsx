@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MapPin, Bed, Bath, Plus, Eye, Pencil, Building2 } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
@@ -58,8 +58,10 @@ export default function HostListingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PropertyCardSkeleton key={i} />
+          ))}
         </div>
       ) : listings.length === 0 ? (
         <div className="text-center py-20 text-blue-300/60">

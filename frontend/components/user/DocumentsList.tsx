@@ -53,6 +53,7 @@ import {
   useArchiveDocument,
 } from '@/lib/query/hooks/use-landlord-documents';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface DocumentsListProps {
   className?: string;
@@ -74,6 +75,7 @@ export function DocumentsList({
     'ALL',
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: documents = [],
@@ -231,6 +233,7 @@ export function DocumentsList({
           <div className="text-sm text-neutral-500">
             {formatDistanceToNow(new Date(row.getValue('uploadedAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </div>
         ),
@@ -293,7 +296,12 @@ export function DocumentsList({
         ),
       },
     ],
-    [onViewDocument, deleteMutation.isPending, archiveMutation.isPending],
+    [
+      onViewDocument,
+      deleteMutation.isPending,
+      archiveMutation.isPending,
+      dateFnsLocale,
+    ],
   );
 
   const table = useReactTable({

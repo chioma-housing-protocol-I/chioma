@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NAV_LINKS } from '@/constants/navigation';
 import { useAuth } from '@/store/authStore';
+import { useAuthDisplay } from '@/store/useAuthDisplay';
 import toast from 'react-hot-toast';
 
 const WalletConnectButton = dynamic(
@@ -32,7 +33,13 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { walletAddress, isAuthenticated, user, logout } = useAuth();
+  const { walletAddress, user, logout } = useAuth();
+  const {
+    isAuthenticated,
+    firstName: displayFirstName,
+    lastName: displayLastName,
+    role: displayRole,
+  } = useAuthDisplay();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   void theme;
@@ -75,7 +82,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     router.push('/');
   };
 
-  const dashboardHref = user?.role === 'admin' ? '/admin' : '/user';
+  const dashboardHref = displayRole === 'admin' ? '/admin' : '/user';
 
   return (
     <header
@@ -116,7 +123,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         </div>
 
         <div className="hidden md:flex items-center space-x-3">
-          {isAuthenticated && user ? (
+          {isAuthenticated ? (
             <>
               {walletAddress && (
                 <div className="px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-500/50">
@@ -134,10 +141,14 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   aria-haspopup="true"
                 >
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {user.firstName?.[0]?.toUpperCase() ?? <User size={14} />}
+                    {displayFirstName ? (
+                      displayFirstName[0].toUpperCase()
+                    ) : (
+                      <User size={14} />
+                    )}
                   </div>
                   <span className="text-sm text-white font-medium max-w-[100px] truncate">
-                    {user.firstName}
+                    {displayFirstName}
                   </span>
                   <ChevronDown
                     size={14}
@@ -149,10 +160,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <div className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-white/10">
                       <p className="text-sm font-semibold text-white truncate">
-                        {user.firstName} {user.lastName}
+                        {displayFirstName} {displayLastName}
                       </p>
                       <p className="text-xs text-blue-300/50 truncate mt-0.5">
-                        {user.email}
+                        {user?.email}
                       </p>
                     </div>
                     <div className="p-2">
@@ -237,7 +248,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
             })}
 
             <div className="pt-4 flex flex-col space-y-3 border-t border-white/10">
-              {isAuthenticated && user ? (
+              {isAuthenticated ? (
                 <>
                   <Link
                     href={dashboardHref}

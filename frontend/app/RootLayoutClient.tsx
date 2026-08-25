@@ -1,7 +1,10 @@
 'use client';
 
 import { QueryProvider } from '@/lib/query/provider';
+import { AuthHydrator } from '@/store/AuthHydrator';
 import { StoreHydrator } from '@/store/StoreHydrator';
+import { InitialAuthProvider } from '@/store/InitialAuthContext';
+import type { AuthHint } from '@/store/authStore';
 import ErrorMonitoringProvider from '@/components/error/ErrorMonitoringProvider';
 import NetworkStatusBanner from '@/components/error/NetworkStatusBanner';
 import RateLimitNotifier from '@/components/error/RateLimitNotifier';
@@ -15,28 +18,37 @@ import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
 
-export function RootLayoutClient({ children }: { children: React.ReactNode }) {
+export function RootLayoutClient({
+  children,
+  authHint,
+}: {
+  children: React.ReactNode;
+  authHint: AuthHint | null;
+}) {
   return (
-    <QueryProvider>
-      <ModalProvider>
-        <ErrorProvider>
-          <StoreHydrator />
-          <ErrorMonitoringProvider />
-          <WebVitalsReporter />
-          <PwaController />
-          <OrientationHandler />
-          <NetworkStatusBanner />
-          <RateLimitNotifier />
-          <RouteAnnouncer />
+    <InitialAuthProvider value={authHint}>
+      <QueryProvider>
+        <ModalProvider>
+          <ErrorProvider>
+            <AuthHydrator />
+            <StoreHydrator />
+            <ErrorMonitoringProvider />
+            <WebVitalsReporter />
+            <PwaController />
+            <OrientationHandler />
+            <NetworkStatusBanner />
+            <RateLimitNotifier />
+            <RouteAnnouncer />
 
-          {/* Page content - individual pages provide their own #main-content landmark */}
-          {children}
+            {/* Page content - individual pages provide their own #main-content landmark */}
+            {children}
 
-          <ModalManager />
-          <OfflineIndicator />
-          <ToastProvider />
-        </ErrorProvider>
-      </ModalProvider>
-    </QueryProvider>
+            <ModalManager />
+            <OfflineIndicator />
+            <ToastProvider />
+          </ErrorProvider>
+        </ModalProvider>
+      </QueryProvider>
+    </InitialAuthProvider>
   );
 }
