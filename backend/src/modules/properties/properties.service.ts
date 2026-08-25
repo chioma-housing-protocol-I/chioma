@@ -292,7 +292,8 @@ export class PropertiesService {
   async remove(id: string, user: User): Promise<void> {
     const property = await this.findOne(id);
     this.verifyOwnership(property, user);
-    await this.propertyRepository.remove(property);
+    property.status = ListingStatus.ARCHIVED;
+    await this.propertyRepository.softRemove(property);
     await this.cacheService.invalidatePropertyDomainCaches(id);
   }
 

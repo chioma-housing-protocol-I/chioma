@@ -16,15 +16,33 @@ describe('ValidationUtils', () => {
     });
   });
 
-  describe('validatePhone', () => {
-    it('should return true for valid international phones', () => {
-      expect(ValidationUtils.validatePhone('+1234567890')).toBe(true);
-      expect(ValidationUtils.validatePhone('1234567890')).toBe(true);
+  describe('normalizePhoneNumber', () => {
+    it.each([
+      ['08012345678', '+2348012345678'],
+      ['8012345678', '+2348012345678'],
+      ['2348012345678', '+2348012345678'],
+      ['+2348012345678', '+2348012345678'],
+      ['+234 801 234 5678', '+2348012345678'],
+      ['+234-801-234-5678', '+2348012345678'],
+      ['00234 801 234 5678', '+2348012345678'],
+      ['  08012345678  ', '+2348012345678'],
+    ])('normalizes %j to canonical E.164 %j', (input, expected) => {
+      expect(ValidationUtils.normalizePhoneNumber(input)).toBe(expected);
     });
 
-    it('should return false for invalid phones', () => {
-      expect(ValidationUtils.validatePhone('abc')).toBe(false);
-      expect(ValidationUtils.validatePhone('+')).toBe(false);
+    it('returns null for empty/blank input (clear phone) and passes null/undefined through', () => {
+      expect(ValidationUtils.normalizePhoneNumber('')).toBeNull();
+      expect(ValidationUtils.normalizePhoneNumber('   ')).toBeNull();
+      expect(ValidationUtils.normalizePhoneNumber(null)).toBeNull();
+      expect(ValidationUtils.normalizePhoneNumber(undefined)).toBeUndefined();
+    });
+
+    it('returns malformed input unchanged so validation can reject it', () => {
+      expect(ValidationUtils.normalizePhoneNumber('abc8012345678')).toBe(
+        'abc8012345678',
+      );
+      expect(ValidationUtils.normalizePhoneNumber('abc')).toBe('abc');
+      expect(ValidationUtils.normalizePhoneNumber('+')).toBe('+');
     });
   });
 

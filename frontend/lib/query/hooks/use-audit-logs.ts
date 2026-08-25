@@ -17,6 +17,8 @@ interface AuditLogParams {
   status?: string;
   level?: string;
   search?: string;
+  sortBy?: 'performedAt' | 'action' | 'entityType' | 'status' | 'level';
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 function buildQueryString(params: AuditLogParams): string {

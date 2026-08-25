@@ -305,7 +305,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue(mockEvidence);
       mockEvidenceRepository.save.mockResolvedValue(mockEvidence);
@@ -332,7 +334,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue({
         ...mockEvidence,

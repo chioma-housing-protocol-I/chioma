@@ -10,12 +10,17 @@ import type { AdminUserDetailExtras } from '@/lib/admin-user-detail';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+export type AdminUserSortField =
+  'createdAt' | 'email' | 'firstName' | 'lastName' | 'role';
+
 export interface AdminUserListParams {
   page?: number;
   limit?: number;
   role?: User['role'];
   search?: string;
   isVerified?: boolean;
+  sortBy?: AdminUserSortField;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 type AdminUserBundle = { user: User; extras: AdminUserDetailExtras };

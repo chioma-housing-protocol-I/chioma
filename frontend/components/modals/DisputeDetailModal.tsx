@@ -13,6 +13,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { BaseModal } from './BaseModal';
 import type { DashboardDispute } from '@/lib/dashboard-data';
 
@@ -122,6 +124,7 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
   dispute,
   onUploadEvidence,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (!dispute) return null;
 
   const status = statusConfig[dispute.status];
@@ -204,9 +207,7 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
                   Requested Amount
                 </p>
                 <p className="text-sm font-bold text-neutral-900 dark:text-white">
-                  {`$${new Intl.NumberFormat('en-US', {
-                    maximumFractionDigits: 2,
-                  }).format(dispute.requestedAmount)} USDC`}
+                  {formatCurrency(dispute.requestedAmount, 'USDC')}
                 </p>
               </div>
             </div>
@@ -285,7 +286,9 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
                   {event.label}
                 </p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  {format(new Date(event.date), 'MMM d, yyyy · h:mm a')}
+                  {format(new Date(event.date), 'MMM d, yyyy · h:mm a', {
+                    locale: dateFnsLocale,
+                  })}
                 </p>
               </li>
             ))}

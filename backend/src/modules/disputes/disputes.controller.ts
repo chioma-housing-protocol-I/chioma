@@ -163,4 +163,41 @@ export class DisputesController {
   ) {
     return this.disputesService.getAgreementDisputes(agreementId, req.user.id);
   }
+
+  @Get('payment/:paymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment ID' })
+  @ApiParam({ name: 'paymentId', description: 'General payment UUID' })
+  @ApiResponse({ status: 200, description: 'Disputes linked to the payment' })
+  async getDisputesByPayment(@Param('paymentId') paymentId: string) {
+    return this.disputesService.findDisputesByPayment(paymentId);
+  }
+
+  @Get('rent-payment/:rentPaymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by rent payment ID' })
+  @ApiParam({ name: 'rentPaymentId', description: 'Rent payment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the rent payment',
+  })
+  async getDisputesByRentPayment(
+    @Param('rentPaymentId') rentPaymentId: string,
+  ) {
+    return this.disputesService.findDisputesByRentPayment(rentPaymentId);
+  }
+
+  @Get('payment-reference/:referenceNumber/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment reference number' })
+  @ApiParam({
+    name: 'referenceNumber',
+    description: 'Payment reference number',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the payment reference',
+  })
+  async getDisputesByPaymentReference(
+    @Param('referenceNumber') referenceNumber: string,
+  ) {
+    return this.disputesService.findDisputesByPaymentReference(referenceNumber);
+  }
 }

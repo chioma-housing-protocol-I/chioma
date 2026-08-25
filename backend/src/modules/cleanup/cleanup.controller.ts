@@ -1,5 +1,12 @@
-import { Controller, Get, Post, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  HttpCode,
+  HttpStatus,
+  Query,
+} from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { join } from 'path';
 import { CodeQualityAnalysisService } from './code-quality-analysis.service';
 import { AutomatedRefactoringService } from './automated-refactoring.service';
@@ -35,12 +42,23 @@ export class CleanupController {
   @ApiOperation({
     summary:
       'Scan for orphaned database records and delete them if ORPHAN_CLEANUP_DELETE_ENABLED is set',
+    description:
+      'Pass dryRun=true to report candidate counts and sample ids without deleting anything. Deletions are capped per run by ORPHAN_CLEANUP_MAX_DELETIONS_PER_RUN; a run that would exceed the cap aborts and raises an alert.',
+  })
+  @ApiQuery({
+    name: 'dryRun',
+    required: false,
+    description: 'When true, log and return the candidate set without mutating',
   })
   @ApiResponse({
     status: 200,
     description: 'Orphaned records scan completed successfully',
   })
-  async runOrphanedRecordsCleanup(): Promise<OrphanedRecordsCleanupStats> {
-    return this.orphanedRecordsCleanupService.runCleanup();
+  async runOrphanedRecordsCleanup(
+    @Query('dryRun') dryRun?: string,
+  ): Promise<OrphanedRecordsCleanupStats> {
+    return this.orphanedRecordsCleanupService.runCleanup(
+      dryRun === undefined ? undefined : { dryRun: dryRun === 'true' },
+    );
   }
 }

@@ -4,7 +4,9 @@ import {
   ConflictException,
   Logger,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FeatureFlag } from './entities/feature-flag.entity';
@@ -15,15 +17,37 @@ import {
   calculateUserBucket,
 } from './utils/bucketing.util';
 
+/**
+ * Default cache TTL. This is the documented window within which a flag
+ * change made outside this process (another instance, direct DB edit) is
+ * guaranteed to take effect. Same-process mutations invalidate immediately.
+ */
+export const DEFAULT_FEATURE_FLAG_CACHE_TTL_MS = 30_000;
+
 @Injectable()
 export class FeatureFlagsService implements OnModuleInit {
   private readonly logger = new Logger(FeatureFlagsService.name);
   private cache: Map<string, FeatureFlag> = new Map();
+  /** Epoch ms of the last cache load; 0 forces a load on first evaluation. */
+  private cacheLoadedAt = 0;
+  private readonly cacheTtlMs: number;
 
   constructor(
     @InjectRepository(FeatureFlag)
     private readonly flagRepository: Repository<FeatureFlag>,
-  ) {}
+    @Optional() configService?: ConfigService,
+  ) {
+    const configured = Number(
+      configService?.get(
+        'FEATURE_FLAG_CACHE_TTL_MS',
+        DEFAULT_FEATURE_FLAG_CACHE_TTL_MS,
+      ) ?? DEFAULT_FEATURE_FLAG_CACHE_TTL_MS,
+    );
+    this.cacheTtlMs =
+      Number.isFinite(configured) && configured > 0
+        ? configured
+        : DEFAULT_FEATURE_FLAG_CACHE_TTL_MS;
+  }
 
   async onModuleInit() {
     await this.refreshCache();
@@ -31,8 +55,13 @@ export class FeatureFlagsService implements OnModuleInit {
 
   /**
    * Refreshes the in-memory flag cache from the database.
+   *
+   * The load timestamp advances even on failure so that a database outage
+   * degrades to serving stale flags for one TTL window instead of retrying
+   * the database on every evaluation.
    */
   async refreshCache(): Promise<void> {
+    this.cacheLoadedAt = Date.now();
     try {
       const flags = await this.flagRepository.find();
       const newCache = new Map<string, FeatureFlag>();
@@ -50,25 +79,27 @@ export class FeatureFlagsService implements OnModuleInit {
     }
   }
 
+  private isCacheStale(): boolean {
+    return Date.now() - this.cacheLoadedAt > this.cacheTtlMs;
+  }
+
   /**
    * Evaluates whether a specific feature flag is enabled for a given user.
+   *
+   * In the steady state this is served entirely from the in-memory cache —
+   * the database is only consulted when the cache has passed its TTL
+   * (`FEATURE_FLAG_CACHE_TTL_MS`, default 30s). Unknown flags default to
+   * disabled without a per-request database lookup.
    *
    * @param flagKey Unique key of the flag
    * @param userId Optional user identifier
    */
   async isFeatureEnabled(flagKey: string, userId?: string): Promise<boolean> {
-    let flag: FeatureFlag | null | undefined = this.cache.get(flagKey);
-
-    if (!flag) {
-      const dbFlag = await this.flagRepository.findOne({
-        where: { key: flagKey },
-      });
-      if (dbFlag) {
-        this.cache.set(dbFlag.key, dbFlag);
-        flag = dbFlag;
-      }
+    if (this.isCacheStale()) {
+      await this.refreshCache();
     }
 
+    const flag = this.cache.get(flagKey);
     if (!flag) {
       // Unknown flags default to disabled for safety
       return false;
