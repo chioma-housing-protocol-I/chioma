@@ -40,6 +40,9 @@ const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
 /** Bump when persisted locale state shape changes. */
 export const I18N_STORE_VERSION = 1;
 
+/** Bump when persisted locale state shape changes. */
+export const I18N_STORE_VERSION = 1;
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface I18nState {
