@@ -111,6 +111,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: null,
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -129,6 +131,24 @@ describe('KycService', () => {
         KycStatus.PENDING,
       );
       expect(result).toEqual(mockKyc);
+    });
+
+    it('should record a non-reversible document hash of the submitted payload', async () => {
+      const submitDto: SubmitKycDto = {
+        kycData: mockKycData,
+      };
+
+      mockKycRepository.create.mockImplementation((data) => data);
+      mockKycRepository.save.mockImplementation(async (data) => ({
+        id: 'kyc-hash-test',
+        ...data,
+      }));
+
+      await service.submitKyc(mockUserId, submitDto);
+
+      const createArg = mockKycRepository.create.mock.calls[0][0];
+      expect(typeof createArg.documentHash).toBe('string');
+      expect(createArg.documentHash).toHaveLength(64); // sha256 hex digest
     });
 
     it('should handle encryption errors gracefully', async () => {
@@ -161,6 +181,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: null,
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -193,6 +215,8 @@ describe('KycService', () => {
         status: KycStatus.APPROVED,
         providerReference: 'ref-123',
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -230,6 +254,8 @@ describe('KycService', () => {
         status: KycStatus.APPROVED,
         providerReference: null,
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -262,6 +288,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: 'ref-123',
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -321,6 +349,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: 'ref-rej',
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -366,6 +396,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: 'ref-info',
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -445,6 +477,8 @@ describe('KycService', () => {
         status: KycStatus.PENDING,
         providerReference: null,
         reason: null,
+        documentHash: null,
+        documentPurgedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -481,6 +515,8 @@ describe('KycService', () => {
       status: KycStatus.PENDING,
       providerReference: null,
       reason: null,
+      documentHash: null,
+      documentPurgedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
