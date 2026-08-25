@@ -87,6 +87,7 @@ describe('Queue Processing Integration', () => {
         { provide: getQueueToken('documents'), useValue: makeQueueMock() },
         { provide: getQueueToken('blockchain'), useValue: mockBlockchainQueue },
         { provide: getQueueToken('data-sync'), useValue: makeQueueMock() },
+        { provide: getQueueToken('analytics'), useValue: makeQueueMock() },
       ],
     }).compile();
 

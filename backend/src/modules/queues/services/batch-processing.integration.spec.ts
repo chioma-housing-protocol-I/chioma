@@ -61,6 +61,7 @@ describe('Batch Processing Integration', () => {
         { provide: getQueueToken('documents'), useValue: makeQueueMock() },
         { provide: getQueueToken('blockchain'), useValue: makeQueueMock() },
         { provide: getQueueToken('data-sync'), useValue: mockDataSyncQueue },
+        { provide: getQueueToken('analytics'), useValue: makeQueueMock() },
       ],
     }).compile();
 
@@ -92,7 +93,7 @@ describe('Batch Processing Integration', () => {
   it('reports correct aggregated stats across all queues', async () => {
     const stats = await service.getAllQueueStats();
 
-    expect(stats).toHaveLength(4);
+    expect(stats).toHaveLength(5);
     const emailStats = stats.find((s) => s.name === 'email');
     expect(emailStats).toBeDefined();
     expect(emailStats!.counts.wait).toBe(8);

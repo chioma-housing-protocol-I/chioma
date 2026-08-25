@@ -75,6 +75,19 @@ describe('Data Import Integration', () => {
           },
         },
         { provide: getQueueToken('data-sync'), useValue: mockDataSyncQueue },
+        {
+          provide: getQueueToken('analytics'),
+          useValue: {
+            add: jest.fn(),
+            getJobCounts: jest.fn().mockResolvedValue({}),
+            getFailed: jest.fn().mockResolvedValue([]),
+            getDelayed: jest.fn().mockResolvedValue([]),
+            isPaused: jest.fn().mockResolvedValue(false),
+            pause: jest.fn(),
+            resume: jest.fn(),
+            clean: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

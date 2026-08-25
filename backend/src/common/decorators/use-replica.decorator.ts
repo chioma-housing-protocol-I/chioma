@@ -1,5 +1,5 @@
 import { SetMetadata, applyDecorators } from '@nestjs/common';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiExtension } from '@nestjs/swagger';
 
 export const USE_REPLICA_METADATA_KEY = 'use_replica';
 
@@ -28,6 +28,8 @@ export interface ReplicaOptions {
 export function UseReplica(options: ReplicaOptions = {}) {
   return applyDecorators(
     SetMetadata(USE_REPLICA_METADATA_KEY, options),
-    ApiOperation({ extensions: { 'x-use-replica': true, 'x-max-staleness': options.maxStaleness ?? 'unknown' } }),
+    ApiOperation({ description: options.reason ?? 'Routed to read replica' }),
+    ApiExtension('x-use-replica', true),
+    ApiExtension('x-max-staleness', options.maxStaleness ?? 'unknown'),
   );
 }
