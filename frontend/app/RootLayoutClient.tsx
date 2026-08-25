@@ -14,6 +14,7 @@ import { ToastProvider } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
+import { ConnectionStatusBanner } from '@/components/connection-status/ConnectionStatusBanner';
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   return (
@@ -26,6 +27,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           <PwaController />
           <OrientationHandler />
           <NetworkStatusBanner />
+          <ConnectionStatusBanner />
           <RateLimitNotifier />
           <RouteAnnouncer />
 
