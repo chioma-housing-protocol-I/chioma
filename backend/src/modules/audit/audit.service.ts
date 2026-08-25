@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   AuditLog,
   AuditAction,
@@ -36,22 +36,25 @@ export class AuditService {
     private auditLogRepository: Repository<AuditLog>,
   ) {}
 
+  /**
+   * Writes an audit entry.
+   *
+   * By default this uses its own repository and swallows write failures
+   * (logging them instead) so that best-effort, fire-and-forget audit calls
+   * — e.g. from the global interceptors — never take down the request they
+   * are merely observing.
+   *
+   * Callers that need the audit row to be part of the atomicity guarantee of
+   * the action it records (so the action cannot commit without its audit
+   * row, and a failed audit write rolls the action back) MUST pass the
+   * `manager` of their own transaction via `logInTransaction` instead. See
+   * that method for details.
+   */
   async log(auditLogData: AuditLogData): Promise<void> {
     try {
-      const auditLog = this.auditLogRepository.create({
-        action: auditLogData.action,
-        entity_type: auditLogData.entityType,
-        entity_id: auditLogData.entityId,
-        old_values: auditLogData.oldValues,
-        new_values: auditLogData.newValues,
-        performed_by: auditLogData.performedBy,
-        ip_address: auditLogData.ipAddress,
-        user_agent: auditLogData.userAgent,
-        status: auditLogData.status || AuditStatus.SUCCESS,
-        level: auditLogData.level || AuditLevel.INFO,
-        error_message: auditLogData.errorMessage,
-        metadata: auditLogData.metadata,
-      });
+      const auditLog = this.auditLogRepository.create(
+        this.toEntityData(auditLogData),
+      );
 
       await this.auditLogRepository.save(auditLog);
       this.logger.debug(
@@ -60,6 +63,55 @@ export class AuditService {
     } catch (error) {
       this.logger.error('Failed to create audit log', error);
     }
+  }
+
+  /**
+   * Writes an audit entry using the given transaction manager, so the audit
+   * row commits or rolls back atomically with the rest of that transaction.
+   *
+   * Unlike `log()`, this method does NOT swallow write failures: if the
+   * audit insert fails, the error propagates so the caller's transaction is
+   * rolled back rather than letting the action commit with no audit trail.
+   *
+   * @example
+   * ```ts
+   * await this.dataSource.transaction(async (manager) => {
+   *   await manager.save(User, updatedUser);
+   *   await this.auditService.logInTransaction(manager, {
+   *     action: AuditAction.DELETE,
+   *     entityType: 'User',
+   *     entityId: userId,
+   *     performedBy: userId,
+   *   });
+   * });
+   * ```
+   */
+  async logInTransaction(
+    manager: EntityManager,
+    auditLogData: AuditLogData,
+  ): Promise<void> {
+    const auditLog = manager.create(AuditLog, this.toEntityData(auditLogData));
+    await manager.save(AuditLog, auditLog);
+    this.logger.debug(
+      `Audit log created (transactional): ${auditLog.action} on ${auditLog.entity_type}:${auditLog.entity_id}`,
+    );
+  }
+
+  private toEntityData(auditLogData: AuditLogData) {
+    return {
+      action: auditLogData.action,
+      entity_type: auditLogData.entityType,
+      entity_id: auditLogData.entityId,
+      old_values: auditLogData.oldValues,
+      new_values: auditLogData.newValues,
+      performed_by: auditLogData.performedBy,
+      ip_address: auditLogData.ipAddress,
+      user_agent: auditLogData.userAgent,
+      status: auditLogData.status || AuditStatus.SUCCESS,
+      level: auditLogData.level || AuditLevel.INFO,
+      error_message: auditLogData.errorMessage,
+      metadata: auditLogData.metadata,
+    };
   }
 
   async logSuccess(
