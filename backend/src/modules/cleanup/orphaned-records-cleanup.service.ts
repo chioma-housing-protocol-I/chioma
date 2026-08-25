@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
+import { AlertService } from '../monitoring/alert.service';
 
 interface OrphanCheck {
   label: string;
@@ -16,16 +17,30 @@ export interface OrphanCheckResult {
   childTable: string;
   childColumn: string;
   orphanedCount: number;
+  /** Up to [`SAMPLE_ID_LIMIT`] candidate row ids, for review before deletion. */
+  sampleIds: string[];
   deleted: boolean;
 }
 
 export interface OrphanedRecordsCleanupStats {
   checkedAt: string;
   deletionEnabled: boolean;
+  /** True when this run only reported candidates without mutating. */
+  dryRun: boolean;
+  /** Per-run deletion ceiling in effect. */
+  maxDeletionsPerRun: number;
+  /** True when the run stopped early because the cap would be exceeded. */
+  aborted: boolean;
+  abortReason?: string;
   results: OrphanCheckResult[];
   totalOrphaned: number;
   totalDeleted: number;
 }
+
+/** Default per-run deletion ceiling; configurable via env. */
+export const DEFAULT_MAX_DELETIONS_PER_RUN = 500;
+/** How many candidate ids each check reports for inspection. */
+export const SAMPLE_ID_LIMIT = 10;
 
 /**
  * These child tables reference a parent (users/properties/bookings/
@@ -224,27 +239,49 @@ export class OrphanedRecordsCleanupService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    @Optional() private readonly alertService?: AlertService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async runScheduledCleanup(): Promise<void> {
     const stats = await this.runCleanup();
     this.logger.log(
-      `Orphaned records cleanup completed: totalOrphaned=${stats.totalOrphaned}, totalDeleted=${stats.totalDeleted}, deletionEnabled=${stats.deletionEnabled}`,
+      `Orphaned records cleanup completed: totalOrphaned=${stats.totalOrphaned}, totalDeleted=${stats.totalDeleted}, deletionEnabled=${stats.deletionEnabled}, dryRun=${stats.dryRun}, aborted=${stats.aborted}`,
     );
   }
 
-  async runCleanup(): Promise<OrphanedRecordsCleanupStats> {
+  /**
+   * Scan (and optionally delete) orphaned rows.
+   *
+   * - `dryRun` (explicit option, or `ORPHAN_CLEANUP_DRY_RUN=true`) reports
+   *   candidate counts and sample ids without mutating anything, regardless
+   *   of `ORPHAN_CLEANUP_DELETE_ENABLED`.
+   * - Deletions are capped per run by `ORPHAN_CLEANUP_MAX_DELETIONS_PER_RUN`
+   *   (default 500): the run aborts before any batch that would push the
+   *   total over the cap and raises a critical alert, so a bad predicate
+   *   cannot silently remove a large amount of data in one pass.
+   */
+  async runCleanup(options?: {
+    dryRun?: boolean;
+  }): Promise<OrphanedRecordsCleanupStats> {
     const databaseType = String(this.dataSource.options.type);
     const deletionEnabled =
       this.configService.get<string>(
         'ORPHAN_CLEANUP_DELETE_ENABLED',
         'false',
       ) === 'true';
+    const dryRun =
+      options?.dryRun ??
+      this.configService.get<string>('ORPHAN_CLEANUP_DRY_RUN', 'false') ===
+        'true';
+    const maxDeletionsPerRun = this.getMaxDeletionsPerRun();
 
     const stats: OrphanedRecordsCleanupStats = {
       checkedAt: new Date().toISOString(),
       deletionEnabled,
+      dryRun,
+      maxDeletionsPerRun,
+      aborted: false,
       results: [],
       totalOrphaned: 0,
       totalDeleted: 0,
@@ -259,12 +296,55 @@ export class OrphanedRecordsCleanupService {
 
     for (const check of ORPHAN_CHECKS) {
       try {
-        const result = await this.runCheck(check, deletionEnabled);
+        const orphanIds = await this.findOrphanIds(check);
+        const orphanedCount = orphanIds.length;
+        const result: OrphanCheckResult = {
+          label: check.label,
+          childTable: check.childTable,
+          childColumn: check.childColumn,
+          orphanedCount,
+          sampleIds: orphanIds.slice(0, SAMPLE_ID_LIMIT),
+          deleted: false,
+        };
         stats.results.push(result);
-        stats.totalOrphaned += result.orphanedCount;
-        if (result.deleted) {
-          stats.totalDeleted += result.orphanedCount;
+        stats.totalOrphaned += orphanedCount;
+
+        if (orphanedCount === 0) {
+          continue;
         }
+
+        this.logger.warn(
+          `Found ${orphanedCount} orphaned row(s) for ${check.label}`,
+        );
+
+        if (dryRun) {
+          this.logger.log(
+            `[DRY RUN] Would delete ${orphanedCount} row(s) from "${check.childTable}" (${check.label}); sample ids: ${result.sampleIds.join(', ')}`,
+          );
+          continue;
+        }
+
+        if (!deletionEnabled) {
+          continue;
+        }
+
+        if (stats.totalDeleted + orphanedCount > maxDeletionsPerRun) {
+          stats.aborted = true;
+          stats.abortReason = `Deleting ${orphanedCount} row(s) for "${check.label}" would exceed the per-run cap of ${maxDeletionsPerRun} (already deleted ${stats.totalDeleted}). Run aborted before this batch.`;
+          this.logger.error(stats.abortReason);
+          await this.raiseCapExceededAlert(stats, check.label, orphanedCount);
+          break;
+        }
+
+        await this.dataSource.query(
+          `DELETE FROM "${check.childTable}" WHERE id = ANY($1::uuid[])`,
+          [orphanIds],
+        );
+        result.deleted = true;
+        stats.totalDeleted += orphanedCount;
+        this.logger.log(
+          `Deleted ${orphanedCount} orphaned row(s) from "${check.childTable}" (${check.label})`,
+        );
       } catch (error) {
         this.logger.warn(
           `Orphan check "${check.label}" failed: ${(error as Error).message}`,
@@ -275,13 +355,9 @@ export class OrphanedRecordsCleanupService {
     return stats;
   }
 
-  private async runCheck(
-    check: OrphanCheck,
-    deletionEnabled: boolean,
-  ): Promise<OrphanCheckResult> {
+  private async findOrphanIds(check: OrphanCheck): Promise<string[]> {
     const parentColumn = check.parentColumn ?? 'id';
-
-    const orphanIds: Array<{ id: string }> = await this.dataSource.query(
+    const rows: Array<{ id: string }> = await this.dataSource.query(
       `
         SELECT id FROM "${check.childTable}"
         WHERE "${check.childColumn}" IS NOT NULL
@@ -290,39 +366,49 @@ export class OrphanedRecordsCleanupService {
           )
       `,
     );
+    return rows.map((row) => row.id);
+  }
 
-    const orphanedCount = orphanIds.length;
-
-    if (orphanedCount === 0) {
-      return {
-        label: check.label,
-        childTable: check.childTable,
-        childColumn: check.childColumn,
-        orphanedCount: 0,
-        deleted: false,
-      };
-    }
-
-    this.logger.warn(
-      `Found ${orphanedCount} orphaned row(s) for ${check.label}`,
+  private getMaxDeletionsPerRun(): number {
+    const configured = Number(
+      this.configService.get(
+        'ORPHAN_CLEANUP_MAX_DELETIONS_PER_RUN',
+        DEFAULT_MAX_DELETIONS_PER_RUN,
+      ),
     );
+    return Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_MAX_DELETIONS_PER_RUN;
+  }
 
-    if (deletionEnabled) {
-      await this.dataSource.query(
-        `DELETE FROM "${check.childTable}" WHERE id = ANY($1::uuid[])`,
-        [orphanIds.map((row) => row.id)],
-      );
-      this.logger.log(
-        `Deleted ${orphanedCount} orphaned row(s) from "${check.childTable}" (${check.label})`,
+  private async raiseCapExceededAlert(
+    stats: OrphanedRecordsCleanupStats,
+    checkLabel: string,
+    batchSize: number,
+  ): Promise<void> {
+    try {
+      await this.alertService?.handleAlert({
+        alerts: [
+          {
+            status: 'firing',
+            labels: {
+              alertname: 'OrphanCleanupCapExceeded',
+              severity: 'critical',
+            },
+            annotations: {
+              summary: 'Orphaned records cleanup aborted at deletion cap',
+              description: `Check "${checkLabel}" produced ${batchSize} candidate deletions; with ${stats.totalDeleted} already deleted this run, the cap of ${stats.maxDeletionsPerRun} would be exceeded. The run aborted without deleting the batch — review the candidate set (a bad predicate may be selecting far too many rows).`,
+            },
+            startsAt: stats.checkedAt,
+            generatorURL: '',
+          },
+        ],
+      });
+    } catch (error) {
+      this.logger.error(
+        'Failed to dispatch OrphanCleanupCapExceeded alert',
+        error instanceof Error ? error.stack : String(error),
       );
     }
-
-    return {
-      label: check.label,
-      childTable: check.childTable,
-      childColumn: check.childColumn,
-      orphanedCount,
-      deleted: deletionEnabled,
-    };
   }
 }
