@@ -8,8 +8,7 @@ import {
   Body,
   Res,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
+  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   UseInterceptors,
@@ -20,7 +19,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +35,15 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import {
+  QuerySecurityEventsDto,
+  QueryUserSecurityEventsDto,
+  QueryThreatsDto,
+  QueryThreatStatsDto,
+  QueryComplianceReportDto,
+  ResolveIncidentDto,
+  AnchorAuditLogsDto,
+} from './dto';
 
 @ApiTags('Security')
 @Controller()
@@ -104,14 +111,12 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent security events' })
-  @ApiQuery({ name: 'hours', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Security events retrieved' })
-  async getSecurityEvents(
-    @Query('hours', new DefaultValuePipe(24), ParseIntPipe) hours: number,
-    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
-  ) {
-    return this.securityEventsService.getRecentEvents(hours, limit);
+  async getSecurityEvents(@Query() query: QuerySecurityEventsDto) {
+    return this.securityEventsService.getRecentEvents(
+      query.hours,
+      query.limit,
+    );
   }
 
   @Get('security/events/user/:userId')
@@ -121,11 +126,14 @@ export class SecurityController {
   @ApiOperation({ summary: 'Get security events for a specific user' })
   @ApiParam({ name: 'userId', type: String })
   async getUserEvents(
-    @Param('userId') userId: string,
-    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() query: QueryUserSecurityEventsDto,
   ) {
-    return this.securityEventsService.getUserEvents(userId, limit, offset);
+    return this.securityEventsService.getUserEvents(
+      userId,
+      query.limit,
+      query.offset,
+    );
   }
 
   @Get('security/events/suspicious/:userId')
@@ -133,7 +141,7 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check for suspicious activity on a user account' })
-  async detectSuspicious(@Param('userId') userId: string) {
+  async detectSuspicious(@Param('userId', ParseUUIDPipe) userId: string) {
     const suspicious =
       await this.securityEventsService.detectSuspiciousActivity(userId);
     return { userId, suspicious };
@@ -146,11 +154,8 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent threat events' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getThreats(
-    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
-  ) {
-    return this.threatDetectionService.getRecentThreats(limit);
+  async getThreats(@Query() query: QueryThreatsDto) {
+    return this.threatDetectionService.getRecentThreats(query.limit);
   }
 
   @Get('security/threats/stats')
@@ -158,11 +163,8 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get threat detection statistics' })
-  @ApiQuery({ name: 'hours', required: false, type: Number })
-  async getThreatStats(
-    @Query('hours', new DefaultValuePipe(24), ParseIntPipe) hours: number,
-  ) {
-    return this.threatDetectionService.getThreatStats(hours);
+  async getThreatStats(@Query() query: QueryThreatStatsDto) {
+    return this.threatDetectionService.getThreatStats(query.hours);
   }
 
   @Patch('security/threats/:id/false-positive')
@@ -177,7 +179,7 @@ export class SecurityController {
     level: AuditLevel.SECURITY,
     includeNewValues: true,
   })
-  async markFalsePositive(@Param('id') threatId: string) {
+  async markFalsePositive(@Param('id', ParseUUIDPipe) threatId: string) {
     await this.threatDetectionService.markFalsePositive(threatId);
   }
 
@@ -214,11 +216,11 @@ export class SecurityController {
   })
   async resolveIncident(
     @Param('id') incidentId: string,
-    @Body('resolution') resolution: string,
+    @Body() dto: ResolveIncidentDto,
   ) {
     return this.incidentService.resolveIncident(
       incidentId,
-      resolution ?? 'Resolved by admin',
+      dto.resolution ?? 'Resolved by admin',
     );
   }
 
@@ -247,25 +249,10 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate GDPR compliance report' })
-  @ApiQuery({
-    name: 'from',
-    required: false,
-    type: String,
-    description: 'ISO date',
-  })
-  @ApiQuery({
-    name: 'to',
-    required: false,
-    type: String,
-    description: 'ISO date',
-  })
-  async getGdprReport(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getGdprReport(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generateGdprReport(from, to);
   }
@@ -275,15 +262,10 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate SOC2 Type II compliance report' })
-  @ApiQuery({ name: 'from', required: false, type: String })
-  @ApiQuery({ name: 'to', required: false, type: String })
-  async getSoc2Report(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getSoc2Report(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generateSoc2Report(from, to);
   }
@@ -293,15 +275,10 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate PCI-DSS compliance report' })
-  @ApiQuery({ name: 'from', required: false, type: String })
-  @ApiQuery({ name: 'to', required: false, type: String })
-  async getPciDssReport(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getPciDssReport(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generatePciDssReport(from, to);
   }
@@ -348,19 +325,16 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Anchor latest audit log batch to blockchain' })
-  @ApiQuery({ name: 'batchSize', required: false, type: Number })
   @AuditLog({
     action: AuditAction.BLOCKCHAIN_TX_SUBMITTED,
     entityType: 'AuditBatch',
     level: AuditLevel.SECURITY,
     includeNewValues: true,
   })
-  async anchorAuditLogs(
-    @Query('batchSize', new DefaultValuePipe(100), ParseIntPipe)
-    batchSize: number,
-  ) {
-    const result =
-      await this.blockchainAuditService.anchorAuditBatch(batchSize);
+  async anchorAuditLogs(@Query() query: AnchorAuditLogsDto) {
+    const result = await this.blockchainAuditService.anchorAuditBatch(
+      query.batchSize,
+    );
     if (!result) return { message: 'No un-anchored audit logs found' };
     return result;
   }
