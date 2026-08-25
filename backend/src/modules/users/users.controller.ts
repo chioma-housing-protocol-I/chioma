@@ -211,8 +211,8 @@ export class UsersController {
 
   @Delete(':id/permanent')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Permanently delete user account (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Account permanently deleted' })
+  @ApiOperation({ summary: 'Delete user account while preserving history (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Account deleted' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async hardDeleteAccount(@Param('id') id: string) {

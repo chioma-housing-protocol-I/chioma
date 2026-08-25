@@ -2,6 +2,8 @@
 
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 type WebhookFormValues = {
   url: string;
@@ -49,7 +51,7 @@ export function WebhookForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<WebhookFormValues>({
     defaultValues: webhook
       ? {
@@ -77,6 +79,8 @@ export function WebhookForm({
         </button>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-white mb-2">
@@ -90,20 +94,26 @@ export function WebhookForm({
                 message: 'Must be a valid URL (http/https)',
               },
             })}
+            {...fieldA11yProps('url', errors.url)}
             type="url"
             placeholder="https://example.com/webhook"
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
             disabled={isLoading}
           />
           {errors.url && (
-            <p className="text-sm text-rose-400 mt-1">{errors.url.message}</p>
+            <p id={fieldErrorId('url')} className="text-sm text-rose-400 mt-1">
+              {errors.url.message}
+            </p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-white mb-3">
+        <fieldset
+          aria-invalid={errors.events ? true : undefined}
+          aria-describedby={errors.events ? fieldErrorId('events') : undefined}
+        >
+          <legend className="block text-sm font-medium text-white mb-3">
             Subscribe to Events
-          </label>
+          </legend>
           <div className="grid grid-cols-2 gap-2">
             {AVAILABLE_EVENTS.map((event) => (
               <label
@@ -122,11 +132,11 @@ export function WebhookForm({
             ))}
           </div>
           {errors.events && (
-            <p className="text-sm text-rose-400 mt-1">
+            <p id={fieldErrorId('events')} className="text-sm text-rose-400 mt-1">
               {errors.events.message}
             </p>
           )}
-        </div>
+        </fieldset>
 
         <div>
           <label className="block text-sm font-medium text-white mb-2">

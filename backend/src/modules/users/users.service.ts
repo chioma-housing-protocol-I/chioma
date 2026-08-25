@@ -534,9 +534,9 @@ export class UsersService {
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId, true);
-    await this.userRepository.delete(userId);
-    this.logger.log(`Account permanently deleted for user: ${user.email}`);
-    return { message: 'Account permanently deleted' };
+    await this.userRepository.softRemove(user);
+    this.logger.log(`Account soft-deleted for user: ${user.email}`);
+    return { message: 'Account deleted' };
   }
 
   async getUserActivity(userId: string): Promise<{

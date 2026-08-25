@@ -130,7 +130,8 @@ export class DocumentService {
     if (doc.ownerId !== ownerId) {
       throw new ForbiddenException('Only the owner can delete this document');
     }
-    await this.documentRepo.remove(doc);
+    doc.status = 'ARCHIVED';
+    await this.documentRepo.softRemove(doc);
   }
 
   async share(

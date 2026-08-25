@@ -7,12 +7,39 @@ export class ValidationUtils {
     return emailRegex.test(email);
   }
 
-  /**
-   * Validates a phone number format (Basic international format)
-   */
-  static validatePhone(phone: string): boolean {
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    return phoneRegex.test(phone);
+  static normalizePhoneNumber(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+    if (typeof value !== 'string') return value;
+
+    const trimmed = value.trim();
+    if (trimmed === '') return null;
+
+    // Remove ONLY legitimate formatting characters.
+    const stripped = trimmed.replace(/[\s\-().]/g, '');
+
+    // If anything besides digits and an optional leading '+' remains, the
+    // input is malformed — return it unchanged so validation rejects it.
+    if (!/^\+?\d+$/.test(stripped)) return trimmed;
+
+    let digits = stripped;
+    if (digits.startsWith('00')) {
+      digits = digits.slice(2); // international prefix (00…)
+    } else if (digits.startsWith('+')) {
+      digits = digits.slice(1);
+    }
+
+    if (digits.startsWith('0')) {
+      // National number with trunk prefix: 08012345678 → 2348012345678
+      digits = `234${digits.slice(1)}`;
+    } else if (digits.startsWith('234') && digits.length >= 12) {
+      // Already contains the +234 country code (e.g. 2348012345678)
+    } else if (digits.length === 10) {
+      // National number without trunk prefix: 8012345678 → 2348012345678
+      digits = `234${digits}`;
+    }
+   
+
+    return `+${digits}`;
   }
 
   /**

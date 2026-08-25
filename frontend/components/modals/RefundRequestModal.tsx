@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { DollarSign, AlertCircle, ReceiptText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const REFUND_REASONS = [
   'Duplicate payment',
@@ -63,7 +65,7 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -151,6 +153,8 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
         noValidate
         className="space-y-6"
       >
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+
         {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 rounded-2xl p-4 flex items-start gap-3">
           <AlertCircle className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -183,6 +187,7 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
             </span>
             <input
               {...register('requestedAmount')}
+              {...fieldA11yProps('requestedAmount', errors.requestedAmount)}
               type="number"
               inputMode="decimal"
               placeholder="0.00"
@@ -192,7 +197,10 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
             />
           </div>
           {errors.requestedAmount && (
-            <p className="text-xs text-red-500 mt-2">
+            <p
+              id={fieldErrorId('requestedAmount')}
+              className="text-xs text-red-500 mt-2"
+            >
               {errors.requestedAmount.message}
             </p>
           )}
@@ -205,6 +213,7 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
           </label>
           <select
             {...register('reason')}
+            {...fieldA11yProps('reason', errors.reason)}
             className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">Select a reason...</option>
@@ -215,7 +224,9 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
             ))}
           </select>
           {errors.reason && (
-            <p className="text-xs text-red-500 mt-1">{errors.reason.message}</p>
+            <p id={fieldErrorId('reason')} className="text-xs text-red-500 mt-1">
+              {errors.reason.message}
+            </p>
           )}
         </div>
 
@@ -226,13 +237,16 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
           </label>
           <textarea
             {...register('details')}
+            {...fieldA11yProps('details', errors.details)}
             rows={4}
             placeholder="Describe why you are requesting this refund..."
             className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
           />
           <div className="flex items-center justify-between mt-1">
             {errors.details ? (
-              <p className="text-xs text-red-500">{errors.details.message}</p>
+              <p id={fieldErrorId('details')} className="text-xs text-red-500">
+                {errors.details.message}
+              </p>
             ) : (
               <span />
             )}

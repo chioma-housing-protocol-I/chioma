@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 import { User, UserRole, AuthMethod } from './entities/user.entity';
@@ -135,10 +136,12 @@ describe('UsersService', () => {
 
   describe('updateProfile', () => {
     it('should update user profile successfully', async () => {
+      const canonicalPhone = '+2348012345678';
       const updateDto = {
         firstName: 'Updated',
         lastName: 'Name',
-        phoneNumber: '+1234567890',
+        // The DTO guarantees the canonical E.164 value reaches the service.
+        phoneNumber: canonicalPhone,
       };
 
       const updatedUser = { ...mockUser, ...updateDto };
@@ -150,7 +153,16 @@ describe('UsersService', () => {
 
       expect(result.firstName).toBe('Updated');
       expect(result.lastName).toBe('Name');
-      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(result.phoneNumber).toBe(canonicalPhone);
+      // Storage, hash and encryption all operate on the canonical value.
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phoneNumber: canonicalPhone,
+          phoneNumberHash: createHash('sha256')
+            .update(canonicalPhone)
+            .digest('hex'),
+        }),
+      );
     });
 
     it('should throw NotFoundException if user not found', async () => {

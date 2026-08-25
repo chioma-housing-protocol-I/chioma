@@ -169,6 +169,13 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  private readonly webhookSignatureVerifications = new Counter({
+    name: 'webhook_signature_verifications_total',
+    help: 'Total webhook signature verification attempts by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
   private readonly blockchainConnectivityUp = new Gauge({
     name: 'blockchain_connectivity_up',
     help: 'Whether the blockchain RPC/Horizon endpoint is reachable (1) or not (0)',
@@ -292,6 +299,16 @@ export class MetricsService implements OnModuleInit {
 
   recordDispute(type: string, status: string): void {
     this.disputes.inc({ type, status });
+  }
+
+  /**
+   * Record the outcome of a webhook signature verification. `result` is
+   * `success` for accepted requests or one of the machine-readable rejection
+   * reasons (e.g. `signature_mismatch`, `timestamp_expired`) so tampering and
+   * replay attempts can be alerted on.
+   */
+  recordWebhookSignatureVerification(result: string): void {
+    this.webhookSignatureVerifications.inc({ result });
   }
 
   recordBlockchainConnectivityCheck(

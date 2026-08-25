@@ -17,6 +17,7 @@ import { ToastProvider } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
+import { HtmlAttributesSync } from '@/components/i18n';
 
 export function RootLayoutClient({
   children,
@@ -26,19 +27,18 @@ export function RootLayoutClient({
   authHint: AuthHint | null;
 }) {
   return (
-    <InitialAuthProvider value={authHint}>
-      <QueryProvider>
-        <ModalProvider>
-          <ErrorProvider>
-            <AuthHydrator />
-            <StoreHydrator />
-            <ErrorMonitoringProvider />
-            <WebVitalsReporter />
-            <PwaController />
-            <OrientationHandler />
-            <NetworkStatusBanner />
-            <RateLimitNotifier />
-            <RouteAnnouncer />
+    <QueryProvider>
+      <ModalProvider>
+        <ErrorProvider>
+          <StoreHydrator />
+          <HtmlAttributesSync />
+          <ErrorMonitoringProvider />
+          <WebVitalsReporter />
+          <PwaController />
+          <OrientationHandler />
+          <NetworkStatusBanner />
+          <RateLimitNotifier />
+          <RouteAnnouncer />
 
             {/* Page content - individual pages provide their own #main-content landmark */}
             {children}

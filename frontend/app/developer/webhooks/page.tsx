@@ -420,6 +420,10 @@ export default function DeveloperWebhooksPage() {
             setTestWebhook(webhook);
           }}
           onRetry={handleRetry}
+          onCreate={() => {
+            setEditingWebhook(null);
+            setFormOpen(true);
+          }}
         />
 
         <div className="space-y-6">
