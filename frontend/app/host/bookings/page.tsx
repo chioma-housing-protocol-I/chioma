@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Users, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
@@ -105,8 +105,10 @@ export default function HostBookingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : bookings.length === 0 ? (
         <EmptyState

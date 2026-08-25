@@ -120,8 +120,11 @@ export function useMessaging(): UseMessagingReturn {
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
       transports: ['websocket'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 10_000,
+      timeout: 20_000,
     });
 
     socketRef.current = socket;
@@ -141,8 +144,7 @@ export function useMessaging(): UseMessagingReturn {
         // the oldest pending message with the same content in this room
         // (covers gateways that don't echo clientId).
         const matched =
-          (incomingClientId &&
-            prev.find((m) => m.id === incomingClientId)) ||
+          (incomingClientId && prev.find((m) => m.id === incomingClientId)) ||
           (serverMessage.senderId === user?.id
             ? prev.find(
                 (m) =>
@@ -284,38 +286,39 @@ export function useMessaging(): UseMessagingReturn {
         clientId,
       };
 
-      socketRef.current.emit(
-        'sendMessage',
-        payload,
-        (ack?: SendMessageAck) => {
-          if (!ack) return; // Gateway has no ack support — rely on echo/timeout.
+      socketRef.current.emit('sendMessage', payload, (ack?: SendMessageAck) => {
+        if (!ack) return; // Gateway has no ack support — rely on echo/timeout.
 
-          if (ack.message) {
-            clearPendingSend(clientId);
-            setMessages((prev: Message[]) =>
-              prev.map((m) =>
-                m.id === clientId ? { ...ack.message!, status: 'sent' } : m,
-              ),
-            );
-          } else if (ack.error) {
-            const t = pendingTimeoutsRef.current.get(clientId);
-            if (t) clearTimeout(t);
-            pendingTimeoutsRef.current.delete(clientId);
-            setMessages((prev: Message[]) =>
-              prev.map((m) =>
-                m.id === clientId ? { ...m, status: 'failed' } : m,
-              ),
-            );
-          }
-        },
-      );
+        if (ack.message) {
+          clearPendingSend(clientId);
+          setMessages((prev: Message[]) =>
+            prev.map((m) =>
+              m.id === clientId ? { ...ack.message!, status: 'sent' } : m,
+            ),
+          );
+        } else if (ack.error) {
+          const t = pendingTimeoutsRef.current.get(clientId);
+          if (t) clearTimeout(t);
+          pendingTimeoutsRef.current.delete(clientId);
+          setMessages((prev: Message[]) =>
+            prev.map((m) =>
+              m.id === clientId ? { ...m, status: 'failed' } : m,
+            ),
+          );
+        }
+      });
     },
     [clearPendingSend],
   );
 
   const sendMessage = useCallback(
     (content: string, attachment?: File) => {
-      if (!activeRoom || (!content.trim() && !attachment) || !socketRef.current || !user)
+      if (
+        !activeRoom ||
+        (!content.trim() && !attachment) ||
+        !socketRef.current ||
+        !user
+      )
         return;
 
       const clientId = generateClientId();

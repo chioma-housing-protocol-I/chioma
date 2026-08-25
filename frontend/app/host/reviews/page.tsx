@@ -2,7 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function HostReviewsPage() {
@@ -37,8 +37,10 @@ export default function HostReviewsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : reviews.length === 0 ? (
         <EmptyState

@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function SubletEarningsPage() {
   const { data: earnings, isLoading } = useQuery({
@@ -31,8 +30,14 @@ export default function SubletEarningsPage() {
         <h1 className="text-3xl font-bold mb-8">Sublet Earnings</h1>
 
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner />
+          <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-6 mb-6 animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-700/50" />
+              <div className="space-y-2">
+                <div className="h-8 w-32 bg-slate-700/50 rounded" />
+                <div className="h-4 w-40 bg-slate-700/50 rounded" />
+              </div>
+            </div>
           </div>
         ) : (
           <>

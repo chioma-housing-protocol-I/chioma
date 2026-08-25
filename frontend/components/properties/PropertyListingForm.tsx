@@ -129,7 +129,10 @@ export default function PropertyListingForm() {
                     placeholder="e.g. Modern Luxury Apartment with City View"
                   />
                   {errors.title && (
-                    <p id={fieldErrorId('title')} className="text-red-400 text-xs mt-1 ml-1">
+                    <p
+                      id={fieldErrorId('title')}
+                      className="text-red-400 text-xs mt-1 ml-1"
+                    >
                       {errors.title.message}
                     </p>
                   )}
@@ -187,7 +190,10 @@ export default function PropertyListingForm() {
                     placeholder="123 Main Street, Apt 4B"
                   />
                   {errors.address && (
-                    <p id={fieldErrorId('address')} className="text-red-400 text-xs mt-1 ml-1">
+                    <p
+                      id={fieldErrorId('address')}
+                      className="text-red-400 text-xs mt-1 ml-1"
+                    >
                       {errors.address.message}
                     </p>
                   )}
@@ -203,7 +209,10 @@ export default function PropertyListingForm() {
                     placeholder="New York"
                   />
                   {errors.city && (
-                    <p id={fieldErrorId('city')} className="text-red-400 text-xs mt-1 ml-1">
+                    <p
+                      id={fieldErrorId('city')}
+                      className="text-red-400 text-xs mt-1 ml-1"
+                    >
                       {errors.city.message}
                     </p>
                   )}
@@ -232,7 +241,10 @@ export default function PropertyListingForm() {
                     />
                   </div>
                   {errors.price && (
-                    <p id={fieldErrorId('price')} className="text-red-400 text-xs mt-1 ml-1">
+                    <p
+                      id={fieldErrorId('price')}
+                      className="text-red-400 text-xs mt-1 ml-1"
+                    >
                       {errors.price.message}
                     </p>
                   )}
@@ -437,7 +449,9 @@ export default function PropertyListingForm() {
         </div>
       )}
 
-      {step < 4 && <FormErrorSummary errors={errors} submitCount={submitCount} />}
+      {step < 4 && (
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+      )}
 
       {renderStep()}
     </div>

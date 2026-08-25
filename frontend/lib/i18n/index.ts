@@ -9,6 +9,7 @@ import {
   formatCurrency,
   formatCrypto,
 } from '../utils/format';
+import { createVersionedPersistConfig } from '@/store/persistence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,9 @@ const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
   ar,
 };
 
+/** Bump when persisted locale state shape changes. */
+export const I18N_STORE_VERSION = 1;
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface I18nState {
@@ -58,9 +62,20 @@ export const useI18nStore = create<I18nStore>()(
       setLocale: (locale) => set({ locale }),
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
-    {
+    createVersionedPersistConfig<I18nStore, Pick<I18nStore, 'locale'>>({
       name: 'chioma-locale',
-      onRehydrateStorage: () => (state) => {
+      version: I18N_STORE_VERSION,
+      partialize: (state: I18nStore) => ({ locale: state.locale }),
+      migrations: {
+        1: (state) => {
+          const legacy = state as Record<string, unknown>;
+          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
+            ? (legacy.locale as SupportedLocale)
+            : 'en';
+          return { locale };
+        },
+      },
+      onRehydrateStorage: () => (state: I18nStore | undefined) => {
         if (state) {
           state.setHasHydrated(true);
 
@@ -82,7 +97,7 @@ export const useI18nStore = create<I18nStore>()(
           }
         }
       },
-    },
+    }),
   ),
 );
 

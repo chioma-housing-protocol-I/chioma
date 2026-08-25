@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
-import { getDashboardRoute } from '@/lib/navigation/role-navigation';
+import {
+  getDashboardRoute,
+  type UserRole,
+} from '@/lib/navigation/role-navigation';
 
 /**
  * Hook to redirect authenticated users to their role-based dashboard
@@ -19,8 +22,8 @@ export function useAuthRedirect() {
     if (loading) return;
     if (!isAuthenticated || !user) return;
 
-    const userRole = (user.role as string).toLowerCase();
-    router.push(getDashboardRoute(userRole as any));
+    const userRole = (user.role as string)?.toLowerCase() as UserRole;
+    router.push(getDashboardRoute(userRole));
   }, [user, isAuthenticated, loading, router]);
 
   return { user, isAuthenticated, loading };

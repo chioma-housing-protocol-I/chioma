@@ -24,7 +24,9 @@ export function Sidebar({
   // Filter nav items based on visibility rules
   const visibleItems = navItems.filter((item) => {
     if (!item.visibleFor) return true;
-    return item.visibleFor.includes(userRole || (user?.role as any) || 'user');
+    const currentRole: 'user' | 'admin' =
+      userRole || (user?.role === 'admin' ? 'admin' : 'user');
+    return item.visibleFor.includes(currentRole);
   });
 
   const isActive = (href: string) => {

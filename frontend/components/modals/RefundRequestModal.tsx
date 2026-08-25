@@ -224,7 +224,10 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
             ))}
           </select>
           {errors.reason && (
-            <p id={fieldErrorId('reason')} className="text-xs text-red-500 mt-1">
+            <p
+              id={fieldErrorId('reason')}
+              className="text-xs text-red-500 mt-1"
+            >
               {errors.reason.message}
             </p>
           )}

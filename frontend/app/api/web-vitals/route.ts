@@ -10,7 +10,14 @@ const MAX_BUFFER = 200;
 const MAX_BODY_BYTES = 4_096;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 60;
-const VALID_WEB_VITAL_NAMES = new Set(['CLS', 'FCP', 'FID', 'INP', 'LCP', 'TTFB']);
+const VALID_WEB_VITAL_NAMES = new Set([
+  'CLS',
+  'FCP',
+  'FID',
+  'INP',
+  'LCP',
+  'TTFB',
+]);
 
 /** In-process ring buffer for local aggregation / GET dashboard. */
 const buffer: WebVitalPayload[] = [];
@@ -22,7 +29,10 @@ function push(payload: WebVitalPayload) {
 }
 
 function clientKey(request: NextRequest): string {
-  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const forwardedFor = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')[0]
+    ?.trim();
   const realIp = request.headers.get('x-real-ip')?.trim();
   return forwardedFor || realIp || 'unknown';
 }
@@ -33,7 +43,10 @@ function isRateLimited(request: NextRequest): boolean {
   const bucket = rateLimitBuckets.get(key);
 
   if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    rateLimitBuckets.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
     return false;
   }
 
@@ -58,7 +71,8 @@ function isValidBody(body: unknown): body is RawWebVitalMetric & {
     b.id.length > 0 &&
     b.id.length <= 128 &&
     (b.rating === undefined || typeof b.rating === 'string') &&
-    (b.delta === undefined || (typeof b.delta === 'number' && Number.isFinite(b.delta))) &&
+    (b.delta === undefined ||
+      (typeof b.delta === 'number' && Number.isFinite(b.delta))) &&
     (b.navigationType === undefined || typeof b.navigationType === 'string') &&
     (b.route === undefined || typeof b.route === 'string')
   );
@@ -69,13 +83,19 @@ function isValidBody(body: unknown): body is RawWebVitalMetric & {
  * Re-sanitizes on the server so query strings / entries never stick.
  */
 export async function POST(request: NextRequest) {
-  const contentLength = Number.parseInt(request.headers.get('content-length') || '0', 10);
+  const contentLength = Number.parseInt(
+    request.headers.get('content-length') || '0',
+    10,
+  );
   if (contentLength > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   }
 
   if (isRateLimited(request)) {
-    return NextResponse.json({ error: 'Too many web vitals submissions' }, { status: 429 });
+    return NextResponse.json(
+      { error: 'Too many web vitals submissions' },
+      { status: 429 },
+    );
   }
 
   let body: unknown;

@@ -76,7 +76,12 @@ export function ContactForm({
       <FormErrorSummary errors={errors} submitCount={submitCount} />
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Field name="name" label="Name" icon={User} error={errors.name?.message}>
+        <Field
+          name="name"
+          label="Name"
+          icon={User}
+          error={errors.name?.message}
+        >
           <input
             {...register('name')}
             className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/30 focus:border-blue-400/60"

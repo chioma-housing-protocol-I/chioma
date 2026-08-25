@@ -132,7 +132,10 @@ export function WebhookForm({
             ))}
           </div>
           {errors.events && (
-            <p id={fieldErrorId('events')} className="text-sm text-rose-400 mt-1">
+            <p
+              id={fieldErrorId('events')}
+              className="text-sm text-rose-400 mt-1"
+            >
               {errors.events.message}
             </p>
           )}

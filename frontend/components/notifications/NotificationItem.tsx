@@ -9,6 +9,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { Notification, NotificationType } from './types';
 
 const typeConfig: Record<
@@ -56,8 +57,10 @@ export default function NotificationItem({
     bg,
     text,
   } = typeConfig[notification.type] ?? fallbackConfig;
+  const dateFnsLocale = useDateFnsLocale();
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
+    locale: dateFnsLocale,
   });
 
   const content = (

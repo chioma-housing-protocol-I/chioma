@@ -120,7 +120,10 @@ export function ProfileMetadataForm({
               disabled={isLoading || !!field}
             />
             {errors.key && (
-              <p id={fieldErrorId('key')} className="text-sm text-rose-400 mt-1">
+              <p
+                id={fieldErrorId('key')}
+                className="text-sm text-rose-400 mt-1"
+              >
                 {errors.key.message}
               </p>
             )}

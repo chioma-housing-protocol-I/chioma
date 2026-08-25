@@ -9,11 +9,19 @@ import {
 
 export type DocumentStatus = 'ACTIVE' | 'ARCHIVED' | 'EXPIRED';
 export type DocumentType =
-  | 'LEASE'
-  | 'INSPECTION'
-  | 'RECEIPT'
-  | 'CONTRACT'
-  | 'OTHER';
+  'LEASE' | 'INSPECTION' | 'RECEIPT' | 'CONTRACT' | 'OTHER';
+
+/**
+ * A captured signature. `payloadHash` binds the signature to the document
+ * content identifiers at signing time, so any later change to the underlying
+ * file is detectable as a hash mismatch.
+ */
+export interface DocumentSignature {
+  signerId: string;
+  signedAt: string;
+  signatureData: string;
+  payloadHash: string;
+}
 
 @Entity('documents')
 export class Document {
@@ -55,6 +63,9 @@ export class Document {
 
   @Column({ type: 'simple-array', nullable: true })
   sharedWith: string[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  signatures: DocumentSignature[] | null;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -148,6 +148,48 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  private readonly queueDepth = new Gauge({
+    name: 'queue_depth',
+    help: 'Jobs waiting or delayed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueOldestJobAgeSeconds = new Gauge({
+    name: 'queue_oldest_job_age_seconds',
+    help: 'Age in seconds of the oldest waiting job in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueActiveJobs = new Gauge({
+    name: 'queue_active_jobs',
+    help: 'Jobs currently being processed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueFailedJobs = new Gauge({
+    name: 'queue_failed_jobs',
+    help: 'Jobs in the failed state for the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queuePaused = new Gauge({
+    name: 'queue_paused',
+    help: 'Whether the queue is paused (1) or running (0)',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueStalledState = new Gauge({
+    name: 'queue_stalled',
+    help: 'Whether the queue is considered stalled (1): jobs are waiting longer than the stall threshold',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
   private readonly rentPayments = new Counter({
     name: 'rent_payments_total',
     help: 'Total rent payment attempts',
@@ -287,6 +329,30 @@ export class MetricsService implements OnModuleInit {
     this.cacheHitRatio.set(
       this.cacheTotal > 0 ? this.cacheHits / this.cacheTotal : 0,
     );
+  }
+
+  /**
+   * Export per-queue gauges so a stalled or backed-up background processor
+   * is visible on the Prometheus metrics endpoint before user-facing
+   * symptoms appear.
+   */
+  setQueueMetrics(
+    queue: string,
+    metrics: {
+      depth: number;
+      oldestJobAgeSeconds: number;
+      active: number;
+      failed: number;
+      paused: boolean;
+      stalled: boolean;
+    },
+  ): void {
+    this.queueDepth.set({ queue }, metrics.depth);
+    this.queueOldestJobAgeSeconds.set({ queue }, metrics.oldestJobAgeSeconds);
+    this.queueActiveJobs.set({ queue }, metrics.active);
+    this.queueFailedJobs.set({ queue }, metrics.failed);
+    this.queuePaused.set({ queue }, metrics.paused ? 1 : 0);
+    this.queueStalledState.set({ queue }, metrics.stalled ? 1 : 0);
   }
 
   recordRentPayment(status: 'success' | 'failed'): void {

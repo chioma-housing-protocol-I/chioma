@@ -34,7 +34,10 @@ function getConnectionKey(request: NextRequest): string {
   const cookie = request.headers.get('cookie');
   if (cookie) return `cookie:${cookie.slice(0, 120)}`;
 
-  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const forwardedFor = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')[0]
+    ?.trim();
   const realIp = request.headers.get('x-real-ip')?.trim();
   return `ip:${forwardedFor || realIp || 'unknown'}`;
 }

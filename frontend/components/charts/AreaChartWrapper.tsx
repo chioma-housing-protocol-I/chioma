@@ -11,13 +11,13 @@ import {
 } from 'recharts';
 
 interface AreaChartWrapperProps {
-  data: any[];
+  data: unknown[];
   dataKeyX: string;
   dataKeyY: string;
   fillColor?: string;
   strokeColor?: string;
   name?: string;
-  formatter?: (value: any) => string;
+  formatter?: (value: number) => string;
 }
 
 export default function AreaChartWrapper({
@@ -49,10 +49,14 @@ export default function AreaChartWrapper({
         <YAxis
           stroke="rgba(255,255,255,0.4)"
           tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
-          tickFormatter={formatter}
+          tickFormatter={
+            formatter ? (val) => formatter(Number(val)) : undefined
+          }
         />
         <Tooltip
-          formatter={formatter}
+          formatter={
+            formatter ? (val) => formatter(Number(val ?? 0)) : undefined
+          }
           contentStyle={{
             backgroundColor: '#0f172a',
             border: '1px solid rgba(255,255,255,0.1)',

@@ -37,7 +37,6 @@ export class ValidationUtils {
       // National number without trunk prefix: 8012345678 → 2348012345678
       digits = `234${digits}`;
     }
-   
 
     return `+${digits}`;
   }

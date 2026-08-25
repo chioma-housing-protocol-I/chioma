@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCheck, Check, Clock, AlertCircle, MessageCircle } from 'lucide-react';
+import {
+  CheckCheck,
+  Check,
+  Clock,
+  AlertCircle,
+  MessageCircle,
+} from 'lucide-react';
 import type { Message } from './types';
 import { UserAvatar } from './UserAvatar';
 import { useAuthStore } from '@/store/authStore';
@@ -169,9 +175,7 @@ export function MessageList({
                           ? 'bg-blue-600 text-white'
                           : 'bg-neutral-100 text-neutral-900'
                       } ${message.status === 'pending' ? 'opacity-60' : ''} ${
-                        message.status === 'failed'
-                          ? 'ring-1 ring-red-400'
-                          : ''
+                        message.status === 'failed' ? 'ring-1 ring-red-400' : ''
                       } ${
                         isMine
                           ? isFirstInSequence && isLastInSequence

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
@@ -31,6 +32,10 @@ import {
   DisputeNotFoundError,
   ValidationError,
 } from '../../common/errors/domain-errors';
+import {
+  DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+  validateEvidenceFile,
+} from './utils/evidence-file-validation.util';
 
 @Injectable()
 export class DisputesService {
@@ -53,6 +58,7 @@ export class DisputesService {
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
+    @Optional() private readonly configService?: ConfigService,
   ) {}
 
   /**
@@ -493,8 +499,8 @@ export class DisputesService {
     // Check permissions
     await this.checkDisputePermission(dispute, userId, 'add_evidence');
 
-    // Validate file
-    this.validateFile(file);
+    // Validate file content (magic bytes), never the declared MIME header
+    const detectedType = this.validateFile(file);
 
     // Create evidence record
     const evidence = this.evidenceRepository.create({
@@ -502,7 +508,8 @@ export class DisputesService {
       uploadedBy: userId,
       fileUrl: file.path, // This would be replaced with actual file storage URL
       fileName: file.originalname,
-      fileType: file.mimetype,
+      // Store the sniffed content type, not the client-declared one.
+      fileType: detectedType,
       fileSize: file.size,
       description: dto?.description,
     });
@@ -707,28 +714,33 @@ export class DisputesService {
   /**
    * Validate uploaded file
    */
-  private validateFile(file: any): void {
-    const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'application/pdf',
-      'text/plain',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    if (!allowedTypes.includes(file.mimetype)) {
+  /**
+   * Validate an evidence upload by sniffing its content (magic bytes) —
+   * the client-declared MIME type is ignored — and by enforcing the
+   * configurable size cap (`DISPUTE_EVIDENCE_MAX_FILE_SIZE_BYTES`).
+   *
+   * Returns the detected content type on success.
+   */
+  private validateFile(file: any): string {
+    const result = validateEvidenceFile(file, this.getEvidenceMaxSizeBytes());
+    if (!result.isValid || !result.detectedType) {
       throw new ValidationError(
-        'Invalid file type. Only images, PDFs, and documents are allowed',
+        result.error ?? 'Evidence file failed validation',
       );
     }
+    return result.detectedType;
+  }
 
-    if (file.size > maxSize) {
-      throw new ValidationError('File size too large. Maximum size is 10MB');
-    }
+  private getEvidenceMaxSizeBytes(): number {
+    const configured = Number(
+      this.configService?.get(
+        'DISPUTE_EVIDENCE_MAX_FILE_SIZE_BYTES',
+        DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+      ) ?? DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+    );
+    return Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES;
   }
 
   /**

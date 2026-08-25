@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { DataSource } from 'typeorm';
 import { UsersService } from './users.service';
 import { User, UserRole, AuthMethod } from './entities/user.entity';
 import { UserNotificationPreference } from './entities/user-notification-preference.entity';
@@ -67,6 +68,19 @@ describe('UsersService', () => {
 
   const mockAuditService = {
     log: jest.fn().mockResolvedValue(undefined),
+    logInTransaction: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockTransactionManager = {
+    save: jest.fn().mockResolvedValue(undefined),
+    softDelete: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockDataSource = {
+    transaction: jest.fn(
+      async (fn: (manager: typeof mockTransactionManager) => Promise<void>) =>
+        fn(mockTransactionManager),
+    ),
   };
 
   const mockNotificationPreferenceRepository = {
@@ -102,6 +116,7 @@ describe('UsersService', () => {
           },
         },
         { provide: LockService, useValue: mockLockService },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -343,6 +358,69 @@ describe('UsersService', () => {
 
       expect(result).toHaveProperty('message');
       expect(mockUserRepository.softDelete).toHaveBeenCalledWith('1');
+    });
+  });
+
+  describe('gdprDeleteAccount', () => {
+    it('anonymizes, soft-deletes, and audits the user inside a single transaction', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+
+      const result = await service.gdprDeleteAccount('1');
+
+      expect(result).toEqual({
+        message: 'Account deleted and data anonymized (GDPR)',
+      });
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(mockTransactionManager.save).toHaveBeenCalledWith(
+        User,
+        expect.objectContaining({ isActive: false, refreshToken: null }),
+      );
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
+      expect(mockAuditService.logInTransaction).toHaveBeenCalledWith(
+        mockTransactionManager,
+        expect.objectContaining({
+          action: AuditAction.DELETE,
+          entityType: 'User',
+          entityId: '1',
+          metadata: { type: 'GDPR_DELETE' },
+        }),
+      );
+    });
+
+    it('does not soft-delete or audit when the anonymizing save fails', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+      mockTransactionManager.save.mockRejectedValueOnce(
+        new Error('db unavailable'),
+      );
+
+      await expect(service.gdprDeleteAccount('1')).rejects.toThrow(
+        'db unavailable',
+      );
+
+      expect(mockTransactionManager.softDelete).not.toHaveBeenCalled();
+      expect(mockAuditService.logInTransaction).not.toHaveBeenCalled();
+
+      // Restore default behaviour for subsequent tests.
+      mockTransactionManager.save.mockResolvedValue(undefined);
+    });
+
+    it('propagates the error (and, in real usage, rolls back) when the audit write fails', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+      mockAuditService.logInTransaction.mockRejectedValueOnce(
+        new Error('audit insert failed'),
+      );
+
+      await expect(service.gdprDeleteAccount('1')).rejects.toThrow(
+        'audit insert failed',
+      );
+
+      // The transaction wrapper is what performs the rollback in a real
+      // DataSource; here we assert the failure propagates out of the
+      // transaction callback instead of being swallowed, which is what
+      // `dataSource.transaction()` needs in order to roll back.
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
+
+      mockAuditService.logInTransaction.mockResolvedValue(undefined);
     });
   });
 

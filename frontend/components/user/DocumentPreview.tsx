@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DocumentRecord } from '@/lib/query/hooks/use-landlord-documents';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface DocumentPreviewProps {
   document: DocumentRecord | null;
@@ -20,6 +21,7 @@ export function DocumentPreview({
   onDownload,
   className = '',
 }: DocumentPreviewProps) {
+  const dateFnsLocale = useDateFnsLocale();
   if (!document) return null;
 
   const getDocumentIcon = () => {
@@ -154,14 +156,18 @@ export function DocumentPreview({
             <div>
               <div className="text-sm text-neutral-500">Uploaded</div>
               <div className="font-medium text-neutral-900">
-                {format(new Date(document.uploadedAt), 'MMM d, yyyy • h:mm a')}
+                {format(new Date(document.uploadedAt), 'MMM d, yyyy • h:mm a', {
+                  locale: dateFnsLocale,
+                })}
               </div>
             </div>
             {document.expiresAt && (
               <div>
                 <div className="text-sm text-neutral-500">Expires</div>
                 <div className="font-medium text-neutral-900">
-                  {format(new Date(document.expiresAt), 'MMM d, yyyy')}
+                  {format(new Date(document.expiresAt), 'MMM d, yyyy', {
+                    locale: dateFnsLocale,
+                  })}
                 </div>
               </div>
             )}

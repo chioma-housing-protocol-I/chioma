@@ -16,6 +16,8 @@ import {
   useAppealTenantDispute,
 } from '@/lib/query/hooks/use-tenant-dispute';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/authStore';
 
 interface DisputeDetailProps {
@@ -51,6 +53,7 @@ export function DisputeDetail({
   className = '',
 }: DisputeDetailProps) {
   const { user } = useAuthStore();
+  const dateFnsLocale = useDateFnsLocale();
   const [newComment, setNewComment] = useState('');
   const { data: dispute, isLoading, error } = useTenantDispute(disputeId);
   const addCommentMutation = useAddDisputeComment();
@@ -116,6 +119,7 @@ export function DisputeDetail({
                   Started{' '}
                   {formatDistanceToNow(new Date(dispute.createdAt), {
                     addSuffix: true,
+                    locale: dateFnsLocale,
                   })}
                 </div>
               </div>
@@ -129,7 +133,7 @@ export function DisputeDetail({
             {dispute.requestedAmount && (
               <div className="mt-5 inline-flex items-baseline gap-2 px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
                 <span className="text-2xl font-black text-emerald-400">
-                  ${dispute.requestedAmount.toLocaleString()} USDC
+                  {formatCurrency(dispute.requestedAmount, 'USDC')}
                 </span>
                 <span className="text-sm font-semibold text-emerald-400/70">
                   claimed
@@ -182,7 +186,9 @@ export function DisputeDetail({
                   Filed Dispute
                 </span>
                 <span className="text-xs text-blue-200/40">
-                  {format(new Date(dispute.createdAt), 'MMM d, yyyy · h:mm a')}
+                  {format(new Date(dispute.createdAt), 'MMM d, yyyy · h:mm a', {
+                    locale: dateFnsLocale,
+                  })}
                 </span>
               </div>
               <p className="text-sm text-white">
@@ -202,6 +208,7 @@ export function DisputeDetail({
                     {format(
                       new Date(dispute.updatedAt),
                       'MMM d, yyyy · h:mm a',
+                      { locale: dateFnsLocale },
                     )}
                   </span>
                 </div>
@@ -240,6 +247,7 @@ export function DisputeDetail({
                     <p className="text-xs text-blue-200/40 mt-0.5">
                       {formatDistanceToNow(new Date(ev.uploadedAt), {
                         addSuffix: true,
+                        locale: dateFnsLocale,
                       })}
                     </p>
                   </div>
@@ -290,6 +298,7 @@ export function DisputeDetail({
                   <span className="text-xs text-blue-200/30">
                     {formatDistanceToNow(new Date(comment.createdAt), {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>

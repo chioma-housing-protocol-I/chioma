@@ -79,9 +79,7 @@ export function ReviewForm({
           role="group"
           aria-labelledby="rating-label"
           aria-invalid={errors.rating ? true : undefined}
-          aria-describedby={
-            errors.rating ? fieldErrorId('rating') : undefined
-          }
+          aria-describedby={errors.rating ? fieldErrorId('rating') : undefined}
           className="bg-white/5 rounded-xl p-3 border border-white/5 inline-block"
         >
           <StarRatingInput

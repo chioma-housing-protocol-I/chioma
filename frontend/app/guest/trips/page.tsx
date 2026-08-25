@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Users, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 const TABS = [
@@ -61,8 +61,10 @@ export default function GuestTripsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <PropertyCardSkeleton key={i} />
+          ))}
         </div>
       ) : trips.length === 0 ? (
         <EmptyState

@@ -35,13 +35,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     pageTitle = 'Dispute Detail';
   }
 
-  // Role-based access - FORCED TO TRUE FOR DEVELOPMENT
-  const canAccessAdmin = true;
-  /* 
   const canAccessAdmin = ['admin', 'support', 'auditor'].includes(
     user?.role ?? '',
   );
-  */
 
   return (
     // <ProtectedRoute>

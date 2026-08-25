@@ -290,7 +290,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     </button>
                   </div>
                   {pwErrors[field] && (
-                    <p id={fieldErrorId(field)} className="text-xs text-red-500 mt-1">
+                    <p
+                      id={fieldErrorId(field)}
+                      className="text-xs text-red-500 mt-1"
+                    >
                       {pwErrors[field]?.message}
                     </p>
                   )}

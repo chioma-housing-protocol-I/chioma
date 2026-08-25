@@ -223,7 +223,10 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.email && (
-              <p id={fieldErrorId('email')} className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('email')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.email.message}
               </p>
             )}
@@ -242,7 +245,10 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.phone && (
-              <p id={fieldErrorId('phone')} className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('phone')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.phone.message}
               </p>
             )}

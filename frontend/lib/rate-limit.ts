@@ -3,7 +3,7 @@
  * and a tracker for API rate limit metrics based on standard headers.
  */
 
-export function debounce<T extends (...args: any[]) => void>(
+export function debounce<T extends (...args: unknown[]) => void>(
   func: T,
   waitMs: number,
 ): {
@@ -46,7 +46,7 @@ export function debounce<T extends (...args: any[]) => void>(
   return debounced;
 }
 
-export function throttle<T extends (...args: any[]) => void>(
+export function throttle<T extends (...args: unknown[]) => void>(
   func: T,
   limitMs: number,
 ): {

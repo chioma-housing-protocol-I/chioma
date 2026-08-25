@@ -11,6 +11,9 @@ import type {
   PaginatedResponse,
 } from '@/types';
 
+export type AnchorTransactionSortField =
+  'createdAt' | 'amount' | 'status' | 'type';
+
 export interface AnchorTransactionListParams {
   page?: number;
   limit?: number;
@@ -19,6 +22,8 @@ export interface AnchorTransactionListParams {
   startDate?: string;
   endDate?: string;
   search?: string;
+  sortBy?: AnchorTransactionSortField;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 function buildQueryString(params: AnchorTransactionListParams): string {
