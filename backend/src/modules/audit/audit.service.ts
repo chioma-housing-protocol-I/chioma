@@ -7,7 +7,10 @@ import {
   AuditStatus,
   AuditLevel,
 } from './entities/audit-log.entity';
-import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
+import {
+  QueryAuditLogsDto,
+  AuditLogSortField,
+} from './dto/query-audit-logs.dto';
 import { User } from '../users/entities/user.entity';
 import { PaginationUtils, DateUtils } from '../../common/utils';
 import { MAX_PAGE_SIZE } from '../../common/constants/business-rules.constants';
@@ -140,8 +143,18 @@ export class AuditService {
   }> {
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
-      .leftJoinAndSelect('audit_log.performed_by_user', 'user')
-      .orderBy('audit_log.performed_at', 'DESC');
+      .leftJoinAndSelect('audit_log.performed_by_user', 'user');
+
+    const sortColumns: Record<AuditLogSortField, string> = {
+      [AuditLogSortField.PERFORMED_AT]: 'audit_log.performed_at',
+      [AuditLogSortField.ACTION]: 'audit_log.action',
+      [AuditLogSortField.ENTITY_TYPE]: 'audit_log.entity_type',
+      [AuditLogSortField.STATUS]: 'audit_log.status',
+      [AuditLogSortField.LEVEL]: 'audit_log.level',
+    };
+    const sortColumn =
+      sortColumns[queryDto.sortBy ?? AuditLogSortField.PERFORMED_AT];
+    queryBuilder.orderBy(sortColumn, queryDto.sortOrder ?? 'DESC');
 
     // Apply filters
     if (queryDto.startDate) {

@@ -16,7 +16,10 @@ import {
   ChangePasswordDto,
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
-import { AdminUserQueryDto } from './dto/admin-user-query.dto';
+import {
+  AdminUserQueryDto,
+  AdminUserSortField,
+} from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
 import { Locked, LockService } from '../../common/lock';
@@ -425,7 +428,17 @@ export class UsersService {
       );
     }
 
-    qb.orderBy('user.createdAt', 'DESC')
+    const sortColumns: Record<AdminUserSortField, string> = {
+      [AdminUserSortField.CREATED_AT]: 'user.createdAt',
+      [AdminUserSortField.EMAIL]: 'user.email',
+      [AdminUserSortField.FIRST_NAME]: 'user.firstName',
+      [AdminUserSortField.LAST_NAME]: 'user.lastName',
+      [AdminUserSortField.ROLE]: 'user.role',
+    };
+    const sortColumn =
+      sortColumns[query.sortBy ?? AdminUserSortField.CREATED_AT];
+
+    qb.orderBy(sortColumn, query.sortOrder ?? 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
