@@ -9,6 +9,8 @@ import {
   AgreementStatus,
 } from '../rent/entities/rent-contract.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { Payment as GeneralPayment } from '../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../rent/entities/payment.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
@@ -43,6 +45,10 @@ export class DisputesService {
     private readonly agreementRepository: Repository<RentAgreement>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(GeneralPayment)
+    private readonly generalPaymentRepository: Repository<GeneralPayment>,
+    @InjectRepository(RentPayment)
+    private readonly rentPaymentRepository: Repository<RentPayment>,
     private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
@@ -122,6 +128,129 @@ export class DisputesService {
         );
       }
 
+      // Validate payment references if provided and gather payment context
+      let paymentContext: {
+        paymentId?: string;
+        rentPaymentId?: string;
+        disputedPaymentAmount?: number;
+        paymentReferenceNumber?: string;
+        paymentDate?: Date;
+      } = {};
+
+      if (createDisputeDto.paymentId) {
+        const generalPayment = await queryRunner.manager.findOne(
+          GeneralPayment,
+          {
+            where: { id: createDisputeDto.paymentId },
+          },
+        );
+
+        if (!generalPayment) {
+          throw new ValidationError(
+            `Payment with ID ${createDisputeDto.paymentId} not found`,
+          );
+        }
+
+        // Validate payment belongs to the same agreement
+        if (generalPayment.agreementId !== createDisputeDto.agreementId) {
+          throw new ValidationError(
+            'Payment does not belong to the specified agreement',
+          );
+        }
+
+        paymentContext = {
+          paymentId: generalPayment.id,
+          disputedPaymentAmount: Number(generalPayment.amount),
+          paymentReferenceNumber: generalPayment.referenceNumber || undefined,
+          paymentDate: generalPayment.processedAt || generalPayment.createdAt,
+        };
+      }
+
+      if (createDisputeDto.rentPaymentId) {
+        const rentPayment = await queryRunner.manager.findOne(RentPayment, {
+          where: { paymentId: createDisputeDto.rentPaymentId },
+        });
+
+        if (!rentPayment) {
+          throw new ValidationError(
+            `Rent payment with ID ${createDisputeDto.rentPaymentId} not found`,
+          );
+        }
+
+        // Validate payment belongs to the same agreement
+        if (rentPayment.agreementId !== createDisputeDto.agreementId) {
+          throw new ValidationError(
+            'Rent payment does not belong to the specified agreement',
+          );
+        }
+
+        paymentContext = {
+          ...paymentContext,
+          rentPaymentId: rentPayment.paymentId,
+          disputedPaymentAmount:
+            paymentContext.disputedPaymentAmount || Number(rentPayment.amount),
+          paymentReferenceNumber:
+            paymentContext.paymentReferenceNumber ||
+            rentPayment.referenceNumber ||
+            undefined,
+          paymentDate: paymentContext.paymentDate || rentPayment.paymentDate,
+        };
+      }
+
+      if (
+        createDisputeDto.paymentReferenceNumber &&
+        !paymentContext.paymentId &&
+        !paymentContext.rentPaymentId
+      ) {
+        // Try to find payment by reference number if no direct payment IDs provided
+        const generalPayment = await queryRunner.manager.findOne(
+          GeneralPayment,
+          {
+            where: {
+              referenceNumber: createDisputeDto.paymentReferenceNumber,
+              agreementId: createDisputeDto.agreementId,
+            },
+          },
+        );
+
+        const rentPayment = await queryRunner.manager.findOne(RentPayment, {
+          where: {
+            referenceNumber: createDisputeDto.paymentReferenceNumber,
+            agreementId: createDisputeDto.agreementId,
+          },
+        });
+
+        if (!generalPayment && !rentPayment) {
+          throw new ValidationError(
+            `No payment found with reference number ${createDisputeDto.paymentReferenceNumber} for this agreement`,
+          );
+        }
+
+        if (generalPayment) {
+          paymentContext = {
+            paymentId: generalPayment.id,
+            disputedPaymentAmount: Number(generalPayment.amount),
+            paymentReferenceNumber: generalPayment.referenceNumber || undefined,
+            paymentDate: generalPayment.processedAt || generalPayment.createdAt,
+          };
+        }
+
+        if (rentPayment) {
+          paymentContext = {
+            ...paymentContext,
+            rentPaymentId: rentPayment.paymentId,
+            disputedPaymentAmount:
+              paymentContext.disputedPaymentAmount ||
+              Number(rentPayment.amount),
+            paymentReferenceNumber:
+              paymentContext.paymentReferenceNumber ||
+              rentPayment.referenceNumber ||
+              undefined,
+            paymentDate: paymentContext.paymentDate || rentPayment.paymentDate,
+          };
+        }
+      }
+
       // Create dispute
       const dispute = queryRunner.manager.create(Dispute, {
         disputeId: randomUUID(),
@@ -134,6 +263,12 @@ export class DisputesService {
         metadata: createDisputeDto.metadata
           ? JSON.parse(createDisputeDto.metadata)
           : null,
+        // Payment correlation fields
+        paymentId: paymentContext.paymentId || null,
+        rentPaymentId: paymentContext.rentPaymentId || null,
+        disputedPaymentAmount: paymentContext.disputedPaymentAmount || null,
+        paymentReferenceNumber: paymentContext.paymentReferenceNumber || null,
+        paymentDate: paymentContext.paymentDate || null,
       });
 
       const savedDispute = await queryRunner.manager.save(dispute);
@@ -200,6 +335,28 @@ export class DisputesService {
       queryBuilder.andWhere('dispute.disputeId IN (:...disputeIds)', {
         disputeIds: query.disputeIds,
       });
+    }
+
+    // Payment correlation filters
+    if (query.paymentId) {
+      queryBuilder.andWhere('dispute.paymentId = :paymentId', {
+        paymentId: query.paymentId,
+      });
+    }
+
+    if (query.rentPaymentId) {
+      queryBuilder.andWhere('dispute.rentPaymentId = :rentPaymentId', {
+        rentPaymentId: query.rentPaymentId,
+      });
+    }
+
+    if (query.paymentReferenceNumber) {
+      queryBuilder.andWhere(
+        'dispute.paymentReferenceNumber = :paymentReferenceNumber',
+        {
+          paymentReferenceNumber: query.paymentReferenceNumber,
+        },
+      );
     }
 
     // Apply sorting
@@ -572,5 +729,40 @@ export class DisputesService {
     if (file.size > maxSize) {
       throw new ValidationError('File size too large. Maximum size is 10MB');
     }
+  }
+
+  /**
+   * Find disputes by payment correlation
+   */
+  async findDisputesByPayment(paymentId: string): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { paymentId },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Find disputes by rent payment correlation
+   */
+  async findDisputesByRentPayment(rentPaymentId: string): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { rentPaymentId },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Find disputes by payment reference number
+   */
+  async findDisputesByPaymentReference(
+    referenceNumber: string,
+  ): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { paymentReferenceNumber: referenceNumber },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

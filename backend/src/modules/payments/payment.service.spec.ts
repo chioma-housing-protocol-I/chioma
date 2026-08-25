@@ -665,6 +665,73 @@ describe('PaymentService', () => {
       expect(mockStellarService.getEscrowById).toHaveBeenCalledWith(7);
     });
 
+    it('marks the payment as partially refunded after a partial escrow refund', async () => {
+      mockStellarService.refundEscrow.mockResolvedValue({
+        id: 7,
+        status: 'ACTIVE',
+        amount: '100.0000000',
+        refundedAmount: '25.0000000',
+        refundTransactionHash: 'partial_refund_hash',
+      });
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        userId: 'user_1',
+        referenceNumber: 'escrow:7',
+        refundAmount: 0,
+        metadata: { gateway: 'stellar', flow: 'escrow_deposit' },
+      });
+      (paymentRepository.save as jest.Mock).mockImplementation((payment) =>
+        Promise.resolve(payment),
+      );
+
+      const result = await service.refundEscrowDeposit(
+        7,
+        { escrowId: 7, reason: 'damage deduction', amount: '25.0000000' },
+        'user_1',
+      );
+
+      expect(mockStellarService.refundEscrow).toHaveBeenCalledWith({
+        escrowId: 7,
+        reason: 'damage deduction',
+        amount: '25.0000000',
+      });
+      expect(result?.status).toBe(PaymentStatus.PARTIAL_REFUND);
+      expect(result?.refundAmount).toBe(25);
+      expect(result?.metadata).toMatchObject({
+        refundedToDate: '25.0000000',
+        refundTransactionHash: 'partial_refund_hash',
+      });
+    });
+
+    it('marks the payment refunded after a full escrow refund', async () => {
+      mockStellarService.refundEscrow.mockResolvedValue({
+        id: 7,
+        status: 'REFUNDED',
+        amount: '100.0000000',
+        refundedAmount: '100.0000000',
+        refundTransactionHash: 'full_refund_hash',
+      });
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        userId: 'user_1',
+        referenceNumber: 'escrow:7',
+        refundAmount: 0,
+        metadata: { gateway: 'stellar', flow: 'escrow_deposit' },
+      });
+      (paymentRepository.save as jest.Mock).mockImplementation((payment) =>
+        Promise.resolve(payment),
+      );
+
+      const result = await service.refundEscrowDeposit(
+        7,
+        { escrowId: 7, reason: 'full refund' },
+        'user_1',
+      );
+
+      expect(result?.status).toBe(PaymentStatus.REFUNDED);
+      expect(result?.refundAmount).toBe(100);
+    });
+
     it('retries failed payments that still have a payment method', async () => {
       (paymentRepository.find as jest.Mock).mockResolvedValue([
         {

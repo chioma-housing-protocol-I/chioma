@@ -3,6 +3,9 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format, subMonths } from 'date-fns';
+import { getDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency, formatNumber } from '@/lib/utils/format';
+import { useI18nStore } from '@/lib/i18n';
 import { Eye, ShieldCheck } from 'lucide-react';
 import { useTransactions } from '@/lib/query/hooks/use-transactions';
 import dynamic from 'next/dynamic';
@@ -39,6 +42,7 @@ interface Transaction {
   type: string;
   property: string;
   amount: number;
+  currency: string;
   status: string;
   inflow: boolean;
   previewImage: string;
@@ -68,6 +72,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Rent Collected',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -79,6 +84,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Rent Collected',
     property: 'Block 4, Admiralty Way',
     amount: 3800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -90,6 +96,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Platform Fee',
     property: 'Platform',
     amount: 38000,
+    currency: 'USDC',
     status: 'Deducted',
     inflow: false,
     previewImage:
@@ -102,6 +109,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Deposit Refund',
     property: 'Glover Road, Ikoyi',
     amount: 500000,
+    currency: 'USDC',
     status: 'Processed',
     inflow: false,
     previewImage:
@@ -113,6 +121,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Rent Collected',
     property: 'Glover Road, Ikoyi',
     amount: 1800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -124,6 +133,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Smart Contract Payout',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -135,6 +145,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Platform Fee',
     property: 'Platform',
     amount: 25000,
+    currency: 'USDC',
     status: 'Deducted',
     inflow: false,
     previewImage:
@@ -146,6 +157,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Rent Collected',
     property: 'Block 4, Admiralty Way',
     amount: 3800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -158,6 +170,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Security Deposit',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Held',
     inflow: true,
     previewImage:
@@ -169,6 +182,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: 'Rent Collected',
     property: 'Glover Road, Ikoyi',
     amount: 1800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -199,10 +213,13 @@ const shortenHash = (hash: string): string =>
 
 const mapApiTransaction = (tx: ApiTransaction): Transaction => ({
   hash: shortenHash(tx.blockchainTxHash ?? tx.id),
-  date: format(new Date(tx.createdAt), 'MMM dd, yyyy'),
+  date: format(new Date(tx.createdAt), 'MMM dd, yyyy', {
+    locale: getDateFnsLocale(useI18nStore.getState().locale),
+  }),
   type: TX_TYPE_LABELS[tx.type] ?? tx.type,
   property: tx.description || '—',
   amount: tx.amount,
+  currency: tx.currency,
   status: TX_STATUS_LABELS[tx.status] ?? tx.status,
   inflow: tx.type === 'payment' || tx.type === 'deposit',
   previewImage:
@@ -214,6 +231,7 @@ const mapApiTransaction = (tx: ApiTransaction): Transaction => ({
 /** Sums completed inflows per calendar month over the trailing 12 months. */
 const deriveMonthlyRevenue = (items: ApiTransaction[]): RevenueDataPoint[] => {
   const now = new Date();
+  const locale = getDateFnsLocale(useI18nStore.getState().locale);
   return Array.from({ length: 12 }, (_, i) => {
     const month = subMonths(now, 11 - i);
     const key = format(month, 'yyyy-MM');
@@ -225,7 +243,7 @@ const deriveMonthlyRevenue = (items: ApiTransaction[]): RevenueDataPoint[] => {
           format(new Date(tx.createdAt), 'yyyy-MM') === key,
       )
       .reduce((sum, tx) => sum + tx.amount, 0);
-    return { month: format(month, 'MMM'), revenue };
+    return { month: format(month, 'MMM', { locale }), revenue };
   });
 };
 
@@ -236,7 +254,8 @@ const fmt = (n: number): string =>
     ? `$${(n / 1_000_000).toFixed(1)}M USDC`
     : `$${(n / 1_000).toFixed(0)}K USDC`;
 
-const fmtFull = (n: number): string => `$${n.toLocaleString()} USDC`;
+const fmtFull = (n: number, currency: string): string =>
+  formatCurrency(n, currency);
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
@@ -427,7 +446,7 @@ export default function FinancialsPage() {
               </p>
               <p className="text-sm font-bold text-white">
                 {xlmBalance !== null
-                  ? `${xlmBalance.toLocaleString()} XLM`
+                  ? `${formatNumber(xlmBalance)} XLM`
                   : 'Not connected'}
               </p>
             </div>
@@ -563,7 +582,7 @@ export default function FinancialsPage() {
               <span
                 className={`text-sm font-bold ${tx.inflow ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gradient-to-r from-rose-400 to-orange-400'} bg-clip-text text-transparent`}
               >
-                {tx.inflow ? '+' : '−'} {fmtFull(tx.amount)}
+                {tx.inflow ? '+' : '−'} {fmtFull(tx.amount, tx.currency)}
               </span>
               <div className="flex justify-start">
                 <div className="flex items-center gap-2">

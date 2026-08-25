@@ -796,7 +796,14 @@ export class StellarService {
   }
 
   /**
-   * Refund escrow funds back to source
+   * Refund escrow funds back to source.
+   *
+   * Without `dto.amount` the full remaining balance is refunded and the
+   * escrow account is merged away (status REFUNDED). With `dto.amount` less
+   * than the remaining refundable balance, only that amount is paid back:
+   * the escrow stays ACTIVE, the account is kept open, and the cumulative
+   * `refundedAmount` is advanced. The sum of partial refunds can never
+   * exceed the original escrow amount.
    */
   async refundEscrow(dto: RefundEscrowDto): Promise<StellarEscrow> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -811,6 +818,37 @@ export class StellarService {
           `Cannot refund escrow in ${escrow.status} status`,
         );
       }
+
+      // All monetary comparisons in stroops (1 XLM = 10^7 stroops) to avoid
+      // float drift on 7-decimal amounts.
+      const toStroops = (value: string | number): number =>
+        Math.round(Number(value) * 10_000_000);
+      const escrowStroops = toStroops(escrow.amount);
+      const refundedStroops = toStroops(escrow.refundedAmount ?? '0');
+      const remainingStroops = escrowStroops - refundedStroops;
+
+      if (remainingStroops <= 0) {
+        throw new BadRequestException(
+          `Escrow ${escrow.id} has no remaining refundable balance`,
+        );
+      }
+
+      const requestedStroops =
+        dto.amount !== undefined ? toStroops(dto.amount) : remainingStroops;
+
+      if (requestedStroops <= 0) {
+        throw new BadRequestException('Refund amount must be positive');
+      }
+
+      if (requestedStroops > remainingStroops) {
+        throw new BadRequestException(
+          `Refund amount ${dto.amount} exceeds the remaining refundable ` +
+            `balance of ${(remainingStroops / 10_000_000).toFixed(7)} ` +
+            `(escrow ${escrow.amount}, already refunded ${escrow.refundedAmount ?? '0'})`,
+        );
+      }
+
+      const isFullRefund = requestedStroops === remainingStroops;
 
       // Get accounts
       const escrowAccount = await this.getAccountById(escrow.escrowAccountId);
@@ -834,57 +872,92 @@ export class StellarService {
       );
       const availableBalance = parseFloat(nativeBalance?.balance || '0');
       const reserveRequired = 1;
-      const amountToSend = (availableBalance - reserveRequired).toFixed(7);
+      const spendableStroops = toStroops(
+        (availableBalance - reserveRequired).toFixed(7),
+      );
 
-      // Build transaction to refund and merge account
-      const transaction = new StellarSdk.TransactionBuilder(networkAccount, {
-        fee: this.baseFee,
-        networkPassphrase: this.networkPassphrase,
-      })
-        .addOperation(
-          StellarSdk.Operation.payment({
-            destination: sourceAccount.publicKey,
-            asset: StellarSdk.Asset.native(),
-            amount: amountToSend,
-          }),
-        )
-        .addOperation(
+      // For full refunds keep the drain-everything behavior; partial refunds
+      // send exactly the requested amount.
+      const sendStroops = isFullRefund
+        ? spendableStroops
+        : Math.min(requestedStroops, spendableStroops);
+
+      if (sendStroops <= 0) {
+        throw new BadRequestException(
+          `Escrow account ${escrowAccount.publicKey} has no spendable balance to refund`,
+        );
+      }
+
+      const amountToSend = (sendStroops / 10_000_000).toFixed(7);
+
+      // Build refund transaction; only a full refund merges the account away.
+      const transactionBuilder = new StellarSdk.TransactionBuilder(
+        networkAccount,
+        {
+          fee: this.baseFee,
+          networkPassphrase: this.networkPassphrase,
+        },
+      ).addOperation(
+        StellarSdk.Operation.payment({
+          destination: sourceAccount.publicKey,
+          asset: StellarSdk.Asset.native(),
+          amount: amountToSend,
+        }),
+      );
+
+      if (isFullRefund) {
+        transactionBuilder.addOperation(
           StellarSdk.Operation.accountMerge({
             destination: sourceAccount.publicKey,
           }),
-        )
-        .setTimeout(180)
-        .build();
+        );
+      }
+
+      const transaction = transactionBuilder.setTimeout(180).build();
 
       transaction.sign(escrowKeypair);
 
       // Submit transaction
       const result = await this.horizon.submitTransaction(transaction);
 
-      // Update escrow status
-      escrow.status = EscrowStatus.REFUNDED;
-      escrow.refundedAt = new Date();
+      // Update escrow state: cumulative refunded-to-date balance always
+      // advances; only a full refund is terminal.
+      escrow.refundedAmount = (
+        (refundedStroops + requestedStroops) /
+        10_000_000
+      ).toFixed(7);
       escrow.refundTransactionHash = result.hash;
+      if (isFullRefund) {
+        escrow.status = EscrowStatus.REFUNDED;
+        escrow.refundedAt = new Date();
+      }
       await queryRunner.manager.save(escrow);
 
-      // Deactivate escrow account
-      escrowAccount.isActive = false;
-      escrowAccount.balance = '0';
+      if (isFullRefund) {
+        // Deactivate escrow account
+        escrowAccount.isActive = false;
+        escrowAccount.balance = '0';
+      } else {
+        escrowAccount.balance = (
+          (spendableStroops - sendStroops) / 10_000_000 +
+          reserveRequired
+        ).toFixed(7);
+      }
       await queryRunner.manager.save(escrowAccount);
 
-      // Record the refund transaction
+      // Record the refund transaction with the actual refunded amount
       const txRecord = this.transactionRepository.create({
         transactionHash: result.hash,
         fromAccountId: escrowAccount.id,
         toAccountId: sourceAccount.id,
         sourceAccount: escrowAccount.publicKey,
         destinationAccount: sourceAccount.publicKey,
-        amount: escrow.amount,
+        amount: (requestedStroops / 10_000_000).toFixed(7),
         assetType: escrow.assetType,
         assetCode: escrow.assetCode,
         assetIssuer: escrow.assetIssuer,
         feePaid: parseInt(this.baseFee),
-        memo: `Escrow refund for escrow ${escrow.id}: ${dto.reason || 'No reason provided'}`,
+        memo: `Escrow ${isFullRefund ? 'refund' : 'partial refund'} for escrow ${escrow.id}: ${dto.reason || 'No reason provided'}`,
         memoType: MemoType.TEXT,
         status: TransactionStatus.COMPLETED,
         ledger: result.ledger,
@@ -893,7 +966,10 @@ export class StellarService {
       await queryRunner.manager.save(txRecord);
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Refunded escrow ${escrow.id}`);
+      this.logger.log(
+        `Refunded escrow ${escrow.id} (${amountToSend}, ` +
+          `${isFullRefund ? 'full' : 'partial'}; refunded to date ${escrow.refundedAmount})`,
+      );
 
       return this.getEscrowById(escrow.id);
     } catch (error) {

@@ -2,18 +2,18 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createVersionedPersistConfig } from '@/store/persistence';
-import { en, es, fr, type TranslationKeys } from './translations';
+import { en, es, fr, ar, type TranslationKeys } from './translations';
 import {
   formatDate,
   formatNumber,
   formatCurrency,
   formatCrypto,
 } from '../utils/format';
+import { createVersionedPersistConfig } from '@/store/persistence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SupportedLocale = 'en' | 'es' | 'fr';
+export type SupportedLocale = 'en' | 'es' | 'fr' | 'ar';
 
 export interface LocaleOption {
   code: SupportedLocale;
@@ -26,9 +26,16 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'en', label: 'English', nativeLabel: 'English', dir: 'ltr' },
   { code: 'es', label: 'Spanish', nativeLabel: 'Español', dir: 'ltr' },
   { code: 'fr', label: 'French', nativeLabel: 'Français', dir: 'ltr' },
+  // RTL verification locale — see translations/ar.ts.
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl' },
 ];
 
-const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = { en, es, fr };
+const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
+  en,
+  es,
+  fr,
+  ar,
+};
 
 /** Bump when persisted locale state shape changes. */
 export const I18N_STORE_VERSION = 1;

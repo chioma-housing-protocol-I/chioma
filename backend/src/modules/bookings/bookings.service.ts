@@ -55,7 +55,14 @@ export class BookingsService {
       );
     }
 
-    // Check for overlapping bookings
+    // Cheap pre-check outside the transaction to fail fast on the common
+    // case. This alone is NOT sufficient to prevent double-booking — two
+    // concurrent requests can both pass it before either commits — so the
+    // authoritative check below re-runs under a row lock inside the
+    // transaction. SQLite (used by in-memory test databases) has no
+    // row-level locking support, so the lock is skipped there rather than
+    // failing the query outright, matching the pattern already used in
+    // payments/refund.service.ts.
     const overlapping = await this.bookingRepository.exists({
       where: {
         propertyId: dto.propertyId,
@@ -70,11 +77,37 @@ export class BookingsService {
       );
     }
 
+    const supportsRowLocking = this.dataSource.options?.type !== 'sqlite';
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Serialize concurrent booking attempts for this property by taking a
+      // pessimistic write lock on its row before re-checking availability.
+      // Without this, two overlapping requests can both pass the exists()
+      // check above before either commits, producing a double booking.
+      await queryRunner.manager.findOne(Property, {
+        where: { id: property.id },
+        ...(supportsRowLocking
+          ? { lock: { mode: 'pessimistic_write' as const } }
+          : {}),
+      });
+
+      const stillOverlapping = await queryRunner.manager.exists(Booking, {
+        where: {
+          propertyId: dto.propertyId,
+          status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+          checkInDate: LessThan(dto.checkOut),
+          checkOutDate: MoreThan(dto.checkIn),
+        },
+      });
+      if (stillOverlapping) {
+        throw new BusinessRuleViolationError(
+          'Property is not available for the selected dates',
+        );
+      }
+
       const booking = queryRunner.manager.create(Booking, {
         propertyId: property.id,
         guestId,

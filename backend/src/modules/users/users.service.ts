@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './entities/user.entity';
@@ -69,6 +69,7 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly encryptionService: EncryptionService,
     private readonly lockService: LockService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getNotificationPreferences(userId: string): Promise<UserPreferences> {
@@ -139,17 +140,25 @@ export class UsersService {
     );
     user.isActive = false;
     user.refreshToken = null;
-    await this.userRepository.save(user);
-    await this.userRepository.softDelete(userId);
-    await this.auditService.log({
-      action: AuditAction.DELETE,
-      entityType: 'User',
-      entityId: userId,
-      performedBy: userId,
-      status: AuditStatus.SUCCESS,
-      level: AuditLevel.SECURITY,
-      metadata: { type: 'GDPR_DELETE' },
+
+    // The anonymization writes and the audit entry that records this
+    // irreversible, destructive action must commit or roll back together:
+    // if the audit insert fails, the deletion must not silently go
+    // untracked. See modules/audit/audit.service.ts#logInTransaction.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.save(User, user);
+      await manager.softDelete(User, userId);
+      await this.auditService.logInTransaction(manager, {
+        action: AuditAction.DELETE,
+        entityType: 'User',
+        entityId: userId,
+        performedBy: userId,
+        status: AuditStatus.SUCCESS,
+        level: AuditLevel.SECURITY,
+        metadata: { type: 'GDPR_DELETE' },
+      });
     });
+
     this.logger.log(`GDPR account deletion for user: ${userId}`);
     return { message: 'Account deleted and data anonymized (GDPR)' };
   }
@@ -547,9 +556,9 @@ export class UsersService {
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId, true);
-    await this.userRepository.delete(userId);
-    this.logger.log(`Account permanently deleted for user: ${user.email}`);
-    return { message: 'Account permanently deleted' };
+    await this.userRepository.softRemove(user);
+    this.logger.log(`Account soft-deleted for user: ${user.email}`);
+    return { message: 'Account deleted' };
   }
 
   async getUserActivity(userId: string): Promise<{
@@ -585,6 +594,19 @@ export class UsersService {
 
   async getUserById(userId: string, withDeleted = false): Promise<User> {
     return this.findById(userId, withDeleted);
+  }
+
+  /**
+   * IDs of active admin/super-admin users, for internal escalation flows
+   * (e.g. SLA breach notifications) that need to reach "the admins" rather
+   * than a specific user.
+   */
+  async findAdminIds(): Promise<string[]> {
+    const admins = await this.userRepository.find({
+      where: [{ role: UserRole.ADMIN }, { role: UserRole.SUPER_ADMIN }],
+      select: ['id'],
+    });
+    return admins.map((admin) => admin.id);
   }
 
   private hashLookupValue(value: string): string {

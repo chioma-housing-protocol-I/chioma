@@ -221,6 +221,18 @@ groups:
           description: 'Webhook failure rate: {{ $value }} per second'
           runbook_url: 'https://wiki.chioma.app/runbooks/webhook-failures'
 
+      - alert: WebhookSignatureVerificationFailures
+        expr: |
+          sum(rate(webhook_signature_verifications_total{result=~"missing_signature|missing_timestamp|invalid_timestamp|timestamp_expired|signature_mismatch"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: webhooks
+        annotations:
+          summary: 'Webhook signature verification failures detected'
+          description: 'Rejected webhook signature rate: {{ $value }} per second — possible tampering or replay attempts'
+          runbook_url: 'https://wiki.chioma.app/runbooks/webhook-signature-failures'
+
       # ==================== AVAILABILITY CHECKS ====================
       - alert: ServiceDown
         expr: |
