@@ -20,6 +20,7 @@ import {
   PER_IP_RATE_THRESHOLD,
   DATA_EXFILTRATION_RECORD_THRESHOLD,
 } from '../../common/constants/business-rules.constants';
+import { PaginationUtils } from '../../common/utils';
 
 export interface ThreatContext {
   userId?: string;
@@ -261,11 +262,14 @@ export class ThreatDetectionService {
   /**
    * Get recent threats for admin review.
    */
-  async getRecentThreats(limit: number = 50): Promise<ThreatEvent[]> {
-    return this.threatRepository.find({
+  async getRecentThreats(page: number = 1, limit: number = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.threatRepository.findAndCount({
       order: { createdAt: 'DESC' },
       take: limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**
