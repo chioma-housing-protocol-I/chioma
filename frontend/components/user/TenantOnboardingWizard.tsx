@@ -28,6 +28,10 @@ import {
 } from '@/lib/tenant-onboarding';
 import { trackTenantOnboardingEvent } from '@/lib/onboarding-analytics';
 import { useOnboardingContext } from '@/contexts/OnboardingContext';
+import {
+  tenantOnboardingSearchSchema,
+  tenantOnboardingDiscoverySchema,
+} from '@/lib/validation/forms';
 
 const TOTAL_STEPS = 4;
 
@@ -606,13 +610,13 @@ export function TenantOnboardingWizard() {
   const canGoNext = useMemo(() => {
     if (step === 0) return true; // profile is optional, can skip
     if (step === 1) return true; // preferences always valid
-    if (step === 2) return data.search.savedSearchCity.trim() !== '';
+    if (step === 2) {
+      const result = tenantOnboardingSearchSchema.safeParse(data.search);
+      return result.success;
+    }
     if (step === 3) {
-      return (
-        data.discovery.paymentsAcknowledged &&
-        data.discovery.disputesAcknowledged &&
-        data.discovery.blockchainAcknowledged
-      );
+      const result = tenantOnboardingDiscoverySchema.safeParse(data.discovery);
+      return result.success;
     }
     return true;
   }, [data, step]);

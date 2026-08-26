@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,10 @@ import {
 } from '@/components/ui/select';
 import { MaintenancePriority } from '@/lib/query/hooks/use-landlord-maintenance';
 import { useAuthStore } from '@/store/authStore';
+import {
+  maintenanceSchema,
+  type MaintenanceFormData,
+} from '@/lib/validation/forms';
 
 interface MaintenanceFormProps {
   propertyId?: string;
@@ -33,19 +39,23 @@ export function MaintenanceForm({
 }: MaintenanceFormProps) {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    priority: 'MEDIUM' as MaintenancePriority,
-    propertyId: propertyId || '',
-    propertyName: propertyName || '',
-  });
   const [photos, setPhotos] = useState<File[]>([]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<MaintenanceFormData>({
+    resolver: zodResolver(maintenanceSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      priority: 'MEDIUM' as MaintenancePriority,
+      propertyId: propertyId || '',
+      propertyName: propertyName || '',
+    },
+  });
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -58,11 +68,7 @@ export function MaintenanceForm({
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.title.trim() || !formData.description.trim()) return;
-
-    setIsSubmitting(true);
+  const onSubmit = async (data: MaintenanceFormData) => {
     try {
       // In a real implementation, this would call the API
       // For now, we'll simulate a successful submission
@@ -75,13 +81,11 @@ export function MaintenanceForm({
       }
     } catch (error) {
       console.error('Failed to submit maintenance request:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
+    <form onSubmit={handleSubmit(onSubmit)} className={`space-y-6 ${className}`}>
       <div className="bg-white rounded-3xl p-8 border border-neutral-100 shadow-sm">
         <h2 className="text-2xl font-bold text-neutral-900 mb-6">
           New Maintenance Request
@@ -98,12 +102,13 @@ export function MaintenanceForm({
             </label>
             <Input
               id="title"
+              {...register('title')}
               placeholder="Brief description of the issue"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              required
               className="w-full"
             />
+            {errors.title && (
+              <p className="text-xs text-red-600">{errors.title.message}</p>
+            )}
           </div>
 
           {/* Description */}
@@ -116,12 +121,15 @@ export function MaintenanceForm({
             </label>
             <Textarea
               id="description"
+              {...register('description')}
               placeholder="Provide detailed information about the maintenance issue..."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              required
               className="min-h-[150px] resize-none"
             />
+            {errors.description && (
+              <p className="text-xs text-red-600">
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           {/* Priority */}
@@ -133,8 +141,10 @@ export function MaintenanceForm({
               Priority
             </label>
             <Select
-              value={formData.priority}
-              onValueChange={(value) => handleInputChange('priority', value)}
+              defaultValue="MEDIUM"
+              onValueChange={(value) =>
+                setValue('priority', value as MaintenancePriority)
+              }
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select priority" />
@@ -159,11 +169,8 @@ export function MaintenanceForm({
               </label>
               <Input
                 id="property"
+                {...register('propertyName')}
                 placeholder="Property name or address"
-                value={formData.propertyName}
-                onChange={(e) =>
-                  handleInputChange('propertyName', e.target.value)
-                }
                 className="w-full"
               />
             </div>
@@ -233,14 +240,7 @@ export function MaintenanceForm({
             Cancel
           </Button>
         )}
-        <Button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            !formData.title.trim() ||
-            !formData.description.trim()
-          }
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

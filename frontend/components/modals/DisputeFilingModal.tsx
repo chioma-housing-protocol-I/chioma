@@ -3,7 +3,6 @@
 import React from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { AlertTriangle, Scale } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
@@ -11,6 +10,10 @@ import { Uploader } from '@/components/ui/Uploader';
 import type { DisputeType } from '@/lib/dashboard-data';
 import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
 import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
+import {
+  disputeFilingSchema,
+  type DisputeFilingFormData,
+} from '@/lib/validation/forms';
 
 const disputeTypes: { value: DisputeType; label: string }[] = [
   { value: 'RENT_PAYMENT', label: 'Rent Payment' },
@@ -21,30 +24,7 @@ const disputeTypes: { value: DisputeType; label: string }[] = [
   { value: 'OTHER', label: 'Other' },
 ];
 
-const schema = z.object({
-  agreementId: z.string().min(1, 'Agreement ID is required'),
-  disputeType: z.enum([
-    'RENT_PAYMENT',
-    'SECURITY_DEPOSIT',
-    'PROPERTY_DAMAGE',
-    'MAINTENANCE',
-    'TERMINATION',
-    'OTHER',
-  ]),
-  description: z
-    .string()
-    .min(20, 'Description must be at least 20 characters')
-    .max(2000, 'Description cannot exceed 2000 characters'),
-  requestedAmount: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
-      'Must be a positive number',
-    ),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = DisputeFilingFormData;
 
 export interface DisputeFilingData {
   agreementId: string;
@@ -76,7 +56,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
     control,
     formState: { errors, isSubmitting, submitCount },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(disputeFilingSchema),
     defaultValues: {
       agreementId,
       disputeType: 'MAINTENANCE',
