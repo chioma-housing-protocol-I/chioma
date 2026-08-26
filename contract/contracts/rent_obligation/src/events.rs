@@ -38,6 +38,37 @@ pub struct ObligationBurned {
     pub reason: String,
 }
 
+/// Event emitted when the system admin is initialized
+/// Topics: ["admin_initialized", admin: Address]
+#[contractevent(topics = ["admin_initialized"])]
+pub struct AdminInitialized {
+    #[topic]
+    pub admin: Address,
+    pub initialized_at: u64,
+}
+
+/// Event emitted when the system admin is updated
+/// Topics: ["admin_updated", old_admin: Address, new_admin: Address]
+#[contractevent(topics = ["admin_updated"])]
+pub struct AdminUpdated {
+    #[topic]
+    pub old_admin: Address,
+    #[topic]
+    pub new_admin: Address,
+    pub updated_at: u64,
+}
+
+/// Event emitted when an admin reassigns an obligation's owner
+/// Topics: ["admin_reassigned", agreement_id: String]
+#[contractevent(topics = ["admin_reassigned"])]
+pub struct ObligationAdminReassigned {
+    #[topic]
+    pub agreement_id: String,
+    pub admin: Address,
+    pub previous_owner: Address,
+    pub new_owner: Address,
+}
+
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
 #[contractevent(topics = ["upgrade_proposed"])]
@@ -108,6 +139,42 @@ pub(crate) fn obligation_burned(env: &Env, token_id: String, owner: Address, rea
         owner,
         token_id,
         reason,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin initialized event
+pub(crate) fn admin_initialized(env: &Env, admin: Address) {
+    AdminInitialized {
+        admin,
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin updated event
+pub(crate) fn admin_updated(env: &Env, old_admin: Address, new_admin: Address) {
+    AdminUpdated {
+        old_admin,
+        new_admin,
+        updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin reassignment event
+pub(crate) fn obligation_admin_reassigned(
+    env: &Env,
+    agreement_id: String,
+    admin: Address,
+    previous_owner: Address,
+    new_owner: Address,
+) {
+    ObligationAdminReassigned {
+        agreement_id,
+        admin,
+        previous_owner,
+        new_owner,
     }
     .publish(env);
 }
