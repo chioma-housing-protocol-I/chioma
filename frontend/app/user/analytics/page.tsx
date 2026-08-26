@@ -12,36 +12,11 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useLandlordPropertyAnalytics } from '@/lib/query/hooks/use-property-analytics';
-import dynamic from 'next/dynamic';
 import {
-  ResponsiveContainer,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Bar,
-} from 'recharts';
-
-const LineChartWrapper = dynamic(
-  () => import('@/components/charts/LineChartWrapper'),
-  {
-    loading: () => (
-      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
-    ),
-    ssr: false,
-  },
-);
-
-const PieChartWrapper = dynamic(
-  () => import('@/components/charts/PieChartWrapper'),
-  {
-    loading: () => (
-      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
-    ),
-    ssr: false,
-  },
-);
+  LazyCityMarketTrendsChart,
+  LazyLineChartWrapper,
+  LazyPieChartWrapper,
+} from '@/components/charts/lazy';
 
 const PIE_COLORS = ['#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#2563eb'];
 
@@ -189,7 +164,7 @@ export default function UserAnalyticsPage() {
             </span>
           </div>
           <div className="h-80">
-            <LineChartWrapper
+            <LazyLineChartWrapper
               data={trendData}
               dataKeyX="shortDate"
               dataKeyY="inquiries"
@@ -204,7 +179,7 @@ export default function UserAnalyticsPage() {
             Listing Status Mix
           </h2>
           <div className="h-72">
-            <PieChartWrapper
+            <LazyPieChartWrapper
               data={marketTrends.listingStatusDistribution}
               dataKey="count"
               nameKey="status"
@@ -233,43 +208,7 @@ export default function UserAnalyticsPage() {
             City Market Trends
           </h2>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={marketTrends.cityTrends}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="city"
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-                <Bar
-                  dataKey="totalViews"
-                  name="Views"
-                  fill="#38bdf8"
-                  radius={[8, 8, 0, 0]}
-                />
-                <Bar
-                  dataKey="totalInquiries"
-                  name="Inquiries"
-                  fill="#22c55e"
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyCityMarketTrendsChart data={marketTrends.cityTrends} />
           </div>
         </div>
 

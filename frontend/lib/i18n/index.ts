@@ -2,17 +2,18 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { en, es, fr, type TranslationKeys } from './translations';
+import { en, es, fr, ar, type TranslationKeys } from './translations';
 import {
   formatDate,
   formatNumber,
   formatCurrency,
   formatCrypto,
 } from '../utils/format';
+import { createVersionedPersistConfig } from '@/store/persistence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SupportedLocale = 'en' | 'es' | 'fr';
+export type SupportedLocale = 'en' | 'es' | 'fr' | 'ar';
 
 export interface LocaleOption {
   code: SupportedLocale;
@@ -25,9 +26,19 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'en', label: 'English', nativeLabel: 'English', dir: 'ltr' },
   { code: 'es', label: 'Spanish', nativeLabel: 'Español', dir: 'ltr' },
   { code: 'fr', label: 'French', nativeLabel: 'Français', dir: 'ltr' },
+  // RTL verification locale — see translations/ar.ts.
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl' },
 ];
 
-const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = { en, es, fr };
+const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
+  en,
+  es,
+  fr,
+  ar,
+};
+
+/** Bump when persisted locale state shape changes. */
+export const I18N_STORE_VERSION = 1;
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
@@ -51,9 +62,20 @@ export const useI18nStore = create<I18nStore>()(
       setLocale: (locale) => set({ locale }),
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
-    {
+    createVersionedPersistConfig<I18nStore, Pick<I18nStore, 'locale'>>({
       name: 'chioma-locale',
-      onRehydrateStorage: () => (state) => {
+      version: I18N_STORE_VERSION,
+      partialize: (state: I18nStore) => ({ locale: state.locale }),
+      migrations: {
+        1: (state) => {
+          const legacy = state as Record<string, unknown>;
+          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
+            ? (legacy.locale as SupportedLocale)
+            : 'en';
+          return { locale };
+        },
+      },
+      onRehydrateStorage: () => (state: I18nStore | undefined) => {
         if (state) {
           state.setHasHydrated(true);
 
@@ -75,7 +97,7 @@ export const useI18nStore = create<I18nStore>()(
           }
         }
       },
-    },
+    }),
   ),
 );
 

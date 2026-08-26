@@ -105,8 +105,26 @@ describe('Queue Processing Integration', () => {
     expect(job).toBeDefined();
     expect(job.id).toBe('bc-job-5');
     expect(mockBlockchainQueue.add).toHaveBeenCalledWith(
-      payload,
+      expect.objectContaining(payload),
       expect.objectContaining({ attempts: 5, removeOnComplete: false }),
+    );
+  });
+
+  it('propagates correlation id from requestContext into enqueued job payload', async () => {
+    const { requestContext } = await import('../../../common/request-context/request-context');
+    const payload = { transactionId: 'tx-xyz789', action: 'mint-nft' };
+
+    await requestContext.run({ correlationId: 'corr-req-12345', requestId: 'req-987' }, async () => {
+      await service.addBlockchainJob(payload);
+    });
+
+    expect(mockBlockchainQueue.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...payload,
+        correlationId: 'corr-req-12345',
+        requestId: 'req-987',
+      }),
+      expect.any(Object),
     );
   });
 
@@ -265,5 +283,30 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
         makeJob({ type: 'create-escrow', data: { agreementId: 'ag-fail' } }),
       ),
     ).rejects.toThrow('on-chain escrow creation failed');
+  });
+
+  it('restores correlationId and requestId into requestContext during job execution', async () => {
+    const { requestContext } = await import('../../../common/request-context/request-context');
+    let capturedCorrelationId: string | undefined;
+    let capturedRequestId: string | undefined;
+
+    mockEscrowIntegrationService.createEscrowForAgreement.mockImplementation(async () => {
+      const ctx = requestContext.get();
+      capturedCorrelationId = ctx?.correlationId;
+      capturedRequestId = ctx?.requestId;
+      return { id: 10 };
+    });
+
+    await processor.handleBlockchainJob(
+      makeJob({
+        type: 'create-escrow',
+        correlationId: 'req-corr-999',
+        requestId: 'req-id-888',
+        data: { agreementId: 'ag-ctx' },
+      }),
+    );
+
+    expect(capturedCorrelationId).toBe('req-corr-999');
+    expect(capturedRequestId).toBe('req-id-888');
   });
 });

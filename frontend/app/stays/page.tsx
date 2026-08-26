@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface StayProperty {
@@ -168,8 +168,10 @@ export default function StaysPage() {
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <PropertyCardSkeleton key={i} />
+            ))}
           </div>
         ) : properties.length === 0 ? (
           <div className="text-center py-20 text-blue-300/60">

@@ -47,7 +47,7 @@ export class DataArchivalService {
     tenant_screening_consent: {
       retentionDays: 365, // 1 year
       archiveTable: 'archived_tenant_screening_consent',
-      softDelete: false,
+      softDelete: true,
     },
   };
 

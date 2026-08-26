@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { MaintenanceRequest } from './maintenance-request.entity';
 import { MaintenanceService } from './maintenance.service';
 import { MaintenanceController } from './maintenance.controller';
@@ -10,6 +11,7 @@ import { PropertiesModule } from '../properties/properties.module';
 import { UsersModule } from '../users/users.module';
 import { AutoRecoveryService } from './auto-recovery.service';
 import { HealthRecoveryService } from './health-recovery.service';
+import { MaintenanceSlaService } from './maintenance-sla.service';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthModule } from '../../health/health.module';
 
@@ -23,9 +25,20 @@ import { HealthModule } from '../../health/health.module';
     UsersModule,
     TerminusModule,
     HealthModule,
+    ScheduleModule.forRoot(),
   ],
-  providers: [MaintenanceService, AutoRecoveryService, HealthRecoveryService],
+  providers: [
+    MaintenanceService,
+    AutoRecoveryService,
+    HealthRecoveryService,
+    MaintenanceSlaService,
+  ],
   controllers: [MaintenanceController],
-  exports: [MaintenanceService, AutoRecoveryService, HealthRecoveryService],
+  exports: [
+    MaintenanceService,
+    AutoRecoveryService,
+    HealthRecoveryService,
+    MaintenanceSlaService,
+  ],
 })
 export class MaintenanceModule {}

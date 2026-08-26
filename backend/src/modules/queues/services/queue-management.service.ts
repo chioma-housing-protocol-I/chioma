@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
+import { requestContext } from '../../../common/request-context/request-context';
 
 export interface JobData {
+  correlationId?: string;
+  requestId?: string;
   [key: string]: any;
 }
 
@@ -29,6 +32,17 @@ export class QueueManagementService {
     @InjectQueue('data-sync') private dataSyncQueue: Queue,
   ) {}
 
+  private enrichJobData<T extends Record<string, any>>(data: T): T & { correlationId?: string; requestId?: string } {
+    const ctx = requestContext.get();
+    const correlationId = data.correlationId || ctx?.correlationId || ctx?.requestId;
+    const requestId = data.requestId || ctx?.requestId || correlationId;
+    return {
+      ...(correlationId ? { correlationId } : {}),
+      ...(requestId ? { requestId } : {}),
+      ...data,
+    };
+  }
+
   /**
    * Add email job to queue
    */
@@ -44,8 +58,9 @@ export class QueueManagementService {
       ...options,
     };
 
-    this.logger.debug(`Adding email job: ${JSON.stringify(data)}`);
-    return this.emailQueue.add(data, defaultOptions);
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(`Adding email job: ${JSON.stringify(enrichedData)}`);
+    return this.emailQueue.add(enrichedData, defaultOptions);
   }
 
   /**
@@ -63,8 +78,9 @@ export class QueueManagementService {
       ...options,
     };
 
-    this.logger.debug(`Adding document job: ${JSON.stringify(data)}`);
-    return this.documentsQueue.add(data, defaultOptions);
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(`Adding document job: ${JSON.stringify(enrichedData)}`);
+    return this.documentsQueue.add(enrichedData, defaultOptions);
   }
 
   /**
@@ -85,8 +101,9 @@ export class QueueManagementService {
       ...options,
     };
 
-    this.logger.debug(`Adding blockchain job: ${JSON.stringify(data)}`);
-    return this.blockchainQueue.add(data, defaultOptions);
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(`Adding blockchain job: ${JSON.stringify(enrichedData)}`);
+    return this.blockchainQueue.add(enrichedData, defaultOptions);
   }
 
   /**
@@ -104,8 +121,9 @@ export class QueueManagementService {
       ...options,
     };
 
-    this.logger.debug(`Adding data sync job: ${JSON.stringify(data)}`);
-    return this.dataSyncQueue.add(data, defaultOptions);
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(`Adding data sync job: ${JSON.stringify(enrichedData)}`);
+    return this.dataSyncQueue.add(enrichedData, defaultOptions);
   }
 
   /**

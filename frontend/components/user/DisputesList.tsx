@@ -21,6 +21,8 @@ import {
 } from '@/lib/query/hooks/use-tenant-disputes';
 import { useUploadTenantDisputeEvidence } from '@/lib/query/hooks/use-tenant-dispute';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { useModal } from '@/contexts/ModalContext';
 import type { EvidenceUploadData } from '@/components/modals/EvidenceUploadModal';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -51,6 +53,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
   const uploadEvidenceMutation = useUploadTenantDisputeEvidence();
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: disputes = [],
@@ -123,7 +126,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
           const amount = row.getValue('requestedAmount') as number | undefined;
           return amount ? (
             <span className="font-mono font-bold text-emerald-400">
-              ${amount.toLocaleString()} USDC
+              {formatCurrency(amount, 'USDC')}
             </span>
           ) : (
             <span className="text-blue-300/30">—</span>
@@ -137,6 +140,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
           <span className="text-blue-200/50 text-sm">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </span>
         ),
@@ -194,7 +198,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
         ),
       },
     ],
-    [openModal, uploadEvidenceMutation],
+    [openModal, uploadEvidenceMutation, dateFnsLocale],
   );
 
   const table = useReactTable({

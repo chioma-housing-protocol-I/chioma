@@ -50,7 +50,7 @@ const SidebarItem = ({ item, isCollapsed = false }: SidebarItemProps) => {
         </>
       )}
       {isCollapsed && item.badge && (
-        <span className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs font-bold bg-red-500 text-white rounded-full">
+        <span className="absolute -top-2 -end-2 w-5 h-5 flex items-center justify-center text-xs font-bold bg-red-500 text-white rounded-full">
           {item.badge}
         </span>
       )}

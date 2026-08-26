@@ -33,6 +33,43 @@ Frontend components are organized by domain/feature rather than by type to make 
 
 New components should be placed within their respective domain folders. General utility components can be placed in `components/ui/` or `components/common/`.
 
+### Component Authoring Conventions
+
+These are the placement, naming, prop typing, and rendering rules new components should follow. See [CONTRIBUTING.md](./CONTRIBUTING.md#component-architecture) for the full guide with examples.
+
+**Placement**
+
+- `components/ui/`: base, reusable primitives with no business logic (buttons, inputs, modals, spinners). Config­urable entirely through props.
+- `components/<domain>/`: feature-specific components that know about app/business logic (e.g. `properties/`, `payments/`, `auth/`). If a component imports a store, hook, or type tied to one feature, it belongs here, not in `ui/`.
+- `components/common/`: small cross-domain helpers that aren't generic enough for `ui/` but aren't owned by a single domain either (e.g. `FileUpload`, `StarRating`). Prefer a domain folder or `ui/` first; use `common/` only when a component genuinely doesn't fit either.
+- Don't create a new top-level folder under `components/` for a single component — add it to the closest existing domain folder, or propose the new domain in the PR description if none fits.
+
+**Naming**
+
+```
+Components:  PascalCase          MyComponent.tsx
+Hooks:       camelCase, use-prefixed   useMyHook.ts
+Utilities:   camelCase           formatDate.ts
+Types:       PascalCase          types.ts (colocated) or User.ts
+Tests:       [name].test.tsx
+Stories:     [name].stories.tsx
+```
+
+Shadcn-derived primitives in `components/ui/` (`button.tsx`, `input.tsx`, `select.tsx`, ...) keep their lowercase filenames to match the upstream generator; new custom components should use PascalCase.
+
+**Prop typing**
+
+- Type props with an exported `interface <ComponentName>Props` directly above the component, e.g. `export interface BadgeProps extends ...`.
+- For a domain folder with several components sharing types (e.g. a `Property` shape used by cards, filters, and modals), colocate shared types in that folder's `types.ts` instead of repeating them per file.
+- Avoid `any`; prefer `unknown` plus narrowing, or a precise union, when a prop's shape genuinely varies.
+
+**Server vs. client boundary**
+
+- Components are server components by default — don't add `'use client'` unless the component needs it.
+- Add `'use client'` only when a component uses hooks (`useState`, `useEffect`, `useMap`, ...), browser-only APIs, event handlers, or a client-only library (e.g. `react-leaflet`).
+- Keep the `'use client'` boundary as low in the tree as practical: a page/layout that only composes other components should stay a server component, pushing `'use client'` down into the specific interactive child instead of marking the whole subtree client-side.
+- Skeleton/loading/presentational components with no interactivity (e.g. `PropertyCardSkeleton`) should have no `'use client'` directive.
+
 ### Running the Development Server
 
 First, run the development server:

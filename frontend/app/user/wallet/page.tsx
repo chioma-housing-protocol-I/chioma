@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import WalletCard from '@/components/dashboard/agent/WalletCard';
 import RecentPayouts, {
   type PayoutTransaction,
@@ -24,6 +26,7 @@ export default function WalletPage() {
 
   const { data: networkAccount } = useStellarNetworkAccount(walletAddress);
   const { data: anchorPage } = useAnchorTransactions({ limit: 10 });
+  const dateFnsLocale = useDateFnsLocale();
 
   const balance =
     readAssetBalance(networkAccount, currency) ?? FALLBACK_BALANCES[currency];
@@ -40,13 +43,16 @@ export default function WalletPage() {
           tx.type === 'deposit'
             ? `Deposit${tx.paymentMethod ? ` via ${tx.paymentMethod}` : ''}`
             : `Withdrawal${tx.destination ? ` to ${tx.destination.slice(0, 4)}…${tx.destination.slice(-4)}` : ''}`,
-        time: formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true }),
-        amount: `${isPositive ? '+' : '-'}$${Number.isFinite(amount) ? amount.toLocaleString() : tx.amount}`,
+        time: formatDistanceToNow(new Date(tx.createdAt), {
+          addSuffix: true,
+          locale: dateFnsLocale,
+        }),
+        amount: `${isPositive ? '+' : '-'}${formatCurrency(Number.isFinite(amount) ? amount : Number(tx.amount), tx.currency)}`,
         currency: tx.currency,
         isPositive,
       };
     });
-  }, [anchorPage]);
+  }, [anchorPage, dateFnsLocale]);
 
   const handleCurrencyToggle = () => {
     setCurrency((prev) => (prev === 'USDC' ? 'XLM' : 'USDC'));

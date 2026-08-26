@@ -30,13 +30,19 @@ export default function PropertyListing() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // ── Filter state (drives API query) ─────────────────────────────────────────
+  // ── Filter state (drives API query, mirrored into the URL) ──────────────────
   const [searchQuery, setSearchQuery] = useState(
     () => searchParams.get('q') ?? '',
   );
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [minPrice, setMinPrice] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>(
+    () => searchParams.get('type') ?? '',
+  );
+  const [minPrice, setMinPrice] = useState<string>(
+    () => searchParams.get('minPrice') ?? '',
+  );
+  const [maxPrice, setMaxPrice] = useState<string>(
+    () => searchParams.get('maxPrice') ?? '',
+  );
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -62,20 +68,76 @@ export default function PropertyListing() {
   // Flatten all pages into a single array
   const allProperties: Property[] = data?.pages.flatMap((p) => p.data) ?? [];
 
+  // Keep local filter state in sync with the URL — covers initial load,
+  // reload, and back/forward navigation (Next.js re-renders with fresh
+  // searchParams on popstate).
   useEffect(() => {
     setSearchQuery(searchParams.get('q') ?? '');
+    setSelectedType(searchParams.get('type') ?? '');
+    setMinPrice(searchParams.get('minPrice') ?? '');
+    setMaxPrice(searchParams.get('maxPrice') ?? '');
   }, [searchParams]);
+
+  // Build a /properties URL representing the full active filter set, with
+  // any of q/type/minPrice/maxPrice overridden by the caller.
+  const buildFiltersUrl = useCallback(
+    (
+      overrides: {
+        q?: string;
+        type?: string;
+        minPrice?: string;
+        maxPrice?: string;
+      } = {},
+    ) => {
+      const next = {
+        q: searchQuery,
+        type: selectedType,
+        minPrice,
+        maxPrice,
+        ...overrides,
+      };
+      const parts: string[] = [];
+      const trimmedQ = next.q.trim();
+      if (trimmedQ) parts.push(`q=${encodeURIComponent(trimmedQ)}`);
+      if (next.type) parts.push(`type=${encodeURIComponent(next.type)}`);
+      if (next.minPrice)
+        parts.push(`minPrice=${encodeURIComponent(next.minPrice)}`);
+      if (next.maxPrice)
+        parts.push(`maxPrice=${encodeURIComponent(next.maxPrice)}`);
+      return parts.length ? `/properties?${parts.join('&')}` : '/properties';
+    },
+    [searchQuery, selectedType, minPrice, maxPrice],
+  );
 
   const applySearchToUrl = useCallback(
     (raw: string) => {
-      const trimmed = raw.trim();
-      const next = trimmed
-        ? `/properties?q=${encodeURIComponent(trimmed)}`
-        : '/properties';
-      router.replace(next);
+      router.replace(buildFiltersUrl({ q: raw }));
     },
-    [router],
+    [buildFiltersUrl, router],
   );
+
+  const handleTypeSelect = useCallback(
+    (type: string) => {
+      setSelectedType(type);
+      router.replace(buildFiltersUrl({ type }));
+    },
+    [buildFiltersUrl, router],
+  );
+
+  // Debounce price-range changes before pushing them into the URL so we
+  // don't replace history on every keystroke.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timeout = setTimeout(() => {
+      router.replace(buildFiltersUrl());
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minPrice, maxPrice]);
 
   // Infinite scroll observer — calls API's next page
   useEffect(() => {
@@ -186,7 +248,7 @@ export default function PropertyListing() {
                     ].map((t) => (
                       <div
                         key={t}
-                        onClick={() => setSelectedType(t)}
+                        onClick={() => handleTypeSelect(t)}
                         className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
                           selectedType === t
                             ? 'bg-blue-600 text-white'

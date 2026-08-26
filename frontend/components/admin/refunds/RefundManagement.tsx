@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { ArrowRight, CircleDollarSign, Filter, Loader2 } from 'lucide-react';
 import type {
   AdminRefundRequestRow,
@@ -46,6 +48,7 @@ export function RefundManagement({
     () => filterByStatus(rows, statusFilter),
     [rows, statusFilter],
   );
+  const dateFnsLocale = useDateFnsLocale();
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -141,7 +144,7 @@ export function RefundManagement({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-white font-medium whitespace-nowrap">
-                      {row.amount.toLocaleString()} {row.currency}
+                      {formatCurrency(row.amount, row.currency)}
                     </td>
                     <td className="px-5 py-4">
                       <span
@@ -151,7 +154,9 @@ export function RefundManagement({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-slate-500 hidden sm:table-cell whitespace-nowrap">
-                      {format(new Date(row.updatedAt), 'MMM d, yyyy')}
+                      {format(new Date(row.updatedAt), 'MMM d, yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </td>
                     <td className="px-5 py-4">
                       <Link

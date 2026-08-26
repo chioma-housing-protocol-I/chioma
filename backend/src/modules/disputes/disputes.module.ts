@@ -11,6 +11,8 @@ import { Arbiter } from './entities/arbiter.entity';
 import { DisputeVote } from './entities/dispute-vote.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 import { User } from '../users/entities/user.entity';
+import { Payment as GeneralPayment } from '../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../rent/entities/payment.entity';
 import { AuditModule } from '../audit/audit.module';
 import { StellarModule } from '../stellar/stellar.module';
 
@@ -24,6 +26,8 @@ import { StellarModule } from '../stellar/stellar.module';
       DisputeVote,
       RentAgreement,
       User,
+      GeneralPayment,
+      RentPayment,
     ]),
     AuditModule,
     StellarModule,

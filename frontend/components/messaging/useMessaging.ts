@@ -7,11 +7,29 @@ import { apiClient } from '@/lib/api-client';
 import type {
   ChatRoom,
   Message,
+  SendMessageAck,
   SendMessagePayload,
   TypingPayload,
 } from './types';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// How long an optimistic message may sit as "pending" before we give up
+// waiting for a server ack or echo and mark it failed/retryable.
+const SEND_TIMEOUT_MS = 10000;
+
+function generateClientId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `c${Date.now()}${Math.random().toString(36).slice(2)}`;
+}
+
+interface PendingSend {
+  roomId: string;
+  content: string;
+  attachment?: File;
+}
 
 interface UseMessagingReturn {
   rooms: ChatRoom[];
@@ -23,6 +41,7 @@ interface UseMessagingReturn {
   isLoadingMessages: boolean;
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string, attachment?: File) => void;
+  retryMessage: (clientId: string) => void;
   sendTyping: (isTyping: boolean) => void;
   createRoom: (participantId: string) => Promise<ChatRoom | null>;
 }
@@ -30,6 +49,10 @@ interface UseMessagingReturn {
 export function useMessaging(): UseMessagingReturn {
   const { accessToken, user } = useAuthStore();
   const socketRef = useRef<Socket | null>(null);
+  const pendingSendsRef = useRef<Map<string, PendingSend>>(new Map());
+  const pendingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
 
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
@@ -51,6 +74,22 @@ export function useMessaging(): UseMessagingReturn {
     } catch {
       // Server support may not exist yet; local clear still improves UX.
     }
+  }, []);
+
+  const clearPendingSend = useCallback((clientId: string) => {
+    const timeout = pendingTimeoutsRef.current.get(clientId);
+    if (timeout) clearTimeout(timeout);
+    pendingTimeoutsRef.current.delete(clientId);
+    pendingSendsRef.current.delete(clientId);
+  }, []);
+
+  // Clear any outstanding send timeouts when the hook unmounts.
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      pendingTimeoutsRef.current.clear();
+      pendingSendsRef.current.clear();
+    };
   }, []);
 
   // ── Fetch rooms on mount ──────────────────────────────────────────────
@@ -81,8 +120,11 @@ export function useMessaging(): UseMessagingReturn {
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
       transports: ['websocket'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 10_000,
+      timeout: 20_000,
     });
 
     socketRef.current = socket;
@@ -90,16 +132,43 @@ export function useMessaging(): UseMessagingReturn {
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
 
-    // New message from server
-    socket.on('message', (message: Message) => {
+    // New message from server (also fires as the echo of our own sends)
+    socket.on('message', (message: Message & { clientId?: string }) => {
+      const { clientId: incomingClientId, ...serverMessage } = message;
+
       setMessages((prev: Message[]) => {
-        if (prev.some((m: Message) => m.id === message.id)) return prev;
-        return [...prev, message];
+        if (prev.some((m: Message) => m.id === serverMessage.id)) return prev;
+
+        // Reconcile against an optimistic message we're waiting on: prefer
+        // matching the clientId the server echoed back, else fall back to
+        // the oldest pending message with the same content in this room
+        // (covers gateways that don't echo clientId).
+        const matched =
+          (incomingClientId && prev.find((m) => m.id === incomingClientId)) ||
+          (serverMessage.senderId === user?.id
+            ? prev.find(
+                (m) =>
+                  m.status === 'pending' &&
+                  m.roomId === serverMessage.roomId &&
+                  m.content === serverMessage.content,
+              )
+            : undefined);
+
+        if (matched) {
+          clearPendingSend(matched.id);
+          return prev.map((m) =>
+            m.id === matched.id ? { ...serverMessage, status: 'sent' } : m,
+          );
+        }
+
+        return [...prev, serverMessage];
       });
 
       setRooms((prev: ChatRoom[]) =>
         prev.map((r: ChatRoom) =>
-          r.id === message.roomId ? { ...r, lastMessage: message } : r,
+          r.id === serverMessage.roomId
+            ? { ...r, lastMessage: serverMessage }
+            : r,
         ),
       );
     });
@@ -159,40 +228,136 @@ export function useMessaging(): UseMessagingReturn {
   );
 
   // ── Send a message ────────────────────────────────────────────────────
-  const sendMessage = useCallback(
-    (content: string, attachment?: File) => {
-      if (!activeRoom || (!content.trim() && !attachment) || !socketRef.current)
-        return;
+  // Dispatches (or re-dispatches, for retry) the network call for an
+  // already-optimistic message identified by clientId.
+  const dispatchSend = useCallback(
+    (clientId: string) => {
+      const pending = pendingSendsRef.current.get(clientId);
+      if (!pending || !socketRef.current) return;
 
-      if (attachment) {
+      setMessages((prev: Message[]) =>
+        prev.map((m) => (m.id === clientId ? { ...m, status: 'pending' } : m)),
+      );
+
+      if (pending.attachment) {
         const formData = new FormData();
-        formData.append('file', attachment);
-        if (content.trim()) formData.append('content', content.trim());
-        formData.append('roomId', activeRoom.id);
+        formData.append('file', pending.attachment);
+        if (pending.content) formData.append('content', pending.content);
+        formData.append('roomId', pending.roomId);
 
         apiClient
           .post<Message>(
-            `/messaging/rooms/${activeRoom.id}/messages/attachment`,
+            `/messaging/rooms/${pending.roomId}/messages/attachment`,
             formData as unknown as Record<string, unknown>,
           )
           .then(({ data }) => {
-            setMessages((prev: Message[]) => {
-              if (prev.some((m: Message) => m.id === data.id)) return prev;
-              return [...prev, data];
-            });
+            clearPendingSend(clientId);
+            setMessages((prev: Message[]) =>
+              prev.map((m) =>
+                m.id === clientId ? { ...data, status: 'sent' } : m,
+              ),
+            );
           })
-          .catch(() => undefined);
+          .catch(() => {
+            setMessages((prev: Message[]) =>
+              prev.map((m) =>
+                m.id === clientId ? { ...m, status: 'failed' } : m,
+              ),
+            );
+          });
         return;
       }
 
+      const timeout = setTimeout(() => {
+        pendingTimeoutsRef.current.delete(clientId);
+        setMessages((prev: Message[]) =>
+          prev.map((m) =>
+            m.id === clientId && m.status === 'pending'
+              ? { ...m, status: 'failed' }
+              : m,
+          ),
+        );
+      }, SEND_TIMEOUT_MS);
+      pendingTimeoutsRef.current.set(clientId, timeout);
+
       const payload: SendMessagePayload = {
-        roomId: activeRoom.id,
-        content: content.trim(),
+        roomId: pending.roomId,
+        content: pending.content,
+        clientId,
       };
 
-      socketRef.current.emit('sendMessage', payload);
+      socketRef.current.emit('sendMessage', payload, (ack?: SendMessageAck) => {
+        if (!ack) return; // Gateway has no ack support — rely on echo/timeout.
+
+        if (ack.message) {
+          clearPendingSend(clientId);
+          setMessages((prev: Message[]) =>
+            prev.map((m) =>
+              m.id === clientId ? { ...ack.message!, status: 'sent' } : m,
+            ),
+          );
+        } else if (ack.error) {
+          const t = pendingTimeoutsRef.current.get(clientId);
+          if (t) clearTimeout(t);
+          pendingTimeoutsRef.current.delete(clientId);
+          setMessages((prev: Message[]) =>
+            prev.map((m) =>
+              m.id === clientId ? { ...m, status: 'failed' } : m,
+            ),
+          );
+        }
+      });
     },
-    [activeRoom],
+    [clearPendingSend],
+  );
+
+  const sendMessage = useCallback(
+    (content: string, attachment?: File) => {
+      if (
+        !activeRoom ||
+        (!content.trim() && !attachment) ||
+        !socketRef.current ||
+        !user
+      )
+        return;
+
+      const clientId = generateClientId();
+      const trimmed = content.trim();
+
+      const optimisticMessage: Message = {
+        id: clientId,
+        content: trimmed,
+        senderId: user.id,
+        roomId: activeRoom.id,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+        status: 'pending',
+        sender: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role as 'user' | 'admin',
+        },
+      };
+
+      setMessages((prev: Message[]) => [...prev, optimisticMessage]);
+      pendingSendsRef.current.set(clientId, {
+        roomId: activeRoom.id,
+        content: trimmed,
+        attachment,
+      });
+
+      dispatchSend(clientId);
+    },
+    [activeRoom, user, dispatchSend],
+  );
+
+  // Re-attempts a message that previously failed to send.
+  const retryMessage = useCallback(
+    (clientId: string) => {
+      dispatchSend(clientId);
+    },
+    [dispatchSend],
   );
 
   // ── Typing indicator ──────────────────────────────────────────────────
@@ -240,6 +405,7 @@ export function useMessaging(): UseMessagingReturn {
     isLoadingMessages,
     selectRoom,
     sendMessage,
+    retryMessage,
     sendTyping,
     createRoom,
   };

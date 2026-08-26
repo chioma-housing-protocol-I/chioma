@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import toast from 'react-hot-toast';
 import {
   usePaymentMethods,
@@ -55,6 +56,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     description: '',
   });
 
+  const dateFnsLocale = useDateFnsLocale();
   const { data: savedMethods = [], isLoading: isLoadingMethods } =
     usePaymentMethods();
   const createMethodMutation = useCreatePaymentMethod();
@@ -318,7 +320,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <div className="mt-4 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                 <Calendar size={16} />
                 <span>
-                  Due: {format(new Date(formData.dueDate), 'MMMM d, yyyy')}
+                  Due:{' '}
+                  {format(new Date(formData.dueDate), 'MMMM d, yyyy', {
+                    locale: dateFnsLocale,
+                  })}
                 </span>
               </div>
             )}
@@ -567,7 +572,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                             {method.expiryDate && (
                               <p className="text-xs text-neutral-500">
                                 Expires:{' '}
-                                {format(new Date(method.expiryDate), 'MM/yy')}
+                                {format(new Date(method.expiryDate), 'MM/yy', {
+                                  locale: dateFnsLocale,
+                                })}
                               </p>
                             )}
                           </div>

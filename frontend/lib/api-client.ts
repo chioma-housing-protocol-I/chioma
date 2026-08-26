@@ -4,6 +4,7 @@
  * Supports mock API mode for frontend-only development.
  */
 
+import { z } from 'zod';
 import {
   AppError,
   classifyUnknownError,
@@ -28,6 +29,8 @@ type RequestConfig = {
   signal?: AbortSignal;
   cancellationKey?: string;
   disableTimeoutConfig?: boolean;
+  /** Optional Zod schema to validate the parsed response at runtime. */
+  schema?: z.ZodType;
 };
 
 type ApiResponse<T> = {
@@ -41,7 +44,7 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
     return configured && configured.length > 0 ? configured : '/api';
@@ -97,13 +100,41 @@ class ApiClient {
     return token;
   }
 
-  private async parseResponse<T>(response: Response): Promise<T> {
+  private async parseResponse<T>(
+    response: Response,
+    schema?: z.ZodType,
+  ): Promise<T> {
     const contentType = response.headers.get('content-type') || '';
+    let data: unknown;
+
     if (contentType.includes('application/json')) {
-      return (await response.json()) as T;
+      data = await response.json();
+    } else {
+      data = await response.text();
     }
 
-    return (await response.text()) as T;
+    if (schema) {
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        throw new AppError({
+          code: 'VALIDATION_RESPONSE_MISMATCH',
+          category: 'validation',
+          severity: 'warning',
+          message: `API response failed schema validation: ${result.error.issues.map((i) => i.path.join('.')).join(', ')}`,
+          userMessage:
+            'The server returned data in an unexpected format. Please try again.',
+          recoverable: true,
+          context: {
+            source: 'lib/api-client.ts',
+            action: 'parseResponse',
+            metadata: { issues: result.error.issues },
+          },
+        });
+      }
+      return result.data as T;
+    }
+
+    return data as T;
   }
 
   private clearAuthAndRedirectIfNeeded(status: number) {
@@ -234,7 +265,7 @@ class ApiClient {
               });
             }
 
-            const data = await this.parseResponse<T>(response);
+            const data = await this.parseResponse<T>(response, config.schema);
             return {
               data,
               status: response.status,

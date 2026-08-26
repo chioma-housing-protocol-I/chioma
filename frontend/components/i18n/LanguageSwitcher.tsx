@@ -23,11 +23,8 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   const current =
     LOCALE_OPTIONS.find((o) => o.code === locale) ?? LOCALE_OPTIONS[0];
 
-  // Sync html[lang] whenever locale changes — inside an effect to satisfy the
-  // react-hooks/immutability rule (no direct DOM mutation in event handlers).
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
+  // html[lang]/[dir] sync lives in <HtmlAttributesSync>, mounted once at the
+  // app root so it applies even on pages without this switcher.
 
   // Close on outside click
   useEffect(() => {
@@ -84,7 +81,7 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
         <ul
           role="listbox"
           aria-label="Language options"
-          className="absolute right-0 mt-1 w-40 bg-slate-800 border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
+          className="absolute end-0 mt-1 w-40 bg-slate-800 border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
         >
           {LOCALE_OPTIONS.map((option) => (
             <li

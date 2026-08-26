@@ -97,8 +97,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static top-0 left-0 bottom-0 w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/10 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col shrink-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed lg:static top-0 start-0 bottom-0 w-64 bg-slate-900/50 backdrop-blur-xl border-e border-white/10 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col shrink-0 ${
+          isSidebarOpen
+            ? 'translate-x-0'
+            : 'ltr:-translate-x-full rtl:translate-x-full'
         }`}
       >
         {/* Logo */}
@@ -150,9 +152,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   </span>
                 )}
 
-                {/* Active Indicator Left Glow */}
+                {/* Active Indicator Glow */}
                 {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-400 rounded-r-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                  <div className="absolute start-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-400 rounded-e-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                 )}
               </Link>
             );
@@ -221,12 +223,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="hidden md:flex items-center relative w-96 group">
               <Search
                 size={16}
-                className="absolute left-4 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+                className="absolute start-4 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
               />
               <input
                 type="text"
                 placeholder="Search properties, clients..."
-                className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-500 focus:bg-white/10 transition-all"
+                className="w-full ps-11 pe-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-500 focus:bg-white/10 transition-all"
               />
             </div>
 

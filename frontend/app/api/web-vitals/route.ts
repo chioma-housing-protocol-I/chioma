@@ -7,26 +7,74 @@ import {
 } from '@/lib/web-vitals';
 
 const MAX_BUFFER = 200;
+const MAX_BODY_BYTES = 4_096;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 60;
+const VALID_WEB_VITAL_NAMES = new Set([
+  'CLS',
+  'FCP',
+  'FID',
+  'INP',
+  'LCP',
+  'TTFB',
+]);
 
 /** In-process ring buffer for local aggregation / GET dashboard. */
 const buffer: WebVitalPayload[] = [];
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function push(payload: WebVitalPayload) {
   buffer.unshift(payload);
   if (buffer.length > MAX_BUFFER) buffer.length = MAX_BUFFER;
 }
 
+function clientKey(request: NextRequest): string {
+  const forwardedFor = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')[0]
+    ?.trim();
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  return forwardedFor || realIp || 'unknown';
+}
+
+function isRateLimited(request: NextRequest): boolean {
+  const key = clientKey(request);
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return false;
+  }
+
+  if (bucket.count >= RATE_LIMIT_MAX_REQUESTS) return true;
+  bucket.count += 1;
+  return false;
+}
+
 function isValidBody(body: unknown): body is RawWebVitalMetric & {
   route?: string;
   timestamp?: string;
 } {
-  if (!body || typeof body !== 'object') return false;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   const b = body as Record<string, unknown>;
   return (
     typeof b.name === 'string' &&
+    VALID_WEB_VITAL_NAMES.has(b.name) &&
     typeof b.value === 'number' &&
     Number.isFinite(b.value) &&
-    typeof b.id === 'string'
+    b.value >= 0 &&
+    typeof b.id === 'string' &&
+    b.id.length > 0 &&
+    b.id.length <= 128 &&
+    (b.rating === undefined || typeof b.rating === 'string') &&
+    (b.delta === undefined ||
+      (typeof b.delta === 'number' && Number.isFinite(b.delta))) &&
+    (b.navigationType === undefined || typeof b.navigationType === 'string') &&
+    (b.route === undefined || typeof b.route === 'string')
   );
 }
 
@@ -35,9 +83,28 @@ function isValidBody(body: unknown): body is RawWebVitalMetric & {
  * Re-sanitizes on the server so query strings / entries never stick.
  */
 export async function POST(request: NextRequest) {
+  const contentLength = Number.parseInt(
+    request.headers.get('content-length') || '0',
+    10,
+  );
+  if (contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
+
+  if (isRateLimited(request)) {
+    return NextResponse.json(
+      { error: 'Too many web vitals submissions' },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    }
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
@@ -50,25 +117,20 @@ export async function POST(request: NextRequest) {
     {
       name: body.name,
       value: body.value,
-      rating: typeof body.rating === 'string' ? body.rating : undefined,
-      delta: typeof body.delta === 'number' ? body.delta : undefined,
+      rating: body.rating,
+      delta: body.delta,
       id: body.id,
-      navigationType:
-        typeof body.navigationType === 'string'
-          ? body.navigationType
-          : undefined,
+      navigationType: body.navigationType,
     },
     typeof body.route === 'string' ? body.route : sanitizeRoute('/'),
   );
 
-  // Prefer client-provided sanitized route if already set
   if (typeof body.route === 'string') {
     payload.route = sanitizeRoute(body.route);
   }
 
   push(payload);
 
-  // Structured log for terminal / log aggregation
   console.info(
     JSON.stringify({
       type: 'web_vital',

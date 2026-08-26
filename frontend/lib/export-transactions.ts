@@ -1,5 +1,7 @@
 import type { Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
+import { getDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { useI18nStore } from '@/lib/i18n';
 
 export function exportTransactionsToCsv(transactions: Transaction[]): void {
   const headers = [
@@ -78,7 +80,7 @@ export function exportTransactionsToPdf(
       </head>
       <body>
         <h1>${title}</h1>
-        <p class="meta">Generated on ${format(new Date(), 'PPpp')} · ${transactions.length} transaction(s)</p>
+        <p class="meta">Generated on ${format(new Date(), 'PPpp', { locale: getDateFnsLocale(useI18nStore.getState().locale) })} · ${transactions.length} transaction(s)</p>
         <table>
           <thead>
             <tr>

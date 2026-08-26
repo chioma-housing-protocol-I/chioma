@@ -272,7 +272,7 @@ export interface Arbiter {
     qualifications?: string;
     specialization?: string;
     stakeAmount?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   } | null;
   createdAt: string;
   updatedAt: string;
@@ -581,3 +581,10 @@ export interface Document {
   description?: string;
   thumbnailUrl?: string;
 }
+
+// OpenAPI generated schema types
+export type {
+  paths as ApiPaths,
+  operations as ApiOperations,
+  components as ApiComponents,
+} from './api-generated';

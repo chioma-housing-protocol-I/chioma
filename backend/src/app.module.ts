@@ -81,7 +81,10 @@ const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
-    ...(process.env.NODE_ENV === 'test' ? [] : [SentryModule.forRoot()]),
+    ...(process.env.NODE_ENV === 'test' ||
+    process.env.OPENAPI_GENERATE === 'true'
+      ? []
+      : [SentryModule.forRoot()]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
@@ -94,7 +97,7 @@ const appLogger = new Logger('AppModule');
     CertificatePinningModule,
     OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
-    process.env.NODE_ENV === 'test'
+    process.env.NODE_ENV === 'test' || process.env.OPENAPI_GENERATE === 'true'
       ? CacheModule.register({
           isGlobal: true,
           ttl: 600,

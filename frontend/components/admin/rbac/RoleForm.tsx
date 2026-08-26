@@ -3,6 +3,8 @@
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import type { Role } from '@/types';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 type RoleFormValues = {
   name: string;
@@ -25,7 +27,7 @@ export function RoleForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm({
     defaultValues: role
       ? {
@@ -53,6 +55,8 @@ export function RoleForm({
         </button>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-white mb-2">
@@ -60,13 +64,16 @@ export function RoleForm({
           </label>
           <input
             {...register('name', { required: 'Role name is required' })}
+            {...fieldA11yProps('name', errors.name)}
             type="text"
             placeholder="e.g., moderator"
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
             disabled={isLoading}
           />
           {errors.name && (
-            <p className="text-sm text-rose-400 mt-1">{errors.name.message}</p>
+            <p id={fieldErrorId('name')} className="text-sm text-rose-400 mt-1">
+              {errors.name.message}
+            </p>
           )}
         </div>
 

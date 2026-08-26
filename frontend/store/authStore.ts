@@ -52,6 +52,7 @@ interface AuthApiUser {
   lastName: string | null;
   role: string;
   avatar?: string;
+  locale?: string;
 }
 
 interface AuthSuccessResponse {
@@ -110,6 +111,23 @@ const AUTH_STORAGE_KEYS = {
 
 const AUTH_COOKIE_NAME = 'chioma_auth_token';
 
+/**
+ * Non-sensitive display hint mirrored into a readable cookie so the server
+ * can render the signed-in UI on the first paint (see AuthHint below) --
+ * localStorage itself is invisible to the server, so without this the app
+ * always SSRs as signed-out and corrects after the client hydrates the
+ * store, producing a visible flash.
+ */
+const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
+
+export interface AuthHint {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  avatar?: string;
+}
+
 // --- Cookie Helpers ----------------------------------------------------------
 
 function setAuthCookie(token: string) {
@@ -122,6 +140,25 @@ function removeAuthCookie() {
   if (typeof document === 'undefined') return;
 
   document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+function setAuthHintCookie(user: User) {
+  if (typeof document === 'undefined') return;
+
+  const hint: AuthHint = {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+  };
+  document.cookie = `${AUTH_HINT_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(hint))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+}
+
+function removeAuthHintCookie() {
+  if (typeof document === 'undefined') return;
+
+  document.cookie = `${AUTH_HINT_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 // --- Storage Helpers ---------------------------------------------------------
@@ -227,6 +264,7 @@ function clearStorage() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
+  removeAuthHintCookie();
 
   cachedAuthSnapshot = emptyAuthSnapshot();
 }
@@ -246,6 +284,7 @@ function persistAuth(
 
   localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
   setAuthCookie(accessToken);
+  setAuthHintCookie(user);
 
   // Keep the closure cache in sync so subsequent reads skip localStorage
   cachedAuthSnapshot = {
@@ -270,7 +309,7 @@ function normalizeUser(user: AuthApiUser): User {
     lastName: user.lastName ?? '',
     role: user.role,
     avatar: user.avatar,
-    locale: (user as any).locale,
+    locale: user.locale,
   };
 }
 

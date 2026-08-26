@@ -30,6 +30,8 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import toast from 'react-hot-toast';
 
 const KYC_BADGE: Record<KycStatus, string> = {
@@ -74,6 +76,7 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
   const [actionLoading, setActionLoading] = useState(false);
   /** Overrides server mock when suspend/activate succeeds before detail payload updates. */
   const [localSuspended, setLocalSuspended] = useState<boolean | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const user = data?.user;
   const extras = data?.extras;
@@ -242,7 +245,10 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
               </div>
               <div className="flex items-center gap-3">
                 <Calendar size={16} className="text-slate-500 shrink-0" />
-                Joined {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                Joined{' '}
+                {format(new Date(user.createdAt), 'MMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </div>
             </div>
           </div>
@@ -260,7 +266,10 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
               </span>
               {extras.kycUpdatedAt && (
                 <span className="text-xs text-slate-500">
-                  Updated {format(new Date(extras.kycUpdatedAt), 'MMM d, yyyy')}
+                  Updated{' '}
+                  {format(new Date(extras.kycUpdatedAt), 'MMM d, yyyy', {
+                    locale: dateFnsLocale,
+                  })}
                 </span>
               )}
             </div>
@@ -393,11 +402,13 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
                           </span>
                           <p className="text-slate-500 text-xs mt-0.5 line-clamp-2 md:hidden">
                             {tx.status} ·{' '}
-                            {format(new Date(tx.createdAt), 'MMM d, yyyy')}
+                            {format(new Date(tx.createdAt), 'MMM d, yyyy', {
+                              locale: dateFnsLocale,
+                            })}
                           </p>
                         </td>
                         <td className="px-4 py-3 text-white whitespace-nowrap">
-                          {tx.amount.toLocaleString()} {tx.currency}
+                          {formatCurrency(tx.amount, tx.currency)}
                         </td>
                         <td
                           className={`px-4 py-3 capitalize hidden sm:table-cell ${txStatusClass(tx.status)}`}
@@ -405,7 +416,9 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
                           {tx.status}
                         </td>
                         <td className="px-4 py-3 text-slate-500 hidden md:table-cell whitespace-nowrap">
-                          {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm')}
+                          {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm', {
+                            locale: dateFnsLocale,
+                          })}
                         </td>
                       </tr>
                     ))}
