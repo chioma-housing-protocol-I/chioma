@@ -27,6 +27,7 @@ import {
   DocumentResponseDto,
 } from './dto/document.dto';
 import { Document } from './document.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Documents')
 @ApiBearerAuth('JWT-auth')
@@ -52,7 +53,7 @@ export class DocumentController {
 
   @Get()
   @ApiOperation({ summary: 'List documents with filtering and pagination' })
-  @ApiResponse({ status: 200, description: 'Paginated document list' })
+  @ApiPaginatedResponse(DocumentResponseDto)
   @ApiQuery({
     name: 'role',
     required: false,
@@ -64,21 +65,15 @@ export class DocumentController {
     @Req() req: { user: { id: string } },
   ) {
     if (role === 'shared') {
-      const documents = await this.documentService.findSharedWithUser(
+      const result = await this.documentService.findSharedWithUser(
         req.user.id,
+        filters.page,
+        filters.limit,
       );
-      return {
-        data: documents.map((d) => this.toResponse(d)),
-        total: documents.length,
-      };
+      return { ...result, data: result.data.map((d) => this.toResponse(d)) };
     }
     const result = await this.documentService.findAll(req.user.id, filters);
-    return {
-      data: result.documents.map((d) => this.toResponse(d)),
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-    };
+    return { ...result, data: result.data.map((d) => this.toResponse(d)) };
   }
 
   @Get(':id')

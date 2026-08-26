@@ -21,6 +21,7 @@ import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { randomUUID } from 'crypto';
 import { Locked, LockService } from '../../common/lock';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
+import { PaginationUtils } from '../../common/utils';
 import {
   AgreementNotFoundError,
   UserNotFoundError,
@@ -158,10 +159,7 @@ export class DisputesService {
   /**
    * Get all disputes with filtering and pagination
    */
-  async findAll(
-    query: QueryDisputesDto,
-    _userId?: string,
-  ): Promise<{ disputes: Dispute[]; total: number }> {
+  async findAll(query: QueryDisputesDto, _userId?: string) {
     const queryBuilder = this.disputeRepository
       .createQueryBuilder('dispute')
       .leftJoinAndSelect('dispute.agreement', 'agreement')
@@ -212,12 +210,21 @@ export class DisputesService {
     queryBuilder.orderBy(sortField, query.sortOrder);
 
     // Apply pagination
-    const skip = ((query?.page || 1) - 1) * (query?.limit || 10);
-    queryBuilder.skip(skip).take(query?.limit || 10);
+    const page = query?.page || 1;
+    const limit = query?.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+    queryBuilder
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit);
 
     const [disputes, total] = await queryBuilder.getManyAndCount();
 
-    return { disputes, total };
+    return PaginationUtils.buildPaginationResponse(
+      disputes,
+      total,
+      page,
+      limit,
+    );
   }
 
   /**
@@ -452,7 +459,9 @@ export class DisputesService {
   async getAgreementDisputes(
     agreementId: string,
     userId?: string,
-  ): Promise<Dispute[]> {
+    page = 1,
+    limit = 20,
+  ) {
     const agreement = await this.agreementRepository.findOne({
       where: { id: agreementId },
       relations: ['landlord', 'tenant'],
@@ -475,11 +484,16 @@ export class DisputesService {
       }
     }
 
-    return this.disputeRepository.find({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.disputeRepository.findAndCount({
       where: { agreementId },
       relations: ['initiator', 'resolver', 'evidence', 'comments'],
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**

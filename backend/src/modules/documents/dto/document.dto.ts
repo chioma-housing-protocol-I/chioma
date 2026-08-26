@@ -7,6 +7,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export class CreateDocumentDto {
   @ApiProperty({ example: 'Lease Agreement.pdf' })
@@ -83,7 +84,7 @@ export class ShareDocumentDto {
   tenantId: string;
 }
 
-export class DocumentFilterDto {
+export class DocumentFilterDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -108,16 +109,6 @@ export class DocumentFilterDto {
   @IsOptional()
   @IsString()
   search?: string;
-
-  @ApiPropertyOptional({ default: 20 })
-  @IsOptional()
-  @IsNumber()
-  limit?: number;
-
-  @ApiPropertyOptional({ default: 0 })
-  @IsOptional()
-  @IsNumber()
-  page?: number;
 }
 
 export class DocumentResponseDto {

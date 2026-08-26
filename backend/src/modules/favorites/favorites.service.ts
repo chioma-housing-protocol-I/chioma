@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Favorite } from './entities/favorite.entity';
 import { Property } from '../properties/entities/property.entity';
 import { FavoriteItemDto, FavoriteStatusDto } from './dtos/favorite.dto';
+import { PaginationUtils } from '../../common/utils';
 
 @Injectable()
 export class FavoritesService {
@@ -14,19 +15,25 @@ export class FavoritesService {
     private readonly propertyRepository: Repository<Property>,
   ) {}
 
-  async getFavorites(userId: string): Promise<FavoriteItemDto[]> {
-    const favorites = await this.favoriteRepository.find({
+  async getFavorites(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [favorites, total] = await this.favoriteRepository.findAndCount({
       where: { userId },
       relations: ['property'],
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
 
-    return favorites.map((fav) => ({
+    const data: FavoriteItemDto[] = favorites.map((fav) => ({
       id: fav.id,
       propertyId: fav.propertyId,
       property: fav.property,
       createdAt: fav.createdAt.toISOString(),
     }));
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getFavoriteStatus(
