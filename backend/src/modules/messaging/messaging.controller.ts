@@ -13,6 +13,10 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { MessagingService } from './messaging.service';
 import { Deprecated } from '../../common/decorators/deprecated.decorator';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ChatRoom } from './entities/chat-room.entity';
+import { Message } from './entities/message.entity';
 
 @ApiTags('Messaging')
 @Controller('messaging')
@@ -49,8 +53,16 @@ export class MessagingController {
 
   @Get('rooms')
   @ApiOperation({ summary: 'Get all chat rooms for the current user' })
-  async getRooms(@Query('userId') userId: string) {
-    return this.messagingService.getRoomsForUser(userId);
+  @ApiPaginatedResponse(ChatRoom)
+  async getRooms(
+    @Query('userId') userId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.messagingService.getRoomsForUser(
+      userId,
+      query.page,
+      query.limit,
+    );
   }
 
   @Post('rooms')
@@ -67,15 +79,15 @@ export class MessagingController {
 
   @Get('rooms/:roomId/messages')
   @ApiOperation({ summary: 'Get messages for a room' })
+  @ApiPaginatedResponse(Message)
   async getMessages(
     @Param('roomId') roomId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 50,
+    @Query() query: PaginationQueryDto,
   ) {
     return this.messagingService.getMessagesForRoom(
       roomId,
-      Number(page),
-      Number(limit),
+      query.page,
+      query.limit || 50,
     );
   }
 
