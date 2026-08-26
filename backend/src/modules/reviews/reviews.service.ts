@@ -8,6 +8,7 @@ import { HostReview } from './entities/host-review.entity';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { PaginationUtils } from '../../common/utils';
 import {
   AgreementStatus,
   RentAgreement,
@@ -41,14 +42,24 @@ export class ReviewsService {
     return this.reviewRepository.save(review);
   }
 
-  async getUserReviews(userId: string): Promise<Review[]> {
-    return this.reviewRepository.find({
+  async getUserReviews(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.reviewRepository.findAndCount({
       where: [{ reviewerId: userId }, { revieweeId: userId }],
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async getPropertyReviews(propertyId: string): Promise<Review[]> {
-    return this.reviewRepository.find({ where: { propertyId } });
+  async getPropertyReviews(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.reviewRepository.findAndCount({
+      where: { propertyId },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getAverageRatingForUser(userId: string): Promise<number> {
@@ -168,25 +179,27 @@ export class ReviewsService {
   }
 
   async getGuestReviews(userId: string, page = 1, limit = 20) {
-    const [items, total] = await this.guestReviewRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.guestReviewRepository.findAndCount({
       where: { guestId: userId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getHostReviews(userId: string, page = 1, limit = 20) {
-    const [items, total] = await this.hostReviewRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.hostReviewRepository.findAndCount({
       where: { hostId: userId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getReputation(userId: string) {
@@ -265,21 +278,13 @@ export class ReviewsService {
       });
     }
 
-    const [items, total] = await query
+    const [data, total] = await query
       .orderBy('review.createdAt', 'DESC')
-      .skip((page - 1) * limit)
+      .skip(PaginationUtils.calculateOffset(page, limit))
       .take(limit)
       .getManyAndCount();
 
-    return {
-      data: items,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async updateReview(id: string, dto: UpdateReviewDto, userId: string) {

@@ -13,11 +13,15 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { Review } from './review.entity';
+import { GuestReview } from './entities/guest-review.entity';
+import { HostReview } from './entities/host-review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Reviews')
 @Controller('reviews')
@@ -49,10 +53,10 @@ export class ReviewsController {
     summary:
       'Get reviews for the authenticated user with pagination and filters',
   })
+  @ApiPaginatedResponse(Review)
   async getMyReviews(
     @Req() req: { user?: { id: string } },
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('rating') rating?: number,
@@ -60,8 +64,8 @@ export class ReviewsController {
   ) {
     return this.reviewsService.getMyReviews(
       req.user?.id ?? '',
-      Number(page),
-      Number(limit),
+      query.page,
+      query.limit,
       { role, status, rating, search },
     );
   }
@@ -69,19 +73,27 @@ export class ReviewsController {
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get reviews for a user' })
   @ApiParam({ name: 'userId', description: 'User ID (reviewee)' })
-  @ApiResponse({ status: 200, description: 'List of reviews' })
-  async getUserReviews(@Param('userId') userId: string): Promise<Review[]> {
-    return this.reviewsService.getUserReviews(userId);
+  @ApiPaginatedResponse(Review)
+  async getUserReviews(
+    @Param('userId') userId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.reviewsService.getUserReviews(userId, query.page, query.limit);
   }
 
   @Get('property/:propertyId')
   @ApiOperation({ summary: 'Get reviews for a property' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'List of reviews' })
+  @ApiPaginatedResponse(Review)
   async getPropertyReviews(
     @Param('propertyId') propertyId: string,
-  ): Promise<Review[]> {
-    return this.reviewsService.getPropertyReviews(propertyId);
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.reviewsService.getPropertyReviews(
+      propertyId,
+      query.page,
+      query.limit,
+    );
   }
 
   @Post('report/:reviewId')
@@ -119,29 +131,25 @@ export class ReviewsController {
   }
 
   @Get('guest/:userId')
+  @ApiPaginatedResponse(GuestReview)
   async getGuestReviews(
     @Param('userId') userId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
   ) {
     return this.reviewsService.getGuestReviews(
       userId,
-      Number(page),
-      Number(limit),
+      query.page,
+      query.limit,
     );
   }
 
   @Get('host/:userId')
+  @ApiPaginatedResponse(HostReview)
   async getHostReviews(
     @Param('userId') userId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.reviewsService.getHostReviews(
-      userId,
-      Number(page),
-      Number(limit),
-    );
+    return this.reviewsService.getHostReviews(userId, query.page, query.limit);
   }
 
   @Get('reputation/:userId')
