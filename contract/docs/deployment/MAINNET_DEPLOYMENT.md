@@ -165,8 +165,12 @@ same as testnet:
 
 ### Option A — scripted (recommended for reproducibility)
 
-Only use this if `DEPLOYER_KEY` is a hardware/offline signer that the `stellar`
-CLI can drive; the script never handles a raw secret itself.
+Use [`scripts/deploy-mainnet.sh`](../../scripts/deploy-mainnet.sh) — a
+safety-focused wrapper around `deploy-testnet.sh` built specifically for this
+flow, so a production deploy is never run ad hoc from someone's shell history.
+Only use it if `DEPLOYER_KEY` is a hardware/offline signer that the `stellar`
+CLI can drive and that already exists as a CLI identity; the script never
+handles a raw secret itself and will not auto-generate one.
 
 ```bash
 cd contract
@@ -175,18 +179,20 @@ cd contract
 env -u CARGO_TARGET_DIR stellar contract build
 
 # Deploy + initialize on mainnet.
-NETWORK=mainnet \
 DEPLOYER_KEY=<mainnet-hardware-identity> \
-ENV_FILE=.env.mainnet \
-ALIAS_PREFIX=chioma_mainnet \
 PLATFORM_FEE_BPS=500 \
 MIN_DISPUTE_VOTES=3 \
-  ./scripts/deploy-testnet.sh --skip-fund
+  ./scripts/deploy-mainnet.sh --confirm
 ```
 
-The script writes each deployed `*_CONTRACT_ID` into `.env.mainnet` and runs the
-per-contract initializers with `--admin` set to the deployer's public key.
-**Immediately** hand off admin to the multisig — see
+`deploy-mainnet.sh` refuses to run without `--confirm` plus a typed
+`DEPLOY TO MAINNET` confirmation, refuses a dirty git tree, forces
+`--skip-fund` (mainnet has no Friendbot), writes each deployed
+`*_CONTRACT_ID` into `.env.mainnet`, appends the commit and contract
+addresses to `docs/deployment/MAINNET_DEPLOYMENTS.log` as a permanent audit
+record, and automatically runs `verify-deployment.sh` once the deploy
+completes. It initializes each contract with `--admin` set to the deployer's
+public key. **Immediately** hand off admin to the multisig — see
 [Post-deployment hardening](#post-deployment-hardening).
 
 ### Option B — manual, one contract at a time
@@ -252,7 +258,10 @@ Immediately after init, before announcing or routing any user funds:
 
 ## Verification
 
-Reuse [`scripts/verify-deployment.sh`](../../scripts/verify-deployment.sh)
+`deploy-mainnet.sh` already runs `verify-deployment.sh` automatically at the
+end of a successful deploy. To re-run it standalone (e.g. after Option B, or
+some time later), reuse
+[`scripts/verify-deployment.sh`](../../scripts/verify-deployment.sh)
 against mainnet — it checks on-chain presence and runs read-only smoke tests:
 
 ```bash
@@ -337,5 +346,7 @@ rollback can be executed quickly.
 - [../security/AUDIT.md](../security/AUDIT.md) — audit requirement and status (launch gate)
 - [../security/EMERGENCY-PROCEDURES.md](../security/EMERGENCY-PROCEDURES.md) — pause & incident response
 - [../../scripts/README.md](../../scripts/README.md) — deploy & verify scripts
+- [`scripts/deploy-mainnet.sh`](../../scripts/deploy-mainnet.sh) — the mainnet deploy script itself
+- `docs/deployment/MAINNET_DEPLOYMENTS.log` — append-only record of past mainnet deploys (created on first run)
 - [`.env.mainnet.example`](../../.env.mainnet.example) — mainnet config template
 - [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/cli/stellar-cli)
