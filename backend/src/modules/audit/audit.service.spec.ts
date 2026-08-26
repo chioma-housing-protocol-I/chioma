@@ -12,6 +12,7 @@ describe('AuditService', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     createQueryBuilder: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -171,17 +172,19 @@ describe('AuditService', () => {
         { id: 2, action: AuditAction.UPDATE },
       ];
 
-      mockAuditLogRepository.find.mockResolvedValue(mockLogs);
+      mockAuditLogRepository.findAndCount.mockResolvedValue([mockLogs, 2]);
 
-      const result = await service.getAuditTrail('User', 'user-123', 50);
+      const result = await service.getAuditTrail('User', 'user-123', 1, 50);
 
-      expect(mockAuditLogRepository.find).toHaveBeenCalledWith({
+      expect(mockAuditLogRepository.findAndCount).toHaveBeenCalledWith({
         where: { entity_type: 'User', entity_id: 'user-123' },
         relations: ['performed_by_user'],
         order: { performed_at: 'DESC' },
+        skip: 0,
         take: 50,
       });
-      expect(result).toEqual(mockLogs);
+      expect(result.data).toEqual(mockLogs);
+      expect(result.total).toBe(2);
     });
   });
 });

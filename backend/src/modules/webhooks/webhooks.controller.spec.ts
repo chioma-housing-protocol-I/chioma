@@ -75,12 +75,14 @@ describe('WebhooksController', () => {
       const deliveries = [{ id: 'del-1' }];
       service.listDeliveriesForUser.mockResolvedValue(deliveries as never);
 
-      await expect(controller.listDeliveries(req, 'ep-1')).resolves.toEqual(
-        deliveries,
-      );
+      await expect(
+        controller.listDeliveries(req, 'ep-1', { page: 1, limit: 20 }),
+      ).resolves.toEqual(deliveries);
       expect(service.listDeliveriesForUser).toHaveBeenCalledWith(
         'user-1',
         'ep-1',
+        1,
+        20,
       );
     });
   });

@@ -75,18 +75,20 @@ describe('ReviewsController', () => {
     const reviews = [{ id: 'r1' }];
     service.getUserReviews.mockResolvedValue(reviews as never);
 
-    await expect(controller.getUserReviews('user-1')).resolves.toEqual(reviews);
-    expect(service.getUserReviews).toHaveBeenCalledWith('user-1');
+    await expect(
+      controller.getUserReviews('user-1', { page: 1, limit: 20 }),
+    ).resolves.toEqual(reviews);
+    expect(service.getUserReviews).toHaveBeenCalledWith('user-1', 1, 20);
   });
 
   it('delegates property review lookup to the service', async () => {
     const reviews = [{ id: 'r2' }];
     service.getPropertyReviews.mockResolvedValue(reviews as never);
 
-    await expect(controller.getPropertyReviews('prop-1')).resolves.toEqual(
-      reviews,
-    );
-    expect(service.getPropertyReviews).toHaveBeenCalledWith('prop-1');
+    await expect(
+      controller.getPropertyReviews('prop-1', { page: 1, limit: 20 }),
+    ).resolves.toEqual(reviews);
+    expect(service.getPropertyReviews).toHaveBeenCalledWith('prop-1', 1, 20);
   });
 
   it('delegates review reporting to the service', async () => {
@@ -137,22 +139,22 @@ describe('ReviewsController', () => {
   });
 
   it('delegates guest review listing to the service', async () => {
-    const paginated = { items: [], total: 0, page: 2, limit: 5 };
+    const paginated = { data: [], total: 0, page: 2, limit: 5, totalPages: 0 };
     service.getGuestReviews.mockResolvedValue(paginated as never);
 
-    await expect(controller.getGuestReviews('guest-1', 2, 5)).resolves.toEqual(
-      paginated,
-    );
+    await expect(
+      controller.getGuestReviews('guest-1', { page: 2, limit: 5 }),
+    ).resolves.toEqual(paginated);
     expect(service.getGuestReviews).toHaveBeenCalledWith('guest-1', 2, 5);
   });
 
   it('delegates host review listing to the service', async () => {
-    const paginated = { items: [], total: 0, page: 1, limit: 20 };
+    const paginated = { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
     service.getHostReviews.mockResolvedValue(paginated as never);
 
-    await expect(controller.getHostReviews('host-1', 1, 20)).resolves.toEqual(
-      paginated,
-    );
+    await expect(
+      controller.getHostReviews('host-1', { page: 1, limit: 20 }),
+    ).resolves.toEqual(paginated);
     expect(service.getHostReviews).toHaveBeenCalledWith('host-1', 1, 20);
   });
 
