@@ -8,6 +8,7 @@ import { In, Repository } from 'typeorm';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { User } from '../users/entities/user.entity';
 import { AdminRefundDecisionDto } from './dto/admin-refund-decision.dto';
+import { PaginationUtils } from '../../common/utils';
 
 export type AdminRefundStatus =
   | 'PENDING'
@@ -58,8 +59,10 @@ export class AdminRefundsService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async listRefunds(): Promise<AdminRefundRow[]> {
-    const payments = await this.paymentRepository
+  async listRefunds(page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [payments, total] = await this.paymentRepository
       .createQueryBuilder('payment')
       .where(
         'payment.refund_status != :none OR payment.refund_amount > 0 OR payment.status IN (:...statuses)',
@@ -69,10 +72,14 @@ export class AdminRefundsService {
         },
       )
       .orderBy('payment.updatedAt', 'DESC')
-      .getMany();
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit)
+      .getManyAndCount();
 
     const userById = await this.loadUsersMap(payments.map((p) => p.userId));
-    return payments.map((payment) => this.toRow(payment, userById));
+    const data = payments.map((payment) => this.toRow(payment, userById));
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getRefundById(id: string): Promise<AdminRefundDetail> {
