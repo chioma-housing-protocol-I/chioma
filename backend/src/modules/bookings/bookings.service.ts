@@ -15,6 +15,7 @@ import { PaymentService } from '../payments/payment.service';
 import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { StellarService } from '../stellar/services/stellar.service';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
+import { PaginationUtils } from '../../common/utils';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -119,15 +120,18 @@ export class BookingsService {
     }
   }
 
-  async findForUser(
-    userId: string,
-    query: QueryBookingsDto,
-  ): Promise<Booking[]> {
+  async findForUser(userId: string, query: QueryBookingsDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
     const qb = this.bookingRepository
       .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.property', 'property')
       .leftJoinAndSelect('booking.guest', 'guest')
-      .orderBy('booking.createdAt', 'DESC');
+      .orderBy('booking.createdAt', 'DESC')
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit);
 
     if (query.role === BookingRoleFilter.HOST) {
       qb.where('property.ownerId = :userId', { userId });
@@ -139,7 +143,8 @@ export class BookingsService {
       qb.andWhere('booking.status = :status', { status: query.status });
     }
 
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async confirm(userId: string, bookingId: string): Promise<Booking> {

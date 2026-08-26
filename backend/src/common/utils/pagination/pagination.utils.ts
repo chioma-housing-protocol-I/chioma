@@ -1,13 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { MAX_PAGE_SIZE } from '../../constants/business-rules.constants';
+import { PaginatedResponseDto } from '../../dto/paginated-response.dto';
 
-export interface PaginationResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+/**
+ * @deprecated Use `PaginatedResponseDto<T>` from `common/dto/paginated-response.dto`
+ * directly for typing — `buildPaginationResponse` now returns that class.
+ * Kept as a structural alias so existing call sites keep compiling unchanged.
+ */
+export type PaginationResponse<T> = PaginatedResponseDto<T>;
 
 export class PaginationUtils {
   /**
@@ -33,20 +33,32 @@ export class PaginationUtils {
   }
 
   /**
-   * Builds a standardized pagination response
+   * Builds the shared pagination response envelope (#1614).
    */
   static buildPaginationResponse<T>(
     data: T[],
     total: number,
     page: number,
     limit: number,
-  ): PaginationResponse<T> {
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+  ): PaginatedResponseDto<T> {
+    return PaginatedResponseDto.create(data, total, page, limit);
+  }
+
+  /**
+   * Applies the shared pagination contract to a result that was already
+   * fetched in full (e.g. a raw-SQL system-catalog query, or an in-memory
+   * tracked collection) rather than queried with `skip`/`take` at the
+   * source. Slices `items` to the requested page and wraps it in the same
+   * envelope `buildPaginationResponse` produces.
+   */
+  static paginateArray<T>(
+    items: T[],
+    page: number,
+    limit: number,
+  ): PaginatedResponseDto<T> {
+    this.validatePagination(page, limit);
+    const offset = this.calculateOffset(page, limit);
+    const data = items.slice(offset, offset + limit);
+    return this.buildPaginationResponse(data, items.length, page, limit);
   }
 }

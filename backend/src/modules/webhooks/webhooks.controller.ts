@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +24,9 @@ import { CreateWebhookEndpointDto } from './dto/create-webhook-endpoint.dto';
 import { UpdateWebhookEndpointDto } from './dto/update-webhook-endpoint.dto';
 import { TriggerWebhookEventDto } from './dto/trigger-webhook-event.dto';
 import { RetryWebhookDeliveryDto } from './dto/retry-webhook-delivery.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { WebhookDelivery } from './entities/webhook-delivery.entity';
 
 function normalizePayload(payload: unknown): Record<string, unknown> {
   if (payload === undefined || payload === null) return {};
@@ -76,13 +80,19 @@ export class WebhooksController {
   @Get(':id/deliveries')
   @ApiOperation({ summary: 'View delivery history for a webhook endpoint' })
   @ApiParam({ name: 'id', description: 'Webhook endpoint ID' })
-  @ApiResponse({ status: 200, description: 'List of delivery attempts' })
+  @ApiPaginatedResponse(WebhookDelivery)
   @ApiResponse({ status: 404, description: 'Not found' })
   async listDeliveries(
     @Req() req: { user: { id: string } },
     @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.webhooksService.listDeliveriesForUser(req.user.id, id);
+    return this.webhooksService.listDeliveriesForUser(
+      req.user.id,
+      id,
+      query.page,
+      query.limit,
+    );
   }
 
   @Put(':id')

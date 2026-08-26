@@ -35,6 +35,10 @@ import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { RentAgreement } from '../rent/entities/rent-contract.entity';
+import { Payment } from '../rent/entities/payment.entity';
 
 @ApiTags('Rent Agreements')
 @ApiBearerAuth('JWT-auth')
@@ -57,6 +61,7 @@ export class AgreementsController {
   }
 
   @Get()
+  @ApiPaginatedResponse(RentAgreement)
   async findAll(@Query() query: QueryAgreementsDto) {
     return await this.agreementsService.findAll(query);
   }
@@ -177,7 +182,11 @@ export class AgreementsController {
   }
 
   @Get(':id/payments')
-  async getPayments(@Param('id') id: string) {
-    return await this.agreementsService.getPayments(id);
+  @ApiPaginatedResponse(Payment)
+  async getPayments(
+    @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return await this.agreementsService.getPayments(id, query);
   }
 }

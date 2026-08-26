@@ -25,6 +25,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { Booking } from './entities/booking.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Bookings')
 @ApiBearerAuth('JWT-auth')
@@ -51,11 +52,8 @@ export class BookingsController {
     description:
       'role=host returns bookings on properties the caller owns; role=guest (default) returns bookings the caller made.',
   })
-  @ApiResponse({ status: 200, description: 'Bookings retrieved' })
-  async findMine(
-    @CurrentUser() user: User,
-    @Query() query: QueryBookingsDto,
-  ): Promise<Booking[]> {
+  @ApiPaginatedResponse(Booking)
+  async findMine(@CurrentUser() user: User, @Query() query: QueryBookingsDto) {
     return this.bookingsService.findForUser(user.id, query);
   }
 

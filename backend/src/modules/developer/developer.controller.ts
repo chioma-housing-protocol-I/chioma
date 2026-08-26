@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -20,6 +21,9 @@ import { DeveloperService } from './developer.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto, RotateApiKeyDto } from './dto/update-api-key.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { ApiKeyRotationHistory } from './entities/api-key-rotation-history.entity';
 
 @ApiTags('Developer Portal')
 @ApiBearerAuth('JWT-auth')
@@ -191,22 +195,28 @@ export class DeveloperController {
     description: 'View the rotation history for a specific API key.',
   })
   @ApiParam({ name: 'id', description: 'API key ID' })
-  @ApiResponse({ status: 200, description: 'List of rotations' })
+  @ApiPaginatedResponse(ApiKeyRotationHistory)
   @ApiResponse({ status: 404, description: 'Not found' })
   async getRotationHistory(
     @Req() req: { user: { id: string } },
     @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
   ) {
     const history = await this.developerService.getRotationHistory(
       req.user.id,
       id,
+      query.page,
+      query.limit,
     );
-    return history.map((h) => ({
-      id: h.id,
-      rotatedAt: h.rotatedAt,
-      oldKeyPrefix: h.oldKeyPrefix,
-      newKeyPrefix: h.newKeyPrefix,
-    }));
+    return {
+      ...history,
+      data: history.data.map((h) => ({
+        id: h.id,
+        rotatedAt: h.rotatedAt,
+        oldKeyPrefix: h.oldKeyPrefix,
+        newKeyPrefix: h.newKeyPrefix,
+      })),
+    };
   }
 
   @Delete('api-keys/:id')
