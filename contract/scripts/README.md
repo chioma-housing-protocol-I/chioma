@@ -81,12 +81,12 @@ Unlike hand-running `deploy-testnet.sh` with mainnet env vars, this script:
 - automatically runs `verify-deployment.sh` against mainnet once deploy completes
 
 | Flag            | Description                                        |
-| --------------- | --------------------------------------------------- |
-| `--confirm`     | Required, or the script exits immediately            |
-| `--skip-build`  | Use existing `target/wasm32v1-none/release/*.wasm`  |
-| `--deploy-only` | Deploy only; skip `initialize` calls                |
-| `--init-only`   | Initialize from existing `.env.mainnet`             |
-| `--allow-dirty` | Bypass the clean-git-tree check (NOT recommended)   |
+| --------------- | -------------------------------------------------- |
+| `--confirm`     | Required, or the script exits immediately          |
+| `--skip-build`  | Use existing `target/wasm32v1-none/release/*.wasm` |
+| `--deploy-only` | Deploy only; skip `initialize` calls               |
+| `--init-only`   | Initialize from existing `.env.mainnet`            |
+| `--allow-dirty` | Bypass the clean-git-tree check (NOT recommended)  |
 
 ## `verify-deployment.sh`
 

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByWalletAddress } from '@/mocks/entities/users';
 import { postToBackend } from '../backend';
 
 /**
@@ -31,30 +30,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(backend.body, { status: backend.status });
     }
 
-    // ── Backend unreachable: mock authentication ──────────────────────────
-    // Owning the wallet is the credential, so an unrecognised address is a
-    // brand-new account rather than an error. Mirror the backend and mint a
-    // wallet-only user with no email — the client then routes it into the
-    // complete-profile step to collect one.
-    const user = getUserByWalletAddress(walletAddress);
-
-    const roleMap = {
-      USER: 'user',
-      ADMIN: 'admin',
-    } as const;
-
-    const id = user?.id ?? `wallet_${walletAddress.slice(0, 8).toLowerCase()}`;
+    // ── Backend unreachable: wallet-only fallback authentication ─────────
+    const id = `wallet_${walletAddress.slice(0, 8).toLowerCase()}`;
 
     return NextResponse.json({
       accessToken: `mock_access_${id}_${Date.now()}`,
       refreshToken: `mock_refresh_${id}_${Date.now()}`,
       user: {
         id,
-        email: user?.email ?? null,
-        emailVerified: Boolean(user?.email),
-        firstName: user ? user.name.split(' ')[0] : '',
-        lastName: user ? user.name.split(' ').slice(1).join(' ') : '',
-        role: user ? roleMap[user.role] : 'user',
+        email: null,
+        emailVerified: false,
+        firstName: '',
+        lastName: '',
+        role: 'user',
         walletAddress,
       },
     });

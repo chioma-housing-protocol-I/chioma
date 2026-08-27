@@ -4,7 +4,11 @@ import path from 'path';
 
 // Do not mock 'fs' globally like this, use vi.spyOn later
 
-const { getRouteChunks, getRouteSizeBytes, statusLabel } = require('../../scripts/check-bundle-size.js');
+import {
+  getRouteChunks,
+  getRouteSizeBytes,
+  statusLabel,
+} from '../../scripts/check-bundle-size.js';
 
 describe('check-bundle-size script', () => {
   beforeEach(() => {
@@ -18,7 +22,7 @@ describe('check-bundle-size script', () => {
           '/dashboard': ['static/chunks/app/dashboard.js'],
         },
       };
-      
+
       const chunks = getRouteChunks('/dashboard', {}, appBuildManifest);
       expect(chunks).toEqual(['static/chunks/app/dashboard.js']);
     });
@@ -29,7 +33,7 @@ describe('check-bundle-size script', () => {
           '/dashboard/page': ['static/chunks/app/dashboard/page.js'],
         },
       };
-      
+
       const chunks = getRouteChunks('/dashboard', {}, appBuildManifest);
       expect(chunks).toEqual(['static/chunks/app/dashboard/page.js']);
     });
@@ -40,7 +44,7 @@ describe('check-bundle-size script', () => {
           '/login': ['static/chunks/pages/login.js'],
         },
       };
-      
+
       const chunks = getRouteChunks('/login', buildManifest, {});
       expect(chunks).toEqual(['static/chunks/pages/login.js']);
     });
@@ -58,28 +62,30 @@ describe('check-bundle-size script', () => {
           '/': ['chunk1.js', 'chunk2.js', 'chunk1.js', 'style.css'],
         },
       };
-      
-      const statSpy = vi.spyOn(fs, 'statSync').mockImplementation((filePath) => {
-        const p = filePath.toString();
-        if (p.endsWith('chunk1.js')) return { size: 1024 } as any;
-        if (p.endsWith('chunk2.js')) return { size: 2048 } as any;
-        throw new Error('Not found');
-      });
+
+      const statSpy = vi
+        .spyOn(fs, 'statSync')
+        .mockImplementation((filePath) => {
+          const p = filePath.toString();
+          if (p.endsWith('chunk1.js')) return { size: 1024 } as any;
+          if (p.endsWith('chunk2.js')) return { size: 2048 } as any;
+          throw new Error('Not found');
+        });
 
       const size = getRouteSizeBytes('/', buildManifest, null, '/build-dir');
-      
+
       // chunk1 is added once, chunk2 is added once. style.css is ignored
       expect(size).toBe(1024 + 2048);
       expect(statSpy).toHaveBeenCalledTimes(2);
     });
-    
+
     it('handles missing files gracefully', () => {
       const buildManifest = {
         pages: {
           '/': ['chunk1.js', 'missing.js'],
         },
       };
-      
+
       vi.spyOn(fs, 'statSync').mockImplementation((filePath) => {
         const p = filePath.toString();
         if (p.endsWith('chunk1.js')) return { size: 1024 } as any;

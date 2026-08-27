@@ -24,7 +24,8 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const BUILD_DIR = path.join(ROOT, '.next');
 const BUDGETS_FILE = path.join(ROOT, 'bundle-budgets.json');
-const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const IS_CI =
+  process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -91,20 +92,26 @@ function collectRouteChunks() {
 function getRouteChunks(routeKey, buildManifest, appBuildManifest) {
   // check app directory
   if (appBuildManifest && appBuildManifest.pages) {
-    if (appBuildManifest.pages[routeKey]) return appBuildManifest.pages[routeKey];
+    if (appBuildManifest.pages[routeKey])
+      return appBuildManifest.pages[routeKey];
     const asPage = routeKey === '/' ? '/page' : `${routeKey}/page`;
     if (appBuildManifest.pages[asPage]) return appBuildManifest.pages[asPage];
   }
-  
+
   // check pages directory
   if (buildManifest && buildManifest.pages) {
     if (buildManifest.pages[routeKey]) return buildManifest.pages[routeKey];
   }
-  
+
   return [];
 }
 
-function getRouteSizeBytes(routeKey, buildManifest, appBuildManifest, buildDir) {
+function getRouteSizeBytes(
+  routeKey,
+  buildManifest,
+  appBuildManifest,
+  buildDir,
+) {
   const chunks = getRouteChunks(routeKey, buildManifest, appBuildManifest);
   let sizeBytes = 0;
   const seen = new Set();
@@ -112,7 +119,7 @@ function getRouteSizeBytes(routeKey, buildManifest, appBuildManifest, buildDir) 
   for (const chunk of chunks) {
     if (seen.has(chunk)) continue;
     seen.add(chunk);
-    
+
     if (!chunk.endsWith('.js')) continue;
 
     try {
@@ -149,13 +156,13 @@ function main() {
 
   const budgets = budgetConfig.routes;
   const baselines = budgetConfig.baseline || {};
-  
+
   const BUILD_MANIFEST = path.join(BUILD_DIR, 'build-manifest.json');
   const APP_BUILD_MANIFEST = path.join(BUILD_DIR, 'app-build-manifest.json');
-  
+
   const buildManifest = readJson(BUILD_MANIFEST) || {};
   const appBuildManifest = readJson(APP_BUILD_MANIFEST) || {};
-  
+
   const { totalStaticBytes } = collectRouteChunks();
 
   const COL = {
@@ -190,7 +197,12 @@ function main() {
     if (routeKey === 'shared-chunks') {
       sizeKB = toKB(totalStaticBytes);
     } else {
-      const bytes = getRouteSizeBytes(routeKey, buildManifest, appBuildManifest, BUILD_DIR);
+      const bytes = getRouteSizeBytes(
+        routeKey,
+        buildManifest,
+        appBuildManifest,
+        BUILD_DIR,
+      );
       if (bytes > 0) {
         sizeKB = toKB(bytes);
       } else {
@@ -219,7 +231,7 @@ function main() {
   }
 
   results.sort((a, b) => {
-    const order = { 'MISSING': 0, 'FAIL ✗': 1, 'WARN ⚠': 2, 'PASS ✓': 3 };
+    const order = { MISSING: 0, 'FAIL ✗': 1, 'WARN ⚠': 2, 'PASS ✓': 3 };
     return (order[a.label] ?? 4) - (order[b.label] ?? 4);
   });
 

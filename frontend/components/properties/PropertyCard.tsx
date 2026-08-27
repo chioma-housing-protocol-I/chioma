@@ -1,9 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
 import { useModal } from '@/contexts/ModalContext';
+import { shimmerBlurDataURL } from '@/lib/utils/image-placeholder';
 import type { PropertyDetailData } from '@/components/modals/types';
 
 interface PropertyCardProps {
@@ -26,11 +28,13 @@ interface PropertyCardProps {
     images?: string[];
   };
   variant?: 'grid' | 'list';
+  priority?: boolean;
 }
 
 export default function PropertyCard({
   property,
   variant = 'grid',
+  priority = false,
 }: PropertyCardProps) {
   const isList = variant === 'list';
   const [imageError, setImageError] = useState(false);
@@ -95,12 +99,20 @@ export default function PropertyCard({
           }`}
         >
           {!imageError ? (
-            <img
+            <Image
               src={property.image}
               alt={property.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              fill
+              sizes={
+                isList
+                  ? '(min-width: 640px) 320px, 100vw'
+                  : '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw'
+              }
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
               onError={() => setImageError(true)}
-              loading="lazy"
+              placeholder="blur"
+              blurDataURL={shimmerBlurDataURL}
+              priority={priority}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
