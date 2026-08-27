@@ -45,6 +45,7 @@ describe('QueueMonitoringService', () => {
         { provide: getQueueToken('documents'), useValue: makeQueue() },
         { provide: getQueueToken('blockchain'), useValue: makeQueue() },
         { provide: getQueueToken('data-sync'), useValue: makeQueue() },
+        { provide: getQueueToken('analytics'), useValue: makeQueue() },
         { provide: MetricsService, useValue: metricsService },
         { provide: AlertService, useValue: alertService },
         { provide: ConfigService, useValue: { get: configGet } },

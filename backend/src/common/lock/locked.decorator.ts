@@ -8,7 +8,7 @@ export interface LockedOptions {
 
 export function Locked(options: LockedOptions): MethodDecorator {
   return function (
-    target: Object,
+    target: object,
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ) {

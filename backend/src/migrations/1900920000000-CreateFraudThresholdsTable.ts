@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateFraudThresholdsTable1900920000000
-  implements MigrationInterface
-{
+export class CreateFraudThresholdsTable1900920000000 implements MigrationInterface {
   name = 'CreateFraudThresholdsTable1900920000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {

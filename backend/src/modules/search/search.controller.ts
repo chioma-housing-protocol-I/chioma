@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import {
   SearchService,
   SearchFilters,
@@ -19,7 +20,10 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get('properties')
-  @UseReplica({ maxStaleness: '30s', reason: 'Property search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Full-text property search with faceted filtering' })
   async searchProperties(@Query() query: SearchPropertiesDto) {
     const filters: SearchFilters = {
@@ -49,7 +53,10 @@ export class SearchController {
   }
 
   @Get('users')
-  @UseReplica({ maxStaleness: '1m', reason: 'User search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'User search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Search users with filters' })
   async searchUsers(@Query() query: SearchUsersDto) {
     const filters: UserSearchFilters = {
@@ -64,7 +71,10 @@ export class SearchController {
   }
 
   @Get('documents')
-  @UseReplica({ maxStaleness: '1m', reason: 'Document search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'Document search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Search documents (agreements) with filters' })
   async searchDocuments(@Query() query: SearchDocumentsDto) {
     const filters: DocumentSearchFilters = {
@@ -84,7 +94,10 @@ export class SearchController {
   }
 
   @Get('suggest')
-  @UseReplica({ maxStaleness: '5m', reason: 'Autocomplete suggestions tolerate staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Autocomplete suggestions tolerate staleness',
+  })
   @ApiOperation({ summary: 'Autocomplete suggestions for search' })
   async suggest(@Query() query: SuggestDto) {
     return this.searchService.suggest(query.q);

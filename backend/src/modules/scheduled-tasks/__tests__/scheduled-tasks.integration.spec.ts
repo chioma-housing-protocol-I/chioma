@@ -327,8 +327,8 @@ describe('Scheduled Tasks Integration', () => {
           },
           { provide: getQueueToken('documents'), useValue: queueFactory() },
           { provide: getQueueToken('blockchain'), useValue: queueFactory() },
-        { provide: getQueueToken('data-sync'), useValue: queueFactory() },
-        { provide: getQueueToken('analytics'), useValue: queueFactory() },
+          { provide: getQueueToken('data-sync'), useValue: queueFactory() },
+          { provide: getQueueToken('analytics'), useValue: queueFactory() },
         ],
       }).compile();
 

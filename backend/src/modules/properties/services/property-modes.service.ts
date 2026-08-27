@@ -139,7 +139,13 @@ export class PropertyModesService {
 
   private validateModeSettings(
     mode: PropertyRentalMode,
-    dto: Partial<UpdatePropertyModeDto & Property>,
+    dto: Omit<
+      Partial<UpdatePropertyModeDto & Property>,
+      'maxStayDays' | 'nightlyRate'
+    > & {
+      maxStayDays?: number | null;
+      nightlyRate?: number | null;
+    },
   ): void {
     if (
       mode === PropertyRentalMode.SHORT_TERM ||

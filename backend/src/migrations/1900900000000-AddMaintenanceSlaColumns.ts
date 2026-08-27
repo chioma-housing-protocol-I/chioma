@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMaintenanceSlaColumns1900900000000
-  implements MigrationInterface
-{
+export class AddMaintenanceSlaColumns1900900000000 implements MigrationInterface {
   name = 'AddMaintenanceSlaColumns1900900000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {

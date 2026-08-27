@@ -27,7 +27,7 @@ export function IdempotencyKey(): ParameterDecorator {
 
 export function Idempotent(options: IdempotentOptions): MethodDecorator {
   return function (
-    target: Object,
+    target: object,
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ) {

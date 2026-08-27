@@ -15,9 +15,7 @@ jest.mock('@stellar/stellar-sdk', () => {
   return {
     SorobanRpc: {
       Server: jest.fn().mockImplementation(() => ({
-        getAccount: jest
-          .fn()
-          .mockResolvedValue({ sequenceNumber: () => '1' }),
+        getAccount: jest.fn().mockResolvedValue({ sequenceNumber: () => '1' }),
         prepareTransaction: jest.fn().mockResolvedValue(mockTx),
         sendTransaction: jest
           .fn()

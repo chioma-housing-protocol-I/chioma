@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bull';
+import { Queue, JobCounts } from 'bull';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { MetricsService } from '../../monitoring/metrics.service';
 import { AlertService } from '../../monitoring/alert.service';
@@ -41,6 +41,7 @@ export class QueueMonitoringService {
     @InjectQueue('documents') private documentsQueue: Queue,
     @InjectQueue('blockchain') private blockchainQueue: Queue,
     @InjectQueue('data-sync') private dataSyncQueue: Queue,
+    @InjectQueue('analytics') private analyticsQueue: Queue,
     private readonly metricsService: MetricsService,
     private readonly alertService: AlertService,
     configService: ConfigService,
@@ -81,11 +82,12 @@ export class QueueMonitoringService {
 
     for (const { name, queue } of queues) {
       try {
-        const counts = await queue.getJobCounts();
+        const counts: JobCounts & { wait?: number } =
+          await queue.getJobCounts();
         const isPaused = await queue.isPaused();
         // Bull reports the waiting count as `waiting`; some Redis providers
         // surface it as `wait`, so accept either.
-        const waiting = (counts as any).wait ?? (counts as any).waiting ?? 0;
+        const waiting = counts.wait ?? counts.waiting ?? 0;
         const oldestJobAgeSeconds = await this.getOldestWaitingJobAge(queue);
         const metric: QueueMetrics = {
           timestamp: new Date(),

@@ -5,14 +5,14 @@ import {
   NPlusOneReport,
 } from '../../common/query-logger/query-analysis.service';
 
-interface IndexSizeRow {
+export interface IndexSizeRow {
   tablename: string;
   indexname: string;
   index_size: string;
   index_size_bytes: string;
 }
 
-interface TableSizeRow {
+export interface TableSizeRow {
   table_name: string;
   total_size: string;
   table_size: string;
@@ -20,7 +20,7 @@ interface TableSizeRow {
   total_size_bytes: string;
 }
 
-interface UnusedIndexRow {
+export interface UnusedIndexRow {
   schemaname: string;
   tablename: string;
   indexname: string;

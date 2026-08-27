@@ -22,7 +22,10 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('landlord/dashboard')
-  @UseReplica({ maxStaleness: '5m', reason: 'Dashboard analytics tolerate staleness for performance' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Dashboard analytics tolerate staleness for performance',
+  })
   @ApiOperation({ summary: 'Get landlord property analytics dashboard data' })
   @ApiQuery({
     name: 'days',
@@ -41,21 +44,30 @@ export class AnalyticsController {
   }
 
   @Get('landlord/fees-summary')
-  @UseReplica({ maxStaleness: '5m', reason: 'Fees summary tolerates staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Fees summary tolerates staleness',
+  })
   @ApiOperation({ summary: 'Get landlord platform fees summary' })
   async getLandlordFeesSummary(@CurrentUser() user: User) {
     return this.analyticsService.getLandlordFeesSummary(user.id);
   }
 
   @Get('dashboard/metrics')
-  @UseReplica({ maxStaleness: '5m', reason: 'Dashboard metrics tolerate staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Dashboard metrics tolerate staleness',
+  })
   @ApiOperation({ summary: 'Get overall dashboard metrics' })
   async getDashboardMetrics(@CurrentUser() user: User) {
     return this.analyticsService.getDashboardMetrics(user.id);
   }
 
   @Get('payment/analytics')
-  @UseReplica({ maxStaleness: '5m', reason: 'Payment analytics tolerate staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Payment analytics tolerate staleness',
+  })
   @ApiOperation({ summary: 'Get payment analytics data' })
   @ApiQuery({
     name: 'days',
@@ -71,7 +83,10 @@ export class AnalyticsController {
   }
 
   @Get('user/activity')
-  @UseReplica({ maxStaleness: '5m', reason: 'User activity analytics tolerate staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'User activity analytics tolerate staleness',
+  })
   @ApiOperation({ summary: 'Get user activity analytics' })
   @ApiQuery({
     name: 'days',

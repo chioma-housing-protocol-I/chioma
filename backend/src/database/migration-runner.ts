@@ -170,9 +170,7 @@ export async function runMigrationsWithRollback(options?: {
       return { success: true, run: 0, reverted: false };
     }
 
-    logger.log(
-      `[Migration] Running ${pending.length} pending migration(s)...`,
-    );
+    logger.log(`[Migration] Running ${pending.length} pending migration(s)...`);
     for (const name of pending) {
       logger.log(`[Migration]   → ${name}`);
     }

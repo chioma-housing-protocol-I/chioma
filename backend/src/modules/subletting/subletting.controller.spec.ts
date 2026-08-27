@@ -74,12 +74,9 @@ describe('SublettingController', () => {
     service.getSublettingRequests.mockResolvedValue(page as never);
 
     await expect(
-      controller.getSublettingRequests(
-        SubletRequestStatus.PENDING,
-        2,
-        5,
-        { user: { id: 'landlord-1' } },
-      ),
+      controller.getSublettingRequests(SubletRequestStatus.PENDING, 2, 5, {
+        user: { id: 'landlord-1' },
+      }),
     ).resolves.toEqual(page);
     expect(service.getSublettingRequests).toHaveBeenCalledWith(
       'landlord-1',

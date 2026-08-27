@@ -68,7 +68,10 @@ export class PropertiesController {
   }
 
   @Get()
-  @UseReplica({ maxStaleness: '30s', reason: 'Browse listings tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Browse listings tolerate brief replication lag',
+  })
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -143,7 +146,10 @@ export class PropertiesController {
   }
 
   @Get(':id')
-  @UseReplica({ maxStaleness: '30s', reason: 'Property detail view tolerates brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property detail view tolerates brief replication lag',
+  })
   @ApiOperation({
     summary: 'Get a specific property',
     description:
