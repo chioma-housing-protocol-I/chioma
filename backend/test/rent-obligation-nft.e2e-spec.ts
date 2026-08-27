@@ -16,6 +16,7 @@ describe('Rent Obligation NFT Integration', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
   };
 
   const mockNftContractService = {
@@ -126,15 +127,18 @@ describe('Rent Obligation NFT Integration', () => {
     });
 
     it('retrieves all NFTs held by a given owner address', async () => {
-      mockNftRepository.find.mockResolvedValue([
-        { id: 'nft-001', agreementId: AGREEMENT_ID, currentOwner: TENANT },
-        { id: 'nft-002', agreementId: 'agreement-002', currentOwner: TENANT },
+      mockNftRepository.findAndCount.mockResolvedValue([
+        [
+          { id: 'nft-001', agreementId: AGREEMENT_ID, currentOwner: TENANT },
+          { id: 'nft-002', agreementId: 'agreement-002', currentOwner: TENANT },
+        ],
+        2,
       ]);
 
       const results = await service.getNftsByOwner(TENANT);
 
-      expect(results).toHaveLength(2);
-      results.forEach((nft) => expect(nft.currentOwner).toBe(TENANT));
+      expect(results.data).toHaveLength(2);
+      results.data.forEach((nft) => expect(nft.currentOwner).toBe(TENANT));
     });
   });
 

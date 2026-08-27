@@ -118,7 +118,7 @@ export class DatabasePerformanceController {
     @Query('search') search: string | undefined,
     @Query() query: PaginationQueryDto,
   ) {
-    const patterns = this.performanceService.getQueryPatterns(search);
+    const patterns = await this.performanceService.getQueryPatterns(search);
     return PaginationUtils.paginateArray(
       patterns,
       query.page || 1,
@@ -138,7 +138,7 @@ export class DatabasePerformanceController {
     const limit = query.limit || 20;
     // getQueryHistory's own `limit` bounds how much in-memory history to
     // scan; fetch enough to cover the requested page, then paginate it.
-    const history = this.performanceService.getQueryHistory(
+    const history = await this.performanceService.getQueryHistory(
       Math.max(200, page * limit),
       minDuration ? parseInt(minDuration, 10) : undefined,
     );
