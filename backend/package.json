@@ -31,6 +31,7 @@
     "perf:local": "node scripts/load-test.mjs local --report-format=html",
     "perf:staging": "node scripts/load-test.mjs staging --report-format=html",
     "perf:ci": "node scripts/performance-benchmark-enhanced.mjs --report-format=json",
+    "perf:k6": "k6 run k6/load-test.js",
     "test:chaos": "pnpm run test:e2e -- --testPathPattern=chaos-resilience --forceExit",
     "sdk:generate": "node scripts/sdk-generate.mjs",
     "typeorm": "typeorm-ts-node-commonjs",
