@@ -12,15 +12,13 @@ export interface CancelButtonProps extends Omit<
   isInFlight?: boolean;
 }
 
-export function CancelButton({
-  onCancel,
-  label = 'Cancel',
-  isInFlight = true,
-  className,
-  ...props
-}: CancelButtonProps) {
+export const CancelButton = React.forwardRef<
+  HTMLButtonElement,
+  CancelButtonProps
+>(({ onCancel, label = 'Cancel', isInFlight = true, className, ...props }, ref) => {
   return (
     <Button
+      ref={ref}
       variant="outline"
       size="sm"
       onClick={onCancel}
@@ -37,4 +35,5 @@ export function CancelButton({
       </span>
     </Button>
   );
-}
+});
+CancelButton.displayName = 'CancelButton';
