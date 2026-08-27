@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Spinner } from '@/components/loading';
 import type { ComponentProps } from 'react';
-import type PropertyMapView from './PropertyMapView';
+import type PropertyMapViewComponent from './PropertyMapView';
 
 const PropertyMapView = dynamic(() => import('./PropertyMapView'), {
   ssr: false,
   loading: () => <MapPlaceholder />,
 });
 
-type PropertyMapViewProps = ComponentProps<typeof PropertyMapView>;
+type PropertyMapViewProps = ComponentProps<typeof PropertyMapViewComponent>;
 
 const MAP_ROOT_MARGIN = '200px';
 

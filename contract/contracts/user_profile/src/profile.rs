@@ -1,5 +1,6 @@
 use crate::errors::ContractError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{AccountType, UserProfile};
 use crate::upgrade;
@@ -37,6 +38,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        rate_limit::check_rate_limit(&env, &account_id, "create_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -83,6 +86,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        rate_limit::check_rate_limit(&env, &account_id, "update_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -159,6 +164,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "verify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -202,6 +209,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "unverify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -239,6 +248,8 @@ impl UserProfileContract {
     pub fn delete_profile(env: Env, account_id: Address) -> Result<(), ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        rate_limit::check_rate_limit(&env, &account_id, "delete_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 

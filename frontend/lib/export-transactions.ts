@@ -1,105 +1,105 @@
 import type { Transaction } from '@/lib/transactions-data';
-import { format } from 'date-fns';
-import { getDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { useI18nStore } from '@/lib/i18n';
+import {
+  buildCsvContent,
+  buildCsvFilename,
+} from './transaction-export/build-csv';
+import { buildPdfHtml } from './transaction-export/build-pdf';
+import {
+  isWorkerSupported,
+  runExportInWorker,
+} from './transaction-export/run-in-worker';
+import type { ExportRequest } from './transaction-export/types';
 
-export function exportTransactionsToCsv(transactions: Transaction[]): void {
-  const headers = [
-    'Date',
-    'Time',
-    'Type',
-    'Property',
-    'Amount',
-    'Currency',
-    'Amount (USD)',
-    'Status',
-    'Transaction Hash',
-    'Description',
-  ];
-  const rows = transactions.map((t) => [
-    format(new Date(t.date), 'yyyy-MM-dd'),
-    format(new Date(t.date), 'HH:mm'),
-    t.type,
-    t.propertyName,
-    t.amount.toFixed(2),
-    t.currency,
-    (t.currency === 'USD' ? t.amount : (t.amountUsd ?? '')).toString(),
-    t.status,
-    t.txHash ?? '',
-    t.description ?? '',
-  ]);
-  const csvContent = [
-    headers.join(','),
-    ...rows.map((r) =>
-      r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','),
-    ),
-  ].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+export interface ExportOptions {
+  /** Called with a value between 0 and 1 as the export progresses. */
+  onProgress?: (progress: number) => void;
+}
+
+async function getExportContent(
+  request: ExportRequest,
+  onProgress?: (progress: number) => void,
+): Promise<string> {
+  if (isWorkerSupported()) {
+    return runExportInWorker(request, onProgress);
+  }
+
+  // Fall back to building on the main thread (e.g. very old browsers, or
+  // environments without Worker support). Still reports progress so callers
+  // don't need two code paths.
+  onProgress?.(0);
+  const content =
+    request.kind === 'csv'
+      ? buildCsvContent(request.transactions)
+      : buildPdfHtml(request.transactions, request.title, request.locale);
+  onProgress?.(1);
+  return content;
+}
+
+function downloadCsv(content: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `chioma-transactions-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  a.download = buildCsvFilename();
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export function exportTransactionsToPdf(
-  transactions: Transaction[],
-  title: string,
-): void {
+function openPdfPrintWindow(html: string, title: string): void {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('Please allow pop-ups to export PDF.');
     return;
   }
-  const rows = transactions
-    .map(
-      (t) =>
-        `<tr>
-          <td>${format(new Date(t.date), 'yyyy-MM-dd HH:mm')}</td>
-          <td>${t.type}</td>
-          <td>${t.propertyName}</td>
-          <td>${t.currency} ${t.amount.toFixed(2)}${t.amountUsd != null && t.currency !== 'USD' ? ` (≈ $${t.amountUsd.toFixed(2)})` : ''}</td>
-          <td>${t.status}</td>
-        </tr>`,
-    )
-    .join('');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>${title}</title>
-        <style>
-          body { font-family: system-ui, sans-serif; padding: 24px; color: #111; }
-          h1 { font-size: 1.5rem; margin-bottom: 8px; }
-          .meta { color: #666; font-size: 0.875rem; margin-bottom: 24px; }
-          table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-          th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
-          th { background: #f8fafc; font-weight: 600; }
-        </style>
-      </head>
-      <body>
-        <h1>${title}</h1>
-        <p class="meta">Generated on ${format(new Date(), 'PPpp', { locale: getDateFnsLocale(useI18nStore.getState().locale) })} · ${transactions.length} transaction(s)</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Date & time</th>
-              <th>Type</th>
-              <th>Property</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </body>
-    </html>
-  `);
+  printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
+  printWindow.document.title = title;
   setTimeout(() => {
     printWindow.print();
     printWindow.close();
   }, 250);
+}
+
+/**
+ * Export transactions to a downloaded CSV file.
+ *
+ * Row formatting runs in a background worker (falling back to the main
+ * thread only if Workers aren't available) so large histories don't freeze
+ * the UI. Pass `onProgress` to surface progress to the user.
+ */
+export async function exportTransactionsToCsv(
+  transactions: Transaction[],
+  options?: ExportOptions,
+): Promise<void> {
+  const content = await getExportContent(
+    { kind: 'csv', transactions },
+    options?.onProgress,
+  );
+  downloadCsv(content);
+}
+
+/**
+ * Export transactions to a printable PDF (via the browser's print dialog).
+ *
+ * Table-row HTML is built in a background worker (falling back to the main
+ * thread only if Workers aren't available) so large histories don't freeze
+ * the UI. Pass `onProgress` to surface progress to the user.
+ */
+export async function exportTransactionsToPdf(
+  transactions: Transaction[],
+  title: string,
+  options?: ExportOptions,
+): Promise<void> {
+  const content = await getExportContent(
+    {
+      kind: 'pdf',
+      transactions,
+      title,
+      locale: useI18nStore.getState().locale,
+    },
+    options?.onProgress,
+  );
+  openPdfPrintWindow(content, title);
 }

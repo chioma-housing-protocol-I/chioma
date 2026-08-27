@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(), // Fix workspace root warning
   },
+  // The visual regression suite (`playwright.config.ts`) drives `next dev`
+  // via 127.0.0.1 rather than localhost.
+  allowedDevOrigins: ['127.0.0.1'],
   async headers() {
     return [
       {
