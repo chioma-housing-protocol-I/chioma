@@ -110,7 +110,7 @@ export class PropertyModesService {
     }
 
     // Validate target mode has required fields
-    this.validateModeSettings(dto.newMode, property as any);
+    this.validateModeSettings(dto.newMode, property);
 
     property.rentalMode = dto.newMode;
     const saved = await this.propertyRepo.save(property);

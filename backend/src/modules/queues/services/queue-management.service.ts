@@ -263,7 +263,7 @@ export class QueueManagementService {
       maxAttempts: job.opts.attempts,
       failedReason: job.failedReason,
       stacktrace: job.stacktrace,
-      createdAt: (job as any).createdTimestamp || (job as any).timestamp,
+      createdAt: job.timestamp,
       finishedAt: job.finishedOn,
     };
   }

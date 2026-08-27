@@ -63,4 +63,24 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/__tests__/**'],
+    rules: {
+      'no-console': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression > TSAnyKeyword',
+          message:
+            "Do not use 'as any'. Use a proper type, a validated parse, or a documented narrow type with a runtime guard instead.",
+        },
+        {
+          selector: 'TSTypeAssertion > TSAnyKeyword',
+          message:
+            "Do not use '<any>' type assertions. Use a proper type, a validated parse, or a documented narrow type with a runtime guard instead.",
+        },
+      ],
+    },
+  },
 );

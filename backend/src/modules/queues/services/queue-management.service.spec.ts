@@ -331,7 +331,7 @@ describe('QueueManagementService', () => {
         opts: { attempts: 3 },
         failedReason: null,
         stacktrace: [],
-        createdTimestamp: 1000,
+        timestamp: 1000,
         finishedOn: 2000,
       };
 

@@ -9,6 +9,13 @@ import {
 } from '../../errors/domain-errors';
 import { ErrorCode } from '../../errors/error-codes';
 
+/** Narrows an unknown error to read its `name` without asserting its full shape. */
+function getErrorName(error: unknown): string | undefined {
+  return typeof error === 'object' && error !== null && 'name' in error
+    ? String((error as { name?: unknown }).name)
+    : undefined;
+}
+
 export interface StandardErrorResponse {
   success: false;
   message: string;
@@ -40,7 +47,7 @@ export class ErrorMapperUtils {
     // TypeORM EntityNotFoundError
     if (
       error instanceof EntityNotFoundError ||
-      (error as any)?.name === 'EntityNotFoundError'
+      getErrorName(error) === 'EntityNotFoundError'
     ) {
       return new ResourceNotFoundError(
         ErrorCode.RESOURCE_NOT_FOUND,
@@ -51,7 +58,7 @@ export class ErrorMapperUtils {
     // TypeORM QueryFailedError (duplicate entry)
     if (
       (error instanceof QueryFailedError ||
-        (error as any)?.name === 'QueryFailedError') &&
+        getErrorName(error) === 'QueryFailedError') &&
       (error as { code: string }).code === '23505'
     ) {
       return new DuplicateEntryError('Duplicate entry found');
@@ -122,7 +129,7 @@ export class ErrorMapperUtils {
       const message =
         typeof response === 'string'
           ? response
-          : (response as any).message || error.message;
+          : (response as { message?: string }).message || error.message;
 
       return {
         success: false,

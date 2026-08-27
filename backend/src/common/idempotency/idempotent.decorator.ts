@@ -27,7 +27,7 @@ export function IdempotencyKey(): ParameterDecorator {
 
 export function Idempotent(options: IdempotentOptions): MethodDecorator {
   return function (
-    target: object,
+    target: Object,
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ) {
@@ -36,7 +36,7 @@ export function Idempotent(options: IdempotentOptions): MethodDecorator {
       const idempotencyService: IdempotencyService = this.idempotencyService;
       if (!idempotencyService) {
         throw new Error(
-          `@Idempotent requires 'idempotencyService: IdempotencyService' to be injected on ${(target as any).constructor.name}`,
+          `@Idempotent requires 'idempotencyService: IdempotencyService' to be injected on ${target.constructor.name}`,
         );
       }
       let key: string | null | undefined;

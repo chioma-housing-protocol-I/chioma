@@ -59,7 +59,7 @@ export class QueueMonitoringService {
           timestamp: new Date(),
           queueName: name,
           active: counts.active,
-          waiting: (counts as any).wait || 0,
+          waiting: counts.waiting || 0,
           delayed: counts.delayed,
           failed: counts.failed,
           completed: counts.completed,

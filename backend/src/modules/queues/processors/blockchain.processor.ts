@@ -74,7 +74,7 @@ export class BlockchainQueueProcessor {
 
   @Process()
   async handleBlockchainJob(job: Job<BlockchainJobData>): Promise<void> {
-    const correlationId = job.data?.correlationId || (job.data as any)?.requestId;
+    const correlationId = job.data?.correlationId || job.data?.requestId;
     const requestId = job.data?.requestId || correlationId;
     const userId = job.data?.userId;
 
