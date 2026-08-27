@@ -8,7 +8,12 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { OAuth2Service } from './oauth2.service';
 import {
@@ -27,6 +32,7 @@ import { User } from '../../users/entities/user.entity';
 export class OAuth2Controller {
   constructor(private readonly oauth2Service: OAuth2Service) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('authorize')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Start OAuth2 authorization code flow' })
@@ -37,6 +43,7 @@ export class OAuth2Controller {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -52,6 +59,7 @@ export class OAuth2Controller {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('profile')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Fetch user profile from OAuth2 provider' })
@@ -62,6 +70,7 @@ export class OAuth2Controller {
     return this.oauth2Service.getUserProfile(provider, accessToken);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('link')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -78,6 +87,7 @@ export class OAuth2Controller {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('link/authorize')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -95,6 +105,7 @@ export class OAuth2Controller {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -108,6 +119,7 @@ export class OAuth2Controller {
     return this.oauth2Service.logout(user.id, provider);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('revoke')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle({ default: { limit: 10, ttl: 60000 } })

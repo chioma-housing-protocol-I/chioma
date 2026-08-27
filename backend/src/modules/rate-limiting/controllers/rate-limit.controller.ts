@@ -6,7 +6,12 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { RateLimitService } from '../services/rate-limit.service';
 import { AbuseDetectionService } from '../services/abuse-detection.service';
 import { RateLimitAnalyticsService } from '../services/rate-limit-analytics.service';
@@ -30,18 +35,21 @@ export class RateLimitController {
     private readonly analyticsService: RateLimitAnalyticsService,
   ) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('metrics')
   @ApiOperation({ summary: 'Get current rate limit metrics' })
   async getMetrics() {
     return this.analyticsService.getMetrics();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('metrics/history/:hours')
   @ApiOperation({ summary: 'Get historical rate limit metrics' })
   async getHistoricalMetrics(@Param('hours') hours: number) {
     return this.analyticsService.getHistoricalMetrics(hours);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('abuse-score/:identifier')
   @ApiOperation({ summary: 'Get abuse score for identifier' })
   async getAbuseScore(@Param('identifier') identifier: string) {
@@ -50,6 +58,7 @@ export class RateLimitController {
     return { identifier, score, isBlocked };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('whitelist/:identifier')
   @ApiOperation({ summary: 'Whitelist an identifier' })
   async whitelistIdentifier(@Param('identifier') identifier: string) {
@@ -57,6 +66,7 @@ export class RateLimitController {
     return { message: 'Identifier whitelisted successfully' };
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete('block/:identifier')
   @ApiOperation({ summary: 'Unblock an identifier' })
   async unblockIdentifier(@Param('identifier') identifier: string) {
@@ -64,6 +74,7 @@ export class RateLimitController {
     return { message: 'Identifier unblocked successfully' };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('reset/:identifier/:category')
   @ApiOperation({ summary: 'Reset rate limit for identifier and category' })
   async resetLimit(

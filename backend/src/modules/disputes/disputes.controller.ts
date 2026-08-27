@@ -79,11 +79,15 @@ export class DisputesController {
     return this.disputesService.findOne(parseInt(id));
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Find by dispute id' })
   @Get('dispute/:disputeId')
   async findByDisputeId(@Param('disputeId') disputeId: string) {
     return this.disputesService.findByDisputeId(disputeId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update' })
   @Put(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -104,6 +108,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add evidence' })
   @Post(':disputeId/evidence')
   @UseInterceptors(FileInterceptor('file'))
   async addEvidence(
@@ -115,6 +121,8 @@ export class DisputesController {
     return this.disputesService.addEvidence(disputeId, file, req.user.id, dto);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add comment' })
   @Post(':disputeId/comment')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -134,6 +142,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Resolve dispute' })
   @Post(':disputeId/resolve')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -156,6 +166,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get agreement disputes' })
   @Get('agreement/:agreementId/disputes')
   async getAgreementDisputes(
     @Param('agreementId') agreementId: string,

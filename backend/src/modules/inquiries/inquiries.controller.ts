@@ -36,18 +36,21 @@ export class InquiriesController {
     return this.inquiriesService.createInquiry(user.id, dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('incoming')
   @ApiOperation({ summary: 'List inquiries sent to current user properties' })
   async incoming(@CurrentUser() user: User) {
     return this.inquiriesService.listIncoming(user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('outgoing')
   @ApiOperation({ summary: 'List inquiries created by current user' })
   async outgoing(@CurrentUser() user: User) {
     return this.inquiriesService.listOutgoing(user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch(':id/viewed')
   @ApiOperation({ summary: 'Mark an incoming inquiry as viewed' })
   async markViewed(@Param('id') id: string, @CurrentUser() user: User) {

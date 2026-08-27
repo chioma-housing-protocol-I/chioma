@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import {
   SearchService,
@@ -20,8 +20,12 @@ import {} from '../../common/constants/business-rules.constants';
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('properties')
-  @UseReplica({ maxStaleness: '30s', reason: 'Property search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Full-text property search with faceted filtering' })
   @ApiQuery({ name: 'q', required: false })
   @ApiQuery({ name: 'city', required: false })
@@ -89,8 +93,12 @@ export class SearchController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('users')
-  @UseReplica({ maxStaleness: '1m', reason: 'User search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'User search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Search users with filters' })
   @ApiQuery({ name: 'q', required: false })
   @ApiQuery({ name: 'role', required: false, enum: UserRole })
@@ -126,8 +134,12 @@ export class SearchController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('documents')
-  @UseReplica({ maxStaleness: '1m', reason: 'Document search results tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'Document search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Search documents (agreements) with filters' })
   @ApiQuery({ name: 'q', required: false })
   @ApiQuery({ name: 'status', required: false, enum: AgreementStatus })
@@ -177,8 +189,12 @@ export class SearchController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('suggest')
-  @UseReplica({ maxStaleness: '5m', reason: 'Autocomplete suggestions tolerate staleness' })
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Autocomplete suggestions tolerate staleness',
+  })
   @ApiOperation({ summary: 'Autocomplete suggestions for search' })
   @ApiQuery({ name: 'q', required: true })
   async suggest(@Query('q') q: string) {

@@ -68,7 +68,10 @@ export class PropertiesController {
   }
 
   @Get()
-  @UseReplica({ maxStaleness: '30s', reason: 'Browse listings tolerate brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Browse listings tolerate brief replication lag',
+  })
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -143,7 +146,10 @@ export class PropertiesController {
   }
 
   @Get(':id')
-  @UseReplica({ maxStaleness: '30s', reason: 'Property detail view tolerates brief replication lag' })
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property detail view tolerates brief replication lag',
+  })
   @ApiOperation({
     summary: 'Get a specific property',
     description:
@@ -329,6 +335,7 @@ export class PropertiesController {
     return await this.propertiesService.markAsRented(id, user);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('/property-listings/wizard/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.AGENT, UserRole.ADMIN)
@@ -345,6 +352,7 @@ export class PropertiesController {
     return await this.propertiesService.startWizard(user.id, body.data);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('/property-listings/wizard/:id/step')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.AGENT, UserRole.ADMIN)
@@ -362,6 +370,7 @@ export class PropertiesController {
     return await this.propertiesService.updateWizardStep(id, user.id, body);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.AGENT, UserRole.ADMIN)
@@ -377,6 +386,7 @@ export class PropertiesController {
     return await this.propertiesService.getWizardDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.AGENT, UserRole.ADMIN)
@@ -393,6 +403,7 @@ export class PropertiesController {
     await this.propertiesService.deleteWizardDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('/property-listings/wizard/:id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.AGENT, UserRole.ADMIN)

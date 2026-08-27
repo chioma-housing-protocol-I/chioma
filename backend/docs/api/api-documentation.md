@@ -4,6 +4,13 @@
 
 The Chioma API is a RESTful API built on NestJS that provides endpoints for managing rental agreements, user authentication, and Stellar blockchain-based payments. The API follows a hybrid architecture combining traditional web2 authentication with Web3 Stellar wallet authentication.
 
+The generated Swagger/OpenAPI reference (served at `/api/docs` and produced by `pnpm run openapi:generate`) is sourced
+directly from `@ApiTags`/`@ApiOperation`/`@ApiResponse` decorators on each controller. Every endpoint is required to
+carry `@ApiOperation` and at least one response decorator (`@ApiResponse` or an `@Api*Response` shorthand), and every
+controller class needs `@ApiTags`, so the generated reference matches the real API surface. This is enforced in CI —
+and locally via `pnpm run check:api-docs` — by `backend/scripts/check-api-docs.ts`, which fails the build on any
+endpoint missing those decorators.
+
 ## Base URL
 
 ```

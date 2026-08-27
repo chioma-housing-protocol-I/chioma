@@ -44,6 +44,7 @@ export class ReviewsController {
     return this.reviewsService.create(payload as Partial<Review>);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get()
   @ApiOperation({
     summary:
@@ -102,6 +103,8 @@ export class ReviewsController {
     return { success: true };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Post guest review' })
   @Post('guest')
   async postGuestReview(
     @Body() dto: PostGuestReviewDto,
@@ -110,6 +113,8 @@ export class ReviewsController {
     return this.reviewsService.postGuestReview(dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Post host review' })
   @Post('host')
   async postHostReview(
     @Body() dto: PostHostReviewDto,
@@ -118,6 +123,8 @@ export class ReviewsController {
     return this.reviewsService.postHostReview(dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get guest reviews' })
   @Get('guest/:userId')
   async getGuestReviews(
     @Param('userId') userId: string,
@@ -131,6 +138,8 @@ export class ReviewsController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get host reviews' })
   @Get('host/:userId')
   async getHostReviews(
     @Param('userId') userId: string,
@@ -144,11 +153,15 @@ export class ReviewsController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get reputation' })
   @Get('reputation/:userId')
   async getReputation(@Param('userId') userId: string) {
     return this.reviewsService.getReputation(userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update review' })
   @Patch(':id')
   async updateReview(
     @Param('id') id: string,
@@ -158,6 +171,8 @@ export class ReviewsController {
     return this.reviewsService.updateReview(id, dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Delete review' })
   @Delete(':id')
   async deleteReview(
     @Param('id') id: string,

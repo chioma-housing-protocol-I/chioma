@@ -21,6 +21,7 @@ import { UpdateFeatureFlagDto } from './dto/update-feature-flag.dto';
 export class FeatureFlagsController {
   constructor(private readonly featureFlagsService: FeatureFlagsService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('feature-flags/eval')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Evaluate a single feature flag for a user' })
@@ -37,6 +38,7 @@ export class FeatureFlagsController {
     return { key, userId: userId || null, isEnabled };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('feature-flags/eval-all')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Evaluate all feature flags for a user' })
@@ -47,6 +49,7 @@ export class FeatureFlagsController {
 
   // --- Admin Endpoints ---
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('admin/feature-flags')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List all feature flags (Admin)' })
@@ -54,6 +57,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.getAllFlags();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('admin/feature-flags/:key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get feature flag details by key (Admin)' })
@@ -72,6 +76,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.createFlag(dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('admin/feature-flags/:key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a feature flag rollout/status (Admin)' })
@@ -82,6 +87,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.updateFlag(key, dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('admin/feature-flags/:key/rollout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -94,6 +100,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.setRolloutPercentage(key, percentage);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('admin/feature-flags/:key/kill')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -103,6 +110,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.killSwitch(key);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete('admin/feature-flags/:key')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a feature flag (Admin)' })
