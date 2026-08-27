@@ -127,8 +127,8 @@ describe('reportWebVital', () => {
     await vi.advanceTimersByTimeAsync(300);
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
-    const [url, blob] = (navigator.sendBeacon as ReturnType<typeof vi.fn>)
-      .mock.calls[0] as [string, Blob];
+    const [url, blob] = (navigator.sendBeacon as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, Blob];
     expect(url).toBe('/api/web-vitals');
     expect(blob.type).toBe('application/json');
 

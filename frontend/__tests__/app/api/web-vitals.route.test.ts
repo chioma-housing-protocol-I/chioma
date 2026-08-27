@@ -77,9 +77,7 @@ describe('/api/web-vitals', () => {
     expect(body.received).toBe(3);
 
     const getRes = await GET(
-      new NextRequest(
-        'http://localhost/api/web-vitals?name=CLS&limit=5',
-      ),
+      new NextRequest('http://localhost/api/web-vitals?name=CLS&limit=5'),
     );
     const data = await getRes.json();
     expect(

@@ -18,7 +18,10 @@ function push(payload: WebVitalPayload) {
   if (buffer.length > MAX_BUFFER) buffer.length = MAX_BUFFER;
 }
 
-type RawWebVitalBody = RawWebVitalMetric & { route?: string; timestamp?: string };
+type RawWebVitalBody = RawWebVitalMetric & {
+  route?: string;
+  timestamp?: string;
+};
 
 function isValidBody(body: unknown): body is RawWebVitalBody {
   if (!body || typeof body !== 'object') return false;
@@ -73,10 +76,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const items = (Array.isArray(body) ? body : [body]).slice(
-    0,
-    MAX_BATCH_ITEMS,
-  );
+  const items = (Array.isArray(body) ? body : [body]).slice(0, MAX_BATCH_ITEMS);
   const validItems = items.filter(isValidBody);
 
   if (validItems.length === 0) {
