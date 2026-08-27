@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Retry } from '../../common/decorators/retry.decorator';
+import { PaginationUtils } from '../../common/utils';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   S3Client,
@@ -211,11 +212,15 @@ export class StorageService {
     this.logger.log(`Deleted file: ${key}`);
   }
 
-  async listFiles(ownerId: string): Promise<FileMetadata[]> {
-    return this.fileMetadataRepo.find({
+  async listFiles(ownerId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.fileMetadataRepo.findAndCount({
       where: { ownerId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async updateMetadata(

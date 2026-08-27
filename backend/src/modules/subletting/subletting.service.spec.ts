@@ -147,10 +147,11 @@ describe('SublettingService', () => {
         10,
       ),
     ).resolves.toEqual({
-      items: [{ id: 'request-1' }],
+      data: [{ id: 'request-1' }],
       total: 1,
       page: 2,
       limit: 10,
+      totalPages: 1,
     });
     expect(requestRepo.findAndCount).toHaveBeenCalledWith({
       where: { landlordId: 'landlord-1', status: SubletRequestStatus.PENDING },

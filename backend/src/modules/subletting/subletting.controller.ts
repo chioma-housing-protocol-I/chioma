@@ -14,7 +14,9 @@ import { SublettingService } from './subletting.service';
 import { RequestSublettingDto } from './dto/request-subletting.dto';
 import { ApproveSublettingDto } from './dto/approve-subletting.dto';
 import { DenySublettingDto } from './dto/deny-subletting.dto';
-import { SubletRequestStatus } from './entities/sublet-request.entity';
+import { SubletRequestStatus, SubletRequest } from './entities/sublet-request.entity';
+import { SubletBooking } from './entities/sublet-booking.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @Controller('api/subletting')
 @UseGuards(JwtAuthGuard)
@@ -30,6 +32,7 @@ export class SublettingController {
   }
 
   @Get('requests')
+  @ApiPaginatedResponse(SubletRequest)
   async getSublettingRequests(
     @Query('status') status: SubletRequestStatus | undefined,
     @Query('page') page = 1,
@@ -71,6 +74,7 @@ export class SublettingController {
   }
 
   @Get('bookings')
+  @ApiPaginatedResponse(SubletBooking)
   async getSubletBookings(
     @Query('page') page = 1,
     @Query('limit') limit = 20,

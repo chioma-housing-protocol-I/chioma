@@ -18,6 +18,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { PaginationUtils } from '../../common/utils';
 
 @ApiTags('Performance Monitoring')
 @Controller('api/performance')
@@ -68,15 +71,17 @@ export class PerformanceController {
   @Get('endpoints')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get performance statistics for all endpoints' })
-  @ApiResponse({
-    status: 200,
-    description: 'Endpoint performance statistics retrieved successfully',
-  })
+  @ApiPaginatedResponse(Object)
   @HttpCode(HttpStatus.OK)
-  async getEndpointStats() {
+  async getEndpointStats(@Query() query: PaginationQueryDto) {
     const systemStats = this.performanceMonitor.getSystemStats();
+    const paginated = PaginationUtils.paginateArray(
+      systemStats.endpointStats,
+      query.page || 1,
+      query.limit || 20,
+    );
     return {
-      endpoints: systemStats.endpointStats,
+      ...paginated,
       summary: {
         totalEndpoints: systemStats.totalEndpoints,
         totalRequests: systemStats.totalRequests,
@@ -183,26 +188,18 @@ export class PerformanceController {
   @Get('alerts')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get recent performance alerts' })
-  @ApiQuery({
-    name: 'limit',
-    description: 'Number of alerts to return',
-    required: false,
-    example: 10,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Performance alerts retrieved successfully',
-  })
+  @ApiPaginatedResponse(Object)
   @HttpCode(HttpStatus.OK)
-  async getAlerts(@Query('limit') limit?: string) {
+  async getAlerts(@Query() query: PaginationQueryDto) {
     // This would typically fetch from a database or cache
     // For now, return a placeholder response
-    const alertLimit = limit ? parseInt(limit, 10) : 10;
-
     return {
-      alerts: [], // Would be populated with actual alert data
-      count: 0,
-      limit: alertLimit,
+      ...PaginationUtils.buildPaginationResponse(
+        [], // Would be populated with actual alert data
+        0,
+        query.page || 1,
+        query.limit || 10,
+      ),
       timestamp: new Date().toISOString(),
       message: 'No recent performance alerts',
     };
@@ -360,6 +357,7 @@ export class PerformanceController {
   async getPercentiles(
     @Query('method') method?: string,
     @Query('path') path?: string,
+    @Query() query?: PaginationQueryDto,
   ) {
     if (method && path) {
       const percentiles = this.performanceMonitor.getEndpointPercentiles(
@@ -386,8 +384,11 @@ export class PerformanceController {
 
     const all = this.performanceMonitor.getAllEndpointPercentiles();
     return {
-      endpoints: all,
-      count: all.length,
+      ...PaginationUtils.paginateArray(
+        all,
+        query?.page || 1,
+        query?.limit || 20,
+      ),
       timestamp: new Date().toISOString(),
     };
   }
