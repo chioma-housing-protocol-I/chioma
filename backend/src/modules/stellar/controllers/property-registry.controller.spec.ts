@@ -115,14 +115,28 @@ describe('PropertyRegistryController', () => {
         { transactionHash: 'hash-1' },
         { transactionHash: 'hash-2' },
       ];
+      const paginated = {
+        data: mockHistory,
+        total: 2,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
       mockPropertyRegistryService.getPropertyHistory.mockResolvedValue(
-        mockHistory,
+        paginated,
       );
 
-      const result = await controller.getPropertyHistory('prop-1');
+      const result = await controller.getPropertyHistory('prop-1', {
+        page: 1,
+        limit: 20,
+      });
 
-      expect(service.getPropertyHistory).toHaveBeenCalledWith('prop-1');
-      expect(result).toEqual({ success: true, data: mockHistory });
+      expect(service.getPropertyHistory).toHaveBeenCalledWith(
+        'prop-1',
+        1,
+        20,
+      );
+      expect(result).toEqual({ success: true, ...paginated });
     });
   });
 });

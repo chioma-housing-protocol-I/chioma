@@ -1,10 +1,19 @@
-import { Controller, Post, Body, Get, Param, Headers } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Query,
+  Headers,
+} from '@nestjs/common';
 import { PropertyRegistryService } from '../services/property-registry.service';
 import {
   RegisterPropertyDto,
   TransferPropertyDto,
   VerifyPropertyDto,
 } from '../dto/property-registry.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 @Controller('property-registry')
 export class PropertyRegistryController {
@@ -49,8 +58,15 @@ export class PropertyRegistryController {
   }
 
   @Get(':id/history')
-  async getPropertyHistory(@Param('id') id: string) {
-    const history = await this.propertyRegistryService.getPropertyHistory(id);
-    return { success: true, data: history };
+  async getPropertyHistory(
+    @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    const history = await this.propertyRegistryService.getPropertyHistory(
+      id,
+      query.page,
+      query.limit,
+    );
+    return { success: true, ...history };
   }
 }
