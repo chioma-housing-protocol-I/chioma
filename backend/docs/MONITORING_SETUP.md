@@ -188,17 +188,34 @@ Query logs in Grafana (Explore → Loki datasource):
 
 ## Health Checks
 
-The backend exposes two health endpoints (excluded from logging middleware):
+The backend exposes two health endpoints (excluded from logging middleware). Both run the same five indicators —
+`database`, `redis`, `elasticsearch`, `stellar`, `memory` — and are wired to the Kubernetes liveness, readiness and
+startup probes (`k8s/deployment.yaml`); `/health/detailed` additionally includes Node version, memory, and PID.
 
-| Endpoint               | Description                                     |
-| ---------------------- | ----------------------------------------------- |
-| `GET /health`          | Liveness — returns `{ status: "ok" }`           |
-| `GET /health/detailed` | Readiness — checks database, Redis, Stellar RPC |
+| Endpoint               | Description                                                          |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `GET /health`          | Overall status + per-dependency health                               |
+| `GET /health/detailed` | Same, plus process/runtime details                                   |
 
 ```bash
 curl http://localhost:3000/health
 curl http://localhost:3000/health/detailed
 ```
+
+Each entry in the response's `services` map carries a `criticality` of `critical` or `degraded` (see
+`backend/src/health/health.constants.ts`):
+
+| Dependency      | Criticality | Failure means                              |
+| ---------------- | ----------- | -------------------------------------------- |
+| `database`      | `critical`  | The API cannot serve traffic — overall `error`, HTTP 503 |
+| `redis`         | `degraded`  | Caching, queues, locks and rate limiting degrade — overall `warning`, HTTP 200 |
+| `elasticsearch` | `degraded`  | Search falls back to PostgreSQL — overall `warning`, HTTP 200 |
+| `stellar`       | `degraded`  | On-chain writes queue for retry — overall `warning`, HTTP 200 |
+| `memory`        | `degraded`  | Heap pressure warning, not an outage — overall `warning`, HTTP 200 |
+
+Only a failing `critical` dependency drops the overall status to `error` (HTTP 503), which is what actually restarts
+the pod. A dependency not configured for the environment (e.g. Redis or Elasticsearch left unset) reports `skipped`
+instead of `down` and never affects the overall status.
 
 ---
 

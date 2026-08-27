@@ -141,6 +141,82 @@ describe('HealthService', () => {
     });
   });
 
+  describe('degraded vs unhealthy classification', () => {
+    it('treats a failing redis indicator as a warning, not an error', () => {
+      const mockResult: HealthCheckResult = {
+        status: 'error' as const,
+        info: { database: { status: 'up' as HealthIndicatorStatus } },
+        error: { redis: { status: 'down' as HealthIndicatorStatus } },
+        details: {
+          database: { status: 'up' as HealthIndicatorStatus },
+          redis: { status: 'down' as HealthIndicatorStatus },
+        },
+      };
+
+      const enhanced = service.enhanceHealthResult(mockResult);
+
+      expect(enhanced.status).toBe('warning');
+      expect(enhanced.services.redis.criticality).toBe('degraded');
+    });
+
+    it('treats a failing elasticsearch indicator as a warning, not an error', () => {
+      const mockResult: HealthCheckResult = {
+        status: 'error' as const,
+        info: { database: { status: 'up' as HealthIndicatorStatus } },
+        error: { elasticsearch: { status: 'down' as HealthIndicatorStatus } },
+        details: {
+          database: { status: 'up' as HealthIndicatorStatus },
+          elasticsearch: { status: 'down' as HealthIndicatorStatus },
+        },
+      };
+
+      const enhanced = service.enhanceHealthResult(mockResult);
+
+      expect(enhanced.status).toBe('warning');
+      expect(enhanced.services.elasticsearch.criticality).toBe('degraded');
+    });
+
+    it('treats a failing database indicator as an error even when others are up', () => {
+      const mockResult: HealthCheckResult = {
+        status: 'error' as const,
+        info: {
+          redis: { status: 'up' as HealthIndicatorStatus },
+          elasticsearch: { status: 'up' as HealthIndicatorStatus },
+        },
+        error: { database: { status: 'down' as HealthIndicatorStatus } },
+        details: {
+          database: { status: 'down' as HealthIndicatorStatus },
+          redis: { status: 'up' as HealthIndicatorStatus },
+          elasticsearch: { status: 'up' as HealthIndicatorStatus },
+        },
+      };
+
+      const enhanced = service.enhanceHealthResult(mockResult);
+
+      expect(enhanced.status).toBe('error');
+      expect(enhanced.services.database.criticality).toBe('critical');
+    });
+
+    it('does not let a skipped indicator affect the overall status', () => {
+      const mockResult: HealthCheckResult = {
+        status: 'ok' as const,
+        info: {
+          database: { status: 'up' as HealthIndicatorStatus },
+          redis: { status: 'skipped' as unknown as HealthIndicatorStatus },
+        },
+        error: {},
+        details: {
+          database: { status: 'up' as HealthIndicatorStatus },
+          redis: { status: 'skipped' as unknown as HealthIndicatorStatus },
+        },
+      };
+
+      const enhanced = service.enhanceHealthResult(mockResult);
+
+      expect(enhanced.status).toBe('ok');
+    });
+  });
+
   describe('handlePartialFailure', () => {
     it('should handle HealthCheckError with causes', () => {
       const mockCauses = {

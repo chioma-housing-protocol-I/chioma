@@ -8,8 +8,11 @@ import { HealthService } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
+import { RedisHealthIndicator } from './indicators/redis.indicator';
+import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.indicator';
 import { HealthAutomationService } from './health-automation.service';
 import { MonitoringModule } from '../modules/monitoring/monitoring.module';
+import { LockModule } from '../common/lock/lock.module';
 import { CertificatePinningService } from '../common/security/certificate-pinning.service';
 
 @Module({
@@ -32,6 +35,7 @@ import { CertificatePinningService } from '../common/security/certificate-pinnin
     }),
     TypeOrmModule.forFeature([]),
     MonitoringModule,
+    LockModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -39,6 +43,8 @@ import { CertificatePinningService } from '../common/security/certificate-pinnin
     DatabaseHealthIndicator,
     StellarHealthIndicator,
     MemoryHealthIndicator,
+    RedisHealthIndicator,
+    ElasticsearchHealthIndicator,
     HealthAutomationService,
   ],
   exports: [HealthService, DatabaseHealthIndicator],

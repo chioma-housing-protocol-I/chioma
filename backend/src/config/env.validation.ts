@@ -298,6 +298,10 @@ const redisExtraSchema = Joi.object({
   REDIS_TLS: boolString,
 });
 
+const searchSchema = Joi.object({
+  ELASTICSEARCH_URL: Joi.string().uri(),
+});
+
 const stellarSchema = Joi.object({
   STELLAR_NETWORK: requiredWhenDeployed(
     Joi.string().valid('testnet', 'mainnet'),
@@ -414,6 +418,8 @@ const healthSchema = Joi.object({
   MEMORY_WARNING_THRESHOLD: Joi.number().min(0),
   MEMORY_ERROR_THRESHOLD: Joi.number().min(0),
   GRACEFUL_SHUTDOWN_TIMEOUT: Joi.number().min(0),
+  REDIS_HEALTH_TIMEOUT_MS: Joi.number().min(0),
+  ELASTICSEARCH_HEALTH_TIMEOUT_MS: Joi.number().min(0),
 });
 
 const bullQueueSchema = Joi.object({
@@ -575,6 +581,7 @@ const additionalVarsSchema = appSchema
   .concat(databaseExtraSchema)
   .concat(authExtraSchema)
   .concat(redisExtraSchema)
+  .concat(searchSchema)
   .concat(stellarSchema)
   .concat(anchorSchema)
   .concat(storageSchema)
