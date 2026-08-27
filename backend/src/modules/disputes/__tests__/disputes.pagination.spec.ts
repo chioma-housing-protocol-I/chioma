@@ -86,7 +86,7 @@ describe('DisputesService – Pagination', () => {
 
       const result = await service.findAll({ page: 1, limit: 5 });
 
-      expect(result.disputes).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.total).toBe(15);
     });
 
@@ -116,18 +116,18 @@ describe('DisputesService – Pagination', () => {
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
-      expect(result.disputes).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
     });
 
-    it('uses default page=1 and limit=10', async () => {
+    it('uses default page=1 and limit=20', async () => {
       const qb = makeQb([], 0);
       mockDisputeRepo.createQueryBuilder.mockReturnValue(qb);
 
       await service.findAll({});
 
       expect(qb.skip).toHaveBeenCalledWith(0);
-      expect(qb.take).toHaveBeenCalledWith(10);
+      expect(qb.take).toHaveBeenCalledWith(20);
     });
   });
 

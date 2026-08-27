@@ -102,8 +102,11 @@ describe('DisputesController', () => {
   describe('findAll', () => {
     it('should return paginated disputes', async () => {
       const mockResult = {
-        disputes: [mockDispute],
+        data: [mockDispute],
         total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
       };
 
       jest.spyOn(service, 'findAll').mockResolvedValue(mockResult);
@@ -204,18 +207,29 @@ describe('DisputesController', () => {
 
   describe('getAgreementDisputes', () => {
     it('should return disputes for an agreement', async () => {
+      const mockResult = {
+        data: [mockDispute],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
       jest
         .spyOn(service, 'getAgreementDisputes')
-        .mockResolvedValue([mockDispute]);
+        .mockResolvedValue(mockResult);
 
-      const result = await controller.getAgreementDisputes('1', {
-        user: mockUser,
-      });
+      const result = await controller.getAgreementDisputes(
+        '1',
+        { user: mockUser },
+        { page: 1, limit: 20 },
+      );
 
-      expect(result).toEqual([mockDispute]);
+      expect(result).toEqual(mockResult);
       expect(service.getAgreementDisputes).toHaveBeenCalledWith(
         '1',
         mockUser.id,
+        1,
+        20,
       );
     });
   });

@@ -117,13 +117,13 @@ describe('AgreementsService – Pagination', () => {
       );
     });
 
-    it('defaults to page=1 and limit=10', async () => {
+    it('defaults to page=1 and limit=20', async () => {
       mockAgreementRepo.findAndCount.mockResolvedValue([[], 0]);
 
       await service.findAll({});
 
       expect(mockAgreementRepo.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 0, take: 10 }),
+        expect.objectContaining({ skip: 0, take: 20 }),
       );
     });
 
