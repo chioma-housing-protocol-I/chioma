@@ -280,6 +280,8 @@ const databaseExtraSchema = Joi.object({
   DB_QUERY_TIME_CRITICAL_MS: Joi.number().min(0),
   DB_INDEX_UNUSED_MIN_SCANS: Joi.number().min(0),
   DB_INDEX_UNUSED_MIN_SIZE_MB: Joi.number().min(0),
+  QUERY_ANALYSIS_SLOW_THRESHOLD_MS: Joi.number().min(0),
+  QUERY_ANALYSIS_SLOW_THRESHOLD_OVERRIDES_MS: Joi.string(),
 });
 
 const authExtraSchema = Joi.object({
