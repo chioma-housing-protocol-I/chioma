@@ -35,6 +35,9 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Dispute } from './entities/dispute.entity';
 
 @ApiTags('Disputes')
 @ApiBearerAuth('JWT-auth')
@@ -65,7 +68,7 @@ export class DisputesController {
 
   @Get()
   @ApiOperation({ summary: 'List disputes with filters' })
-  @ApiResponse({ status: 200, description: 'Paginated disputes' })
+  @ApiPaginatedResponse(Dispute)
   async findAll(@Query() query: QueryDisputesDto, @Request() req) {
     return this.disputesService.findAll(query, req.user.id);
   }
@@ -157,10 +160,17 @@ export class DisputesController {
   }
 
   @Get('agreement/:agreementId/disputes')
+  @ApiPaginatedResponse(Dispute)
   async getAgreementDisputes(
     @Param('agreementId') agreementId: string,
     @Request() req,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.disputesService.getAgreementDisputes(agreementId, req.user.id);
+    return this.disputesService.getAgreementDisputes(
+      agreementId,
+      req.user.id,
+      query.page,
+      query.limit,
+    );
   }
 }

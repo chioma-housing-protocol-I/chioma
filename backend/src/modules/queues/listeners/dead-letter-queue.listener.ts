@@ -50,6 +50,11 @@ export class DeadLetterQueueListener {
     await this.handleFailed('data-sync', job, error);
   }
 
+  @OnQueueFailed({ name: 'analytics' })
+  async onAnalyticsFailed(job: Job, error: Error): Promise<void> {
+    await this.handleFailed('analytics', job, error);
+  }
+
   private async handleFailed(
     sourceQueue: WorkerQueueName,
     job: Job,

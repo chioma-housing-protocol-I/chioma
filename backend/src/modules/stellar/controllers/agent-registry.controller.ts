@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -15,6 +16,9 @@ import {
   RateAgentDto,
   RegisterTransactionDto,
 } from '../dto/agent-registry.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../../common/decorators/api-paginated-response.decorator';
+import { AgentTransaction } from '../entities/agent-transaction.entity';
 
 @ApiTags('Agent Registry')
 @ApiBearerAuth()
@@ -88,7 +92,15 @@ export class AgentRegistryController {
 
   @Get('transactions/:agentAddress')
   @ApiOperation({ summary: 'Get transactions for an agent' })
-  async getAgentTransactions(@Param('agentAddress') agentAddress: string) {
-    return this.agentRegistry.getAgentTransactions(agentAddress);
+  @ApiPaginatedResponse(AgentTransaction)
+  async getAgentTransactions(
+    @Param('agentAddress') agentAddress: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.agentRegistry.getAgentTransactions(
+      agentAddress,
+      query.page,
+      query.limit,
+    );
   }
 }

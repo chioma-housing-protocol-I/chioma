@@ -45,6 +45,7 @@ describe('FavoritesService', () => {
           provide: getRepositoryToken(Favorite),
           useValue: {
             find: jest.fn(),
+            findAndCount: jest.fn(),
             findOne: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
@@ -72,25 +73,31 @@ describe('FavoritesService', () => {
   describe('getFavorites', () => {
     it('should return user favorites ordered by creation date', async () => {
       const mockFavorites = [mockFavorite];
-      jest.spyOn(favoriteRepository, 'find').mockResolvedValue(mockFavorites);
+      jest
+        .spyOn(favoriteRepository, 'findAndCount')
+        .mockResolvedValue([mockFavorites, 1]);
 
       const result = await service.getFavorites(mockUserId);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].propertyId).toBe(mockPropertyId);
-      expect(favoriteRepository.find).toHaveBeenCalledWith({
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].propertyId).toBe(mockPropertyId);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith({
         where: { userId: mockUserId },
         relations: ['property'],
         order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
     });
 
     it('should return empty array if user has no favorites', async () => {
-      jest.spyOn(favoriteRepository, 'find').mockResolvedValue([]);
+      jest
+        .spyOn(favoriteRepository, 'findAndCount')
+        .mockResolvedValue([[], 0]);
 
       const result = await service.getFavorites(mockUserId);
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
     });
   });
 

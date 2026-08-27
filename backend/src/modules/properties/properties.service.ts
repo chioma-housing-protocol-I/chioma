@@ -17,6 +17,7 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { PropertyQueryBuilder } from './property-query-builder';
+import { PaginationUtils } from '../../common/utils';
 import { CacheService } from '../../common/cache/cache.service';
 import {
   CACHE_PREFIX_PROPERTIES_LIST,
@@ -108,14 +109,7 @@ export class PropertiesService {
     return this.findOne(savedProperty.id);
   }
 
-  async findAll(query: QueryPropertyDto): Promise<{
-    data: Property[];
-    meta: {
-      total: number;
-      page: number;
-      limit: number;
-    };
-  }> {
+  async findAll(query: QueryPropertyDto) {
     const isPublicListing =
       query.status === ListingStatus.PUBLISHED && !query.ownerId;
 
@@ -131,17 +125,10 @@ export class PropertiesService {
     return this.fetchListingsPage(query);
   }
 
-  private async fetchListingsPage(query: QueryPropertyDto): Promise<{
-    data: Property[];
-    meta: {
-      total: number;
-      page: number;
-      limit: number;
-    };
-  }> {
+  private async fetchListingsPage(query: QueryPropertyDto) {
     const {
       page = 1,
-      limit = 10,
+      limit = 20,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       ...filters
@@ -161,14 +148,7 @@ export class PropertiesService {
       .applyPagination(page, limit)
       .execute();
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-      },
-    };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOne(id: string): Promise<Property> {

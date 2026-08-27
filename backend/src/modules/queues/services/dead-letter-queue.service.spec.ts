@@ -62,6 +62,7 @@ describe('DeadLetterQueueService', () => {
         { provide: getQueueToken('documents'), useValue: { add: jest.fn() } },
         { provide: getQueueToken('blockchain'), useValue: { add: jest.fn() } },
         { provide: getQueueToken('data-sync'), useValue: { add: jest.fn() } },
+        { provide: getQueueToken('analytics'), useValue: { add: jest.fn() } },
         {
           provide: ErrorNotificationService,
           useValue: errorNotificationService,

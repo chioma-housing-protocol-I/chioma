@@ -23,6 +23,10 @@ describe('AnalyticsService', () => {
     find: jest.fn(),
   };
 
+  const queueManagementService = {
+    addAnalyticsJob: jest.fn(),
+  };
+
   let service: AnalyticsService;
 
   beforeEach(() => {
@@ -33,6 +37,7 @@ describe('AnalyticsService', () => {
       subletBookingRepository as any,
       paymentRepository as any,
       auditLogRepository as any,
+      queueManagementService as any,
     );
   });
 

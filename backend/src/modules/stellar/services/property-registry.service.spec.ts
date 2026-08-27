@@ -53,6 +53,7 @@ describe('PropertyRegistryService', () => {
     create: jest.fn().mockImplementation((dto) => dto),
     save: jest.fn().mockResolvedValue({}),
     find: jest.fn(),
+    findAndCount: jest.fn(),
   };
 
   const mockStellarAccountRepo = {
@@ -204,12 +205,17 @@ describe('PropertyRegistryService', () => {
     });
 
     it('getPropertyHistory should return history array', async () => {
-      mockPropertyHistoryRepo.find.mockResolvedValue([{ id: 1 }]);
+      mockPropertyHistoryRepo.findAndCount.mockResolvedValue([
+        [{ id: 1 }],
+        1,
+      ]);
       const result = await service.getPropertyHistory('prop-1');
-      expect(result).toEqual([{ id: 1 }]);
-      expect(mockPropertyHistoryRepo.find).toHaveBeenCalledWith({
+      expect(result.data).toEqual([{ id: 1 }]);
+      expect(mockPropertyHistoryRepo.findAndCount).toHaveBeenCalledWith({
         where: { propertyId: 'prop-1' },
         order: { transferredAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
     });
   });

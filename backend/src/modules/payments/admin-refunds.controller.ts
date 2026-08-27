@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -15,9 +16,9 @@ import { UserRole } from '../users/entities/user.entity';
 import {
   AdminRefundsService,
   type AdminRefundDetail,
-  type AdminRefundRow,
 } from './admin-refunds.service';
 import { AdminRefundDecisionDto } from './dto/admin-refund-decision.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 interface RequestUser {
   id?: string;
@@ -35,10 +36,10 @@ export class AdminRefundsController {
   @ApiOperation({ summary: 'List admin refund requests' })
   async listRefundRequests(
     @Request() req: { user?: RequestUser },
-  ): Promise<{ data: AdminRefundRow[] }> {
+    @Query() query: PaginationQueryDto,
+  ) {
     this.ensureAdmin(req.user);
-    const rows = await this.adminRefundsService.listRefunds();
-    return { data: rows };
+    return this.adminRefundsService.listRefunds(query.page, query.limit);
   }
 
   @Get(':id')

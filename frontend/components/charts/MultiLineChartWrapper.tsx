@@ -18,10 +18,10 @@ interface Series {
 }
 
 interface MultiLineChartWrapperProps {
-  data: any[];
+  data: unknown[];
   dataKeyX: string;
   series: Series[];
-  tickFormatter?: (val: any) => string;
+  tickFormatter?: (val: string) => string;
 }
 
 export default function MultiLineChartWrapper({

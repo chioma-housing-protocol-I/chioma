@@ -50,7 +50,10 @@ describe('BookingsService', () => {
     orderBy: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
+    getManyAndCount: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -183,7 +186,7 @@ describe('BookingsService', () => {
 
   describe('findForUser', () => {
     it('scopes to guest_id by default', async () => {
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
       await service.findForUser('guest-1', {});
 
@@ -194,7 +197,7 @@ describe('BookingsService', () => {
     });
 
     it('scopes to property owner when role=host', async () => {
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
       await service.findForUser('host-1', { role: BookingRoleFilter.HOST });
 
@@ -205,7 +208,7 @@ describe('BookingsService', () => {
     });
 
     it('filters by status when provided', async () => {
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
       await service.findForUser('guest-1', { status: BookingStatus.PENDING });
 

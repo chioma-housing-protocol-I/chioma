@@ -85,6 +85,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     createQueryBuilder: jest.fn(),
     update: jest.fn(),
   };
@@ -442,12 +443,15 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('getAgreementDisputes', () => {
     it('returns disputes for a valid agreement without userId', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([
+        [openDispute],
+        1,
+      ]);
 
       const result = await service.getAgreementDisputes('1');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].status).toBe(DisputeStatus.OPEN);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].status).toBe(DisputeStatus.OPEN);
     });
 
     it('throws NotFoundException when agreement does not exist', async () => {
@@ -464,19 +468,25 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
         ...regularUser,
         id: 'landlord-1',
       });
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([
+        [openDispute],
+        1,
+      ]);
 
       const result = await service.getAgreementDisputes('1', 'landlord-1');
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it('allows the tenant (userId) to view disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(regularUser); // id = 'user-1'
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([
+        [openDispute],
+        1,
+      ]);
 
       const result = await service.getAgreementDisputes('1', 'user-1');
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it('throws ForbiddenException when user is not a party to the agreement', async () => {
@@ -495,21 +505,21 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     it('allows admin to view any agreement disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(adminUser);
-      mockDisputeRepository.find.mockResolvedValue([
-        openDispute,
-        underReviewDispute,
+      mockDisputeRepository.findAndCount.mockResolvedValue([
+        [openDispute, underReviewDispute],
+        2,
       ]);
 
       const result = await service.getAgreementDisputes('1', 'admin-1');
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
 
     it('returns empty array when agreement has no disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockDisputeRepository.find.mockResolvedValue([]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[], 0]);
 
       const result = await service.getAgreementDisputes('1');
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

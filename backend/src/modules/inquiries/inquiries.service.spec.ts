@@ -6,6 +6,7 @@ describe('InquiriesService', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
   };
 
@@ -93,7 +94,7 @@ describe('InquiriesService', () => {
   });
 
   it('enriches incoming inquiries with property details and sender contact', async () => {
-    inquiryRepository.find.mockResolvedValue([
+    inquiryRepository.findAndCount.mockResolvedValue([[
       {
         id: 'inq-1',
         propertyId: 'property-1',
@@ -103,7 +104,7 @@ describe('InquiriesService', () => {
         senderEmail: 'jane@example.com',
         senderPhone: '+2340000000',
       },
-    ]);
+    ], 1]);
     propertyRepository.find.mockResolvedValue([
       {
         id: 'property-1',
@@ -116,7 +117,7 @@ describe('InquiriesService', () => {
 
     const result = await service.listIncoming('owner-1');
 
-    expect(result).toEqual([
+    expect(result.data).toEqual([
       expect.objectContaining({
         id: 'inq-1',
         property: {
@@ -137,13 +138,16 @@ describe('InquiriesService', () => {
   });
 
   it('enriches outgoing inquiries with property details and landlord contact', async () => {
-    inquiryRepository.find.mockResolvedValue([
-      {
-        id: 'inq-1',
-        propertyId: 'property-1',
-        fromUserId: 'tenant-1',
-        toUserId: 'owner-1',
-      },
+    inquiryRepository.findAndCount.mockResolvedValue([
+      [
+        {
+          id: 'inq-1',
+          propertyId: 'property-1',
+          fromUserId: 'tenant-1',
+          toUserId: 'owner-1',
+        },
+      ],
+      1,
     ]);
     propertyRepository.find.mockResolvedValue([
       {
@@ -166,7 +170,7 @@ describe('InquiriesService', () => {
 
     const result = await service.listOutgoing('tenant-1');
 
-    expect(result).toEqual([
+    expect(result.data).toEqual([
       expect.objectContaining({
         id: 'inq-1',
         property: {

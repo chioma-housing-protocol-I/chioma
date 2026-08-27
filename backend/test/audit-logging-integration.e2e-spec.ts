@@ -48,6 +48,7 @@ describe('Audit Logging Integration (e2e)', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
     createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
   };
@@ -264,41 +265,44 @@ describe('Audit Logging Integration (e2e)', () => {
         { ...mockAuditLog, id: 2, action: AuditAction.UPDATE },
         { ...mockAuditLog, id: 1, action: AuditAction.CREATE },
       ];
-      mockAuditLogRepository.find.mockResolvedValue(logs);
+      mockAuditLogRepository.findAndCount.mockResolvedValue([logs, 2]);
 
       const result = await service.getAuditTrail(entityType, entityId);
 
-      expect(mockAuditLogRepository.find).toHaveBeenCalledWith(
+      expect(mockAuditLogRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { entity_type: entityType, entity_id: entityId },
           order: { performed_at: 'DESC' },
         }),
       );
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
 
     it('retrieves user activity log ordered by most recent', async () => {
       const userLogs = [{ ...mockAuditLog, id: 3, action: AuditAction.LOGIN }];
-      mockAuditLogRepository.find.mockResolvedValue(userLogs);
+      mockAuditLogRepository.findAndCount.mockResolvedValue([userLogs, 1]);
 
       const result = await service.getUserActivity(userId);
 
-      expect(mockAuditLogRepository.find).toHaveBeenCalledWith(
+      expect(mockAuditLogRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { performed_by: userId },
           order: { performed_at: 'DESC' },
         }),
       );
-      expect(result).toHaveLength(1);
-      expect(result[0].action).toBe(AuditAction.LOGIN);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].action).toBe(AuditAction.LOGIN);
     });
 
     it('respects the limit parameter on audit trail retrieval', async () => {
-      mockAuditLogRepository.find.mockResolvedValue([mockAuditLog]);
+      mockAuditLogRepository.findAndCount.mockResolvedValue([
+        [mockAuditLog],
+        1,
+      ]);
 
-      await service.getAuditTrail(entityType, entityId, 10);
+      await service.getAuditTrail(entityType, entityId, 1, 10);
 
-      expect(mockAuditLogRepository.find).toHaveBeenCalledWith(
+      expect(mockAuditLogRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({ take: 10 }),
       );
     });

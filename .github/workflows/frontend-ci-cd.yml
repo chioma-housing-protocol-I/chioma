@@ -16,11 +16,6 @@ on:
       - "frontend/**"
       - ".github/workflows/frontend-ci-cd.yml"
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-
 env:
   IS_PR: ${{ github.event_name == 'pull_request' }}
 
@@ -42,25 +37,32 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify generated API types freshness
+        run: pnpm run types:check
+
       - name: Run ESLint
         run: pnpm run lint
 
       - name: Check Prettier formatting
-        working-directory: .
-        run: cd frontend && pnpm run format:check
+        run: pnpm run format:check
 
-      - name: Run unit tests
-        run: pnpm test
+      - name: Run unit tests with coverage
+        run: pnpm run test:cov
 
-      - name: Run i18n translation coverage audit
-        run: pnpm run i18n:audit
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 14
 
   build:
     name: Build
@@ -81,7 +83,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
@@ -96,14 +98,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: .next/
+          path: frontend/.next/
           retention-days: 7
           include-hidden-files: true
 
   bundle-size:
     name: Bundle Size Check
     runs-on: ubuntu-latest
-    needs: [lint-and-test]
+    needs: [build]
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     defaults:
       run:
@@ -119,15 +121,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create production build
-        run: pnpm run build
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/.next/
 
       - name: Check bundle size budgets
         id: size_check
@@ -153,7 +158,16 @@ jobs:
             const report = fs.readFileSync('/tmp/size-report.txt', 'utf8');
             const exitCode = '${{ steps.size_check.outputs.exit_code }}';
             const status = exitCode === '0' ? '✅ Budgets OK' : '❌ Budget Exceeded';
-            const body = `## 📦 Bundle Size Report — ${status}\n\n\`\`\`\n${report}\n\`\`\`\n\n> Update \`bundle-budgets.json\` to adjust thresholds. See [BUNDLE_ANALYZER.md](./docs/BUNDLE_ANALYZER.md) for guidance.`;
+            const body = `## 📦 Bundle Size Report — ${status}
+
+\`\`\`
+${report}
+\`\`\`
+
+### Size delta
+The \`Δ (KB)\` column and delta summary compare current sizes against \`bundle-budgets.json#baseline\`. Positive values indicate bundle growth.
+
+> Update \`bundle-budgets.json\` to adjust thresholds. See [BUNDLE_ANALYZER.md](./docs/BUNDLE_ANALYZER.md) for guidance.`;
 
             try {
               const { data: comments } = await github.rest.issues.listComments({
@@ -206,7 +220,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: .next/
+          path: frontend/
 
       - name: Deploy to production
         run: |

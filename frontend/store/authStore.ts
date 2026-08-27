@@ -52,6 +52,7 @@ interface AuthApiUser {
   lastName: string | null;
   role: string;
   avatar?: string;
+  locale?: string;
 }
 
 interface AuthSuccessResponse {
@@ -270,7 +271,7 @@ function normalizeUser(user: AuthApiUser): User {
     lastName: user.lastName ?? '',
     role: user.role,
     avatar: user.avatar,
-    locale: (user as any).locale,
+    locale: user.locale,
   };
 }
 

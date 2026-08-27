@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RentObligationNftService } from '../stellar/services/rent-obligation-nft.service';
 import { RentObligationNft } from './entities/rent-obligation-nft.entity';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
 @Injectable()
 export class AgreementNftService {
@@ -109,8 +111,20 @@ export class AgreementNftService {
     return this.nftRepository.findOne({ where: { agreementId } });
   }
 
-  async getNftsByOwner(ownerAddress: string): Promise<RentObligationNft[]> {
-    return this.nftRepository.find({ where: { currentOwner: ownerAddress } });
+  async getNftsByOwner(
+    ownerAddress: string,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedResponseDto<RentObligationNft>> {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.nftRepository.findAndCount({
+      where: { currentOwner: ownerAddress },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async verifyOwnership(

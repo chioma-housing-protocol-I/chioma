@@ -59,6 +59,7 @@ describe('WebhooksService', () => {
         .mockImplementation((d) => Promise.resolve({ ...d, id: 'delivery-1' })),
       findOne: jest.fn(),
       find: jest.fn(),
+      findAndCount: jest.fn(),
     };
 
     configService = {
@@ -448,18 +449,20 @@ describe('WebhooksService', () => {
   describe('listDeliveriesForUser', () => {
     it('lists deliveries for an endpoint owned by the user', async () => {
       endpointRepository.findOne.mockResolvedValue(mockEndpoint());
-      deliveryRepository.find.mockResolvedValue([mockDelivery()]);
+      deliveryRepository.findAndCount.mockResolvedValue([[mockDelivery()], 1]);
 
       const result = await service.listDeliveriesForUser(
         'user-1',
         'endpoint-1',
       );
 
-      expect(deliveryRepository.find).toHaveBeenCalledWith({
+      expect(deliveryRepository.findAndCount).toHaveBeenCalledWith({
         where: { endpointId: 'endpoint-1' },
         order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it('throws NotFoundException when the endpoint is not owned by the user', async () => {

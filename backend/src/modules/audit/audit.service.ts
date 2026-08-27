@@ -219,25 +219,33 @@ export class AuditService {
   async getAuditTrail(
     entityType: string,
     entityId: string,
-    limit: number = 100,
-  ): Promise<AuditLog[]> {
-    return this.auditLogRepository.find({
+    page: number = 1,
+    limit: number = 50,
+  ) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.auditLogRepository.findAndCount({
       where: { entity_type: entityType, entity_id: entityId },
       relations: ['performed_by_user'],
       order: { performed_at: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async getUserActivity(
-    userId: string,
-    limit: number = 100,
-  ): Promise<AuditLog[]> {
-    return this.auditLogRepository.find({
+  async getUserActivity(userId: string, page: number = 1, limit: number = 50) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.auditLogRepository.findAndCount({
       where: { performed_by: userId },
       relations: ['performed_by_user'],
       order: { performed_at: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 }

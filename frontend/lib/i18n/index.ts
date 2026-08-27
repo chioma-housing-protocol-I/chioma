@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createVersionedPersistConfig } from '@/store/persistence';
 import { en, es, fr, type TranslationKeys } from './translations';
 import {
   formatDate,
@@ -29,6 +30,9 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
 
 const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = { en, es, fr };
 
+/** Bump when persisted locale state shape changes. */
+export const I18N_STORE_VERSION = 1;
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface I18nState {
@@ -51,9 +55,20 @@ export const useI18nStore = create<I18nStore>()(
       setLocale: (locale) => set({ locale }),
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
-    {
+    createVersionedPersistConfig<I18nStore, Pick<I18nStore, 'locale'>>({
       name: 'chioma-locale',
-      onRehydrateStorage: () => (state) => {
+      version: I18N_STORE_VERSION,
+      partialize: (state: I18nStore) => ({ locale: state.locale }),
+      migrations: {
+        1: (state) => {
+          const legacy = state as Record<string, unknown>;
+          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
+            ? (legacy.locale as SupportedLocale)
+            : 'en';
+          return { locale };
+        },
+      },
+      onRehydrateStorage: () => (state: I18nStore | undefined) => {
         if (state) {
           state.setHasHydrated(true);
 
@@ -75,7 +90,7 @@ export const useI18nStore = create<I18nStore>()(
           }
         }
       },
-    },
+    }),
   ),
 );
 

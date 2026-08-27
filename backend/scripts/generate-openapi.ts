@@ -3,6 +3,11 @@
  * Usage: OPENAPI_GENERATE=true npx ts-node -r tsconfig-paths/register scripts/generate-openapi.ts
  * Output: openapi.json (or path from OPENAPI_OUTPUT env)
  */
+// Set required environment variables for OpenAPI generation
+process.env.NODE_ENV = 'test';
+process.env.OPENAPI_GENERATE = 'true';
+require('../test/setup-env');
+
 // Ensure global crypto for Node 18 (TypeORM uses crypto.randomUUID())
 if (typeof globalThis.crypto === 'undefined') {
   (globalThis as any).crypto = require('crypto');
@@ -21,11 +26,11 @@ process.on('uncaughtException', (err) => logAndExit('Uncaught Exception', err));
 import { NestFactory } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from '../src/app.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
 async function generate() {
+  const { AppModule } = await import('../src/app.module');
   // abortOnError: false so bootstrap errors are thrown instead of process.exit(1)
   let app;
   try {
@@ -79,7 +84,8 @@ async function generate() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
   });
 
   await app.close();

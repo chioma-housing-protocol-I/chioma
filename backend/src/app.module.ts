@@ -71,8 +71,10 @@ import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
+import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { CertificatePinningModule } from './common/security/certificate-pinning.module';
 import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 
@@ -80,7 +82,10 @@ const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
-    ...(process.env.NODE_ENV === 'test' ? [] : [SentryModule.forRoot()]),
+    ...(process.env.NODE_ENV === 'test' ||
+    process.env.OPENAPI_GENERATE === 'true'
+      ? []
+      : [SentryModule.forRoot()]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
@@ -93,7 +98,7 @@ const appLogger = new Logger('AppModule');
     CertificatePinningModule,
     OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
-    process.env.NODE_ENV === 'test'
+    process.env.NODE_ENV === 'test' || process.env.OPENAPI_GENERATE === 'true'
       ? CacheModule.register({
           isGlobal: true,
           ttl: 600,
@@ -254,6 +259,7 @@ const appLogger = new Logger('AppModule');
     AiModule,
     FraudModule,
     FavoritesModule,
+    FeatureFlagsModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,
@@ -300,6 +306,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: DeprecationInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReadReplicaInterceptor,
     },
   ],
 })

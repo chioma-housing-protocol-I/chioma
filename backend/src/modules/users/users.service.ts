@@ -18,6 +18,8 @@ import {
 import { UserRestoreDto } from './dto/user-restore.dto';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { AuditService } from '../audit/audit.service';
 import { Locked, LockService } from '../../common/lock';
 import {
@@ -46,13 +48,7 @@ export interface AdminUserView {
   updatedAt: string;
 }
 
-export interface PaginatedAdminUsersResult {
-  data: AdminUserView[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type PaginatedAdminUsersResult = PaginatedResponseDto<AdminUserView>;
 
 @Injectable()
 export class UsersService {
@@ -426,18 +422,17 @@ export class UsersService {
     }
 
     qb.orderBy('user.createdAt', 'DESC')
-      .skip((page - 1) * limit)
+      .skip(PaginationUtils.calculateOffset(page, limit))
       .take(limit);
 
     const [rows, total] = await qb.getManyAndCount();
 
-    return {
-      data: rows.map((user) => this.toAdminUserView(user)),
+    return PaginationUtils.buildPaginationResponse(
+      rows.map((user) => this.toAdminUserView(user)),
       total,
       page,
       limit,
-      totalPages: Math.max(Math.ceil(total / limit), 1),
-    };
+    );
   }
 
   async adminDeactivateAccount(

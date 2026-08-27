@@ -37,6 +37,10 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { SecurityEvent } from './entities/security-event.entity';
+import { ThreatEvent } from './entities/threat-event.entity';
 
 @ApiTags('Security')
 @Controller()
@@ -105,13 +109,16 @@ export class SecurityController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent security events' })
   @ApiQuery({ name: 'hours', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Security events retrieved' })
+  @ApiPaginatedResponse(SecurityEvent)
   async getSecurityEvents(
     @Query('hours', new DefaultValuePipe(24), ParseIntPipe) hours: number,
-    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.securityEventsService.getRecentEvents(hours, limit);
+    return this.securityEventsService.getRecentEvents(
+      hours,
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('security/events/user/:userId')
@@ -120,12 +127,16 @@ export class SecurityController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get security events for a specific user' })
   @ApiParam({ name: 'userId', type: String })
+  @ApiPaginatedResponse(SecurityEvent)
   async getUserEvents(
     @Param('userId') userId: string,
-    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.securityEventsService.getUserEvents(userId, limit, offset);
+    return this.securityEventsService.getUserEvents(
+      userId,
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('security/events/suspicious/:userId')
@@ -146,11 +157,12 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent threat events' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getThreats(
-    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
-  ) {
-    return this.threatDetectionService.getRecentThreats(limit);
+  @ApiPaginatedResponse(ThreatEvent)
+  async getThreats(@Query() query: PaginationQueryDto) {
+    return this.threatDetectionService.getRecentThreats(
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('security/threats/stats')
@@ -188,8 +200,8 @@ export class SecurityController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get open security incidents' })
-  async getIncidents() {
-    return this.incidentService.getOpenIncidents();
+  async getIncidents(@Query() query: PaginationQueryDto) {
+    return this.incidentService.getOpenIncidents(query.page, query.limit);
   }
 
   @Get('security/incidents/metrics')

@@ -13,6 +13,7 @@ import { WebhookEndpoint } from './entities/webhook-endpoint.entity';
 import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookEvent } from './webhook-event';
 import { WebhookSignatureService } from './webhook-signature.service';
+import { PaginationUtils } from '../../common/utils';
 
 export interface WebhookEndpointInput {
   url: string;
@@ -186,13 +187,20 @@ export class WebhooksService {
   async listDeliveriesForUser(
     userId: string,
     endpointId: string,
-  ): Promise<WebhookDelivery[]> {
+    page = 1,
+    limit = 20,
+  ) {
     await this.getEndpointForUser(userId, endpointId);
 
-    return this.deliveryRepository.find({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.deliveryRepository.findAndCount({
       where: { endpointId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async triggerTestEvent(

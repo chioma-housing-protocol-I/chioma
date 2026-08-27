@@ -1,13 +1,14 @@
 import { IsEnum, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingStatus } from '../entities/booking.entity';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export enum BookingRoleFilter {
   HOST = 'host',
   GUEST = 'guest',
 }
 
-export class QueryBookingsDto {
+export class QueryBookingsDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     enum: BookingRoleFilter,
     example: 'guest',

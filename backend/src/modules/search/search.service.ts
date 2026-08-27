@@ -12,6 +12,8 @@ import {
   AgreementStatus,
 } from '../rent/entities/rent-contract.entity';
 import { CacheService } from '../../common/cache/cache.service';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import {
   CACHE_PREFIX_SEARCH_PROPERTIES,
   CACHE_PREFIX_SUGGEST,
@@ -66,11 +68,7 @@ export interface DocumentSearchFilters {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface SearchResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
+export interface SearchResult<T> extends PaginatedResponseDto<T> {
   facets: SearchFacets;
 }
 
@@ -123,7 +121,8 @@ export class SearchService {
     const qb = this.buildPropertyQuery(filters);
     const countQb = this.buildPropertyQuery(filters);
 
-    qb.skip((page - 1) * limit).take(limit);
+    PaginationUtils.validatePagination(page, limit);
+    qb.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
     qb.orderBy('property.createdAt', 'DESC');
 
     const [items, total] = await Promise.all([
@@ -134,10 +133,7 @@ export class SearchService {
     const facets = await this.buildFacets(filters);
 
     return {
-      items,
-      total,
-      page,
-      limit,
+      ...PaginationUtils.buildPaginationResponse(items, total, page, limit),
       facets,
     };
   }
@@ -380,10 +376,11 @@ export class SearchService {
     filters: UserSearchFilters,
     page = 1,
     limit = 20,
-  ): Promise<{ items: User[]; total: number; page: number; limit: number }> {
+  ) {
+    PaginationUtils.validatePagination(page, limit);
     const qb = this.buildUserQuery(filters);
 
-    qb.skip((page - 1) * limit).take(limit);
+    qb.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
 
     const sortBy = filters.sortBy || 'createdAt';
     const sortOrder = filters.sortOrder || 'desc';
@@ -401,7 +398,7 @@ export class SearchService {
 
     const [items, total] = await qb.getManyAndCount();
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(items, total, page, limit);
   }
 
   private buildUserQuery(filters: UserSearchFilters): SelectQueryBuilder<User> {
@@ -439,15 +436,11 @@ export class SearchService {
     filters: DocumentSearchFilters,
     page = 1,
     limit = 20,
-  ): Promise<{
-    items: RentAgreement[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
+  ) {
+    PaginationUtils.validatePagination(page, limit);
     const qb = this.buildDocumentQuery(filters);
 
-    qb.skip((page - 1) * limit).take(limit);
+    qb.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
 
     const sortBy = filters.sortBy || 'createdAt';
     const sortOrder = filters.sortOrder || 'desc';
@@ -468,7 +461,7 @@ export class SearchService {
 
     const [items, total] = await qb.getManyAndCount();
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(items, total, page, limit);
   }
 
   private buildDocumentQuery(

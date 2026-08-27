@@ -16,6 +16,7 @@ import { RequestSublettingDto } from './dto/request-subletting.dto';
 import { ApproveSublettingDto } from './dto/approve-subletting.dto';
 import { DenySublettingDto } from './dto/deny-subletting.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaginationUtils } from '../../common/utils';
 import { Property } from '../properties/entities/property.entity';
 
 @Injectable()
@@ -91,14 +92,15 @@ export class SublettingService {
       where.status = status;
     }
 
-    const [items, total] = await this.subletRequestRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.subletRequestRepository.findAndCount({
       where,
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async approveSubletting(
@@ -168,14 +170,15 @@ export class SublettingService {
   }
 
   async getTenantSubletBookings(tenantId: string, page = 1, limit = 20) {
-    const [items, total] = await this.subletBookingRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.subletBookingRepository.findAndCount({
       where: { tenantId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getTenantEarnings(tenantId: string) {

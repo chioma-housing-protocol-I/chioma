@@ -12,6 +12,7 @@ import {
   UpdateDocumentDto,
   DocumentFilterDto,
 } from './dto/document.dto';
+import { PaginationUtils } from '../../common/utils';
 
 @Injectable()
 export class DocumentService {
@@ -39,15 +40,7 @@ export class DocumentService {
     return this.documentRepo.save(doc);
   }
 
-  async findAll(
-    ownerId: string,
-    filters: DocumentFilterDto,
-  ): Promise<{
-    documents: Document[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
+  async findAll(ownerId: string, filters: DocumentFilterDto) {
     const query = this.documentRepo
       .createQueryBuilder('doc')
       .where('doc.ownerId = :ownerId', { ownerId });
@@ -75,17 +68,23 @@ export class DocumentService {
       );
     }
 
-    const page = filters.page ?? 0;
+    const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
+    PaginationUtils.validatePagination(page, limit);
 
     query
       .orderBy('doc.createdAt', 'DESC')
-      .skip(page * limit)
+      .skip(PaginationUtils.calculateOffset(page, limit))
       .take(limit);
 
     const [documents, total] = await query.getManyAndCount();
 
-    return { documents, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(
+      documents,
+      total,
+      page,
+      limit,
+    );
   }
 
   async findOne(id: string, ownerId: string): Promise<Document> {
@@ -154,11 +153,22 @@ export class DocumentService {
     return this.documentRepo.save(doc);
   }
 
-  async findSharedWithUser(userId: string): Promise<Document[]> {
-    return this.documentRepo
+  async findSharedWithUser(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [documents, total] = await this.documentRepo
       .createQueryBuilder('doc')
       .where('doc.sharedWith LIKE :userId', { userId: `%${userId}%` })
       .orderBy('doc.createdAt', 'DESC')
-      .getMany();
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationUtils.buildPaginationResponse(
+      documents,
+      total,
+      page,
+      limit,
+    );
   }
 }

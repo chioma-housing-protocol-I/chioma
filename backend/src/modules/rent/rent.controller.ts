@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -27,6 +28,10 @@ import {
 } from '@nestjs/swagger';
 import { RentService } from './rent.service';
 import { RentReminderService } from './rent-reminder.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Payment } from './entities/payment.entity';
+import { RentReminder } from './entities/rent-reminder.entity';
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -168,8 +173,12 @@ export class RentController {
   })
   @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/history')
-  async getRentHistory(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentService.getRentHistory(id);
+  @ApiPaginatedResponse(Payment)
+  async getRentHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentService.getRentHistory(id, query.page, query.limit);
   }
 
   @ApiOperation({
@@ -237,8 +246,12 @@ export class RentController {
   @ApiResponse({ status: 200, description: 'Reminders retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/reminders')
-  async getReminders(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentReminderService.getReminders(id);
+  @ApiPaginatedResponse(RentReminder)
+  async getReminders(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentReminderService.getReminders(id, query.page, query.limit);
   }
 
   @ApiOperation({

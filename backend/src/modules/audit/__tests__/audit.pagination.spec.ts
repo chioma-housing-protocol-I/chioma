@@ -27,6 +27,7 @@ describe('AuditService – Pagination', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
 
@@ -219,26 +220,27 @@ describe('AuditService – Pagination', () => {
 
   describe('getAuditTrail', () => {
     it('returns audit trail ordered by performed_at DESC', async () => {
-      mockRepo.find.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+      mockRepo.findAndCount.mockResolvedValue([[{ id: 1 }, { id: 2 }], 2]);
 
-      const result = await service.getAuditTrail('User', 'user-1', 50);
+      const result = await service.getAuditTrail('User', 'user-1', 1, 50);
 
-      expect(mockRepo.find).toHaveBeenCalledWith(
+      expect(mockRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           order: { performed_at: 'DESC' },
+          skip: 0,
           take: 50,
         }),
       );
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
 
-    it('uses default limit of 100', async () => {
-      mockRepo.find.mockResolvedValue([]);
+    it('uses default limit of 50', async () => {
+      mockRepo.findAndCount.mockResolvedValue([[], 0]);
 
       await service.getAuditTrail('Property', 'prop-1');
 
-      expect(mockRepo.find).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 100 }),
+      expect(mockRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 50 }),
       );
     });
   });

@@ -326,9 +326,9 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes).toBeDefined();
+      expect(result.data).toBeDefined();
       expect(result.total).toBeGreaterThan(0);
-      expect(result.disputes.length).toBeLessThanOrEqual(10);
+      expect(result.data.length).toBeLessThanOrEqual(10);
     });
 
     it('should filter disputes by status', async () => {
@@ -343,7 +343,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.disputes.every((d) => d.status === DisputeStatus.OPEN),
+        result.data.every((d) => d.status === DisputeStatus.OPEN),
       ).toBe(true);
     });
 
@@ -359,7 +359,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.disputes.every(
+        result.data.every(
           (d) => d.disputeType === DisputeType.RENT_PAYMENT,
         ),
       ).toBe(true);
@@ -377,7 +377,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.disputes.every(
+        result.data.every(
           (d) => d.agreementId.toString() === testAgreement.id,
         ),
       ).toBe(true);
@@ -393,8 +393,8 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes[0].agreement).toBeDefined();
-      expect(result.disputes[0].initiator).toBeDefined();
+      expect(result.data[0].agreement).toBeDefined();
+      expect(result.data[0].initiator).toBeDefined();
     });
   });
 
@@ -765,10 +765,11 @@ describe.skip('DisputesService - Integration Tests', () => {
     });
 
     it('should retrieve all disputes for an agreement', async () => {
-      const disputes = await service.getAgreementDisputes(
+      const result = await service.getAgreementDisputes(
         testAgreement.id,
         tenantUser.id,
       );
+      const disputes = result.data;
 
       expect(disputes.length).toBeGreaterThanOrEqual(2);
       expect(
@@ -777,10 +778,11 @@ describe.skip('DisputesService - Integration Tests', () => {
     });
 
     it('should order disputes by creation date descending', async () => {
-      const disputes = await service.getAgreementDisputes(
+      const result = await service.getAgreementDisputes(
         testAgreement.id,
         tenantUser.id,
       );
+      const disputes = result.data;
 
       for (let i = 0; i < disputes.length - 1; i++) {
         expect(disputes[i].createdAt.getTime()).toBeGreaterThanOrEqual(
@@ -850,7 +852,7 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
     });
 

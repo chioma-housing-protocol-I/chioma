@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, Between } from 'typeorm';
 import {
@@ -14,6 +14,7 @@ import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { GenerateReportDto, ReportType } from './dto/generate-report.dto';
 import { ExportAnalyticsDto, ExportType } from './dto/export-analytics.dto';
+import { QueueManagementService } from '../queues/services/queue-management.service';
 
 export interface CityAggregate {
   city: string;
@@ -31,6 +32,8 @@ export interface LandlordFeesSummary {
 
 @Injectable()
 export class AnalyticsService {
+  private readonly logger = new Logger(AnalyticsService.name);
+
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
@@ -42,6 +45,7 @@ export class AnalyticsService {
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(AuditLog)
     private readonly auditLogRepository: Repository<AuditLog>,
+    private readonly queueManagementService: QueueManagementService,
   ) {}
 
   async getLandlordDashboard(ownerId: string, days = 30) {
@@ -675,5 +679,37 @@ export class AnalyticsService {
       count,
       percentage: this.toPercent(count, activities.length),
     }));
+  }
+
+  /**
+   * Record an analytics event asynchronously via queue.
+   * This ensures analytics writes do not impact request latency.
+   * Event loss on queue failure is bounded by retry attempts (2).
+   */
+  async recordEvent(
+    type:
+      | 'track-view'
+      | 'track-search'
+      | 'track-listing-browse'
+      | 'track-analytics-query'
+      | 'track-payment-event'
+      | 'track-user-activity',
+    data: {
+      entityId?: string;
+      entityType?: string;
+      userId?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ): Promise<void> {
+    try {
+      await this.queueManagementService.addAnalyticsJob({
+        type,
+        ...data,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to enqueue analytics event "${type}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

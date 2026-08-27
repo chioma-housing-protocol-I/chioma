@@ -1,17 +1,14 @@
 import {
   IsEnum,
   IsIn,
-  IsInt,
   IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
-  Max,
-  Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { KycStatus } from './kyc-status.enum';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class SubmitKycDto {
   @ApiProperty({
@@ -49,22 +46,7 @@ export class KycWebhookDto {
   reason?: string;
 }
 
-export class AdminKycQueryDto {
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ default: 10 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 10;
-
+export class AdminKycQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Search by user id, email, or name',
   })

@@ -10,6 +10,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginationUtils } from '../../common/utils';
 
 @ApiTags('Database Performance')
 @Controller('database-performance')
@@ -32,22 +34,39 @@ export class DatabasePerformanceController {
   @ApiOperation({
     summary: 'Get slow query statistics from pg_stat_statements',
   })
-  async getSlowQueries() {
-    return this.performanceService.getSlowQueries(20);
+  async getSlowQueries(@Query() query: PaginationQueryDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    // Fetch a generously-sized capped set from Postgres, then paginate it —
+    // pg_stat_statements ORDER BY doesn't support OFFSET-based paging.
+    const rows = await this.performanceService.getSlowQueries(
+      Math.max(200, page * limit),
+    );
+    return PaginationUtils.paginateArray(rows, page, limit);
   }
 
   @Get('indexes/usage')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get index usage statistics' })
-  async getIndexUsage() {
-    return this.performanceService.getIndexUsage();
+  async getIndexUsage(@Query() query: PaginationQueryDto) {
+    const rows = await this.performanceService.getIndexUsage();
+    return PaginationUtils.paginateArray(
+      rows,
+      query.page || 1,
+      query.limit || 20,
+    );
   }
 
   @Get('indexes/unused')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get unused or rarely-used indexes' })
-  async getUnusedIndexes() {
-    return this.performanceService.getUnusedIndexes();
+  async getUnusedIndexes(@Query() query: PaginationQueryDto) {
+    const rows = await this.performanceService.getUnusedIndexes();
+    return PaginationUtils.paginateArray(
+      rows,
+      query.page || 1,
+      query.limit || 20,
+    );
   }
 
   @Get('indexes/recommendations')
@@ -60,8 +79,13 @@ export class DatabasePerformanceController {
   @Get('indexes/duplicates')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get duplicate index candidates' })
-  async getDuplicateIndexes() {
-    return this.performanceService.getDuplicateIndexCandidates();
+  async getDuplicateIndexes(@Query() query: PaginationQueryDto) {
+    const rows = await this.performanceService.getDuplicateIndexCandidates();
+    return PaginationUtils.paginateArray(
+      rows,
+      query.page || 1,
+      query.limit || 20,
+    );
   }
 
   @Get('query-analysis')
@@ -90,23 +114,35 @@ export class DatabasePerformanceController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get all tracked query patterns with statistics' })
   @ApiQuery({ name: 'search', required: false })
-  async getQueryPatterns(@Query('search') search?: string) {
-    return this.performanceService.getQueryPatterns(search);
+  async getQueryPatterns(
+    @Query('search') search: string | undefined,
+    @Query() query: PaginationQueryDto,
+  ) {
+    const patterns = await this.performanceService.getQueryPatterns(search);
+    return PaginationUtils.paginateArray(
+      patterns,
+      query.page || 1,
+      query.limit || 20,
+    );
   }
 
   @Get('query-analysis/history')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get recent query execution history' })
-  @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'minDuration', required: false })
   async getQueryHistory(
-    @Query('limit') limit?: string,
-    @Query('minDuration') minDuration?: string,
+    @Query('minDuration') minDuration: string | undefined,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.performanceService.getQueryHistory(
-      limit ? parseInt(limit, 10) : 100,
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    // getQueryHistory's own `limit` bounds how much in-memory history to
+    // scan; fetch enough to cover the requested page, then paginate it.
+    const history = await this.performanceService.getQueryHistory(
+      Math.max(200, page * limit),
       minDuration ? parseInt(minDuration, 10) : undefined,
     );
+    return PaginationUtils.paginateArray(history, page, limit);
   }
 
   @Get('query-analysis/stats')

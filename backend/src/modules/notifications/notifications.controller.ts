@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Notification } from './entities/notification.entity';
 
 interface RequestWithUser extends Request {
   user: {
@@ -23,6 +25,7 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
+  @ApiPaginatedResponse(Notification)
   async getNotifications(
     @Request() req: RequestWithUser,
     @Query('page') page: string = '1',

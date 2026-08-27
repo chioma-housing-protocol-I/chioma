@@ -183,6 +183,7 @@ describe('StellarService — comprehensive coverage', () => {
     save: jest.fn().mockImplementation((e) => Promise.resolve({ ...e, id: 1 })),
     findOne: jest.fn(),
     find: jest.fn().mockResolvedValue([]),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
     createQueryBuilder: jest.fn().mockReturnValue({
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
@@ -335,18 +336,18 @@ describe('StellarService — comprehensive coverage', () => {
 
   describe('getAccountsByUserId', () => {
     it('returns all accounts for a user', async () => {
-      mockAccountRepository.find.mockResolvedValue([mockAccount]);
+      mockAccountRepository.findAndCount.mockResolvedValue([[mockAccount], 1]);
 
       const result = await service.getAccountsByUserId('user-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].userId).toBe('user-1');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].userId).toBe('user-1');
     });
 
     it('returns an empty array when user has no accounts', async () => {
-      mockAccountRepository.find.mockResolvedValue([]);
+      mockAccountRepository.findAndCount.mockResolvedValue([[], 0]);
 
       const result = await service.getAccountsByUserId('user-no-accounts');
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

@@ -23,7 +23,7 @@
     "test:e2e": "DB_TYPE=postgres jest --config ./test/jest-e2e.json --runInBand",
     "ci": "pnpm run lint && npx prettier --check \"src/**/*.ts\" \"test/**/*.ts\" && pnpm exec tsc --noEmit && pnpm run test && pnpm run test:cov",
     "ci:local": "./scripts/ci-local.sh",
-    "openapi:generate": "OPENAPI_GENERATE=true ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
+    "openapi:generate": "OPENAPI_GENERATE=true ts-node -T -r tsconfig-paths/register scripts/generate-openapi.ts",
     "perf": "node scripts/performance-benchmark.mjs",
     "perf:enhanced": "node scripts/performance-benchmark-enhanced.mjs",
     "perf:load": "node scripts/load-test.mjs",
@@ -31,6 +31,7 @@
     "perf:local": "node scripts/load-test.mjs local --report-format=html",
     "perf:staging": "node scripts/load-test.mjs staging --report-format=html",
     "perf:ci": "node scripts/performance-benchmark-enhanced.mjs --report-format=json",
+    "perf:k6": "k6 run k6/load-test.js",
     "test:chaos": "pnpm run test:e2e -- --testPathPattern=chaos-resilience --forceExit",
     "sdk:generate": "node scripts/sdk-generate.mjs",
     "typeorm": "typeorm-ts-node-commonjs",
@@ -229,10 +230,13 @@
     ]
   },
   "overrides": {
+    "axios": "^1.15.2",
     "tar": "^7.5.10",
+    "@isaacs/brace-expansion": "5.0.1",
     "minimatch": "^9.0.8",
     "serialize-javascript": "^7.0.3",
     "multer": "^2.1.1",
+    "fast-xml-parser": "^5.5.6",
     "picomatch@<2.3.2": "^2.3.2",
     "picomatch@>=4.0.0 <4.0.4": "^4.0.4"
   },

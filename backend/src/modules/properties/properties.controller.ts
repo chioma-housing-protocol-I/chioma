@@ -20,6 +20,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
+import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -33,7 +34,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
-import { ListingStatus } from './entities/property.entity';
+import { ListingStatus, Property } from './entities/property.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -67,15 +69,13 @@ export class PropertiesController {
   }
 
   @Get()
+  @UseReplica({ maxStaleness: '30s', reason: 'Browse listings tolerate brief replication lag' })
   @ApiOperation({
     summary: 'List all properties',
     description:
       'Retrieve a paginated list of property listings with optional filtering. By default, returns only published properties for public access.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Properties retrieved successfully',
-  })
+  @ApiPaginatedResponse(Property)
   async findAll(@Query() query: QueryPropertyDto) {
     // For public access, only show published properties unless status is explicitly set
     if (!query.status) {
@@ -91,10 +91,7 @@ export class PropertiesController {
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'User properties retrieved successfully',
-  })
+  @ApiPaginatedResponse(Property)
   async findMyProperties(
     @Query() query: QueryPropertyDto,
     @CurrentUser() user: User,
@@ -141,6 +138,7 @@ export class PropertiesController {
   }
 
   @Get(':id')
+  @UseReplica({ maxStaleness: '30s', reason: 'Property detail view tolerates brief replication lag' })
   @ApiOperation({
     summary: 'Get a specific property',
     description:

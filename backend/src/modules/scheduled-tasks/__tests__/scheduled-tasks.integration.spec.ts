@@ -121,6 +121,7 @@ describe('Scheduled Tasks Integration', () => {
         { provide: getQueueToken('documents'), useValue: queueFactory() },
         { provide: getQueueToken('blockchain'), useValue: queueFactory() },
         { provide: getQueueToken('data-sync'), useValue: queueFactory() },
+        { provide: getQueueToken('analytics'), useValue: queueFactory() },
         {
           provide: getQueueToken(DEAD_LETTER_QUEUE_NAME),
           useValue: deadLetterQueue,
@@ -326,7 +327,8 @@ describe('Scheduled Tasks Integration', () => {
           },
           { provide: getQueueToken('documents'), useValue: queueFactory() },
           { provide: getQueueToken('blockchain'), useValue: queueFactory() },
-          { provide: getQueueToken('data-sync'), useValue: queueFactory() },
+        { provide: getQueueToken('data-sync'), useValue: queueFactory() },
+        { provide: getQueueToken('analytics'), useValue: queueFactory() },
         ],
       }).compile();
 

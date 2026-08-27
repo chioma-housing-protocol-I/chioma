@@ -177,3 +177,7 @@ The wizard includes server-side AI helpers for:
 ### Draft Expiry
 
 Drafts automatically expire after **30 days** of inactivity. A cleanup task runs periodically to remove expired drafts.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).

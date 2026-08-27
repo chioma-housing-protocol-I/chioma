@@ -13,6 +13,7 @@ import {
   PropertyHistory,
 } from '../entities/property-registry.entity';
 import { StellarAccount } from '../entities/stellar-account.entity';
+import { PaginationUtils } from '../../../common/utils';
 import {
   RegisterPropertyDto,
   TransferPropertyDto,
@@ -216,10 +217,14 @@ export class PropertyRegistryService {
     return this.propertyRegistryRepo.count();
   }
 
-  async getPropertyHistory(propertyId: string): Promise<PropertyHistory[]> {
-    return this.propertyHistoryRepo.find({
+  async getPropertyHistory(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.propertyHistoryRepo.findAndCount({
       where: { propertyId },
       order: { transferredAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 }

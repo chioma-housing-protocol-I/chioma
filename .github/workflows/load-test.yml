@@ -1,0 +1,72 @@
+name: Backend Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      base_url:
+        description: "Override base URL (leave blank to use the environment default)"
+        required: false
+        type: string
+      vus_peak:
+        description: "Peak virtual users per scenario"
+        required: false
+        default: "20"
+        type: string
+      ramp_duration:
+        description: "Ramp-up/ramp-down duration (e.g. 30s)"
+        required: false
+        default: "30s"
+        type: string
+      hold_duration:
+        description: "Steady-state hold duration (e.g. 1m)"
+        required: false
+        default: "1m"
+        type: string
+
+jobs:
+  load-test:
+    name: Run k6 load/stress suite
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Resolve base URL
+        id: base_url
+        run: |
+          if [ -n "${{ inputs.base_url }}" ]; then
+            echo "value=${{ inputs.base_url }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ vars.LOAD_TEST_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run k6 suite
+        uses: grafana/run-k6-action@v1
+        with:
+          path: backend/k6/load-test.js
+          flags: --summary-export=k6-summary.json
+        env:
+          BASE_URL: ${{ steps.base_url.outputs.value }}
+          K6_VUS_PEAK: ${{ inputs.vus_peak }}
+          K6_RAMP_DURATION: ${{ inputs.ramp_duration }}
+          K6_HOLD_DURATION: ${{ inputs.hold_duration }}
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-load-test-summary-${{ inputs.target }}
+          path: k6-summary.json
+          retention-days: 30

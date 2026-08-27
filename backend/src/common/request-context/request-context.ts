@@ -4,6 +4,7 @@ export interface RequestContextValue {
   requestId?: string;
   correlationId?: string;
   userId?: string;
+  useReplica?: boolean;
 }
 
 class RequestContextStore {

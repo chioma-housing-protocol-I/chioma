@@ -81,8 +81,11 @@ export function useMessaging(): UseMessagingReturn {
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
       transports: ['websocket'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 10_000,
+      timeout: 20_000,
     });
 
     socketRef.current = socket;

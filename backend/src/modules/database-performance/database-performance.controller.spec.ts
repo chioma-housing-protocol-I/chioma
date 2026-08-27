@@ -67,9 +67,15 @@ describe('DatabasePerformanceController', () => {
   });
 
   it('should return slow queries', async () => {
-    const result = await controller.getSlowQueries();
-    expect(result).toEqual([]);
-    expect(service.getSlowQueries).toHaveBeenCalledWith(20);
+    const result = await controller.getSlowQueries({ page: 1, limit: 20 });
+    expect(result).toEqual({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+    });
+    expect(service.getSlowQueries).toHaveBeenCalledWith(200);
   });
 
   it('should return query analysis', async () => {
@@ -85,15 +91,33 @@ describe('DatabasePerformanceController', () => {
   });
 
   it('should return query patterns', async () => {
-    const result = await controller.getQueryPatterns();
-    expect(result).toEqual([]);
+    const result = await controller.getQueryPatterns(undefined, {
+      page: 1,
+      limit: 20,
+    });
+    expect(result).toEqual({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+    });
     expect(service.getQueryPatterns).toHaveBeenCalledWith(undefined);
   });
 
   it('should return query history', async () => {
-    const result = await controller.getQueryHistory('50');
-    expect(result).toEqual([]);
-    expect(service.getQueryHistory).toHaveBeenCalledWith(50, undefined);
+    const result = await controller.getQueryHistory('50', {
+      page: 1,
+      limit: 20,
+    });
+    expect(result).toEqual({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+    });
+    expect(service.getQueryHistory).toHaveBeenCalledWith(200, 50);
   });
 
   it('should return query stats', async () => {

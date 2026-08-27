@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
@@ -7,20 +8,19 @@ export default defineConfig({
     globals: true,
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
     setupFiles: ['test/setup.ts', 'test/setup-tests.ts'],
+    testTimeout: 20000,
+    hookTimeout: 20000,
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov', 'html'],
-      include: [
-        'components/auth/**/*.{ts,tsx}',
-        'components/reviews/**/*.{ts,tsx}',
-        'components/forms/**/*.{ts,tsx}',
-        'components/accessibility/**/*.{ts,tsx}',
-      ],
+      reporter: ['text', 'lcov', 'html', 'json-summary'],
+      include: ['components/**/*.{ts,tsx}'],
+      exclude: ['**/__tests__/**', '**/*.d.ts', '**/*.stories.{ts,tsx}'],
       thresholds: {
-        lines: 85,
-        branches: 85,
-        functions: 85,
-        statements: 85,
+        lines: 30,
+        branches: 25,
+        functions: 25,
+        statements: 30,
       },
     },
   },

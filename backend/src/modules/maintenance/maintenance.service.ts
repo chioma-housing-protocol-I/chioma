@@ -15,6 +15,8 @@ import {
   AuthorizationError,
   ValidationError,
 } from '../../common/errors/domain-errors';
+import { PaginationUtils } from '../../common/utils';
+import { QueryMaintenanceDto } from './dto';
 
 export interface CreateMaintenanceDto {
   propertyId: string;
@@ -75,9 +77,23 @@ export class MaintenanceService {
     return saved;
   }
 
-  async findAll(filter: MaintenanceFilter): Promise<MaintenanceRequest[]> {
-    // Removed the erroneous `as MaintenanceRequest[]` cast — find() already returns the correct type
-    return this.maintenanceRepo.find({ where: filter });
+  async findAll(query: QueryMaintenanceDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
+    const where: MaintenanceFilter = {};
+    if (query.propertyId) where.propertyId = query.propertyId;
+    if (query.status) where.status = query.status;
+    if (query.priority) where.priority = query.priority;
+
+    const [data, total] = await this.maintenanceRepo.findAndCount({
+      where,
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOne(id: string): Promise<MaintenanceRequest> {

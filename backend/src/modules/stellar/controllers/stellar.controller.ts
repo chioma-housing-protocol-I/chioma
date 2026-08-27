@@ -38,6 +38,8 @@ import {
 import { StellarAccount } from '../entities/stellar-account.entity';
 import { StellarTransaction } from '../entities/stellar-transaction.entity';
 import { StellarEscrow } from '../entities/stellar-escrow.entity';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Stellar')
 @Controller('stellar')
@@ -98,11 +100,20 @@ export class StellarController {
    * Get accounts for a user
    */
   @Get('accounts/user/:userId')
+  @ApiPaginatedResponse(AccountResponseDto)
   async getAccountsByUserId(
     @Param('userId') userId: string,
-  ): Promise<AccountResponseDto[]> {
-    const accounts = await this.stellarService.getAccountsByUserId(userId);
-    return accounts.map((account) => this.mapAccountToResponse(account));
+    @Query() query: PaginationQueryDto,
+  ) {
+    const result = await this.stellarService.getAccountsByUserId(
+      userId,
+      query.page,
+      query.limit,
+    );
+    return {
+      ...result,
+      data: result.data.map((account) => this.mapAccountToResponse(account)),
+    };
   }
 
   /**
@@ -178,19 +189,12 @@ export class StellarController {
    * List transactions with filters
    */
   @Get('transactions')
-  async listTransactions(@Query() dto: ListTransactionsDto): Promise<{
-    transactions: TransactionResponseDto[];
-    total: number;
-    limit: number;
-    offset: number;
-  }> {
-    const { transactions, total } =
-      await this.stellarService.listTransactions(dto);
+  @ApiPaginatedResponse(TransactionResponseDto)
+  async listTransactions(@Query() dto: ListTransactionsDto) {
+    const result = await this.stellarService.listTransactions(dto);
     return {
-      transactions: transactions.map((tx) => this.mapTransactionToResponse(tx)),
-      total,
-      limit: dto.limit || 20,
-      offset: dto.offset || 0,
+      ...result,
+      data: result.data.map((tx) => this.mapTransactionToResponse(tx)),
     };
   }
 
@@ -268,18 +272,12 @@ export class StellarController {
    * List escrows with filters
    */
   @Get('escrows')
-  async listEscrows(@Query() dto: ListEscrowsDto): Promise<{
-    escrows: EscrowResponseDto[];
-    total: number;
-    limit: number;
-    offset: number;
-  }> {
-    const { escrows, total } = await this.stellarService.listEscrows(dto);
+  @ApiPaginatedResponse(EscrowResponseDto)
+  async listEscrows(@Query() dto: ListEscrowsDto) {
+    const result = await this.stellarService.listEscrows(dto);
     return {
-      escrows: escrows.map((escrow) => this.mapEscrowToResponse(escrow)),
-      total,
-      limit: dto.limit || 20,
-      offset: dto.offset || 0,
+      ...result,
+      data: result.data.map((escrow) => this.mapEscrowToResponse(escrow)),
     };
   }
 

@@ -83,7 +83,7 @@ describe('DocumentService', () => {
   describe('findAll', () => {
     it('returns paginated documents', async () => {
       const result = await service.findAll('user-1', {});
-      expect(result.documents).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(mockRepo.createQueryBuilder).toHaveBeenCalled();
     });
@@ -170,7 +170,7 @@ describe('DocumentService', () => {
   describe('findSharedWithUser', () => {
     it('finds documents shared with a user', async () => {
       const result = await service.findSharedWithUser('tenant-1');
-      expect(result).toEqual([mockDoc]);
+      expect(result.data).toEqual([mockDoc]);
     });
   });
 });

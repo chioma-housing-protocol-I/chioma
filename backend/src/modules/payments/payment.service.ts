@@ -22,6 +22,7 @@ import {
   PAYMENT_LIST_MAX_LIMIT,
 } from './dto/payment-filters.dto';
 import { PaymentGatewayService } from './payment-gateway.service';
+import { PaginationUtils } from '../../common/utils';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { PaymentMethodFiltersDto } from './dto/payment-method-filters.dto';
@@ -296,10 +297,7 @@ export class PaymentService {
     };
   }
 
-  async listPayments(
-    filters: PaymentFiltersDto,
-    userId: string,
-  ): Promise<Payment[]> {
+  async listPayments(filters: PaymentFiltersDto, userId: string) {
     ensureUserId(userId);
     const query = this.paymentRepository
       .createQueryBuilder('payment')
@@ -345,9 +343,12 @@ export class PaymentService {
       PAYMENT_LIST_MAX_LIMIT,
     );
     const page = filters.page ?? 1;
-    query.skip((page - 1) * limit).take(limit);
+    query
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit);
 
-    return query.getMany();
+    const [data, total] = await query.getManyAndCount();
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getPaymentById(id: string, userId: string): Promise<Payment> {

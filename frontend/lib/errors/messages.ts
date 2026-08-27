@@ -47,6 +47,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     message: 'Some fields contain invalid or missing information.',
     guidance: 'Review highlighted fields and submit again.',
   },
+  VALIDATION_RESPONSE_MISMATCH: {
+    title: 'Unexpected response format',
+    message: 'The server returned data in an unexpected format.',
+    guidance: 'Try again. If this persists, contact support.',
+  },
   BUSINESS_RULE_VIOLATION: {
     title: 'Action unavailable',
     message: 'This action conflicts with current business rules.',

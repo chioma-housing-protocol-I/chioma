@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Retry } from '../../../common/decorators/retry.decorator';
+import { PaginationUtils } from '../../../common/utils';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -256,11 +257,15 @@ export class StellarService {
   /**
    * Get accounts for a user
    */
-  async getAccountsByUserId(userId: string): Promise<StellarAccount[]> {
-    return this.accountRepository.find({
+  async getAccountsByUserId(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.accountRepository.findAndCount({
       where: { userId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   // ==================== Payment Processing ====================
@@ -457,9 +462,7 @@ export class StellarService {
   /**
    * List transactions with filters
    */
-  async listTransactions(
-    dto: ListTransactionsDto,
-  ): Promise<{ transactions: StellarTransaction[]; total: number }> {
+  async listTransactions(dto: ListTransactionsDto) {
     const queryBuilder = this.transactionRepository
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.fromAccount', 'fromAccount')
@@ -488,13 +491,22 @@ export class StellarService {
       });
     }
 
+    const limit = dto.limit ?? 20;
+    const offset = dto.offset ?? 0;
+
     const [transactions, total] = await queryBuilder
       .orderBy('tx.createdAt', 'DESC')
-      .skip(dto.offset)
-      .take(dto.limit)
+      .skip(offset)
+      .take(limit)
       .getManyAndCount();
 
-    return { transactions, total };
+    const page = Math.floor(offset / limit) + 1;
+    return PaginationUtils.buildPaginationResponse(
+      transactions,
+      total,
+      page,
+      limit,
+    );
   }
 
   /**
@@ -924,9 +936,7 @@ export class StellarService {
   /**
    * List escrows with filters
    */
-  async listEscrows(
-    dto: ListEscrowsDto,
-  ): Promise<{ escrows: StellarEscrow[]; total: number }> {
+  async listEscrows(dto: ListEscrowsDto) {
     const queryBuilder = this.escrowRepository
       .createQueryBuilder('escrow')
       .leftJoinAndSelect('escrow.escrowAccount', 'escrowAccount')
@@ -944,13 +954,17 @@ export class StellarService {
       queryBuilder.andWhere('escrow.status = :status', { status: dto.status });
     }
 
+    const limit = dto.limit ?? 20;
+    const offset = dto.offset ?? 0;
+
     const [escrows, total] = await queryBuilder
       .orderBy('escrow.createdAt', 'DESC')
-      .skip(dto.offset)
-      .take(dto.limit)
+      .skip(offset)
+      .take(limit)
       .getManyAndCount();
 
-    return { escrows, total };
+    const page = Math.floor(offset / limit) + 1;
+    return PaginationUtils.buildPaginationResponse(escrows, total, page, limit);
   }
 
   /**

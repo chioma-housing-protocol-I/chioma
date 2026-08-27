@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
 import { ApiKey, ApiKeyStatus } from './entities/api-key.entity';
 import { ApiKeyRotationHistory } from './entities/api-key-rotation-history.entity';
+import { PaginationUtils } from '../../common/utils';
 
 const PREFIX = 'chioma_sk_';
 const KEY_BYTES = 32;
@@ -210,14 +211,21 @@ export class DeveloperService {
   async getRotationHistory(
     userId: string,
     keyId: string,
-  ): Promise<ApiKeyRotationHistory[]> {
+    page = 1,
+    limit = 20,
+  ) {
     // Verify key exists and belongs to user
     await this.getKey(userId, keyId);
 
-    return this.rotationHistoryRepo.find({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.rotationHistoryRepo.findAndCount({
       where: { apiKeyId: keyId },
       order: { rotatedAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async revokeKey(userId: string, keyId: string): Promise<void> {
