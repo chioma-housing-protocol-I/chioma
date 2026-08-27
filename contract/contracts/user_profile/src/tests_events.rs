@@ -56,8 +56,8 @@ fn test_create_profile_emits_profile_created_event() {
 
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
-    // Topics: [event_name_part1, event_name_part2, account_id]
-    assert_eq!(event.1.len(), 3);
+    // Topics: [event_name, account_id]
+    assert_eq!(event.1.len(), 2);
 }
 
 #[test]
@@ -81,7 +81,7 @@ fn test_update_profile_emits_profile_updated_event() {
 
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 2);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn test_verify_profile_emits_profile_verified_event() {
 
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 2);
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn test_unverify_profile_emits_profile_unverified_event() {
 
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 2);
 }
 
 #[test]
@@ -154,7 +154,7 @@ fn test_delete_profile_emits_profile_deleted_event() {
 
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 2);
 }
 
 #[test]
