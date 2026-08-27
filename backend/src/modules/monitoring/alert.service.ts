@@ -3,6 +3,7 @@ import { AlertPayload } from './alert.types';
 import { ErrorEscalationService } from './error-escalation.service';
 import { ErrorNotificationService } from './error-notification.service';
 import { EscalationTier } from './alert.types';
+import { isActionableSeverity, resolveAlertSeverity } from './alert-rules';
 
 export type Alert = AlertPayload;
 
@@ -28,7 +29,7 @@ export class AlertService {
   }
 
   private async handleFiringAlert(alert: AlertPayload): Promise<void> {
-    const severity = alert.labels.severity ?? 'info';
+    const severity = resolveAlertSeverity(alert.labels.severity);
     const alertName = alert.labels.alertname;
     const summary = alert.annotations.summary;
     const description = alert.annotations.description;
@@ -41,8 +42,7 @@ export class AlertService {
 
     this.errorEscalationService.trackFiringAlert(alert);
 
-    const normalizedSeverity = severity.toLowerCase();
-    if (['critical', 'high', 'warning'].includes(normalizedSeverity)) {
+    if (isActionableSeverity(severity)) {
       await this.errorNotificationService.notifyAlert(
         alert,
         EscalationTier.ONCALL,

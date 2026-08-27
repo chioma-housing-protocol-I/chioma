@@ -44,7 +44,7 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
     return configured && configured.length > 0 ? configured : '/api';

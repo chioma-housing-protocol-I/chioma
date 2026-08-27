@@ -57,9 +57,40 @@ stellar keys fund testnet-deployer --network testnet
 
 **Output:** `.env.testnet` with `*_CONTRACT_ID` variables for the frontend/backend.
 
+## `deploy-mainnet.sh`
+
+Safety-focused wrapper around `deploy-testnet.sh` for Stellar mainnet (pubnet). See
+[docs/deployment/MAINNET_DEPLOYMENT.md](../docs/deployment/MAINNET_DEPLOYMENT.md)
+for the full runbook and the Production Launch Gate that must be satisfied first.
+
+```bash
+cd contract
+./scripts/deploy-mainnet.sh --confirm
+```
+
+Unlike hand-running `deploy-testnet.sh` with mainnet env vars, this script:
+
+- refuses to run without `--confirm` **and** a typed `DEPLOY TO MAINNET`
+  confirmation (or `$CONFIRM_PHRASE` in non-interactive shells)
+- never auto-generates a deployer identity — mainnet keys must already exist
+  and be hardware-backed / offline
+- always passes `--skip-fund` (mainnet has no Friendbot)
+- refuses a dirty git tree by default (`--allow-dirty` to override, not recommended)
+- appends the commit, deployer, and every deployed contract ID to
+  `docs/deployment/MAINNET_DEPLOYMENTS.log`
+- automatically runs `verify-deployment.sh` against mainnet once deploy completes
+
+| Flag            | Description                                        |
+| --------------- | --------------------------------------------------- |
+| `--confirm`     | Required, or the script exits immediately            |
+| `--skip-build`  | Use existing `target/wasm32v1-none/release/*.wasm`  |
+| `--deploy-only` | Deploy only; skip `initialize` calls                |
+| `--init-only`   | Initialize from existing `.env.mainnet`             |
+| `--allow-dirty` | Bypass the clean-git-tree check (NOT recommended)   |
+
 ## `verify-deployment.sh`
 
-Loads `.env.testnet`, checks each contract exists on testnet, and runs read-only `invoke` smoke tests.
+Loads `.env.testnet` (or `.env.mainnet` via `ENV_FILE`), checks each contract exists on the target network, and runs read-only `invoke` smoke tests.
 
 ## Troubleshooting
 
@@ -68,4 +99,4 @@ Loads `.env.testnet`, checks each contract exists on testnet, and runs read-only
 - **Init auth errors:** ensure `DEPLOYER_KEY` is the same identity used as `--admin` / `--collector`.
 - **Rate limits:** re-run with `--init-only` after deploy succeeds.
 
-See also: [docs/deployment/TESTNET_DEPLOYMENT.md](../docs/deployment/TESTNET_DEPLOYMENT.md)
+See also: [docs/deployment/TESTNET_DEPLOYMENT.md](../docs/deployment/TESTNET_DEPLOYMENT.md) and [docs/deployment/MAINNET_DEPLOYMENT.md](../docs/deployment/MAINNET_DEPLOYMENT.md)

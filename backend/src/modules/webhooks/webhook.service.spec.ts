@@ -9,6 +9,7 @@ import {
 } from './webhook-signature.service';
 import { WebhookSignatureGuard } from './guards/webhook-signature.guard';
 import { WEBHOOK_SECRET_METADATA_KEY } from './decorators/webhook-secret.decorator';
+import { MetricsService } from '../monitoring/metrics.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -274,6 +275,173 @@ describe('WebhookSignatureService', () => {
         service.verifySignature(PAYLOAD, almostSig, ts, SECRET),
       ).toThrow('Invalid webhook signature');
     });
+
+    // ── structured rejection logging ────────────────────────────────────────
+
+    it('emits analyzable structured metadata when a signature is tampered', () => {
+      const warnSpy = jest
+        .spyOn(
+          (service as unknown as { logger: { warn: jest.Mock } }).logger,
+          'warn',
+        )
+        .mockImplementation(() => undefined);
+
+      const ts = buildTimestamp();
+      const sig = service.generateSignature(PAYLOAD, ts, SECRET);
+      const ctx = {
+        ipAddress: '203.0.113.7',
+        userAgent: 'tamper-bot/1.0',
+        path: '/api/kyc/webhook',
+        method: 'POST',
+        endpoint: 'KYC_WEBHOOK_SECRET',
+      };
+
+      expect(() =>
+        service.verifySignature(
+          '{"tampered":true}',
+          sig,
+          ts,
+          SECRET,
+          undefined,
+          ctx,
+        ),
+      ).toThrow('Invalid webhook signature');
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      const [message, metadata] = warnSpy.mock.calls[0];
+      expect(String(message)).toContain('signature_mismatch');
+      expect(metadata).toMatchObject({
+        event: 'webhook_signature_verification',
+        outcome: 'rejected',
+        reason: 'signature_mismatch',
+        receivedSignature: sig,
+        receivedTimestamp: ts,
+        ipAddress: '203.0.113.7',
+        userAgent: 'tamper-bot/1.0',
+        path: '/api/kyc/webhook',
+        method: 'POST',
+        endpoint: 'KYC_WEBHOOK_SECRET',
+      });
+      // Payload hash lets analysts correlate identical tampered payloads
+      expect(metadata.payloadHash).toMatch(/^[0-9a-f]{64}$/);
+      // Only a prefix of the locally-computed HMAC is exposed, never the full digest
+      expect(metadata.expectedSignaturePrefix).toMatch(/^[0-9a-f]{12}$/);
+    });
+
+    it('emits a distinct reason code for each rejection path', () => {
+      const warnSpy = jest
+        .spyOn(
+          (service as unknown as { logger: { warn: jest.Mock } }).logger,
+          'warn',
+        )
+        .mockImplementation(() => undefined);
+      const ts = buildTimestamp();
+      const sig = service.generateSignature(PAYLOAD, ts, SECRET);
+
+      const expectReason = (reason: string, fn: () => void) => {
+        warnSpy.mockClear();
+        expect(fn).toThrow();
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][1]).toMatchObject({ reason });
+      };
+
+      expectReason('missing_signature', () =>
+        service.verifySignature(PAYLOAD, undefined, ts, SECRET),
+      );
+      expectReason('missing_timestamp', () =>
+        service.verifySignature(PAYLOAD, sig, undefined, SECRET),
+      );
+      expectReason('invalid_timestamp', () =>
+        service.verifySignature(PAYLOAD, sig, 'not-a-number', SECRET),
+      );
+      expectReason('timestamp_expired', () =>
+        service.verifySignature(
+          PAYLOAD,
+          sig,
+          buildTimestamp(-6 * 60 * 1000),
+          SECRET,
+        ),
+      );
+      expectReason('signature_mismatch', () =>
+        service.verifySignature(PAYLOAD, '0'.repeat(64), ts, SECRET),
+      );
+    });
+
+    it('logs secret misconfiguration at error level', () => {
+      const errorSpy = jest
+        .spyOn(
+          (service as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation(() => undefined);
+      const ts = buildTimestamp();
+      const sig = service.generateSignature(PAYLOAD, ts, SECRET);
+
+      expect(() =>
+        service.verifySignature(PAYLOAD, sig, ts, undefined),
+      ).toThrow('Webhook secret misconfigured');
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][1]).toMatchObject({
+        reason: 'secret_not_configured',
+      });
+    });
+  });
+
+  // ── metrics ────────────────────────────────────────────────────────────────
+
+  describe('metrics', () => {
+    it('records success when verification passes and MetricsService is available', async () => {
+      const recordWebhookSignatureVerification = jest.fn();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WebhookSignatureService,
+          {
+            provide: MetricsService,
+            useValue: { recordWebhookSignatureVerification },
+          },
+        ],
+      }).compile();
+      const svc = module.get<WebhookSignatureService>(WebhookSignatureService);
+
+      const ts = buildTimestamp();
+      const sig = svc.generateSignature(PAYLOAD, ts, SECRET);
+      expect(() => svc.verifySignature(PAYLOAD, sig, ts, SECRET)).not.toThrow();
+
+      expect(recordWebhookSignatureVerification).toHaveBeenCalledWith(
+        'success',
+      );
+    });
+
+    it('records the rejection reason when verification fails', async () => {
+      const recordWebhookSignatureVerification = jest.fn();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WebhookSignatureService,
+          {
+            provide: MetricsService,
+            useValue: { recordWebhookSignatureVerification },
+          },
+        ],
+      }).compile();
+      const svc = module.get<WebhookSignatureService>(WebhookSignatureService);
+
+      expect(() =>
+        svc.verifySignature(PAYLOAD, '0'.repeat(64), buildTimestamp(), SECRET),
+      ).toThrow('Invalid webhook signature');
+
+      expect(recordWebhookSignatureVerification).toHaveBeenCalledWith(
+        'signature_mismatch',
+      );
+    });
+
+    it('does not throw when MetricsService is not provided (optional injection)', () => {
+      const ts = buildTimestamp();
+      const sig = service.generateSignature(PAYLOAD, ts, SECRET);
+      expect(() =>
+        service.verifySignature(PAYLOAD, sig, ts, SECRET),
+      ).not.toThrow();
+    });
   });
 
   // ── header constant exports ────────────────────────────────────────────────
@@ -309,6 +477,10 @@ describe('WebhookSignatureGuard', () => {
       timestamp: string | undefined;
       rawBody: string | undefined;
       body: Record<string, unknown>;
+      ipAddress: string | undefined;
+      userAgent: string | undefined;
+      path: string | undefined;
+      method: string | undefined;
     }> = {},
   ): ExecutionContext => {
     const req = {
@@ -318,10 +490,16 @@ describe('WebhookSignatureGuard', () => {
           return overrides.signature ?? undefined;
         if (lower === WEBHOOK_TIMESTAMP_HEADER)
           return overrides.timestamp ?? undefined;
+        if (lower === 'user-agent') return overrides.userAgent;
+        if (lower === 'x-forwarded-for') return overrides.ipAddress;
+        if (lower === 'x-real-ip') return overrides.ipAddress;
         return undefined;
       }),
       rawBody: overrides.rawBody,
       body: overrides.body ?? {},
+      path: overrides.path,
+      method: overrides.method,
+      socket: { remoteAddress: overrides.ipAddress },
     };
 
     return {
@@ -469,5 +647,53 @@ describe('WebhookSignatureGuard', () => {
   it('WEBHOOK_SECRET_METADATA_KEY constant is defined', () => {
     expect(WEBHOOK_SECRET_METADATA_KEY).toBeDefined();
     expect(typeof WEBHOOK_SECRET_METADATA_KEY).toBe('string');
+  });
+
+  it('passes request context (IP, user agent, path, method, endpoint) to the service', () => {
+    const ts = buildTimestamp();
+    const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
+    const verifySpy = jest.spyOn(signatureService, 'verifySignature');
+
+    const ctx = buildContext({
+      signature: sig,
+      timestamp: ts,
+      rawBody: PAYLOAD,
+      ipAddress: '198.51.100.23',
+      userAgent: 'provider-client/2.0',
+      path: '/api/screening/webhook',
+      method: 'POST',
+    });
+
+    expect(guard.canActivate(ctx)).toBe(true);
+
+    const callArgs = verifySpy.mock.calls[0];
+    expect(callArgs[5]).toMatchObject({
+      ipAddress: '198.51.100.23',
+      userAgent: 'provider-client/2.0',
+      path: '/api/screening/webhook',
+      method: 'POST',
+      endpoint: 'WEBHOOK_SIGNATURE_SECRET',
+    });
+  });
+
+  it('passes the decorator config key as the endpoint context', () => {
+    reflector.getAllAndOverride.mockReturnValue('KYC_WEBHOOK_SECRET');
+    configService.get.mockImplementation((key: string) =>
+      key === 'KYC_WEBHOOK_SECRET' ? 'kyc-secret' : undefined,
+    );
+    const ts = buildTimestamp();
+    const sig = signatureService.generateSignature(PAYLOAD, ts, 'kyc-secret');
+    const verifySpy = jest.spyOn(signatureService, 'verifySignature');
+
+    const ctx = buildContext({
+      signature: sig,
+      timestamp: ts,
+      rawBody: PAYLOAD,
+    });
+
+    expect(guard.canActivate(ctx)).toBe(true);
+    expect(verifySpy.mock.calls[0][5]).toMatchObject({
+      endpoint: 'KYC_WEBHOOK_SECRET',
+    });
   });
 });

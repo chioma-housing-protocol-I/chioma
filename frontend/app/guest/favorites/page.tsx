@@ -1,10 +1,12 @@
 'use client';
 
 import { Heart } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useFavorites, useRemoveFavorite } from '@/lib/query/hooks';
 
 export default function GuestFavoritesPage() {
+  const router = useRouter();
   const { data: favorites = [], isLoading, isError } = useFavorites();
   const removeFavorite = useRemoveFavorite();
 
@@ -34,13 +36,14 @@ export default function GuestFavoritesPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Favorites</h1>
       {favorites.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          <Heart size={48} className="mx-auto mb-4 text-blue-300/20" />
-          <p className="text-xl mb-4">No saved properties yet</p>
-          <Link href="/stays" className="text-blue-400 hover:underline">
-            Browse stays and save your favorites →
-          </Link>
-        </div>
+        <EmptyState
+          icon={Heart}
+          title="No saved properties yet"
+          description="Browse stays and tap the heart icon to save your favorites for later."
+          actionLabel="Browse stays"
+          onAction={() => router.push('/stays')}
+          variant="dark"
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {favorites.map((favorite) => {

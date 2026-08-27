@@ -28,6 +28,11 @@ import { LockService } from '../../common/lock';
 import { QueueManagementService } from '../queues/services/queue-management.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
+import { SecurityEventsService } from '../security/security-events.service';
+import {
+  SecurityEventType,
+  SecurityEventSeverity,
+} from '../security/entities/security-event.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -82,6 +87,10 @@ describe('AuthService', () => {
     addDataSyncJob: jest
       .fn()
       .mockImplementation(() => Promise.resolve(makeQueueJob())),
+  };
+
+  const mockSecurityEventsService = {
+    createEvent: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockConfigService = {
@@ -147,6 +156,12 @@ describe('AuthService', () => {
           useValue: {
             generateReferralCode: jest.fn().mockResolvedValue('REF12345'),
             trackReferral: jest.fn().mockResolvedValue(undefined),
+            assignUniqueReferralCode: jest.fn(
+              async (save: (code: string) => Promise<unknown>) => ({
+                code: 'REF12345',
+                result: await save('REF12345'),
+              }),
+            ),
           },
         },
         {
@@ -184,6 +199,10 @@ describe('AuthService', () => {
             set: jest.fn(),
             del: jest.fn(),
           },
+        },
+        {
+          provide: SecurityEventsService,
+          useValue: mockSecurityEventsService,
         },
       ],
     }).compile();
@@ -731,6 +750,127 @@ describe('AuthService', () => {
       // Both emails carry the identical token — no request clobbered the other.
       expect(emailCalls[0][1]).toBe(emailCalls[1][1]);
       expect(unverifiedUser.verificationToken).toBe(emailCalls[0][1]);
+    });
+  });
+
+  describe('refreshToken rotation and reuse detection', () => {
+    const refreshPayload = {
+      sub: mockUser.id,
+      email: mockUser.email,
+      role: mockUser.role,
+      type: 'refresh',
+    };
+
+    it('rotates tokens for a valid current refresh token', async () => {
+      mockJwtService.verify.mockReturnValue(refreshPayload);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'stored-hash',
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('new-hash' as never);
+      mockJwtService.sign
+        .mockReturnValueOnce('new-access-token')
+        .mockReturnValueOnce('new-refresh-token');
+
+      const result = await service.refreshToken({
+        refreshToken: 'current-refresh-token',
+      });
+
+      expect(result.accessToken).toBe('new-access-token');
+      expect(result.refreshToken).toBe('new-refresh-token');
+      // Old token invalidated by storing the new hash (rotation).
+      expect(mockUserRepository.update).toHaveBeenCalledWith(mockUser.id, {
+        refreshToken: 'new-hash',
+      });
+      expect(mockSecurityEventsService.createEvent).not.toHaveBeenCalled();
+    });
+
+    it('revokes the token family when a consumed token is replayed', async () => {
+      mockJwtService.verify.mockReturnValue(refreshPayload);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'hash-of-newer-token',
+      });
+      // Signature-valid token that does not match the stored hash: replay.
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      await expect(
+        service.refreshToken({ refreshToken: 'stolen-old-token' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      expect(mockUserRepository.update).toHaveBeenCalledWith(
+        { id: mockUser.id },
+        { refreshToken: null },
+      );
+      expect(mockSecurityEventsService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: mockUser.id,
+          eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+          severity: SecurityEventSeverity.CRITICAL,
+          success: false,
+          details: expect.objectContaining({
+            reason: 'refresh_token_reuse',
+            action: 'token_family_revoked',
+          }),
+        }),
+      );
+    });
+
+    it('rejects the whole family: a replay then blocks the newest token too', async () => {
+      mockJwtService.verify.mockReturnValue(refreshPayload);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'hash-of-newer-token',
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      await expect(
+        service.refreshToken({ refreshToken: 'stolen-old-token' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      // After revocation the stored token is null, so even the legitimate
+      // newest token is refused until the user logs in again.
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: null,
+      });
+      await expect(
+        service.refreshToken({ refreshToken: 'newest-legit-token' }),
+      ).rejects.toThrow(AuthenticationError);
+    });
+
+    it('does not revoke the family for a token with an invalid signature', async () => {
+      mockJwtService.verify.mockImplementation(() => {
+        throw new Error('invalid signature');
+      });
+
+      await expect(
+        service.refreshToken({ refreshToken: 'garbage-token' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+      expect(mockSecurityEventsService.createEvent).not.toHaveBeenCalled();
+    });
+
+    it('still revokes the family if recording the security event fails', async () => {
+      mockJwtService.verify.mockReturnValue(refreshPayload);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'hash-of-newer-token',
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      mockSecurityEventsService.createEvent.mockRejectedValueOnce(
+        new Error('monitoring down'),
+      );
+
+      await expect(
+        service.refreshToken({ refreshToken: 'stolen-old-token' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      expect(mockUserRepository.update).toHaveBeenCalledWith(
+        { id: mockUser.id },
+        { refreshToken: null },
+      );
     });
   });
 

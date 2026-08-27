@@ -88,6 +88,43 @@ function collectRouteChunks() {
   return { totalStaticBytes };
 }
 
+function getRouteChunks(routeKey, buildManifest, appBuildManifest) {
+  // check app directory
+  if (appBuildManifest && appBuildManifest.pages) {
+    if (appBuildManifest.pages[routeKey]) return appBuildManifest.pages[routeKey];
+    const asPage = routeKey === '/' ? '/page' : `${routeKey}/page`;
+    if (appBuildManifest.pages[asPage]) return appBuildManifest.pages[asPage];
+  }
+  
+  // check pages directory
+  if (buildManifest && buildManifest.pages) {
+    if (buildManifest.pages[routeKey]) return buildManifest.pages[routeKey];
+  }
+  
+  return [];
+}
+
+function getRouteSizeBytes(routeKey, buildManifest, appBuildManifest, buildDir) {
+  const chunks = getRouteChunks(routeKey, buildManifest, appBuildManifest);
+  let sizeBytes = 0;
+  const seen = new Set();
+
+  for (const chunk of chunks) {
+    if (seen.has(chunk)) continue;
+    seen.add(chunk);
+    
+    if (!chunk.endsWith('.js')) continue;
+
+    try {
+      sizeBytes += fs.statSync(path.join(buildDir, chunk)).size;
+    } catch {
+      // ignore
+    }
+  }
+
+  return sizeBytes;
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function main() {
@@ -112,7 +149,13 @@ function main() {
 
   const budgets = budgetConfig.routes;
   const baselines = budgetConfig.baseline || {};
+  
   const BUILD_MANIFEST = path.join(BUILD_DIR, 'build-manifest.json');
+  const APP_BUILD_MANIFEST = path.join(BUILD_DIR, 'app-build-manifest.json');
+  
+  const buildManifest = readJson(BUILD_MANIFEST) || {};
+  const appBuildManifest = readJson(APP_BUILD_MANIFEST) || {};
+  
   const { totalStaticBytes } = collectRouteChunks();
 
   const COL = {
@@ -142,35 +185,30 @@ function main() {
   const results = [];
   const deltaSummary = [];
 
-  const buildManifest = readJson(BUILD_MANIFEST) || {};
-  const rootMainFiles = buildManifest.rootMainFiles || [];
-  let rootMainBytes = 0;
-  for (const f of rootMainFiles) {
-    try {
-      rootMainBytes += fs.statSync(path.join(BUILD_DIR, f)).size;
-    } catch {
-      // ignore
-    }
-  }
-
   for (const [routeKey, budget] of Object.entries(budgets)) {
     let sizeKB = 0;
     if (routeKey === 'shared-chunks') {
       sizeKB = toKB(totalStaticBytes);
     } else {
-      sizeKB = toKB(rootMainBytes || totalStaticBytes * 0.15);
+      const bytes = getRouteSizeBytes(routeKey, buildManifest, appBuildManifest, BUILD_DIR);
+      if (bytes > 0) {
+        sizeKB = toKB(bytes);
+      } else {
+        // Fallback for empty/missing routes if strictly requested, but we'll report 0 to highlight they are missing.
+        sizeKB = 0;
+      }
     }
 
     const baselineKB = baselines[routeKey];
     const delta = formatDelta(sizeKB, baselineKB);
-    const label = statusLabel(sizeKB, budget);
+    const label = sizeKB === 0 ? 'MISSING' : statusLabel(sizeKB, budget);
 
     if (label.startsWith('FAIL')) failed = true;
     if (label.startsWith('WARN')) warned = true;
 
     results.push({ routeKey, sizeKB, baselineKB, delta, budget, label });
 
-    if (typeof baselineKB === 'number') {
+    if (typeof baselineKB === 'number' && sizeKB > 0) {
       deltaSummary.push({
         routeKey,
         sizeKB,
@@ -181,15 +219,15 @@ function main() {
   }
 
   results.sort((a, b) => {
-    const order = { 'FAIL ✗': 0, 'WARN ⚠': 1, 'PASS ✓': 2 };
-    return (order[a.label] ?? 3) - (order[b.label] ?? 3);
+    const order = { 'MISSING': 0, 'FAIL ✗': 1, 'WARN ⚠': 2, 'PASS ✓': 3 };
+    return (order[a.label] ?? 4) - (order[b.label] ?? 4);
   });
 
   for (const { routeKey, sizeKB, delta, budget, label } of results) {
-    const color = statusColor(label);
+    const color = label === 'MISSING' ? '\x1b[31m' : statusColor(label);
     console.log(
       pad(routeKey, COL.route) +
-        pad(sizeKB.toFixed(1), COL.size) +
+        pad(sizeKB > 0 ? sizeKB.toFixed(1) : 'N/A', COL.size) +
         pad(delta, COL.delta) +
         pad(budget.maxKB, COL.budget) +
         pad(budget.warnKB, COL.warn) +
@@ -236,4 +274,12 @@ function main() {
   process.exit(0);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  getRouteChunks,
+  getRouteSizeBytes,
+  statusLabel,
+};

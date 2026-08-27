@@ -128,28 +128,6 @@ export class QueueManagementService {
   }
 
   /**
-   * Add analytics event job to queue
-   * Events are processed asynchronously to avoid impacting request latency.
-   * Event loss on queue failure is bounded by retry attempts.
-   */
-  async addAnalyticsJob(data: JobData, options?: QueueJobOptions): Promise<Job> {
-    const defaultOptions = {
-      attempts: 2,
-      backoff: {
-        type: 'exponential' as const,
-        delay: 1000,
-      },
-      removeOnComplete: true,
-      removeOnFail: false,
-      ...options,
-    };
-
-    const enrichedData = this.enrichJobData(data);
-    this.logger.debug(`Adding analytics job: ${JSON.stringify(enrichedData)}`);
-    return this.analyticsQueue.add(enrichedData, defaultOptions);
-  }
-
-  /**
    * Get queue statistics
    */
   async getQueueStats(queueName: string): Promise<any> {

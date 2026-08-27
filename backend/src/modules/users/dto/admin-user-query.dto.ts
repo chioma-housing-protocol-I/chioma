@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -8,6 +9,14 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+export enum AdminUserSortField {
+  CREATED_AT = 'createdAt',
+  EMAIL = 'email',
+  FIRST_NAME = 'firstName',
+  LAST_NAME = 'lastName',
+  ROLE = 'role',
+}
 
 export class AdminUserQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -46,4 +55,22 @@ export class AdminUserQueryDto {
   })
   @IsBoolean()
   isVerified?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Field to sort by',
+    enum: AdminUserSortField,
+    default: AdminUserSortField.CREATED_AT,
+  })
+  @IsOptional()
+  @IsEnum(AdminUserSortField)
+  sortBy?: AdminUserSortField = AdminUserSortField.CREATED_AT;
+
+  @ApiPropertyOptional({
+    description: 'Sort direction',
+    enum: ['ASC', 'DESC'],
+    default: 'DESC',
+  })
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

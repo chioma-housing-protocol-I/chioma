@@ -13,6 +13,7 @@ import {
 import {
   decryptSensitiveKycFields,
   encryptSensitiveKycFields,
+  hashKycPayload,
 } from './kyc-encryption.util';
 import { UserKycStatusService } from '../users/user-kyc-status.service';
 import { KycStatus } from './kyc-status.enum';
@@ -68,10 +69,12 @@ export class KycService {
       this.logger.log(`Submitting KYC for user ${userId}`);
 
       const encryptedKycData = this.encryptKycData(userId, dto.kycData);
+      const documentHash = hashKycPayload(dto.kycData);
 
       const kyc = this.kycRepository.create({
         userId,
         encryptedKycData,
+        documentHash,
         status: KycStatus.PENDING,
       });
 
@@ -289,8 +292,7 @@ export class KycService {
     const limit = query.limit ?? 10;
     const sortBy = query.sortBy ?? 'createdAt';
     const sortOrder = (query.sortOrder ?? 'desc').toUpperCase() as
-      | 'ASC'
-      | 'DESC';
+      'ASC' | 'DESC';
 
     const qb = this.kycRepository
       .createQueryBuilder('kyc')

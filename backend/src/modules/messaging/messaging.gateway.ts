@@ -7,11 +7,12 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { MessagingService } from './messaging.service';
 import { RoomAccessGuard } from './room-access.guard';
 import { WebSocketSessionService } from './websocket-session.service';
+import { SendMessageDto } from './dto/send-message.dto';
 
 @WebSocketGateway({
   namespace: '/messaging',
@@ -63,9 +64,10 @@ export class MessagingGateway
   }
 
   @UseGuards(RoomAccessGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   @SubscribeMessage('message:send')
   async handleMessageSend(
-    @MessageBody() data: any,
+    @MessageBody() data: SendMessageDto,
     @ConnectedSocket() socket: Socket,
   ) {
     const valid = await this.sessionService.validateSession(

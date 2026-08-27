@@ -25,13 +25,11 @@ describe('FeatureFlagsController', () => {
       setRolloutPercentage: jest
         .fn()
         .mockResolvedValue({ key: 'test_flag', rolloutPercentage: 25 }),
-      killSwitch: jest
-        .fn()
-        .mockResolvedValue({
-          key: 'test_flag',
-          enabled: false,
-          rolloutPercentage: 0,
-        }),
+      killSwitch: jest.fn().mockResolvedValue({
+        key: 'test_flag',
+        enabled: false,
+        rolloutPercentage: 0,
+      }),
       deleteFlag: jest.fn().mockResolvedValue(undefined),
     };
 

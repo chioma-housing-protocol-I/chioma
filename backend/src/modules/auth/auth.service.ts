@@ -35,6 +35,11 @@ import {
 } from '../../common/errors/domain-errors';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { ValidationUtils } from '../../common/utils/validation/validation.utils';
+import { SecurityEventsService } from '../security/security-events.service';
+import {
+  SecurityEventType,
+  SecurityEventSeverity,
+} from '../security/entities/security-event.entity';
 
 import {
   BCRYPT_SALT_ROUNDS,
@@ -69,6 +74,8 @@ export class AuthService {
     private readonly encryptedCache: EncryptedCacheService,
     @Optional()
     private readonly queueManagementService?: QueueManagementService,
+    @Optional()
+    private readonly securityEventsService?: SecurityEventsService,
   ) {}
 
   @Logging({ service: 'AuthService' })
@@ -98,7 +105,6 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const userReferralCode = await this.referralService.generateReferralCode();
 
     const user = this.userRepository.create({
       email: normalizedEmail,
@@ -110,12 +116,20 @@ export class AuthService {
       emailVerified: false,
       failedLoginAttempts: 0,
       isActive: true,
-      referralCode: userReferralCode,
     });
 
     const verificationToken = this.issueVerificationToken(user);
 
-    const savedUser = await this.userRepository.save(user);
+    // The pre-check in generateReferralCode() is racy under concurrent
+    // registration, so the actual save is retried on a genuine unique
+    // constraint collision with a fresh code — bounded, so a run of
+    // collisions surfaces as a domain error instead of an infinite loop
+    // or a raw database error reaching the client.
+    const { result: savedUser } =
+      await this.referralService.assignUniqueReferralCode((code) => {
+        user.referralCode = code;
+        return this.userRepository.save(user);
+      });
 
     // Track referral if code provided. Queued with retry so a transient
     // failure doesn't silently drop the referral; a permanent failure
@@ -274,7 +288,11 @@ export class AuthService {
       );
 
       if (!isValidRefreshToken) {
-        this.logger.warn(`Invalid refresh token for user: ${user.id}`);
+        // The token's signature verified, so we issued it — but it is not
+        // the currently stored one. That means a rotated (already-consumed)
+        // refresh token is being replayed: the classic signal of a stolen
+        // token. Revoke the whole token family and record a security event.
+        await this.handleRefreshTokenReuse(user.id);
         throw new AuthenticationError(
           ErrorCode.AUTH_TOKEN_INVALID,
           'Invalid refresh token',
@@ -299,6 +317,40 @@ export class AuthService {
       throw new AuthenticationError(
         ErrorCode.AUTH_TOKEN_INVALID,
         'Invalid or expired refresh token',
+      );
+    }
+  }
+
+  /**
+   * Reuse detection: a signature-valid refresh token that no longer matches
+   * the stored hash was already consumed by a previous rotation. Presenting
+   * it again indicates token theft, so the entire token family (the user's
+   * current refresh session) is revoked — forcing re-authentication — and a
+   * critical security event is emitted for monitoring.
+   */
+  private async handleRefreshTokenReuse(userId: string): Promise<void> {
+    this.logger.warn(
+      `Refresh token reuse detected for user: ${userId} — revoking token family`,
+    );
+    await this.userRepository.update({ id: userId }, { refreshToken: null });
+
+    try {
+      await this.securityEventsService?.createEvent({
+        userId,
+        eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+        severity: SecurityEventSeverity.CRITICAL,
+        success: false,
+        errorMessage: 'Consumed refresh token replayed',
+        details: {
+          reason: 'refresh_token_reuse',
+          action: 'token_family_revoked',
+        },
+      });
+    } catch (eventError) {
+      // Never let monitoring failures mask the revocation itself.
+      this.logger.error(
+        `Failed to record refresh token reuse event for user: ${userId}`,
+        eventError instanceof Error ? eventError.stack : String(eventError),
       );
     }
   }

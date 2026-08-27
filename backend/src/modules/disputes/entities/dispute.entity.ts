@@ -7,6 +7,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { RentAgreement } from '../../rent/entities/rent-contract.entity';
 import { User } from '../../users/entities/user.entity';
@@ -31,6 +32,9 @@ export enum DisputeStatus {
 }
 
 @Entity('disputes')
+@Index('IDX_disputes_payment_id', ['paymentId'])
+@Index('IDX_disputes_rent_payment_id', ['rentPaymentId'])
+@Index('IDX_disputes_payment_reference_number', ['paymentReferenceNumber'])
 export class Dispute {
   @PrimaryGeneratedColumn()
   id: number;
@@ -130,6 +134,42 @@ export class Dispute {
 
   @Column({ name: 'blockchain_synced_at', type: 'timestamp', nullable: true })
   blockchainSyncedAt: Date;
+
+  // Payment correlation fields for dispute resolution context
+  @Column({ name: 'payment_id', type: 'uuid', nullable: true })
+  paymentId: string | null;
+
+  @Column({
+    name: 'rent_payment_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  rentPaymentId: string | null;
+
+  @Column({
+    name: 'disputed_payment_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  disputedPaymentAmount: number | null;
+
+  @Column({
+    name: 'payment_reference_number',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  paymentReferenceNumber: string | null;
+
+  @Column({
+    name: 'payment_date',
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
+  paymentDate: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

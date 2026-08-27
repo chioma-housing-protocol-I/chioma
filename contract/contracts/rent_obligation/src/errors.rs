@@ -14,4 +14,8 @@ pub enum ObligationError {
     BurnRecordNotFound = 8,
     CannotBurnActiveObligation = 9,
     InvalidBurnReason = 10,
+    AdminAlreadySet = 11,
+    AdminNotSet = 12,
+    RateLimitExceeded = 13,
+    CooldownNotMet = 14,
 }

@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { User, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const schema = z.object({
   firstName: z
@@ -61,7 +63,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting, isDirty, submitCount },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -148,6 +150,8 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
         noValidate
         className="space-y-6"
       >
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+
         {/* Name */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -166,12 +170,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
               </label>
               <input
                 {...register('firstName')}
+                {...fieldA11yProps('firstName', errors.firstName)}
                 type="text"
                 placeholder="Jane"
                 className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
               />
               {errors.firstName && (
-                <p className="text-xs text-red-500 mt-1">
+                <p
+                  id={fieldErrorId('firstName')}
+                  className="text-xs text-red-500 mt-1"
+                >
                   {errors.firstName.message}
                 </p>
               )}
@@ -183,12 +191,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
               </label>
               <input
                 {...register('lastName')}
+                {...fieldA11yProps('lastName', errors.lastName)}
                 type="text"
                 placeholder="Doe"
                 className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
               />
               {errors.lastName && (
-                <p className="text-xs text-red-500 mt-1">
+                <p
+                  id={fieldErrorId('lastName')}
+                  className="text-xs text-red-500 mt-1"
+                >
                   {errors.lastName.message}
                 </p>
               )}
@@ -205,12 +217,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
             </label>
             <input
               {...register('email')}
+              {...fieldA11yProps('email', errors.email)}
               type="email"
               placeholder="jane@example.com"
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.email && (
-              <p className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('email')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.email.message}
               </p>
             )}
@@ -223,12 +239,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
             </label>
             <input
               {...register('phone')}
+              {...fieldA11yProps('phone', errors.phone)}
               type="tel"
               placeholder="+1 (555) 123-4567"
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.phone && (
-              <p className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('phone')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.phone.message}
               </p>
             )}
@@ -241,12 +261,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
             </label>
             <input
               {...register('location')}
+              {...fieldA11yProps('location', errors.location)}
               type="text"
               placeholder="Lagos, Nigeria"
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.location && (
-              <p className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('location')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.location.message}
               </p>
             )}
@@ -260,13 +284,16 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
           </label>
           <textarea
             {...register('bio')}
+            {...fieldA11yProps('bio', errors.bio)}
             rows={3}
             placeholder="Tell others a bit about yourself..."
             className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
           />
           <div className="flex items-center justify-between mt-1">
             {errors.bio ? (
-              <p className="text-xs text-red-500">{errors.bio.message}</p>
+              <p id={fieldErrorId('bio')} className="text-xs text-red-500">
+                {errors.bio.message}
+              </p>
             ) : (
               <span />
             )}
