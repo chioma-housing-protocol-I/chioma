@@ -2,18 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({
-      children,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) =>
-      React.createElement('div', props, children),
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-}));
-
 vi.mock('@/components/loading', () => ({
   Spinner: ({ label }: { label?: string }) =>
     React.createElement(
@@ -79,28 +67,40 @@ describe('BaseModal', () => {
   it('calls onClose when the Escape key is pressed', () => {
     const onClose = vi.fn();
     renderModal({ onClose });
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('does not call onClose on Escape when closeOnEscape is false', () => {
     const onClose = vi.fn();
     renderModal({ onClose, closeOnEscape: false });
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('calls onClose when the backdrop is clicked', () => {
+  it('calls onClose when the overlay backdrop is clicked', async () => {
     const onClose = vi.fn();
     renderModal({ onClose });
-    const overlay = document.querySelector('[role="dialog"]') as HTMLElement;
-    fireEvent.click(overlay, { target: overlay });
+    // Radix attaches its outside-pointerdown listener via setTimeout(0).
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const overlay = screen.getByTestId('modal-overlay');
+    fireEvent.pointerDown(overlay);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close on backdrop click when closeOnOverlayClick is false', async () => {
+    const onClose = vi.fn();
+    renderModal({ onClose, closeOnOverlayClick: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const overlay = screen.getByTestId('modal-overlay');
+    fireEvent.pointerDown(overlay);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('does not call onClose when a child element inside the modal is clicked', () => {
     const onClose = vi.fn();
     renderModal({ onClose });
+    fireEvent.pointerDown(screen.getByText('Modal content'));
     fireEvent.click(screen.getByText('Modal content'));
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -130,17 +130,17 @@ describe('BaseModal', () => {
   });
 
   it('has role="dialog" and aria-modal="true"', () => {
-    const { container } = renderModal();
-    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    renderModal();
+    const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
   });
 
   it('labels the dialog with the title via aria-labelledby', () => {
-    const { container } = renderModal();
-    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    renderModal();
+    const dialog = screen.getByRole('dialog');
     const labelledById = dialog.getAttribute('aria-labelledby');
     expect(labelledById).toBeTruthy();
-    const titleEl = container.querySelector(`#${labelledById}`);
+    const titleEl = document.getElementById(labelledById as string);
     expect(titleEl?.textContent).toBe('Test Modal');
   });
 });

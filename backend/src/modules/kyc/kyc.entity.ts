@@ -18,8 +18,13 @@ export class Kyc {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Encrypted({ nullable: false })
-  encryptedKycData: Record<string, any>; // SEP-9 fields, encrypted
+  /**
+   * SEP-9 fields, encrypted. Nulled out by the retention purge job once the
+   * decision has stood for the configured retention window; `documentHash`
+   * and the decision fields below survive the purge.
+   */
+  @Encrypted({ nullable: true })
+  encryptedKycData: Record<string, any> | null;
 
   @Column({ type: 'int', default: 1 })
   encryptionVersion: number;
@@ -32,6 +37,18 @@ export class Kyc {
 
   @Column({ type: 'text', nullable: true })
   reason: string | null;
+
+  /**
+   * Non-reversible SHA-256 checksum of the plaintext KYC payload, recorded
+   * at submission time. Retained after the raw document is purged so the
+   * decision can still be tied to the exact data it was made on.
+   */
+  @Column({ type: 'text', nullable: true })
+  documentHash: string | null;
+
+  /** When the raw document was purged by the retention job, if ever. */
+  @Column({ type: 'timestamp', nullable: true })
+  documentPurgedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

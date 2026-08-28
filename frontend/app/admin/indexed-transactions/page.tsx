@@ -19,6 +19,7 @@ import {
 import { IndexedTransactionList } from '@/components/admin/IndexedTransactionList';
 import { IndexedTransactionStats } from '@/components/admin/IndexedTransactionStats';
 import { IndexedTransactionDetail } from '@/components/admin/IndexedTransactionDetail';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 const DEFAULT_FILTERS: IndexedTransactionFiltersValue = {
   page: 1,
@@ -167,24 +168,29 @@ export default function IndexedTransactionsPage() {
         onClear={() => setFilters(DEFAULT_FILTERS)}
       />
 
-      <IndexedTransactionList
-        transactions={transactions}
-        isLoading={
-          indexedTransactionsQuery.isLoading && !indexedTransactionsQuery.data
-        }
-        selectedId={selectedId}
-        page={filters.page}
-        onSelect={(id) => {
-          setSelectedId(id);
-          setIsDetailOpen(true);
-        }}
-        onPageChange={(page) =>
-          setFilters((current) => ({
-            ...current,
-            page,
-          }))
-        }
-      />
+      <FeatureBoundary
+        name="admin:indexed-transactions-table"
+        label="Transaction table"
+      >
+        <IndexedTransactionList
+          transactions={transactions}
+          isLoading={
+            indexedTransactionsQuery.isLoading && !indexedTransactionsQuery.data
+          }
+          selectedId={selectedId}
+          page={filters.page}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setIsDetailOpen(true);
+          }}
+          onPageChange={(page) =>
+            setFilters((current) => ({
+              ...current,
+              page,
+            }))
+          }
+        />
+      </FeatureBoundary>
 
       <IndexedTransactionDetail
         transaction={selectedTransaction}

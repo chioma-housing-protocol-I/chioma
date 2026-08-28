@@ -51,6 +51,7 @@
     "migration:rollback-to": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts revert --to",
     "migration:dry-run": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts run --dry-run",
     "migration:list": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts show",
+    "migration:schema-check": "npm run typeorm migration:generate -- -d src/database/data-source.ts --check src/migrations/CIDriftCheck",
     "db:index-review": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts",
     "db:index-review:all": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts --all",
     "db:verify-payment-status-index": "ts-node -r tsconfig-paths/register scripts/verify-payment-status-index.ts",

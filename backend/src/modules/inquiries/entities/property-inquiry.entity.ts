@@ -10,6 +10,8 @@ import {
 export enum PropertyInquiryStatus {
   PENDING = 'pending',
   VIEWED = 'viewed',
+  /** Terminal state: either party ended the conversation. */
+  CLOSED = 'closed',
 }
 
 @Entity('property_inquiries')

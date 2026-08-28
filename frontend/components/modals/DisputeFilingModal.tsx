@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
 import { Uploader } from '@/components/ui/Uploader';
 import type { DisputeType } from '@/lib/dashboard-data';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const disputeTypes: { value: DisputeType; label: string }[] = [
   { value: 'RENT_PAYMENT', label: 'Rent Payment' },
@@ -72,7 +74,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -160,6 +162,8 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
         noValidate
         className="space-y-6"
       >
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+
         {/* Warning Banner */}
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
@@ -176,11 +180,15 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
           </label>
           <input
             {...register('agreementId')}
+            {...fieldA11yProps('agreementId', errors.agreementId)}
             placeholder="AGR-2025-014"
             className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
           {errors.agreementId && (
-            <p className="text-xs text-red-500 mt-1">
+            <p
+              id={fieldErrorId('agreementId')}
+              className="text-xs text-red-500 mt-1"
+            >
               {errors.agreementId.message}
             </p>
           )}
@@ -210,12 +218,16 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
             </label>
             <input
               {...register('requestedAmount')}
+              {...fieldA11yProps('requestedAmount', errors.requestedAmount)}
               inputMode="numeric"
               placeholder="e.g. 40000"
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             />
             {errors.requestedAmount && (
-              <p className="text-xs text-red-500 mt-1">
+              <p
+                id={fieldErrorId('requestedAmount')}
+                className="text-xs text-red-500 mt-1"
+              >
                 {errors.requestedAmount.message}
               </p>
             )}
@@ -229,13 +241,17 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
           </label>
           <textarea
             {...register('description')}
+            {...fieldA11yProps('description', errors.description)}
             rows={6}
             placeholder="Describe the issue, timeline, and the outcome you are requesting..."
             className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
           />
           <div className="flex items-center justify-between mt-1">
             {errors.description ? (
-              <p className="text-xs text-red-500">
+              <p
+                id={fieldErrorId('description')}
+                className="text-xs text-red-500"
+              >
                 {errors.description.message}
               </p>
             ) : (

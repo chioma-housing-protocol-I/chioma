@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,7 +22,9 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CheckTransactionFraudDto } from './dto/check-transaction-fraud.dto';
+import { UpdateFraudThresholdsDto } from './dto/update-fraud-thresholds.dto';
 import { FraudAlertsService } from './fraud-alerts.service';
+import { FraudThresholdsService } from './fraud-thresholds.service';
 import { FraudService } from './fraud.service';
 
 @ApiTags('Fraud')
@@ -33,6 +36,7 @@ export class FraudController {
   constructor(
     private readonly fraudService: FraudService,
     private readonly fraudAlertsService: FraudAlertsService,
+    private readonly fraudThresholdsService: FraudThresholdsService,
   ) {}
 
   @ApiResponse({ status: 200, description: 'Retrieved' })
@@ -80,5 +84,28 @@ export class FraudController {
   @ApiOperation({ summary: 'Check transaction fraud risk' })
   async checkTransactionFraud(@Body() payload: CheckTransactionFraudDto) {
     return this.fraudService.checkTransactionFraud(payload);
+  }
+
+  @Get('thresholds')
+  @ApiOperation({ summary: 'Get current fraud scoring thresholds' })
+  @ApiResponse({ status: 200, description: 'Current thresholds' })
+  getThresholds() {
+    return this.fraudThresholdsService.getThresholds();
+  }
+
+  @Patch('thresholds')
+  @ApiOperation({
+    summary: 'Update fraud scoring thresholds (runtime-configurable)',
+  })
+  @ApiResponse({ status: 200, description: 'Thresholds updated' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid threshold values',
+  })
+  async updateThresholds(
+    @Body() dto: UpdateFraudThresholdsDto,
+    @Req() req: any,
+  ) {
+    return this.fraudThresholdsService.updateThresholds(dto, req.user.id);
   }
 }

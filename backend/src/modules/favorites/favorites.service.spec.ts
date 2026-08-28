@@ -45,6 +45,7 @@ describe('FavoritesService', () => {
           provide: getRepositoryToken(Favorite),
           useValue: {
             find: jest.fn(),
+            findAndCount: jest.fn(),
             findOne: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
@@ -70,27 +71,84 @@ describe('FavoritesService', () => {
   });
 
   describe('getFavorites', () => {
-    it('should return user favorites ordered by creation date', async () => {
-      const mockFavorites = [mockFavorite];
-      jest.spyOn(favoriteRepository, 'find').mockResolvedValue(mockFavorites);
+    it('should return a page of favorites ordered by creation date', async () => {
+      jest
+        .spyOn(favoriteRepository, 'findAndCount')
+        .mockResolvedValue([[mockFavorite], 1]);
 
       const result = await service.getFavorites(mockUserId);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].propertyId).toBe(mockPropertyId);
-      expect(favoriteRepository.find).toHaveBeenCalledWith({
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].propertyId).toBe(mockPropertyId);
+      expect(result.total).toBe(1);
+      expect(result.totalPages).toBe(1);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith({
         where: { userId: mockUserId },
         relations: ['property'],
         order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
     });
 
-    it('should return empty array if user has no favorites', async () => {
-      jest.spyOn(favoriteRepository, 'find').mockResolvedValue([]);
+    it('should apply the default page size when limit is omitted', async () => {
+      jest.spyOn(favoriteRepository, 'findAndCount').mockResolvedValue([[], 0]);
 
       const result = await service.getFavorites(mockUserId);
 
-      expect(result).toEqual([]);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 20 }),
+      );
+    });
+
+    it('should translate page and limit into skip/take', async () => {
+      jest
+        .spyOn(favoriteRepository, 'findAndCount')
+        .mockResolvedValue([[], 45]);
+
+      const result = await service.getFavorites(mockUserId, 3, 10);
+
+      expect(result.page).toBe(3);
+      expect(result.limit).toBe(10);
+      expect(result.totalPages).toBe(5);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 20, take: 10 }),
+      );
+    });
+
+    it('should clamp the limit to the maximum page size', async () => {
+      jest.spyOn(favoriteRepository, 'findAndCount').mockResolvedValue([[], 0]);
+
+      const result = await service.getFavorites(mockUserId, 1, 5000);
+
+      expect(result.limit).toBe(100);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 100 }),
+      );
+    });
+
+    it('should clamp non-positive page and limit values', async () => {
+      jest.spyOn(favoriteRepository, 'findAndCount').mockResolvedValue([[], 0]);
+
+      const result = await service.getFavorites(mockUserId, 0, -5);
+
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(1);
+      expect(favoriteRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 1 }),
+      );
+    });
+
+    it('should return an empty page if user has no favorites', async () => {
+      jest.spyOn(favoriteRepository, 'findAndCount').mockResolvedValue([[], 0]);
+
+      const result = await service.getFavorites(mockUserId);
+
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
     });
   });
 

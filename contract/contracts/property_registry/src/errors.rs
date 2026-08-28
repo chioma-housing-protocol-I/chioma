@@ -12,4 +12,6 @@ pub enum PropertyError {
     AlreadyVerified = 6,
     InvalidPropertyId = 7,
     InvalidMetadata = 8,
+    RateLimitExceeded = 9,
+    CooldownNotMet = 10,
 }

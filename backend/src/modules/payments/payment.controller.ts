@@ -169,7 +169,11 @@ export class PaymentController {
   ) {
     return this.paymentService.refundEscrowDeposit(
       parseInt(escrowId, 10),
-      { escrowId: parseInt(escrowId, 10), reason: dto.reason },
+      {
+        escrowId: parseInt(escrowId, 10),
+        reason: dto.reason,
+        amount: dto.amount,
+      },
       req.user?.id || '',
     );
   }

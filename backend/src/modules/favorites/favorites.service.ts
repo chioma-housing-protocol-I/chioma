@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Favorite } from './entities/favorite.entity';
 import { Property } from '../properties/entities/property.entity';
-import { FavoriteItemDto, FavoriteStatusDto } from './dtos/favorite.dto';
+import {
+  DEFAULT_FAVORITES_PAGE_SIZE,
+  FavoriteStatusDto,
+  MAX_FAVORITES_PAGE_SIZE,
+  PaginatedFavoritesDto,
+} from './dtos/favorite.dto';
 
 @Injectable()
 export class FavoritesService {
@@ -14,19 +19,39 @@ export class FavoritesService {
     private readonly propertyRepository: Repository<Property>,
   ) {}
 
-  async getFavorites(userId: string): Promise<FavoriteItemDto[]> {
-    const favorites = await this.favoriteRepository.find({
+  async getFavorites(
+    userId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedFavoritesDto> {
+    // Defensive clamping so a large favorites list can never produce an
+    // unbounded payload, even if a caller bypasses DTO validation.
+    const safePage = Math.max(1, Math.floor(page ?? 1));
+    const safeLimit = Math.min(
+      MAX_FAVORITES_PAGE_SIZE,
+      Math.max(1, Math.floor(limit ?? DEFAULT_FAVORITES_PAGE_SIZE)),
+    );
+
+    const [favorites, total] = await this.favoriteRepository.findAndCount({
       where: { userId },
       relations: ['property'],
       order: { createdAt: 'DESC' },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
     });
 
-    return favorites.map((fav) => ({
-      id: fav.id,
-      propertyId: fav.propertyId,
-      property: fav.property,
-      createdAt: fav.createdAt.toISOString(),
-    }));
+    return {
+      data: favorites.map((fav) => ({
+        id: fav.id,
+        propertyId: fav.propertyId,
+        property: fav.property,
+        createdAt: fav.createdAt.toISOString(),
+      })),
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async getFavoriteStatus(

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 export type MfaDeviceFormValues = {
   name: string;
@@ -53,7 +55,7 @@ export function MfaDeviceForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<MfaDeviceFormValues>({
     defaultValues: {
       name: '',
@@ -74,6 +76,8 @@ export function MfaDeviceForm({
         </button>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-white mb-2">
@@ -81,13 +85,16 @@ export function MfaDeviceForm({
           </label>
           <input
             {...register('name', { required: 'Device name is required' })}
+            {...fieldA11yProps('name', errors.name)}
             type="text"
             placeholder="e.g., My iPhone, Work Phone"
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
             disabled={isLoading}
           />
           {errors.name && (
-            <p className="text-sm text-rose-400 mt-1">{errors.name.message}</p>
+            <p id={fieldErrorId('name')} className="text-sm text-rose-400 mt-1">
+              {errors.name.message}
+            </p>
           )}
         </div>
 

@@ -24,6 +24,7 @@ describe('BookingsService', () => {
   let service: BookingsService;
   let bookingRepository: jest.Mocked<Repository<Booking>>;
   let propertyRepository: jest.Mocked<Repository<Property>>;
+  let dataSource: DataSource;
 
   const mockProperty = {
     id: 'property-1',
@@ -42,6 +43,7 @@ describe('BookingsService', () => {
       create: jest.fn((_entity: unknown, data: unknown) => data),
       save: jest.fn((data: unknown) => Promise.resolve(data)),
       findOne: jest.fn(),
+      exists: jest.fn(),
     },
   };
 
@@ -107,6 +109,7 @@ describe('BookingsService', () => {
         {
           provide: DataSource,
           useValue: {
+            options: { type: 'postgres' },
             createQueryRunner: jest.fn(() => mockQueryRunner),
           },
         },
@@ -116,6 +119,7 @@ describe('BookingsService', () => {
     service = module.get(BookingsService);
     bookingRepository = module.get(getRepositoryToken(Booking));
     propertyRepository = module.get(getRepositoryToken(Property));
+    dataSource = module.get(DataSource);
     jest.clearAllMocks();
     mockQueryBuilder.leftJoinAndSelect.mockReturnThis();
     mockQueryBuilder.orderBy.mockReturnThis();
@@ -132,8 +136,16 @@ describe('BookingsService', () => {
       (data: DeepPartial<Booking>) => bookingRepository.save(data),
     );
     mockQueryRunner.manager.findOne.mockImplementation(
-      (_entity: unknown, options: FindOneOptions<Booking>) =>
-        bookingRepository.findOne(options),
+      (
+        entity: unknown,
+        options: FindOneOptions<Booking> | FindOneOptions<Property>,
+      ) =>
+        entity === Property
+          ? propertyRepository.findOne(options as FindOneOptions<Property>)
+          : bookingRepository.findOne(options as FindOneOptions<Booking>),
+    );
+    mockQueryRunner.manager.exists.mockImplementation(() =>
+      bookingRepository.exists(),
     );
   });
 
@@ -178,6 +190,85 @@ describe('BookingsService', () => {
       expect(booking.totalAmount).toBe(400);
       expect(booking.status).toBe(BookingStatus.PENDING);
       expect(bookingRepository.save).toHaveBeenCalled();
+    });
+
+    it('rejects when the pre-transaction availability check finds an overlap', async () => {
+      propertyRepository.findOne.mockResolvedValue(mockProperty);
+      bookingRepository.exists.mockResolvedValueOnce(true);
+
+      await expect(
+        service.create('guest-1', {
+          propertyId: 'property-1',
+          checkIn: '2026-08-01',
+          checkOut: '2026-08-05',
+          guests: 2,
+        }),
+      ).rejects.toThrow(BusinessRuleViolationError);
+
+      // Rejected before a transaction was ever opened.
+      expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
+    });
+
+    it('re-checks availability under a row lock inside the transaction and rejects a race', async () => {
+      propertyRepository.findOne.mockResolvedValue(mockProperty);
+      // The cheap pre-check outside the transaction sees no overlap...
+      bookingRepository.exists.mockResolvedValueOnce(false);
+      // ...but by the time this request acquires the lock inside the
+      // transaction, a concurrent request has already committed an
+      // overlapping booking, so the in-transaction re-check must catch it.
+      bookingRepository.exists.mockResolvedValueOnce(true);
+
+      await expect(
+        service.create('guest-1', {
+          propertyId: 'property-1',
+          checkIn: '2026-08-01',
+          checkOut: '2026-08-05',
+          guests: 2,
+        }),
+      ).rejects.toThrow(BusinessRuleViolationError);
+
+      // The lock must be acquired on the property row before the
+      // authoritative overlap re-check runs.
+      expect(mockQueryRunner.manager.findOne).toHaveBeenCalledWith(
+        Property,
+        expect.objectContaining({
+          where: { id: mockProperty.id },
+          lock: { mode: 'pessimistic_write' },
+        }),
+      );
+      expect(mockQueryRunner.manager.exists).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+      // No booking should have been persisted for the losing request.
+      expect(mockQueryRunner.manager.save).not.toHaveBeenCalled();
+    });
+
+    it('skips the row lock on SQLite (no row-level locking support) but still re-checks', async () => {
+      (dataSource as unknown as { options: { type: string } }).options = {
+        type: 'sqlite',
+      };
+      propertyRepository.findOne.mockResolvedValue(mockProperty);
+      bookingRepository.exists.mockResolvedValue(false);
+
+      await service.create('guest-1', {
+        propertyId: 'property-1',
+        checkIn: '2026-08-01',
+        checkOut: '2026-08-05',
+        guests: 2,
+      });
+
+      expect(mockQueryRunner.manager.findOne).toHaveBeenCalledWith(
+        Property,
+        expect.objectContaining({ where: { id: mockProperty.id } }),
+      );
+      const lockCall = mockQueryRunner.manager.findOne.mock.calls.find(
+        ([entity]: [unknown]) => entity === Property,
+      );
+      expect(lockCall?.[1]).not.toHaveProperty('lock');
+      // Reset for subsequent tests.
+      (dataSource as unknown as { options: { type: string } }).options = {
+        type: 'postgres',
+      };
     });
   });
 

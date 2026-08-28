@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { Kyc } from './kyc.entity';
 import { User } from '../users/entities/user.entity';
 import { KycService } from './kyc.service';
@@ -10,6 +11,7 @@ import { SecurityModule } from '../security/security.module';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { KycRetentionService } from './kyc-retention.service';
 
 @Module({
   imports: [
@@ -19,9 +21,10 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     AuditModule,
     NotificationsModule,
     WebhooksModule,
+    ScheduleModule.forRoot(),
   ],
-  providers: [KycService],
+  providers: [KycService, KycRetentionService],
   controllers: [KycController, AdminKycController],
-  exports: [KycService],
+  exports: [KycService, KycRetentionService],
 })
 export class KycModule {}

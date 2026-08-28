@@ -11,6 +11,7 @@ import { DataArchivalService } from './data-archival.service';
 import { SecurityPatchManagementService } from './security-patch-management.service';
 import { DatabaseMaintenanceService } from './database-maintenance.service';
 import { OrphanedRecordsCleanupService } from './orphaned-records-cleanup.service';
+import { MonitoringModule } from '../monitoring/monitoring.module';
 import { TenantScreeningRequest } from '../screening/entities/tenant-screening-request.entity';
 import { TenantScreeningReport } from '../screening/entities/tenant-screening-report.entity';
 import { TenantScreeningConsent } from '../screening/entities/tenant-screening-consent.entity';
@@ -23,6 +24,7 @@ import { TenantScreeningConsent } from '../screening/entities/tenant-screening-c
       TenantScreeningConsent,
     ]),
     ScheduleModule.forRoot(),
+    MonitoringModule,
   ],
   controllers: [CleanupController, DataArchivalController],
   providers: [

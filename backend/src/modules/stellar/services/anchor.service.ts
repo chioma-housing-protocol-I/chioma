@@ -11,7 +11,10 @@ import {
 import { SupportedCurrency } from '../../transactions/entities/supported-currency.entity';
 import { DepositRequestDto } from '../dto/deposit-request.dto';
 import { WithdrawRequestDto } from '../dto/withdraw-request.dto';
-import { QueryAnchorTransactionsDto } from '../dto/query-anchor-transactions.dto';
+import {
+  QueryAnchorTransactionsDto,
+  AnchorTransactionSortField,
+} from '../dto/query-anchor-transactions.dto';
 import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 
 interface AnchorDepositResponse {
@@ -295,8 +298,17 @@ export class AnchorService {
       );
     }
 
+    const sortColumns: Record<AnchorTransactionSortField, string> = {
+      [AnchorTransactionSortField.CREATED_AT]: 'anchorTransaction.createdAt',
+      [AnchorTransactionSortField.AMOUNT]: 'anchorTransaction.amount',
+      [AnchorTransactionSortField.STATUS]: 'anchorTransaction.status',
+      [AnchorTransactionSortField.TYPE]: 'anchorTransaction.type',
+    };
+    const sortColumn =
+      sortColumns[query.sortBy ?? AnchorTransactionSortField.CREATED_AT];
+
     queryBuilder
-      .orderBy('anchorTransaction.createdAt', 'DESC')
+      .orderBy(sortColumn, query.sortOrder ?? 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

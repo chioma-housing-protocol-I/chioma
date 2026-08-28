@@ -52,8 +52,10 @@ export function Sidebar({
 
       {/* Sidebar Content */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-64 backdrop-blur-xl bg-slate-900/50 border-r border-white/10 z-50 transition-transform duration-300 lg:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 start-0 bottom-0 w-64 backdrop-blur-xl bg-slate-900/50 border-e border-white/10 z-50 transition-transform duration-300 lg:translate-x-0 ${
+          isOpen
+            ? 'translate-x-0'
+            : 'ltr:-translate-x-full rtl:translate-x-full'
         } flex flex-col ${className}`}
       >
         {/* Logo */}
@@ -86,7 +88,7 @@ export function Sidebar({
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
-                  <span className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
+                  <span className="ms-2 inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
                     {item.badge}
                   </span>
                 )}
@@ -99,7 +101,7 @@ export function Sidebar({
         <div className="p-4 border-t border-white/10">
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 px-4 py-3 rounded-xl w-full text-left text-blue-200/70 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200"
+            className="flex items-center space-x-3 px-4 py-3 rounded-xl w-full text-start text-blue-200/70 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200"
           >
             <LogOut size={20} />
             <span className="text-sm font-medium">Log out</span>

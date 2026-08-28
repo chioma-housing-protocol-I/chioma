@@ -56,4 +56,11 @@ export class InquiriesController {
   async markViewed(@Param('id') id: string, @CurrentUser() user: User) {
     return this.inquiriesService.markViewed(id, user.id);
   }
+
+  @Patch(':id/close')
+  @ApiOperation({ summary: 'Close an inquiry (sender or recipient)' })
+  @ApiResponse({ status: 400, description: 'Invalid lifecycle transition' })
+  async close(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.inquiriesService.close(id, user.id);
+  }
 }

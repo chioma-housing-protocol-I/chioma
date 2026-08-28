@@ -13,6 +13,14 @@ import {
   AuditStatus,
 } from '../entities/audit-log.entity';
 
+export enum AuditLogSortField {
+  PERFORMED_AT = 'performedAt',
+  ACTION = 'action',
+  ENTITY_TYPE = 'entityType',
+  STATUS = 'status',
+  LEVEL = 'level',
+}
+
 export class QueryAuditLogsDto {
   @ApiPropertyOptional({
     example: '2026-06-01T00:00:00Z',
@@ -107,4 +115,22 @@ export class QueryAuditLogsDto {
   @Type(() => Number)
   @Transform(({ value }) => parseInt(value))
   limit?: number = 50;
+
+  @ApiPropertyOptional({
+    example: AuditLogSortField.PERFORMED_AT,
+    enum: AuditLogSortField,
+    description: 'Field to sort by',
+  })
+  @IsOptional()
+  @IsEnum(AuditLogSortField)
+  sortBy?: AuditLogSortField = AuditLogSortField.PERFORMED_AT;
+
+  @ApiPropertyOptional({
+    example: 'DESC',
+    enum: ['ASC', 'DESC'],
+    description: 'Sort direction',
+  })
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

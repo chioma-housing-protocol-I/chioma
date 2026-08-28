@@ -87,4 +87,34 @@ export class CreateDisputeDto {
   @IsString()
   @MaxLength(128)
   idempotencyKey?: string;
+
+  // Payment correlation fields for dispute context
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174001',
+    description:
+      'UUID of the general payment being disputed (from payments table)',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  paymentId?: string;
+
+  @ApiPropertyOptional({
+    example: 'pay_rent_abc123',
+    description:
+      'ID of the rent payment being disputed (from rent_payments table)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  rentPaymentId?: string;
+
+  @ApiPropertyOptional({
+    example: 'REF-2024-001234',
+    description: 'Reference number of the payment being disputed',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentReferenceNumber?: string;
 }

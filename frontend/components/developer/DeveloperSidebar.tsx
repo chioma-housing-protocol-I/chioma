@@ -43,10 +43,10 @@ export const DeveloperSidebar = ({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-64 z-50 flex flex-col
-          bg-slate-900/70 backdrop-blur-2xl border-r border-white/10
+        className={`fixed top-0 start-0 bottom-0 w-64 z-50 flex flex-col
+          bg-slate-900/70 backdrop-blur-2xl border-e border-white/10
           transition-transform duration-300 lg:translate-x-0
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          ${isOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}
       >
         {/* Logo + Portal Badge */}
         <div className="h-20 flex items-center justify-between px-5 border-b border-white/10 flex-shrink-0">
@@ -87,7 +87,7 @@ export const DeveloperSidebar = ({
                 />
                 <span>{item.name}</span>
                 {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span className="ms-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />
                 )}
               </Link>
             );
@@ -111,7 +111,7 @@ export const DeveloperSidebar = ({
           )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-xl w-full text-left
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl w-full text-start
               text-blue-200/60 hover:bg-red-500/10 hover:text-red-400
               transition-all duration-200 text-sm font-medium"
           >

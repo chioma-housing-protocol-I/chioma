@@ -10,6 +10,7 @@ import {
   File,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { Document } from './types';
 
 interface DocumentCardProps {
@@ -28,6 +29,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   showActions = true,
 }) => {
   const [thumbnailError, setThumbnailError] = React.useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   const getDocumentIcon = () => {
     switch (document.type) {
@@ -115,7 +117,11 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="flex items-center gap-3 text-xs text-neutral-500">
             <span>{formatFileSize(document.size)}</span>
             <span>•</span>
-            <span>{format(new Date(document.uploadedAt), 'MMM d, yyyy')}</span>
+            <span>
+              {format(new Date(document.uploadedAt), 'MMM d, yyyy', {
+                locale: dateFnsLocale,
+              })}
+            </span>
             {document.uploadedByName && (
               <>
                 <span>•</span>

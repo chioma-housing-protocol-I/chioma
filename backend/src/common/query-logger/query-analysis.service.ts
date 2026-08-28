@@ -43,6 +43,20 @@ const N_PLUS_ONE_WINDOW_MS = 5000;
 const MAX_QUERY_HISTORY = 10000;
 const MAX_QUERY_STATS = 500;
 
+/**
+ * TypeORM's public `Driver` interface does not expose `query()` — it is an
+ * implementation detail of concrete drivers (Postgres, MySQL, etc). This
+ * narrow type describes only the shape this service needs to monkey-patch,
+ * and is paired with a runtime `typeof` guard before use.
+ */
+interface InterceptableDriver {
+  query?: (
+    query: string,
+    parameters?: unknown[],
+    ...args: unknown[]
+  ) => unknown;
+}
+
 @Injectable()
 export class QueryAnalysisService implements OnModuleInit {
   private readonly logger = new Logger(QueryAnalysisService.name);
@@ -71,7 +85,7 @@ export class QueryAnalysisService implements OnModuleInit {
     this.intercepting = true;
 
     try {
-      const driver = this.dataSource.driver as any;
+      const driver = this.dataSource.driver as unknown as InterceptableDriver;
       if (!driver || typeof driver.query !== 'function') {
         this.logger.warn(
           'DataSource driver does not support query interception',
