@@ -14,6 +14,7 @@ import { User } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
 
 describe('DisputesService – Pagination', () => {
   let service: DisputesService;
@@ -74,6 +75,10 @@ describe('DisputesService – Pagination', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: LockService, useValue: mockLockService },
         { provide: IdempotencyService, useValue: mockIdempotencyService },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
+        },
       ],
     }).compile();
     service = module.get<DisputesService>(DisputesService);

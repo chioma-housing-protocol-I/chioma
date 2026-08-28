@@ -32,7 +32,12 @@ import { AuditModule } from '../../audit/audit.module';
 import { AuditLog } from '../../audit/entities/audit-log.entity';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
 import { CacheModule } from '@nestjs/cache-manager';
+
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn().mockResolvedValue(Buffer.from('mock file contents')),
+}));
 
 /**
  * Integration Tests for Dispute Module
@@ -102,6 +107,10 @@ describe.skip('DisputesService - Integration Tests', () => {
             check: jest.fn().mockResolvedValue(null),
             store: jest.fn().mockResolvedValue(true),
           },
+        },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
         },
       ],
     }).compile();
@@ -342,9 +351,9 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(
-        result.data.every((d) => d.status === DisputeStatus.OPEN),
-      ).toBe(true);
+      expect(result.data.every((d) => d.status === DisputeStatus.OPEN)).toBe(
+        true,
+      );
     });
 
     it('should filter disputes by type', async () => {
@@ -359,9 +368,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.data.every(
-          (d) => d.disputeType === DisputeType.RENT_PAYMENT,
-        ),
+        result.data.every((d) => d.disputeType === DisputeType.RENT_PAYMENT),
       ).toBe(true);
     });
 
@@ -377,9 +384,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.data.every(
-          (d) => d.agreementId.toString() === testAgreement.id,
-        ),
+        result.data.every((d) => d.agreementId.toString() === testAgreement.id),
       ).toBe(true);
     });
 

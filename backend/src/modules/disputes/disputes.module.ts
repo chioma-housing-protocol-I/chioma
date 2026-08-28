@@ -13,6 +13,7 @@ import { RentAgreement } from '../rent/entities/rent-contract.entity';
 import { User } from '../users/entities/user.entity';
 import { AuditModule } from '../audit/audit.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { StellarModule } from '../stellar/stellar.module';
     ]),
     AuditModule,
     StellarModule,
+    StorageModule,
   ],
   controllers: [DisputesController, AdminDisputesController],
   providers: [DisputesService, DisputeBlockchainService],

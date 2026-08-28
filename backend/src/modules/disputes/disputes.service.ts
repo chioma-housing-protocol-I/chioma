@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
+import { readFile } from 'fs/promises';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
 import { DisputeEvidence } from './entities/dispute-evidence.entity';
+import { MalwareScanService } from '../storage/malware-scan.service';
+import { ScanStatus } from '../storage/file-metadata.entity';
 import { DisputeComment } from './entities/dispute-comment.entity';
 import {
   RentAgreement,
@@ -48,6 +51,7 @@ export class DisputesService {
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
+    private readonly malwareScan: MalwareScanService,
   ) {}
 
   /**
@@ -213,11 +217,10 @@ export class DisputesService {
     const page = query?.page || 1;
     const limit = query?.limit || 20;
     PaginationUtils.validatePagination(page, limit);
-    queryBuilder
-      .skip(PaginationUtils.calculateOffset(page, limit))
-      .take(limit);
+    queryBuilder.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
 
     const [disputes, total] = await queryBuilder.getManyAndCount();
+    disputes.forEach((dispute) => this.filterRetrievableEvidence(dispute));
 
     return PaginationUtils.buildPaginationResponse(
       disputes,
@@ -248,6 +251,7 @@ export class DisputesService {
       throw new DisputeNotFoundError(id.toString());
     }
 
+    this.filterRetrievableEvidence(dispute);
     return dispute;
   }
 
@@ -272,6 +276,7 @@ export class DisputesService {
       throw new DisputeNotFoundError(disputeId);
     }
 
+    this.filterRetrievableEvidence(dispute);
     return dispute;
   }
 
@@ -346,7 +351,10 @@ export class DisputesService {
     // Validate file
     this.validateFile(file);
 
-    // Create evidence record
+    // Scan the uploaded file before it becomes part of the dispute record
+    const buffer = await readFile(file.path);
+    const scanResult = await this.malwareScan.scan(buffer, file.originalname);
+
     const evidence = this.evidenceRepository.create({
       dispute: dispute,
       uploadedBy: userId,
@@ -355,9 +363,29 @@ export class DisputesService {
       fileType: file.mimetype,
       fileSize: file.size,
       description: dto?.description,
+      scanStatus: scanResult.clean ? ScanStatus.CLEAN : ScanStatus.QUARANTINED,
     });
+    const saved = await this.evidenceRepository.save(evidence);
 
-    return this.evidenceRepository.save(evidence);
+    if (!scanResult.clean) {
+      await this.auditService.log({
+        action: AuditAction.SUSPICIOUS_ACTIVITY,
+        entityType: 'DisputeEvidence',
+        entityId: saved.id.toString(),
+        performedBy: userId,
+        level: AuditLevel.SECURITY,
+        metadata: {
+          disputeId,
+          fileName: file.originalname,
+          reason: scanResult.reason ?? 'malware_detected',
+        },
+      });
+      throw new AuthorizationError(
+        'File failed malware scan and has been quarantined',
+      );
+    }
+
+    return saved;
   }
 
   /**
@@ -559,6 +587,18 @@ export class DisputesService {
         newStatus as string,
       ) || false
     );
+  }
+
+  /**
+   * Unscanned or quarantined evidence must never be exposed to other
+   * parties on the dispute; only malware-scan-clean evidence is retrievable.
+   */
+  private filterRetrievableEvidence(dispute: Dispute): void {
+    if (dispute.evidence) {
+      dispute.evidence = dispute.evidence.filter(
+        (evidence) => evidence.scanStatus === ScanStatus.CLEAN,
+      );
+    }
   }
 
   /**
