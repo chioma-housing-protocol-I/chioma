@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AvailabilityService } from './availability.service';
@@ -35,6 +36,7 @@ interface AuthenticatedRequest extends Request {
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get()
   @ApiOperation({ summary: 'Get availability calendar for a date range' })
   @ApiParam({ name: 'propertyId', type: String })
@@ -49,6 +51,7 @@ export class AvailabilityController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Put()
   @ApiOperation({ summary: 'Update availability for a date range' })
   @ApiParam({ name: 'propertyId', type: String })
@@ -64,6 +67,7 @@ export class AvailabilityController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('block')
   @ApiOperation({ summary: 'Block a list of dates' })
   @ApiParam({ name: 'propertyId', type: String })
@@ -76,6 +80,7 @@ export class AvailabilityController {
     return { success: true };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('unblock')
   @ApiOperation({ summary: 'Unblock a list of dates' })
   @ApiParam({ name: 'propertyId', type: String })
@@ -88,6 +93,7 @@ export class AvailabilityController {
     return { success: true };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('price')
   @ApiOperation({ summary: 'Set custom price for a specific date' })
   @ApiParam({ name: 'propertyId', type: String })

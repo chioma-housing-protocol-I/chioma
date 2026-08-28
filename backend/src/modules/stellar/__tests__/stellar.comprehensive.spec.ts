@@ -161,6 +161,7 @@ describe('StellarService — comprehensive coverage', () => {
     disputeIntegrated: false,
     signatures: [],
     conditions: [],
+    refundedAmount: '0',
     createdAt: new Date(),
     updatedAt: new Date(),
   } as StellarEscrow;

@@ -26,6 +26,7 @@ export function MessagingHub() {
     isLoadingMessages,
     selectRoom,
     sendMessage,
+    retryMessage,
     sendTyping,
     createRoom: _createRoom,
   } = useMessaging();
@@ -125,6 +126,7 @@ export function MessagingHub() {
                 messages={messages}
                 typingUsers={typingUsers}
                 isLoading={isLoadingMessages}
+                onRetry={retryMessage}
               />
 
               <MessageInput

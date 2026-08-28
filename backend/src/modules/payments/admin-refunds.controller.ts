@@ -9,7 +9,12 @@ import {
   UnauthorizedException,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IpAccessControlGuard } from '../auth/guards/ip-access-control.guard';
@@ -37,6 +42,7 @@ interface RequestUser {
 export class AdminRefundsController {
   constructor(private readonly adminRefundsService: AdminRefundsService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get()
   @ApiOperation({ summary: 'List admin refund requests' })
   async listRefundRequests(
@@ -47,6 +53,7 @@ export class AdminRefundsController {
     return this.adminRefundsService.listRefunds(query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id')
   @ApiOperation({ summary: 'Get admin refund request detail' })
   async getRefundRequest(
@@ -58,6 +65,7 @@ export class AdminRefundsController {
     return { data: detail };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post(':id/decision')
   @ApiOperation({ summary: 'Approve or reject a refund request' })
   @AuditLog({

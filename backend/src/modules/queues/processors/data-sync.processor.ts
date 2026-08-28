@@ -33,52 +33,57 @@ export class DataSyncQueueProcessor {
     const requestId = job.data?.requestId || correlationId;
     const userId = job.data?.userId;
 
-    return requestContext.run({ correlationId, requestId, userId }, async () => {
-      this.logger.log(`Processing data sync job ${job.id}: ${job.data.type}`);
+    return requestContext.run(
+      { correlationId, requestId, userId },
+      async () => {
+        this.logger.log(`Processing data sync job ${job.id}: ${job.data.type}`);
 
-      try {
-        switch (job.data.type) {
-          case 'sync-user-profile':
-            await this.syncUserProfile(job.data);
-            break;
+        try {
+          switch (job.data.type) {
+            case 'sync-user-profile':
+              await this.syncUserProfile(job.data);
+              break;
 
-          case 'sync-property-data':
-            await this.syncPropertyData(job.data);
-            break;
+            case 'sync-property-data':
+              await this.syncPropertyData(job.data);
+              break;
 
-          case 'sync-agreement-status':
-            await this.syncAgreementStatus(job.data);
-            break;
+            case 'sync-agreement-status':
+              await this.syncAgreementStatus(job.data);
+              break;
 
-          case 'sync-payment-status':
-            await this.syncPaymentStatus(job.data);
-            break;
+            case 'sync-payment-status':
+              await this.syncPaymentStatus(job.data);
+              break;
 
-          case 'cleanup-old-data':
-            await this.cleanupOldData(job.data);
-            break;
+            case 'cleanup-old-data':
+              await this.cleanupOldData(job.data);
+              break;
 
-          case 'rebuild-search-index':
-            await this.rebuildSearchIndex(job.data);
-            break;
+            case 'rebuild-search-index':
+              await this.rebuildSearchIndex(job.data);
+              break;
 
-          case 'track-referral':
-            await this.trackReferral(job.data);
-            break;
+            case 'track-referral':
+              await this.trackReferral(job.data);
+              break;
 
-          default:
-            throw new Error(`Unknown data sync type: ${String(job.data.type)}`);
+            default:
+              throw new Error(
+                `Unknown data sync type: ${String(job.data.type)}`,
+              );
+          }
+
+          this.logger.log(`Data sync job ${job.id} completed successfully`);
+        } catch (error) {
+          this.logger.error(
+            `Data sync job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error instanceof Error ? error.stack : '',
+          );
+          throw error;
         }
-
-        this.logger.log(`Data sync job ${job.id} completed successfully`);
-      } catch (error) {
-        this.logger.error(
-          `Data sync job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          error instanceof Error ? error.stack : '',
-        );
-        throw error;
-      }
-    });
+      },
+    );
   }
 
   private async syncUserProfile(data: DataSyncJobData): Promise<void> {

@@ -43,9 +43,7 @@ export class DLQProcessor {
       dlqJob.originalData?.correlationId ||
       dlqJob.originalData?.requestId;
     const requestId =
-      dlqJob.requestId ||
-      dlqJob.originalData?.requestId ||
-      correlationId;
+      dlqJob.requestId || dlqJob.originalData?.requestId || correlationId;
 
     return requestContext.run({ correlationId, requestId }, async () => {
       this.logger.error(

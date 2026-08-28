@@ -13,6 +13,7 @@ import {
   PropertyInquiryStatus,
 } from './entities/property-inquiry.entity';
 import { CreatePropertyInquiryDto } from './dto/create-property-inquiry.dto';
+import { assertInquiryTransition } from './inquiry-state-machine';
 import { PaginationUtils } from '../../common/utils';
 
 export interface InquiryPropertySummary {
@@ -207,12 +208,41 @@ export class InquiriesService {
       throw new NotFoundException('Inquiry not found');
     }
 
+    // Idempotent: re-viewing an already viewed inquiry is a no-op.
     if (inquiry.status === PropertyInquiryStatus.VIEWED) {
       return inquiry;
     }
 
+    assertInquiryTransition(inquiry.status, PropertyInquiryStatus.VIEWED);
+
     inquiry.status = PropertyInquiryStatus.VIEWED;
     inquiry.viewedAt = new Date();
+    return this.inquiryRepository.save(inquiry);
+  }
+
+  /**
+   * Close an inquiry. Either party (sender or recipient) may close; closing
+   * is terminal and idempotent.
+   */
+  async close(id: string, userId: string): Promise<PropertyInquiry> {
+    const inquiry = await this.inquiryRepository.findOne({
+      where: [
+        { id, toUserId: userId },
+        { id, fromUserId: userId },
+      ],
+    });
+
+    if (!inquiry) {
+      throw new NotFoundException('Inquiry not found');
+    }
+
+    if (inquiry.status === PropertyInquiryStatus.CLOSED) {
+      return inquiry;
+    }
+
+    assertInquiryTransition(inquiry.status, PropertyInquiryStatus.CLOSED);
+
+    inquiry.status = PropertyInquiryStatus.CLOSED;
     return this.inquiryRepository.save(inquiry);
   }
 }

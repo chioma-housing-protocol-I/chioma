@@ -42,42 +42,49 @@ export class AnalyticsQueueProcessor {
     const requestId = job.data?.requestId || correlationId;
     const userId = job.data?.userId;
 
-    return requestContext.run({ correlationId, requestId, userId }, async () => {
-      this.logger.debug(`Processing analytics job ${job.id}: ${job.data.type}`);
-
-      try {
-        switch (job.data.type) {
-          case 'track-view':
-            await this.trackView(job.data);
-            break;
-          case 'track-search':
-            await this.trackSearch(job.data);
-            break;
-          case 'track-listing-browse':
-            await this.trackListingBrowse(job.data);
-            break;
-          case 'track-analytics-query':
-            await this.trackAnalyticsQuery(job.data);
-            break;
-          case 'track-payment-event':
-            await this.trackPaymentEvent(job.data);
-            break;
-          case 'track-user-activity':
-            await this.trackUserActivity(job.data);
-            break;
-          default:
-            throw new Error(`Unknown analytics type: ${String(job.data.type)}`);
-        }
-
-        this.logger.debug(`Analytics job ${job.id} completed`);
-      } catch (error) {
-        this.logger.error(
-          `Analytics job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          error instanceof Error ? error.stack : '',
+    return requestContext.run(
+      { correlationId, requestId, userId },
+      async () => {
+        this.logger.debug(
+          `Processing analytics job ${job.id}: ${job.data.type}`,
         );
-        throw error;
-      }
-    });
+
+        try {
+          switch (job.data.type) {
+            case 'track-view':
+              await this.trackView(job.data);
+              break;
+            case 'track-search':
+              await this.trackSearch(job.data);
+              break;
+            case 'track-listing-browse':
+              await this.trackListingBrowse(job.data);
+              break;
+            case 'track-analytics-query':
+              await this.trackAnalyticsQuery(job.data);
+              break;
+            case 'track-payment-event':
+              await this.trackPaymentEvent(job.data);
+              break;
+            case 'track-user-activity':
+              await this.trackUserActivity(job.data);
+              break;
+            default:
+              throw new Error(
+                `Unknown analytics type: ${String(job.data.type)}`,
+              );
+          }
+
+          this.logger.debug(`Analytics job ${job.id} completed`);
+        } catch (error) {
+          this.logger.error(
+            `Analytics job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error instanceof Error ? error.stack : '',
+          );
+          throw error;
+        }
+      },
+    );
   }
 
   private async trackView(data: AnalyticsJobData): Promise<void> {
@@ -134,7 +141,8 @@ export class AnalyticsQueueProcessor {
   }
 
   private async trackPaymentEvent(data: AnalyticsJobData): Promise<void> {
-    const action = (data.metadata?.action as AuditAction) ?? AuditAction.PAYMENT_COMPLETED;
+    const action =
+      (data.metadata?.action as AuditAction) ?? AuditAction.PAYMENT_COMPLETED;
     await this.auditLogRepository.save(
       this.auditLogRepository.create({
         action,

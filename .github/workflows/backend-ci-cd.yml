@@ -55,6 +55,9 @@ jobs:
       - name: Run TypeScript type check
         run: pnpm exec tsc --noEmit
 
+      - name: Check API documentation coverage
+        run: pnpm run check:api-docs
+
       - name: Run unit tests
         run: pnpm test
 

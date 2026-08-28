@@ -557,6 +557,22 @@ TypeOrmModule.forRoot({
 });
 ```
 
+### 8.1.1 Runtime Query Analysis (`modules/database-performance`)
+
+Separately from TypeORM's own logging, `QueryAnalysisService` (`backend/src/common/query-logger/`) intercepts every
+query at runtime to track slow-query counts, N+1 detection and per-pattern stats, surfaced under
+`GET /database-performance/query-analysis*`. Its slow-query threshold is configurable per environment and, optionally,
+per query class — see `backend/src/common/query-logger/query-threshold.config.ts`:
+
+| Variable                                      | Default | Description                                                                                       |
+| ---------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `QUERY_ANALYSIS_SLOW_THRESHOLD_MS`             | `200`   | Threshold (ms) applied to any query class without its own override.                                |
+| `QUERY_ANALYSIS_SLOW_THRESHOLD_OVERRIDES_MS`   | —       | JSON object mapping query class to its own threshold, e.g. `{"select":150,"insert":400,"update":400,"delete":400}`. Unknown classes and invalid values are logged and ignored. |
+
+Query class is inferred from the leading SQL keyword: `select`, `insert`, `update`, `delete`, or `other`. A staging
+environment might tighten `QUERY_ANALYSIS_SLOW_THRESHOLD_MS` to catch regressions early; production might raise
+writes' threshold via the overrides since `INSERT`/`UPDATE` naturally take longer than indexed `SELECT`s.
+
 ### 8.2 Profile a Specific Query
 
 ```sql

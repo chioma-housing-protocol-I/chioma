@@ -48,6 +48,7 @@ describe('PropertiesService', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     kycStatus: KycStatus.PENDING,
     loginCount: 0,
     preferredLanguage: 'en',
@@ -139,6 +140,7 @@ describe('PropertiesService', () => {
     aiOccupancyPrediction: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockPropertyRepository = {
@@ -146,6 +148,7 @@ describe('PropertiesService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    softRemove: jest.fn(),
     increment: jest.fn(),
     update: jest.fn(),
     createQueryBuilder: jest.fn(),
@@ -588,13 +591,15 @@ describe('PropertiesService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a property by owner', async () => {
+    it('should archive a property by owner', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
-      mockPropertyRepository.remove.mockResolvedValue(mockProperty);
+      mockPropertyRepository.softRemove.mockResolvedValue(mockProperty);
 
       await service.remove('property-id', mockOwner);
 
-      expect(mockPropertyRepository.remove).toHaveBeenCalledWith(mockProperty);
+      expect(mockPropertyRepository.softRemove).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ListingStatus.ARCHIVED }),
+      );
     });
 
     it('should throw ForbiddenException for non-owner', async () => {

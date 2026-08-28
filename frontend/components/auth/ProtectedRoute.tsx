@@ -2,7 +2,7 @@
 
 import React, { useEffect, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/store/authStore';
+import { useAuthDisplay } from '@/store/useAuthDisplay';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -23,7 +23,7 @@ interface ProtectedRouteProps {
  *   </ProtectedRoute>
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuthDisplay();
   const router = useRouter();
   const hasRedirected = useRef(false);
 

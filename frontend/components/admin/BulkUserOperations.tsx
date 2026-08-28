@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/admin/users/UserAvatar';
+import { SortableHeader } from '@/components/admin/SortableHeader';
+import type { AdminUserSortField } from '@/lib/query/hooks/use-admin-users';
 import type { User, PaginatedResponse } from '@/types';
 
 interface BulkUserOperationsProps {
@@ -23,6 +26,9 @@ interface BulkUserOperationsProps {
   isLoading: boolean;
   page: number;
   setPage: (page: number) => void;
+  sortBy?: AdminUserSortField;
+  sortOrder?: 'ASC' | 'DESC';
+  onSort?: (key: AdminUserSortField) => void;
   onBulkSuspend: (ids: string[]) => Promise<void>;
   onBulkActivate: (ids: string[]) => Promise<void>;
   onBulkExport: (ids: string[]) => void;
@@ -99,6 +105,9 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   isLoading,
   page,
   setPage,
+  sortBy,
+  sortOrder,
+  onSort,
   onBulkSuspend,
   onBulkActivate,
   onBulkExport,
@@ -107,6 +116,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | 'suspend' | 'activate'>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   const data = users?.data ?? [];
   const totalPages = users?.totalPages ?? 1;
@@ -223,18 +233,51 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    User
-                  </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    Role
-                  </th>
+                  {onSort ? (
+                    <SortableHeader
+                      label="User"
+                      sortKey="email"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      User
+                    </th>
+                  )}
+                  {onSort ? (
+                    <SortableHeader
+                      label="Role"
+                      sortKey="role"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      Role
+                    </th>
+                  )}
                   <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
                     Status
                   </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    Joined
-                  </th>
+                  {onSort ? (
+                    <SortableHeader
+                      label="Joined"
+                      sortKey="createdAt"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      Joined
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -294,7 +337,9 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-blue-200/60">
-                      {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                      {format(new Date(user.createdAt), 'MMM d, yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </td>
                   </tr>
                 ))}

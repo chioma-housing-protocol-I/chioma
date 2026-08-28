@@ -117,6 +117,46 @@ describe('DeveloperService', () => {
 
       expect(result.expiresAt).toEqual(customExpiration);
     });
+
+    it('should reject scopes outside the canonical vocabulary', async () => {
+      await expect(
+        service.createKey('user-123', 'Bad Key', undefined, [
+          'properties:read',
+          'admin:everything',
+        ]),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockApiKeyRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should accept scopes from the canonical vocabulary', async () => {
+      mockApiKeyRepo.create.mockImplementation((data) => data as ApiKey);
+      mockApiKeyRepo.save.mockImplementation((key) =>
+        Promise.resolve({ ...(key as ApiKey), id: 'key-1' }),
+      );
+
+      const result = await service.createKey('user-123', 'Scoped', undefined, [
+        'properties:read',
+        'bookings:write',
+      ]);
+
+      expect(result).toHaveProperty('key');
+      const created = mockApiKeyRepo.create.mock.calls[0][0] as Partial<ApiKey>;
+      expect(created.permissions).toEqual([
+        'properties:read',
+        'bookings:write',
+      ]);
+    });
+  });
+
+  describe('updateKey', () => {
+    it('should reject unknown scopes before touching the key', async () => {
+      await expect(
+        service.updateKey('user-123', 'key-1', {
+          permissions: ['not:a:scope'],
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockApiKeyRepo.findOne).not.toHaveBeenCalled();
+    });
   });
 
   describe('rotateKey', () => {
@@ -186,6 +226,88 @@ describe('DeveloperService', () => {
       expect(result).toHaveProperty('id');
       expect(mockApiKeyRepo.create).toHaveBeenCalled();
       expect(mockRotationHistoryRepo.save).toHaveBeenCalled();
+    });
+
+    it('should carry scopes and description over to the new key', async () => {
+      const userId = 'user-123';
+      const keyId = 'key-1';
+      const oldKey = {
+        id: keyId,
+        userId,
+        name: 'Scoped Key',
+        description: 'CI integration',
+        permissions: ['properties:read', 'bookings:read'],
+        keyHash: 'old-hash',
+        keyPrefix: 'chioma_sk_old...',
+        status: ApiKeyStatus.ACTIVE,
+        isExpired: () => false,
+        rotatedAt: null,
+        expiresAt: null,
+      } as unknown as ApiKey;
+
+      mockApiKeyRepo.findOne.mockResolvedValue(oldKey);
+      mockApiKeyRepo.create.mockImplementation(
+        (data) => ({ ...data, id: 'key-2' }) as ApiKey,
+      );
+      mockApiKeyRepo.save.mockImplementation((key) =>
+        Promise.resolve(key as ApiKey),
+      );
+      mockRotationHistoryRepo.create.mockReturnValue(
+        {} as ApiKeyRotationHistory,
+      );
+      mockRotationHistoryRepo.save.mockResolvedValue(
+        {} as ApiKeyRotationHistory,
+      );
+
+      await service.rotateKey(userId, keyId);
+
+      const created = mockApiKeyRepo.create.mock.calls[0][0] as Partial<ApiKey>;
+      expect(created.permissions).toEqual(['properties:read', 'bookings:read']);
+      expect(created.description).toBe('CI integration');
+    });
+
+    it('should keep the old key active for a bounded overlap window', async () => {
+      const userId = 'user-123';
+      const keyId = 'key-1';
+      const farFuture = new Date();
+      farFuture.setDate(farFuture.getDate() + 90);
+      const oldKey = {
+        id: keyId,
+        userId,
+        name: 'Test Key',
+        permissions: [],
+        keyHash: 'old-hash',
+        keyPrefix: 'chioma_sk_old...',
+        status: ApiKeyStatus.ACTIVE,
+        isExpired: () => false,
+        rotatedAt: null,
+        expiresAt: farFuture,
+      } as unknown as ApiKey;
+
+      mockApiKeyRepo.findOne.mockResolvedValue(oldKey);
+      mockApiKeyRepo.create.mockImplementation(
+        (data) => ({ ...data, id: 'key-2' }) as ApiKey,
+      );
+      mockApiKeyRepo.save.mockImplementation((key) =>
+        Promise.resolve(key as ApiKey),
+      );
+      mockRotationHistoryRepo.create.mockReturnValue(
+        {} as ApiKeyRotationHistory,
+      );
+      mockRotationHistoryRepo.save.mockResolvedValue(
+        {} as ApiKeyRotationHistory,
+      );
+
+      await service.rotateKey(userId, keyId);
+
+      // Second save call persists the old key: still ACTIVE, but its expiry
+      // is capped to the 7-day overlap window instead of the original 90 days.
+      const savedOldKey = mockApiKeyRepo.save.mock.calls[1][0] as ApiKey;
+      expect(savedOldKey.status).toBe(ApiKeyStatus.ACTIVE);
+      expect(savedOldKey.rotatedAt).toBeInstanceOf(Date);
+      const overlapMs = new Date(savedOldKey.expiresAt!).getTime() - Date.now();
+      expect(overlapMs).toBeGreaterThan(6 * 24 * 60 * 60 * 1000);
+      expect(overlapMs).toBeLessThanOrEqual(7 * 24 * 60 * 60 * 1000);
     });
 
     it('should throw BadRequestException when rotating an inactive key', async () => {

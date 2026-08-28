@@ -19,7 +19,9 @@ function makeJob(data: BlockchainJobData): Job<BlockchainJobData> {
 }
 
 /** A fake Keypair object returned by the mocked Keypair.fromSecret. */
-const fakeKeypair = { publicKey: () => 'GFAKE_PUBLIC_KEY' } as unknown as StellarSdk.Keypair;
+const fakeKeypair = {
+  publicKey: () => 'GFAKE_PUBLIC_KEY',
+} as unknown as StellarSdk.Keypair;
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -96,14 +98,18 @@ describe('BlockchainQueueProcessor', () => {
     };
 
     it('calls PaymentProcessingService.processRentPayment with correct args', async () => {
-      mockPaymentProcessingService.processRentPayment.mockResolvedValue('tx-hash-abc');
+      mockPaymentProcessingService.processRentPayment.mockResolvedValue(
+        'tx-hash-abc',
+      );
 
       await processor.handleBlockchainJob(makeJob(validPayload));
 
       // Verify Keypair was reconstructed from the secret in the payload
       expect(fromSecretSpy).toHaveBeenCalledWith('ANY_SECRET_MOCKED_OUT');
 
-      expect(mockPaymentProcessingService.processRentPayment).toHaveBeenCalledTimes(1);
+      expect(
+        mockPaymentProcessingService.processRentPayment,
+      ).toHaveBeenCalledTimes(1);
       const [from, agreementId, amount, keypair] =
         mockPaymentProcessingService.processRentPayment.mock.calls[0];
       expect(from).toBe('GABC1234SENDER');
@@ -132,7 +138,9 @@ describe('BlockchainQueueProcessor', () => {
       await expect(processor.handleBlockchainJob(badJob)).rejects.toThrow(
         'send-payment job requires',
       );
-      expect(mockPaymentProcessingService.processRentPayment).not.toHaveBeenCalled();
+      expect(
+        mockPaymentProcessingService.processRentPayment,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -147,9 +155,10 @@ describe('BlockchainQueueProcessor', () => {
     };
 
     it('calls EscrowIntegrationService.createEscrowForAgreement with the correct agreementId', async () => {
-      mockEscrowIntegrationService.createEscrowForAgreement.mockResolvedValue(
-        { id: 7, blockchainEscrowId: 'escrow-tx-hash' },
-      );
+      mockEscrowIntegrationService.createEscrowForAgreement.mockResolvedValue({
+        id: 7,
+        blockchainEscrowId: 'escrow-tx-hash',
+      });
 
       await processor.handleBlockchainJob(makeJob(validPayload));
 
@@ -191,7 +200,9 @@ describe('BlockchainQueueProcessor', () => {
     };
 
     it('calls EscrowIntegrationService.approveEscrowRelease with the correct escrowId and releaseTo', async () => {
-      mockEscrowIntegrationService.approveEscrowRelease.mockResolvedValue(undefined);
+      mockEscrowIntegrationService.approveEscrowRelease.mockResolvedValue(
+        undefined,
+      );
 
       await processor.handleBlockchainJob(makeJob(validPayload));
 
@@ -246,9 +257,7 @@ describe('BlockchainQueueProcessor', () => {
 
       await processor.handleBlockchainJob(makeJob(validPayload));
 
-      expect(
-        mockRentObligationNftService.mintObligation,
-      ).toHaveBeenCalledWith({
+      expect(mockRentObligationNftService.mintObligation).toHaveBeenCalledWith({
         agreementId: 'agreement-uuid-003',
         adminAddress: 'GADMINADDRESS456',
       });

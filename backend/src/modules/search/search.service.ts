@@ -372,11 +372,7 @@ export class SearchService {
 
   // ─── Users ──────────────────────────────────────────────────────────────────
 
-  async searchUsers(
-    filters: UserSearchFilters,
-    page = 1,
-    limit = 20,
-  ) {
+  async searchUsers(filters: UserSearchFilters, page = 1, limit = 20) {
     PaginationUtils.validatePagination(page, limit);
     const qb = this.buildUserQuery(filters);
 
@@ -432,11 +428,7 @@ export class SearchService {
 
   // ─── Documents (Agreements) ─────────────────────────────────────────────────
 
-  async searchDocuments(
-    filters: DocumentSearchFilters,
-    page = 1,
-    limit = 20,
-  ) {
+  async searchDocuments(filters: DocumentSearchFilters, page = 1, limit = 20) {
     PaginationUtils.validatePagination(page, limit);
     const qb = this.buildDocumentQuery(filters);
 

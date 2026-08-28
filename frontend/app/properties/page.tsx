@@ -2,16 +2,17 @@
 
 export const dynamic = 'force-dynamic';
 
-import nextDynamic from 'next/dynamic';
 import Footer from '@/components/landing/Footer';
 import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
 import { PropertyListingHeader } from '@/components/properties/PropertyListingHeader';
+import LazyPropertyMapView from '@/components/properties/LazyPropertyMapView';
+import { VirtualGrid } from '@/components/ui/VirtualGrid';
+import { useGridColumns } from '@/hooks/use-grid-columns';
 import { Filter, Bell, List, Map, ChevronLeft } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Spinner } from '@/components/loading';
 import {
   useInfiniteProperties,
   type PropertyListParams,
@@ -19,18 +20,13 @@ import {
 import { toPropertyCardShape } from '@/lib/utils/property-adapter';
 import type { Property } from '@/types';
 
-const PropertyMapView = nextDynamic(
-  () => import('@/components/properties/PropertyMapView'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-100 text-gray-600">
-        <Spinner size="lg" label="Loading map" />
-        <span className="text-sm">Loading map…</span>
-      </div>
-    ),
-  },
-);
+// Estimated card heights (image + content) per column count — used only to
+// pick which rows are in the virtualization window, not to clip content.
+const ROW_HEIGHT_BY_COLUMNS: Record<number, number> = {
+  1: 640,
+  2: 600,
+  4: 560,
+};
 
 type ViewMode = 'split' | 'list' | 'map';
 
@@ -44,15 +40,22 @@ export default function PropertyListing() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // ── Filter state (drives API query) ─────────────────────────────────────────
+  // ── Filter state (drives API query, mirrored into the URL) ──────────────────
   const [searchQuery, setSearchQuery] = useState(
     () => searchParams.get('q') ?? '',
   );
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [minPrice, setMinPrice] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>(
+    () => searchParams.get('type') ?? '',
+  );
+  const [minPrice, setMinPrice] = useState<string>(
+    () => searchParams.get('minPrice') ?? '',
+  );
+  const [maxPrice, setMaxPrice] = useState<string>(
+    () => searchParams.get('maxPrice') ?? '',
+  );
 
   const observerTarget = useRef<HTMLDivElement>(null);
+  const gridColumns = useGridColumns();
 
   // Build API filter params from local state
   const filterParams: Omit<PropertyListParams, 'page'> = {
@@ -76,20 +79,76 @@ export default function PropertyListing() {
   // Flatten all pages into a single array
   const allProperties: Property[] = data?.pages.flatMap((p) => p.data) ?? [];
 
+  // Keep local filter state in sync with the URL — covers initial load,
+  // reload, and back/forward navigation (Next.js re-renders with fresh
+  // searchParams on popstate).
   useEffect(() => {
     setSearchQuery(searchParams.get('q') ?? '');
+    setSelectedType(searchParams.get('type') ?? '');
+    setMinPrice(searchParams.get('minPrice') ?? '');
+    setMaxPrice(searchParams.get('maxPrice') ?? '');
   }, [searchParams]);
+
+  // Build a /properties URL representing the full active filter set, with
+  // any of q/type/minPrice/maxPrice overridden by the caller.
+  const buildFiltersUrl = useCallback(
+    (
+      overrides: {
+        q?: string;
+        type?: string;
+        minPrice?: string;
+        maxPrice?: string;
+      } = {},
+    ) => {
+      const next = {
+        q: searchQuery,
+        type: selectedType,
+        minPrice,
+        maxPrice,
+        ...overrides,
+      };
+      const parts: string[] = [];
+      const trimmedQ = next.q.trim();
+      if (trimmedQ) parts.push(`q=${encodeURIComponent(trimmedQ)}`);
+      if (next.type) parts.push(`type=${encodeURIComponent(next.type)}`);
+      if (next.minPrice)
+        parts.push(`minPrice=${encodeURIComponent(next.minPrice)}`);
+      if (next.maxPrice)
+        parts.push(`maxPrice=${encodeURIComponent(next.maxPrice)}`);
+      return parts.length ? `/properties?${parts.join('&')}` : '/properties';
+    },
+    [searchQuery, selectedType, minPrice, maxPrice],
+  );
 
   const applySearchToUrl = useCallback(
     (raw: string) => {
-      const trimmed = raw.trim();
-      const next = trimmed
-        ? `/properties?q=${encodeURIComponent(trimmed)}`
-        : '/properties';
-      router.replace(next);
+      router.replace(buildFiltersUrl({ q: raw }));
     },
-    [router],
+    [buildFiltersUrl, router],
   );
+
+  const handleTypeSelect = useCallback(
+    (type: string) => {
+      setSelectedType(type);
+      router.replace(buildFiltersUrl({ type }));
+    },
+    [buildFiltersUrl, router],
+  );
+
+  // Debounce price-range changes before pushing them into the URL so we
+  // don't replace history on every keystroke.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timeout = setTimeout(() => {
+      router.replace(buildFiltersUrl());
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minPrice, maxPrice]);
 
   // Infinite scroll observer — calls API's next page
   useEffect(() => {
@@ -200,7 +259,7 @@ export default function PropertyListing() {
                     ].map((t) => (
                       <div
                         key={t}
-                        onClick={() => setSelectedType(t)}
+                        onClick={() => handleTypeSelect(t)}
                         className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
                           selectedType === t
                             ? 'bg-blue-600 text-white'
@@ -320,47 +379,42 @@ export default function PropertyListing() {
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Listings Panel */}
-          <div
-            className="overflow-y-auto transition-all duration-500 ease-in-out bg-slate-900/50"
-            style={{
-              width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
-              display: viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
-            }}
-          >
-            <div className="mx-auto px-2 sm:px-3 lg:px-4 py-8">
-              <div className="max-w-[1600px] mx-auto">
-                <PropertyListingHeader count={totalCount} />
+          {isLoading || allProperties.length === 0 ? (
+            <div
+              className="overflow-y-auto transition-all duration-500 ease-in-out bg-slate-900/50"
+              style={{
+                width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
+                display:
+                  viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
+              }}
+            >
+              <div className="mx-auto px-2 sm:px-3 lg:px-4 py-8">
+                <div className="max-w-[1600px] mx-auto">
+                  <PropertyListingHeader count={totalCount} />
 
-                {/* Error state */}
-                {isError && (
+                  {/* Error state */}
+                  {isError && (
+                    <div
+                      className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
+                      data-testid="error-state"
+                    >
+                      <p className="text-red-400 font-medium">
+                        Failed to load listings.{' '}
+                        {error instanceof Error
+                          ? error.message
+                          : 'Please try again.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Property Cards Grid */}
                   <div
-                    className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
-                    data-testid="error-state"
+                    className="grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                    data-testid="property-grid"
                   >
-                    <p className="text-red-400 font-medium">
-                      Failed to load listings.{' '}
-                      {error instanceof Error
-                        ? error.message
-                        : 'Please try again.'}
-                    </p>
-                  </div>
-                )}
-
-                {/* Property Cards Grid */}
-                <div
-                  className="grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-                  data-testid="property-grid"
-                >
-                  {isLoading
-                    ? Array.from({ length: 8 }).map((_, i) => (
-                        <PropertyCardSkeleton key={i} />
-                      ))
-                    : allProperties.length > 0
-                      ? allProperties.map((property) => (
-                          <PropertyCard
-                            key={property.id}
-                            property={toPropertyCardShape(property)}
-                          />
+                    {isLoading
+                      ? Array.from({ length: 8 }).map((_, i) => (
+                          <PropertyCardSkeleton key={i} />
                         ))
                       : !isError && (
                           <div
@@ -372,26 +426,74 @@ export default function PropertyListing() {
                             </div>
                           </div>
                         )}
-
-                  {/* Skeleton rows while fetching next page */}
-                  {isFetchingNextPage &&
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <PropertyCardSkeleton key={`next-${i}`} />
-                    ))}
+                  </div>
                 </div>
-
-                {/* Infinite scroll trigger */}
-                <div ref={observerTarget} className="h-4" />
-
-                {/* End of results indicator */}
-                {!hasNextPage && allProperties.length > 0 && (
-                  <p className="text-center text-blue-200/30 text-sm pb-8">
-                    Showing all {totalCount} listings
-                  </p>
-                )}
               </div>
             </div>
-          </div>
+          ) : (
+            <VirtualGrid
+              items={allProperties}
+              columns={gridColumns}
+              rowHeight={ROW_HEIGHT_BY_COLUMNS[gridColumns] ?? 600}
+              gap={24}
+              overscanRows={2}
+              className="transition-all duration-500 ease-in-out bg-slate-900/50 px-2 sm:px-3 lg:px-4 py-8"
+              innerClassName="max-w-[1600px] mx-auto"
+              data-testid="property-grid"
+              style={{
+                width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
+                display:
+                  viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
+              }}
+              header={
+                <>
+                  <PropertyListingHeader count={totalCount} />
+                  {isError && (
+                    <div
+                      className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
+                      data-testid="error-state"
+                    >
+                      <p className="text-red-400 font-medium">
+                        Failed to load listings.{' '}
+                        {error instanceof Error
+                          ? error.message
+                          : 'Please try again.'}
+                      </p>
+                    </div>
+                  )}
+                </>
+              }
+              renderItem={(property, index) => (
+                <PropertyCard
+                  key={property.id}
+                  property={toPropertyCardShape(property)}
+                  priority={index < gridColumns}
+                />
+              )}
+              footer={
+                <div className="pt-12">
+                  {/* Skeleton rows while fetching next page */}
+                  {isFetchingNextPage && (
+                    <div className="grid gap-6 mb-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <PropertyCardSkeleton key={`next-${i}`} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Infinite scroll trigger */}
+                  <div ref={observerTarget} className="h-4" />
+
+                  {/* End of results indicator */}
+                  {!hasNextPage && (
+                    <p className="text-center text-blue-200/30 text-sm pb-8">
+                      Showing all {totalCount} listings
+                    </p>
+                  )}
+                </div>
+              }
+            />
+          )}
 
           {/* Map Panel */}
           <div
@@ -456,16 +558,18 @@ export default function PropertyListing() {
             </div>
 
             <div className="h-full w-full">
-              <PropertyMapView
-                properties={allProperties.map(toPropertyCardShape)}
-                onBoundsChange={handleBoundsChange}
-                searchAsIMove={searchAsIMove}
-                initialViewState={{
-                  longitude: 0,
-                  latitude: 20,
-                  zoom: 2,
-                }}
-              />
+              {!isMapCollapsed && (
+                <LazyPropertyMapView
+                  properties={allProperties.map(toPropertyCardShape)}
+                  onBoundsChange={handleBoundsChange}
+                  searchAsIMove={searchAsIMove}
+                  initialViewState={{
+                    longitude: 0,
+                    latitude: 20,
+                    zoom: 2,
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

@@ -8,6 +8,8 @@ import { FileUp, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
 import { Uploader } from '@/components/ui/Uploader';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 const schema = z.object({
   description: z
@@ -47,7 +49,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { description: '' },
@@ -141,6 +143,8 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         noValidate
         className="space-y-6"
       >
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+
         {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 rounded-2xl p-4 flex items-start gap-3">
           <Info className="text-blue-800 shrink-0 mt-0.5" size={18} />
@@ -161,7 +165,13 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             description="Drag and drop or click to upload (max 10 files)"
           />
           {fileError && (
-            <p className="text-xs text-red-500 mt-2">{fileError}</p>
+            <p
+              role="alert"
+              aria-live="assertive"
+              className="text-xs text-red-500 mt-2"
+            >
+              {fileError}
+            </p>
           )}
           <p className="text-xs text-neutral-500 mt-2">
             Supported: Images, PDF, Word. Max 10MB per file.
@@ -175,13 +185,17 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
           </label>
           <textarea
             {...register('description')}
+            {...fieldA11yProps('description', errors.description)}
             rows={3}
             placeholder="Briefly describe what this evidence shows..."
             className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
           />
           <div className="flex items-center justify-between mt-1">
             {errors.description ? (
-              <p className="text-xs text-red-500">
+              <p
+                id={fieldErrorId('description')}
+                className="text-xs text-red-500"
+              >
                 {errors.description.message}
               </p>
             ) : (

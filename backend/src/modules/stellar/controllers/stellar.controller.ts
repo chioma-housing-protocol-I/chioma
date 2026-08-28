@@ -88,6 +88,8 @@ export class StellarController {
   /**
    * Get account info by public key
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get account by public key' })
   @Get('accounts/public-key/:publicKey')
   async getAccountByPublicKey(
     @Param('publicKey') publicKey: string,
@@ -99,6 +101,8 @@ export class StellarController {
   /**
    * Get accounts for a user
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get accounts by user id' })
   @Get('accounts/user/:userId')
   @ApiPaginatedResponse(AccountResponseDto)
   async getAccountsByUserId(
@@ -136,6 +140,8 @@ export class StellarController {
   /**
    * Sync account from Stellar network
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Sync account' })
   @Post('accounts/:publicKey/sync')
   @HttpCode(HttpStatus.OK)
   async syncAccount(
@@ -148,6 +154,8 @@ export class StellarController {
   /**
    * Get account info directly from Stellar network
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get network account info' })
   @Get('accounts/:publicKey/network')
   async getNetworkAccountInfo(
     @Param('publicKey') publicKey: string,
@@ -188,6 +196,8 @@ export class StellarController {
   /**
    * List transactions with filters
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List transactions' })
   @Get('transactions')
   @ApiPaginatedResponse(TransactionResponseDto)
   async listTransactions(@Query() dto: ListTransactionsDto) {
@@ -201,6 +211,8 @@ export class StellarController {
   /**
    * Get transaction by ID
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get transaction by id' })
   @Get('transactions/:id')
   async getTransactionById(
     @Param('id', ParseIntPipe) id: number,
@@ -212,6 +224,8 @@ export class StellarController {
   /**
    * Get transaction by hash
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get transaction by hash' })
   @Get('transactions/hash/:hash')
   async getTransactionByHash(
     @Param('hash') hash: string,
@@ -238,6 +252,8 @@ export class StellarController {
   /**
    * Release escrow funds to destination
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Release escrow' })
   @Post('escrow/release')
   @HttpCode(HttpStatus.OK)
   async releaseEscrow(
@@ -250,6 +266,8 @@ export class StellarController {
   /**
    * Refund escrow funds to source
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Refund escrow' })
   @Post('escrow/refund')
   @HttpCode(HttpStatus.OK)
   async refundEscrow(@Body() dto: RefundEscrowDto): Promise<EscrowResponseDto> {
@@ -260,6 +278,8 @@ export class StellarController {
   /**
    * Get escrow by ID
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get escrow by id' })
   @Get('escrow/:id')
   async getEscrowById(
     @Param('id', ParseIntPipe) id: number,
@@ -271,6 +291,8 @@ export class StellarController {
   /**
    * List escrows with filters
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List escrows' })
   @Get('escrows')
   @ApiPaginatedResponse(EscrowResponseDto)
   async listEscrows(@Query() dto: ListEscrowsDto) {

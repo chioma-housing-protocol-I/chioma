@@ -280,6 +280,8 @@ const databaseExtraSchema = Joi.object({
   DB_QUERY_TIME_CRITICAL_MS: Joi.number().min(0),
   DB_INDEX_UNUSED_MIN_SCANS: Joi.number().min(0),
   DB_INDEX_UNUSED_MIN_SIZE_MB: Joi.number().min(0),
+  QUERY_ANALYSIS_SLOW_THRESHOLD_MS: Joi.number().min(0),
+  QUERY_ANALYSIS_SLOW_THRESHOLD_OVERRIDES_MS: Joi.string(),
 });
 
 const authExtraSchema = Joi.object({
@@ -296,6 +298,10 @@ const redisExtraSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow(''),
   REDIS_USERNAME: Joi.string(),
   REDIS_TLS: boolString,
+});
+
+const searchSchema = Joi.object({
+  ELASTICSEARCH_URL: Joi.string().uri(),
 });
 
 const stellarSchema = Joi.object({
@@ -414,6 +420,8 @@ const healthSchema = Joi.object({
   MEMORY_WARNING_THRESHOLD: Joi.number().min(0),
   MEMORY_ERROR_THRESHOLD: Joi.number().min(0),
   GRACEFUL_SHUTDOWN_TIMEOUT: Joi.number().min(0),
+  REDIS_HEALTH_TIMEOUT_MS: Joi.number().min(0),
+  ELASTICSEARCH_HEALTH_TIMEOUT_MS: Joi.number().min(0),
 });
 
 const bullQueueSchema = Joi.object({
@@ -575,6 +583,7 @@ const additionalVarsSchema = appSchema
   .concat(databaseExtraSchema)
   .concat(authExtraSchema)
   .concat(redisExtraSchema)
+  .concat(searchSchema)
   .concat(stellarSchema)
   .concat(anchorSchema)
   .concat(storageSchema)

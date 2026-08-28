@@ -67,13 +67,13 @@ export class FindPropertiesQueryDto extends PaginationQueryDto {
 }
 ```
 
-| Field        | Description                                    |
-| ------------ | ----------------------------------------------- |
-| `data`       | The items on this page                          |
-| `total`      | Total number of items across all pages           |
-| `page`       | The page number that was returned (1-indexed)    |
-| `limit`      | The page size that was applied                   |
-| `totalPages` | `ceil(total / limit)`                            |
+| Field        | Description                                   |
+| ------------ | --------------------------------------------- |
+| `data`       | The items on this page                        |
+| `total`      | Total number of items across all pages        |
+| `page`       | The page number that was returned (1-indexed) |
+| `limit`      | The page size that was applied                |
+| `totalPages` | `ceil(total / limit)`                         |
 
 This is the **only** shape a list endpoint should return — no `items`, no
 nested `meta`, no bare arrays, no `offset`-only responses.

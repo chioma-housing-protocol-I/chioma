@@ -11,6 +11,10 @@ fn create_contract(env: &Env) -> UserProfileContractClient<'_> {
     UserProfileContractClient::new(env, &contract_id)
 }
 
+fn hash32(env: &Env) -> Bytes {
+    Bytes::from_array(env, &[0u8; 32])
+}
+
 // ── AlreadyInitialized (#1) ──────────────────────────────────────────────────
 
 #[test]
@@ -83,6 +87,21 @@ fn test_update_profile_fails_if_not_found() {
 
 #[test]
 #[should_panic(expected = "Error(Contract, #3)")]
+fn test_verify_profile_fails_if_not_found() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    client.verify_profile(&admin, &user);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
 fn test_verify_profile_fails_if_profile_not_found() {
     let env = Env::default();
     let client = create_contract(&env);
@@ -94,6 +113,21 @@ fn test_verify_profile_fails_if_profile_not_found() {
     client.initialize(&admin);
 
     client.verify_profile(&admin, &user);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn test_unverify_profile_fails_if_not_found() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    client.unverify_profile(&admin, &user);
 }
 
 #[test]
@@ -209,6 +243,22 @@ fn test_create_profile_fails_with_hash_length_47() {
 
 #[test]
 #[should_panic(expected = "Error(Contract, #4)")]
+fn test_create_profile_fails_with_invalid_hash_length() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let bad_hash = Bytes::from_array(&env, &[0u8; 16]);
+    client.create_profile(&user, &AccountType::Tenant, &bad_hash);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
 fn test_update_profile_fails_with_invalid_hash_length() {
     let env = Env::default();
     let client = create_contract(&env);
@@ -243,6 +293,15 @@ fn test_try_create_profile_returns_err_for_invalid_hash() {
 }
 
 // ── AdminNotConfigured (#5) ──────────────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_get_admin_fails_if_not_initialized() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    client.get_admin();
+}
 
 #[test]
 #[should_panic(expected = "Error(Contract, #5)")]
@@ -298,7 +357,54 @@ fn test_propose_upgrade_fails_if_admin_not_configured() {
     client.propose_upgrade(&proposer, &proposal_id, &wasm_hash, &notes, &1000);
 }
 
-// ── AccessDenied (#7) — upgrade proposal lifecycle ──────────────────────────
+// ── UnauthorizedAdmin (#6) ───────────────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_verify_profile_fails_if_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+    client.create_profile(&user, &AccountType::Tenant, &hash32(&env));
+
+    client.verify_profile(&attacker, &user);
+}
+
+#[test]
+fn test_try_verify_profile_returns_err_if_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+    client.create_profile(&user, &AccountType::Tenant, &hash32(&env));
+
+    let result = client.try_verify_profile(&attacker, &user);
+    assert!(matches!(result, Err(Ok(ContractError::UnauthorizedAdmin))));
+}
+
+// ── AccessDenied (#7) — upgrade-proposal lifecycle ──────────────────────────
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_get_upgrade_proposal_fails_if_not_found() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let proposal_id = String::from_str(&env, "UPG-NONEXISTENT");
+
+    client.get_upgrade_proposal(&proposal_id);
+}
 
 #[test]
 #[should_panic(expected = "Error(Contract, #7)")]
@@ -406,17 +512,6 @@ fn test_execute_upgrade_fails_if_not_found() {
 
     let proposal_id = String::from_str(&env, "UPG-NONEXISTENT");
     client.execute_upgrade(&admin, &proposal_id);
-}
-
-#[test]
-#[should_panic(expected = "Error(Contract, #7)")]
-fn test_get_upgrade_proposal_fails_if_not_found() {
-    let env = Env::default();
-    let client = create_contract(&env);
-
-    let proposal_id = String::from_str(&env, "UPG-NONEXISTENT");
-
-    client.get_upgrade_proposal(&proposal_id);
 }
 
 #[test]

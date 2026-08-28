@@ -74,4 +74,32 @@ export class QueryDisputesDto extends PaginationQueryDto {
   @IsArray()
   @IsUUID('all', { each: true })
   disputeIds?: string[];
+
+  // Payment correlation filters
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174001',
+    description: 'Filter by general payment UUID',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  paymentId?: string;
+
+  @ApiPropertyOptional({
+    example: 'pay_rent_abc123',
+    description: 'Filter by rent payment ID',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  rentPaymentId?: string;
+
+  @ApiPropertyOptional({
+    example: 'REF-2024-001234',
+    description: 'Filter by payment reference number',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentReferenceNumber?: string;
 }

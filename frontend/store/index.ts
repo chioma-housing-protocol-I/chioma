@@ -7,7 +7,7 @@
 
 // ── Stores ───────────────────────────────────────────────────────────────────
 export { useAuthStore, useAuth } from './authStore';
-export type { AuthStore, User } from './authStore';
+export type { AuthStore, User, AuthHint } from './authStore';
 
 export { useNotificationStore, selectUnreadCount } from './notificationStore';
 export type { NotificationStore } from './notificationStore';

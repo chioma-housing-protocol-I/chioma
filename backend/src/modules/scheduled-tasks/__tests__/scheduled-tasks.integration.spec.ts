@@ -25,6 +25,8 @@ import {
   DEAD_LETTER_QUEUE_NAME,
 } from '../../queues/queues.constants';
 import { SecurityPatchManagementService } from '../../cleanup/security-patch-management.service';
+import { MetricsService } from '../../monitoring/metrics.service';
+import { AlertService } from '../../monitoring/alert.service';
 
 describe('Scheduled Tasks Integration', () => {
   let moduleRef: TestingModule;
@@ -91,6 +93,8 @@ describe('Scheduled Tasks Integration', () => {
       return config[key] ?? fallback;
     }),
   };
+  const metricsService = { setQueueMetrics: jest.fn() };
+  const alertService = { handleAlert: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     jest.restoreAllMocks();
@@ -127,6 +131,8 @@ describe('Scheduled Tasks Integration', () => {
           useValue: deadLetterQueue,
         },
         { provide: ConfigService, useValue: configService },
+        { provide: MetricsService, useValue: metricsService },
+        { provide: AlertService, useValue: alertService },
       ],
     }).compile();
   });
@@ -327,8 +333,11 @@ describe('Scheduled Tasks Integration', () => {
           },
           { provide: getQueueToken('documents'), useValue: queueFactory() },
           { provide: getQueueToken('blockchain'), useValue: queueFactory() },
-        { provide: getQueueToken('data-sync'), useValue: queueFactory() },
-        { provide: getQueueToken('analytics'), useValue: queueFactory() },
+          { provide: getQueueToken('data-sync'), useValue: queueFactory() },
+          { provide: getQueueToken('analytics'), useValue: queueFactory() },
+          { provide: MetricsService, useValue: metricsService },
+          { provide: AlertService, useValue: alertService },
+          { provide: ConfigService, useValue: configService },
         ],
       }).compile();
 

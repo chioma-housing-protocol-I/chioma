@@ -87,7 +87,10 @@ export class ScheduleService {
     return this.paymentScheduleRepository.save(schedule);
   }
 
-  async listPaymentSchedules(filters: PaymentScheduleFiltersDto, userId: string) {
+  async listPaymentSchedules(
+    filters: PaymentScheduleFiltersDto,
+    userId: string,
+  ) {
     ensureUserId(userId);
     const page = filters.page || 1;
     const limit = filters.limit || 20;

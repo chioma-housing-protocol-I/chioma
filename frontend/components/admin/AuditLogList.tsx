@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   Eye,
   ChevronLeft,
@@ -27,6 +28,7 @@ export const AuditLogList: React.FC<ListProps> = ({
   page,
   setPage,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (isLoading) {
     return (
       <div className="h-64 flex items-center justify-center bg-white/5 rounded-3xl border border-white/10">
@@ -121,6 +123,7 @@ export const AuditLogList: React.FC<ListProps> = ({
                     {format(
                       new Date(log.performedAt),
                       'MMM d, yyyy • HH:mm:ss',
+                      { locale: dateFnsLocale },
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">

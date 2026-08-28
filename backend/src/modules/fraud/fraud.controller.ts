@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,7 +22,9 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CheckTransactionFraudDto } from './dto/check-transaction-fraud.dto';
+import { UpdateFraudThresholdsDto } from './dto/update-fraud-thresholds.dto';
 import { FraudAlertsService } from './fraud-alerts.service';
+import { FraudThresholdsService } from './fraud-thresholds.service';
 import { FraudService } from './fraud.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -34,8 +37,10 @@ export class FraudController {
   constructor(
     private readonly fraudService: FraudService,
     private readonly fraudAlertsService: FraudAlertsService,
+    private readonly fraudThresholdsService: FraudThresholdsService,
   ) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('user/:userId')
   @ApiOperation({ summary: 'Check user fraud risk' })
   @ApiParam({ name: 'userId', description: 'User ID to check' })
@@ -43,6 +48,7 @@ export class FraudController {
     return this.fraudService.checkUserFraud(userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('listing/:listingId')
   @ApiOperation({ summary: 'Check listing fraud risk' })
   @ApiParam({ name: 'listingId', description: 'Listing ID to check' })
@@ -50,6 +56,7 @@ export class FraudController {
     return this.fraudService.checkListingFraud(listingId);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('alerts')
   @ApiOperation({ summary: 'Get fraud alerts' })
   @ApiQuery({
@@ -62,11 +69,7 @@ export class FraudController {
     @Query('status') status: 'open' | 'resolved' | undefined,
     @Query() query: PaginationQueryDto,
   ) {
-    return this.fraudAlertsService.listAlerts(
-      status,
-      query.page,
-      query.limit,
-    );
+    return this.fraudAlertsService.listAlerts(status, query.page, query.limit);
   }
 
   @Patch('alerts/:alertId/resolve')
@@ -81,9 +84,33 @@ export class FraudController {
     return this.fraudAlertsService.resolveAlert(alertId);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('transaction')
   @ApiOperation({ summary: 'Check transaction fraud risk' })
   async checkTransactionFraud(@Body() payload: CheckTransactionFraudDto) {
     return this.fraudService.checkTransactionFraud(payload);
+  }
+
+  @Get('thresholds')
+  @ApiOperation({ summary: 'Get current fraud scoring thresholds' })
+  @ApiResponse({ status: 200, description: 'Current thresholds' })
+  getThresholds() {
+    return this.fraudThresholdsService.getThresholds();
+  }
+
+  @Patch('thresholds')
+  @ApiOperation({
+    summary: 'Update fraud scoring thresholds (runtime-configurable)',
+  })
+  @ApiResponse({ status: 200, description: 'Thresholds updated' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid threshold values',
+  })
+  async updateThresholds(
+    @Body() dto: UpdateFraudThresholdsDto,
+    @Req() req: any,
+  ) {
+    return this.fraudThresholdsService.updateThresholds(dto, req.user.id);
   }
 }

@@ -26,6 +26,8 @@ import {
   AddFavoriteDto,
   FavoriteItemDto,
   FavoriteStatusDto,
+  FavoritesQueryDto,
+  PaginatedFavoritesDto,
 } from './dtos/favorite.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
@@ -42,19 +44,20 @@ export class FavoritesController {
   @ApiOperation({
     summary: "Get current user's favorited properties",
     description:
-      'Retrieves a list of all properties favorited by the current user.',
+      'Retrieves a paginated list of properties favorited by the current user.',
   })
-  @ApiPaginatedResponse(FavoriteItemDto)
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of favorited properties',
+    type: PaginatedFavoritesDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid pagination parameters' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getFavorites(
     @CurrentUser() user: User,
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.favoritesService.getFavorites(
-      user.id,
-      query.page,
-      query.limit,
-    );
+    @Query() query: FavoritesQueryDto,
+  ): Promise<PaginatedFavoritesDto> {
+    return this.favoritesService.getFavorites(user.id, query.page, query.limit);
   }
 
   @Get(':propertyId')

@@ -38,35 +38,37 @@ export class InquiriesController {
     return this.inquiriesService.createInquiry(user.id, dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('incoming')
   @ApiOperation({ summary: 'List inquiries sent to current user properties' })
   async incoming(
     @CurrentUser() user: User,
     @Query() query: PaginationQueryDto,
   ) {
-    return this.inquiriesService.listIncoming(
-      user.id,
-      query.page,
-      query.limit,
-    );
+    return this.inquiriesService.listIncoming(user.id, query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('outgoing')
   @ApiOperation({ summary: 'List inquiries created by current user' })
   async outgoing(
     @CurrentUser() user: User,
     @Query() query: PaginationQueryDto,
   ) {
-    return this.inquiriesService.listOutgoing(
-      user.id,
-      query.page,
-      query.limit,
-    );
+    return this.inquiriesService.listOutgoing(user.id, query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch(':id/viewed')
   @ApiOperation({ summary: 'Mark an incoming inquiry as viewed' })
   async markViewed(@Param('id') id: string, @CurrentUser() user: User) {
     return this.inquiriesService.markViewed(id, user.id);
+  }
+
+  @Patch(':id/close')
+  @ApiOperation({ summary: 'Close an inquiry (sender or recipient)' })
+  @ApiResponse({ status: 400, description: 'Invalid lifecycle transition' })
+  async close(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.inquiriesService.close(id, user.id);
   }
 }

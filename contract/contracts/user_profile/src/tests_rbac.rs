@@ -14,6 +14,10 @@ fn create_contract(env: &Env) -> UserProfileContractClient<'_> {
     UserProfileContractClient::new(env, &contract_id)
 }
 
+fn hash32(env: &Env) -> Bytes {
+    Bytes::from_array(env, &[0u8; 32])
+}
+
 // ── initialize ──────────────────────────────────────────────────────────────
 
 #[test]
@@ -132,6 +136,26 @@ fn test_verify_profile_fails_if_not_admin() {
     client.verify_profile(&non_admin, &user);
 }
 
+/// A signed-in but non-admin caller cannot verify a profile: `require_auth`
+/// only proves the caller signed for the address they claim to be, it does
+/// not prove that address is the configured admin.
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_verify_profile_fails_if_caller_is_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+    client.create_profile(&user, &AccountType::Tenant, &hash32(&env));
+
+    client.verify_profile(&attacker, &user);
+}
+
 // ── unverify_profile ─────────────────────────────────────────────────────────
 
 #[test]
@@ -173,6 +197,24 @@ fn test_unverify_profile_fails_if_not_admin() {
     client.verify_profile(&admin, &user);
 
     client.unverify_profile(&non_admin, &user);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_unverify_profile_fails_if_caller_is_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+    client.create_profile(&user, &AccountType::Tenant, &hash32(&env));
+    client.verify_profile(&admin, &user);
+
+    client.unverify_profile(&attacker, &user);
 }
 
 // ── upgrade proposal lifecycle ───────────────────────────────────────────────
@@ -218,6 +260,25 @@ fn test_propose_upgrade_fails_if_not_admin() {
 
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
+fn test_propose_upgrade_fails_if_caller_is_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let proposal_id = String::from_str(&env, "UPG-001");
+    let wasm_hash = Bytes::from_array(&env, &[0u8; 32]);
+    let notes = String::from_str(&env, "notes");
+
+    client.propose_upgrade(&attacker, &proposal_id, &wasm_hash, &notes, &1000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_approve_upgrade_fails_if_not_admin() {
     let env = Env::default();
     let client = create_contract(&env);
@@ -238,7 +299,47 @@ fn test_approve_upgrade_fails_if_not_admin() {
 
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
+fn test_approve_upgrade_fails_if_caller_is_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let proposal_id = String::from_str(&env, "UPG-001");
+    let wasm_hash = Bytes::from_array(&env, &[0u8; 32]);
+    let notes = String::from_str(&env, "notes");
+
+    client.propose_upgrade(&admin, &proposal_id, &wasm_hash, &notes, &1000);
+    client.approve_upgrade(&attacker, &proposal_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_execute_upgrade_fails_if_not_admin() {
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+
+    let proposal_id = String::from_str(&env, "UPG-001");
+    let wasm_hash = Bytes::from_array(&env, &[0u8; 32]);
+    let notes = String::from_str(&env, "notes");
+
+    client.propose_upgrade(&admin, &proposal_id, &wasm_hash, &notes, &0);
+    client.execute_upgrade(&attacker, &proposal_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_execute_upgrade_fails_if_caller_is_not_admin() {
     let env = Env::default();
     let client = create_contract(&env);
 

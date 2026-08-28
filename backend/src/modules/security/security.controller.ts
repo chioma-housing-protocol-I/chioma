@@ -8,8 +8,9 @@ import {
   Body,
   Res,
   UseGuards,
-  ParseIntPipe,
+  ParseUUIDPipe,
   DefaultValuePipe,
+  ParseIntPipe,
   HttpCode,
   HttpStatus,
   UseInterceptors,
@@ -19,8 +20,8 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
   ApiQuery,
+  ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +38,12 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import {
+  QueryThreatStatsDto,
+  QueryComplianceReportDto,
+  ResolveIncidentDto,
+  AnchorAuditLogsDto,
+} from './dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 import { SecurityEvent } from './entities/security-event.entity';
@@ -58,6 +65,8 @@ export class SecurityController {
 
   // ─── Public endpoints ─────────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get' })
   @Get('security.txt')
   @Get('.well-known/security.txt')
   @ApiOperation({
@@ -121,6 +130,7 @@ export class SecurityController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/events/user/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -129,7 +139,7 @@ export class SecurityController {
   @ApiParam({ name: 'userId', type: String })
   @ApiPaginatedResponse(SecurityEvent)
   async getUserEvents(
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Query() query: PaginationQueryDto,
   ) {
     return this.securityEventsService.getUserEvents(
@@ -139,12 +149,13 @@ export class SecurityController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/events/suspicious/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check for suspicious activity on a user account' })
-  async detectSuspicious(@Param('userId') userId: string) {
+  async detectSuspicious(@Param('userId', ParseUUIDPipe) userId: string) {
     const suspicious =
       await this.securityEventsService.detectSuspiciousActivity(userId);
     return { userId, suspicious };
@@ -152,6 +163,7 @@ export class SecurityController {
 
   // ─── Threat Detection ─────────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/threats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -165,18 +177,17 @@ export class SecurityController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/threats/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get threat detection statistics' })
-  @ApiQuery({ name: 'hours', required: false, type: Number })
-  async getThreatStats(
-    @Query('hours', new DefaultValuePipe(24), ParseIntPipe) hours: number,
-  ) {
-    return this.threatDetectionService.getThreatStats(hours);
+  async getThreatStats(@Query() query: QueryThreatStatsDto) {
+    return this.threatDetectionService.getThreatStats(query.hours);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('security/threats/:id/false-positive')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -189,12 +200,13 @@ export class SecurityController {
     level: AuditLevel.SECURITY,
     includeNewValues: true,
   })
-  async markFalsePositive(@Param('id') threatId: string) {
+  async markFalsePositive(@Param('id', ParseUUIDPipe) threatId: string) {
     await this.threatDetectionService.markFalsePositive(threatId);
   }
 
   // ─── Incident Management ──────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/incidents')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -204,6 +216,7 @@ export class SecurityController {
     return this.incidentService.getOpenIncidents(query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/incidents/metrics')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -213,6 +226,7 @@ export class SecurityController {
     return this.incidentService.getResponseMetrics();
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('security/incidents/:id/resolve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -226,14 +240,15 @@ export class SecurityController {
   })
   async resolveIncident(
     @Param('id') incidentId: string,
-    @Body('resolution') resolution: string,
+    @Body() dto: ResolveIncidentDto,
   ) {
     return this.incidentService.resolveIncident(
       incidentId,
-      resolution ?? 'Resolved by admin',
+      dto.resolution ?? 'Resolved by admin',
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/incidents/:id/report')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -245,6 +260,7 @@ export class SecurityController {
 
   // ─── Compliance Reports ───────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/compliance/score')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -254,72 +270,51 @@ export class SecurityController {
     return this.complianceService.getSecurityScore();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/compliance/gdpr')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate GDPR compliance report' })
-  @ApiQuery({
-    name: 'from',
-    required: false,
-    type: String,
-    description: 'ISO date',
-  })
-  @ApiQuery({
-    name: 'to',
-    required: false,
-    type: String,
-    description: 'ISO date',
-  })
-  async getGdprReport(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getGdprReport(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generateGdprReport(from, to);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/compliance/soc2')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate SOC2 Type II compliance report' })
-  @ApiQuery({ name: 'from', required: false, type: String })
-  @ApiQuery({ name: 'to', required: false, type: String })
-  async getSoc2Report(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getSoc2Report(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generateSoc2Report(from, to);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/compliance/pci-dss')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate PCI-DSS compliance report' })
-  @ApiQuery({ name: 'from', required: false, type: String })
-  @ApiQuery({ name: 'to', required: false, type: String })
-  async getPciDssReport(
-    @Query('from') fromStr?: string,
-    @Query('to') toStr?: string,
-  ) {
-    const to = toStr ? new Date(toStr) : new Date();
-    const from = fromStr
-      ? new Date(fromStr)
+  async getPciDssReport(@Query() query: QueryComplianceReportDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from
+      ? new Date(query.from)
       : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
     return this.complianceService.generatePciDssReport(from, to);
   }
 
   // ─── RBAC Management ─────────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/rbac/roles')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -329,6 +324,7 @@ export class SecurityController {
     return this.rbacService.findAllRoles();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('security/rbac/permissions')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -338,6 +334,7 @@ export class SecurityController {
     return this.rbacService.findAllPermissions();
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('security/rbac/seed')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -355,24 +352,22 @@ export class SecurityController {
 
   // ─── Blockchain Audit Anchoring ───────────────────────────────────────────
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('security/audit/anchor')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Anchor latest audit log batch to blockchain' })
-  @ApiQuery({ name: 'batchSize', required: false, type: Number })
   @AuditLog({
     action: AuditAction.BLOCKCHAIN_TX_SUBMITTED,
     entityType: 'AuditBatch',
     level: AuditLevel.SECURITY,
     includeNewValues: true,
   })
-  async anchorAuditLogs(
-    @Query('batchSize', new DefaultValuePipe(100), ParseIntPipe)
-    batchSize: number,
-  ) {
-    const result =
-      await this.blockchainAuditService.anchorAuditBatch(batchSize);
+  async anchorAuditLogs(@Query() query: AnchorAuditLogsDto) {
+    const result = await this.blockchainAuditService.anchorAuditBatch(
+      query.batchSize,
+    );
     if (!result) return { message: 'No un-anchored audit logs found' };
     return result;
   }

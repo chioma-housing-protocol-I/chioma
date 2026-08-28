@@ -4,6 +4,7 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiQuery,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { DatabasePerformanceService } from './database-performance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,6 +23,7 @@ export class DatabasePerformanceController {
     private readonly performanceService: DatabasePerformanceService,
   ) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('report')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get a comprehensive database performance report' })
@@ -29,6 +31,7 @@ export class DatabasePerformanceController {
     return this.performanceService.getPerformanceReport();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('slow-queries')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({
@@ -45,6 +48,7 @@ export class DatabasePerformanceController {
     return PaginationUtils.paginateArray(rows, page, limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('indexes/usage')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get index usage statistics' })
@@ -57,6 +61,7 @@ export class DatabasePerformanceController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('indexes/unused')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get unused or rarely-used indexes' })
@@ -69,6 +74,7 @@ export class DatabasePerformanceController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('indexes/recommendations')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get index optimization recommendations' })
@@ -76,6 +82,7 @@ export class DatabasePerformanceController {
     return this.performanceService.getIndexRecommendations();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('indexes/duplicates')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get duplicate index candidates' })
@@ -88,6 +95,7 @@ export class DatabasePerformanceController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({
@@ -98,6 +106,7 @@ export class DatabasePerformanceController {
     return this.performanceService.getQueryAnalysis();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis/n-plus-one')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get N+1 query detection reports' })
@@ -110,6 +119,7 @@ export class DatabasePerformanceController {
     return this.performanceService.getNPlusOneDetection(severity);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis/patterns')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get all tracked query patterns with statistics' })
@@ -126,6 +136,7 @@ export class DatabasePerformanceController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis/history')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get recent query execution history' })
@@ -145,6 +156,7 @@ export class DatabasePerformanceController {
     return PaginationUtils.paginateArray(history, page, limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis/stats')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get aggregated query execution statistics' })
@@ -152,6 +164,7 @@ export class DatabasePerformanceController {
     return this.performanceService.getQueryStats();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('query-analysis/reset')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Reset query analysis data' })

@@ -382,11 +382,7 @@ export class AgentRegistryService {
     }
   }
 
-  async getAgentTransactions(
-    agentAddress: string,
-    page = 1,
-    limit = 20,
-  ) {
+  async getAgentTransactions(agentAddress: string, page = 1, limit = 20) {
     PaginationUtils.validatePagination(page, limit);
     const [data, total] = await this.agentTransactionRepo.findAndCount({
       where: { agentAddress },

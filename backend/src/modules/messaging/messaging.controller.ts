@@ -10,11 +10,14 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MessagingService } from './messaging.service';
 import { Deprecated } from '../../common/decorators/deprecated.decorator';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UserIdQueryDto } from './dto/user-id-query.dto';
+import { RoomIdParamsDto } from './dto/room-id-params.dto';
+import { PaginationQueryDto } from './dto/pagination.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Message } from './entities/message.entity';
 
@@ -25,6 +28,7 @@ export class MessagingController {
 
   // ── Legacy history endpoint ──────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('history')
   @ApiOperation({ summary: '[Deprecated] Get chat history for a chat group' })
   @Deprecated({
@@ -39,18 +43,18 @@ export class MessagingController {
   })
   async getHistory(
     @Query('chatGroupId') chatGroupId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() pagination: PaginationQueryDto,
   ) {
     return this.messagingService.getHistory(
       chatGroupId,
-      Number(page),
-      Number(limit),
+      pagination.page ?? 1,
+      pagination.limit ?? 20,
     );
   }
 
   // ── Rooms ────────────────────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('rooms')
   @ApiOperation({ summary: 'Get all chat rooms for the current user' })
   @ApiPaginatedResponse(ChatRoom)
@@ -60,15 +64,16 @@ export class MessagingController {
   ) {
     return this.messagingService.getRoomsForUser(
       userId,
-      query.page,
-      query.limit,
+      query.page ?? 1,
+      query.limit ?? 20,
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('rooms')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create or find a direct message room' })
-  async createRoom(@Body() body: { userId: string; participantId: string }) {
+  async createRoom(@Body() body: CreateRoomDto) {
     return this.messagingService.findOrCreateRoom(
       body.userId,
       body.participantId,
@@ -77,27 +82,29 @@ export class MessagingController {
 
   // ── Messages ─────────────────────────────────────────────────────────────
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('rooms/:roomId/messages')
   @ApiOperation({ summary: 'Get messages for a room' })
   @ApiPaginatedResponse(Message)
   async getMessages(
-    @Param('roomId') roomId: string,
-    @Query() query: PaginationQueryDto,
+    @Param() params: RoomIdParamsDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     return this.messagingService.getMessagesForRoom(
-      roomId,
-      query.page,
-      query.limit || 50,
+      params.roomId,
+      pagination.page ?? 1,
+      pagination.limit ?? 50,
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('rooms/:roomId/read')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark all messages in a room as read' })
   async markRoomAsRead(
-    @Param('roomId') roomId: string,
-    @Query('userId') userId: string,
+    @Param() params: RoomIdParamsDto,
+    @Query() query: UserIdQueryDto,
   ) {
-    await this.messagingService.markRoomAsRead(roomId, userId);
+    await this.messagingService.markRoomAsRead(params.roomId, query.userId);
   }
 }

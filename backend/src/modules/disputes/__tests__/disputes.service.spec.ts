@@ -24,6 +24,9 @@ import {
 } from '../../../common/errors/domain-errors';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
+import { Payment as GeneralPayment } from '../../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../../rent/entities/payment.entity';
 
 describe('DisputesService', () => {
   let service: DisputesService;
@@ -110,6 +113,14 @@ describe('DisputesService', () => {
           },
         },
         {
+          provide: getRepositoryToken(GeneralPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(RentPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
           provide: DataSource,
           useValue: {
             createQueryRunner: jest.fn().mockReturnValue({
@@ -156,6 +167,10 @@ describe('DisputesService', () => {
               ) => fn(),
             ),
           },
+        },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
         },
       ],
     }).compile();
@@ -279,6 +294,24 @@ describe('DisputesService', () => {
       jest.spyOn(disputeRepository, 'findOne').mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(DisputeNotFoundError);
+    });
+
+    it('should strip evidence that is not clean of malware', async () => {
+      const disputeWithEvidence = {
+        ...mockDispute,
+        evidence: [
+          { id: 1, scanStatus: 'clean' },
+          { id: 2, scanStatus: 'quarantined' },
+          { id: 3, scanStatus: 'pending' },
+        ],
+      } as unknown as Dispute;
+      jest
+        .spyOn(disputeRepository, 'findOne')
+        .mockResolvedValue(disputeWithEvidence);
+
+      const result = await service.findOne(1);
+
+      expect(result.evidence).toEqual([{ id: 1, scanStatus: 'clean' }]);
     });
   });
 

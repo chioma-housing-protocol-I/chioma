@@ -6,6 +6,8 @@ export interface RequestWithTiming extends Request {
   startTime?: number;
   endTime?: number;
   responseTime?: number;
+  /** Populated by Passport/JWT auth middleware upstream. */
+  user?: { id: string };
 }
 
 @Injectable()
@@ -41,7 +43,7 @@ export class PerformanceMiddleware implements NestMiddleware {
           responseTime,
           statusCode: res.statusCode,
           userAgent: req.get('User-Agent'),
-          userId: (req as any).user?.id,
+          userId: req.user?.id,
           memoryUsage: process.memoryUsage(),
         };
 
@@ -81,7 +83,7 @@ export class PerformanceMiddleware implements NestMiddleware {
           responseTime,
           statusCode: res.statusCode,
           userAgent: req.get('User-Agent'),
-          userId: (req as any).user?.id,
+          userId: req.user?.id,
           memoryUsage: process.memoryUsage(),
         };
 

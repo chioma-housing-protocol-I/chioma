@@ -51,6 +51,7 @@ import {
   MaintenanceRecord,
 } from '@/lib/query/hooks/use-landlord-maintenance';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface MaintenanceListProps {
   className?: string;
@@ -68,6 +69,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
     MaintenancePriority | 'ALL'
   >('ALL');
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: requests = [],
@@ -206,6 +208,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
           <div className="text-sm text-neutral-500">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </div>
         ),
@@ -224,7 +227,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
             <div
               className={`text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-neutral-500'}`}
             >
-              {format(deadlineDate, 'MMM d, yyyy')}
+              {format(deadlineDate, 'MMM d, yyyy', { locale: dateFnsLocale })}
             </div>
           );
         },
@@ -242,7 +245,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
         ),
       },
     ],
-    [],
+    [dateFnsLocale],
   );
 
   const table = useReactTable({

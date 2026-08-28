@@ -46,6 +46,12 @@ contract/contracts/chioma/src/
 |- timelock.rs          # Delayed admin actions
 ```
 
+This is a large, single-deployable contract by design today. See
+[Chioma Contract Extraction Plan](../architecture/CHIOMA-CONTRACT-EXTRACTION.md)
+for the coupling analysis and phased plan to split deposit interest,
+multisig/timelock governance, royalties, and multi-token support into
+independently deployable contracts.
+
 ---
 
 ## Initialization

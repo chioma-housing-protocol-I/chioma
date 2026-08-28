@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn().mockResolvedValue(Buffer.from('mock file contents')),
+}));
 import {} from '@nestjs/common';
 import {
   AuthorizationError,
@@ -24,11 +28,16 @@ import { User, UserRole } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
 import { ResolveDisputeDto } from '../dto/resolve-dispute.dto';
 import { AddCommentDto } from '../dto/add-comment.dto';
+import { Payment as GeneralPayment } from '../../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../../rent/entities/payment.entity';
 
 describe('DisputesService — resolution, evidence, comments, agreements', () => {
   let service: DisputesService;
+  let malwareScan: { scan: jest.Mock };
+  let auditService: { log: jest.Mock };
 
   const adminUser: User = {
     id: 'admin-1',
@@ -148,6 +157,14 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
           useValue: mockAgreementRepository,
         },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
+        {
+          provide: getRepositoryToken(GeneralPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(RentPayment),
+          useValue: { findOne: jest.fn() },
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditService, useValue: { log: jest.fn() } },
         {
@@ -168,10 +185,16 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
             ),
           },
         },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
+        },
       ],
     }).compile();
 
     service = module.get<DisputesService>(DisputesService);
+    malwareScan = module.get(MalwareScanService);
+    auditService = module.get(AuditService);
     jest.clearAllMocks();
     // Reset shared query runner mocks
     mockQueryRunner.manager.findOne.mockReset();
@@ -306,7 +329,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue(mockEvidence);
       mockEvidenceRepository.save.mockResolvedValue(mockEvidence);
@@ -333,7 +358,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue({
         ...mockEvidence,
@@ -356,6 +383,40 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       );
 
       expect(result.description).toBe('Invoice copy');
+    });
+
+    it('quarantines and audit-logs evidence that fails the malware scan, and rejects it', async () => {
+      jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
+      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      malwareScan.scan.mockResolvedValueOnce({
+        clean: false,
+        reason: 'eicar_test_signature',
+      });
+      mockEvidenceRepository.create.mockImplementation((value) => value);
+      mockEvidenceRepository.save.mockImplementation(async (value) => ({
+        ...value,
+        id: 11,
+      }));
+
+      await expect(
+        service.addEvidence('dispute-uuid-1', mockFile, 'user-1'),
+      ).rejects.toThrow(AuthorizationError);
+
+      expect(mockEvidenceRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ scanStatus: 'quarantined' }),
+      );
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'DisputeEvidence',
+          performedBy: 'user-1',
+          metadata: expect.objectContaining({
+            reason: 'eicar_test_signature',
+          }),
+        }),
+      );
     });
   });
 
@@ -443,10 +504,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('getAgreementDisputes', () => {
     it('returns disputes for a valid agreement without userId', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockDisputeRepository.findAndCount.mockResolvedValue([
-        [openDispute],
-        1,
-      ]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1');
 
@@ -468,10 +526,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
         ...regularUser,
         id: 'landlord-1',
       });
-      mockDisputeRepository.findAndCount.mockResolvedValue([
-        [openDispute],
-        1,
-      ]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1', 'landlord-1');
       expect(result.data).toHaveLength(1);
@@ -480,10 +535,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     it('allows the tenant (userId) to view disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(regularUser); // id = 'user-1'
-      mockDisputeRepository.findAndCount.mockResolvedValue([
-        [openDispute],
-        1,
-      ]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1', 'user-1');
       expect(result.data).toHaveLength(1);

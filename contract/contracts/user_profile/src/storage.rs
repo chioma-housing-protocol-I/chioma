@@ -15,4 +15,13 @@ pub enum DataKey {
 
     /// Upgrade proposal
     UpgradeProposal(String),
+
+    /// Rate limiting configuration
+    RateLimitConfig,
+
+    /// User call count for rate limiting: DataKey::UserCallCount(user, function_name)
+    UserCallCount(Address, String),
+
+    /// Block call count for rate limiting: DataKey::BlockCallCount(block_number, function_name)
+    BlockCallCount(u64, String),
 }

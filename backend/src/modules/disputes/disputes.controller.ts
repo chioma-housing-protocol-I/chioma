@@ -82,11 +82,15 @@ export class DisputesController {
     return this.disputesService.findOne(parseInt(id));
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Find by dispute id' })
   @Get('dispute/:disputeId')
   async findByDisputeId(@Param('disputeId') disputeId: string) {
     return this.disputesService.findByDisputeId(disputeId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update' })
   @Put(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -107,6 +111,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add evidence' })
   @Post(':disputeId/evidence')
   @UseInterceptors(FileInterceptor('file'))
   async addEvidence(
@@ -118,6 +124,8 @@ export class DisputesController {
     return this.disputesService.addEvidence(disputeId, file, req.user.id, dto);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add comment' })
   @Post(':disputeId/comment')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -137,6 +145,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Resolve dispute' })
   @Post(':disputeId/resolve')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -159,6 +169,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get agreement disputes' })
   @Get('agreement/:agreementId/disputes')
   @ApiPaginatedResponse(Dispute)
   async getAgreementDisputes(
@@ -172,5 +184,42 @@ export class DisputesController {
       query.page,
       query.limit,
     );
+  }
+
+  @Get('payment/:paymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment ID' })
+  @ApiParam({ name: 'paymentId', description: 'General payment UUID' })
+  @ApiResponse({ status: 200, description: 'Disputes linked to the payment' })
+  async getDisputesByPayment(@Param('paymentId') paymentId: string) {
+    return this.disputesService.findDisputesByPayment(paymentId);
+  }
+
+  @Get('rent-payment/:rentPaymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by rent payment ID' })
+  @ApiParam({ name: 'rentPaymentId', description: 'Rent payment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the rent payment',
+  })
+  async getDisputesByRentPayment(
+    @Param('rentPaymentId') rentPaymentId: string,
+  ) {
+    return this.disputesService.findDisputesByRentPayment(rentPaymentId);
+  }
+
+  @Get('payment-reference/:referenceNumber/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment reference number' })
+  @ApiParam({
+    name: 'referenceNumber',
+    description: 'Payment reference number',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the payment reference',
+  })
+  async getDisputesByPaymentReference(
+    @Param('referenceNumber') referenceNumber: string,
+  ) {
+    return this.disputesService.findDisputesByPaymentReference(referenceNumber);
   }
 }

@@ -96,12 +96,46 @@ describe('Health Check Integration (e2e)', () => {
       expect(res.body.services).toHaveProperty('stellar');
     });
 
+    it('includes redis service in readiness check', async () => {
+      const res = await request(app.getHttpServer()).get('/health');
+
+      expect(res.body.services).toHaveProperty('redis');
+    });
+
+    it('includes elasticsearch service in readiness check', async () => {
+      const res = await request(app.getHttpServer()).get('/health');
+
+      expect(res.body.services).toHaveProperty('elasticsearch');
+    });
+
+    it('each service entry carries a criticality of critical or degraded', async () => {
+      const res = await request(app.getHttpServer()).get('/health');
+
+      Object.values(res.body.services).forEach((service: any) => {
+        expect(service).toHaveProperty('criticality');
+        expect(service.criticality).toMatch(/^(critical|degraded)$/);
+      });
+    });
+
+    it('the database service is classified as critical', async () => {
+      const res = await request(app.getHttpServer()).get('/health');
+
+      expect(res.body.services.database.criticality).toBe('critical');
+    });
+
+    it('redis and elasticsearch are classified as degraded', async () => {
+      const res = await request(app.getHttpServer()).get('/health');
+
+      expect(res.body.services.redis.criticality).toBe('degraded');
+      expect(res.body.services.elasticsearch.criticality).toBe('degraded');
+    });
+
     it('each service entry has a status field', async () => {
       const res = await request(app.getHttpServer()).get('/health');
 
       Object.values(res.body.services).forEach((service: any) => {
         expect(service).toHaveProperty('status');
-        expect(service.status).toMatch(/^(ok|up|error|down|warning)$/);
+        expect(service.status).toMatch(/^(ok|up|error|down|warning|skipped)$/);
       });
     });
 

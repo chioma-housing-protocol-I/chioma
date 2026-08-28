@@ -11,11 +11,7 @@ import { AdminRefundDecisionDto } from './dto/admin-refund-decision.dto';
 import { PaginationUtils } from '../../common/utils';
 
 export type AdminRefundStatus =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'PROCESSING'
-  | 'COMPLETED'
-  | 'REJECTED';
+  'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
 
 export interface AdminRefundHistoryEntry {
   id: string;

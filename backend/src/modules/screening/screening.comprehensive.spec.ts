@@ -328,6 +328,19 @@ describe('ScreeningService — comprehensive coverage', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('treats an expired report as absent and requires a re-run', async () => {
+      mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
+      mockReportRepository.findOne.mockResolvedValue({
+        ...encryptedReport,
+        accessExpiresAt: new Date('2020-01-01'),
+      });
+
+      await expect(
+        service.getScreeningReport('screening-1', tenantActor),
+      ).rejects.toThrow('Screening report has expired and must be re-run');
+      expect(mockEncryptionService.decrypt).not.toHaveBeenCalled();
+    });
+
     it('throws ForbiddenException for a non-owner non-admin', async () => {
       mockScreeningRepository.findOne.mockResolvedValue(pendingScreening);
 

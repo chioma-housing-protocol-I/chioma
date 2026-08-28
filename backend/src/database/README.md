@@ -33,6 +33,7 @@ Use a **new** Unix-ms timestamp greater than the latest migration in the repo.
 | `pnpm run migration:revert:safe`                          | Same as `migration:revert` via runner                             |
 | `pnpm run migration:show`                                 | Show pending migrations (CLI)                                     |
 | `pnpm run migration:show:safe`                            | Show pending migrations (runner)                                  |
+| `pnpm run migration:schema-check`                         | CI check: fails if entities drift from the migrated schema        |
 
 ## Commands (production / compiled)
 

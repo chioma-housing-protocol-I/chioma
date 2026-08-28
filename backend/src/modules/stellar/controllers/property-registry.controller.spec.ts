@@ -131,11 +131,7 @@ describe('PropertyRegistryController', () => {
         limit: 20,
       });
 
-      expect(service.getPropertyHistory).toHaveBeenCalledWith(
-        'prop-1',
-        1,
-        20,
-      );
+      expect(service.getPropertyHistory).toHaveBeenCalledWith('prop-1', 1, 20);
       expect(result).toEqual({ success: true, ...paginated });
     });
   });

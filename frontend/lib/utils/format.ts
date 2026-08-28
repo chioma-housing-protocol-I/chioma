@@ -1,7 +1,15 @@
-import { useI18nStore, type SupportedLocale } from '../i18n';
+import { useI18nStore, LOCALE_OPTIONS, type SupportedLocale } from '../i18n';
+
+// Computed lazily (not at module scope) to avoid a circular-import ordering
+// issue: this module is imported by lib/i18n/index.ts, which is still
+// mid-evaluation (LOCALE_OPTIONS not yet assigned) the first time this file
+// itself imports from '../i18n'.
+function isSupportedLocale(locale: string): locale is SupportedLocale {
+  return LOCALE_OPTIONS.some((option) => option.code === locale);
+}
 
 function resolveLocale(locale?: SupportedLocale): SupportedLocale {
-  if (locale === 'en' || locale === 'es' || locale === 'fr') {
+  if (locale && isSupportedLocale(locale)) {
     return locale;
   }
   try {
@@ -115,7 +123,7 @@ export function formatCurrency(
 export function formatCrypto(
   amount: number | string | null | undefined,
   symbolOrLocale?: string | SupportedLocale,
-  localeOrOptions?: SupportedLocale | Intl.NumberFormatOptions,
+  localeOrOptions?: string | Intl.NumberFormatOptions,
   options?: Intl.NumberFormatOptions,
 ): string {
   if (amount === null || amount === undefined || amount === '') return '';
@@ -127,7 +135,7 @@ export function formatCrypto(
   let opts: Intl.NumberFormatOptions | undefined;
 
   const isLocaleStr = (str?: string): str is SupportedLocale =>
-    str === 'en' || str === 'es' || str === 'fr';
+    !!str && isSupportedLocale(str);
 
   if (isLocaleStr(symbolOrLocale as string)) {
     locale = resolveLocale(symbolOrLocale as SupportedLocale);

@@ -214,9 +214,7 @@ describe('DisputesController', () => {
         limit: 20,
         totalPages: 1,
       };
-      jest
-        .spyOn(service, 'getAgreementDisputes')
-        .mockResolvedValue(mockResult);
+      jest.spyOn(service, 'getAgreementDisputes').mockResolvedValue(mockResult);
 
       const result = await controller.getAgreementDisputes(
         '1',

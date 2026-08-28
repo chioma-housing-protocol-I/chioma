@@ -89,6 +89,7 @@ describe('PropertiesService – Pagination', () => {
       aiOccupancyPrediction: null,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-01'),
+      deletedAt: null,
       ...overrides,
     };
   }

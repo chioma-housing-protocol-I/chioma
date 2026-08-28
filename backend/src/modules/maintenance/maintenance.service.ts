@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   MaintenanceRequest,
   MaintenanceStatus,
@@ -15,6 +16,7 @@ import {
   AuthorizationError,
   ValidationError,
 } from '../../common/errors/domain-errors';
+import { computeSlaDeadlines } from './sla.config';
 import { PaginationUtils } from '../../common/utils';
 import { QueryMaintenanceDto } from './dto';
 
@@ -42,6 +44,7 @@ export class MaintenanceService {
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
     private readonly reviewPromptService: ReviewPromptService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(dto: CreateMaintenanceDto): Promise<MaintenanceRequest> {
@@ -60,9 +63,18 @@ export class MaintenanceService {
       }
     }
 
+    const now = new Date();
+    const { responseDueAt, resolutionDueAt } = computeSlaDeadlines(
+      now,
+      dto.priority as string | undefined,
+      this.configService,
+    );
+
     const req = this.maintenanceRepo.create({
       ...dto,
       status: MaintenanceStatus.OPEN,
+      responseDueAt,
+      resolutionDueAt,
     });
 
     const saved = await this.maintenanceRepo.save(req);
