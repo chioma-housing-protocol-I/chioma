@@ -5,6 +5,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/fraunces';
 
 import { RootLayoutClient } from './RootLayoutClient';
+import { env } from '@/lib/env';
 
 export const viewport: Viewport = {
   themeColor: '#0d0e12',
@@ -16,8 +17,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
+const APP_URL = env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),

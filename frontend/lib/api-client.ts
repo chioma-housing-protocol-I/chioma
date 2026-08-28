@@ -17,6 +17,7 @@ import { cancellationManager, isCancellationError } from '@/lib/cancellation';
 import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
 import { getTimeoutForEndpoint } from '@/lib/config/timeouts';
+import { env } from '@/lib/env';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -46,12 +47,12 @@ const AUTH_STORAGE_KEYS = {
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    const configured = process.env.NEXT_PUBLIC_API_URL;
+    const configured = env.NEXT_PUBLIC_API_URL;
     return configured && configured.length > 0 ? configured : '/api';
   }
   return (
-    process.env.BACKEND_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
+    env.BACKEND_API_BASE_URL ??
+    env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
     'http://localhost:5000/api/v1'
   );
 }

@@ -5,6 +5,7 @@ import {
   Post,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RateLimitService } from '../services/rate-limit.service';
@@ -16,6 +17,9 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../users/entities/user.entity';
+import { AuditLog } from '../../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('rate-limiting')
 @Controller('rate-limiting')
@@ -23,6 +27,7 @@ import { UserRole } from '../../users/entities/user.entity';
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN)
 @SkipRateLimit()
+@UseInterceptors(AuditLogInterceptor)
 export class RateLimitController {
   constructor(
     private readonly rateLimitService: RateLimitService,
@@ -52,6 +57,12 @@ export class RateLimitController {
 
   @Post('whitelist/:identifier')
   @ApiOperation({ summary: 'Whitelist an identifier' })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'RateLimitWhitelist',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async whitelistIdentifier(@Param('identifier') identifier: string) {
     await this.rateLimitService.whitelistIdentifier(identifier);
     return { message: 'Identifier whitelisted successfully' };
@@ -59,6 +70,12 @@ export class RateLimitController {
 
   @Delete('block/:identifier')
   @ApiOperation({ summary: 'Unblock an identifier' })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'RateLimitBlock',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async unblockIdentifier(@Param('identifier') identifier: string) {
     await this.abuseDetectionService.unblockIdentifier(identifier);
     return { message: 'Identifier unblocked successfully' };
@@ -66,6 +83,12 @@ export class RateLimitController {
 
   @Post('reset/:identifier/:category')
   @ApiOperation({ summary: 'Reset rate limit for identifier and category' })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'RateLimit',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async resetLimit(
     @Param('identifier') identifier: string,
     @Param('category') category: EndpointCategory,

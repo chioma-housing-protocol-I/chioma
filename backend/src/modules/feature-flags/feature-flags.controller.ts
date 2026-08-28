@@ -10,14 +10,19 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { FeatureFlagsService } from './feature-flags.service';
 import { CreateFeatureFlagDto } from './dto/create-feature-flag.dto';
 import { UpdateFeatureFlagDto } from './dto/update-feature-flag.dto';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Feature Flags')
 @Controller()
+@UseInterceptors(AuditLogInterceptor)
 export class FeatureFlagsController {
   constructor(private readonly featureFlagsService: FeatureFlagsService) {}
 
@@ -68,6 +73,12 @@ export class FeatureFlagsController {
     status: 201,
     description: 'Feature flag successfully created',
   })
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeNewValues: true,
+  })
   async createFlag(@Body() dto: CreateFeatureFlagDto) {
     return this.featureFlagsService.createFlag(dto);
   }
@@ -75,6 +86,13 @@ export class FeatureFlagsController {
   @Patch('admin/feature-flags/:key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a feature flag rollout/status (Admin)' })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async updateFlag(
     @Param('key') key: string,
     @Body() dto: UpdateFeatureFlagDto,
@@ -86,6 +104,13 @@ export class FeatureFlagsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update rollout percentage for a feature flag (Admin)',
+  })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+    includeNewValues: true,
   })
   async setRolloutPercentage(
     @Param('key') key: string,
@@ -99,6 +124,12 @@ export class FeatureFlagsController {
   @ApiOperation({
     summary: 'Trigger emergency kill switch for a feature flag (Admin)',
   })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.SECURITY,
+    includeOldValues: true,
+  })
   async killSwitch(@Param('key') key: string) {
     return this.featureFlagsService.killSwitch(key);
   }
@@ -106,6 +137,12 @@ export class FeatureFlagsController {
   @Delete('admin/feature-flags/:key')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a feature flag (Admin)' })
+  @AuditLog({
+    action: AuditAction.DELETE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async deleteFlag(@Param('key') key: string) {
     await this.featureFlagsService.deleteFlag(key);
   }

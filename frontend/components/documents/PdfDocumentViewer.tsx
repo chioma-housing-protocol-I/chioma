@@ -4,8 +4,13 @@ import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
-// Load the PDF.js worker on demand with the dynamically imported module.
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Bundle the PDF.js worker from our own build output instead of fetching it
+// from a third-party CDN (unpkg) at runtime — avoids relying on an
+// unauthenticated, non-SRI-verifiable script from a compromised CDN.
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 interface PdfDocumentViewerProps {
   url: string;

@@ -1,9 +1,10 @@
+import { env } from './env';
+
 /** Matches `NEXT_PUBLIC_STELLAR_NETWORK` (default testnet). */
 export type StellarNetworkId = 'TESTNET' | 'PUBLIC';
 
 export function getConfiguredNetwork(): StellarNetworkId {
-  const n = process.env.NEXT_PUBLIC_STELLAR_NETWORK?.toUpperCase();
-  return n === 'PUBLIC' ? 'PUBLIC' : 'TESTNET';
+  return env.NEXT_PUBLIC_STELLAR_NETWORK === 'PUBLIC' ? 'PUBLIC' : 'TESTNET';
 }
 
 export function getHorizonServerUrl(): string {
