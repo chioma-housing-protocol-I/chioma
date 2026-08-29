@@ -21,6 +21,7 @@ import { SignAgreementDto } from './dto/sign-agreement.dto';
 import { AuditService } from '../audit/audit.service';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 import { ChiomaContractService } from '../stellar/services/chioma-contract.service';
+import { AgreementNftService } from './agreement-nft.service';
 import { BlockchainSyncService } from './blockchain-sync.service';
 import { EscrowIntegrationService } from './escrow-integration.service';
 import { TemplateRenderingService } from './template-rendering.service';
@@ -46,6 +47,7 @@ export class AgreementsService {
     private readonly auditService: AuditService,
     private readonly reviewPromptService: ReviewPromptService,
     private readonly chiomaContract: ChiomaContractService,
+    private readonly agreementNftService: AgreementNftService,
     private readonly blockchainSync: BlockchainSyncService,
     private readonly escrowIntegration: EscrowIntegrationService,
     private readonly templateService: TemplateRenderingService,
@@ -338,6 +340,19 @@ export class AgreementsService {
         'Agreement terminated',
       ),
     );
+
+    try {
+      await this.agreementNftService.burnNftForAgreement(
+        id,
+        'AgreementTerminated',
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to burn NFT obligation for terminated agreement ${id}`,
+        error,
+      );
+    }
+
     return saved;
   }
 

@@ -11,6 +11,7 @@ import { Payment } from '../rent/entities/payment.entity';
 import { AuditService } from '../audit/audit.service';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 import { ChiomaContractService } from '../stellar/services/chioma-contract.service';
+import { AgreementNftService } from './agreement-nft.service';
 import { BlockchainSyncService } from './blockchain-sync.service';
 import { EscrowIntegrationService } from './escrow-integration.service';
 import { TemplateRenderingService } from './template-rendering.service';
@@ -85,6 +86,10 @@ describe('AgreementsService (lease extensions)', () => {
     find: jest.fn(),
   };
 
+  const mockAgreementNftService = {
+    burnNftForAgreement: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockIdempotencyService = {
@@ -111,6 +116,7 @@ describe('AgreementsService (lease extensions)', () => {
         { provide: AuditService, useValue: {} },
         { provide: ReviewPromptService, useValue: {} },
         { provide: ChiomaContractService, useValue: {} },
+        { provide: AgreementNftService, useValue: mockAgreementNftService },
         { provide: BlockchainSyncService, useValue: {} },
         { provide: EscrowIntegrationService, useValue: {} },
         { provide: TemplateRenderingService, useValue: { render: jest.fn() } },
@@ -251,6 +257,43 @@ describe('AgreementsService (lease extensions)', () => {
 
       expect(second).toEqual(first);
       expect(mockAgreementRepo.save).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('terminate', () => {
+    it('transitions the agreement to TERMINATED and burns the NFT obligation', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.ACTIVE,
+      });
+      mockAgreementRepo.save.mockImplementation((a) => Promise.resolve(a));
+
+      const result = await service.terminate('agr-1', {
+        terminationReason: 'Mutual agreement',
+      });
+
+      expect(result.status).toBe(AgreementStatus.TERMINATED);
+      expect(mockAgreementNftService.burnNftForAgreement).toHaveBeenCalledWith(
+        'agr-1',
+        'AgreementTerminated',
+      );
+    });
+
+    it('still returns the terminated agreement when burning the NFT fails', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.ACTIVE,
+      });
+      mockAgreementRepo.save.mockImplementation((a) => Promise.resolve(a));
+      mockAgreementNftService.burnNftForAgreement.mockRejectedValueOnce(
+        new Error('NFT not found for agreement agr-1'),
+      );
+
+      const result = await service.terminate('agr-1', {
+        terminationReason: 'Mutual agreement',
+      });
+
+      expect(result.status).toBe(AgreementStatus.TERMINATED);
     });
   });
 });

@@ -10,6 +10,7 @@ import { Payment } from '../../rent/entities/payment.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ReviewPromptService } from '../../reviews/review-prompt.service';
 import { ChiomaContractService } from '../../stellar/services/chioma-contract.service';
+import { AgreementNftService } from '../agreement-nft.service';
 import { BlockchainSyncService } from '../blockchain-sync.service';
 import { EscrowIntegrationService } from '../escrow-integration.service';
 import { TemplateRenderingService } from '../template-rendering.service';
@@ -48,6 +49,10 @@ describe('AgreementsService – Pagination', () => {
         { provide: AuditService, useValue: {} },
         { provide: ReviewPromptService, useValue: {} },
         { provide: ChiomaContractService, useValue: {} },
+        {
+          provide: AgreementNftService,
+          useValue: { burnNftForAgreement: jest.fn() },
+        },
         { provide: BlockchainSyncService, useValue: {} },
         { provide: EscrowIntegrationService, useValue: {} },
         { provide: TemplateRenderingService, useValue: { render: jest.fn() } },
