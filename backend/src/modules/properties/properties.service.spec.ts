@@ -21,6 +21,7 @@ import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../search/saved-search.service';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -192,6 +193,10 @@ describe('PropertiesService', () => {
     onListingPublished: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSavedSearchService = {
+    notifyMatchingSearches: jest.fn().mockResolvedValue(0),
+  };
+
   beforeEach(async () => {
     mockCacheService.getOrSet.mockImplementation(
       async (_key: string, factory: () => Promise<unknown>) => factory(),
@@ -230,6 +235,10 @@ describe('PropertiesService', () => {
         {
           provide: FraudHooksService,
           useValue: mockFraudHooksService,
+        },
+        {
+          provide: SavedSearchService,
+          useValue: mockSavedSearchService,
         },
       ],
     }).compile();
@@ -628,6 +637,9 @@ describe('PropertiesService', () => {
       expect(mockFraudHooksService.onListingPublished).toHaveBeenCalledWith(
         'property-id',
       );
+      expect(
+        mockSavedSearchService.notifyMatchingSearches,
+      ).toHaveBeenCalledWith(publishedProperty);
     });
 
     it('should throw BadRequestException if already published', async () => {

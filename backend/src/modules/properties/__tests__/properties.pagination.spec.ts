@@ -14,6 +14,7 @@ import { RentalUnit } from '../entities/rental-unit.entity';
 import { PropertyListingDraft } from '../entities/property-listing-draft.entity';
 import { CacheService } from '../../../common/cache/cache.service';
 import { FraudHooksService } from '../../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../../search/saved-search.service';
 import { User } from '../../users/entities/user.entity';
 
 describe('PropertiesService – Pagination', () => {
@@ -134,6 +135,10 @@ describe('PropertiesService – Pagination', () => {
     onListingPublished: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSavedSearchService = {
+    notifyMatchingSearches: jest.fn().mockResolvedValue(0),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -171,6 +176,7 @@ describe('PropertiesService – Pagination', () => {
         },
         { provide: CacheService, useValue: mockCacheService },
         { provide: FraudHooksService, useValue: mockFraudHooksService },
+        { provide: SavedSearchService, useValue: mockSavedSearchService },
       ],
     }).compile();
 
