@@ -38,6 +38,18 @@ export {
 } from './use-transactions';
 
 export {
+  useSavedSearches,
+  useCreateSavedSearch,
+  useDeleteSavedSearch,
+  toSavedSearchFilters,
+} from './use-saved-searches';
+export type {
+  SavedSearch,
+  SavedSearchFilters,
+  CreateSavedSearchPayload,
+} from './use-saved-searches';
+
+export {
   useAnchorTransactions,
   useAnchorTransaction,
   useAnchorTransactionStats,
