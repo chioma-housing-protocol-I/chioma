@@ -24,6 +24,7 @@ import {
   TTL_PUBLIC_PROPERTY_LIST_MS,
 } from '../../common/cache/cache.constants';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../search/saved-search.service';
 import {
   PropertyNotFoundError,
   AuthorizationError,
@@ -46,6 +47,7 @@ export class PropertiesService {
     private readonly propertyListingDraftRepository: Repository<PropertyListingDraft>,
     private readonly cacheService: CacheService,
     private readonly fraudHooksService: FraudHooksService,
+    private readonly savedSearchService: SavedSearchService,
   ) {}
 
   private generateCacheKey(query: QueryPropertyDto): string {
@@ -305,6 +307,7 @@ export class PropertiesService {
     const saved = await this.propertyRepository.save(property);
     await this.cacheService.invalidatePropertyDomainCaches(id);
     void this.fraudHooksService.onListingPublished(saved.id);
+    void this.savedSearchService.notifyMatchingSearches(saved);
     return saved;
   }
 
