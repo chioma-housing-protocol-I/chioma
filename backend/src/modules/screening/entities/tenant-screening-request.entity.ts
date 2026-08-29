@@ -54,6 +54,9 @@ export class TenantScreeningRequest {
   @Column({ name: 'provider_reference', type: 'varchar', nullable: true })
   providerReference?: string | null;
 
+  @Column({ name: 'renewed_from_id', type: 'uuid', nullable: true })
+  renewedFromId?: string | null;
+
   @Column({ name: 'encrypted_applicant_data', type: 'text' })
   encryptedApplicantData: string;
 
