@@ -86,6 +86,71 @@ export class AgreementNftService {
     return nft;
   }
 
+  async burnNftForAgreement(
+    agreementId: string,
+    reason: string,
+  ): Promise<RentObligationNft> {
+    const nft = await this.nftRepository.findOne({ where: { agreementId } });
+
+    if (!nft) {
+      throw new Error(`NFT not found for agreement ${agreementId}`);
+    }
+
+    if (nft.status === 'burned') {
+      return nft;
+    }
+
+    const { txHash } = await this.nftContractService.burnObligation({
+      tokenId: nft.tokenId,
+      reason,
+      ownerAddress: nft.currentOwner,
+    });
+
+    nft.status = 'burned';
+    nft.isActive = false;
+    nft.burnTxHash = txHash;
+    nft.burnedAt = new Date();
+
+    await this.nftRepository.save(nft);
+
+    this.logger.log(
+      `NFT burned for agreement ${agreementId} (reason: ${reason}): ${txHash}`,
+    );
+
+    return nft;
+  }
+
+  async adminReassignNft(
+    agreementId: string,
+    newOwnerAddress: string,
+    adminAddress: string,
+  ): Promise<RentObligationNft> {
+    const nft = await this.nftRepository.findOne({ where: { agreementId } });
+
+    if (!nft) {
+      throw new Error(`NFT not found for agreement ${agreementId}`);
+    }
+
+    const { txHash } = await this.nftContractService.adminReassignObligation({
+      agreementId,
+      newOwnerAddress,
+      adminAddress,
+    });
+
+    nft.currentOwner = newOwnerAddress;
+    nft.lastTransferTxHash = txHash;
+    nft.lastTransferredAt = new Date();
+    nft.transferCount += 1;
+
+    await this.nftRepository.save(nft);
+
+    this.logger.log(
+      `NFT admin-reassigned for agreement ${agreementId} to ${newOwnerAddress}: ${txHash}`,
+    );
+
+    return nft;
+  }
+
   async syncNftOwnership(agreementId: string): Promise<void> {
     const nft = await this.nftRepository.findOne({ where: { agreementId } });
 
