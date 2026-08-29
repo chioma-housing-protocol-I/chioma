@@ -7,14 +7,29 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { AgreementNftService } from './agreement-nft.service';
 import { NftAnalyticsService } from './nft-analytics.service';
-import { MintNftDto, TransferNftDto } from './dto/nft.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  MintNftDto,
+  TransferNftDto,
+  BurnNftDto,
+  AdminReassignObligationDto,
+} from './dto/nft.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 import { RentObligationNft } from './entities/rent-obligation-nft.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @Controller('agreements/nfts')
 @ApiTags('Agreement Nft')
@@ -90,5 +105,31 @@ export class AgreementNftController {
   async syncOwnership(@Param('agreementId') agreementId: string) {
     await this.nftService.syncNftOwnership(agreementId);
     return { message: 'Ownership synced successfully' };
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiResponse({ status: 200, description: 'Burned' })
+  @ApiOperation({ summary: 'Burn nft (admin only)' })
+  @Post('burn')
+  @HttpCode(HttpStatus.OK)
+  async burnNft(@Body() dto: BurnNftDto) {
+    return this.nftService.burnNftForAgreement(dto.agreementId, dto.reason);
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiResponse({ status: 200, description: 'Reassigned' })
+  @ApiOperation({ summary: 'Admin reassign obligation (admin only)' })
+  @Post('admin-reassign')
+  @HttpCode(HttpStatus.OK)
+  async adminReassign(@Body() dto: AdminReassignObligationDto) {
+    return this.nftService.adminReassignNft(
+      dto.agreementId,
+      dto.newOwnerAddress,
+      dto.adminAddress,
+    );
   }
 }
