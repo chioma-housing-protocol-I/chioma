@@ -8,12 +8,14 @@ import { PaymentModule } from '../payments/payment.module';
 import { StellarModule } from '../stellar/stellar.module';
 import { Payment } from '../payments/entities/payment.entity';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Booking, Property, Payment, StellarEscrow]),
     PaymentModule,
     StellarModule,
+    NotificationsModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

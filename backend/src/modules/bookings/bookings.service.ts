@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In, LessThan, MoreThan } from 'typeorm';
+import { Repository, DataSource, In, LessThan, MoreThan, Not } from 'typeorm';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import { Property } from '../properties/entities/property.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { BookingRoleFilter, QueryBookingsDto } from './dto/query-bookings.dto';
 import {
   AuthorizationError,
@@ -15,6 +16,7 @@ import { PaymentService } from '../payments/payment.service';
 import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { StellarService } from '../stellar/services/stellar.service';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -33,6 +35,7 @@ export class BookingsService {
     private readonly escrowRepository: Repository<StellarEscrow>,
     private readonly paymentService: PaymentService,
     private readonly stellarService: StellarService,
+    private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -229,6 +232,107 @@ export class BookingsService {
 
       await queryRunner.commitTransaction();
       this.logger.log(`Booking ${bookingId} transitioned to cancelled`);
+      return savedBooking;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async reschedule(
+    guestId: string,
+    bookingId: string,
+    dto: RescheduleBookingDto,
+  ): Promise<Booking> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['property', 'guest'],
+      });
+      if (!booking) {
+        throw new BookingNotFoundError(bookingId);
+      }
+      if (booking.guestId !== guestId) {
+        throw new AuthorizationError(
+          'Only the guest who made this booking can reschedule it',
+        );
+      }
+      if (
+        booking.status !== BookingStatus.PENDING &&
+        booking.status !== BookingStatus.CONFIRMED
+      ) {
+        throw new BusinessRuleViolationError(
+          `Booking is already ${booking.status}`,
+        );
+      }
+
+      const checkIn = new Date(dto.checkIn);
+      const checkOut = new Date(dto.checkOut);
+      const nights = Math.round(
+        (checkOut.getTime() - checkIn.getTime()) / MS_PER_DAY,
+      );
+      if (nights < 1) {
+        throw new BusinessRuleViolationError(
+          'Check-out date must be after check-in date',
+        );
+      }
+
+      const overlapping = await queryRunner.manager.exists(Booking, {
+        where: {
+          propertyId: booking.propertyId,
+          id: Not(booking.id),
+          status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+          checkInDate: LessThan(dto.checkOut),
+          checkOutDate: MoreThan(dto.checkIn),
+        },
+      });
+      if (overlapping) {
+        throw new BusinessRuleViolationError(
+          'Property is not available for the selected dates',
+        );
+      }
+
+      const previousCheckIn = booking.checkInDate;
+      const previousCheckOut = booking.checkOutDate;
+      const previousAmount = booking.totalAmount;
+
+      booking.checkInDate = dto.checkIn;
+      booking.checkOutDate = dto.checkOut;
+      booking.totalAmount = Number(booking.property.price) * nights;
+
+      const savedBooking = await queryRunner.manager.save(booking);
+
+      const amountDelta = savedBooking.totalAmount - Number(previousAmount);
+      if (amountDelta !== 0) {
+        const payment = await queryRunner.manager.findOne(Payment, {
+          where: { bookingId: savedBooking.id },
+        });
+        if (payment) {
+          payment.amount = savedBooking.totalAmount;
+          payment.netAmount = savedBooking.totalAmount - payment.transactionFee;
+          await queryRunner.manager.save(payment);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `Booking ${bookingId} rescheduled from ${previousCheckIn}..${previousCheckOut} to ${dto.checkIn}..${dto.checkOut}`,
+      );
+
+      await this.notificationsService.notify(
+        booking.property.ownerId,
+        'Booking Rescheduled',
+        `The guest rescheduled booking ${savedBooking.id} to ${dto.checkIn} - ${dto.checkOut}.`,
+        'booking',
+      );
+
       return savedBooking;
     } catch (error) {
       await queryRunner.rollbackTransaction();
