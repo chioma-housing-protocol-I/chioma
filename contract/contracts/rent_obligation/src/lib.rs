@@ -4,16 +4,19 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 mod errors;
 mod events;
+pub mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_rate_limit;
 
 pub use errors::ObligationError;
 pub use storage::DataKey;
-pub use types::{BurnRecord, RentObligation};
+pub use types::{BurnRecord, RateLimitConfig, RentObligation, UserCallCount};
 
 #[contract]
 pub struct TokenizedRentObligationContract;
@@ -70,6 +73,7 @@ impl TokenizedRentObligationContract {
         }
 
         landlord.require_auth();
+        crate::rate_limit::check_rate_limit(&env, &landlord, "mint_obligation")?;
 
         let obligation_key = DataKey::Obligation(agreement_id.clone());
         let owner_key = DataKey::Owner(agreement_id.clone());
@@ -134,6 +138,7 @@ impl TokenizedRentObligationContract {
         }
 
         from.require_auth();
+        crate::rate_limit::check_rate_limit(&env, &from, "transfer_obligation")?;
 
         let obligation_key = DataKey::Obligation(agreement_id.clone());
         let owner_key = DataKey::Owner(agreement_id.clone());
@@ -251,6 +256,7 @@ impl TokenizedRentObligationContract {
         }
 
         obligation.owner.require_auth();
+        crate::rate_limit::check_rate_limit(&env, &obligation.owner, "burn_nft")?;
 
         let burn_record = BurnRecord {
             token_id: token_id.clone(),

@@ -5,19 +5,22 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String};
 mod errors;
 mod events;
 mod property;
+pub mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_rate_limit;
 
 pub use errors::PropertyError;
 pub use property::{
     get_property, get_property_count, has_property, register_property, verify_property,
 };
 pub use storage::DataKey;
-pub use types::{ContractState, PropertyDetails};
+pub use types::{ContractState, PropertyDetails, RateLimitConfig, UserCallCount};
 
 #[contract]
 pub struct PropertyRegistryContract;

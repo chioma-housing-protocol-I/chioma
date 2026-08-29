@@ -17,4 +17,8 @@ pub enum AgentError {
     TransactionNotFound = 11,
     NotTransactionParty = 12,
     TransactionNotCompleted = 13,
+    /// Rate limit exceeded for this operation
+    RateLimitExceeded = 14,
+    /// Cooldown period not met between successive calls
+    CooldownNotMet = 15,
 }

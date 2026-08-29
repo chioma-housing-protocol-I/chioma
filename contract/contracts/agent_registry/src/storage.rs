@@ -10,4 +10,7 @@ pub enum DataKey {
     Transaction(String),
     AgentRating(Address, Address),
     UpgradeProposal(String),
+    RateLimitConfig,
+    UserCallCount(Address, String),
+    BlockCallCount(u64, String),
 }

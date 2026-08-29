@@ -16,6 +16,7 @@ pub fn register_property(
     }
 
     landlord.require_auth();
+    crate::rate_limit::check_rate_limit(env, &landlord, "register_property")?;
 
     if property_id.is_empty() {
         return Err(PropertyError::InvalidPropertyId);
@@ -66,6 +67,7 @@ pub fn verify_property(
         .ok_or(PropertyError::NotInitialized)?;
 
     admin.require_auth();
+    crate::rate_limit::check_rate_limit(env, &admin, "verify_property")?;
 
     if admin != state.admin {
         return Err(PropertyError::Unauthorized);

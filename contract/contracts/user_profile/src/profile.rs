@@ -38,6 +38,8 @@ impl UserProfileContract {
         // Require authorization from the account owner
         account_id.require_auth();
 
+        crate::rate_limit::check_rate_limit(&env, &account_id, "create_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Check if profile already exists
@@ -83,6 +85,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        crate::rate_limit::check_rate_limit(&env, &account_id, "update_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -147,6 +151,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require admin authorization
         admin.require_auth();
+
+        crate::rate_limit::check_rate_limit(&env, &admin, "verify_profile")?;
 
         // Verify admin
         let stored_admin: Address = env

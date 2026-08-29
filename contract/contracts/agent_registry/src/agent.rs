@@ -16,6 +16,8 @@ pub fn register_agent(
 
     agent.require_auth();
 
+    crate::rate_limit::check_rate_limit(env, &agent, "register_agent")?;
+
     if external_profile_hash.is_empty() {
         return Err(AgentError::InvalidProfileHash);
     }
@@ -59,6 +61,8 @@ pub fn verify_agent(env: &Env, admin: Address, agent: Address) -> Result<(), Age
         .ok_or(AgentError::NotInitialized)?;
 
     admin.require_auth();
+
+    crate::rate_limit::check_rate_limit(env, &admin, "verify_agent")?;
 
     if admin != state.admin {
         return Err(AgentError::Unauthorized);

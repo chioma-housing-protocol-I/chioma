@@ -15,4 +15,13 @@ pub enum DataKey {
 
     /// Upgrade proposal
     UpgradeProposal(String),
+
+    /// Rate limit configuration
+    RateLimitConfig,
+
+    /// Per-user per-function call count
+    UserCallCount(Address, String),
+
+    /// Per-block per-function call count
+    BlockCallCount(u64, String),
 }

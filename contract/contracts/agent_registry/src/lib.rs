@@ -5,12 +5,15 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 mod agent;
 mod errors;
 mod events;
+pub mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_rate_limit;
 
 pub use agent::{
     complete_transaction, get_agent_count, get_agent_info, rate_agent, register_agent,
@@ -18,7 +21,7 @@ pub use agent::{
 };
 pub use errors::AgentError;
 pub use storage::DataKey;
-pub use types::{AgentInfo, AgentTransaction, ContractState};
+pub use types::{AgentInfo, AgentTransaction, ContractState, RateLimitConfig, UserCallCount};
 
 #[contract]
 pub struct AgentRegistryContract;
