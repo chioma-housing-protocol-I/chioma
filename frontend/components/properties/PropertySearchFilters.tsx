@@ -8,10 +8,17 @@ import {
   ChevronDown,
   Filter,
   X,
+  BookmarkPlus,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { usePropertyStore } from '@/store/property-store';
-import { useSearchSuggest } from '@/lib/query/hooks';
+import {
+  useSearchSuggest,
+  useCreateSavedSearch,
+  toSavedSearchFilters,
+} from '@/lib/query/hooks';
+import { useAuthStore } from '@/store/authStore';
 
 interface FilterOption {
   label: string;
@@ -68,8 +75,13 @@ export default function PropertySearchFilters() {
   const [availability, setAvailability] = useState('');
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
+  const [savedSearchName, setSavedSearchName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const createSavedSearch = useCreateSavedSearch();
 
   const debouncedSearch = useDebounce(localSearch, 300);
 
@@ -161,6 +173,51 @@ export default function PropertySearchFilters() {
     maxBudget ||
     selectedType !== 'all' ||
     activeTags.size > 0;
+
+  const handleOpenSaveSearch = useCallback(() => {
+    if (!isAuthenticated) {
+      toast.error('Sign in to save searches');
+      return;
+    }
+    setSavedSearchName(localSearch || 'My search');
+    setIsSaveSearchOpen(true);
+  }, [isAuthenticated, localSearch]);
+
+  const handleSaveSearch = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!savedSearchName.trim()) return;
+
+      const searchFilters = toSavedSearchFilters({
+        q: localSearch || undefined,
+        minPrice: minBudget || undefined,
+        maxPrice: maxBudget || undefined,
+        type: selectedType !== 'all' ? selectedType : undefined,
+        petsAllowed: activeTags.has('pets allowed') ? 'true' : undefined,
+        parking: activeTags.has('parking') ? 'true' : undefined,
+      });
+
+      try {
+        await createSavedSearch.mutateAsync({
+          name: savedSearchName.trim(),
+          filters: searchFilters,
+        });
+        toast.success('Search saved — we’ll notify you of new matches');
+        setIsSaveSearchOpen(false);
+      } catch {
+        toast.error('Could not save this search. Please try again.');
+      }
+    },
+    [
+      savedSearchName,
+      localSearch,
+      minBudget,
+      maxBudget,
+      selectedType,
+      activeTags,
+      createSavedSearch,
+    ],
+  );
 
   return (
     <div
@@ -273,6 +330,16 @@ export default function PropertySearchFilters() {
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-95"
           >
             Search
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenSaveSearch}
+            data-testid="save-search-btn"
+            className="flex items-center gap-1.5 text-blue-200/70 hover:text-white text-sm px-3 py-2 rounded-xl border border-white/5 hover:border-white/10 transition-all"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+            <span>Save search</span>
           </button>
 
           {hasActiveFilters && (
@@ -436,6 +503,55 @@ export default function PropertySearchFilters() {
               Apply Filters
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Save Search Modal */}
+      {isSaveSearchOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+          data-testid="save-search-modal"
+        >
+          <div
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            onClick={() => setIsSaveSearchOpen(false)}
+          />
+          <form
+            onSubmit={handleSaveSearch}
+            className="relative w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">Save this search</h3>
+              <button
+                type="button"
+                onClick={() => setIsSaveSearchOpen(false)}
+                data-testid="save-search-close-btn"
+                className="p-1.5 bg-slate-800 rounded-full text-blue-200/50 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-blue-200/60">
+              We&apos;ll notify you when a new listing matches these filters.
+            </p>
+            <input
+              type="text"
+              value={savedSearchName}
+              onChange={(e) => setSavedSearchName(e.target.value)}
+              placeholder="Name this search"
+              data-testid="save-search-name-input"
+              autoFocus
+              className="w-full bg-slate-800 border border-white/5 rounded-xl py-3 px-4 text-white placeholder:text-blue-200/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <button
+              type="submit"
+              disabled={createSavedSearch.isPending || !savedSearchName.trim()}
+              data-testid="save-search-submit-btn"
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all"
+            >
+              {createSavedSearch.isPending ? 'Saving…' : 'Save & get alerts'}
+            </button>
+          </form>
         </div>
       )}
     </div>
