@@ -9,7 +9,7 @@ import {
 import { createHash } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
-import { UsersService } from './users.service';
+import { UsersService, ANONYMIZED_USER_ID } from './users.service';
 import { User, UserRole, AuthMethod } from './entities/user.entity';
 import { UserNotificationPreference } from './entities/user-notification-preference.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
@@ -17,6 +17,18 @@ import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
 import { LockService } from '../../common/lock';
 import { EncryptionService } from '../../common/services/encryption.service';
+import { Review } from '../reviews/review.entity';
+import { GuestReview } from '../reviews/entities/guest-review.entity';
+import { HostReview } from '../reviews/entities/host-review.entity';
+import { Message } from '../messaging/entities/message.entity';
+import { Participant } from '../messaging/entities/participant.entity';
+import { Payment } from '../payments/entities/payment.entity';
+import { PaymentSchedule } from '../payments/entities/payment-schedule.entity';
+import { PaymentMethod } from '../payments/entities/payment-method.entity';
+import { Kyc } from '../kyc/kyc.entity';
+import { PropertyInquiry } from '../inquiries/entities/property-inquiry.entity';
+import { SecurityEvent } from '../security/entities/security-event.entity';
+import { ApiKey } from '../developer/entities/api-key.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -74,6 +86,8 @@ describe('UsersService', () => {
   const mockTransactionManager = {
     save: jest.fn().mockResolvedValue(undefined),
     softDelete: jest.fn().mockResolvedValue(undefined),
+    update: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockDataSource = {
@@ -107,6 +121,18 @@ describe('UsersService', () => {
           provide: getRepositoryToken(UserNotificationPreference),
           useValue: mockNotificationPreferenceRepository,
         },
+        { provide: getRepositoryToken(Review), useValue: {} },
+        { provide: getRepositoryToken(GuestReview), useValue: {} },
+        { provide: getRepositoryToken(HostReview), useValue: {} },
+        { provide: getRepositoryToken(Message), useValue: {} },
+        { provide: getRepositoryToken(Participant), useValue: {} },
+        { provide: getRepositoryToken(Payment), useValue: {} },
+        { provide: getRepositoryToken(PaymentSchedule), useValue: {} },
+        { provide: getRepositoryToken(PaymentMethod), useValue: {} },
+        { provide: getRepositoryToken(Kyc), useValue: {} },
+        { provide: getRepositoryToken(PropertyInquiry), useValue: {} },
+        { provide: getRepositoryToken(SecurityEvent), useValue: {} },
+        { provide: getRepositoryToken(ApiKey), useValue: {} },
         { provide: AuditService, useValue: mockAuditService },
         {
           provide: EncryptionService,
@@ -362,33 +388,221 @@ describe('UsersService', () => {
   });
 
   describe('gdprDeleteAccount', () => {
-    it('anonymizes, soft-deletes, and audits the user inside a single transaction', async () => {
+    beforeEach(() => {
       mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    });
 
+    it('returns the success message', async () => {
       const result = await service.gdprDeleteAccount('1');
-
       expect(result).toEqual({
         message: 'Account deleted and data anonymized (GDPR)',
       });
+    });
+
+    it('runs every erasure step inside a single transaction', async () => {
+      await service.gdprDeleteAccount('1');
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    // ── User row ──────────────────────────────────────────────────────────
+    it('anonymizes PII fields and soft-deletes the User row', async () => {
+      await service.gdprDeleteAccount('1');
+
       expect(mockTransactionManager.save).toHaveBeenCalledWith(
         User,
-        expect.objectContaining({ isActive: false, refreshToken: null }),
+        expect.objectContaining({
+          isActive: false,
+          refreshToken: null,
+          firstName: null,
+          lastName: null,
+          phoneNumber: null,
+        }),
       );
       expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
-      expect(mockAuditService.logInTransaction).toHaveBeenCalledWith(
-        mockTransactionManager,
+    });
+
+    // ── Reviews ───────────────────────────────────────────────────────────
+    it('soft-deletes reviews authored by the user', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(Review, {
+        reviewerId: '1',
+      });
+    });
+
+    it('anonymizes reviews where the user is the reviewee', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Review,
+        { revieweeId: '1' },
+        { reviewerId: ANONYMIZED_USER_ID, comment: null },
+      );
+    });
+
+    // ── GuestReviews ──────────────────────────────────────────────────────
+    it('soft-deletes GuestReviews authored by the user as guest', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(
+        GuestReview,
+        { guestId: '1' },
+      );
+    });
+
+    it('anonymizes GuestReviews where the user is the host', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        GuestReview,
+        { hostId: '1' },
+        { guestId: ANONYMIZED_USER_ID, comment: '' },
+      );
+    });
+
+    // ── HostReviews ───────────────────────────────────────────────────────
+    it('soft-deletes HostReviews authored by the user as host', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(
+        HostReview,
+        { hostId: '1' },
+      );
+    });
+
+    it('anonymizes HostReviews where the user is the guest', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        HostReview,
+        { guestId: '1' },
+        { hostId: ANONYMIZED_USER_ID, comment: '' },
+      );
+    });
+
+    // ── Messages & Participants ───────────────────────────────────────────
+    it('anonymizes message senderId and receiverId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Message,
+        { senderId: Number('1') },
+        { senderId: 0 },
+      );
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Message,
+        { receiverId: Number('1') },
+        { receiverId: 0 },
+      );
+    });
+
+    it('anonymizes participant userId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Participant,
+        { userId: Number('1') },
+        { userId: 0 },
+      );
+    });
+
+    // ── PropertyInquiries ─────────────────────────────────────────────────
+    it('anonymizes inquiry PII and fromUserId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        PropertyInquiry,
+        { fromUserId: '1' },
+        {
+          fromUserId: ANONYMIZED_USER_ID,
+          senderName: null,
+          senderEmail: null,
+          senderPhone: null,
+        },
+      );
+    });
+
+    it('anonymizes inquiry toUserId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        PropertyInquiry,
+        { toUserId: '1' },
+        { toUserId: ANONYMIZED_USER_ID },
+      );
+    });
+
+    // ── Payments ──────────────────────────────────────────────────────────
+    it('nullifies userId on payments (financial record retained)', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Payment,
+        { userId: '1' },
+        { userId: null },
+      );
+    });
+
+    // ── PaymentSchedules & PaymentMethods ─────────────────────────────────
+    it('hard-deletes payment schedules', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(
+        PaymentSchedule,
+        { userId: '1' },
+      );
+    });
+
+    it('hard-deletes payment methods', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(
+        PaymentMethod,
+        { userId: '1' },
+      );
+    });
+
+    // ── KYC ───────────────────────────────────────────────────────────────
+    it('wipes KYC raw document data while retaining the decision record', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Kyc,
+        { userId: '1' },
         expect.objectContaining({
-          action: AuditAction.DELETE,
-          entityType: 'User',
-          entityId: '1',
-          metadata: { type: 'GDPR_DELETE' },
+          encryptedKycData: null,
+          documentPurgedAt: expect.any(Date),
         }),
       );
     });
 
-    it('does not soft-delete or audit when the anonymizing save fails', async () => {
-      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    // ── SecurityEvents ────────────────────────────────────────────────────
+    it('nullifies userId on security events (log retained)', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        SecurityEvent,
+        { userId: '1' },
+        { userId: null },
+      );
+    });
+
+    // ── ApiKeys ───────────────────────────────────────────────────────────
+    it('hard-deletes API keys', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(ApiKey, {
+        userId: '1',
+      });
+    });
+
+    // ── Audit entry ───────────────────────────────────────────────────────
+    it('writes a USER_ERASURE_REQUESTED audit entry with disposition metadata', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockAuditService.logInTransaction).toHaveBeenCalledWith(
+        mockTransactionManager,
+        expect.objectContaining({
+          action: AuditAction.USER_ERASURE_REQUESTED,
+          entityType: 'User',
+          entityId: '1',
+          performedBy: '1',
+          metadata: expect.objectContaining({
+            type: 'GDPR_ERASURE',
+            dispositions: expect.objectContaining({
+              payments: expect.stringContaining('retained'),
+              auditLogs: expect.stringContaining('retained'),
+            }),
+          }),
+        }),
+      );
+    });
+
+    // ── Atomicity ─────────────────────────────────────────────────────────
+    it('does not proceed past the first failing step', async () => {
       mockTransactionManager.save.mockRejectedValueOnce(
         new Error('db unavailable'),
       );
@@ -400,12 +614,10 @@ describe('UsersService', () => {
       expect(mockTransactionManager.softDelete).not.toHaveBeenCalled();
       expect(mockAuditService.logInTransaction).not.toHaveBeenCalled();
 
-      // Restore default behaviour for subsequent tests.
       mockTransactionManager.save.mockResolvedValue(undefined);
     });
 
-    it('propagates the error (and, in real usage, rolls back) when the audit write fails', async () => {
-      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    it('propagates audit-write failures so the transaction rolls back', async () => {
       mockAuditService.logInTransaction.mockRejectedValueOnce(
         new Error('audit insert failed'),
       );
@@ -414,10 +626,7 @@ describe('UsersService', () => {
         'audit insert failed',
       );
 
-      // The transaction wrapper is what performs the rollback in a real
-      // DataSource; here we assert the failure propagates out of the
-      // transaction callback instead of being swallowed, which is what
-      // `dataSource.transaction()` needs in order to roll back.
+      // All data steps ran before the audit write, so softDelete was called
       expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
 
       mockAuditService.logInTransaction.mockResolvedValue(undefined);

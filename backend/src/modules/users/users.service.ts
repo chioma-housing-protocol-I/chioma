@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Not, Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './entities/user.entity';
@@ -36,6 +36,21 @@ import {
   AuditStatus,
 } from '../audit/entities/audit-log.entity';
 import { EncryptionService } from '../../common/services/encryption.service';
+import { Review } from '../reviews/review.entity';
+import { GuestReview } from '../reviews/entities/guest-review.entity';
+import { HostReview } from '../reviews/entities/host-review.entity';
+import { Message } from '../messaging/entities/message.entity';
+import { Participant } from '../messaging/entities/participant.entity';
+import { Payment } from '../payments/entities/payment.entity';
+import { PaymentSchedule } from '../payments/entities/payment-schedule.entity';
+import { PaymentMethod } from '../payments/entities/payment-method.entity';
+import { Kyc } from '../kyc/kyc.entity';
+import { PropertyInquiry } from '../inquiries/entities/property-inquiry.entity';
+import { SecurityEvent } from '../security/entities/security-event.entity';
+import { ApiKey } from '../developer/entities/api-key.entity';
+
+/** Sentinel that replaces the author id on retained records after erasure. */
+export const ANONYMIZED_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 const SALT_ROUNDS = 12;
 
@@ -62,6 +77,30 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserNotificationPreference)
     private readonly userNotificationPreferenceRepository: Repository<UserNotificationPreference>,
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
+    @InjectRepository(GuestReview)
+    private readonly guestReviewRepository: Repository<GuestReview>,
+    @InjectRepository(HostReview)
+    private readonly hostReviewRepository: Repository<HostReview>,
+    @InjectRepository(Message)
+    private readonly messageRepository: Repository<Message>,
+    @InjectRepository(Participant)
+    private readonly participantRepository: Repository<Participant>,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
+    @InjectRepository(PaymentSchedule)
+    private readonly paymentScheduleRepository: Repository<PaymentSchedule>,
+    @InjectRepository(PaymentMethod)
+    private readonly paymentMethodRepository: Repository<PaymentMethod>,
+    @InjectRepository(Kyc)
+    private readonly kycRepository: Repository<Kyc>,
+    @InjectRepository(PropertyInquiry)
+    private readonly propertyInquiryRepository: Repository<PropertyInquiry>,
+    @InjectRepository(SecurityEvent)
+    private readonly securityEventRepository: Repository<SecurityEvent>,
+    @InjectRepository(ApiKey)
+    private readonly apiKeyRepository: Repository<ApiKey>,
     private readonly auditService: AuditService,
     private readonly encryptionService: EncryptionService,
     private readonly lockService: LockService,
@@ -121,8 +160,44 @@ export class UsersService {
     return exportData;
   }
 
+  /**
+   * Erases a user account per GDPR Art. 17 "right to erasure".
+   *
+   * Every entity that references the user has a documented disposition:
+   *
+   * | Entity                  | Disposition                                                      | Rationale                                        |
+   * |-------------------------|------------------------------------------------------------------|--------------------------------------------------|
+   * | User row                | Anonymize PII fields, randomise password, soft-delete           | Keeps FK targets valid; removes personal data    |
+   * | Review (authored)       | Soft-delete (cascade from service)                              | User no longer exists to stand behind the review |
+   * | Review (received)       | Anonymize reviewerId → ANONYMIZED_USER_ID, comment nulled       | Rating evidence retained; author identity erased |
+   * | GuestReview (as guest)  | Soft-delete                                                     | User-authored content removed                    |
+   * | GuestReview (as host)   | Anonymize guestId → ANONYMIZED_USER_ID, comment nulled          | Host's operational record kept; guest erased     |
+   * | HostReview (as host)    | Soft-delete                                                     | User-authored content removed                    |
+   * | HostReview (as guest)   | Anonymize hostId → ANONYMIZED_USER_ID, comment nulled           | Guest's operational record kept; host erased     |
+   * | Message / Participant   | Anonymize senderId/receiverId/userId → ANONYMIZED_USER_ID       | Conversation thread integrity preserved          |
+   * | PropertyInquiry         | Anonymize PII fields + fromUserId/toUserId                      | Property record retained; sender identity erased |
+   * | Payment                 | Nullify userId (set to NULL)                                    | Financial record retained for legal obligation   |
+   * | PaymentSchedule         | Hard-delete (CASCADE already configured on entity)             | No legal hold; owned by user                     |
+   * | PaymentMethod           | Hard-delete (CASCADE already configured on entity)             | Access credential; no legal hold                 |
+   * | KYC                     | Wipe encryptedKycData; retain documentHash + decision fields    | Raw document erased; audit trail preserved       |
+   * | SecurityEvent           | Nullify userId                                                  | Security log retained for fraud/legal analysis   |
+   * | ApiKey                  | Hard-delete                                                     | Access credential; no legal hold                 |
+   * | AuditLog                | Retain intact                                                   | Immutable compliance record                      |
+   * | OAuthAccount / MFA /    | Handled by onDelete: CASCADE in DB schema                       | Access credentials removed automatically         |
+   * | UserNotificationPref /  |                                                                  |                                                  |
+   * | ProfileMetadata /       |                                                                  |                                                  |
+   * | Favorites / AIPrefs /   |                                                                  |                                                  |
+   * | StellarAccount          |                                                                  |                                                  |
+   *
+   * All writes execute inside a single transaction so the operation is
+   * atomic: either every table is updated or nothing is committed.
+   * The audit entry uses `logInTransaction` so a failed audit write rolls
+   * the entire erasure back rather than leaving it silently untracked.
+   */
   async gdprDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId);
+
+    // ── 1. Prepare anonymized User row ──────────────────────────────────────
     const anonEmail = `deleted_${user.id}@anonymized.local`;
     user.email = anonEmail;
     user.firstName = null;
@@ -130,6 +205,10 @@ export class UsersService {
     user.phoneNumber = null;
     user.emailHash = this.hashLookupValue(anonEmail);
     user.phoneNumberHash = null;
+    user.firstNameEncrypted = null;
+    user.lastNameEncrypted = null;
+    user.phoneNumberEncrypted = null;
+    user.emailEncrypted = null;
     user.password = await bcrypt.hash(
       randomBytes(32).toString('hex'),
       SALT_ROUNDS,
@@ -137,25 +216,117 @@ export class UsersService {
     user.isActive = false;
     user.refreshToken = null;
 
-    // The anonymization writes and the audit entry that records this
-    // irreversible, destructive action must commit or roll back together:
-    // if the audit insert fails, the deletion must not silently go
-    // untracked. See modules/audit/audit.service.ts#logInTransaction.
     await this.dataSource.transaction(async (manager) => {
+      // ── 2. User row ───────────────────────────────────────────────────────
       await manager.save(User, user);
       await manager.softDelete(User, userId);
+
+      // ── 3. Reviews authored by this user → soft-delete ───────────────────
+      await manager.softDelete(Review, { reviewerId: userId });
+
+      // ── 4. Reviews where this user is the reviewee → anonymize author ─────
+      await manager.update(Review, { revieweeId: userId }, {
+        reviewerId: ANONYMIZED_USER_ID,
+        comment: null as unknown as string,
+      });
+
+      // ── 5. GuestReviews authored by user (as guest) → soft-delete ─────────
+      await manager.softDelete(GuestReview, { guestId: userId });
+
+      // ── 6. GuestReviews received by user (as host) → anonymize guest ──────
+      await manager.update(GuestReview, { hostId: userId }, {
+        guestId: ANONYMIZED_USER_ID,
+        comment: '',
+      });
+
+      // ── 7. HostReviews authored by user (as host) → soft-delete ──────────
+      await manager.softDelete(HostReview, { hostId: userId });
+
+      // ── 8. HostReviews received by user (as guest) → anonymize host ───────
+      await manager.update(HostReview, { guestId: userId }, {
+        hostId: ANONYMIZED_USER_ID,
+        comment: '',
+      });
+
+      // ── 9. Messages: anonymize senderId / receiverId ──────────────────────
+      await manager.update(Message, { senderId: Number(userId) }, { senderId: 0 });
+      await manager.update(Message, { receiverId: Number(userId) }, { receiverId: 0 });
+
+      // ── 10. Participants: anonymize userId ────────────────────────────────
+      await manager.update(Participant, { userId: Number(userId) }, { userId: 0 });
+
+      // ── 11. PropertyInquiries: anonymize PII + user references ────────────
+      await manager.update(
+        PropertyInquiry,
+        { fromUserId: userId },
+        {
+          fromUserId: ANONYMIZED_USER_ID,
+          senderName: null,
+          senderEmail: null,
+          senderPhone: null,
+        },
+      );
+      await manager.update(
+        PropertyInquiry,
+        { toUserId: userId },
+        { toUserId: ANONYMIZED_USER_ID },
+      );
+
+      // ── 12. Payments: nullify userId (financial record retained) ──────────
+      await manager.update(Payment, { userId }, { userId: null as any });
+
+      // ── 13. PaymentSchedules: hard-delete (cascade; no legal hold) ────────
+      await manager.delete(PaymentSchedule, { userId });
+
+      // ── 14. PaymentMethods: hard-delete (cascade; access credential) ──────
+      await manager.delete(PaymentMethod, { userId });
+
+      // ── 15. KYC: wipe raw document data; retain decision metadata ─────────
+      await manager.update(
+        Kyc,
+        { userId },
+        {
+          encryptedKycData: null,
+          documentPurgedAt: new Date(),
+        },
+      );
+
+      // ── 16. SecurityEvents: nullify userId (log retained) ─────────────────
+      await manager.update(SecurityEvent, { userId }, { userId: null });
+
+      // ── 17. ApiKeys: hard-delete (access credentials) ─────────────────────
+      await manager.delete(ApiKey, { userId });
+
+      // ── 18. Audit entry — must be last; failure here rolls everything back ─
       await this.auditService.logInTransaction(manager, {
-        action: AuditAction.DELETE,
+        action: AuditAction.USER_ERASURE_REQUESTED,
         entityType: 'User',
         entityId: userId,
         performedBy: userId,
         status: AuditStatus.SUCCESS,
         level: AuditLevel.SECURITY,
-        metadata: { type: 'GDPR_DELETE' },
+        metadata: {
+          type: 'GDPR_ERASURE',
+          dispositions: {
+            reviews: 'authored soft-deleted; received anonymized',
+            guestReviews: 'authored soft-deleted; received anonymized',
+            hostReviews: 'authored soft-deleted; received anonymized',
+            messages: 'senderId/receiverId anonymized',
+            participants: 'userId anonymized',
+            inquiries: 'PII fields nulled; userIds anonymized',
+            payments: 'userId nullified (financial record retained)',
+            paymentSchedules: 'hard-deleted',
+            paymentMethods: 'hard-deleted',
+            kyc: 'encryptedKycData wiped; decision metadata retained',
+            securityEvents: 'userId nullified (log retained)',
+            apiKeys: 'hard-deleted',
+            auditLogs: 'retained intact (compliance)',
+          },
+        },
       });
     });
 
-    this.logger.log(`GDPR account deletion for user: ${userId}`);
+    this.logger.log(`GDPR erasure completed for user: ${userId}`);
     return { message: 'Account deleted and data anonymized (GDPR)' };
   }
 
