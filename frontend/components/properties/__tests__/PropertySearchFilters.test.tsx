@@ -2,19 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
+const mockMutateAsync = vi.fn();
+
 vi.mock('@/lib/query/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
   return {
     ...actual,
     useSearchSuggest: vi.fn(() => ({ data: undefined })),
+    useCreateSavedSearch: vi.fn(() => ({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    })),
   };
 });
 
+import { useAuthStore } from '@/store/authStore';
 import PropertySearchFilters from '../PropertySearchFilters';
 
 describe('PropertySearchFilters', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ isAuthenticated: false });
   });
 
   it('renders the location search input', () => {
@@ -31,7 +39,12 @@ describe('PropertySearchFilters', () => {
 
   it('renders the search button', () => {
     render(React.createElement(PropertySearchFilters));
-    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
+    expect(screen.getByTestId('search-submit-btn')).toBeInTheDocument();
+  });
+
+  it('renders the save search button', () => {
+    render(React.createElement(PropertySearchFilters));
+    expect(screen.getByTestId('save-search-btn')).toBeInTheDocument();
   });
 
   it('renders popular filter tags', () => {
@@ -102,5 +115,53 @@ describe('PropertySearchFilters', () => {
     const closeBtn = screen.getByRole('button', { name: '' });
     fireEvent.click(closeBtn);
     expect(screen.queryByText('Apply Filters')).not.toBeInTheDocument();
+  });
+
+  describe('save search', () => {
+    it('does not open the save search modal for an unauthenticated user', () => {
+      useAuthStore.setState({ isAuthenticated: false });
+      render(React.createElement(PropertySearchFilters));
+
+      fireEvent.click(screen.getByTestId('save-search-btn'));
+
+      expect(screen.queryByTestId('save-search-modal')).not.toBeInTheDocument();
+    });
+
+    it('opens the save search modal for an authenticated user', () => {
+      useAuthStore.setState({ isAuthenticated: true });
+      render(React.createElement(PropertySearchFilters));
+
+      fireEvent.click(screen.getByTestId('save-search-btn'));
+
+      expect(screen.getByTestId('save-search-modal')).toBeInTheDocument();
+    });
+
+    it('submits the saved search with the entered name', async () => {
+      useAuthStore.setState({ isAuthenticated: true });
+      mockMutateAsync.mockResolvedValue({ id: 'saved-1' });
+      render(React.createElement(PropertySearchFilters));
+
+      fireEvent.click(screen.getByTestId('save-search-btn'));
+      const nameInput = screen.getByTestId(
+        'save-search-name-input',
+      ) as HTMLInputElement;
+      fireEvent.change(nameInput, { target: { value: 'Lekki 2-beds' } });
+      fireEvent.click(screen.getByTestId('save-search-submit-btn'));
+
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Lekki 2-beds' }),
+      );
+    });
+
+    it('closes the save search modal via the close button', () => {
+      useAuthStore.setState({ isAuthenticated: true });
+      render(React.createElement(PropertySearchFilters));
+
+      fireEvent.click(screen.getByTestId('save-search-btn'));
+      expect(screen.getByTestId('save-search-modal')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('save-search-close-btn'));
+      expect(screen.queryByTestId('save-search-modal')).not.toBeInTheDocument();
+    });
   });
 });

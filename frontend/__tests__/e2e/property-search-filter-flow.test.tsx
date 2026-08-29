@@ -116,6 +116,10 @@ vi.mock('@/lib/query/hooks', async (importOriginal) => {
       isPending: false,
       toggleFavorite: vi.fn(),
     })),
+    useCreateSavedSearch: vi.fn(() => ({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    })),
   };
 });
 
