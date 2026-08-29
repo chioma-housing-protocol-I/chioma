@@ -21,8 +21,13 @@ export class InvalidInquiryTransitionError extends BadRequestException {
  * The explicit inquiry lifecycle. Every legal transition is listed here;
  * anything not in the table is rejected. Terminal states have an empty list.
  *
- *   PENDING ──▶ VIEWED ──▶ CLOSED
- *      └────────────────────▲
+ *   PENDING ──▶ VIEWED ──▶ RESPONDED ──▶ CLOSED
+ *      │           └───────────┬────────────▲
+ *      └──────────────────────────────────────
+ *
+ * RESPONDED is reached when the recipient replies via in-app messaging. A
+ * repeat reply keeps the inquiry in RESPONDED (callers short-circuit before
+ * asserting), so RESPONDED -> RESPONDED is intentionally absent.
  */
 export const INQUIRY_STATUS_TRANSITIONS: Record<
   PropertyInquiryStatus,
@@ -30,9 +35,14 @@ export const INQUIRY_STATUS_TRANSITIONS: Record<
 > = {
   [PropertyInquiryStatus.PENDING]: [
     PropertyInquiryStatus.VIEWED,
+    PropertyInquiryStatus.RESPONDED,
     PropertyInquiryStatus.CLOSED,
   ],
-  [PropertyInquiryStatus.VIEWED]: [PropertyInquiryStatus.CLOSED],
+  [PropertyInquiryStatus.VIEWED]: [
+    PropertyInquiryStatus.RESPONDED,
+    PropertyInquiryStatus.CLOSED,
+  ],
+  [PropertyInquiryStatus.RESPONDED]: [PropertyInquiryStatus.CLOSED],
   [PropertyInquiryStatus.CLOSED]: [],
 };
 

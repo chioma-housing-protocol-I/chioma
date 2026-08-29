@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Property } from '../properties/entities/property.entity';
 import { User } from '../users/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { MessagingModule } from '../messaging/messaging.module';
 import { InquiriesController } from './inquiries.controller';
 import { InquiriesService } from './inquiries.service';
 import { PropertyInquiry } from './entities/property-inquiry.entity';
@@ -11,6 +12,7 @@ import { PropertyInquiry } from './entities/property-inquiry.entity';
   imports: [
     TypeOrmModule.forFeature([PropertyInquiry, Property, User]),
     NotificationsModule,
+    MessagingModule,
   ],
   controllers: [InquiriesController],
   providers: [InquiriesService],

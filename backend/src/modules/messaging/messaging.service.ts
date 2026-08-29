@@ -114,6 +114,36 @@ export class MessagingService {
     }) as Promise<ChatRoom>;
   }
 
+  /**
+   * Bridge helper for other modules (e.g. inquiries): ensure a DM room exists
+   * between two users and post a message from `senderUserId` into it. Returns
+   * the room and the persisted message so callers can link the two parties'
+   * conversation into the in-app messaging system instead of pushing them to
+   * reply off-platform.
+   */
+  async sendDirectMessage(
+    senderUserId: string,
+    recipientUserId: string,
+    content: string,
+  ): Promise<{ room: ChatRoom; message: Message }> {
+    const room = await this.findOrCreateRoom(senderUserId, recipientUserId);
+
+    const senderNumericId = parseInt(senderUserId, 10);
+    const recipientNumericId = parseInt(recipientUserId, 10);
+
+    const message = this.messageRepository.create({
+      senderId: senderNumericId,
+      receiverId: recipientNumericId,
+      content,
+      chatRoom: room,
+      sender: room.participants?.find((p) => p.userId === senderNumericId),
+      receiver: room.participants?.find((p) => p.userId === recipientNumericId),
+    });
+
+    const saved = await this.messageRepository.save(message);
+    return { room, message: saved };
+  }
+
   // ── Messages ──────────────────────────────────────────────────────────────
 
   async getMessagesForRoom(roomId: string, page = 1, limit = 50) {

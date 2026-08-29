@@ -8,11 +8,13 @@ import { In, Repository } from 'typeorm';
 import { Property } from '../properties/entities/property.entity';
 import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MessagingService } from '../messaging/messaging.service';
 import {
   PropertyInquiry,
   PropertyInquiryStatus,
 } from './entities/property-inquiry.entity';
 import { CreatePropertyInquiryDto } from './dto/create-property-inquiry.dto';
+import { RespondInquiryDto } from './dto/respond-inquiry.dto';
 import { assertInquiryTransition } from './inquiry-state-machine';
 import { PaginationUtils } from '../../common/utils';
 
@@ -46,6 +48,7 @@ export class InquiriesService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
+    private readonly messagingService: MessagingService,
   ) {}
 
   async createInquiry(
@@ -218,6 +221,59 @@ export class InquiriesService {
     inquiry.status = PropertyInquiryStatus.VIEWED;
     inquiry.viewedAt = new Date();
     return this.inquiryRepository.save(inquiry);
+  }
+
+  /**
+   * Respond to an inquiry as the recipient (property owner). Bridges the
+   * inquiry into the in-app messaging system: it finds or creates the DM room
+   * between the two parties, posts the reply there, advances the inquiry to
+   * RESPONDED, and notifies the original sender. A repeat reply simply appends
+   * another message without re-transitioning.
+   */
+  async respond(
+    id: string,
+    userId: string,
+    dto: RespondInquiryDto,
+  ): Promise<PropertyInquiry> {
+    const inquiry = await this.inquiryRepository.findOne({
+      where: { id, toUserId: userId },
+    });
+
+    if (!inquiry) {
+      throw new NotFoundException('Inquiry not found');
+    }
+
+    const alreadyResponded =
+      inquiry.status === PropertyInquiryStatus.RESPONDED;
+
+    // Validate the lifecycle move up front so an illegal state (e.g. CLOSED)
+    // is rejected before we post anything into the messaging room.
+    if (!alreadyResponded) {
+      assertInquiryTransition(
+        inquiry.status,
+        PropertyInquiryStatus.RESPONDED,
+      );
+    }
+
+    await this.messagingService.sendDirectMessage(
+      inquiry.toUserId,
+      inquiry.fromUserId,
+      dto.message,
+    );
+
+    if (!alreadyResponded) {
+      inquiry.status = PropertyInquiryStatus.RESPONDED;
+    }
+    const saved = await this.inquiryRepository.save(inquiry);
+
+    await this.notificationsService.notify(
+      inquiry.fromUserId,
+      'Response to your inquiry',
+      'The property owner replied to your inquiry.',
+      'PROPERTY_INQUIRY_RESPONSE',
+    );
+
+    return saved;
   }
 
   /**

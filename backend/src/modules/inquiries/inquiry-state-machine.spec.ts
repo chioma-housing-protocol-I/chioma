@@ -17,8 +17,11 @@ describe('inquiry state machine', () => {
 
   const legal: Array<[PropertyInquiryStatus, PropertyInquiryStatus]> = [
     [PropertyInquiryStatus.PENDING, PropertyInquiryStatus.VIEWED],
+    [PropertyInquiryStatus.PENDING, PropertyInquiryStatus.RESPONDED],
     [PropertyInquiryStatus.PENDING, PropertyInquiryStatus.CLOSED],
+    [PropertyInquiryStatus.VIEWED, PropertyInquiryStatus.RESPONDED],
     [PropertyInquiryStatus.VIEWED, PropertyInquiryStatus.CLOSED],
+    [PropertyInquiryStatus.RESPONDED, PropertyInquiryStatus.CLOSED],
   ];
 
   it.each(legal)('allows %s -> %s', (from, to) => {

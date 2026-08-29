@@ -10,6 +10,8 @@ import {
 export enum PropertyInquiryStatus {
   PENDING = 'pending',
   VIEWED = 'viewed',
+  /** The recipient replied through the in-app messaging system. */
+  RESPONDED = 'responded',
   /** Terminal state: either party ended the conversation. */
   CLOSED = 'closed',
 }

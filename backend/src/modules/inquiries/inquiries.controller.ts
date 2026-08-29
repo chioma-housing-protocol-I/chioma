@@ -19,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { InquiriesService } from './inquiries.service';
 import { CreatePropertyInquiryDto } from './dto/create-property-inquiry.dto';
+import { RespondInquiryDto } from './dto/respond-inquiry.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Inquiries')
@@ -63,6 +64,20 @@ export class InquiriesController {
   @ApiOperation({ summary: 'Mark an incoming inquiry as viewed' })
   async markViewed(@Param('id') id: string, @CurrentUser() user: User) {
     return this.inquiriesService.markViewed(id, user.id);
+  }
+
+  @Post(':id/respond')
+  @ApiOperation({
+    summary: 'Respond to an inquiry via in-app messaging (recipient only)',
+  })
+  @ApiResponse({ status: 201, description: 'Response posted' })
+  @ApiResponse({ status: 400, description: 'Invalid lifecycle transition' })
+  async respond(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: RespondInquiryDto,
+  ) {
+    return this.inquiriesService.respond(id, user.id, dto);
   }
 
   @Patch(':id/close')

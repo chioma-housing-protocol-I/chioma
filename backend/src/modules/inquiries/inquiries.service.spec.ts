@@ -25,17 +25,26 @@ describe('InquiriesService', () => {
     notify: jest.fn(),
   };
 
+  const messagingService = {
+    sendDirectMessage: jest.fn(),
+  };
+
   let service: InquiriesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     propertyRepository.find.mockResolvedValue([]);
     userRepository.find.mockResolvedValue([]);
+    messagingService.sendDirectMessage.mockResolvedValue({
+      room: { id: 1 },
+      message: { id: 1 },
+    });
     service = new InquiriesService(
       inquiryRepository as any,
       propertyRepository as any,
       userRepository as any,
       notificationsService as any,
+      messagingService as any,
     );
   });
 
@@ -238,6 +247,80 @@ describe('InquiriesService', () => {
         InvalidInquiryTransitionError,
       );
       expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('responds by bridging into messaging and advancing to RESPONDED', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.VIEWED,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.respond('inq-1', 'owner-1', {
+        message: 'Yes, still available — happy to arrange a viewing.',
+      });
+
+      expect(result.status).toBe(PropertyInquiryStatus.RESPONDED);
+      // Room is bridged from the recipient (owner) to the original sender.
+      expect(messagingService.sendDirectMessage).toHaveBeenCalledWith(
+        'owner-1',
+        'tenant-1',
+        'Yes, still available — happy to arrange a viewing.',
+      );
+      // Original sender is notified of the response.
+      expect(notificationsService.notify).toHaveBeenCalledWith(
+        'tenant-1',
+        'Response to your inquiry',
+        expect.any(String),
+        'PROPERTY_INQUIRY_RESPONSE',
+      );
+    });
+
+    it('appends another reply without re-transitioning when already RESPONDED', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.RESPONDED,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.respond('inq-1', 'owner-1', {
+        message: 'Following up on my last message.',
+      });
+
+      expect(result.status).toBe(PropertyInquiryStatus.RESPONDED);
+      expect(messagingService.sendDirectMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects responding to a closed inquiry without posting a message', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.CLOSED,
+      });
+
+      await expect(
+        service.respond('inq-1', 'owner-1', { message: 'hello' }),
+      ).rejects.toThrow(InvalidInquiryTransitionError);
+      expect(messagingService.sendDirectMessage).not.toHaveBeenCalled();
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when a non-recipient tries to respond', async () => {
+      inquiryRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.respond('inq-1', 'tenant-1', { message: 'hello' }),
+      ).rejects.toThrow(NotFoundException);
+      expect(messagingService.sendDirectMessage).not.toHaveBeenCalled();
     });
 
     it('closes a pending inquiry', async () => {
