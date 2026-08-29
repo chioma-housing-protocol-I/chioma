@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -77,5 +78,18 @@ export class BookingsController {
     @Param('id') id: string,
   ): Promise<Booking> {
     return this.bookingsService.cancel(user.id, id);
+  }
+
+  @Patch(':id/reschedule')
+  @ApiOperation({
+    summary: 'Guest reschedules a pending or confirmed booking to new dates',
+  })
+  @ApiResponse({ status: 200, description: 'Booking rescheduled' })
+  async reschedule(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: RescheduleBookingDto,
+  ): Promise<Booking> {
+    return this.bookingsService.reschedule(user.id, id, dto);
   }
 }
