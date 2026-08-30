@@ -2,9 +2,14 @@
 
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
+mod access;
 mod errors;
 mod events;
+<<<<<<< HEAD
 pub mod rate_limit;
+=======
+mod rate_limit;
+>>>>>>> upstream/main
 mod storage;
 mod types;
 mod upgrade;
@@ -13,6 +18,14 @@ mod upgrade;
 mod tests;
 #[cfg(test)]
 mod tests_rate_limit;
+
+#[cfg(test)]
+mod tests_rbac;
+
+#[cfg(test)]
+mod tests_rate_limit;
+
+use access::AccessControl;
 
 pub use errors::ObligationError;
 pub use storage::DataKey;
@@ -51,6 +64,8 @@ impl TokenizedRentObligationContract {
             .persistent()
             .extend_ttl(&DataKey::ObligationCount, 500000, 500000);
 
+        events::contract_initialized(&env);
+
         Ok(())
     }
 
@@ -74,6 +89,8 @@ impl TokenizedRentObligationContract {
 
         landlord.require_auth();
         crate::rate_limit::check_rate_limit(&env, &landlord, "mint_obligation")?;
+
+        rate_limit::check_rate_limit(&env, &landlord, "mint_obligation")?;
 
         let obligation_key = DataKey::Obligation(agreement_id.clone());
         let owner_key = DataKey::Owner(agreement_id.clone());
@@ -140,6 +157,8 @@ impl TokenizedRentObligationContract {
         from.require_auth();
         crate::rate_limit::check_rate_limit(&env, &from, "transfer_obligation")?;
 
+        rate_limit::check_rate_limit(&env, &from, "transfer_obligation")?;
+
         let obligation_key = DataKey::Obligation(agreement_id.clone());
         let owner_key = DataKey::Owner(agreement_id.clone());
 
@@ -149,9 +168,7 @@ impl TokenizedRentObligationContract {
             .get(&obligation_key)
             .ok_or(ObligationError::ObligationNotFound)?;
 
-        if obligation.owner != from {
-            return Err(ObligationError::Unauthorized);
-        }
+        AccessControl::is_owner(&obligation, &from)?;
 
         obligation.owner = to.clone();
 
@@ -258,6 +275,8 @@ impl TokenizedRentObligationContract {
         obligation.owner.require_auth();
         crate::rate_limit::check_rate_limit(&env, &obligation.owner, "burn_nft")?;
 
+        rate_limit::check_rate_limit(&env, &obligation.owner, "burn_nft")?;
+
         let burn_record = BurnRecord {
             token_id: token_id.clone(),
             burned_by: obligation.owner.clone(),
@@ -302,7 +321,7 @@ impl TokenizedRentObligationContract {
             .persistent()
             .extend_ttl(&DataKey::ObligationCount, 500000, 500000);
 
-        events::nft_burned(&env, token_id, obligation.owner, burn_record.reason);
+        events::obligation_burned(&env, token_id, obligation.owner, burn_record.reason);
 
         Ok(())
     }
@@ -378,6 +397,110 @@ impl TokenizedRentObligationContract {
             .persistent()
             .get(&owner_key)
             .unwrap_or_else(|| Vec::new(&env)))
+    }
+
+    // --- Admin / RBAC Functions ---
+
+    /// Initialize the system admin address. Can only be called once.
+    ///
+    /// The admin has emergency powers to reassign an obligation's ownership,
+    /// e.g. after a dispute resolution or a lost-key recovery, via
+    /// `admin_reassign_obligation`.
+    ///
+    /// # Errors
+    /// * `AdminAlreadySet` - If the admin has already been initialized
+    pub fn initialize_admin(env: Env, admin: Address) -> Result<(), ObligationError> {
+        if env.storage().persistent().has(&DataKey::Admin) {
+            return Err(ObligationError::AdminAlreadySet);
+        }
+
+        admin.require_auth();
+
+        env.storage().persistent().set(&DataKey::Admin, &admin);
+        env.storage()
+            .persistent()
+            .extend_ttl(&DataKey::Admin, 500000, 500000);
+
+        events::admin_initialized(&env, admin);
+
+        Ok(())
+    }
+
+    /// Update the system admin address. Only the current admin may do this.
+    ///
+    /// # Errors
+    /// * `AdminNotSet` - If no admin has been initialized yet
+    /// * `Unauthorized` - If the caller is not the current admin
+    pub fn update_admin(
+        env: Env,
+        caller: Address,
+        new_admin: Address,
+    ) -> Result<(), ObligationError> {
+        AccessControl::is_admin(&env, &caller)?;
+
+        caller.require_auth();
+
+        env.storage().persistent().set(&DataKey::Admin, &new_admin);
+        env.storage()
+            .persistent()
+            .extend_ttl(&DataKey::Admin, 500000, 500000);
+
+        events::admin_updated(&env, caller, new_admin);
+
+        Ok(())
+    }
+
+    /// Get the current system admin address, if set.
+    pub fn get_admin(env: Env) -> Option<Address> {
+        env.storage().persistent().get(&DataKey::Admin)
+    }
+
+    /// Reassign ownership of an obligation to another address (admin only).
+    ///
+    /// Intended for emergency use, such as enforcing a dispute resolution or
+    /// recovering an obligation from a lost owner key.
+    ///
+    /// # Errors
+    /// * `AdminNotSet` - If no admin has been initialized yet
+    /// * `Unauthorized` - If the caller is not the current admin
+    /// * `ObligationNotFound` - If the obligation doesn't exist
+    pub fn admin_reassign_obligation(
+        env: Env,
+        admin: Address,
+        agreement_id: String,
+        new_owner: Address,
+    ) -> Result<(), ObligationError> {
+        AccessControl::is_admin(&env, &admin)?;
+
+        admin.require_auth();
+
+        rate_limit::check_rate_limit(&env, &admin, "admin_reassign_obligation")?;
+
+        let obligation_key = DataKey::Obligation(agreement_id.clone());
+        let owner_key = DataKey::Owner(agreement_id.clone());
+
+        let mut obligation: RentObligation = env
+            .storage()
+            .persistent()
+            .get(&obligation_key)
+            .ok_or(ObligationError::ObligationNotFound)?;
+
+        let previous_owner = obligation.owner.clone();
+        obligation.owner = new_owner.clone();
+
+        env.storage().persistent().set(&obligation_key, &obligation);
+        env.storage()
+            .persistent()
+            .extend_ttl(&obligation_key, 500000, 500000);
+
+        env.storage().persistent().set(&owner_key, &new_owner);
+        env.storage()
+            .persistent()
+            .extend_ttl(&owner_key, 500000, 500000);
+
+        events::obligation_admin_reassigned(&env, agreement_id, admin, previous_owner, new_owner);
+
+        Ok(())
     }
 
     // --- Upgrade Functions ---

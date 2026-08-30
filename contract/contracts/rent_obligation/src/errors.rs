@@ -14,8 +14,15 @@ pub enum ObligationError {
     BurnRecordNotFound = 8,
     CannotBurnActiveObligation = 9,
     InvalidBurnReason = 10,
+<<<<<<< HEAD
     /// Rate limit exceeded for this operation
     RateLimitExceeded = 11,
     /// Cooldown period not met between successive calls
     CooldownNotMet = 12,
+=======
+    AdminAlreadySet = 11,
+    AdminNotSet = 12,
+    RateLimitExceeded = 13,
+    CooldownNotMet = 14,
+>>>>>>> upstream/main
 }

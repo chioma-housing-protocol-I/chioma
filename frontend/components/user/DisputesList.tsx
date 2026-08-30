@@ -13,15 +13,19 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import Link from 'next/link';
-import { Search, Filter, Loader2, Eye, Flag } from 'lucide-react';
+import { Search, Filter, Loader2, Eye, Flag, Shield } from 'lucide-react';
 import { DisputeStatus } from '@/lib/dashboard-data';
 import {
   useTenantDisputes,
   TenantDisputeRecord,
 } from '@/lib/query/hooks/use-tenant-disputes';
+import { useUploadTenantDisputeEvidence } from '@/lib/query/hooks/use-tenant-dispute';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { useModal } from '@/contexts/ModalContext';
 import type { EvidenceUploadData } from '@/components/modals/EvidenceUploadModal';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const statusBadge: Record<DisputeStatus, string> = {
   OPEN: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -48,6 +52,8 @@ export function DisputesList({ className = '' }: DisputesListProps) {
     'ALL',
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const uploadEvidenceMutation = useUploadTenantDisputeEvidence();
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: disputes = [],
@@ -120,7 +126,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
           const amount = row.getValue('requestedAmount') as number | undefined;
           return amount ? (
             <span className="font-mono font-bold text-emerald-400">
-              ${amount.toLocaleString()} USDC
+              {formatCurrency(amount, 'USDC')}
             </span>
           ) : (
             <span className="text-blue-300/30">—</span>
@@ -134,6 +140,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
           <span className="text-blue-200/50 text-sm">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </span>
         ),
@@ -162,16 +169,16 @@ export function DisputesList({ className = '' }: DisputesListProps) {
                     createdAt: row.original.createdAt,
                     updatedAt: row.original.updatedAt,
                   },
-                  onUploadEvidence: (disputeId: string) =>
+                  onUploadEvidence: (_disputeId: string) =>
                     openModal('evidenceUpload', {
-                      disputeId,
+                      disputeId: row.original.backendDisputeId,
                       disputeTitle: row.original.disputeId,
                       onUpload: async (data: EvidenceUploadData) => {
-                        const { apiClient } = await import('@/lib/api-client');
-                        await apiClient.post(
-                          `/disputes/${disputeId}/evidence`,
-                          data,
-                        );
+                        await uploadEvidenceMutation.mutateAsync({
+                          disputeId: data.disputeId,
+                          files: data.files,
+                          description: data.description,
+                        });
                       },
                     }),
                 })
@@ -191,7 +198,7 @@ export function DisputesList({ className = '' }: DisputesListProps) {
         ),
       },
     ],
-    [openModal],
+    [openModal, uploadEvidenceMutation, dateFnsLocale],
   );
 
   const table = useReactTable({
@@ -283,14 +290,13 @@ export function DisputesList({ className = '' }: DisputesListProps) {
             <span className="text-blue-200/50">Loading your disputes...</span>
           </div>
         ) : disputes.length === 0 ? (
-          <div className="p-16 text-center">
-            <Flag className="w-12 h-12 text-blue-300/20 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-white mb-1">
-              No disputes yet
-            </h3>
-            <p className="text-blue-200/40 text-sm">
-              All your rental agreements are running smoothly.
-            </p>
+          <div className="p-8">
+            <EmptyState
+              icon={Shield}
+              title="No disputes yet"
+              description="All your rental agreements are running smoothly."
+              variant="dark"
+            />
           </div>
         ) : (
           <>

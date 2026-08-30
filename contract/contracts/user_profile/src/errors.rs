@@ -26,9 +26,16 @@ pub enum ContractError {
     /// Access denied: caller is not the owner
     AccessDenied = 7,
 
+<<<<<<< HEAD
     /// Rate limit exceeded for this operation
     RateLimitExceeded = 8,
 
     /// Cooldown period not met between successive calls
+=======
+    /// Rate limit exceeded for this function/user/block
+    RateLimitExceeded = 8,
+
+    /// Caller is within the cooldown period for this function
+>>>>>>> upstream/main
     CooldownNotMet = 9,
 }

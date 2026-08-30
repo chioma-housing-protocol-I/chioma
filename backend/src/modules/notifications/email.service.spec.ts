@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from './email.service';
 import { NetworkError } from '../../common/errors/retry-errors';
@@ -7,10 +8,27 @@ import { NetworkError } from '../../common/errors/retry-errors';
 jest.mock('nodemailer');
 const mockedNodemailer = nodemailer as jest.Mocked<typeof nodemailer>;
 
+function createMockCacheManager() {
+  const store = new Map<string, unknown>();
+  return {
+    store,
+    get: jest.fn((key: string) => Promise.resolve(store.get(key))),
+    set: jest.fn((key: string, value: unknown) => {
+      store.set(key, value);
+      return Promise.resolve();
+    }),
+    del: jest.fn((key: string) => {
+      store.delete(key);
+      return Promise.resolve();
+    }),
+  };
+}
+
 describe('EmailService', () => {
   let service: EmailService;
   let sendMailMock: jest.Mock;
   let configService: any;
+  let cacheManager: ReturnType<typeof createMockCacheManager>;
 
   const mockConfig: Record<string, string> = {
     EMAIL_SERVICE: 'gmail',
@@ -33,11 +51,13 @@ describe('EmailService', () => {
     configService = {
       get: jest.fn((key: string) => mockConfig[key] ?? null),
     };
+    cacheManager = createMockCacheManager();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EmailService,
         { provide: ConfigService, useValue: configService },
+        { provide: CACHE_MANAGER, useValue: cacheManager },
       ],
     }).compile();
 
@@ -136,6 +156,7 @@ describe('EmailService', () => {
         providers: [
           EmailService,
           { provide: ConfigService, useValue: configService },
+          { provide: CACHE_MANAGER, useValue: createMockCacheManager() },
         ],
       }).compile();
       const svc = module.get<EmailService>(EmailService);
@@ -158,6 +179,107 @@ describe('EmailService', () => {
       await service.sendPasswordResetEmail('reset@example.com', 'tok');
       const mailOptions = sendMailMock.mock.calls[0][0];
       expect(mailOptions.html).toContain('1 hour');
+    });
+  });
+
+  // ── sendPasswordResetEmail rate limiting ───────────────────────────────────
+
+  describe('sendPasswordResetEmail rate limiting', () => {
+    it('allows sending up to the default limit (3) within the window', async () => {
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-1');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-2');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-3');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('suppresses sending once the limit is exceeded, without throwing', async () => {
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-1');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-2');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-3');
+
+      await expect(
+        service.sendPasswordResetEmail('reset@example.com', 'tok-4'),
+      ).resolves.toBeUndefined();
+
+      expect(sendMailMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps suppressing further requests within the same window', async () => {
+      for (let i = 0; i < 3; i++) {
+        await service.sendPasswordResetEmail('reset@example.com', `tok-${i}`);
+      }
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-4');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-5');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('rate limits per recipient regardless of email casing', async () => {
+      await service.sendPasswordResetEmail('Reset@Example.com', 'tok-1');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-2');
+      await service.sendPasswordResetEmail('RESET@EXAMPLE.COM', 'tok-3');
+      await service.sendPasswordResetEmail('reset@example.com', 'tok-4');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('tracks limits independently per recipient', async () => {
+      for (let i = 0; i < 3; i++) {
+        await service.sendPasswordResetEmail('victim-a@example.com', `a-${i}`);
+      }
+      await service.sendPasswordResetEmail('victim-b@example.com', 'b-1');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('allows sending again once the window resets', async () => {
+      for (let i = 0; i < 3; i++) {
+        await service.sendPasswordResetEmail('reset@example.com', `tok-${i}`);
+      }
+      await service.sendPasswordResetEmail('reset@example.com', 'blocked');
+      expect(sendMailMock).toHaveBeenCalledTimes(3);
+
+      // Simulate the fixed window expiring.
+      cacheManager.store.delete(
+        'email_rate_limit:password-reset:reset@example.com',
+      );
+
+      await service.sendPasswordResetEmail(
+        'reset@example.com',
+        'tok-after-reset',
+      );
+      expect(sendMailMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('respects PASSWORD_RESET_EMAIL_LIMIT and PASSWORD_RESET_EMAIL_WINDOW_SECONDS overrides', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'PASSWORD_RESET_EMAIL_LIMIT') return '1';
+        if (key === 'PASSWORD_RESET_EMAIL_WINDOW_SECONDS') return '120';
+        return mockConfig[key] ?? null;
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          EmailService,
+          { provide: ConfigService, useValue: configService },
+          { provide: CACHE_MANAGER, useValue: createMockCacheManager() },
+        ],
+      }).compile();
+      const svc = module.get<EmailService>(EmailService);
+
+      await svc.sendPasswordResetEmail('reset@example.com', 'tok-1');
+      await svc.sendPasswordResetEmail('reset@example.com', 'tok-2');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails open (still sends) when the cache backend errors', async () => {
+      cacheManager.get.mockRejectedValueOnce(new Error('redis down'));
+
+      await service.sendPasswordResetEmail('reset@example.com', 'tok');
+
+      expect(sendMailMock).toHaveBeenCalledTimes(1);
     });
   });
 

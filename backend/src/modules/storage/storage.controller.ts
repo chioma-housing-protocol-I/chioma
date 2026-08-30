@@ -25,6 +25,8 @@ import {
   UpdateFileMetadataDto,
   FileMetadataResponseDto,
 } from './dto/upload-url.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Storage')
 @ApiBearerAuth('JWT-auth')
@@ -94,13 +96,12 @@ export class StorageController {
     summary: 'List files',
     description: 'Returns a list of all files owned by the authenticated user.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'List of files',
-    type: [FileMetadataResponseDto],
-  })
-  async listFiles(@Req() req: { user: { id: string } }) {
-    return this.storageService.listFiles(req.user.id);
+  @ApiPaginatedResponse(FileMetadataResponseDto)
+  async listFiles(
+    @Req() req: { user: { id: string } },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.storageService.listFiles(req.user.id, query.page, query.limit);
   }
 
   @Patch()

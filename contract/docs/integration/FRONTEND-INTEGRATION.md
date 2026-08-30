@@ -2,7 +2,7 @@
 
 **Status:** Completed  
 **Category:** Documentation  
-**Type:** Integration Guide  
+**Type:** Integration Guide
 
 ## Overview
 
@@ -36,17 +36,17 @@ Backend API
 ### 2.1 API Client Setup
 
 ```typescript
-import axios from 'axios';
+import axios from "axios";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 10000,
-  withCredentials: true
+  withCredentials: true,
 });
 
 // Add request interceptor for authentication
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem("auth_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -59,10 +59,10 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized - redirect to login
-      window.location.href = '/login';
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 ```
 
@@ -72,39 +72,37 @@ apiClient.interceptors.response.use(
 // services/paymentService.ts
 export const paymentService = {
   async createPayment(agreementId: string, amount: string) {
-    const response = await apiClient.post('/payments', {
+    const response = await apiClient.post("/payments", {
       agreement_id: agreementId,
-      amount
+      amount,
     });
     return response.data;
   },
 
   async getPaymentHistory(agreementId: string) {
-    const response = await apiClient.get(
-      `/agreements/${agreementId}/payments`
-    );
+    const response = await apiClient.get(`/agreements/${agreementId}/payments`);
     return response.data;
   },
 
   async confirmPayment(transactionHash: string) {
-    const response = await apiClient.post('/payments/confirm', {
-      transaction_hash: transactionHash
+    const response = await apiClient.post("/payments/confirm", {
+      transaction_hash: transactionHash,
     });
     return response.data;
-  }
+  },
 };
 ```
 
 ### 2.3 Using TanStack Query
 
 ```typescript
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation } from "@tanstack/react-query";
 
 export function usePayments(agreementId: string) {
   return useQuery({
-    queryKey: ['payments', agreementId],
+    queryKey: ["payments", agreementId],
     queryFn: () => paymentService.getPaymentHistory(agreementId),
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -116,8 +114,8 @@ export function useCreatePayment() {
       paymentService.createPayment(data.agreementId, data.amount),
     onSuccess: (data) => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
   });
 }
 ```
@@ -127,14 +125,14 @@ export function useCreatePayment() {
 ### 3.1 Freighter Wallet Setup
 
 ```typescript
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { FreighterModule } from '@stellar/freighter-api';
+import * as StellarSdk from "@stellar/stellar-sdk";
+import { FreighterModule } from "@stellar/freighter-api";
 
 export const initializeWallet = async () => {
   // Check if Freighter is installed
   const isConnected = await FreighterModule.isConnected();
   if (!isConnected) {
-    throw new Error('Freighter wallet not installed');
+    throw new Error("Freighter wallet not installed");
   }
 
   // Request public key
@@ -147,7 +145,7 @@ export const initializeWallet = async () => {
 
 ```typescript
 // store/walletStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface WalletState {
   publicKey: string | null;
@@ -165,32 +163,32 @@ export const useWalletStore = create<WalletState>((set) => ({
     try {
       const publicKey = await initializeWallet();
       set({ publicKey, isConnected: true });
-      localStorage.setItem('wallet_public_key', publicKey);
+      localStorage.setItem("wallet_public_key", publicKey);
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      console.error("Failed to connect wallet:", error);
       throw error;
     }
   },
 
   disconnect: () => {
     set({ publicKey: null, isConnected: false });
-    localStorage.removeItem('wallet_public_key');
+    localStorage.removeItem("wallet_public_key");
   },
 
   getBalance: async () => {
-    const publicKey = localStorage.getItem('wallet_public_key');
-    if (!publicKey) throw new Error('Wallet not connected');
+    const publicKey = localStorage.getItem("wallet_public_key");
+    if (!publicKey) throw new Error("Wallet not connected");
 
     const response = await fetch(
-      `https://horizon-testnet.stellar.org/accounts/${publicKey}`
+      `https://horizon-testnet.stellar.org/accounts/${publicKey}`,
     );
     const account = await response.json();
 
     const nativeBalance = account.balances.find(
-      (b: any) => b.asset_type === 'native'
+      (b: any) => b.asset_type === "native",
     );
-    return nativeBalance?.balance || '0';
-  }
+    return nativeBalance?.balance || "0";
+  },
 }));
 ```
 
@@ -260,26 +258,23 @@ export function PaymentForm({ agreementId }: { agreementId: string }) {
 
 ```typescript
 // utils/transactionSigning.ts
-import { FreighterModule } from '@stellar/freighter-api';
+import { FreighterModule } from "@stellar/freighter-api";
 
 export async function signAndSubmitTransaction(transactionXdr: string) {
   try {
     // Sign with Freighter
-    const signedXdr = await FreighterModule.signTransaction(
-      transactionXdr,
-      {
-        network: 'TESTNET'
-      }
-    );
+    const signedXdr = await FreighterModule.signTransaction(transactionXdr, {
+      network: "TESTNET",
+    });
 
     // Submit to backend
-    const response = await apiClient.post('/transactions/submit', {
-      transaction_xdr: signedXdr
+    const response = await apiClient.post("/transactions/submit", {
+      transaction_xdr: signedXdr,
     });
 
     return response.data;
   } catch (error) {
-    console.error('Transaction signing failed:', error);
+    console.error("Transaction signing failed:", error);
     throw error;
   }
 }
@@ -297,7 +292,7 @@ interface Agreement {
   landlordId: string;
   propertyId: string;
   monthlyRent: string;
-  status: 'active' | 'paused' | 'terminated';
+  status: "active" | "paused" | "terminated";
   createdAt: string;
 }
 
@@ -313,7 +308,7 @@ export const useAgreementStore = create<{
   fetchAgreements: async () => {
     set({ loading: true });
     try {
-      const data = await apiClient.get('/agreements');
+      const data = await apiClient.get("/agreements");
       set({ agreements: data.data });
     } finally {
       set({ loading: false });
@@ -322,7 +317,7 @@ export const useAgreementStore = create<{
 
   selectAgreement: (id: string) => {
     return get().agreements.find((a) => a.id === id);
-  }
+  },
 }));
 ```
 
@@ -332,14 +327,14 @@ export const useAgreementStore = create<{
 // store/notificationStore.ts
 interface Notification {
   id: string;
-  type: 'success' | 'error' | 'info' | 'warning';
+  type: "success" | "error" | "info" | "warning";
   message: string;
   duration?: number;
 }
 
 export const useNotificationStore = create<{
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
+  addNotification: (notification: Omit<Notification, "id">) => void;
   removeNotification: (id: string) => void;
 }>((set) => ({
   notifications: [],
@@ -347,13 +342,13 @@ export const useNotificationStore = create<{
   addNotification: (notification) => {
     const id = Date.now().toString();
     set((state) => ({
-      notifications: [...state.notifications, { ...notification, id }]
+      notifications: [...state.notifications, { ...notification, id }],
     }));
 
     if (notification.duration) {
       setTimeout(() => {
         set((state) => ({
-          notifications: state.notifications.filter((n) => n.id !== id)
+          notifications: state.notifications.filter((n) => n.id !== id),
         }));
       }, notification.duration);
     }
@@ -361,9 +356,9 @@ export const useNotificationStore = create<{
 
   removeNotification: (id: string) => {
     set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id)
+      notifications: state.notifications.filter((n) => n.id !== id),
     }));
-  }
+  },
 }));
 ```
 
@@ -413,7 +408,7 @@ export class ErrorBoundary extends React.Component<
 // utils/errorHandling.ts
 export function handleApiError(error: any): string {
   if (!error.response) {
-    return 'Network error. Please check your connection.';
+    return "Network error. Please check your connection.";
   }
 
   const status = error.response.status;
@@ -421,19 +416,19 @@ export function handleApiError(error: any): string {
 
   switch (status) {
     case 400:
-      return data.message || 'Invalid request';
+      return data.message || "Invalid request";
     case 401:
-      return 'Authentication required';
+      return "Authentication required";
     case 403:
-      return 'Access denied';
+      return "Access denied";
     case 404:
-      return 'Resource not found';
+      return "Resource not found";
     case 429:
-      return 'Too many requests. Please try again later.';
+      return "Too many requests. Please try again later.";
     case 500:
-      return 'Server error. Please try again later.';
+      return "Server error. Please try again later.";
     default:
-      return 'An error occurred. Please try again.';
+      return "An error occurred. Please try again.";
   }
 }
 ```
@@ -444,12 +439,12 @@ export function handleApiError(error: any): string {
 
 ```typescript
 // services/socketService.ts
-import io from 'socket.io-client';
+import io from "socket.io-client";
 
 const socket = io(process.env.NEXT_PUBLIC_API_URL, {
   auth: {
-    token: localStorage.getItem('auth_token')
-  }
+    token: localStorage.getItem("auth_token"),
+  },
 });
 
 export const socketService = {
@@ -463,15 +458,15 @@ export const socketService = {
 
   disconnect: () => {
     socket.disconnect();
-  }
+  },
 };
 
 // Listen for payment updates
-socketService.on('payment:confirmed', (data) => {
+socketService.on("payment:confirmed", (data) => {
   useNotificationStore.getState().addNotification({
-    type: 'success',
+    type: "success",
     message: `Payment confirmed: ${data.amount} XLM`,
-    duration: 3000
+    duration: 3000,
   });
 });
 ```
@@ -485,13 +480,16 @@ socketService.on('payment:confirmed', (data) => {
 let csrfToken: string | null = null;
 
 export async function initializeCsrfToken() {
-  const response = await apiClient.get('/csrf-token');
+  const response = await apiClient.get("/csrf-token");
   csrfToken = response.data.token;
 }
 
 apiClient.interceptors.request.use((config) => {
-  if (csrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase())) {
-    config.headers['X-CSRF-Token'] = csrfToken;
+  if (
+    csrfToken &&
+    ["POST", "PUT", "DELETE", "PATCH"].includes(config.method?.toUpperCase())
+  ) {
+    config.headers["X-CSRF-Token"] = csrfToken;
   }
   return config;
 });
@@ -508,7 +506,7 @@ apiClient.interceptors.request.use((config) => {
 // <div>{userInput}</div>
 
 // Use DOMPurify for sanitization if needed
-import DOMPurify from 'dompurify';
+import DOMPurify from "dompurify";
 
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html);
@@ -563,12 +561,12 @@ describe('PaymentForm', () => {
 
 ```typescript
 // __tests__/hooks/usePayments.test.ts
-import { renderHook, waitFor } from '@testing-library/react';
-import { usePayments } from '@/services/paymentService';
+import { renderHook, waitFor } from "@testing-library/react";
+import { usePayments } from "@/services/paymentService";
 
-describe('usePayments', () => {
-  it('fetches payment history', async () => {
-    const { result } = renderHook(() => usePayments('agreement-123'));
+describe("usePayments", () => {
+  it("fetches payment history", async () => {
+    const { result } = renderHook(() => usePayments("agreement-123"));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -608,19 +606,17 @@ export default function AgreementDetail() {
 ```typescript
 // Use query key factories
 const paymentKeys = {
-  all: ['payments'] as const,
-  lists: () => [...paymentKeys.all, 'list'] as const,
-  list: (agreementId: string) =>
-    [...paymentKeys.lists(), agreementId] as const,
-  details: () => [...paymentKeys.all, 'detail'] as const,
-  detail: (id: string) =>
-    [...paymentKeys.details(), id] as const
+  all: ["payments"] as const,
+  lists: () => [...paymentKeys.all, "list"] as const,
+  list: (agreementId: string) => [...paymentKeys.lists(), agreementId] as const,
+  details: () => [...paymentKeys.all, "detail"] as const,
+  detail: (id: string) => [...paymentKeys.details(), id] as const,
 };
 
 // Use in queries
 useQuery({
   queryKey: paymentKeys.list(agreementId),
-  queryFn: () => fetchPayments(agreementId)
+  queryFn: () => fetchPayments(agreementId),
 });
 ```
 

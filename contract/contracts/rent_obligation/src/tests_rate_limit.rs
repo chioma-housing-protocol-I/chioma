@@ -26,6 +26,10 @@ fn seed_config(env: &Env, contract_id: &Address, config: &RateLimitConfig) {
 #[test]
 fn test_rate_limit_config_default() {
     let (env, contract_id, _user) = setup();
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     let config = env.as_contract(&contract_id, || rate_limit::get_rate_limit_config(&env));
     assert_eq!(config.max_calls_per_block, 10);
     assert_eq!(config.max_calls_per_user_per_day, 100);
@@ -35,6 +39,10 @@ fn test_rate_limit_config_default() {
 #[test]
 fn test_check_rate_limit_within_limit() {
     let (env, contract_id, user) = setup();
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     seed_config(
         &env,
         &contract_id,
@@ -44,6 +52,10 @@ fn test_check_rate_limit_within_limit() {
             cooldown_blocks: 0,
         },
     );
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     for _ in 0..3 {
         let result = env.as_contract(&contract_id, || {
             rate_limit::check_rate_limit(&env, &user, "mint_obligation")
@@ -55,6 +67,10 @@ fn test_check_rate_limit_within_limit() {
 #[test]
 fn test_check_rate_limit_exceed_block() {
     let (env, contract_id, _user) = setup();
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     seed_config(
         &env,
         &contract_id,
@@ -64,6 +80,10 @@ fn test_check_rate_limit_exceed_block() {
             cooldown_blocks: 0,
         },
     );
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
     let user3 = Address::generate(&env);
@@ -87,6 +107,10 @@ fn test_check_rate_limit_exceed_block() {
 #[test]
 fn test_check_rate_limit_exceed_daily() {
     let (env, contract_id, user) = setup();
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/main
     seed_config(
         &env,
         &contract_id,
@@ -120,7 +144,14 @@ fn test_check_rate_limit_exceed_daily() {
 #[test]
 fn test_check_rate_limit_cooldown() {
     let (env, contract_id, user) = setup();
+<<<<<<< HEAD
     env.ledger().with_mut(|li| li.sequence_number = 1);
+=======
+
+    // Start at a non-zero block so last_call_block > 0 after the first call
+    env.ledger().with_mut(|li| li.sequence_number = 100);
+
+>>>>>>> upstream/main
     seed_config(
         &env,
         &contract_id,

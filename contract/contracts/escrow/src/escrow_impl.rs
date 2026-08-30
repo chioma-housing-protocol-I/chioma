@@ -68,10 +68,10 @@ impl EscrowContract {
             depositor: depositor.clone(),
             beneficiary: beneficiary.clone(),
             arbiter: arbiter.clone(),
-            platform_governance,
-            agent_referral,
+            platform_governance: platform_governance.clone(),
+            agent_referral: agent_referral.clone(),
             amount,
-            token,
+            token: token.clone(),
             status: EscrowStatus::Pending,
             created_at: env.ledger().timestamp(),
             timeout_days: EscrowStorage::get_timeout_config(&env).escrow_timeout_days,
@@ -84,6 +84,18 @@ impl EscrowContract {
 
         EscrowStorage::save(&env, &escrow);
         EscrowStorage::increment_count(&env);
+
+        events::escrow_created(
+            &env,
+            escrow_id.clone(),
+            depositor,
+            beneficiary,
+            arbiter,
+            platform_governance,
+            agent_referral,
+            amount,
+            token,
+        );
 
         Ok(escrow_id)
     }
@@ -127,6 +139,8 @@ impl EscrowContract {
         // INTERACTIONS: Token transfer from depositor to escrow contract
         let token_client = token::Client::new(&env, &escrow.token);
         token_client.transfer(&caller, env.current_contract_address(), &escrow.amount);
+
+        events::escrow_funded(&env, escrow_id, caller, escrow.amount);
 
         Ok(())
     }
@@ -200,6 +214,8 @@ impl EscrowContract {
         let approval_count =
             EscrowStorage::get_approval_count_for_target(&env, &escrow_id, &release_to);
 
+        events::release_approved(&env, escrow_id.clone(), caller.clone(), approval_count);
+
         // If 2 or more unique signers approve, execute release
         if approval_count >= 2 {
             let mut escrow_to_update =
@@ -222,6 +238,18 @@ impl EscrowContract {
             // INTERACTIONS: Token transfer from escrow contract to release target
             let token_client = token::Client::new(&env, &escrow.token);
             token_client.transfer(&env.current_contract_address(), &release_to, &escrow.amount);
+
+            let landlord_amount = if release_to == escrow.beneficiary {
+                escrow.amount
+            } else {
+                0
+            };
+            let tenant_amount = if release_to == escrow.depositor {
+                escrow.amount
+            } else {
+                0
+            };
+            events::escrow_released(&env, escrow_id, landlord_amount, tenant_amount, 0, 0);
         }
 
         Ok(())
@@ -307,6 +335,15 @@ impl EscrowContract {
         }
 
         EscrowStorage::set_timeout_config(&env, &config);
+
+        events::timeout_config_updated(
+            &env,
+            caller,
+            config.escrow_timeout_days,
+            config.dispute_timeout_days,
+            config.payment_timeout_days,
+        );
+
         Ok(())
     }
 
@@ -640,6 +677,8 @@ impl EscrowContract {
         // Set the admin
         EscrowStorage::set_admin(&env, &admin);
 
+        events::admin_initialized(&env, admin);
+
         Ok(())
     }
 
@@ -660,6 +699,8 @@ impl EscrowContract {
 
         // Update the admin
         EscrowStorage::set_admin(&env, &new_admin);
+
+        events::admin_updated(&env, caller, new_admin);
 
         Ok(())
     }

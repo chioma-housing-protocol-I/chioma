@@ -1,13 +1,24 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavItem } from './types';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface SidebarItemProps {
   item: NavItem;
   isCollapsed?: boolean;
 }
+
+/** Routes where default Next.js viewport prefetch is useful (top-level nav). */
+const HOT_NAV_PREFETCH = new Set([
+  '/user',
+  '/user/properties',
+  '/user/payments',
+  '/user/agreements',
+  '/dashboard',
+  '/properties',
+  '/stays',
+]);
 
 const SidebarItem = ({ item, isCollapsed = false }: SidebarItemProps) => {
   const pathname = usePathname();
@@ -15,10 +26,12 @@ const SidebarItem = ({ item, isCollapsed = false }: SidebarItemProps) => {
     pathname === item.href || pathname.startsWith(item.href + '/');
 
   const Icon = item.icon;
+  const enableRoutePrefetch = HOT_NAV_PREFETCH.has(item.href);
 
   return (
-    <Link
+    <PrefetchLink
       href={item.href}
+      prefetch={enableRoutePrefetch}
       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative ${
         isActive
           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
@@ -37,11 +50,11 @@ const SidebarItem = ({ item, isCollapsed = false }: SidebarItemProps) => {
         </>
       )}
       {isCollapsed && item.badge && (
-        <span className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs font-bold bg-red-500 text-white rounded-full">
+        <span className="absolute -top-2 -end-2 w-5 h-5 flex items-center justify-center text-xs font-bold bg-red-500 text-white rounded-full">
           {item.badge}
         </span>
       )}
-    </Link>
+    </PrefetchLink>
   );
 };
 

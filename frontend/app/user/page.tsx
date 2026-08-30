@@ -10,12 +10,13 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
-  ReceiptText,
-  AlertTriangle,
 } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
-import { MicroCharts } from '@/components/dashboard/MicroCharts';
+import {
+  LazyAnalyticsPreviewChart,
+  LazyMicroCharts,
+} from '@/components/charts/lazy';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
+import { WalletEmailBanner } from '@/components/user/WalletEmailBanner';
 import { useAuth } from '@/store/authStore';
 import { useRoleRedirect } from '@/hooks/useRoleRedirect';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
@@ -46,15 +47,6 @@ const mockAgreements = [
     dueDate: 'Sep 1, 2023',
     status: 'Completed',
   },
-];
-
-const analyticsPreviewData = [
-  { month: 'Jan', views: 120 },
-  { month: 'Feb', views: 180 },
-  { month: 'Mar', views: 240 },
-  { month: 'Apr', views: 200 },
-  { month: 'May', views: 320 },
-  { month: 'Jun', views: 410 },
 ];
 
 const DASHBOARD_IMAGE_FALLBACK =
@@ -91,12 +83,13 @@ const dashboardDisputes = [
 ];
 
 export default function UserDashboardOverview() {
-  useRoleRedirect(['user', 'admin']);
+  useRoleRedirect(['user', 'agent', 'admin']);
 
   const { openModal } = useModal();
   const router = useRouter();
   const { loading } = useAuth();
-  const { data: apiAgreements = [] } = useUserAgreements();
+  const { data: agreementsResult } = useUserAgreements();
+  const apiAgreements = agreementsResult?.data ?? [];
   const { data: paymentsData } = usePayments({ limit: 50 });
   const apiPayments = paymentsData?.data ?? [];
 
@@ -223,6 +216,7 @@ export default function UserDashboardOverview() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
+      <WalletEmailBanner />
       <TenantOnboardingBanner />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -304,7 +298,7 @@ export default function UserDashboardOverview() {
             </span>
           </div>
           <div className="mt-4 flex flex-col pt-1">
-            <MicroCharts />
+            <LazyMicroCharts />
             <div className="flex items-baseline justify-between mt-4">
               <div>
                 <p className="text-sm font-medium text-blue-200/60 uppercase tracking-wider">
@@ -347,56 +341,7 @@ export default function UserDashboardOverview() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Chart */}
           <div className="md:col-span-2 h-40">
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart
-                data={analyticsPreviewData}
-                margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-              >
-                <defs>
-                  <linearGradient
-                    id="analyticsGrad"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{
-                    fill: 'rgba(147, 197, 253, 0.4)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '8px 12px',
-                  }}
-                  itemStyle={{ color: '#fff', fontSize: '12px' }}
-                  labelStyle={{
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontSize: '10px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="views"
-                  stroke="#60a5fa"
-                  strokeWidth={2.5}
-                  fill="url(#analyticsGrad)"
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <LazyAnalyticsPreviewChart />
           </div>
 
           {/* Stats */}
@@ -413,7 +358,10 @@ export default function UserDashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <Link
+              href="/user/inquiries"
+              className="block bg-white/5 rounded-2xl p-4 border border-white/5 transition-colors hover:bg-white/10"
+            >
               <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
                 Inquiries
               </p>
@@ -424,7 +372,7 @@ export default function UserDashboardOverview() {
                   +8%
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>

@@ -97,6 +97,21 @@ export class RefundEscrowGatewayDto {
   @IsOptional()
   @IsString()
   reason?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Amount to refund as a decimal string (max 7 decimal places). ' +
+      'Omit for a full refund of the remaining escrow balance. Partial ' +
+      'amounts leave the escrow active and accumulate in its ' +
+      'refunded-to-date balance; the sum of partial refunds can never ' +
+      'exceed the original escrow amount.',
+    example: '25.5000000',
+  })
+  @IsOptional()
+  @Matches(/^(?!0+(\.0+)?$)\d+(\.\d{1,7})?$/, {
+    message: 'amount must be a positive decimal with at most 7 decimal places',
+  })
+  amount?: string;
 }
 
 export class ReconcilePaymentsDto {
@@ -120,6 +135,14 @@ export class PaymentGatewayWebhookDto {
   @IsString()
   @IsNotEmpty()
   eventType: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Unique event identifier assigned by the gateway. Used to deduplicate retried webhook deliveries.',
+  })
+  @IsOptional()
+  @IsString()
+  eventId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

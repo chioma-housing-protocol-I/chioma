@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import axios from 'axios';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { EncryptionService } from '../security/encryption.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -59,6 +60,7 @@ export class ScreeningService {
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
     private readonly webhooksService: WebhooksService,
+    private readonly certificatePinningService: CertificatePinningService,
   ) {}
 
   async createRequest(
@@ -177,6 +179,12 @@ export class ScreeningService {
     });
     if (!report) {
       throw new NotFoundException('Screening report not available');
+    }
+
+    if (report.accessExpiresAt && report.accessExpiresAt < new Date()) {
+      throw new NotFoundException(
+        'Screening report has expired and must be re-run',
+      );
     }
 
     const decryptedReport = JSON.parse(
@@ -330,6 +338,9 @@ export class ScreeningService {
           'Content-Type': 'application/json',
         },
         timeout: 15000,
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          providerConfig.baseUrl,
+        ),
       },
     );
 
@@ -478,8 +489,8 @@ export class ScreeningService {
   private getDefaultProvider(): UserScreeningProvider {
     return (
       (this.configService.get<string>('USER_SCREENING_DEFAULT_PROVIDER') as
-        | UserScreeningProvider
-        | undefined) ?? UserScreeningProvider.TRANSUNION_SMARTMOVE
+        UserScreeningProvider | undefined) ??
+      UserScreeningProvider.TRANSUNION_SMARTMOVE
     );
   }
 

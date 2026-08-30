@@ -12,6 +12,7 @@ describe('AuditService', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     createQueryBuilder: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -72,6 +73,57 @@ describe('AuditService', () => {
         metadata: undefined,
       });
       expect(mockAuditLogRepository.save).toHaveBeenCalledWith(mockAuditLog);
+    });
+  });
+
+  describe('logInTransaction', () => {
+    const mockManager = {
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('creates and saves the audit row using the given manager', async () => {
+      const auditData = {
+        action: AuditAction.DELETE,
+        entityType: 'User',
+        entityId: 'user-123',
+        performedBy: 'user-123',
+      };
+      const mockAuditLog = { id: 1, ...auditData };
+      mockManager.create.mockReturnValue(mockAuditLog);
+      mockManager.save.mockResolvedValue(mockAuditLog);
+
+      await service.logInTransaction(mockManager as any, auditData);
+
+      expect(mockManager.create).toHaveBeenCalledWith(
+        AuditLog,
+        expect.objectContaining({
+          action: AuditAction.DELETE,
+          entity_type: 'User',
+          entity_id: 'user-123',
+          performed_by: 'user-123',
+        }),
+      );
+      expect(mockManager.save).toHaveBeenCalledWith(AuditLog, mockAuditLog);
+      // Does not touch the fire-and-forget repository path.
+      expect(mockAuditLogRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('propagates the error instead of swallowing it, so the caller transaction rolls back', async () => {
+      mockManager.create.mockReturnValue({});
+      mockManager.save.mockRejectedValue(new Error('insert failed'));
+
+      await expect(
+        service.logInTransaction(mockManager as any, {
+          action: AuditAction.DELETE,
+          entityType: 'User',
+          entityId: 'user-123',
+        }),
+      ).rejects.toThrow('insert failed');
     });
   });
 
@@ -171,17 +223,19 @@ describe('AuditService', () => {
         { id: 2, action: AuditAction.UPDATE },
       ];
 
-      mockAuditLogRepository.find.mockResolvedValue(mockLogs);
+      mockAuditLogRepository.findAndCount.mockResolvedValue([mockLogs, 2]);
 
-      const result = await service.getAuditTrail('User', 'user-123', 50);
+      const result = await service.getAuditTrail('User', 'user-123', 1, 50);
 
-      expect(mockAuditLogRepository.find).toHaveBeenCalledWith({
+      expect(mockAuditLogRepository.findAndCount).toHaveBeenCalledWith({
         where: { entity_type: 'User', entity_id: 'user-123' },
         relations: ['performed_by_user'],
         order: { performed_at: 'DESC' },
+        skip: 0,
         take: 50,
       });
-      expect(result).toEqual(mockLogs);
+      expect(result.data).toEqual(mockLogs);
+      expect(result.total).toBe(2);
     });
   });
 });

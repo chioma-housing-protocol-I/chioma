@@ -5,21 +5,13 @@
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
-import {
-  PaymentSchedule,
-  PaymentScheduleStatus,
-  PaymentInterval,
-} from './entities/payment-schedule.entity';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
-import { ProcessRefundDto } from './dto/process-refund.dto';
-import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
 import { LockService } from '../../common/lock';
@@ -47,27 +39,12 @@ const makePaymentMethodRepo = () => ({
   createQueryBuilder: jest.fn(),
 });
 
-const makePaymentScheduleRepo = () => ({
-  findOne: jest.fn(),
-  find: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  createQueryBuilder: jest.fn(),
-});
-
-const makeEntityManager = () => ({
-  findOne: jest.fn(),
-  save: jest.fn(),
-});
-
 // ─── Test Suite ──────────────────────────────────────────────────────────────
 
 describe('PaymentService – edge cases & isolation', () => {
   let service: PaymentService;
   let paymentRepo: ReturnType<typeof makePaymentRepo>;
   let paymentMethodRepo: ReturnType<typeof makePaymentMethodRepo>;
-  let paymentScheduleRepo: ReturnType<typeof makePaymentScheduleRepo>;
-  let entityManager: ReturnType<typeof makeEntityManager>;
   let mockGateway: {
     chargePayment: jest.Mock;
     processRefund: jest.Mock;
@@ -89,8 +66,6 @@ describe('PaymentService – edge cases & isolation', () => {
   beforeEach(async () => {
     paymentRepo = makePaymentRepo();
     paymentMethodRepo = makePaymentMethodRepo();
-    paymentScheduleRepo = makePaymentScheduleRepo();
-    entityManager = makeEntityManager();
 
     mockGateway = {
       chargePayment: jest.fn(),
@@ -126,10 +101,6 @@ describe('PaymentService – edge cases & isolation', () => {
           provide: getRepositoryToken(PaymentMethod),
           useValue: paymentMethodRepo,
         },
-        {
-          provide: getRepositoryToken(PaymentSchedule),
-          useValue: paymentScheduleRepo,
-        },
         { provide: PaymentGatewayService, useValue: mockGateway },
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: Object, useValue: { getUserById: jest.fn() } },
@@ -137,15 +108,6 @@ describe('PaymentService – edge cases & isolation', () => {
         { provide: StellarService, useValue: mockStellar },
         { provide: LockService, useValue: mockLock },
         { provide: IdempotencyService, useValue: mockIdempotency },
-        {
-          provide: DataSource,
-          useValue: {
-            transaction: jest.fn(
-              (cb: (em: typeof entityManager) => Promise<unknown>) =>
-                cb(entityManager),
-            ),
-          },
-        },
         { provide: FraudHooksService, useValue: mockFraud },
       ],
     }).compile();
@@ -260,140 +222,119 @@ describe('PaymentService – edge cases & isolation', () => {
     });
   });
 
-  // ─── processRefund edge cases ────────────────────────────────────────────
+  // ─── deposit management integration flow ───────────────────────────────
 
-  describe('processRefund – edge cases', () => {
-    it('throws when payment is not found', async () => {
-      entityManager.findOne.mockResolvedValue(null);
+  describe('deposit management integration flow', () => {
+    it('records a security deposit escrow, releases it, and marks the payment complete', async () => {
+      const escrowPayload = {
+        sourcePublicKey: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        destinationPublicKey:
+          'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+        amount: '3000.0000000',
+        agreementId: 'agr-1',
+      };
 
-      await expect(
-        service.processRefund(
-          'pay-missing',
-          { amount: 50, reason: 'test' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('throws when refund amount exceeds payment amount', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-1',
-          { amount: 999, reason: 'over' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('prevents double-refund on already-refunded payment', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.REFUNDED,
-        amount: 100,
-        refundAmount: 100,
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-
-      await expect(
-        service.processRefund(
-          'pay-1',
-          { amount: 1, reason: 'dup' } as ProcessRefundDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('sends notification after successful refund', async () => {
-      entityManager.findOne.mockResolvedValue({
-        id: 'pay-1',
-        userId: 'user-1',
-        status: PaymentStatus.COMPLETED,
-        amount: 100,
-        refundAmount: 0,
-        currency: 'NGN',
-        metadata: { chargeId: 'ch-1' },
-      } as unknown as Payment);
-      mockGateway.processRefund.mockResolvedValue({
-        success: true,
-        refundId: 'ref-1',
+      mockStellar.createEscrow.mockResolvedValue({
+        id: 42,
+        status: 'ACTIVE',
       });
-      entityManager.save.mockResolvedValue({
-        id: 'pay-1',
-        status: PaymentStatus.REFUNDED,
-        refundAmount: 50,
+
+      const escrowPayment = {
+        id: 'pay-escrow-1',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        currency: 'XLM',
+        status: PaymentStatus.PENDING,
+        referenceNumber: 'escrow:42',
+        metadata: {
+          gateway: 'stellar',
+          flow: 'escrow_deposit',
+          escrowId: 42,
+        },
+      } as Payment;
+
+      paymentRepo.create.mockImplementation(
+        (d: Partial<Payment>) => d as Payment,
+      );
+      paymentRepo.save.mockResolvedValue(escrowPayment);
+
+      const created = await service.createEscrowDeposit(
+        escrowPayload as any,
+        'user-1',
+      );
+
+      expect(mockStellar.createEscrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: '3000.0000000',
+          rentAgreementId: 'agr-1',
+        }),
+      );
+      expect(created.status).toBe(PaymentStatus.PENDING);
+      expect(created.referenceNumber).toBe('escrow:42');
+
+      mockStellar.releaseEscrow.mockResolvedValue({
+        id: 42,
+        status: 'released',
+        releaseTransactionHash: 'release-hash-1',
+      });
+      paymentRepo.findOne.mockResolvedValue(escrowPayment);
+      paymentRepo.save.mockResolvedValue({
+        ...escrowPayment,
+        status: PaymentStatus.COMPLETED,
       } as Payment);
 
-      await service.processRefund(
-        'pay-1',
-        { amount: 50, reason: 'partial' } as ProcessRefundDto,
+      const released = await service.releaseEscrowDeposit(
+        42,
+        { memo: 'Deposit released' } as any,
         'user-1',
       );
 
-      expect(mockNotifications.notify).toHaveBeenCalledWith(
-        'user-1',
-        expect.stringContaining('efund'),
-        expect.any(String),
-        'PAYMENT_REFUNDED',
-      );
-    });
-  });
-
-  // ─── createPaymentSchedule edge cases ───────────────────────────────────
-
-  describe('createPaymentSchedule – edge cases', () => {
-    it('throws when payment method is not found', async () => {
-      paymentMethodRepo.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.createPaymentSchedule(
-          {
-            agreementId: 'agr-1',
-            paymentMethodId: 'pm-missing',
-            amount: 500,
-            interval: PaymentInterval.MONTHLY,
-          } as CreatePaymentScheduleDto,
-          'user-1',
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('sets status to ACTIVE on creation', async () => {
-      paymentMethodRepo.findOne.mockResolvedValue({
-        id: 'pm-1',
-        userId: 'user-1',
+      expect(mockStellar.releaseEscrow).toHaveBeenCalledWith({
+        escrowId: 42,
+        memo: 'Deposit released',
       });
-      paymentScheduleRepo.create.mockImplementation(
-        (d: Partial<PaymentSchedule>) => d as PaymentSchedule,
-      );
-      paymentScheduleRepo.save.mockResolvedValue({
-        id: 'sched-1',
-        status: PaymentScheduleStatus.ACTIVE,
-      } as PaymentSchedule);
+      expect(released?.status).toBe(PaymentStatus.COMPLETED);
+    });
 
-      const result = await service.createPaymentSchedule(
-        {
-          agreementId: 'agr-1',
-          paymentMethodId: 'pm-1',
-          amount: 500,
-          interval: PaymentInterval.MONTHLY,
-        } as CreatePaymentScheduleDto,
+    it('refunds a held escrow deposit when the security deposit is returned', async () => {
+      const escrowPayment = {
+        id: 'pay-escrow-2',
+        userId: 'user-1',
+        agreementId: 'agr-1',
+        amount: 3000,
+        currency: 'XLM',
+        status: PaymentStatus.PENDING,
+        referenceNumber: 'escrow:88',
+        metadata: {
+          gateway: 'stellar',
+          flow: 'escrow_deposit',
+          escrowId: 88,
+        },
+      } as Payment;
+
+      paymentRepo.findOne.mockResolvedValue(escrowPayment);
+      mockStellar.refundEscrow.mockResolvedValue({
+        id: 88,
+        status: 'refunded',
+        refundTransactionHash: 'refund-hash-2',
+      });
+      paymentRepo.save.mockResolvedValue({
+        ...escrowPayment,
+        status: PaymentStatus.REFUNDED,
+      } as Payment);
+
+      const result = await service.refundEscrowDeposit(
+        88,
+        { reason: 'Normal move-out refund' } as any,
         'user-1',
       );
 
-      expect(paymentScheduleRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: PaymentScheduleStatus.ACTIVE }),
-      );
-      expect(result.id).toBe('sched-1');
+      expect(mockStellar.refundEscrow).toHaveBeenCalledWith({
+        escrowId: 88,
+        reason: 'Normal move-out refund',
+      });
+      expect(result?.status).toBe(PaymentStatus.REFUNDED);
     });
   });
 

@@ -182,4 +182,62 @@ describe('User Profile Update Integration', () => {
     // The plain value is returned but hash columns are never exposed
     expect(profile.body).not.toHaveProperty('phoneNumberHash');
   });
+
+  it('PUT /api/users/me – normalizes equivalent phone formats to canonical E.164', async () => {
+    const inputs = [
+      '08012345678',
+      '8012345678',
+      '2348012345678',
+      '+234 801 234 5678',
+      '+234-801-234-5678',
+      '00234 801 234 5678',
+    ];
+
+    for (const input of inputs) {
+      await request(app.getHttpServer())
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ phoneNumber: input })
+        .expect(200);
+
+      const profile = await request(app.getHttpServer())
+        .get('/api/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(profile.body.phoneNumber).toBe('+2348012345678');
+    }
+  });
+
+  it('PUT /api/users/me – rejects invalid phone numbers', async () => {
+    for (const input of [
+      'abc',
+      'abc8012345678',
+      '+',
+      'not a phone',
+      '+1555123567',
+      '+1111111111111555',
+    ]) {
+      await request(app.getHttpServer())
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ phoneNumber: input })
+        .expect(400);
+    }
+  });
+
+  it('PUT /api/users/me – empty phone value clears the stored phone', async () => {
+    await request(app.getHttpServer())
+      .put('/api/users/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ phoneNumber: '' })
+      .expect(200);
+
+    const profile = await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(profile.body.phoneNumber).toBeNull();
+  });
 });

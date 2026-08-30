@@ -30,17 +30,22 @@ import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.mi
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
+import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { ThreatDetectionMiddleware } from './common/middleware/threat-detection.middleware';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { StorageModule } from './modules/storage/storage.module';
+import { DocumentModule } from './modules/documents/document.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { SearchModule } from './modules/search/search.module';
 import { JobQueueService } from './common/services/job-queue.service';
+import { CompressionService } from './common/middleware/compression.service';
+import { CompressionMiddleware } from './common/middleware/compression.middleware';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { upstashStore } from './common/cache/upstash-cache.store';
@@ -61,15 +66,26 @@ import { IdempotencyModule } from './common/idempotency';
 import { ResilienceModule } from './common/resilience';
 import { FraudModule } from './modules/fraud/fraud.module';
 import { TransactionModule } from './modules/transactions/transaction.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
+import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
+import { createDatabaseConnectionOptions } from './database/database-config';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
+import { CertificatePinningModule } from './common/security/certificate-pinning.module';
+import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 
 const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
-    ...(process.env.NODE_ENV === 'test' ? [] : [SentryModule.forRoot()]),
+    ...(process.env.NODE_ENV === 'test' ||
+    process.env.OPENAPI_GENERATE === 'true'
+      ? []
+      : [SentryModule.forRoot()]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
@@ -79,8 +95,10 @@ const appLogger = new Logger('AppModule');
     LockModule,
     IdempotencyModule,
     ResilienceModule,
+    CertificatePinningModule,
+    OpenApiDocumentRegistryModule,
     require('./common/services/encryption.module').EncryptionModule,
-    process.env.NODE_ENV === 'test'
+    process.env.NODE_ENV === 'test' || process.env.OPENAPI_GENERATE === 'true'
       ? CacheModule.register({
           isGlobal: true,
           ttl: 600,
@@ -186,39 +204,28 @@ const appLogger = new Logger('AppModule');
             logging: false,
           };
         }
-        const config = {
-          type: 'postgres' as const,
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT || '5432'),
-          username: process.env.DB_USERNAME,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          namingStrategy: new SnakeNamingStrategy(),
-          entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
-          migrations: isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
-          synchronize: false,
-          logging: process.env.TYPEORM_LOGGING === 'true',
-          logger: 'advanced-console' as const,
-          // Connection pooling configuration
-          extra: {
-            max: parseInt(process.env.DB_POOL_MAX || '20'),
-            min: parseInt(process.env.DB_POOL_MIN || '5'),
-            idleTimeoutMillis: parseInt(
-              process.env.DB_POOL_IDLE_TIMEOUT || '30000',
-            ),
-            connectionTimeoutMillis: parseInt(
-              process.env.DB_POOL_CONNECTION_TIMEOUT || '2000',
-            ),
-          },
+        const config = createDatabaseConnectionOptions(
+          __dirname,
+          isTest ? [] : [__dirname + '/migrations/*{.ts,.js}'],
+        );
+        const debugConfig = config as {
+          host?: string;
+          port?: number;
+          database?: string;
+          replication?: unknown;
+          synchronize?: boolean;
+          logging?: boolean;
+          extra?: unknown;
         };
-        console.log('[DEBUG] TypeORM Config:', {
-          host: config.host,
-          port: config.port,
-          username: config.username,
-          database: config.database,
-          synchronize: config.synchronize,
-          logging: config.logging,
-          pool: config.extra,
+        appLogger.debug({
+          host: debugConfig.host,
+          port: debugConfig.port,
+          database: debugConfig.database,
+          // Removed username to prevent credential exposure in logs
+          replicationEnabled: Boolean(debugConfig.replication),
+          synchronize: debugConfig.synchronize,
+          logging: debugConfig.logging,
+          pool: debugConfig.extra,
         });
         return config;
       },
@@ -230,6 +237,7 @@ const appLogger = new Logger('AppModule');
     PropertiesModule,
     StellarModule,
     DisputesModule,
+    BookingsModule,
     MonitoringModule,
     StatusModule,
     // Load HealthModule only when not generating OpenAPI (avoids loading broken @nestjs/terminus in script)
@@ -242,6 +250,7 @@ const appLogger = new Logger('AppModule');
     SecurityModule,
     I18nModule,
     StorageModule,
+    DocumentModule,
     ReviewsModule,
     FeedbackModule,
     DeveloperModule,
@@ -249,6 +258,8 @@ const appLogger = new Logger('AppModule');
     CleanupModule,
     AiModule,
     FraudModule,
+    FavoritesModule,
+    FeatureFlagsModule,
     WebhooksModule,
     ScreeningModule,
     ReferralModule,
@@ -271,6 +282,7 @@ const appLogger = new Logger('AppModule');
   providers: [
     AppService,
     JobQueueService,
+    CompressionService,
     {
       provide: 'APP_PIPE',
       useClass: ValidationPipe,
@@ -291,10 +303,22 @@ const appLogger = new Logger('AppModule');
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DeprecationInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReadReplicaInterceptor,
+    },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+
+    consumer.apply(CompressionMiddleware).forRoutes('*');
+
     consumer.apply(LocalizationMiddleware).forRoutes('*');
 
     // Security headers middleware (applied to all routes)
@@ -302,6 +326,9 @@ export class AppModule implements NestModule {
 
     // Request size limiting (applied to all routes)
     consumer.apply(RequestSizeLimitMiddleware).forRoutes('*');
+
+    // Query depth limiting (applied to all routes)
+    consumer.apply(QueryDepthLimitMiddleware).forRoutes('*');
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');

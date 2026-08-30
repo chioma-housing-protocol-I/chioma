@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -30,6 +29,9 @@ import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { AgreementStateService } from './state-machines/agreement-state-machine.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AgreementStatusChangedEvent } from './events/agreement-status-changed.event';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class AgreementsService {
@@ -117,14 +119,22 @@ export class AgreementsService {
     if (agentId) whereClause.agentId = agentId;
     if (propertyId) whereClause.propertyId = propertyId;
 
+    const currentPage = page || 1;
+    const pageSize = limit || 20;
+
     const [data, total] = await this.agreementRepository.findAndCount({
       where: whereClause,
       order: { [sortBy || 'createdAt']: sortOrder || 'DESC' },
-      skip: (page ? page - 1 : 0) * (limit || 10),
-      take: limit || 10,
+      skip: PaginationUtils.calculateOffset(currentPage, pageSize),
+      take: pageSize,
     });
 
-    return { data, total, page: page || 1, limit: limit || 10 };
+    return PaginationUtils.buildPaginationResponse(
+      data,
+      total,
+      currentPage,
+      pageSize,
+    );
   }
 
   async findOne(id: string) {
@@ -310,8 +320,23 @@ export class AgreementsService {
     return await this.paymentRepository.save(payment);
   }
 
-  async getPayments(id: string) {
-    return await this.paymentRepository.find({ where: { agreementId: id } });
+  async getPayments(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<Payment>> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.paymentRepository.findAndCount({
+      where: { agreementId: id },
+      relations: ['user', 'paymentMethodRelation'],
+      order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**

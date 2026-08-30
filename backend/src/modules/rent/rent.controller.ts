@@ -5,79 +5,27 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  IsNumber,
-  IsOptional,
-  IsDateString,
-  IsString,
-  IsEmail,
-  Min,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RentService } from './rent.service';
 import { RentReminderService } from './rent-reminder.service';
-
-// ─── DTOs ────────────────────────────────────────────────────────────────────
-
-export class CalculateLateFeeDto {
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  monthlyRent: number;
-
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  daysLate: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  gracePeriodDays?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  lateFeeRate?: number;
-}
-
-export class CalculateProratedRentDto {
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  monthlyRent: number;
-
-  @IsDateString()
-  moveInDate: string;
-}
-
-export class CreateRemindersDto {
-  @IsString()
-  agreementId: string;
-
-  @IsString()
-  tenantId: string;
-
-  @IsEmail()
-  tenantEmail: string;
-
-  @IsDateString()
-  dueDate: string;
-
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  amount: number;
-}
+import {
+  CalculateLateFeeDto,
+  CalculateProratedRentDto,
+  CreateRemindersDto,
+} from './dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Payment } from './entities/payment.entity';
+import { RentReminder } from './entities/rent-reminder.entity';
 
 // ─── Controller ──────────────────────────────────────────────────────────────
 
+@ApiTags('Rent')
 @Controller('rent')
 export class RentController {
   constructor(
@@ -85,36 +33,54 @@ export class RentController {
     private readonly rentReminderService: RentReminderService,
   ) {}
 
-  /**
-   * GET /rent/agreements/:id/schedule
-   * Generates a payment schedule for the given agreement based on its stored terms.
-   */
+  @ApiOperation({
+    summary: 'Get payment schedule',
+    description:
+      'Generates a payment schedule for the given agreement based on its stored terms.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment schedule generated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/schedule')
   async getPaymentSchedule(@Param('id', ParseUUIDPipe) id: string) {
-    // Validate the agreement exists (throws NotFoundException if not found),
-    // then generate the payment schedule.
     await this.rentService.getRentHistory(id);
     return this.rentService.generatePaymentSchedule(
       id,
-      0, // placeholder – the controller will be enhanced once an agreement-fetch method is added
+      0,
       new Date(),
       new Date(),
     );
   }
 
-  /**
-   * GET /rent/agreements/:id/history
-   * Returns the payment history for the specified agreement.
-   */
+  @ApiOperation({
+    summary: 'Get rent history',
+    description: 'Returns the payment history for the specified agreement.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rent history retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/history')
-  async getRentHistory(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentService.getRentHistory(id);
+  @ApiPaginatedResponse(Payment)
+  async getRentHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentService.getRentHistory(id, query.page, query.limit);
   }
 
-  /**
-   * POST /rent/calculate/late-fee
-   * Calculates a late fee based on the provided parameters.
-   */
+  @ApiOperation({
+    summary: 'Calculate late fee',
+    description: 'Calculates a late fee based on the provided parameters.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Late fee calculated',
+    schema: { example: { lateFee: 75.0 } },
+  })
   @Post('calculate/late-fee')
   @HttpCode(HttpStatus.OK)
   calculateLateFee(@Body() dto: CalculateLateFeeDto) {
@@ -127,10 +93,15 @@ export class RentController {
     return { lateFee: fee };
   }
 
-  /**
-   * POST /rent/calculate/prorated
-   * Calculates prorated rent for a partial month.
-   */
+  @ApiOperation({
+    summary: 'Calculate prorated rent',
+    description: 'Calculates prorated rent for a partial month.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Prorated rent calculated',
+    schema: { example: { proratedRent: 750.0 } },
+  })
   @Post('calculate/prorated')
   @HttpCode(HttpStatus.OK)
   calculateProratedRent(@Body() dto: CalculateProratedRentDto) {
@@ -141,10 +112,12 @@ export class RentController {
     return { proratedRent: prorated };
   }
 
-  /**
-   * POST /rent/reminders
-   * Creates a set of automated reminders for a rent agreement.
-   */
+  @ApiOperation({
+    summary: 'Create rent reminders',
+    description: 'Creates a set of automated reminders for a rent agreement.',
+  })
+  @ApiResponse({ status: 201, description: 'Reminders created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
   @Post('reminders')
   @HttpCode(HttpStatus.CREATED)
   async createReminders(@Body() dto: CreateRemindersDto) {
@@ -157,19 +130,27 @@ export class RentController {
     );
   }
 
-  /**
-   * GET /rent/agreements/:id/reminders
-   * Lists all reminders for the specified agreement.
-   */
+  @ApiOperation({
+    summary: 'Get reminders',
+    description: 'Lists all reminders for the specified agreement.',
+  })
+  @ApiResponse({ status: 200, description: 'Reminders retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/reminders')
-  async getReminders(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentReminderService.getReminders(id);
+  @ApiPaginatedResponse(RentReminder)
+  async getReminders(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentReminderService.getReminders(id, query.page, query.limit);
   }
 
-  /**
-   * DELETE /rent/reminders/:id
-   * Cancels a specific reminder.
-   */
+  @ApiOperation({
+    summary: 'Cancel reminder',
+    description: 'Cancels a specific reminder by ID.',
+  })
+  @ApiResponse({ status: 200, description: 'Reminder cancelled successfully' })
+  @ApiResponse({ status: 404, description: 'Reminder not found' })
   @Delete('reminders/:id')
   async cancelReminder(@Param('id', ParseUUIDPipe) id: string) {
     return this.rentReminderService.cancelReminder(id);

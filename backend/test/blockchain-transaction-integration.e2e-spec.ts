@@ -12,10 +12,7 @@ import {
   StellarAccount,
   StellarAccountType,
 } from '../src/modules/stellar/entities/stellar-account.entity';
-import {
-  StellarEscrow,
-  EscrowStatus,
-} from '../src/modules/stellar/entities/stellar-escrow.entity';
+import { StellarEscrow } from '../src/modules/stellar/entities/stellar-escrow.entity';
 import { EncryptionService } from '../src/modules/stellar/services/encryption.service';
 import * as StellarSdk from '@stellar/stellar-sdk';
 

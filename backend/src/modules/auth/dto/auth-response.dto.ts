@@ -4,8 +4,8 @@ export class UserProfileDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   id: string;
 
-  @ApiProperty({ example: 'user@example.com' })
-  email: string;
+  @ApiProperty({ example: 'user@example.com', nullable: true })
+  email: string | null;
 
   @ApiProperty({ example: 'John', nullable: true })
   firstName: string | null;

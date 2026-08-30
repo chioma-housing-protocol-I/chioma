@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DisputesController } from './disputes.controller';
+import { AdminDisputesController } from './admin-disputes.controller';
 import { DisputesService } from './disputes.service';
 import { DisputeBlockchainService } from './dispute-blockchain.service';
 import { Dispute } from './entities/dispute.entity';
@@ -10,8 +11,11 @@ import { Arbiter } from './entities/arbiter.entity';
 import { DisputeVote } from './entities/dispute-vote.entity';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 import { User } from '../users/entities/user.entity';
+import { Payment as GeneralPayment } from '../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../rent/entities/payment.entity';
 import { AuditModule } from '../audit/audit.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -23,11 +27,14 @@ import { StellarModule } from '../stellar/stellar.module';
       DisputeVote,
       RentAgreement,
       User,
+      GeneralPayment,
+      RentPayment,
     ]),
     AuditModule,
     StellarModule,
+    StorageModule,
   ],
-  controllers: [DisputesController],
+  controllers: [DisputesController, AdminDisputesController],
   providers: [DisputesService, DisputeBlockchainService],
   exports: [DisputesService, DisputeBlockchainService],
 })

@@ -441,7 +441,10 @@ describe('showMigrations', () => {
   let consoleSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    consoleSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    // Nest's Logger writes via process.stdout.write, not console.*
+    consoleSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
   });
 
   afterEach(() => {

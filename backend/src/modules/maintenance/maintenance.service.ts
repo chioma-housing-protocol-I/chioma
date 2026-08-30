@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   MaintenanceRequest,
   MaintenanceStatus,
@@ -15,6 +16,9 @@ import {
   AuthorizationError,
   ValidationError,
 } from '../../common/errors/domain-errors';
+import { computeSlaDeadlines } from './sla.config';
+import { PaginationUtils } from '../../common/utils';
+import { QueryMaintenanceDto } from './dto';
 
 export interface CreateMaintenanceDto {
   propertyId: string;
@@ -40,6 +44,7 @@ export class MaintenanceService {
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
     private readonly reviewPromptService: ReviewPromptService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(dto: CreateMaintenanceDto): Promise<MaintenanceRequest> {
@@ -58,9 +63,18 @@ export class MaintenanceService {
       }
     }
 
+    const now = new Date();
+    const { responseDueAt, resolutionDueAt } = computeSlaDeadlines(
+      now,
+      dto.priority as string | undefined,
+      this.configService,
+    );
+
     const req = this.maintenanceRepo.create({
       ...dto,
       status: MaintenanceStatus.OPEN,
+      responseDueAt,
+      resolutionDueAt,
     });
 
     const saved = await this.maintenanceRepo.save(req);
@@ -75,9 +89,23 @@ export class MaintenanceService {
     return saved;
   }
 
-  async findAll(filter: MaintenanceFilter): Promise<MaintenanceRequest[]> {
-    // Removed the erroneous `as MaintenanceRequest[]` cast — find() already returns the correct type
-    return this.maintenanceRepo.find({ where: filter });
+  async findAll(query: QueryMaintenanceDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
+    const where: MaintenanceFilter = {};
+    if (query.propertyId) where.propertyId = query.propertyId;
+    if (query.status) where.status = query.status;
+    if (query.priority) where.priority = query.priority;
+
+    const [data, total] = await this.maintenanceRepo.findAndCount({
+      where,
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOne(id: string): Promise<MaintenanceRequest> {

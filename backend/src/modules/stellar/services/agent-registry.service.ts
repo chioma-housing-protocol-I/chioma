@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
 import { AgentTransaction } from '../entities/agent-transaction.entity';
+import { PaginationUtils } from '../../../common/utils';
 
 export interface AgentInfo {
   agent: string;
@@ -381,13 +382,15 @@ export class AgentRegistryService {
     }
   }
 
-  async getAgentTransactions(
-    agentAddress: string,
-  ): Promise<AgentTransaction[]> {
-    return this.agentTransactionRepo.find({
+  async getAgentTransactions(agentAddress: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.agentTransactionRepo.findAndCount({
       where: { agentAddress },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   private async pollTransactionStatus(

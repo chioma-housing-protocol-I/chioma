@@ -147,10 +147,11 @@ describe('SublettingService', () => {
         10,
       ),
     ).resolves.toEqual({
-      items: [{ id: 'request-1' }],
+      data: [{ id: 'request-1' }],
       total: 1,
       page: 2,
       limit: 10,
+      totalPages: 1,
     });
     expect(requestRepo.findAndCount).toHaveBeenCalledWith({
       where: { landlordId: 'landlord-1', status: SubletRequestStatus.PENDING },
@@ -160,9 +161,10 @@ describe('SublettingService', () => {
     });
   });
 
-  it('approves and denies only landlord-owned requests', async () => {
+  it('approves and denies only landlord-owned requests, preserving the link to the parent agreement', async () => {
     const pending = {
       id: 'request-1',
+      agreementId: 'agreement-1',
       landlordId: 'landlord-1',
       tenantId: 'tenant-1',
       status: SubletRequestStatus.PENDING,
@@ -177,6 +179,7 @@ describe('SublettingService', () => {
         'landlord-1',
       ),
     ).resolves.toMatchObject({
+      agreementId: 'agreement-1',
       status: SubletRequestStatus.APPROVED,
       landlordNotes: 'Approved',
     });
@@ -187,6 +190,8 @@ describe('SublettingService', () => {
       'SUBLET_APPROVED',
     );
 
+    // A landlord who administers a *different* agreement must not be able to
+    // approve or deny a request tied to this one.
     requestRepo.findOne.mockResolvedValueOnce({
       ...pending,
       landlordId: 'other',
@@ -194,6 +199,9 @@ describe('SublettingService', () => {
     await expect(
       service.denySubletting('request-1', { reason: 'No' }, 'landlord-1'),
     ).rejects.toThrow(ForbiddenException);
+    expect(requestRepo.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: SubletRequestStatus.DENIED }),
+    );
 
     requestRepo.findOne.mockResolvedValueOnce({ ...pending });
     await expect(
@@ -203,9 +211,27 @@ describe('SublettingService', () => {
         'landlord-1',
       ),
     ).resolves.toMatchObject({
+      agreementId: 'agreement-1',
       status: SubletRequestStatus.DENIED,
       landlordNotes: 'Calendar conflict',
     });
+    expect(notificationsService.notify).toHaveBeenCalledWith(
+      'tenant-1',
+      'Sublet denied',
+      'Your sublet request has been denied.',
+      'SUBLET_DENIED',
+    );
+  });
+
+  it('rejects approval and denial of a request that does not exist', async () => {
+    requestRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.approveSubletting('missing', { notes: 'x' }, 'landlord-1'),
+    ).rejects.toThrow(NotFoundException);
+    await expect(
+      service.denySubletting('missing', { reason: 'x' }, 'landlord-1'),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('calculates tenant and landlord earnings from bookings', async () => {

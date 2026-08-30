@@ -5,7 +5,7 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 mod agent;
 mod errors;
 mod events;
-pub mod rate_limit;
+mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;

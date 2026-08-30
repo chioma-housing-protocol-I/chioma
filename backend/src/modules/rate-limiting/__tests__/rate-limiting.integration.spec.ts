@@ -6,18 +6,15 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { RateLimitingModule } from '../rate-limiting.module';
 import { RateLimitService } from '../services/rate-limit.service';
-import { RateLimitGuard } from '../guards/rate-limit.guard';
 import { AbuseDetectionService } from '../services/abuse-detection.service';
-import { RateLimitAnalyticsService } from '../services/rate-limit-analytics.service';
 import { UserTier, EndpointCategory } from '../types/rate-limit.types';
-import { UserRole } from '../../users/entities/user.entity';
 
 describe.skip('Rate Limiting Integration Tests', () => {
   let app: INestApplication;
   let moduleRef: TestingModule;
   let rateLimitService: RateLimitService;
   let abuseDetectionService: AbuseDetectionService;
-  let dataSource: DataSource;
+  let _dataSource: DataSource;
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -46,7 +43,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
     abuseDetectionService = moduleRef.get<AbuseDetectionService>(
       AbuseDetectionService,
     );
-    dataSource = moduleRef.get<DataSource>(DataSource);
+    _dataSource = moduleRef.get<DataSource>(DataSource);
   });
 
   afterAll(async () => {
@@ -70,7 +67,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
 
         const promises = Array(concurrentRequests)
           .fill(null)
-          .map((_, index) =>
+          .map((_, _index) =>
             rateLimitService.consumePoints(
               identifier,
               UserTier.FREE,
@@ -375,7 +372,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
       it('should maintain accuracy under load', async () => {
         const identifier = 'accuracy-test';
         const requestsPerBatch = 50;
-        const batchCount = 2;
+        void 2;
 
         // First batch
         const firstBatch = Array(requestsPerBatch)

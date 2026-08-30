@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -20,6 +21,9 @@ import { DeveloperService } from './developer.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto, RotateApiKeyDto } from './dto/update-api-key.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { ApiKeyRotationHistory } from './entities/api-key-rotation-history.entity';
 
 @ApiTags('Developer Portal')
 @ApiBearerAuth('JWT-auth')
@@ -52,7 +56,12 @@ export class DeveloperController {
     @Req() req: { user: { id: string } },
     @Body() dto: CreateApiKeyDto,
   ) {
-    return this.developerService.createKey(req.user.id, dto.name);
+    return this.developerService.createKey(
+      req.user.id,
+      dto.name,
+      dto.description,
+      dto.permissions,
+    );
   }
 
   @Get('api-keys')
@@ -90,7 +99,9 @@ export class DeveloperController {
     return {
       id: key.id,
       name: key.name,
-      prefix: key.keyPrefix ?? 'chioma_sk_...',
+      description: key.description,
+      keyPrefix: key.keyPrefix ?? 'chioma_sk_...',
+      permissions: key.permissions || [],
       lastUsedAt: key.lastUsedAt,
       createdAt: key.createdAt,
       expiresAt: key.expiresAt,
@@ -105,7 +116,8 @@ export class DeveloperController {
   @Patch('api-keys/:id')
   @ApiOperation({
     summary: 'Update API key',
-    description: 'Update API key name and/or expiration date.',
+    description:
+      'Update API key name, description, permissions and/or expiration date.',
   })
   @ApiParam({ name: 'id', description: 'API key ID' })
   @ApiResponse({ status: 200, description: 'API key updated' })
@@ -115,14 +127,27 @@ export class DeveloperController {
     @Param('id') id: string,
     @Body() dto: UpdateApiKeyDto,
   ) {
-    const updates: { name?: string; expiresAt?: Date } = {};
+    const updates: {
+      name?: string;
+      description?: string;
+      expiresAt?: Date;
+      permissions?: string[];
+    } = {};
 
     if (dto.name) {
       updates.name = dto.name;
     }
 
+    if (dto.description !== undefined) {
+      updates.description = dto.description;
+    }
+
     if (dto.expiresAt) {
       updates.expiresAt = new Date(dto.expiresAt);
+    }
+
+    if (dto.permissions) {
+      updates.permissions = dto.permissions;
     }
 
     const key = await this.developerService.updateKey(req.user.id, id, updates);
@@ -170,22 +195,28 @@ export class DeveloperController {
     description: 'View the rotation history for a specific API key.',
   })
   @ApiParam({ name: 'id', description: 'API key ID' })
-  @ApiResponse({ status: 200, description: 'List of rotations' })
+  @ApiPaginatedResponse(ApiKeyRotationHistory)
   @ApiResponse({ status: 404, description: 'Not found' })
   async getRotationHistory(
     @Req() req: { user: { id: string } },
     @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
   ) {
     const history = await this.developerService.getRotationHistory(
       req.user.id,
       id,
+      query.page,
+      query.limit,
     );
-    return history.map((h) => ({
-      id: h.id,
-      rotatedAt: h.rotatedAt,
-      oldKeyPrefix: h.oldKeyPrefix,
-      newKeyPrefix: h.newKeyPrefix,
-    }));
+    return {
+      ...history,
+      data: history.data.map((h) => ({
+        id: h.id,
+        rotatedAt: h.rotatedAt,
+        oldKeyPrefix: h.oldKeyPrefix,
+        newKeyPrefix: h.newKeyPrefix,
+      })),
+    };
   }
 
   @Delete('api-keys/:id')

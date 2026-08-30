@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Dispute } from './dispute.entity';
 import { User } from '../../users/entities/user.entity';
+import { ScanStatus } from '../../storage/file-metadata.entity';
 
 @Entity('dispute_evidence')
 export class DisputeEvidence {
@@ -21,8 +22,8 @@ export class DisputeEvidence {
   @JoinColumn({ name: 'dispute_id' })
   dispute: Dispute;
 
-  @Column({ name: 'uploaded_by' })
-  uploadedBy: number;
+  @Column({ name: 'uploaded_by', type: 'uuid' })
+  uploadedBy: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'uploaded_by' })
@@ -42,6 +43,14 @@ export class DisputeEvidence {
 
   @Column({ type: 'text', nullable: true })
   description: string;
+
+  @Column({
+    name: 'scan_status',
+    type: 'enum',
+    enum: ScanStatus,
+    default: ScanStatus.PENDING,
+  })
+  scanStatus: ScanStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -14,6 +14,9 @@ import { User } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
+import { Payment as GeneralPayment } from '../../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../../rent/entities/payment.entity';
 
 describe('DisputesService – Pagination', () => {
   let service: DisputesService;
@@ -70,10 +73,22 @@ describe('DisputesService – Pagination', () => {
           useValue: mockAgreementRepo,
         },
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        {
+          provide: getRepositoryToken(GeneralPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(RentPayment),
+          useValue: { findOne: jest.fn() },
+        },
         { provide: AuditService, useValue: mockAuditService },
         { provide: DataSource, useValue: mockDataSource },
         { provide: LockService, useValue: mockLockService },
         { provide: IdempotencyService, useValue: mockIdempotencyService },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
+        },
       ],
     }).compile();
     service = module.get<DisputesService>(DisputesService);
@@ -86,7 +101,7 @@ describe('DisputesService – Pagination', () => {
 
       const result = await service.findAll({ page: 1, limit: 5 });
 
-      expect(result.disputes).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.total).toBe(15);
     });
 
@@ -116,18 +131,18 @@ describe('DisputesService – Pagination', () => {
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
-      expect(result.disputes).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
     });
 
-    it('uses default page=1 and limit=10', async () => {
+    it('uses default page=1 and limit=20', async () => {
       const qb = makeQb([], 0);
       mockDisputeRepo.createQueryBuilder.mockReturnValue(qb);
 
       await service.findAll({});
 
       expect(qb.skip).toHaveBeenCalledWith(0);
-      expect(qb.take).toHaveBeenCalledWith(10);
+      expect(qb.take).toHaveBeenCalledWith(20);
     });
   });
 

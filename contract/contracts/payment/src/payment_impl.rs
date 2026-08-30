@@ -32,9 +32,11 @@ pub fn calculate_rent_for_period(
             // Calculate escalated rent: Rent = BaseRent * (1 + rate)^years
             let mut current_rent = base_rent;
             for _ in 0..years_passed {
-                // annual_rate_bps is in basis points (1 bps = 0.01%)
-                let increase = (current_rent * (config.annual_rate_bps as i128)) / 10000;
-                current_rent += increase;
+                // annual_rate_bps is in basis points (1 bps = 0.01%).
+                // Compounding is saturating: an extreme rate/term combination
+                // must clamp rather than panic on overflow inside the contract.
+                let increase = current_rent.saturating_mul(config.annual_rate_bps as i128) / 10000;
+                current_rent = current_rent.saturating_add(increase);
             }
             current_rent
         }

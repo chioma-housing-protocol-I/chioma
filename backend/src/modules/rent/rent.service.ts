@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { RentAgreement } from './entities/rent-contract.entity';
 import { Payment } from './entities/payment.entity';
 import { AgreementNotFoundError } from '../../common/errors/domain-errors';
+import { PaginationUtils } from '../../common/utils';
 
 /** Represents a single entry in a generated payment schedule. */
 export interface PaymentScheduleEntry {
@@ -147,7 +148,7 @@ export class RentService {
    * @returns An array of Payment records ordered by payment date descending
    * @throws NotFoundException if the agreement does not exist
    */
-  async getRentHistory(agreementId: string): Promise<Payment[]> {
+  async getRentHistory(agreementId: string, page = 1, limit = 20) {
     const agreement = await this.agreementRepository.findOne({
       where: { id: agreementId },
     });
@@ -156,15 +157,23 @@ export class RentService {
       throw new AgreementNotFoundError(agreementId);
     }
 
-    const payments = await this.paymentRepository.find({
+    PaginationUtils.validatePagination(page, limit);
+    const [payments, total] = await this.paymentRepository.findAndCount({
       where: { agreementId },
       order: { paymentDate: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
 
     this.logger.log(
       `Retrieved ${payments.length} payments for agreement ${agreementId}`,
     );
 
-    return payments;
+    return PaginationUtils.buildPaginationResponse(
+      payments,
+      total,
+      page,
+      limit,
+    );
   }
 }

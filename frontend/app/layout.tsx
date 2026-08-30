@@ -1,10 +1,29 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 
 import '@fontsource-variable/inter';
+import '@fontsource-variable/fraunces';
+
+import { RootLayoutClient } from './RootLayoutClient';
+import type { AuthHint } from '@/store/authStore';
+
+const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
+
+async function readAuthHint(): Promise<AuthHint | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(AUTH_HINT_COOKIE_NAME)?.value;
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(decodeURIComponent(raw)) as AuthHint;
+  } catch {
+    return null;
+  }
+}
 
 export const viewport: Viewport = {
-  themeColor: '#1d4ed8',
+  themeColor: '#0d0e12',
   colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
@@ -13,26 +32,59 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app',
-  ),
+  metadataBase: new URL(APP_URL),
   title: {
-    default: 'Chioma — Blockchain-Powered Rentals',
+    default: 'Chioma — Rentals, settled on Stellar',
     template: '%s | Chioma',
   },
   description:
-    'Automated commissions, zero disputes. Connect with landlords and tenants on the Stellar network.',
+    'Chioma is a rental platform where agreements, payments, and commissions settle automatically on the Stellar network — instant payouts, transparent contracts, zero disputes.',
+  keywords: [
+    'rentals',
+    'real estate',
+    'Stellar',
+    'blockchain',
+    'escrow',
+    'smart contracts',
+    'property management',
+  ],
+  applicationName: 'Chioma',
   manifest: '/manifest.webmanifest',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    url: APP_URL,
+    siteName: 'Chioma',
+    title: 'Chioma — Rentals, settled on Stellar',
+    description:
+      'Agreements, payments, and commissions settle automatically on the Stellar network. Instant payouts. Transparent contracts. Zero disputes.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Chioma' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chioma — Rentals, settled on Stellar',
+    description:
+      'Agreements, payments, and commissions settle automatically on the Stellar network.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
 };
 
-import { RootLayoutClient } from './RootLayoutClient';
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const authHint = await readAuthHint();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -41,14 +93,14 @@ export default function RootLayout({
 
       <body
         suppressHydrationWarning
-        className="font-sans bg-linear-to-br from-slate-900 via-blue-900 to-slate-900"
+        className="font-sans bg-ink-900 text-cream"
       >
         {/* Accessibility: skip link */}
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
 
-        <RootLayoutClient>{children}</RootLayoutClient>
+        <RootLayoutClient authHint={authHint}>{children}</RootLayoutClient>
       </body>
     </html>
   );

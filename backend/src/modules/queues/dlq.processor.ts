@@ -3,6 +3,7 @@ import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { IncidentService } from '../../common/resilience/incident.service';
 import { IncidentSeverity } from '../../common/resilience/resilience.types';
+import { requestContext } from '../../common/request-context/request-context';
 
 export const DLQ_QUEUE_NAME = 'dead-letter-queue';
 
@@ -16,6 +17,8 @@ export interface DeadLetterJob {
   };
   originalData: any;
   timestamp: number;
+  correlationId?: string;
+  requestId?: string;
 }
 
 /**
@@ -35,44 +38,52 @@ export class DLQProcessor {
   @Process()
   async processDLQ(job: Job<DeadLetterJob>): Promise<void> {
     const dlqJob = job.data;
+    const correlationId =
+      dlqJob.correlationId ||
+      dlqJob.originalData?.correlationId ||
+      dlqJob.originalData?.requestId;
+    const requestId =
+      dlqJob.requestId || dlqJob.originalData?.requestId || correlationId;
 
-    this.logger.error(
-      `Processing DLQ job from queue: ${dlqJob.originalQueue}`,
-      {
-        jobId: dlqJob.originalJobId,
-        failureCount: dlqJob.failureCount,
-        error: dlqJob.lastError,
-        age: Date.now() - dlqJob.timestamp,
-      },
-    );
-
-    try {
-      // Classify the failure
-      const severity = this.classifyFailure(dlqJob);
-
-      // Create incident for investigation
-      this.incident.declare({
-        title: `Dead-Letter Job: ${dlqJob.originalQueue}`,
-        description: `Job failed after ${dlqJob.failureCount} attempts: ${dlqJob.lastError.message}`,
-        severity,
-        affectedServices: [dlqJob.originalQueue],
-      });
-
-      // Archive the job for later analysis
-      await this.archiveJob(dlqJob);
-
-      // Attempt recovery if applicable
-      if (this.isRecoverable(dlqJob)) {
-        await this.attemptRecovery(dlqJob);
-      }
-    } catch (error) {
+    return requestContext.run({ correlationId, requestId }, async () => {
       this.logger.error(
-        `Failed to process DLQ job: ${dlqJob.originalJobId}`,
-        error,
+        `Processing DLQ job from queue: ${dlqJob.originalQueue}`,
+        {
+          jobId: dlqJob.originalJobId,
+          failureCount: dlqJob.failureCount,
+          error: dlqJob.lastError,
+          age: Date.now() - dlqJob.timestamp,
+        },
       );
-      // Re-throw to ensure job is marked as failed
-      throw error;
-    }
+
+      try {
+        // Classify the failure
+        const severity = this.classifyFailure(dlqJob);
+
+        // Create incident for investigation
+        this.incident.declare({
+          title: `Dead-Letter Job: ${dlqJob.originalQueue}`,
+          description: `Job failed after ${dlqJob.failureCount} attempts: ${dlqJob.lastError.message}`,
+          severity,
+          affectedServices: [dlqJob.originalQueue],
+        });
+
+        // Archive the job for later analysis
+        await this.archiveJob(dlqJob);
+
+        // Attempt recovery if applicable
+        if (this.isRecoverable(dlqJob)) {
+          await this.attemptRecovery(dlqJob);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to process DLQ job: ${dlqJob.originalJobId}`,
+          error,
+        );
+        // Re-throw to ensure job is marked as failed
+        throw error;
+      }
+    });
   }
 
   /**

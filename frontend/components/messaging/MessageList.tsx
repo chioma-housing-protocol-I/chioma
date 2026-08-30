@@ -1,15 +1,23 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCheck, Check } from 'lucide-react';
+import {
+  CheckCheck,
+  Check,
+  Clock,
+  AlertCircle,
+  MessageCircle,
+} from 'lucide-react';
 import type { Message } from './types';
 import { UserAvatar } from './UserAvatar';
 import { useAuthStore } from '@/store/authStore';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface MessageListProps {
   messages: Message[];
   typingUsers: Set<string>;
   isLoading: boolean;
+  onRetry?: (clientId: string) => void;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -54,6 +62,7 @@ export function MessageList({
   messages,
   typingUsers,
   isLoading,
+  onRetry,
 }: MessageListProps) {
   const { user } = useAuthStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -86,31 +95,14 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-3xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
-          </div>
-          <p className="text-sm font-semibold text-neutral-700">
-            Start the conversation
-          </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Send a message below to get started
-          </p>
-        </div>
+      <div className="flex-1 flex items-center justify-center p-8">
+        <EmptyState
+          icon={MessageCircle}
+          title="Start the conversation"
+          description="Send a message below to get started"
+          variant="dark"
+          className="w-full max-w-md"
+        />
       </div>
     );
   }
@@ -182,6 +174,8 @@ export function MessageList({
                         isMine
                           ? 'bg-blue-600 text-white'
                           : 'bg-neutral-100 text-neutral-900'
+                      } ${message.status === 'pending' ? 'opacity-60' : ''} ${
+                        message.status === 'failed' ? 'ring-1 ring-red-400' : ''
                       } ${
                         isMine
                           ? isFirstInSequence && isLastInSequence
@@ -203,25 +197,56 @@ export function MessageList({
                       {message.content}
                     </div>
 
-                    {/* Timestamp — shows on hover */}
+                    {/* Timestamp/status — pending & failed stay visible; sent shows on hover */}
                     {isLastInSequence && (
                       <div
-                        className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        className={`flex items-center gap-1 mt-1 transition-opacity ${
                           isMine ? 'flex-row-reverse' : ''
+                        } ${
+                          isMine &&
+                          (message.status === 'pending' ||
+                            message.status === 'failed')
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         <span className="text-[10px] text-neutral-400">
-                          {formatMessageTime(message.createdAt)}
+                          {message.status === 'pending'
+                            ? 'Sending…'
+                            : message.status === 'failed'
+                              ? 'Not delivered'
+                              : formatMessageTime(message.createdAt)}
                         </span>
-                        {isMine && (
-                          <span aria-label={message.readAt ? 'Read' : 'Sent'}>
-                            {message.readAt ? (
-                              <CheckCheck size={11} className="text-blue-400" />
-                            ) : (
-                              <Check size={11} className="text-neutral-400" />
-                            )}
-                          </span>
-                        )}
+                        {isMine &&
+                          (message.status === 'pending' ? (
+                            <Clock
+                              size={11}
+                              className="text-neutral-400 animate-pulse"
+                              aria-label="Sending"
+                            />
+                          ) : message.status === 'failed' ? (
+                            <button
+                              type="button"
+                              onClick={() => onRetry?.(message.id)}
+                              className="flex items-center gap-1 text-red-500 hover:text-red-600 hover:underline"
+                            >
+                              <AlertCircle size={11} />
+                              <span className="text-[10px] font-medium">
+                                Retry
+                              </span>
+                            </button>
+                          ) : (
+                            <span aria-label={message.readAt ? 'Read' : 'Sent'}>
+                              {message.readAt ? (
+                                <CheckCheck
+                                  size={11}
+                                  className="text-blue-400"
+                                />
+                              ) : (
+                                <Check size={11} className="text-neutral-400" />
+                              )}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>

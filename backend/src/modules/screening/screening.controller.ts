@@ -60,6 +60,7 @@ export class ScreeningController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post(':id/consent')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -81,6 +82,7 @@ export class ScreeningController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -92,6 +94,7 @@ export class ScreeningController {
     });
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/report')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -103,6 +106,7 @@ export class ScreeningController {
     });
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('webhook')
   @Public()
   @UseGuards(WebhookSignatureGuard)

@@ -65,7 +65,9 @@ function resolvePrimaryImage(property: Property): string {
  */
 function resolveManagerName(property: Property): string {
   // Support both `owner` (new) and `landlord` (legacy alias)
-  const owner = property.owner ?? (property as unknown as { landlord?: { name?: string } }).landlord;
+  const owner =
+    property.owner ??
+    (property as unknown as { landlord?: { name?: string } }).landlord;
   return owner?.name ?? 'Property Manager';
 }
 
@@ -78,14 +80,14 @@ export function toPropertyCardShape(property: Property): PropertyCardShape {
 
   // Prefer the new `type` field; fall back to legacy `propertyType`
   const rawType =
-    property.type ?? (property as { propertyType?: string }).propertyType ?? 'apartment';
+    property.type ??
+    (property as { propertyType?: string }).propertyType ??
+    'apartment';
   const category = rawType.charAt(0).toUpperCase() + rawType.slice(1);
 
   // Prefer the new `area` field; fall back to legacy `squareFeet`
   const sqft =
-    property.area ??
-    (property as { squareFeet?: number }).squareFeet ??
-    0;
+    property.area ?? (property as { squareFeet?: number }).squareFeet ?? 0;
 
   const allImageUrls = (property.images ?? []).map((img) => img.url);
 

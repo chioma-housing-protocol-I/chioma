@@ -4,20 +4,28 @@ import {
   Get,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { AgreementNftService } from './agreement-nft.service';
 import { NftAnalyticsService } from './nft-analytics.service';
 import { MintNftDto, TransferNftDto } from './dto/nft.dto';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { RentObligationNft } from './entities/rent-obligation-nft.entity';
 
 @Controller('agreements/nfts')
+@ApiTags('Agreement Nft')
 export class AgreementNftController {
   constructor(
     private readonly nftService: AgreementNftService,
     private readonly analyticsService: NftAnalyticsService,
   ) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Mint nft' })
   @Post('mint')
   @HttpCode(HttpStatus.CREATED)
   async mintNft(@Body() dto: MintNftDto) {
@@ -27,6 +35,8 @@ export class AgreementNftController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Transfer nft' })
   @Post('transfer')
   @HttpCode(HttpStatus.OK)
   async transferNft(@Body() dto: TransferNftDto) {
@@ -37,26 +47,44 @@ export class AgreementNftController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get nft by agreement' })
   @Get('agreement/:agreementId')
   async getNftByAgreement(@Param('agreementId') agreementId: string) {
     return this.nftService.getNftByAgreement(agreementId);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get nfts by owner' })
   @Get('owner/:ownerAddress')
-  async getNftsByOwner(@Param('ownerAddress') ownerAddress: string) {
-    return this.nftService.getNftsByOwner(ownerAddress);
+  @ApiPaginatedResponse(RentObligationNft)
+  async getNftsByOwner(
+    @Param('ownerAddress') ownerAddress: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.nftService.getNftsByOwner(
+      ownerAddress,
+      query.page,
+      query.limit,
+    );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get analytics' })
   @Get('analytics')
   async getAnalytics() {
     return this.analyticsService.getAnalytics();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get owner portfolio' })
   @Get('analytics/owner/:ownerAddress')
   async getOwnerPortfolio(@Param('ownerAddress') ownerAddress: string) {
     return this.analyticsService.getOwnerPortfolio(ownerAddress);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Sync ownership' })
   @Post('sync/:agreementId')
   @HttpCode(HttpStatus.OK)
   async syncOwnership(@Param('agreementId') agreementId: string) {

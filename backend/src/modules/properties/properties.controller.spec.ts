@@ -28,6 +28,7 @@ describe('PropertiesController', () => {
     role: UserRole.ADMIN,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -116,6 +117,7 @@ describe('PropertiesController', () => {
     aiOccupancyPrediction: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockPaginatedResponse = {

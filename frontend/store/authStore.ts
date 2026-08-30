@@ -1,18 +1,30 @@
 'use client';
 
+import { AppError } from '@/lib/errors';
+import { apiClient, setApiClientToken } from '@/lib/api-client';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
+import { useUIStore } from './ui-store';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// --- Types -------------------------------------------------------------------
 
-export interface User {
+export type Role = 'admin' | 'user' | 'agent';
+
+export interface BaseUser {
   id: string;
   email: string;
+  emailVerified: boolean;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
   avatar?: string;
+  locale?: string;
 }
+
+export type AdminUser = BaseUser & { role: 'admin' };
+export type RegularUser = BaseUser & { role: 'user' };
+export type AgentUser = BaseUser & { role: 'agent' };
+
+export type User = AdminUser | RegularUser | AgentUser;
 
 interface AuthState {
   user: User | null;
@@ -28,26 +40,67 @@ interface RegisterPayload {
   lastName: string;
   email: string;
   password: string;
-  role?: 'user' | 'admin';
+  /** Backend requires an explicit role; public signup only offers non-admin roles. */
+  role: 'user' | 'agent';
 }
 
+interface AuthApiUser {
+  id: string;
+  email: string | null;
+  emailVerified?: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  avatar?: string;
+  locale?: string;
+}
+
+interface AuthSuccessResponse {
+  accessToken: string;
+  refreshToken?: string | null;
+  user: AuthApiUser;
+  mfaRequired?: false;
+}
+
+interface MfaRequiredResponse {
+  mfaRequired: true;
+  mfaToken: string;
+  user: AuthApiUser;
+}
+
+interface RefreshResponse {
+  accessToken: string;
+}
+
+interface MessageResponse {
+  message: string;
+}
+
+type AuthResult = { success: boolean; error?: string };
+
 interface AuthActions {
-  login: (
-    email: string,
-    password: string,
-  ) => Promise<{ success: boolean; error?: string }>;
-  register: (
-    payload: RegisterPayload,
-  ) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (payload: RegisterPayload) => Promise<AuthResult>;
   logout: () => Promise<void>;
-  setTokens: (accessToken: string, refreshToken: string, user: User) => void;
+  refreshSession: () => Promise<AuthResult>;
+  setTokens: (
+    accessToken: string,
+    refreshToken: string | null,
+    user: User,
+  ) => void;
   setWalletAddress: (address: string | null) => void;
-  hydrate: () => void;
+  completeProfile: (payload: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  }) => Promise<AuthResult>;
+  updatePreferences: (preferences: { locale: string }) => Promise<void>;
+  hydrate: (forceRefresh?: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// --- Constants ---------------------------------------------------------------
 
 const AUTH_STORAGE_KEYS = {
   ACCESS_TOKEN: 'chioma_access_token',
@@ -58,27 +111,84 @@ const AUTH_STORAGE_KEYS = {
 
 const AUTH_COOKIE_NAME = 'chioma_auth_token';
 
-// ─── Cookie Helpers ──────────────────────────────────────────────────────────
+/**
+ * Non-sensitive display hint mirrored into a readable cookie so the server
+ * can render the signed-in UI on the first paint (see AuthHint below) --
+ * localStorage itself is invisible to the server, so without this the app
+ * always SSRs as signed-out and corrects after the client hydrates the
+ * store, producing a visible flash.
+ */
+const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
+
+export interface AuthHint {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  avatar?: string;
+}
+
+// --- Cookie Helpers ----------------------------------------------------------
 
 function setAuthCookie(token: string) {
+  if (typeof document === 'undefined') return;
+
   document.cookie = `${AUTH_COOKIE_NAME}=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 }
 
 function removeAuthCookie() {
+  if (typeof document === 'undefined') return;
+
   document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-// ─── Storage Helpers ─────────────────────────────────────────────────────────
+function setAuthHintCookie(user: User) {
+  if (typeof document === 'undefined') return;
 
-function readStoredAuth(): Omit<AuthState, 'loading'> {
+  const hint: AuthHint = {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+  };
+  document.cookie = `${AUTH_HINT_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(hint))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+}
+
+function removeAuthHintCookie() {
+  if (typeof document === 'undefined') return;
+
+  document.cookie = `${AUTH_HINT_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+// --- Storage Helpers ---------------------------------------------------------
+
+/**
+ * Closure cache for the parsed localStorage snapshot. localStorage.getItem()
+ * is synchronous and blocks the main thread, so repeat reads within the same
+ * page session (e.g. a re-mounted hydrator) reuse this instead of hitting
+ * storage again. Only refreshed when readStoredAuth is called with
+ * `forceRefresh: true`, which `hydrate()` does not do by default.
+ */
+let cachedAuthSnapshot: Omit<AuthState, 'loading'> | null = null;
+
+function emptyAuthSnapshot(): Omit<AuthState, 'loading'> {
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    walletAddress: null,
+  };
+}
+
+function readStoredAuth(forceRefresh = false): Omit<AuthState, 'loading'> {
+  if (cachedAuthSnapshot && !forceRefresh) {
+    return cachedAuthSnapshot;
+  }
+
   if (typeof window === 'undefined') {
-    return {
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      walletAddress: null,
-    };
+    return emptyAuthSnapshot();
   }
 
   try {
@@ -94,53 +204,132 @@ function readStoredAuth(): Omit<AuthState, 'loading'> {
     );
 
     if (storedAccessToken && storedUser) {
-      return {
+      cachedAuthSnapshot = {
         user: JSON.parse(storedUser) as User,
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
         isAuthenticated: true,
         walletAddress: storedWalletAddress,
       };
+      return cachedAuthSnapshot;
     }
-  } catch {
-    // Corrupted storage — clear and start fresh
+  } catch (error) {
+    console.error('[authStore] Failed to parse auth storage:', error);
+
+    const storedWalletAddress = localStorage.getItem(
+      AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+    );
+
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
-    localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
+    // Partial recovery: preserve wallet address if it exists
     removeAuthCookie();
+
+    useUIStore.getState().addToast({
+      type: 'error',
+      title: 'Session Corrupted',
+      message:
+        'Your local session data was corrupted. You have been safely logged out.',
+    });
+
+    cachedAuthSnapshot = {
+      ...emptyAuthSnapshot(),
+      walletAddress: storedWalletAddress,
+    };
+    return cachedAuthSnapshot;
   }
 
-  return {
-    user: null,
-    accessToken: null,
-    refreshToken: null,
-    isAuthenticated: false,
-    walletAddress: null,
+  // If no stored token and user found
+  const storedWalletAddressFallback = localStorage.getItem(
+    AUTH_STORAGE_KEYS.WALLET_ADDRESS,
+  );
+  cachedAuthSnapshot = {
+    ...emptyAuthSnapshot(),
+    walletAddress: storedWalletAddressFallback,
   };
+  return cachedAuthSnapshot;
+}
+
+/** Test-only escape hatch to reset the closure cache between test cases. */
+export function __resetAuthStorageCacheForTests(): void {
+  cachedAuthSnapshot = null;
 }
 
 function clearStorage() {
+  if (typeof window === 'undefined') return;
+
   localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
   removeAuthCookie();
+  removeAuthHintCookie();
+
+  cachedAuthSnapshot = emptyAuthSnapshot();
 }
 
-function persistAuth(accessToken: string, refreshToken: string, user: User) {
+function persistAuth(
+  accessToken: string,
+  refreshToken: string | null,
+  user: User,
+) {
   localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-  localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+
+  if (refreshToken) {
+    localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+  } else {
+    localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+  }
+
   localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
   setAuthCookie(accessToken);
+  setAuthHintCookie(user);
+
+  // Keep the closure cache in sync so subsequent reads skip localStorage
+  cachedAuthSnapshot = {
+    user,
+    accessToken,
+    refreshToken,
+    isAuthenticated: true,
+    walletAddress: cachedAuthSnapshot?.walletAddress ?? null,
+  };
 }
 
-// ─── Store ───────────────────────────────────────────────────────────────────
+function normalizeUser(user: AuthApiUser): User {
+  if (user.role !== 'admin' && user.role !== 'user' && user.role !== 'agent') {
+    throw new Error(`Invalid role assigned: ${user.role}`);
+  }
+
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    emailVerified: user.emailVerified ?? false,
+    firstName: user.firstName ?? '',
+    lastName: user.lastName ?? '',
+    role: user.role,
+    avatar: user.avatar,
+    locale: user.locale,
+  };
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AppError) {
+    return error.userMessage || error.message || fallback;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+// --- Store -------------------------------------------------------------------
 
 export const useAuthStore = create<AuthStore>()(
   withMiddleware(
     (set, get) => ({
-      // Initial state — SSR-safe defaults; call hydrate() on client mount
       user: null,
       accessToken: null,
       refreshToken: null,
@@ -148,19 +337,11 @@ export const useAuthStore = create<AuthStore>()(
       loading: true,
       walletAddress: null,
 
-      /**
-       * Hydrate from localStorage on client mount.
-       * Should be called once from the root layout/component.
-       */
-      hydrate: () => {
-        const stored = readStoredAuth();
+      hydrate: (forceRefresh = false) => {
+        const stored = readStoredAuth(forceRefresh);
+        setApiClientToken(stored.accessToken);
         set((state) => {
-          let user = stored.user;
-          // FORCED TO ADMIN FOR DEVELOPMENT - Global bypass for all admin pages
-          if (user && process.env.NODE_ENV !== 'production') {
-            user = { ...user, role: 'admin' };
-          }
-          state.user = user;
+          state.user = stored.user;
           state.accessToken = stored.accessToken;
           state.refreshToken = stored.refreshToken;
           state.isAuthenticated = stored.isAuthenticated;
@@ -169,19 +350,15 @@ export const useAuthStore = create<AuthStore>()(
         });
       },
 
-      /**
-       * Directly set tokens & user (useful after registration or
-       * when the backend response is already available).
-       */
-      setTokens: (accessToken: string, refreshToken: string, user: User) => {
-        // FORCED TO ADMIN FOR DEVELOPMENT - Global bypass for all admin pages
-        let finalUser = user;
-        if (user && process.env.NODE_ENV !== 'production') {
-          finalUser = { ...user, role: 'admin' };
-        }
-        persistAuth(accessToken, refreshToken, finalUser);
+      setTokens: (
+        accessToken: string,
+        refreshToken: string | null,
+        user: User,
+      ) => {
+        persistAuth(accessToken, refreshToken, user);
+        setApiClientToken(accessToken);
         set((state) => {
-          state.user = finalUser;
+          state.user = user;
           state.accessToken = accessToken;
           state.refreshToken = refreshToken;
           state.isAuthenticated = true;
@@ -189,130 +366,208 @@ export const useAuthStore = create<AuthStore>()(
         });
       },
 
-      /**
-       * Set wallet address and persist to localStorage.
-       */
       setWalletAddress: (address: string | null) => {
         if (address) {
           localStorage.setItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS, address);
         } else {
           localStorage.removeItem(AUTH_STORAGE_KEYS.WALLET_ADDRESS);
         }
+
+        // Keep closure cache in sync
+        if (cachedAuthSnapshot) {
+          cachedAuthSnapshot = {
+            ...cachedAuthSnapshot,
+            walletAddress: address,
+          };
+        }
+
         set((state) => {
           state.walletAddress = address;
         });
       },
 
-      /**
-       * Login with email/password — calls the backend auth endpoint.
-       */
-      login: async (
-        email: string,
-      ): Promise<{ success: boolean; error?: string }> => {
-        // --- REAL AUTHENTICATION LOGIC (Commented out for development) ---
-        /*
+      completeProfile: async (payload): Promise<AuthResult> => {
         try {
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-          });
+          await apiClient.post<MessageResponse>(
+            '/auth/complete-profile',
+            payload,
+          );
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return {
-              success: false,
-              error: errorData.message || 'Invalid credentials. Please try again.',
+          const currentUser = get().user;
+          if (currentUser) {
+            const updatedUser: User = {
+              ...currentUser,
+              email: payload.email,
+              emailVerified: false,
+              firstName: payload.firstName || currentUser.firstName,
+              lastName: payload.lastName || currentUser.lastName,
             };
+            localStorage.setItem(
+              AUTH_STORAGE_KEYS.USER,
+              JSON.stringify(updatedUser),
+            );
+            if (cachedAuthSnapshot) {
+              cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+            }
+            set((state) => {
+              state.user = updatedUser;
+            });
           }
 
-          const data = await response.json();
-          get().setTokens(data.accessToken, data.refreshToken, data.user);
           return { success: true };
-        } catch {
+        } catch (error) {
           return {
             success: false,
-            error: 'Network error. Please check your connection.',
+            error: getErrorMessage(
+              error,
+              'Could not save your profile. Please try again.',
+            ),
           };
         }
-        */
-
-        // DEV BYPASS: map demo emails to roles for local testing.
-        const normalizedEmail = (email || 'dev@chioma.local').toLowerCase();
-        const inferredRole: User['role'] = normalizedEmail.includes('admin')
-          ? 'admin'
-          : 'user';
-
-        get().setTokens('mock-access-token', 'mock-refresh-token', {
-          id: 'dev-123',
-          email: normalizedEmail,
-          firstName:
-            inferredRole.charAt(0).toUpperCase() + inferredRole.slice(1),
-          lastName: 'User',
-          role: inferredRole,
-        });
-        return { success: true };
       },
 
-      /**
-       * Register a new account — calls the backend auth endpoint.
-       */
-      register: async (
-        payload: RegisterPayload,
-      ): Promise<{ success: boolean; error?: string }> => {
-        // --- REAL REGISTRATION LOGIC (Commented out for development) ---
-        /*
+      updatePreferences: async (preferences) => {
         try {
-          const response = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+          // Attempt to update backend if API exists. We gracefully fail if it doesn't.
+          await apiClient.post('/auth/preferences', preferences);
+        } catch {
+          // Silent catch for mock environments or missing endpoint
+        }
+
+        const currentUser = get().user;
+        if (currentUser) {
+          const updatedUser: User = {
+            ...currentUser,
+            ...preferences,
+          };
+          localStorage.setItem(
+            AUTH_STORAGE_KEYS.USER,
+            JSON.stringify(updatedUser),
+          );
+          if (cachedAuthSnapshot) {
+            cachedAuthSnapshot = { ...cachedAuthSnapshot, user: updatedUser };
+          }
+          set((state) => {
+            state.user = updatedUser;
           });
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+        }
+      },
+
+      login: async (email: string, password: string): Promise<AuthResult> => {
+        try {
+          const response = await apiClient.post<
+            AuthSuccessResponse | MfaRequiredResponse
+          >('/auth/login', {
+            email,
+            password,
+          });
+
+          if ('mfaRequired' in response.data && response.data.mfaRequired) {
             return {
               success: false,
-              error: errorData.message || 'Registration failed. Please try again.',
+              error:
+                'Multi-factor authentication is required to finish signing in.',
             };
           }
-          const data = await response.json();
-          get().setTokens(data.accessToken, data.refreshToken, data.user);
-          return { success: true };
-        } catch {
-          return { success: false, error: 'Network error. Please check your connection.' };
-        }
-        */
 
-        // DEV BYPASS: immediately log in after registration.
-        get().setTokens('mock-access-token', 'mock-refresh-token', {
-          id: 'dev-' + Date.now(),
-          email: payload.email,
-          firstName: payload.firstName,
-          lastName: payload.lastName,
-          role: payload.role ?? 'user',
-        });
-        return { success: true };
+          get().setTokens(
+            response.data.accessToken,
+            response.data.refreshToken ?? null,
+            normalizeUser(response.data.user),
+          );
+
+          return { success: true };
+        } catch (error) {
+          return {
+            success: false,
+            error: getErrorMessage(
+              error,
+              'Invalid credentials. Please try again.',
+            ),
+          };
+        }
       },
 
-      /**
-       * Logout — clears tokens from storage, cookie, and state.
-       */
-      logout: async () => {
-        const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      register: async (payload: RegisterPayload): Promise<AuthResult> => {
+        try {
+          const response = await apiClient.post<AuthSuccessResponse>(
+            '/auth/register',
+            payload,
+          );
 
-        // Best-effort call to backend logout
-        if (token) {
-          try {
-            await fetch('/api/auth/logout', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-            });
-          } catch {
-            // Silently fail — we still clear local state
-          }
+          get().setTokens(
+            response.data.accessToken,
+            response.data.refreshToken ?? null,
+            normalizeUser(response.data.user),
+          );
+
+          return { success: true };
+        } catch (error) {
+          return {
+            success: false,
+            error: getErrorMessage(
+              error,
+              'Registration failed. Please try again.',
+            ),
+          };
+        }
+      },
+
+      refreshSession: async (): Promise<AuthResult> => {
+        const currentUser = get().user;
+
+        if (!currentUser) {
+          return { success: false, error: 'No authenticated user to refresh.' };
+        }
+
+        try {
+          const response = await apiClient.post<RefreshResponse>(
+            '/auth/refresh',
+            {},
+            { retries: 0 },
+          );
+
+          get().setTokens(
+            response.data.accessToken,
+            get().refreshToken,
+            currentUser,
+          );
+
+          return { success: true };
+        } catch (error) {
+          clearStorage();
+          set((state) => {
+            state.user = null;
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.isAuthenticated = false;
+            state.walletAddress = null;
+            state.loading = false;
+          });
+
+          return {
+            success: false,
+            error: getErrorMessage(
+              error,
+              'Your session expired. Please sign in again.',
+            ),
+          };
+        }
+      },
+
+      logout: async () => {
+        try {
+          await apiClient.post<MessageResponse>(
+            '/auth/logout',
+            {},
+            { retries: 0 },
+          );
+        } catch {
+          // Best-effort logout: always clear the local session.
         }
 
         clearStorage();
+        setApiClientToken(null);
 
         set((state) => {
           state.user = null;
@@ -328,6 +583,6 @@ export const useAuthStore = create<AuthStore>()(
   ),
 );
 
-// ─── Convenience Hook (backward-compatible with old AuthContext) ─────────────
+// --- Convenience Hook (backward-compatible with old AuthContext) -------------
 
 export const useAuth = useAuthStore;

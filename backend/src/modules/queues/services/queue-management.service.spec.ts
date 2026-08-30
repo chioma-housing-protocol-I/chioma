@@ -101,6 +101,26 @@ describe('QueueManagementService', () => {
           provide: getQueueToken('data-sync'),
           useValue: mockDataSyncQueue,
         },
+        {
+          provide: getQueueToken('analytics'),
+          useValue: {
+            add: jest.fn().mockResolvedValue({ id: '5' }),
+            getJobCounts: jest.fn().mockResolvedValue({
+              active: 0,
+              wait: 0,
+              delayed: 0,
+              failed: 0,
+              completed: 20,
+            }),
+            getFailed: jest.fn().mockResolvedValue([]),
+            getDelayed: jest.fn().mockResolvedValue([]),
+            isPaused: jest.fn().mockReturnValue(false),
+            pause: jest.fn().mockResolvedValue(undefined),
+            resume: jest.fn().mockResolvedValue(undefined),
+            clean: jest.fn().mockResolvedValue(undefined),
+            getJob: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -237,11 +257,12 @@ describe('QueueManagementService', () => {
     it('should return stats for all queues', async () => {
       const allStats = await service.getAllQueueStats();
 
-      expect(allStats).toHaveLength(4);
+      expect(allStats).toHaveLength(5);
       expect(allStats[0].name).toBe('email');
       expect(allStats[1].name).toBe('documents');
       expect(allStats[2].name).toBe('blockchain');
       expect(allStats[3].name).toBe('data-sync');
+      expect(allStats[4].name).toBe('analytics');
     });
   });
 
@@ -310,7 +331,7 @@ describe('QueueManagementService', () => {
         opts: { attempts: 3 },
         failedReason: null,
         stacktrace: [],
-        createdTimestamp: 1000,
+        timestamp: 1000,
         finishedOn: 2000,
       };
 

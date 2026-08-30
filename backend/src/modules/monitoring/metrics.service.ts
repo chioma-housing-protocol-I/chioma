@@ -113,6 +113,83 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  private readonly cacheOperations = new Counter({
+    name: 'cache_operations_total',
+    help: 'Total cache operations by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly cacheHitRatio = new Gauge({
+    name: 'cache_hit_ratio',
+    help: 'Cache hit ratio (hits / total operations)',
+    registers: [this.registry],
+  });
+
+  private cacheHits = 0;
+  private cacheTotal = 0;
+  private readonly dbReplicationLagSeconds = new Gauge({
+    name: 'database_replication_lag_seconds',
+    help: 'Replication lag for each database replica in seconds',
+    labelNames: ['replica'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly dbReplicaHealthy = new Gauge({
+    name: 'database_replica_healthy',
+    help: 'Replica health state where 1 is healthy and 0 is unhealthy',
+    labelNames: ['replica'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly dbReplicaCount = new Gauge({
+    name: 'database_replica_count',
+    help: 'Number of configured database replicas currently observed',
+    registers: [this.registry],
+  });
+
+  private readonly queueDepth = new Gauge({
+    name: 'queue_depth',
+    help: 'Jobs waiting or delayed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueOldestJobAgeSeconds = new Gauge({
+    name: 'queue_oldest_job_age_seconds',
+    help: 'Age in seconds of the oldest waiting job in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueActiveJobs = new Gauge({
+    name: 'queue_active_jobs',
+    help: 'Jobs currently being processed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueFailedJobs = new Gauge({
+    name: 'queue_failed_jobs',
+    help: 'Jobs in the failed state for the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queuePaused = new Gauge({
+    name: 'queue_paused',
+    help: 'Whether the queue is paused (1) or running (0)',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueStalledState = new Gauge({
+    name: 'queue_stalled',
+    help: 'Whether the queue is considered stalled (1): jobs are waiting longer than the stall threshold',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
   private readonly rentPayments = new Counter({
     name: 'rent_payments_total',
     help: 'Total rent payment attempts',
@@ -131,6 +208,41 @@ export class MetricsService implements OnModuleInit {
     name: 'disputes_total',
     help: 'Total disputes',
     labelNames: ['type', 'status'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly webhookSignatureVerifications = new Counter({
+    name: 'webhook_signature_verifications_total',
+    help: 'Total webhook signature verification attempts by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityUp = new Gauge({
+    name: 'blockchain_connectivity_up',
+    help: 'Whether the blockchain RPC/Horizon endpoint is reachable (1) or not (0)',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityResponseTime = new Gauge({
+    name: 'blockchain_connectivity_response_time_ms',
+    help: 'Latency of the last blockchain connectivity check in milliseconds',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityConsecutiveFailures = new Gauge({
+    name: 'blockchain_connectivity_consecutive_failures',
+    help: 'Number of consecutive failed blockchain connectivity checks',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityLastSuccess = new Gauge({
+    name: 'blockchain_connectivity_last_success_timestamp',
+    help: 'Unix timestamp (seconds) of the last successful blockchain connectivity check',
+    labelNames: ['network'] as const,
     registers: [this.registry],
   });
 
@@ -171,8 +283,6 @@ export class MetricsService implements OnModuleInit {
     this.blockchainDuration.observe({ type }, durationMs);
   }
 
-  setDatabaseConnections(_count: number): void {}
-
   setDatabasePoolUsage(
     active: number,
     idle: number,
@@ -195,8 +305,54 @@ export class MetricsService implements OnModuleInit {
     this.dbCacheHitRatio.set(cacheHitRatio);
   }
 
+  setReplicationLag(replica: string, lagSeconds: number): void {
+    this.dbReplicationLagSeconds.set({ replica }, lagSeconds);
+  }
+
+  setReplicaHealth(replica: string, healthy: boolean): void {
+    this.dbReplicaHealthy.set({ replica }, healthy ? 1 : 0);
+  }
+
+  setReplicaCount(count: number): void {
+    this.dbReplicaCount.set(count);
+  }
+
   recordDatabaseQuery(queryType: string, durationMs: number): void {
     this.dbQueryDuration.observe({ query_type: queryType }, durationMs);
+  }
+
+  recordCacheOperation(hit: boolean): void {
+    const result = hit ? 'hit' : 'miss';
+    this.cacheOperations.inc({ result });
+    this.cacheTotal++;
+    if (hit) this.cacheHits++;
+    this.cacheHitRatio.set(
+      this.cacheTotal > 0 ? this.cacheHits / this.cacheTotal : 0,
+    );
+  }
+
+  /**
+   * Export per-queue gauges so a stalled or backed-up background processor
+   * is visible on the Prometheus metrics endpoint before user-facing
+   * symptoms appear.
+   */
+  setQueueMetrics(
+    queue: string,
+    metrics: {
+      depth: number;
+      oldestJobAgeSeconds: number;
+      active: number;
+      failed: number;
+      paused: boolean;
+      stalled: boolean;
+    },
+  ): void {
+    this.queueDepth.set({ queue }, metrics.depth);
+    this.queueOldestJobAgeSeconds.set({ queue }, metrics.oldestJobAgeSeconds);
+    this.queueActiveJobs.set({ queue }, metrics.active);
+    this.queueFailedJobs.set({ queue }, metrics.failed);
+    this.queuePaused.set({ queue }, metrics.paused ? 1 : 0);
+    this.queueStalledState.set({ queue }, metrics.stalled ? 1 : 0);
   }
 
   recordRentPayment(status: 'success' | 'failed'): void {
@@ -209,6 +365,36 @@ export class MetricsService implements OnModuleInit {
 
   recordDispute(type: string, status: string): void {
     this.disputes.inc({ type, status });
+  }
+
+  /**
+   * Record the outcome of a webhook signature verification. `result` is
+   * `success` for accepted requests or one of the machine-readable rejection
+   * reasons (e.g. `signature_mismatch`, `timestamp_expired`) so tampering and
+   * replay attempts can be alerted on.
+   */
+  recordWebhookSignatureVerification(result: string): void {
+    this.webhookSignatureVerifications.inc({ result });
+  }
+
+  recordBlockchainConnectivityCheck(
+    network: string,
+    healthy: boolean,
+    responseTimeMs: number,
+    consecutiveFailures: number,
+  ): void {
+    this.blockchainConnectivityUp.set({ network }, healthy ? 1 : 0);
+    this.blockchainConnectivityResponseTime.set({ network }, responseTimeMs);
+    this.blockchainConnectivityConsecutiveFailures.set(
+      { network },
+      consecutiveFailures,
+    );
+    if (healthy) {
+      this.blockchainConnectivityLastSuccess.set(
+        { network },
+        Math.floor(Date.now() / 1000),
+      );
+    }
   }
 
   async getMetrics(): Promise<string> {

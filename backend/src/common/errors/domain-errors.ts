@@ -129,6 +129,16 @@ export class DisputeNotFoundError extends ResourceNotFoundError {
   }
 }
 
+export class BookingNotFoundError extends ResourceNotFoundError {
+  constructor(bookingId?: string) {
+    super(
+      ErrorCode.BOOKING_NOT_FOUND,
+      bookingId ? `Booking with ID ${bookingId} not found` : undefined,
+      bookingId ? { bookingId } : undefined,
+    );
+  }
+}
+
 /**
  * Business Logic Errors
  */

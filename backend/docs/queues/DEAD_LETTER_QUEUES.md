@@ -26,10 +26,10 @@ DeadLetterQueueService.moveToDeadLetter()
 
 ## Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DEAD_LETTER_QUEUE_ENABLED` | Enable automatic DLQ routing | `true` |
-| `DEAD_LETTER_RETENTION_DAYS` | Auto-purge archived jobs older than N days | `30` |
+| Variable                     | Description                                | Default |
+| ---------------------------- | ------------------------------------------ | ------- |
+| `DEAD_LETTER_QUEUE_ENABLED`  | Enable automatic DLQ routing               | `true`  |
+| `DEAD_LETTER_RETENTION_DAYS` | Auto-purge archived jobs older than N days | `30`    |
 
 Set `DEAD_LETTER_QUEUE_ENABLED=false` in local dev if you do not want failed jobs moved.
 
@@ -37,13 +37,13 @@ Set `DEAD_LETTER_QUEUE_ENABLED=false` in local dev if you do not want failed job
 
 Base path: `/api/v1/queues`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/dead-letter/stats` | DLQ counts |
-| GET | `/dead-letter/jobs` | List archived failed jobs |
-| POST | `/dead-letter/jobs/:jobId/retry` | Re-queue job to original worker queue |
-| POST | `/dead-letter/jobs/:jobId/remove` | Delete archived job |
-| POST | `/dead-letter/purge` | Purge jobs older than retention period |
+| Method | Path                              | Description                            |
+| ------ | --------------------------------- | -------------------------------------- |
+| GET    | `/dead-letter/stats`              | DLQ counts                             |
+| GET    | `/dead-letter/jobs`               | List archived failed jobs              |
+| POST   | `/dead-letter/jobs/:jobId/retry`  | Re-queue job to original worker queue  |
+| POST   | `/dead-letter/jobs/:jobId/remove` | Delete archived job                    |
+| POST   | `/dead-letter/purge`              | Purge jobs older than retention period |
 
 ## Job defaults
 

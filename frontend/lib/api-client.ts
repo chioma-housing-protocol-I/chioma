@@ -4,24 +4,33 @@
  * Supports mock API mode for frontend-only development.
  */
 
+import { z } from 'zod';
 import {
   AppError,
   classifyUnknownError,
   createHttpError,
   logError,
   withRetry,
+  globalCircuitBreaker,
 } from '@/lib/errors';
-import { getMockData, shouldUseMockApi } from '@/lib/mock-api';
+import { cancellationManager, isCancellationError } from '@/lib/cancellation';
+import { getMockData, shouldUseMockApi } from '@/mocks';
 import { globalRateLimitTracker } from '@/lib/rate-limit';
+import { getTimeoutForEndpoint } from '@/lib/config/timeouts';
 
 type RequestConfig = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Record<string, string>;
   body?: unknown;
   cache?: RequestCache;
+  credentials?: RequestCredentials;
   retries?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
+  cancellationKey?: string;
+  disableTimeoutConfig?: boolean;
+  /** Optional Zod schema to validate the parsed response at runtime. */
+  schema?: z.ZodType;
 };
 
 type ApiResponse<T> = {
@@ -35,8 +44,7 @@ const AUTH_STORAGE_KEYS = {
   LEGACY_ACCESS_TOKEN: 'auth_token',
 } as const;
 
-/** Browser calls same-origin `/api` (Next proxy); SSR hits backend directly. */
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const configured = process.env.NEXT_PUBLIC_API_URL;
     return configured && configured.length > 0 ? configured : '/api';
@@ -44,8 +52,26 @@ function getApiBaseUrl(): string {
   return (
     process.env.BACKEND_API_BASE_URL ??
     process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
-    'http://localhost:5000/api'
+    'http://localhost:5000/api/v1'
   );
+}
+
+/**
+ * Module-level token cache so getAuthToken() does not hit localStorage on
+ * every HTTP request. Populated by setApiClientToken() which is called by
+ * the authStore whenever tokens change (login, refresh, logout).
+ *
+ * Falls back to localStorage on the first call (e.g. page reload before the
+ * store has had a chance to call setApiClientToken).
+ */
+let _cachedToken: string | null | undefined = undefined;
+
+/**
+ * Updates the api-client's in-memory token cache.
+ * Call this from the authStore on login, token refresh, and logout.
+ */
+export function setApiClientToken(token: string | null): void {
+  _cachedToken = token;
 }
 
 class ApiClient {
@@ -55,26 +81,60 @@ class ApiClient {
   constructor() {
     this.baseURL = getApiBaseUrl();
     this.defaultHeaders = {
-      'Content-Type': 'application/json',
+      Accept: 'application/json',
     };
   }
 
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
 
-    return (
+    // Use in-memory cache if already populated (avoids synchronous localStorage
+    // I/O on every request — localStorage reads block the main thread).
+    if (_cachedToken !== undefined) return _cachedToken;
+
+    // Cold-start fallback: read from localStorage once and cache the result.
+    const token =
       localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN) ||
-      localStorage.getItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN)
-    );
+      localStorage.getItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
+    _cachedToken = token;
+    return token;
   }
 
-  private async parseResponse<T>(response: Response): Promise<T> {
+  private async parseResponse<T>(
+    response: Response,
+    schema?: z.ZodType,
+  ): Promise<T> {
     const contentType = response.headers.get('content-type') || '';
+    let data: unknown;
+
     if (contentType.includes('application/json')) {
-      return (await response.json()) as T;
+      data = await response.json();
+    } else {
+      data = await response.text();
     }
 
-    return (await response.text()) as T;
+    if (schema) {
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        throw new AppError({
+          code: 'VALIDATION_RESPONSE_MISMATCH',
+          category: 'validation',
+          severity: 'warning',
+          message: `API response failed schema validation: ${result.error.issues.map((i) => i.path.join('.')).join(', ')}`,
+          userMessage:
+            'The server returned data in an unexpected format. Please try again.',
+          recoverable: true,
+          context: {
+            source: 'lib/api-client.ts',
+            action: 'parseResponse',
+            metadata: { issues: result.error.issues },
+          },
+        });
+      }
+      return result.data as T;
+    }
+
+    return data as T;
   }
 
   private clearAuthAndRedirectIfNeeded(status: number) {
@@ -82,18 +142,13 @@ class ApiClient {
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AUTH_STORAGE_KEYS.LEGACY_ACCESS_TOKEN);
-
-    // DISABLED FOR DEVELOPMENT - Prevent aggressive redirect to home page
-    // if (window.location.pathname !== '/') {
-    //   window.location.assign('/');
-    // }
+    _cachedToken = null;
   }
 
   private async request<T>(
     endpoint: string,
     config: RequestConfig = {},
   ): Promise<ApiResponse<T>> {
-    // Use mock API if enabled
     if (shouldUseMockApi()) {
       const mockResponse = getMockData(endpoint);
       return {
@@ -107,19 +162,38 @@ class ApiClient {
       headers = {},
       body,
       cache = 'no-cache',
+      credentials = 'include',
       retries = 3,
-      timeoutMs = 12000,
+      timeoutMs,
       signal,
+      cancellationKey,
+      disableTimeoutConfig = false,
     } = config;
 
+    // Calculate timeout based on endpoint if not explicitly provided
+    const calculatedTimeout =
+      timeoutMs ||
+      (disableTimeoutConfig ? 12000 : getTimeoutForEndpoint(endpoint));
+    const finalTimeout = disableTimeoutConfig
+      ? timeoutMs || 12000
+      : calculatedTimeout;
+
     const token = this.getAuthToken();
+    const isFormData =
+      typeof FormData !== 'undefined' && body instanceof FormData;
     const requestHeaders = {
       ...this.defaultHeaders,
-      ...headers,
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
+      ...headers,
     };
 
+    if (isFormData && 'Content-Type' in requestHeaders) {
+      delete requestHeaders['Content-Type'];
+    }
+
     const url = `${this.baseURL}${endpoint}`;
+    const breakerName = `${method}:${endpoint}`;
 
     const waitTimeMs = globalRateLimitTracker.getWaitTimeMs();
     if (waitTimeMs > 0) {
@@ -131,90 +205,118 @@ class ApiClient {
       return Promise.reject(error);
     }
 
-    return withRetry(
-      async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return globalCircuitBreaker.execute(breakerName, () =>
+      withRetry(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
 
-        if (signal) {
-          if (signal.aborted) controller.abort();
-          signal.addEventListener('abort', () => controller.abort(), {
-            once: true,
-          });
-        }
+          if (signal) {
+            if (signal.aborted) controller.abort();
+            signal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
 
-        try {
-          const response = await fetch(url, {
-            method,
-            headers: requestHeaders,
-            body: body ? JSON.stringify(body) : undefined,
-            cache,
-            signal: controller.signal,
-          });
+          if (cancellationKey) {
+            const cancelSignal =
+              cancellationManager.createSignal(cancellationKey).signal;
+            if (cancelSignal.aborted) controller.abort();
+            cancelSignal.addEventListener('abort', () => controller.abort(), {
+              once: true,
+            });
+          }
 
-          globalRateLimitTracker.updateFromHeaders(
-            response.headers,
-            response.status,
-          );
+          try {
+            const response = await fetch(url, {
+              method,
+              headers: requestHeaders,
+              body: isFormData
+                ? (body as FormData)
+                : body
+                  ? JSON.stringify(body)
+                  : undefined,
+              cache,
+              credentials,
+              signal: controller.signal,
+            });
 
-          if (!response.ok) {
-            this.clearAuthAndRedirectIfNeeded(response.status);
+            globalRateLimitTracker.updateFromHeaders(
+              response.headers,
+              response.status,
+            );
 
-            const errorBody = await response
-              .json()
-              .catch(() => ({ message: response.statusText }));
-            const baseError = createHttpError(response.status, {
+            if (!response.ok) {
+              this.clearAuthAndRedirectIfNeeded(response.status);
+
+              const errorBody = await response
+                .json()
+                .catch(() => ({ message: response.statusText }));
+              const baseError = createHttpError(response.status, {
+                source: 'lib/api-client.ts',
+                action: `${method} ${endpoint}`,
+              });
+
+              throw new AppError({
+                ...baseError,
+                message: errorBody.message || baseError.message,
+                userMessage: errorBody.message || baseError.userMessage,
+                cause: errorBody,
+              });
+            }
+
+            const data = await this.parseResponse<T>(response, config.schema);
+            return {
+              data,
+              status: response.status,
+              message:
+                data &&
+                typeof data === 'object' &&
+                'message' in (data as object)
+                  ? String((data as { message?: string }).message)
+                  : undefined,
+            };
+          } catch (error) {
+            if (isCancellationError(error)) {
+              clearTimeout(timeoutId);
+              throw cancellationManager.classifyCancellationError(
+                error,
+                'lib/api-client.ts',
+              );
+            }
+
+            const appError = classifyUnknownError(error, {
               source: 'lib/api-client.ts',
               action: `${method} ${endpoint}`,
-              metadata: { responseBody: errorBody },
             });
 
-            throw new AppError({
-              ...baseError,
-              message: errorBody.message || baseError.message,
-              userMessage: errorBody.message || baseError.userMessage,
-              cause: errorBody,
-            });
+            logError(appError, appError.context);
+            throw appError;
+          } finally {
+            clearTimeout(timeoutId);
           }
-
-          const data = await this.parseResponse<T>(response);
-          return {
-            data,
-            status: response.status,
-            message:
-              data && typeof data === 'object' && 'message' in (data as object)
-                ? String((data as { message?: string }).message)
-                : undefined,
-          };
-        } catch (error) {
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `${method} ${endpoint}`,
-          });
-
-          logError(appError, appError.context);
-          throw appError;
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      {
-        maxAttempts: retries,
-        shouldRetry: (error) => {
-          const appError = classifyUnknownError(error, {
-            source: 'lib/api-client.ts',
-            action: `retry-check ${method} ${endpoint}`,
-          });
-
-          if (appError.code === 'NETWORK_RATE_LIMIT') return false;
-          if (appError.category === 'network') return true;
-          if (typeof appError.status === 'number' && appError.status >= 500) {
-            return true;
-          }
-
-          return false;
         },
-      },
+        {
+          maxAttempts: retries,
+          endpoint: `${method}:${endpoint}`,
+          shouldRetry: (error) => {
+            if (isCancellationError(error)) return false;
+
+            const appError = classifyUnknownError(error, {
+              source: 'lib/api-client.ts',
+              action: `retry-check ${method} ${endpoint}`,
+            });
+
+            if (appError.code === 'NETWORK_RATE_LIMIT') return false;
+            if (appError.category === 'network') return true;
+            if (typeof appError.status === 'number' && appError.status >= 500) {
+              return true;
+            }
+
+            return false;
+          },
+        },
+      ),
     );
   }
 

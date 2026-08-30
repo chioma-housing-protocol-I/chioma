@@ -46,8 +46,6 @@ pub struct AgentTransaction {
     pub completed: bool,
 }
 
-// ─── Rate Limiting Types ──────────────────────────────────────────────────────
-
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RateLimitConfig {

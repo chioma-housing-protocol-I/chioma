@@ -206,8 +206,11 @@ describe('StellarController', () => {
       ];
 
       mockStellarService.listTransactions.mockResolvedValue({
-        transactions: mockTransactions,
+        data: mockTransactions,
         total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
       });
 
       const result = await controller.listTransactions({
@@ -215,10 +218,10 @@ describe('StellarController', () => {
         offset: 0,
       });
 
-      expect(result.transactions).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.limit).toBe(20);
-      expect(result.offset).toBe(0);
+      expect(result.page).toBe(1);
     });
   });
 
@@ -323,15 +326,18 @@ describe('StellarController', () => {
       ];
 
       mockStellarService.listEscrows.mockResolvedValue({
-        escrows: mockEscrows,
+        data: mockEscrows,
         total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
       });
 
       const result = await controller.listEscrows({
         status: EscrowStatus.ACTIVE,
       });
 
-      expect(result.escrows).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
     });
   });

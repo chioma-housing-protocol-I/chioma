@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { DisputesService } from '../disputes.service';
-import { DisputesModule } from '../disputes.module';
 import {
   Dispute,
   DisputeStatus,
@@ -33,7 +32,12 @@ import { AuditModule } from '../../audit/audit.module';
 import { AuditLog } from '../../audit/entities/audit-log.entity';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
 import { CacheModule } from '@nestjs/cache-manager';
+
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn().mockResolvedValue(Buffer.from('mock file contents')),
+}));
 
 /**
  * Integration Tests for Dispute Module
@@ -103,6 +107,10 @@ describe.skip('DisputesService - Integration Tests', () => {
             check: jest.fn().mockResolvedValue(null),
             store: jest.fn().mockResolvedValue(true),
           },
+        },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
         },
       ],
     }).compile();
@@ -327,9 +335,9 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes).toBeDefined();
+      expect(result.data).toBeDefined();
       expect(result.total).toBeGreaterThan(0);
-      expect(result.disputes.length).toBeLessThanOrEqual(10);
+      expect(result.data.length).toBeLessThanOrEqual(10);
     });
 
     it('should filter disputes by status', async () => {
@@ -343,9 +351,9 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(
-        result.disputes.every((d) => d.status === DisputeStatus.OPEN),
-      ).toBe(true);
+      expect(result.data.every((d) => d.status === DisputeStatus.OPEN)).toBe(
+        true,
+      );
     });
 
     it('should filter disputes by type', async () => {
@@ -360,9 +368,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.disputes.every(
-          (d) => d.disputeType === DisputeType.RENT_PAYMENT,
-        ),
+        result.data.every((d) => d.disputeType === DisputeType.RENT_PAYMENT),
       ).toBe(true);
     });
 
@@ -378,9 +384,7 @@ describe.skip('DisputesService - Integration Tests', () => {
       const result = await service.findAll(query);
 
       expect(
-        result.disputes.every(
-          (d) => d.agreementId.toString() === testAgreement.id,
-        ),
+        result.data.every((d) => d.agreementId.toString() === testAgreement.id),
       ).toBe(true);
     });
 
@@ -394,8 +398,8 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes[0].agreement).toBeDefined();
-      expect(result.disputes[0].initiator).toBeDefined();
+      expect(result.data[0].agreement).toBeDefined();
+      expect(result.data[0].initiator).toBeDefined();
     });
   });
 
@@ -766,10 +770,11 @@ describe.skip('DisputesService - Integration Tests', () => {
     });
 
     it('should retrieve all disputes for an agreement', async () => {
-      const disputes = await service.getAgreementDisputes(
+      const result = await service.getAgreementDisputes(
         testAgreement.id,
         tenantUser.id,
       );
+      const disputes = result.data;
 
       expect(disputes.length).toBeGreaterThanOrEqual(2);
       expect(
@@ -778,10 +783,11 @@ describe.skip('DisputesService - Integration Tests', () => {
     });
 
     it('should order disputes by creation date descending', async () => {
-      const disputes = await service.getAgreementDisputes(
+      const result = await service.getAgreementDisputes(
         testAgreement.id,
         tenantUser.id,
       );
+      const disputes = result.data;
 
       for (let i = 0; i < disputes.length - 1; i++) {
         expect(disputes[i].createdAt.getTime()).toBeGreaterThanOrEqual(
@@ -851,7 +857,7 @@ describe.skip('DisputesService - Integration Tests', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.disputes).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
     });
 
@@ -867,7 +873,7 @@ describe.skip('DisputesService - Integration Tests', () => {
           },
           tenantUser.id,
         );
-      } catch (error) {
+      } catch (_error) {
         // Expected to fail
       }
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, LessThan, MoreThan, Between } from 'typeorm';
+import { Repository, DataSource, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TenantScreeningRequest } from '../screening/entities/tenant-screening-request.entity';
 import { TenantScreeningReport } from '../screening/entities/tenant-screening-report.entity';
@@ -47,7 +47,7 @@ export class DataArchivalService {
     tenant_screening_consent: {
       retentionDays: 365, // 1 year
       archiveTable: 'archived_tenant_screening_consent',
-      softDelete: false,
+      softDelete: true,
     },
   };
 
@@ -286,7 +286,7 @@ export class DataArchivalService {
         `SELECT COUNT(*) as count FROM ${archiveTable}`,
       );
       return parseInt(result[0].count, 10);
-    } catch (error) {
+    } catch (_error) {
       // Table might not exist yet
       return 0;
     }

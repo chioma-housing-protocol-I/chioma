@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
+vi.mock('@/lib/query/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
+  return {
+    ...actual,
+    useSearchSuggest: vi.fn(() => ({ data: undefined })),
+  };
+});
+
 import PropertySearchFilters from '../PropertySearchFilters';
 
 describe('PropertySearchFilters', () => {
@@ -12,7 +20,7 @@ describe('PropertySearchFilters', () => {
   it('renders the location search input', () => {
     render(React.createElement(PropertySearchFilters));
     expect(
-      screen.getByPlaceholderText('Search by location...'),
+      screen.getByPlaceholderText('Search by location, name, or keyword...'),
     ).toBeInTheDocument();
   });
 

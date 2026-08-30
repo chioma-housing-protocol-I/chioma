@@ -26,10 +26,14 @@ export function useMessagingUnreadCount() {
     if (isViewingMessages) {
       return 0;
     }
-    const rooms = Array.isArray(data)
-      ? data
-      : (data as any)?.data && Array.isArray((data as any).data)
-        ? (data as any).data
+    const rawData = data as unknown as
+      | { data?: ChatRoom[] }
+      | ChatRoom[]
+      | undefined;
+    const rooms: ChatRoom[] = Array.isArray(rawData)
+      ? rawData
+      : rawData && typeof rawData === 'object' && Array.isArray(rawData.data)
+        ? rawData.data
         : [];
 
     return rooms.reduce(

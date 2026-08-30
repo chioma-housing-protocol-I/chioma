@@ -14,7 +14,6 @@ import {
 } from '@tanstack/react-table';
 import Link from 'next/link';
 import {
-  ChevronDown,
   Search,
   Filter,
   Loader2,
@@ -24,10 +23,12 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Select,
   SelectContent,
@@ -50,6 +51,7 @@ import {
   MaintenanceRecord,
 } from '@/lib/query/hooks/use-landlord-maintenance';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface MaintenanceListProps {
   className?: string;
@@ -67,6 +69,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
     MaintenancePriority | 'ALL'
   >('ALL');
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: requests = [],
@@ -205,6 +208,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
           <div className="text-sm text-neutral-500">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </div>
         ),
@@ -223,7 +227,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
             <div
               className={`text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-neutral-500'}`}
             >
-              {format(deadlineDate, 'MMM d, yyyy')}
+              {format(deadlineDate, 'MMM d, yyyy', { locale: dateFnsLocale })}
             </div>
           );
         },
@@ -241,7 +245,7 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
         ),
       },
     ],
-    [],
+    [dateFnsLocale],
   );
 
   const table = useReactTable({
@@ -345,14 +349,17 @@ export function MaintenanceList({ className = '' }: MaintenanceListProps) {
             </span>
           </div>
         ) : requests.length === 0 ? (
-          <div className="p-16 text-center border-2 border-dashed border-neutral-200 rounded-3xl">
-            <Wrench className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-              No maintenance requests
-            </h3>
-            <p className="text-neutral-500 mb-6">
-              All your properties are in good condition.
-            </p>
+          <div className="p-8">
+            <EmptyState
+              icon={Wrench}
+              title="No maintenance requests"
+              description="All your properties are in good condition. Submit a request when you need repairs."
+              actionLabel="Create Request"
+              onAction={() => {
+                // Navigate to create maintenance request page
+                window.location.href = '/landlords/maintenance/new';
+              }}
+            />
           </div>
         ) : (
           <>

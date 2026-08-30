@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import {
   Injectable,
-  CanActivate,
   ExecutionContext,
   Controller,
   Get,
@@ -22,6 +21,7 @@ import { ROLES_KEY } from '../guards/roles.guard';
 
 describe('Auth Endpoint Security', () => {
   let reflector: Reflector;
+  let _guard: JwtAuthGuard;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,10 +39,8 @@ describe('Auth Endpoint Security', () => {
       }
     }
 
-    let guard: MockJwtAuthGuard;
-
     beforeEach(() => {
-      guard = new MockJwtAuthGuard(reflector);
+      _guard = new MockJwtAuthGuard(reflector);
     });
 
     it('allows access to @Public() routes without authentication', () => {

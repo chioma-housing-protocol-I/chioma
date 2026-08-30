@@ -1,5 +1,6 @@
 use crate::errors::ContractError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{AccountType, UserProfile};
 use crate::upgrade;
@@ -38,7 +39,11 @@ impl UserProfileContract {
         // Require authorization from the account owner
         account_id.require_auth();
 
+<<<<<<< HEAD
         crate::rate_limit::check_rate_limit(&env, &account_id, "create_profile")?;
+=======
+        rate_limit::check_rate_limit(&env, &account_id, "create_profile")?;
+>>>>>>> upstream/main
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -86,7 +91,11 @@ impl UserProfileContract {
         // Require authorization from the account owner
         account_id.require_auth();
 
+<<<<<<< HEAD
         crate::rate_limit::check_rate_limit(&env, &account_id, "update_profile")?;
+=======
+        rate_limit::check_rate_limit(&env, &account_id, "update_profile")?;
+>>>>>>> upstream/main
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -165,6 +174,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "verify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -182,7 +193,7 @@ impl UserProfileContract {
         env.storage().persistent().set(&key, &profile);
 
         // Emit verification event
-        events::profile_verified(&env, account_id);
+        events::profile_verified(&env, account_id, admin);
 
         Ok(profile)
     }
@@ -208,6 +219,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "unverify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -225,7 +238,8 @@ impl UserProfileContract {
         env.storage().persistent().set(&key, &profile);
 
         // Emit unverification event
-        events::profile_unverified(&env, account_id);
+        // No reason is captured by the current public entrypoint signature.
+        events::profile_unverified(&env, account_id, admin, String::from_str(&env, ""));
 
         Ok(profile)
     }
@@ -245,6 +259,8 @@ impl UserProfileContract {
         // Require authorization from the account owner
         account_id.require_auth();
 
+        rate_limit::check_rate_limit(&env, &account_id, "delete_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         if !env.storage().persistent().has(&key) {
@@ -255,7 +271,8 @@ impl UserProfileContract {
         env.storage().persistent().remove(&key);
 
         // Emit deletion event
-        events::profile_deleted(&env, account_id);
+        // Deletion is self-service, so the account is also the actor.
+        events::profile_deleted(&env, account_id.clone(), account_id);
 
         Ok(())
     }

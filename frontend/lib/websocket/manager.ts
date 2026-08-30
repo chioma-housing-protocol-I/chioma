@@ -56,7 +56,7 @@ function stopHeartbeat() {
 function getSocketUrl(): string {
   const configured =
     (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
-    'http://localhost:3001';
+    'http://localhost:5000';
 
   // Keep socket host at API origin even when HTTP base URL includes /api.
   return configured.replace(/\/api(?:\/v\d+)?\/?$/i, '');

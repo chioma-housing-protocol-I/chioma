@@ -3,13 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 export default function SubletManagePage() {
   const { data: sublets = [], isLoading } = useQuery({
     queryKey: ['sublets'],
     queryFn: async () => {
-      const res = await fetch('/api/sublets');
+      const res = await fetch('/api/subletting/requests');
       if (!res.ok) return [];
       const data = await res.json();
       return data.data ?? data ?? [];
@@ -28,8 +28,10 @@ export default function SubletManagePage() {
         <h1 className="text-3xl font-bold mb-8">Manage Sublets</h1>
 
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner />
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : sublets.length === 0 ? (
           <div className="text-center py-20 text-blue-300/60">

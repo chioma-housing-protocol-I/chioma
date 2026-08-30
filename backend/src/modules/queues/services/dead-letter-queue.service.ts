@@ -20,6 +20,8 @@ import {
   DeadLetterQueueStats,
 } from '../dead-letter.types';
 import { JobData } from './queue-management.service';
+import { ErrorNotificationService } from '../../monitoring/error-notification.service';
+import { AlertPayload, EscalationTier } from '../../monitoring/alert.types';
 
 @Injectable()
 export class DeadLetterQueueService {
@@ -32,7 +34,9 @@ export class DeadLetterQueueService {
     @InjectQueue('documents') private readonly documentsQueue: Queue,
     @InjectQueue('blockchain') private readonly blockchainQueue: Queue,
     @InjectQueue('data-sync') private readonly dataSyncQueue: Queue,
+    @InjectQueue('analytics') private readonly analyticsQueue: Queue,
     private readonly configService: ConfigService,
+    private readonly errorNotificationService: ErrorNotificationService,
   ) {}
 
   isEnabled(): boolean {
@@ -85,6 +89,45 @@ export class DeadLetterQueueService {
     this.logger.error(
       `Job ${job.id} moved to dead letter queue from ${sourceQueue}: ${error.message}`,
     );
+
+    await this.alertRetryExhaustion(sourceQueue, payload);
+  }
+
+  /**
+   * Notifies on-call once a job has exhausted all retry attempts and been
+   * moved to the dead-letter queue. This is the alert path for otherwise
+   * silent fire-and-forget failures (e.g. emails, notifications).
+   */
+  private async alertRetryExhaustion(
+    sourceQueue: WorkerQueueName,
+    payload: DeadLetterJobPayload,
+  ): Promise<void> {
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'AsyncJobRetryExhausted',
+        queue: sourceQueue,
+        severity: sourceQueue === 'email' ? 'high' : 'warning',
+      },
+      annotations: {
+        summary: `${sourceQueue} job ${String(payload.originalJobId)} exhausted all retries`,
+        description: `Job failed after ${payload.attemptsMade}/${payload.maxAttempts} attempts on the "${sourceQueue}" queue and was moved to the dead-letter queue. Reason: ${payload.failedReason}`,
+      },
+      startsAt: payload.failedAt,
+      generatorURL: `dead-letter-queue/${sourceQueue}`,
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.ONCALL,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        `Failed to send retry-exhaustion alert for ${sourceQueue} job ${String(payload.originalJobId)}`,
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
   }
 
   shouldMoveToDeadLetter(job: Job): boolean {
@@ -186,6 +229,61 @@ export class DeadLetterQueueService {
     await this.purgeExpiredJobs();
   }
 
+  /**
+   * Dead-letter queue backlog monitoring: alerts when the number of
+   * unprocessed dead-letter jobs exceeds a configurable threshold,
+   * signalling that something upstream is failing systematically rather
+   * than transiently.
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async monitorDeadLetterBacklog(): Promise<void> {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    const threshold = Number(
+      this.configService.get<string>('DEAD_LETTER_QUEUE_ALERT_THRESHOLD') ??
+        '20',
+    );
+    const stats = await this.getDeadLetterStats();
+    const backlog = stats.waitingCount + stats.failedCount;
+
+    if (backlog <= threshold) {
+      return;
+    }
+
+    this.logger.warn(
+      `Dead letter queue backlog (${backlog}) exceeds threshold (${threshold})`,
+    );
+
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'DeadLetterQueueBacklogHigh',
+        severity: 'warning',
+      },
+      annotations: {
+        summary: `Dead letter queue backlog is ${backlog} (threshold ${threshold})`,
+        description:
+          'A growing dead-letter queue backlog indicates jobs are failing systematically rather than transiently. Review /api/v1/queues/dead-letter/jobs.',
+      },
+      startsAt: new Date().toISOString(),
+      generatorURL: 'dead-letter-queue/backlog',
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.TEAM,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        'Failed to send dead-letter backlog alert',
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
+  }
+
   private toSummary(job: Job<DeadLetterJobPayload>): DeadLetterJobSummary {
     return {
       id: job.id,
@@ -209,6 +307,8 @@ export class DeadLetterQueueService {
         return this.blockchainQueue;
       case 'data-sync':
         return this.dataSyncQueue;
+      case 'analytics':
+        return this.analyticsQueue;
       default: {
         const _exhaustive: never = queueName;
         throw new BadRequestException(`Unknown queue: ${String(_exhaustive)}`);

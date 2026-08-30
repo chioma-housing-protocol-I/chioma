@@ -2,7 +2,7 @@ import { TimeoutService } from './timeout.service';
 import { ExternalCallTimeoutError } from './resilience.errors';
 
 /** Returns a promise that resolves after `ms` milliseconds. */
-function sleep(ms: number): Promise<void> {
+function _sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -82,7 +82,7 @@ describe('TimeoutService', () => {
 
       const err = await race.catch((e: unknown) => e);
       expect(err).toBeInstanceOf(ExternalCallTimeoutError);
-      expect((err as ExternalCallTimeoutError).callContext).toBe(
+      expect((err as ExternalCallTimeoutError).operationContext).toBe(
         'payment-status',
       );
       expect((err as ExternalCallTimeoutError).timeoutMs).toBe(3_000);

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NAV_LINKS } from '@/constants/navigation';
 import { useAuth } from '@/store/authStore';
+import { useAuthDisplay } from '@/store/useAuthDisplay';
 import toast from 'react-hot-toast';
 
 const WalletConnectButton = dynamic(
@@ -32,7 +33,13 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { walletAddress, isAuthenticated, user, logout } = useAuth();
+  const { walletAddress, user, logout } = useAuth();
+  const {
+    isAuthenticated,
+    firstName: displayFirstName,
+    lastName: displayLastName,
+    role: displayRole,
+  } = useAuthDisplay();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   void theme;
@@ -75,10 +82,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     router.push('/');
   };
 
-  const dashboardHref = user?.role === 'admin' ? '/admin' : '/user';
+  const dashboardHref = displayRole === 'admin' ? '/admin' : '/user';
 
   return (
-    <nav
+    <header
       className={`top-0 left-0 right-0 z-50 transition-all duration-300 sticky ${
         isScrolled
           ? 'backdrop-blur-xl bg-slate-950/95 border-b border-white/20 py-2 shadow-xl shadow-black/20'
@@ -86,7 +93,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
       }`}
       suppressHydrationWarning
     >
-      <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between">
+      <nav
+        className="container mx-auto px-4 sm:px-6 flex items-center justify-between"
+        aria-label="Main navigation"
+      >
         <Logo
           size="md"
           textClassName="text-xl font-bold text-white tracking-tight"
@@ -113,7 +123,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         </div>
 
         <div className="hidden md:flex items-center space-x-3">
-          {isAuthenticated && user ? (
+          {isAuthenticated ? (
             <>
               {walletAddress && (
                 <div className="px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-500/50">
@@ -131,10 +141,14 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   aria-haspopup="true"
                 >
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {user.firstName[0]?.toUpperCase() ?? <User size={14} />}
+                    {displayFirstName ? (
+                      displayFirstName[0].toUpperCase()
+                    ) : (
+                      <User size={14} />
+                    )}
                   </div>
                   <span className="text-sm text-white font-medium max-w-[100px] truncate">
-                    {user.firstName}
+                    {displayFirstName}
                   </span>
                   <ChevronDown
                     size={14}
@@ -146,10 +160,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <div className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-white/10">
                       <p className="text-sm font-semibold text-white truncate">
-                        {user.firstName} {user.lastName}
+                        {displayFirstName} {displayLastName}
                       </p>
                       <p className="text-xs text-blue-300/50 truncate mt-0.5">
-                        {user.email}
+                        {user?.email}
                       </p>
                     </div>
                     <div className="p-2">
@@ -183,7 +197,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
               </Link>
               <Link
                 href="/signup"
-                className="px-5 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors"
+                className="px-5 py-2 text-sm font-semibold bg-brass-500 hover:bg-brass-400 text-ink-950 rounded-xl transition-colors"
               >
                 Get started
               </Link>
@@ -197,17 +211,25 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
           )}
         </div>
 
+        {/* Mobile Menu Button */}
         <button
           className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg hover:bg-white/10 transition-colors text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-menu"
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-      </div>
+      </nav>
 
+      {/* Mobile Navigation Drawer */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-slate-950/98 border-b border-white/20 shadow-xl shadow-black/20">
+        <nav
+          id="mobile-menu"
+          className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-slate-950/98 border-b border-white/20 shadow-xl shadow-black/20"
+          aria-label="Mobile navigation"
+        >
           <div className="flex flex-col p-6 space-y-4">
             {NAV_LINKS.map((link) => {
               const active = isActive(link.href);
@@ -226,7 +248,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
             })}
 
             <div className="pt-4 flex flex-col space-y-3 border-t border-white/10">
-              {isAuthenticated && user ? (
+              {isAuthenticated ? (
                 <>
                   <Link
                     href={dashboardHref}
@@ -259,7 +281,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   <Link
                     href="/signup"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold text-center"
+                    className="px-4 py-3 rounded-xl bg-brass-500 text-ink-950 text-sm font-semibold text-center"
                   >
                     Get started
                   </Link>
@@ -273,9 +295,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
               )}
             </div>
           </div>
-        </div>
+        </nav>
       )}
-    </nav>
+    </header>
   );
 };
 

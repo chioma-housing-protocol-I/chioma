@@ -1,8 +1,10 @@
 use soroban_sdk::{contractevent, Address, Env, String};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum BurnEvent {
-    NFTBurned(String, Address, String),
+/// Event emitted when the contract is initialized
+/// Topics: ["initialized"]
+#[contractevent(topics = ["initialized"])]
+pub struct ContractInitialized {
+    pub initialized_at: u64,
 }
 
 /// Event emitted when a rent obligation NFT is minted
@@ -29,11 +31,81 @@ pub struct ObligationTransferred {
 /// Event emitted when a rent obligation NFT is burned
 /// Topics: ["burned", owner: Address]
 #[contractevent(topics = ["burned"])]
-pub struct NFTBurned {
+pub struct ObligationBurned {
     #[topic]
     pub owner: Address,
     pub token_id: String,
     pub reason: String,
+}
+
+/// Event emitted when the system admin is initialized
+/// Topics: ["admin_initialized", admin: Address]
+#[contractevent(topics = ["admin_initialized"])]
+pub struct AdminInitialized {
+    #[topic]
+    pub admin: Address,
+    pub initialized_at: u64,
+}
+
+/// Event emitted when the system admin is updated
+/// Topics: ["admin_updated", old_admin: Address, new_admin: Address]
+#[contractevent(topics = ["admin_updated"])]
+pub struct AdminUpdated {
+    #[topic]
+    pub old_admin: Address,
+    #[topic]
+    pub new_admin: Address,
+    pub updated_at: u64,
+}
+
+/// Event emitted when an admin reassigns an obligation's owner
+/// Topics: ["admin_reassigned", agreement_id: String]
+#[contractevent(topics = ["admin_reassigned"])]
+pub struct ObligationAdminReassigned {
+    #[topic]
+    pub agreement_id: String,
+    pub admin: Address,
+    pub previous_owner: Address,
+    pub new_owner: Address,
+}
+
+/// Event emitted when a contract upgrade is proposed
+/// Topics: ["upgrade_proposed", proposal_id: String]
+#[contractevent(topics = ["upgrade_proposed"])]
+pub struct UpgradeProposed {
+    #[topic]
+    pub proposal_id: String,
+    pub proposer: Address,
+    pub eta: u64,
+    pub created_at: u64,
+}
+
+/// Event emitted when a contract upgrade proposal is approved
+/// Topics: ["upgrade_approved", proposal_id: String]
+#[contractevent(topics = ["upgrade_approved"])]
+pub struct UpgradeApproved {
+    #[topic]
+    pub proposal_id: String,
+    pub approver: Address,
+    pub approval_count: u32,
+}
+
+/// Event emitted when a contract upgrade is executed
+/// Topics: ["upgrade_executed", proposal_id: String]
+#[contractevent(topics = ["upgrade_executed"])]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub proposal_id: String,
+    pub executor: Address,
+    pub executed_at: u64,
+}
+
+/// Helper function to emit contract initialized event
+pub(crate) fn contract_initialized(env: &Env) {
+    ContractInitialized {
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
 }
 
 /// Helper function to emit obligation minted event
@@ -62,12 +134,83 @@ pub(crate) fn obligation_transferred(env: &Env, agreement_id: String, from: Addr
 }
 
 /// Helper function to emit NFT burned event
-pub(crate) fn nft_burned(env: &Env, token_id: String, owner: Address, reason: String) {
-    let _burn_event = BurnEvent::NFTBurned(token_id.clone(), owner.clone(), reason.clone());
-    NFTBurned {
+pub(crate) fn obligation_burned(env: &Env, token_id: String, owner: Address, reason: String) {
+    ObligationBurned {
         owner,
         token_id,
         reason,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin initialized event
+pub(crate) fn admin_initialized(env: &Env, admin: Address) {
+    AdminInitialized {
+        admin,
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin updated event
+pub(crate) fn admin_updated(env: &Env, old_admin: Address, new_admin: Address) {
+    AdminUpdated {
+        old_admin,
+        new_admin,
+        updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit admin reassignment event
+pub(crate) fn obligation_admin_reassigned(
+    env: &Env,
+    agreement_id: String,
+    admin: Address,
+    previous_owner: Address,
+    new_owner: Address,
+) {
+    ObligationAdminReassigned {
+        agreement_id,
+        admin,
+        previous_owner,
+        new_owner,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit upgrade proposed event
+pub(crate) fn upgrade_proposed(env: &Env, proposal_id: String, proposer: Address, eta: u64) {
+    UpgradeProposed {
+        proposal_id,
+        proposer,
+        eta,
+        created_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit upgrade approved event
+pub(crate) fn upgrade_approved(
+    env: &Env,
+    proposal_id: String,
+    approver: Address,
+    approval_count: u32,
+) {
+    UpgradeApproved {
+        proposal_id,
+        approver,
+        approval_count,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit upgrade executed event
+pub(crate) fn upgrade_executed(env: &Env, proposal_id: String, executor: Address) {
+    UpgradeExecuted {
+        proposal_id,
+        executor,
+        executed_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

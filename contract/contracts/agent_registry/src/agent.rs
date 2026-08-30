@@ -2,6 +2,7 @@ use soroban_sdk::{Address, Env, String, Vec};
 
 use crate::errors::AgentError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{AgentInfo, AgentTransaction, ContractState};
 
@@ -16,7 +17,8 @@ pub fn register_agent(
 
     agent.require_auth();
 
-    crate::rate_limit::check_rate_limit(env, &agent, "register_agent")?;
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "register_agent")?;
 
     if external_profile_hash.is_empty() {
         return Err(AgentError::InvalidProfileHash);
@@ -62,7 +64,8 @@ pub fn verify_agent(env: &Env, admin: Address, agent: Address) -> Result<(), Age
 
     admin.require_auth();
 
-    crate::rate_limit::check_rate_limit(env, &admin, "verify_agent")?;
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &admin, "verify_agent")?;
 
     if admin != state.admin {
         return Err(AgentError::Unauthorized);
@@ -102,6 +105,9 @@ pub fn rate_agent(
     }
 
     rater.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &rater, "rate_agent")?;
 
     if !(1..=5).contains(&score) {
         return Err(AgentError::InvalidRatingScore);
@@ -163,7 +169,7 @@ pub fn rate_agent(
         .persistent()
         .extend_ttl(&agent_key, 500000, 500000);
 
-    events::agent_rated(env, agent, rater, score);
+    events::agent_rated(env, agent, rater, score, transaction_id.clone());
 
     Ok(())
 }
@@ -189,6 +195,9 @@ pub fn register_transaction(
     if !env.storage().persistent().has(&DataKey::Initialized) {
         return Err(AgentError::NotInitialized);
     }
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "register_transaction")?;
 
     let agent_key = DataKey::Agent(agent.clone());
     if !env.storage().persistent().has(&agent_key) {
@@ -223,6 +232,9 @@ pub fn complete_transaction(
         return Err(AgentError::NotInitialized);
     }
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "complete_transaction")?;
+
     let txn_key = DataKey::Transaction(transaction_id.clone());
     let mut transaction: AgentTransaction = env
         .storage()
@@ -241,7 +253,7 @@ pub fn complete_transaction(
         .persistent()
         .extend_ttl(&txn_key, 500000, 500000);
 
-    let agent_key = DataKey::Agent(agent);
+    let agent_key = DataKey::Agent(agent.clone());
     let mut agent_info: AgentInfo = env
         .storage()
         .persistent()
@@ -254,6 +266,8 @@ pub fn complete_transaction(
     env.storage()
         .persistent()
         .extend_ttl(&agent_key, 500000, 500000);
+
+    events::transaction_completed(env, transaction_id, agent);
 
     Ok(())
 }

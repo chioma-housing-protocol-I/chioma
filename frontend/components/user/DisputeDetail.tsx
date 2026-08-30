@@ -13,8 +13,11 @@ import {
 import {
   useTenantDispute,
   useAddDisputeComment,
+  useAppealTenantDispute,
 } from '@/lib/query/hooks/use-tenant-dispute';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/authStore';
 
 interface DisputeDetailProps {
@@ -50,15 +53,17 @@ export function DisputeDetail({
   className = '',
 }: DisputeDetailProps) {
   const { user } = useAuthStore();
+  const dateFnsLocale = useDateFnsLocale();
   const [newComment, setNewComment] = useState('');
   const { data: dispute, isLoading, error } = useTenantDispute(disputeId);
   const addCommentMutation = useAddDisputeComment();
+  const appealDisputeMutation = useAppealTenantDispute();
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !dispute || addCommentMutation.isPending) return;
     addCommentMutation.mutate(
-      { disputeId: dispute.id, content: newComment.trim() },
+      { disputeId: dispute.backendDisputeId, content: newComment.trim() },
       { onSuccess: () => setNewComment('') },
     );
   };
@@ -114,6 +119,7 @@ export function DisputeDetail({
                   Started{' '}
                   {formatDistanceToNow(new Date(dispute.createdAt), {
                     addSuffix: true,
+                    locale: dateFnsLocale,
                   })}
                 </div>
               </div>
@@ -127,7 +133,7 @@ export function DisputeDetail({
             {dispute.requestedAmount && (
               <div className="mt-5 inline-flex items-baseline gap-2 px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
                 <span className="text-2xl font-black text-emerald-400">
-                  ${dispute.requestedAmount.toLocaleString()} USDC
+                  {formatCurrency(dispute.requestedAmount, 'USDC')}
                 </span>
                 <span className="text-sm font-semibold text-emerald-400/70">
                   claimed
@@ -136,6 +142,20 @@ export function DisputeDetail({
             )}
           </div>
           <div className="flex flex-col gap-3 text-sm shrink-0">
+            {dispute.status === 'REJECTED' && (
+              <button
+                type="button"
+                onClick={() =>
+                  appealDisputeMutation.mutate({ disputeId: dispute.id })
+                }
+                disabled={appealDisputeMutation.isPending}
+                className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {appealDisputeMutation.isPending
+                  ? 'Submitting appeal...'
+                  : 'Appeal Dispute'}
+              </button>
+            )}
             <div>
               <p className="text-blue-200/40 text-xs uppercase tracking-wider mb-0.5">
                 Agreement
@@ -166,7 +186,9 @@ export function DisputeDetail({
                   Filed Dispute
                 </span>
                 <span className="text-xs text-blue-200/40">
-                  {format(new Date(dispute.createdAt), 'MMM d, yyyy · h:mm a')}
+                  {format(new Date(dispute.createdAt), 'MMM d, yyyy · h:mm a', {
+                    locale: dateFnsLocale,
+                  })}
                 </span>
               </div>
               <p className="text-sm text-white">
@@ -186,6 +208,7 @@ export function DisputeDetail({
                     {format(
                       new Date(dispute.updatedAt),
                       'MMM d, yyyy · h:mm a',
+                      { locale: dateFnsLocale },
                     )}
                   </span>
                 </div>
@@ -224,13 +247,25 @@ export function DisputeDetail({
                     <p className="text-xs text-blue-200/40 mt-0.5">
                       {formatDistanceToNow(new Date(ev.uploadedAt), {
                         addSuffix: true,
+                        locale: dateFnsLocale,
                       })}
                     </p>
                   </div>
                 </div>
-                <button className="w-full text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors text-left">
-                  Download
-                </button>
+                {ev.fileUrl ? (
+                  <a
+                    href={ev.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full text-xs font-semibold text-blue-400 transition-colors hover:text-blue-300"
+                  >
+                    Open Evidence
+                  </a>
+                ) : (
+                  <span className="text-xs font-semibold text-blue-300/40">
+                    File uploaded
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -263,6 +298,7 @@ export function DisputeDetail({
                   <span className="text-xs text-blue-200/30">
                     {formatDistanceToNow(new Date(comment.createdAt), {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>

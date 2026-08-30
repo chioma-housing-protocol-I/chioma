@@ -1,16 +1,24 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InquiriesService } from './inquiries.service';
+import { PropertyInquiryStatus } from './entities/property-inquiry.entity';
+import { InvalidInquiryTransitionError } from './inquiry-state-machine';
 
 describe('InquiriesService', () => {
   const inquiryRepository = {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
   };
 
   const propertyRepository = {
     findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const userRepository = {
+    find: jest.fn(),
   };
 
   const notificationsService = {
@@ -21,9 +29,12 @@ describe('InquiriesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    propertyRepository.find.mockResolvedValue([]);
+    userRepository.find.mockResolvedValue([]);
     service = new InquiriesService(
       inquiryRepository as any,
       propertyRepository as any,
+      userRepository as any,
       notificationsService as any,
     );
   });
@@ -82,5 +93,188 @@ describe('InquiriesService', () => {
         message: 'hello',
       } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('enriches incoming inquiries with property details and sender contact', async () => {
+    inquiryRepository.findAndCount.mockResolvedValue([
+      [
+        {
+          id: 'inq-1',
+          propertyId: 'property-1',
+          fromUserId: 'tenant-1',
+          toUserId: 'owner-1',
+          senderName: 'Jane',
+          senderEmail: 'jane@example.com',
+          senderPhone: '+2340000000',
+        },
+      ],
+      1,
+    ]);
+    propertyRepository.find.mockResolvedValue([
+      {
+        id: 'property-1',
+        title: 'Lekki Apartment',
+        address: '1 Admiralty Way',
+        city: 'Lagos',
+        images: [{ url: 'https://img/1.png', isPrimary: true }],
+      },
+    ]);
+
+    const result = await service.listIncoming('owner-1');
+
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        id: 'inq-1',
+        property: {
+          id: 'property-1',
+          title: 'Lekki Apartment',
+          address: '1 Admiralty Way',
+          city: 'Lagos',
+          coverImageUrl: 'https://img/1.png',
+        },
+        counterparty: {
+          id: 'tenant-1',
+          name: 'Jane',
+          email: 'jane@example.com',
+          phone: '+2340000000',
+        },
+      }),
+    ]);
+  });
+
+  it('enriches outgoing inquiries with property details and landlord contact', async () => {
+    inquiryRepository.findAndCount.mockResolvedValue([
+      [
+        {
+          id: 'inq-1',
+          propertyId: 'property-1',
+          fromUserId: 'tenant-1',
+          toUserId: 'owner-1',
+        },
+      ],
+      1,
+    ]);
+    propertyRepository.find.mockResolvedValue([
+      {
+        id: 'property-1',
+        title: 'Lekki Apartment',
+        address: null,
+        city: null,
+        images: [],
+      },
+    ]);
+    userRepository.find.mockResolvedValue([
+      {
+        id: 'owner-1',
+        firstName: 'Ada',
+        lastName: 'Obi',
+        email: 'ada@example.com',
+        phoneNumber: null,
+      },
+    ]);
+
+    const result = await service.listOutgoing('tenant-1');
+
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        id: 'inq-1',
+        property: {
+          id: 'property-1',
+          title: 'Lekki Apartment',
+          address: null,
+          city: null,
+          coverImageUrl: null,
+        },
+        counterparty: {
+          id: 'owner-1',
+          name: 'Ada Obi',
+          email: 'ada@example.com',
+          phone: null,
+        },
+      }),
+    ]);
+  });
+
+  describe('lifecycle transitions', () => {
+    it('marks a pending inquiry as viewed', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.PENDING,
+        viewedAt: null,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.markViewed('inq-1', 'owner-1');
+
+      expect(result.status).toBe(PropertyInquiryStatus.VIEWED);
+      expect(result.viewedAt).toBeInstanceOf(Date);
+    });
+
+    it('is idempotent when re-viewing a viewed inquiry', async () => {
+      const inquiry = {
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.VIEWED,
+      };
+      inquiryRepository.findOne.mockResolvedValue(inquiry);
+
+      await expect(service.markViewed('inq-1', 'owner-1')).resolves.toBe(
+        inquiry,
+      );
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects viewing a closed inquiry with a domain error', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.CLOSED,
+      });
+
+      await expect(service.markViewed('inq-1', 'owner-1')).rejects.toThrow(
+        InvalidInquiryTransitionError,
+      );
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('closes a pending inquiry', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.PENDING,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.close('inq-1', 'tenant-1');
+
+      expect(result.status).toBe(PropertyInquiryStatus.CLOSED);
+    });
+
+    it('is idempotent when closing an already closed inquiry', async () => {
+      const inquiry = {
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.CLOSED,
+      };
+      inquiryRepository.findOne.mockResolvedValue(inquiry);
+
+      await expect(service.close('inq-1', 'tenant-1')).resolves.toBe(inquiry);
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when closing an inquiry the user is not part of', async () => {
+      inquiryRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.close('inq-1', 'stranger')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 });

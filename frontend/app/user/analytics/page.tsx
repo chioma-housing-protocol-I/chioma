@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Eye,
   MessageSquare,
@@ -10,21 +11,12 @@ import {
   Heart,
   BarChart3,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { useLandlordPropertyAnalytics } from '@/lib/query/hooks/use-property-analytics';
+import {
+  LazyCityMarketTrendsChart,
+  LazyLineChartWrapper,
+  LazyPieChartWrapper,
+} from '@/components/charts/lazy';
 
 const PIE_COLORS = ['#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#2563eb'];
 
@@ -33,14 +25,18 @@ function MetricCard({
   value,
   subtitle,
   icon: Icon,
+  href,
 }: {
   title: string;
   value: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
+  href?: string;
 }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
+  const content = (
+    <div
+      className={`rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 h-full ${href ? 'transition-colors hover:bg-white/10' : ''}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-blue-200/70 text-sm">{title}</p>
@@ -52,6 +48,14 @@ function MetricCard({
         </div>
       </div>
     </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block">
+      {content}
+    </Link>
+  ) : (
+    content
   );
 }
 
@@ -135,6 +139,7 @@ export default function UserAnalyticsPage() {
           value={summary.totalInquiries.toLocaleString()}
           subtitle={`${performance.averageInquiriesPerProperty} avg per property`}
           icon={MessageSquare}
+          href="/user/inquiries"
         />
         <MetricCard
           title="Conversion Rate"
@@ -159,40 +164,13 @@ export default function UserAnalyticsPage() {
             </span>
           </div>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="shortDate"
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="inquiries"
-                  stroke="#38bdf8"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Inquiries"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <LazyLineChartWrapper
+              data={trendData}
+              dataKeyX="shortDate"
+              dataKeyY="inquiries"
+              strokeColor="#38bdf8"
+              name="Inquiries"
+            />
           </div>
         </div>
 
@@ -201,34 +179,12 @@ export default function UserAnalyticsPage() {
             Listing Status Mix
           </h2>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={marketTrends.listingStatusDistribution}
-                  dataKey="count"
-                  nameKey="status"
-                  outerRadius={95}
-                  innerRadius={50}
-                  paddingAngle={2}
-                >
-                  {marketTrends.listingStatusDistribution.map(
-                    (entry, index) => (
-                      <Cell
-                        key={entry.status}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      />
-                    ),
-                  )}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <LazyPieChartWrapper
+              data={marketTrends.listingStatusDistribution}
+              dataKey="count"
+              nameKey="status"
+              colors={PIE_COLORS}
+            />
           </div>
           <div className="space-y-2 mt-2">
             {marketTrends.listingStatusDistribution.map((item) => (
@@ -252,43 +208,7 @@ export default function UserAnalyticsPage() {
             City Market Trends
           </h2>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={marketTrends.cityTrends}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="city"
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.55)"
-                  tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-                <Bar
-                  dataKey="totalViews"
-                  name="Views"
-                  fill="#38bdf8"
-                  radius={[8, 8, 0, 0]}
-                />
-                <Bar
-                  dataKey="totalInquiries"
-                  name="Inquiries"
-                  fill="#22c55e"
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyCityMarketTrendsChart data={marketTrends.cityTrends} />
           </div>
         </div>
 

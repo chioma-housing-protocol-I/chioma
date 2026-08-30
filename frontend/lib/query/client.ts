@@ -5,14 +5,60 @@
  * query/mutation in the app behaves consistently without per-hook config.
  */
 
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { classifyUnknownError } from '@/lib/errors';
+import { useErrorStore } from '@/store/errorStore';
+import { queryCacheTtl } from './cache-ttl';
 
-// ─── Defaults ────────────────────────────────────────────────────────────────
+// ─── Cache Monitoring ───────────────────────────────────────────────────────
 
-const STALE_TIME_MS = 30_000; // 30 s — data considered fresh
-const GC_TIME_MS = 5 * 60_000; // 5 min — unused cache kept in memory
+interface CacheMetrics {
+  hits: number;
+  misses: number;
+  evictions: number;
+  size: number;
+}
+
+const cacheMetrics: CacheMetrics = {
+  hits: 0,
+  misses: 0,
+  evictions: 0,
+  size: 0,
+};
+
+export function getCacheMetrics(): CacheMetrics {
+  return { ...cacheMetrics };
+}
+
+export function resetCacheMetrics(): void {
+  cacheMetrics.hits = 0;
+  cacheMetrics.misses = 0;
+  cacheMetrics.evictions = 0;
+  cacheMetrics.size = 0;
+}
+
+export function getCacheHitRate(): number {
+  const total = cacheMetrics.hits + cacheMetrics.misses;
+  if (total === 0) return 0;
+  return (cacheMetrics.hits / total) * 100;
+}
+
+export function recordCacheHit(): void {
+  cacheMetrics.hits++;
+}
+
+export function recordCacheMiss(): void {
+  cacheMetrics.misses++;
+}
+
+// ─── Defaults (aligned with queryCacheTtl.default / queryKeys) ───────────────
+
+const STALE_TIME_MS = queryCacheTtl.default.staleTime;
+const GC_TIME_MS = queryCacheTtl.default.gcTime;
 const MAX_RETRIES = 2;
+const MAX_CACHE_SIZE = 100; // Maximum number of queries to cache
+
+export { STALE_TIME_MS, GC_TIME_MS };
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= MAX_RETRIES) return false;
@@ -29,6 +75,58 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
   return true;
 }
 
+// ─── Cache Size Management ───────────────────────────────────────────────────
+
+function manageCacheSize(queryCache: QueryCache): void {
+  const queries = queryCache.getAll();
+  cacheMetrics.size = queries.length;
+
+  if (queries.length > MAX_CACHE_SIZE) {
+    // Evict oldest queries that are not currently active
+    const inactiveQueries = queries
+      .filter((query) => query.state.fetchStatus !== 'fetching')
+      .sort((a, b) => a.state.dataUpdatedAt - b.state.dataUpdatedAt);
+
+    const toRemove = inactiveQueries.slice(0, queries.length - MAX_CACHE_SIZE);
+    toRemove.forEach((query) => {
+      queryCache.remove(query);
+      cacheMetrics.evictions++;
+    });
+
+    cacheMetrics.size = queryCache.getAll().length;
+  }
+}
+
+function handleGlobalError(error: unknown, source: string, action?: string) {
+  const appError = classifyUnknownError(error, {
+    source,
+    action,
+  });
+
+  let category:
+    | 'validation'
+    | 'api'
+    | 'network'
+    | 'authentication'
+    | 'authorization'
+    | 'server'
+    | 'unknown' = 'unknown';
+  if (appError.category === 'network') category = 'network';
+  else if (appError.category === 'validation') category = 'validation';
+  else if (appError.category === 'authentication') category = 'authentication';
+  else if (appError.category === 'permission') category = 'authorization';
+  else if (appError.category === 'system') category = 'server';
+  else if (appError.category === 'business') category = 'api';
+
+  useErrorStore.getState().addError({
+    message: appError.userMessage,
+    category,
+    severity: appError.severity,
+    autoDismissMs: appError.severity === 'critical' ? undefined : 5000,
+    cause: appError.cause,
+  });
+}
+
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 /**
@@ -36,7 +134,35 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
  * provider. Avoid creating inside a component render to prevent cache loss.
  */
 export function createQueryClient(): QueryClient {
+  const queryCache = new QueryCache({
+    onError: (error: Error, query) => {
+      recordCacheMiss();
+      if (
+        (query.meta as { disableGlobalError?: boolean } | undefined)
+          ?.disableGlobalError
+      )
+        return;
+      handleGlobalError(error, 'QueryCache', query.queryKey.join(' / '));
+    },
+    onSuccess: () => {
+      recordCacheHit();
+    },
+  });
+
+  const mutationCache = new MutationCache({
+    onError: (error: Error, _variables, _context, mutation) => {
+      if (
+        (mutation.meta as { disableGlobalError?: boolean } | undefined)
+          ?.disableGlobalError
+      )
+        return;
+      handleGlobalError(error, 'MutationCache');
+    },
+  });
+
   return new QueryClient({
+    queryCache,
+    mutationCache,
     defaultOptions: {
       queries: {
         staleTime: STALE_TIME_MS,
@@ -44,6 +170,8 @@ export function createQueryClient(): QueryClient {
         retry: shouldRetry,
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
+        retryOnMount: false,
+        refetchInterval: false,
       },
       mutations: {
         retry: false,

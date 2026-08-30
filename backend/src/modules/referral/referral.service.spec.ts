@@ -1,19 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { ReferralService } from './referral.service';
 import { Referral, ReferralStatus } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
 import { StellarService } from '../stellar/services/stellar.service';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { SystemError } from '../../common/errors/domain-errors';
 
 describe('ReferralService', () => {
   let service: ReferralService;
-  let referralRepository: Repository<Referral>;
-  let userRepository: Repository<User>;
-  let stellarService: StellarService;
-  let configService: ConfigService;
+  let _userRepository: Repository<User>;
+  let _stellarService: StellarService;
+  let _referralRepository: Repository<Referral>;
+  let _configService: ConfigService;
 
   const mockReferral: Partial<Referral> = {
     id: 'test-referral-id',
@@ -36,7 +37,7 @@ describe('ReferralService', () => {
     walletAddress: 'GABC123...',
   };
 
-  const mockReferredUser: Partial<User> = {
+  const mockReferredUser = {
     id: 'referred-id',
     email: 'referred@example.com',
     firstName: 'Jane',
@@ -108,12 +109,12 @@ describe('ReferralService', () => {
     }).compile();
 
     service = module.get<ReferralService>(ReferralService);
-    referralRepository = module.get<Repository<Referral>>(
+    _referralRepository = module.get<Repository<Referral>>(
       getRepositoryToken(Referral),
     );
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    stellarService = module.get<StellarService>(StellarService);
-    configService = module.get<ConfigService>(ConfigService);
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    _stellarService = module.get<StellarService>(StellarService);
+    _configService = module.get<ConfigService>(ConfigService);
 
     // Clear all mocks
     jest.clearAllMocks();
@@ -121,9 +122,10 @@ describe('ReferralService', () => {
 
   describe('generateReferralCode', () => {
     it('should generate a unique referral code', async () => {
-      mockUserRepository.findOne
-        .mockResolvedValueOnce(null) // First call - code not found
-        .mockResolvedValueOnce(mockReferrer); // Second call - code found
+      // The implementation returns as soon as the first lookup misses, so
+      // only one findOne call is ever made here — queuing a second
+      // resolved value would leak into the next test unconsumed.
+      mockUserRepository.findOne.mockResolvedValueOnce(null);
 
       const result = await service.generateReferralCode();
 
@@ -136,7 +138,7 @@ describe('ReferralService', () => {
       });
     });
 
-    it.skip('should handle code collision and generate new code', async () => {
+    it('should handle code collision and generate new code', async () => {
       mockUserRepository.findOne
         .mockResolvedValueOnce(mockReferrer) // First code exists
         .mockResolvedValueOnce(mockReferrer) // Second code also exists
@@ -152,13 +154,86 @@ describe('ReferralService', () => {
     });
   });
 
+  describe('assignUniqueReferralCode (#1601)', () => {
+    function uniqueViolation(): QueryFailedError {
+      const err = new QueryFailedError(
+        'INSERT ...',
+        [],
+        new Error('duplicate key'),
+      );
+      (err as unknown as { code: string }).code = '23505';
+      return err;
+    }
+
+    beforeEach(() => {
+      // No pre-existing collisions found by the (racy) pre-check by default;
+      // the real collision in these tests is simulated at the save() layer.
+      mockUserRepository.findOne.mockResolvedValue(null);
+    });
+
+    it('succeeds on the first attempt when there is no collision', async () => {
+      const save = jest.fn().mockResolvedValue({ id: 'user-1' });
+
+      const { code, result } = await service.assignUniqueReferralCode(save);
+
+      expect(code).toBeDefined();
+      expect(result).toEqual({ id: 'user-1' });
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries with a fresh code on a unique-constraint collision and eventually succeeds', async () => {
+      const save = jest
+        .fn()
+        .mockRejectedValueOnce(uniqueViolation())
+        .mockRejectedValueOnce(uniqueViolation())
+        .mockResolvedValueOnce({ id: 'user-1' });
+
+      const { result } = await service.assignUniqueReferralCode(save);
+
+      expect(result).toEqual({ id: 'user-1' });
+      expect(save).toHaveBeenCalledTimes(3);
+
+      // Each retry attempt used a different generated code.
+      const attemptedCodes = save.mock.calls.map(([code]) => code);
+      expect(new Set(attemptedCodes).size).toBe(3);
+    });
+
+    it('does not retry a non-collision error and propagates it immediately', async () => {
+      const otherError = new Error('database connection lost');
+      const save = jest.fn().mockRejectedValue(otherError);
+
+      await expect(service.assignUniqueReferralCode(save)).rejects.toThrow(
+        'database connection lost',
+      );
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    it('is bounded: gives up after the max attempts and raises a domain error, never looping forever', async () => {
+      const save = jest.fn().mockRejectedValue(uniqueViolation());
+
+      await expect(service.assignUniqueReferralCode(save)).rejects.toThrow(
+        SystemError,
+      );
+      // Exactly the bounded attempt count — proves this cannot spin forever.
+      expect(save).toHaveBeenCalledTimes(5);
+    });
+
+    it('the bounded-exhaustion error does not leak the raw database error to the caller', async () => {
+      const save = jest.fn().mockRejectedValue(uniqueViolation());
+
+      await expect(service.assignUniqueReferralCode(save)).rejects.toThrow(
+        /unique referral code/i,
+      );
+    });
+  });
+
   describe('trackReferral', () => {
     it('should successfully track a referral', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockReferrer);
       mockReferralRepository.create.mockReturnValue(mockReferral);
       mockReferralRepository.save.mockResolvedValue(mockReferral);
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { referralCode: 'ABC123' },
@@ -182,7 +257,7 @@ describe('ReferralService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await service.trackReferral(mockReferredUser as User, 'INVALID');
+      await service.trackReferral(mockReferredUser.id, 'INVALID');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Referral code INVALID not found for user referred-id',
@@ -203,7 +278,7 @@ describe('ReferralService', () => {
         id: mockReferredUser.id, // Same user
       });
 
-      await service.trackReferral(mockReferredUser as User, 'ABC123');
+      await service.trackReferral(mockReferredUser.id, 'ABC123');
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'User referred-id tried to refer themselves',

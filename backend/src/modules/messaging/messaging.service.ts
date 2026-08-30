@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Participant } from './entities/participant.entity';
 import { v4 as uuid } from 'uuid';
+import { PaginationUtils } from '../../common/utils';
 
 @Injectable()
 export class MessagingService {
@@ -45,14 +46,36 @@ export class MessagingService {
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
 
-  async getRoomsForUser(userId: string): Promise<ChatRoom[]> {
-    return this.chatRoomRepository
+  async getRoomsForUser(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+
+    // Resolve the paginated room ids first via a join-free query, then load
+    // full relations for just that page — a direct skip/take on a query with
+    // a one-to-many `messages` join would paginate joined rows, not rooms.
+    const membershipQuery = this.chatRoomRepository
       .createQueryBuilder('room')
-      .innerJoin('room.participants', 'p', 'p.userId = :userId', { userId })
-      .leftJoinAndSelect('room.participants', 'participants')
-      .leftJoinAndSelect('room.messages', 'messages')
+      .innerJoin('room.participants', 'p', 'p.userId = :userId', { userId });
+
+    const total = await membershipQuery.getCount();
+
+    const idRows = await membershipQuery
+      .clone()
+      .select('room.id', 'id')
       .orderBy('room.id', 'DESC')
-      .getMany();
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit)
+      .getRawMany<{ id: number }>();
+    const roomIds = idRows.map((r) => r.id);
+
+    const data = roomIds.length
+      ? await this.chatRoomRepository.find({
+          where: { id: In(roomIds) },
+          relations: ['participants', 'messages'],
+          order: { id: 'DESC' },
+        })
+      : [];
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOrCreateRoom(
@@ -93,21 +116,21 @@ export class MessagingService {
 
   // ── Messages ──────────────────────────────────────────────────────────────
 
-  async getMessagesForRoom(
-    roomId: string,
-    page = 1,
-    limit = 50,
-  ): Promise<Message[]> {
-    return this.messageRepository.find({
+  async getMessagesForRoom(roomId: string, page = 1, limit = 50) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.messageRepository.findAndCount({
       where: { chatRoom: { id: parseInt(roomId, 10) } },
       order: { timestamp: 'ASC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
       relations: ['sender'],
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async markRoomAsRead(roomId: string, userId: string): Promise<void> {
+  async markRoomAsRead(_roomId: string, _userId: string): Promise<void> {
     // Mark messages in this room as read for the given user
     // This is a best-effort operation — no readAt column exists yet
     // so we just return without error for now

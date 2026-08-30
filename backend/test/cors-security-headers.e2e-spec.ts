@@ -17,7 +17,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
 
     // Setup CORS as in main.ts
     app.enableCors({
-      origin: ['http://localhost:3001', 'https://chioma.io'],
+      origin: ['http://localhost:3000', 'https://chioma.io'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: [
@@ -49,11 +49,11 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should allow requests from permitted origins', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(200);
 
       expect(response.headers['access-control-allow-origin']).toBe(
-        'http://localhost:3001',
+        'http://localhost:3000',
       );
     });
 
@@ -71,7 +71,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should include credentials header for permitted origins', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(200);
 
       expect(response.headers['access-control-allow-credentials']).toBe('true');
@@ -94,7 +94,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should handle preflight requests with 204 response', async () => {
       await request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .set('Access-Control-Request-Method', 'POST')
         .expect(204);
     });
@@ -102,7 +102,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should return allowed methods in preflight response', async () => {
       const response = await request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .set('Access-Control-Request-Method', 'PUT')
         .expect(204);
 
@@ -118,7 +118,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should return allowed headers in preflight response', async () => {
       const response = await request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .set('Access-Control-Request-Headers', 'X-Custom-Header')
         .expect(204);
 
@@ -128,7 +128,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should return max age for preflight caching', async () => {
       const response = await request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(204);
 
       expect(response.headers['access-control-max-age']).toBe('86400');
@@ -261,12 +261,12 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should allow authenticated requests from permitted origins', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .set('Authorization', 'Bearer test-token')
         .expect(200);
 
       expect(response.headers['access-control-allow-origin']).toBe(
-        'http://localhost:3001',
+        'http://localhost:3000',
       );
       expect(response.headers['access-control-allow-credentials']).toBe('true');
     });
@@ -274,7 +274,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should include cookies with CORS-enabled responses', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(200);
 
       expect(response.headers['access-control-allow-credentials']).toBe('true');
@@ -285,7 +285,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should expose rate limit headers', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(200);
 
       const exposedHeaders = response.headers['access-control-expose-headers'];
@@ -297,7 +297,7 @@ describe('CORS and Security Headers Integration (e2e)', () => {
     it('should expose custom headers when appropriate', async () => {
       const response = await request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:3000')
         .expect(200);
 
       const exposedHeaders =

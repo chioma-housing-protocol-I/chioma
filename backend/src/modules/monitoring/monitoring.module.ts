@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  forwardRef,
+} from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -13,15 +18,18 @@ import { ErrorEscalationService } from './error-escalation.service';
 import { StructuredLoggerService } from './structured-logger.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { DatabaseMonitorService } from './database-monitor.service';
+import { DatabaseReplicationService } from './database-replication.service';
 import { WebhookSignatureService } from '../webhooks/webhook-signature.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     HttpModule,
     ScheduleModule.forRoot(),
-    NotificationsModule,
+    forwardRef(() => NotificationsModule),
+    StorageModule,
     TypeOrmModule.forFeature([]),
   ],
   controllers: [MonitoringController, PerformanceController],
@@ -34,6 +42,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PerformanceMonitorService,
     PerformanceMiddleware,
     DatabaseMonitorService,
+    DatabaseReplicationService,
     WebhookSignatureService,
     WebhookSignatureGuard,
   ],
@@ -46,6 +55,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PerformanceMonitorService,
     PerformanceMiddleware,
     DatabaseMonitorService,
+    DatabaseReplicationService,
   ],
 })
 export class MonitoringModule implements NestModule {

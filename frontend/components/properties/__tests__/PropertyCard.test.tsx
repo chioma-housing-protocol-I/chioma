@@ -10,6 +10,18 @@ vi.mock('@/contexts/ModalContext', () => ({
   })),
 }));
 
+vi.mock('@/lib/query/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
+  return {
+    ...actual,
+    useFavoriteStatus: vi.fn(() => ({ data: undefined })),
+    useToggleFavorite: vi.fn(() => ({
+      isPending: false,
+      toggleFavorite: vi.fn(),
+    })),
+  };
+});
+
 import PropertyCard from '../PropertyCard';
 
 const mockProperty = {

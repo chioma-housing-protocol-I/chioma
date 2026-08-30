@@ -96,4 +96,119 @@ describe('LoggerMiddleware', () => {
     expect(mockLogger.log).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
+
+  it('logs method, path, status code and response time for successful requests', () => {
+    const req = {
+      method: 'GET',
+      originalUrl: '/test-ok',
+      path: '/test-ok',
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as Request;
+
+    const res = {
+      statusCode: 200,
+      getHeader: jest.fn().mockReturnValue('10'),
+      getHeaders: jest.fn().mockReturnValue({}),
+      setHeader: jest.fn(),
+      on: (event: string, cb: () => void) => {
+        if (event === 'finish') cb();
+      },
+      locals: {},
+    } as unknown as Response;
+
+    const next = jest.fn();
+
+    middleware.use(req, res, next);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      'GET /test-ok',
+      expect.objectContaining({
+        http: expect.objectContaining({
+          method: 'GET',
+          url: '/test-ok',
+          statusCode: 200,
+          responseTime: expect.any(Number),
+        }),
+      }),
+      'HTTP',
+    );
+  });
+
+  it('reuses an incoming x-request-id header as the correlation ID', () => {
+    const req = {
+      method: 'GET',
+      originalUrl: '/test-correlation',
+      path: '/test-correlation',
+      headers: { 'x-request-id': 'incoming-correlation-id' },
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as Request;
+
+    const setHeader = jest.fn();
+    const res = {
+      statusCode: 200,
+      getHeader: jest.fn().mockReturnValue('10'),
+      getHeaders: jest.fn().mockReturnValue({}),
+      setHeader,
+      on: (event: string, cb: () => void) => {
+        if (event === 'finish') cb();
+      },
+      locals: {},
+    } as unknown as Response;
+
+    const next = jest.fn();
+
+    middleware.use(req, res, next);
+
+    expect(setHeader).toHaveBeenCalledWith(
+      'x-request-id',
+      'incoming-correlation-id',
+    );
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      'GET /test-correlation',
+      expect.objectContaining({
+        http: expect.objectContaining({
+          correlationId: 'incoming-correlation-id',
+        }),
+      }),
+      'HTTP',
+    );
+  });
+
+  it('generates a correlation ID when none is provided on the request', () => {
+    const req = {
+      method: 'GET',
+      originalUrl: '/test-generated-id',
+      path: '/test-generated-id',
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as Request;
+
+    const setHeader = jest.fn();
+    const res = {
+      statusCode: 200,
+      getHeader: jest.fn().mockReturnValue('10'),
+      getHeaders: jest.fn().mockReturnValue({}),
+      setHeader,
+      on: (event: string, cb: () => void) => {
+        if (event === 'finish') cb();
+      },
+      locals: {},
+    } as unknown as Response;
+
+    const next = jest.fn();
+
+    middleware.use(req, res, next);
+
+    expect(setHeader).toHaveBeenCalledWith('x-request-id', expect.any(String));
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      'GET /test-generated-id',
+      expect.objectContaining({
+        http: expect.objectContaining({
+          correlationId: expect.any(String),
+        }),
+      }),
+      'HTTP',
+    );
+  });
 });

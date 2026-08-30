@@ -17,7 +17,12 @@
 import type { Property, PropertyImage, PropertyAmenity } from '@/types';
 
 function makeImage(url: string, primary = false): PropertyImage {
-  return { id: `img-${Math.random().toString(36).slice(2)}`, url, isPrimary: primary, order: 0 };
+  return {
+    id: `img-${Math.random().toString(36).slice(2)}`,
+    url,
+    isPrimary: primary,
+    order: 0,
+  };
 }
 
 function makeAmenity(name: string): PropertyAmenity {
@@ -43,10 +48,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: true,
     hasParking: false,
     petsAllowed: false,
-    images: [makeImage('https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('Gym'), makeAmenity('Pool')],
     ownerId: 'owner-1',
-    owner: { id: 'owner-1', email: 'sarah@example.com', name: 'Sarah Okafor', role: 'user', isVerified: true, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-1',
+      email: 'sarah@example.com',
+      name: 'Sarah Okafor',
+      role: 'user',
+      isVerified: true,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: 'verified',
     latitude: 40.7648,
     longitude: -73.9808,
@@ -71,10 +89,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: false,
     hasParking: true,
     petsAllowed: true,
-    images: [makeImage('https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('Parking')],
     ownerId: 'owner-2',
-    owner: { id: 'owner-2', email: 'david@example.com', name: 'David Ibrahim', role: 'user', isVerified: true, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-2',
+      email: 'david@example.com',
+      name: 'David Ibrahim',
+      role: 'user',
+      isVerified: true,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: null,
     latitude: 51.5014,
     longitude: -0.1919,
@@ -99,10 +130,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: true,
     hasParking: false,
     petsAllowed: false,
-    images: [makeImage('https://images.pexels.com/photos/1579253/pexels-photo-1579253.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1579253/pexels-photo-1579253.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('WiFi')],
     ownerId: 'owner-3',
-    owner: { id: 'owner-3', email: 'emm@example.com', name: 'Emmanuel K.', role: 'user', isVerified: false, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-3',
+      email: 'emm@example.com',
+      name: 'Emmanuel K.',
+      role: 'user',
+      isVerified: false,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: null,
     latitude: 52.4811,
     longitude: 13.4357,
@@ -127,10 +171,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: true,
     hasParking: true,
     petsAllowed: false,
-    images: [makeImage('https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('Pool'), makeAmenity('Parking')],
     ownerId: 'owner-4',
-    owner: { id: 'owner-4', email: 'james@example.com', name: 'James Obi', role: 'user', isVerified: true, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-4',
+      email: 'james@example.com',
+      name: 'James Obi',
+      role: 'user',
+      isVerified: true,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: 'verified',
     latitude: 40.7735,
     longitude: -73.9565,
@@ -155,10 +212,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: false,
     hasParking: false,
     petsAllowed: false,
-    images: [makeImage('https://images.pexels.com/photos/1579253/pexels-photo-1579253.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1579253/pexels-photo-1579253.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('Gym')],
     ownerId: 'owner-5',
-    owner: { id: 'owner-5', email: 'chioma@example.com', name: 'Chioma N.', role: 'user', isVerified: false, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-5',
+      email: 'chioma@example.com',
+      name: 'Chioma N.',
+      role: 'user',
+      isVerified: false,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: null,
     latitude: 35.662,
     longitude: 139.7038,
@@ -183,10 +253,23 @@ export const E2E_PROPERTIES: Property[] = [
     isFurnished: true,
     hasParking: false,
     petsAllowed: true,
-    images: [makeImage('https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg', true)],
+    images: [
+      makeImage(
+        'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg',
+        true,
+      ),
+    ],
     amenities: [makeAmenity('WiFi'), makeAmenity('Gym')],
     ownerId: 'owner-6',
-    owner: { id: 'owner-6', email: 'grace@example.com', name: 'Grace A.', role: 'user', isVerified: true, createdAt: '', updatedAt: '' },
+    owner: {
+      id: 'owner-6',
+      email: 'grace@example.com',
+      name: 'Grace A.',
+      role: 'user',
+      isVerified: true,
+      createdAt: '',
+      updatedAt: '',
+    },
     verificationStatus: 'verified',
     latitude: 51.5137,
     longitude: -0.2013,

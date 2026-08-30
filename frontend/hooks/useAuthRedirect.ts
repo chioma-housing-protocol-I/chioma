@@ -1,35 +1,26 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
-import { getDashboardRoute } from '@/lib/navigation/role-navigation';
+import {
+  getDashboardRoute,
+  type UserRole,
+} from '@/lib/navigation/role-navigation';
 
 /**
- * Hook to redirect authenticated users to their role-based dashboard
- * Useful on landing page to prevent authenticated users from seeing the login flow
+ * Redirect authenticated users away from public entry pages (e.g. landing)
+ * to their role-based dashboard. Navigation ergonomics only — protected
+ * routes are gated server-side in proxy.ts.
  */
 export function useAuthRedirect() {
   const router = useRouter();
   const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to load
-    if (loading) {
-      console.log('⏳ Auth still loading...');
-      return;
-    }
+    if (loading) return;
+    if (!isAuthenticated || !user) return;
 
-    // If user is authenticated, redirect to their dashboard
-    if (isAuthenticated && user) {
-      const userRole = (user.role as string).toLowerCase();
-      const dashboardRoute = getDashboardRoute(userRole as any);
-
-      console.log('🚀 User authenticated, redirecting to dashboard:', {
-        userRole,
-        dashboardRoute,
-      });
-
-      router.push(dashboardRoute);
-    }
+    const userRole = (user.role as string)?.toLowerCase() as UserRole;
+    router.push(getDashboardRoute(userRole));
   }, [user, isAuthenticated, loading, router]);
 
   return { user, isAuthenticated, loading };

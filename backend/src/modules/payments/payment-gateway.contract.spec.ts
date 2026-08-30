@@ -5,6 +5,8 @@ import {
   GatewayRefundResponse,
 } from './payment-gateway.service';
 import { RetryService } from '../../common/services/retry.service';
+import { CircuitBreakerService } from '../../common/resilience/circuit-breaker.service';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { PaymentMethod } from './entities/payment-method.entity';
 
 /**
@@ -15,7 +17,7 @@ import { PaymentMethod } from './entities/payment-method.entity';
  */
 describe('PaymentGatewayService - Contract Tests', () => {
   let service: PaymentGatewayService;
-  let retryService: RetryService;
+  let _retryService: RetryService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,17 +29,30 @@ describe('PaymentGatewayService - Contract Tests', () => {
             execute: jest.fn((fn) => fn()),
           },
         },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            execute: jest.fn((_key: string, fn: () => unknown) => fn()),
+          },
+        },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<PaymentGatewayService>(PaymentGatewayService);
-    retryService = module.get<RetryService>(RetryService);
+    _retryService = module.get<RetryService>(RetryService);
   });
 
   describe('Contract: chargePayment', () => {
     it('should return a response conforming to GatewayChargeResponse contract', async () => {
       const mockUser = { id: 'user_123' } as any;
-      const mockPaymentMethod: PaymentMethod = {
+      const mockPaymentMethod = {
         id: 1,
         user: mockUser,
         userId: 'user_123',
@@ -49,7 +64,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
         metadata: { authorizationCode: 'AUTH_code123' },
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as PaymentMethod;
+      } as unknown as PaymentMethod;
 
       const result: GatewayChargeResponse = await service.chargePayment({
         paymentMethod: mockPaymentMethod,
@@ -80,7 +95,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
 
     it('should handle payment method with required metadata fields', async () => {
       const mockUser = { id: 'user_456' } as any;
-      const mockPaymentMethod: PaymentMethod = {
+      const mockPaymentMethod = {
         id: 2,
         user: mockUser,
         userId: 'user_456',
@@ -92,7 +107,7 @@ describe('PaymentGatewayService - Contract Tests', () => {
         metadata: { token: 'flw_token_xyz' },
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as PaymentMethod;
+      } as unknown as PaymentMethod;
 
       const result = await service.chargePayment({
         paymentMethod: mockPaymentMethod,
@@ -165,6 +180,21 @@ describe('PaymentGatewayService - Contract Tests', () => {
           expect(validKeys).toContain(key);
         });
       }
+    });
+
+    it('should reject a missing or empty chargeId instead of calling the gateway', async () => {
+      await expect(
+        service.processRefund(undefined as any, 100),
+      ).rejects.toThrow('A valid chargeId is required to process a refund');
+      await expect(service.processRefund(null as any, 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
+      await expect(service.processRefund('', 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
+      await expect(service.processRefund('   ', 100)).rejects.toThrow(
+        'A valid chargeId is required to process a refund',
+      );
     });
   });
 });

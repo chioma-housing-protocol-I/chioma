@@ -22,6 +22,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     message: 'Something interrupted the request to the server.',
     guidance: 'Retry now or refresh the page.',
   },
+  REQUEST_CANCELLED: {
+    title: 'Request cancelled',
+    message: 'The request was cancelled.',
+    guidance: 'Try again if needed.',
+  },
   AUTH_REQUIRED: {
     title: 'Sign-in required',
     message: 'Your account is not authenticated for this action.',
@@ -41,6 +46,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     title: 'Check your input',
     message: 'Some fields contain invalid or missing information.',
     guidance: 'Review highlighted fields and submit again.',
+  },
+  VALIDATION_RESPONSE_MISMATCH: {
+    title: 'Unexpected response format',
+    message: 'The server returned data in an unexpected format.',
+    guidance: 'Try again. If this persists, contact support.',
   },
   BUSINESS_RULE_VIOLATION: {
     title: 'Action unavailable',

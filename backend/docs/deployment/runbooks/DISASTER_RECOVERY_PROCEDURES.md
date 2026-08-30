@@ -7,6 +7,7 @@
 Step-by-step recovery procedures for disaster scenarios affecting the Chioma platform.
 
 **Related documents:**
+
 - [Disaster Recovery Plan](../DISASTER_RECOVERY_PLAN.md) — overview, objectives, team roles
 - [Recovery Runbook](./RECOVERY_RUNBOOK.md) — database-specific recovery scenarios
 - [Backup and Recovery](../BACKUP_AND_RECOVERY.md) — backup strategy and procedures

@@ -8,6 +8,9 @@ import {
   PaymentWebhookController,
 } from './payment.controller';
 import { PaymentService } from './payment.service';
+import { RefundService } from './refund.service';
+import { ScheduleService } from './schedule.service';
+import { PaymentWebhookService } from './payment-webhook.service';
 import { AuditService } from '../audit/audit.service';
 import { CreatePaymentRecordDto } from './dto/record-payment.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
@@ -17,9 +20,14 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { PaymentInterval } from './entities/payment-schedule.entity';
 import {
   CreateEscrowGatewayDto,
-  PaymentGatewayWebhookDto,
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
+import { PaymentWebhookDto } from './dto/payment-webhook.dto';
+import { RefundWebhookDto } from './dto/refund-webhook.dto';
+import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { ExecutionContext, CallHandler } from '@nestjs/common';
 
 const mockPaymentService = {
   recordPayment: jest.fn(),
@@ -29,21 +37,31 @@ const mockPaymentService = {
   refundEscrowDeposit: jest.fn(),
   reconcileStellarPayments: jest.fn(),
   retryFailedPayments: jest.fn(),
-  handlePaymentGatewayWebhook: jest.fn(),
   getPaymentAnalytics: jest.fn(),
   listPayments: jest.fn(),
   getPaymentById: jest.fn(),
-  processRefund: jest.fn(),
   generateReceipt: jest.fn(),
   createPaymentMethod: jest.fn(),
   listPaymentMethods: jest.fn(),
   updatePaymentMethod: jest.fn(),
   removePaymentMethod: jest.fn(),
+};
+
+const mockRefundService = {
+  processRefund: jest.fn(),
+};
+
+const mockScheduleService = {
   createPaymentSchedule: jest.fn(),
   listPaymentSchedules: jest.fn(),
   updatePaymentSchedule: jest.fn(),
   runPaymentSchedule: jest.fn(),
   processDueSchedules: jest.fn(),
+};
+
+const mockPaymentWebhookService = {
+  handlePaymentGatewayWebhook: jest.fn(),
+  handleRefundWebhook: jest.fn(),
 };
 
 describe('Payment Controllers', () => {
@@ -68,6 +86,18 @@ describe('Payment Controllers', () => {
           useValue: mockPaymentService,
         },
         {
+          provide: RefundService,
+          useValue: mockRefundService,
+        },
+        {
+          provide: ScheduleService,
+          useValue: mockScheduleService,
+        },
+        {
+          provide: PaymentWebhookService,
+          useValue: mockPaymentWebhookService,
+        },
+        {
           provide: AuditService,
           useValue: {
             log: jest.fn(),
@@ -80,7 +110,18 @@ describe('Payment Controllers', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(WebhookSignatureGuard)
+      .useValue({ canActivate: () => true })
+      .overrideInterceptor(AuditLogInterceptor)
+      .useValue({
+        intercept(_ctx: ExecutionContext, next: CallHandler) {
+          return next.handle();
+        },
+      })
+      .compile();
 
     paymentController = module.get<PaymentController>(PaymentController);
     paymentMethodController = module.get<PaymentMethodController>(
@@ -119,7 +160,7 @@ describe('Payment Controllers', () => {
     await paymentController.processRefund('pay_1', dto, {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.processRefund).toHaveBeenCalledWith(
+    expect(mockRefundService.processRefund).toHaveBeenCalledWith(
       'pay_1',
       dto,
       'user_1',
@@ -172,7 +213,7 @@ describe('Payment Controllers', () => {
     await paymentScheduleController.createSchedule(dto, {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.createPaymentSchedule).toHaveBeenCalledWith(
+    expect(mockScheduleService.createPaymentSchedule).toHaveBeenCalledWith(
       dto,
       'user_1',
     );
@@ -182,7 +223,7 @@ describe('Payment Controllers', () => {
     await paymentScheduleController.runSchedule('schedule_1', {
       user: { id: 'user_1' },
     });
-    expect(mockPaymentService.runPaymentSchedule).toHaveBeenCalledWith(
+    expect(mockScheduleService.runPaymentSchedule).toHaveBeenCalledWith(
       'schedule_1',
       'user_1',
     );
@@ -190,7 +231,7 @@ describe('Payment Controllers', () => {
 
   it('processes due schedules', async () => {
     await paymentScheduleController.processDueSchedules();
-    expect(mockPaymentService.processDueSchedules).toHaveBeenCalled();
+    expect(mockScheduleService.processDueSchedules).toHaveBeenCalled();
   });
 
   it('processes stellar rent payment with user id', async () => {
@@ -226,13 +267,26 @@ describe('Payment Controllers', () => {
   });
 
   it('handles payment gateway webhook', async () => {
-    const dto: PaymentGatewayWebhookDto = {
+    const dto: PaymentWebhookDto = {
       eventType: 'payment.completed',
       paymentId: 'pay_1',
       status: 'completed',
     };
     await paymentWebhookController.handleGatewayWebhook(dto, 'secret');
-    expect(mockPaymentService.handlePaymentGatewayWebhook).toHaveBeenCalledWith(
+    expect(
+      mockPaymentWebhookService.handlePaymentGatewayWebhook,
+    ).toHaveBeenCalledWith(dto, 'secret');
+  });
+
+  it('handles refund webhook', async () => {
+    const dto: RefundWebhookDto = {
+      eventType: 'refund.completed',
+      paymentId: 'pay_1',
+      status: 'completed',
+      amount: 50,
+    };
+    await paymentWebhookController.handleRefundWebhook(dto, 'secret');
+    expect(mockPaymentWebhookService.handleRefundWebhook).toHaveBeenCalledWith(
       dto,
       'secret',
     );

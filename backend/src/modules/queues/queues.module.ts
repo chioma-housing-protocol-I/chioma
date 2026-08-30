@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailQueueProcessor } from './processors/email.processor';
 import { DocumentQueueProcessor } from './processors/document.processor';
 import { BlockchainQueueProcessor } from './processors/blockchain.processor';
 import { DataSyncQueueProcessor } from './processors/data-sync.processor';
+import { AnalyticsQueueProcessor } from './processors/analytics.processor';
 import { QueueMonitoringService } from './services/queue-monitoring.service';
 import { QueueManagementService } from './services/queue-management.service';
 import { DeadLetterQueueService } from './services/dead-letter-queue.service';
@@ -17,6 +19,10 @@ import { QueuesController } from './controllers/queues.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { AgreementsModule } from '../agreements/agreements.module';
+import { MonitoringModule } from '../monitoring/monitoring.module';
+import { ReferralModule } from '../referral/referral.module';
+import { AuditLog } from '../audit/entities/audit-log.entity';
 import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
 
 @Module({
@@ -54,17 +60,23 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
       { name: 'documents' },
       { name: 'blockchain' },
       { name: 'data-sync' },
+      { name: 'analytics' },
       { name: DEAD_LETTER_QUEUE_NAME },
     ),
     NotificationsModule,
     StorageModule,
     StellarModule,
+    AgreementsModule,
+    MonitoringModule,
+    ReferralModule,
+    TypeOrmModule.forFeature([AuditLog]),
   ],
   providers: [
     EmailQueueProcessor,
     DocumentQueueProcessor,
     BlockchainQueueProcessor,
     DataSyncQueueProcessor,
+    AnalyticsQueueProcessor,
     DeadLetterQueueProcessor,
     DeadLetterQueueListener,
     QueueMonitoringService,

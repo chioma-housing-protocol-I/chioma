@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
@@ -8,6 +8,40 @@ import {
   UserPreferences,
   UserNotificationPreference,
 } from '../users/entities/user-notification-preference.entity';
+import { ErrorNotificationService } from '../monitoring/error-notification.service';
+import { AlertPayload, EscalationTier } from '../monitoring/alert.types';
+import { RetryService } from '../../common/services/retry.service';
+import { MaxRetriesExceededError } from '../../common/errors/retry-errors';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import {
+  NOTIFICATION_CHANNEL_RETRY_POLICY,
+  NotificationChannel,
+} from './notification-channel.policy';
+import { PaginationUtils } from '../../common/utils';
+
+/**
+ * Renders an unknown thrown value as a human-readable string. Plain objects are
+ * JSON-serialized so alert descriptions carry the payload instead of the
+ * useless '[object Object]' that default stringification would produce.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error === null || error === undefined) {
+    return 'Unknown error';
+  }
+  if (typeof error === 'object') {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unserializable error object';
+    }
+  }
+  // Everything object-like is handled above, so only primitives reach here.
+  return String(error as string | number | boolean | symbol | bigint);
+}
 
 @Injectable()
 export class NotificationsService {
@@ -19,6 +53,10 @@ export class NotificationsService {
     @InjectRepository(UserNotificationPreference)
     private readonly preferencesRepository: Repository<UserNotificationPreference>,
     private readonly realtimeService: NotificationsRealtimeService,
+    @Inject(forwardRef(() => ErrorNotificationService))
+    private readonly errorNotificationService: ErrorNotificationService,
+    private readonly retryService: RetryService,
+    private readonly auditService: AuditService,
   ) {}
 
   async notify(
@@ -27,28 +65,152 @@ export class NotificationsService {
     message: string,
     type: string,
   ): Promise<Notification> {
-    const notification = this.notificationRepository.create({
-      userId,
-      title,
-      message,
-      type,
-    });
+    const payload = { userId, title, message, type };
 
-    const saved = await this.notificationRepository.save(notification);
+    try {
+      const saved = await this.deliverWithRetry(
+        'persist',
+        payload,
+        async () => {
+          const notification = this.notificationRepository.create({
+            userId,
+            title,
+            message,
+            type,
+          });
+          return this.notificationRepository.save(notification);
+        },
+      );
 
-    const preferences = await this.getUserPreferences(userId);
-    if (this.shouldDeliverRealtime(preferences, type)) {
-      this.realtimeService.emitToUser(userId, saved);
+      const preferences = await this.getUserPreferences(userId);
+      if (this.shouldDeliverRealtime(preferences, type)) {
+        // Best-effort: a failed/exhausted realtime emit must not fail the
+        // notification as a whole, since it already persisted successfully
+        // and the recipient can still see it on next fetch/poll.
+        await this.deliverWithRetry('realtime', payload, () => {
+          this.realtimeService.emitToUser(userId, saved);
+          return Promise.resolve();
+        }).catch(() => undefined);
+      }
+
+      this.logger.log(`Notification sent to user ${userId}: ${title}`);
+      return saved;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send notification "${title}" to user ${userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      await this.alertNotificationFailure(userId, title, type, error);
+      throw error;
     }
+  }
 
-    this.logger.log(`Notification sent to user ${userId}: ${title}`);
-    return saved;
+  /**
+   * Dispatches through the given channel using that channel's configured
+   * retry/backoff policy (see notification-channel.policy.ts). When all
+   * attempts are exhausted, the original payload is written to the audit
+   * trail as a dead-letter record (queryable via the existing /audit
+   * endpoints) rather than being silently dropped, and the error is
+   * rethrown so the caller can decide whether the overall delivery failed.
+   */
+  private async deliverWithRetry<T>(
+    channel: NotificationChannel,
+    payload: Record<string, unknown>,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await this.retryService.execute(
+        fn,
+        NOTIFICATION_CHANNEL_RETRY_POLICY[channel],
+        `NotificationsService:${channel}`,
+      );
+    } catch (error) {
+      if (error instanceof MaxRetriesExceededError) {
+        await this.deadLetter(channel, payload, error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Records an exhausted-retry delivery as a dead-letter audit entry
+   * carrying the original payload, so failed sends are inspectable instead
+   * of silently lost. This intentionally does not throw on its own
+   * failure — losing an alert about a dropped notification must not also
+   * take down the request that triggered it.
+   */
+  private async deadLetter(
+    channel: NotificationChannel,
+    payload: Record<string, unknown>,
+    error: MaxRetriesExceededError,
+  ): Promise<void> {
+    try {
+      await this.auditService.log({
+        action: AuditAction.NOTIFICATION_DELIVERY_FAILED,
+        entityType: 'Notification',
+        entityId:
+          typeof payload.userId === 'string' ? payload.userId : undefined,
+        performedBy:
+          typeof payload.userId === 'string' ? payload.userId : undefined,
+        level: AuditLevel.ERROR,
+        errorMessage: error.message,
+        metadata: {
+          channel,
+          attempts: error.attempts,
+          payload,
+        },
+      });
+    } catch (deadLetterError) {
+      this.logger.error(
+        `Failed to record dead-lettered ${channel} notification`,
+        deadLetterError instanceof Error
+          ? deadLetterError.stack
+          : String(deadLetterError),
+      );
+    }
+  }
+
+  private async alertNotificationFailure(
+    userId: string,
+    title: string,
+    type: string,
+    error: unknown,
+  ): Promise<void> {
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'NotificationDeliveryFailed',
+        notificationType: type,
+        severity: 'warning',
+      },
+      annotations: {
+        summary: `Notification "${title}" failed to send to user ${userId}`,
+        description: describeError(error),
+      },
+      startsAt: new Date().toISOString(),
+      generatorURL: `notifications/${userId}`,
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.TEAM,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        'Failed to send notification-failure alert',
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
   }
 
   async getUserNotifications(
     userId: string,
     filters?: { isRead?: boolean; type?: string },
-  ): Promise<Notification[]> {
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    PaginationUtils.validatePagination(page, limit);
     const query = this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.userId = :userId', { userId })
@@ -64,7 +226,11 @@ export class NotificationsService {
       query.andWhere('notification.type = :type', { type: filters.type });
     }
 
-    return query.getMany();
+    query.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getUnreadCount(userId: string): Promise<number> {

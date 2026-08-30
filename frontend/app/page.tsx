@@ -12,16 +12,18 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <Navbar />
-      <Hero />
-      <Stats />
-      <Features />
-      <HowItWorks />
-      <ForWho />
-      <Testimonials />
-      <CTA />
+      <main id="main-content" tabIndex={-1}>
+        <Hero />
+        <Stats />
+        <Features />
+        <HowItWorks />
+        <ForWho />
+        <Testimonials />
+        <CTA />
+      </main>
       <Footer />
-    </main>
+    </div>
   );
 }

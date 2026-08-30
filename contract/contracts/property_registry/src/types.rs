@@ -18,8 +18,6 @@ pub struct ContractState {
     pub initialized: bool,
 }
 
-// ─── Rate Limiting Types ──────────────────────────────────────────────────────
-
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RateLimitConfig {

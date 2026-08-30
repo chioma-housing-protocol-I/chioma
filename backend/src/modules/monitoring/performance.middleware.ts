@@ -6,6 +6,8 @@ export interface RequestWithTiming extends Request {
   startTime?: number;
   endTime?: number;
   responseTime?: number;
+  /** Populated by Passport/JWT auth middleware upstream. */
+  user?: { id: string };
 }
 
 @Injectable()
@@ -21,6 +23,8 @@ export class PerformanceMiddleware implements NestMiddleware {
     // Capture the original end method
     const originalEnd = res.end;
     const originalSend = res.send;
+    const performanceMonitor = this.performanceMonitor;
+    const logger = this.logger;
 
     // Override res.end to capture timing
     res.end = function (chunk?: any, encoding?: any) {
@@ -39,23 +43,23 @@ export class PerformanceMiddleware implements NestMiddleware {
           responseTime,
           statusCode: res.statusCode,
           userAgent: req.get('User-Agent'),
-          userId: (req as any).user?.id,
+          userId: req.user?.id,
           memoryUsage: process.memoryUsage(),
         };
 
         // Only record metrics for API endpoints (not static files)
         if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-          this.performanceMonitor.recordRequestMetrics(performanceMetrics);
+          performanceMonitor.recordRequestMetrics(performanceMetrics);
         }
 
         // Log errors
         if (res.statusCode >= 400) {
-          this.logger.warn(
+          logger.warn(
             `Error response: ${req.method} ${req.path} - ${responseTime}ms (Status: ${res.statusCode})`,
           );
         }
       } catch (error) {
-        this.logger.error('Failed to record performance metrics:', error);
+        logger.error('Failed to record performance metrics:', error);
       }
 
       // Call the original end method
@@ -79,21 +83,21 @@ export class PerformanceMiddleware implements NestMiddleware {
           responseTime,
           statusCode: res.statusCode,
           userAgent: req.get('User-Agent'),
-          userId: (req as any).user?.id,
+          userId: req.user?.id,
           memoryUsage: process.memoryUsage(),
         };
 
         if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-          this.performanceMonitor.recordRequestMetrics(performanceMetrics);
+          performanceMonitor.recordRequestMetrics(performanceMetrics);
         }
 
         if (res.statusCode >= 400) {
-          this.logger.warn(
+          logger.warn(
             `Error response: ${req.method} ${req.path} - ${responseTime}ms (Status: ${res.statusCode})`,
           );
         }
       } catch (error) {
-        this.logger.error('Failed to record performance metrics:', error);
+        logger.error('Failed to record performance metrics:', error);
       }
 
       // Call the original send method

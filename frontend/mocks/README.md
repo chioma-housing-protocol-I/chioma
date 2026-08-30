@@ -241,7 +241,7 @@ NEXT_PUBLIC_USE_MOCK_API=true
 
 # Disable mock API to use real backend
 NEXT_PUBLIC_USE_MOCK_API=false
-NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
 ## Performance Considerations

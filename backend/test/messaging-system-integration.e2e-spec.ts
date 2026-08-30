@@ -264,11 +264,11 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
         5,
       );
 
-      expect(page1).toHaveLength(5);
-      expect(page2).toHaveLength(5);
+      expect(page1.data).toHaveLength(5);
+      expect(page2.data).toHaveLength(5);
       // Different pages return different messages
-      const page1Ids = page1.map((m) => m.id);
-      const page2Ids = page2.map((m) => m.id);
+      const page1Ids = page1.data.map((m) => m.id);
+      const page2Ids = page2.data.map((m) => m.id);
       expect(page1Ids.some((id) => page2Ids.includes(id))).toBe(false);
     });
 
@@ -279,7 +279,7 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
         5,
       );
 
-      expect(page3).toHaveLength(5);
+      expect(page3.data).toHaveLength(5);
     });
 
     it('returns empty array beyond last page', async () => {
@@ -289,7 +289,7 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
         5,
       );
 
-      expect(page4).toHaveLength(0);
+      expect(page4.data).toHaveLength(0);
     });
 
     it('GET /messaging/rooms/:roomId/messages returns paginated messages', async () => {
@@ -298,8 +298,8 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
         .query({ page: 1, limit: 10 })
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeLessThanOrEqual(10);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeLessThanOrEqual(10);
     });
 
     it('GET /messaging/history returns messages for a chatGroupId', async () => {
@@ -376,8 +376,8 @@ describe('[INTEGRATION] Messaging System (e2e)', () => {
     it('tracks multiple sessions per user up to the max', async () => {
       sessionService = app.get(WebSocketSessionService);
 
-      const s1 = await sessionService.createSession(USER_C, 'conn-c-1');
-      const s2 = await sessionService.createSession(USER_C, 'conn-c-2');
+      void (await sessionService.createSession(USER_C, 'conn-c-1'));
+      void (await sessionService.createSession(USER_C, 'conn-c-2'));
 
       const count = await sessionService.getUserConnectionCount(USER_C);
       expect(count).toBeGreaterThanOrEqual(2);

@@ -4,6 +4,8 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   UserNotificationPreference,
 } from '../users/entities/user-notification-preference.entity';
+import { MaxRetriesExceededError } from '../../common/errors/retry-errors';
+import { AuditAction } from '../audit/entities/audit-log.entity';
 
 describe('NotificationsService', () => {
   const notificationRepo = {
@@ -24,6 +26,32 @@ describe('NotificationsService', () => {
     emitToUser: jest.fn(),
   };
 
+  const errorNotificationService = {
+    notifyAlert: jest.fn().mockResolvedValue(undefined),
+  };
+
+  // Executes fn immediately (no real delay/backoff) so tests stay fast,
+  // while still exercising the retry-then-give-up contract: retries on
+  // failure up to maxAttempts, then throws MaxRetriesExceededError.
+  const retryService = {
+    execute: jest.fn(async (fn: () => Promise<unknown>, options: any) => {
+      const maxAttempts = options?.maxAttempts ?? 1;
+      let lastError: Error = new Error('Unknown error');
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+      throw new MaxRetriesExceededError(maxAttempts, lastError);
+    }),
+  };
+
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: NotificationsService;
 
   beforeEach(() => {
@@ -32,6 +60,9 @@ describe('NotificationsService', () => {
       notificationRepo as any,
       preferenceRepo as any,
       realtimeService as any,
+      errorNotificationService as any,
+      retryService as any,
+      auditService as any,
     );
   });
 
@@ -152,6 +183,102 @@ describe('NotificationsService', () => {
 
     await service.notify('user-3', 'New message', 'hello', 'NEW_MESSAGE');
     expect(realtimeService.emitToUser).not.toHaveBeenCalled();
+  });
+
+  it('retries the persist channel on failure using its configured policy', async () => {
+    const saved = { id: 'n-7', userId: 'user-7' } as Notification;
+    notificationRepo.create.mockReturnValue({});
+    notificationRepo.save
+      .mockRejectedValueOnce(new Error('transient db error'))
+      .mockResolvedValueOnce(saved);
+    preferenceRepo.findOne.mockResolvedValue(null);
+
+    const result = await service.notify(
+      'user-7',
+      'Payment received',
+      'Done',
+      'PAYMENT_RECEIVED',
+    );
+
+    expect(result).toEqual(saved);
+    expect(notificationRepo.save).toHaveBeenCalledTimes(2);
+    expect(retryService.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ maxAttempts: 3 }),
+      'NotificationsService:persist',
+    );
+  });
+
+  it('exhausts retries, dead-letters the payload, alerts, and rethrows when persisting fails', async () => {
+    notificationRepo.create.mockReturnValue({});
+    notificationRepo.save.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.notify('user-6', 'Payment received', 'Done', 'PAYMENT_RECEIVED'),
+    ).rejects.toThrow('db down');
+
+    // Exhausted the persist channel's configured 3 attempts.
+    expect(notificationRepo.save).toHaveBeenCalledTimes(3);
+
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: AuditAction.NOTIFICATION_DELIVERY_FAILED,
+        entityType: 'Notification',
+        entityId: 'user-6',
+        metadata: expect.objectContaining({
+          channel: 'persist',
+          attempts: 3,
+          payload: expect.objectContaining({ userId: 'user-6' }),
+        }),
+      }),
+    );
+
+    expect(errorNotificationService.notifyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        labels: expect.objectContaining({
+          alertname: 'NotificationDeliveryFailed',
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('dead-letters an exhausted realtime emit without failing the overall notify() call', async () => {
+    const saved = { id: 'n-8', userId: 'user-8' } as Notification;
+    notificationRepo.create.mockReturnValue({});
+    notificationRepo.save.mockResolvedValue(saved);
+    preferenceRepo.findOne.mockResolvedValue({
+      userId: 'user-8',
+      preferences: DEFAULT_NOTIFICATION_PREFERENCES,
+    } as UserNotificationPreference);
+    realtimeService.emitToUser.mockImplementation(() => {
+      throw new Error('socket server unavailable');
+    });
+
+    const result = await service.notify(
+      'user-8',
+      'Payment received',
+      'Done',
+      'PAYMENT_RECEIVED',
+    );
+
+    // The overall notification succeeds — it already persisted — even
+    // though the best-effort realtime channel exhausted its retries.
+    expect(result).toEqual(saved);
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: AuditAction.NOTIFICATION_DELIVERY_FAILED,
+        metadata: expect.objectContaining({ channel: 'realtime' }),
+      }),
+    );
+    expect(retryService.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ maxAttempts: 2 }),
+      'NotificationsService:realtime',
+    );
+    // The realtime failure is swallowed, not escalated via the same
+    // "delivery failed" alert used for the persist channel.
+    expect(errorNotificationService.notifyAlert).not.toHaveBeenCalled();
   });
 
   it('marks all unread notifications as read', async () => {

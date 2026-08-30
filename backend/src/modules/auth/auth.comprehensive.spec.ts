@@ -16,6 +16,9 @@ import { PasswordPolicyService } from './services/password-policy.service';
 import { ReferralService } from '../referral/referral.service';
 import { LoggerService } from '../../common/services/logger.service';
 import { LockService } from '../../common/lock';
+import { QueueManagementService } from '../queues/services/queue-management.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EncryptedCacheService } from '../../common/cache/encrypted-cache.service';
 
 describe('AuthService — comprehensive coverage', () => {
   let service: AuthService;
@@ -81,11 +84,31 @@ describe('AuthService — comprehensive coverage', () => {
   const mockEmailService = {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
     sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendAlertEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockReferralService = {
     generateReferralCode: jest.fn().mockResolvedValue('REF12345'),
     trackReferral: jest.fn().mockResolvedValue(undefined),
+    assignUniqueReferralCode: jest.fn(
+      async (save: (code: string) => Promise<unknown>) => ({
+        code: 'REF12345',
+        result: await save('REF12345'),
+      }),
+    ),
+  };
+
+  const mockQueueManagementService = {
+    addEmailJob: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ finished: jest.fn().mockResolvedValue(undefined) }),
+      ),
+    addDataSyncJob: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ finished: jest.fn().mockResolvedValue(undefined) }),
+      ),
   };
 
   const mockLoggerService = {
@@ -111,6 +134,10 @@ describe('AuthService — comprehensive coverage', () => {
         { provide: ReferralService, useValue: mockReferralService },
         { provide: LoggerService, useValue: mockLoggerService },
         {
+          provide: QueueManagementService,
+          useValue: mockQueueManagementService,
+        },
+        {
           provide: LockService,
           useValue: {
             withLock: jest.fn(
@@ -118,6 +145,14 @@ describe('AuthService — comprehensive coverage', () => {
                 fn(),
             ),
           },
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: EncryptedCacheService,
+          useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
         },
       ],
     }).compile();
@@ -383,11 +418,14 @@ describe('AuthService — comprehensive coverage', () => {
       ).rejects.toThrow(AuthenticationError);
 
       expect(mockUserRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ failedLoginAttempts: 4 }),
+        expect.objectContaining({
+          failedLoginAttempts: 4,
+          accountLockedUntil: null,
+        }),
       );
     });
 
-    it('sets accountLockedUntil when failedLoginAttempts reaches 5', async () => {
+    it('does not set accountLockedUntil on the 5th failed attempt (starting at 4)', async () => {
       const user = { ...mockUser, failedLoginAttempts: 4 };
       mockUserRepository.findOne.mockResolvedValue(user);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
@@ -400,6 +438,24 @@ describe('AuthService — comprehensive coverage', () => {
       expect(mockUserRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           failedLoginAttempts: 5,
+          accountLockedUntil: null,
+        }),
+      );
+    });
+
+    it('sets accountLockedUntil on the 6th failed attempt (starting at 5)', async () => {
+      const user = { ...mockUser, failedLoginAttempts: 5 };
+      mockUserRepository.findOne.mockResolvedValue(user);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      mockUserRepository.save.mockImplementation(async (u: typeof user) => u);
+
+      await expect(
+        service.login({ email: 'user@example.com', password: 'wrong' }),
+      ).rejects.toThrow(AuthenticationError);
+
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failedLoginAttempts: 6,
           accountLockedUntil: expect.any(Date),
         }),
       );
