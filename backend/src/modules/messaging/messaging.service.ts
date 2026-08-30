@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, MoreThan } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Participant } from './entities/participant.entity';
+import { MessageRead } from './entities/message-read.entity';
 import { v4 as uuid } from 'uuid';
 import { PaginationUtils } from '../../common/utils';
+import { UnreadCountResponseDto } from './dto/unread-count-response.dto';
 
 @Injectable()
 export class MessagingService {
@@ -16,6 +18,8 @@ export class MessagingService {
     private chatRoomRepository: Repository<ChatRoom>,
     @InjectRepository(Participant)
     private participantRepository: Repository<Participant>,
+    @InjectRepository(MessageRead)
+    private messageReadRepository: Repository<MessageRead>,
   ) {}
 
   // ── Legacy ───────────────────────────────────────────────────────────────
@@ -130,10 +134,114 @@ export class MessagingService {
     return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async markRoomAsRead(_roomId: string, _userId: string): Promise<void> {
-    // Mark messages in this room as read for the given user
-    // This is a best-effort operation — no readAt column exists yet
-    // so we just return without error for now
-    return;
+  async markRoomAsRead(roomId: string, userId: string): Promise<void> {
+    const roomIdNum = parseInt(roomId, 10);
+    const userIdNum = parseInt(userId, 10);
+
+    // Verify room exists and user is a participant
+    const room = await this.chatRoomRepository.findOne({
+      where: { id: roomIdNum },
+      relations: ['participants'],
+    });
+
+    if (!room) {
+      throw new Error(`Room ${roomId} not found`);
+    }
+
+    const isParticipant = room.participants.some((p) => p.userId === userIdNum);
+    if (!isParticipant) {
+      throw new Error(`User ${userId} is not a participant in room ${roomId}`);
+    }
+
+    // Get the latest message timestamp in this room
+    const latestMessage = await this.messageRepository.findOne({
+      where: { chatRoom: { id: roomIdNum } },
+      order: { timestamp: 'DESC' },
+    });
+
+    // If no messages exist, there's nothing to mark as read
+    if (!latestMessage) {
+      return;
+    }
+
+    // Upsert the read receipt
+    const existingReceipt = await this.messageReadRepository.findOne({
+      where: {
+        userId: userIdNum,
+        chatRoomId: roomIdNum,
+      },
+    });
+
+    if (existingReceipt) {
+      existingReceipt.readAt = latestMessage.timestamp;
+      existingReceipt.updatedAt = new Date();
+      await this.messageReadRepository.save(existingReceipt);
+    } else {
+      const receipt = this.messageReadRepository.create({
+        userId: userIdNum,
+        chatRoomId: roomIdNum,
+        readAt: latestMessage.timestamp,
+      });
+      await this.messageReadRepository.save(receipt);
+    }
+  }
+
+  async getUnreadCount(userId: string): Promise<UnreadCountResponseDto> {
+    const userIdNum = parseInt(userId, 10);
+
+    // Get all rooms the user is part of
+    const rooms = await this.chatRoomRepository
+      .createQueryBuilder('room')
+      .innerJoin('room.participants', 'p', 'p.userId = :userId', {
+        userId: userIdNum,
+      })
+      .getMany();
+
+    const roomUnreadCounts = await Promise.all(
+      rooms.map(async (room) => {
+        // Get the read receipt for this room
+        const receipt = await this.messageReadRepository.findOne({
+          where: {
+            userId: userIdNum,
+            chatRoomId: room.id,
+          },
+        });
+
+        let unreadCount = 0;
+
+        if (receipt) {
+          // Count messages newer than the read receipt
+          unreadCount = await this.messageRepository.count({
+            where: {
+              chatRoom: { id: room.id },
+              timestamp: MoreThan(receipt.readAt),
+            },
+          });
+        } else {
+          // No receipt means all messages are unread
+          unreadCount = await this.messageRepository.count({
+            where: {
+              chatRoom: { id: room.id },
+            },
+          });
+        }
+
+        return {
+          roomId: room.id,
+          chatGroupId: room.chatGroupId,
+          unreadCount,
+        };
+      }),
+    );
+
+    const totalUnread = roomUnreadCounts.reduce(
+      (sum, room) => sum + room.unreadCount,
+      0,
+    );
+
+    return {
+      totalUnread,
+      rooms: roomUnreadCounts,
+    };
   }
 }

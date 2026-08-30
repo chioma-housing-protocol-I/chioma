@@ -117,4 +117,46 @@ export class MessagingGateway
     await this.sessionService.updateActivity(socket.data.sessionId);
     return { status: 'ok', sessionId: socket.data.sessionId };
   }
+
+  @SubscribeMessage('message:markRead')
+  async handleMarkAsRead(
+    @MessageBody() data: { roomId: string; userId: string },
+    @ConnectedSocket() socket: Socket,
+  ) {
+    const valid = await this.sessionService.validateSession(
+      socket.data.sessionId,
+    );
+    if (!valid) {
+      socket.emit('error', { message: 'Session expired or invalid' });
+      socket.disconnect();
+      return;
+    }
+
+    await this.sessionService.updateActivity(socket.data.sessionId);
+
+    try {
+      // Mark the room as read
+      await this.messagingService.markRoomAsRead(data.roomId, data.userId);
+
+      // Get the room to emit to other participants
+      const room = await this.messagingService['chatRoomRepository'].findOne({
+        where: { id: parseInt(data.roomId, 10) },
+      });
+
+      if (room) {
+        // Emit read receipt to all participants in the room
+        this.server.to(room.chatGroupId).emit('message:readReceipt', {
+          roomId: data.roomId,
+          userId: data.userId,
+          readAt: new Date(),
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to mark room as read: ${error.message}`);
+      socket.emit('error', { message: error.message });
+      return { success: false, error: error.message };
+    }
+  }
 }

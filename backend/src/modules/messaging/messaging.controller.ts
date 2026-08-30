@@ -20,6 +20,7 @@ import { PaginationQueryDto } from './dto/pagination.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Message } from './entities/message.entity';
+import { UnreadCountResponseDto } from './dto/unread-count-response.dto';
 
 @ApiTags('Messaging')
 @Controller('messaging')
@@ -106,5 +107,18 @@ export class MessagingController {
     @Query() query: UserIdQueryDto,
   ) {
     await this.messagingService.markRoomAsRead(params.roomId, query.userId);
+  }
+
+  @ApiResponse({
+    status: 200,
+    description: 'Retrieved',
+    type: UnreadCountResponseDto,
+  })
+  @Get('unread')
+  @ApiOperation({
+    summary: 'Get unread message counts per room and total for a user',
+  })
+  async getUnreadCount(@Query() query: UserIdQueryDto) {
+    return this.messagingService.getUnreadCount(query.userId);
   }
 }
