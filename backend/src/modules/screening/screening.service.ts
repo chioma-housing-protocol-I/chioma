@@ -565,8 +565,8 @@ export class ScreeningService {
   private getDefaultProvider(): UserScreeningProvider {
     return (
       (this.configService.get<string>('USER_SCREENING_DEFAULT_PROVIDER') as
-        | UserScreeningProvider
-        | undefined) ?? UserScreeningProvider.TRANSUNION_SMARTMOVE
+        UserScreeningProvider | undefined) ??
+      UserScreeningProvider.TRANSUNION_SMARTMOVE
     );
   }
 

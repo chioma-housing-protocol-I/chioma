@@ -2,11 +2,16 @@ import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { extname } from 'path';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
-import { DisputeEvidence } from './entities/dispute-evidence.entity';
+import {
+  DisputeEvidence,
+  EvidenceProcessingStatus,
+} from './entities/dispute-evidence.entity';
 import { MalwareScanService } from '../storage/malware-scan.service';
 import { ScanStatus } from '../storage/file-metadata.entity';
+import { QueueManagementService } from '../queues/services/queue-management.service';
 import { DisputeComment } from './entities/dispute-comment.entity';
 import {
   RentAgreement,
@@ -521,16 +526,32 @@ export class DisputesService {
     const buffer = file.buffer ?? (await readFile(file.path));
     const scanResult = await this.malwareScan.scan(buffer, file.originalname);
 
+    // Videos are transcoded asynchronously (see VideoQueueProcessor), which
+    // needs the original file available on disk by path, not the in-memory
+    // buffer. Persist it up front rather than pushing the full buffer
+    // through the job queue payload.
+    let fileUrl = file.path;
+    let processingStatus = EvidenceProcessingStatus.NOT_APPLICABLE;
+    if (isVideo && scanResult.clean) {
+      const evidenceDir = './uploads/disputes/evidence';
+      await mkdir(evidenceDir, { recursive: true });
+      const storedFileName = `${randomUUID()}${extname(file.originalname)}`;
+      fileUrl = `${evidenceDir}/${storedFileName}`;
+      await writeFile(fileUrl, buffer);
+      processingStatus = EvidenceProcessingStatus.PENDING;
+    }
+
     const evidence = this.evidenceRepository.create({
       dispute: dispute,
       uploadedBy: userId,
-      fileUrl: file.path, // This would be replaced with actual file storage URL
+      fileUrl, // This would be replaced with actual file storage URL
       fileName: file.originalname,
       // Store the sniffed content type, not the client-declared one.
       fileType: detectedType,
       fileSize: file.size,
       description: dto?.description,
       scanStatus: scanResult.clean ? ScanStatus.CLEAN : ScanStatus.QUARANTINED,
+      processingStatus,
     });
     const saved = await this.evidenceRepository.save(evidence);
 
@@ -550,6 +571,17 @@ export class DisputesService {
       throw new AuthorizationError(
         'File failed malware scan and has been quarantined',
       );
+    }
+
+    if (isVideo) {
+      // Multi-quality transcoding runs off the request path so large video
+      // uploads don't block the HTTP response; the evidence row is updated
+      // with variants/thumbnail once the queued job completes.
+      await this.queueManagementService.addVideoProcessingJob({
+        evidenceId: saved.id,
+        sourcePath: fileUrl,
+        userId,
+      });
     }
 
     return saved;

@@ -18,9 +18,13 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { FileMetadata, ScanStatus } from './file-metadata.entity';
 import { MalwareScanService } from './malware-scan.service';
 import { ImageProcessingService } from './image-processing.service';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../audit/entities/audit-log.entity';
 
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
@@ -257,6 +261,52 @@ export class StorageService {
     );
     await this.fileMetadataRepo.delete({ s3Key: key, ownerId });
     this.logger.log(`Deleted file: ${key}`);
+  }
+
+  /**
+   * Permanently deletes quarantined files (S3 object + metadata row) whose
+   * quarantine has outlived the given retention window. Part of GDPR-style
+   * data retention enforcement: flagged content shouldn't linger indefinitely
+   * once its investigation window has passed.
+   */
+  async purgeQuarantinedFiles(retentionDays: number): Promise<number> {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const candidates = await this.fileMetadataRepo.find({
+      where: { scanStatus: ScanStatus.QUARANTINED, createdAt: LessThan(cutoff) },
+    });
+
+    let purged = 0;
+    for (const file of candidates) {
+      try {
+        await this.s3.send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: file.s3Key }),
+        );
+        await this.fileMetadataRepo.delete({ id: file.id });
+        await this.auditService.log({
+          action: AuditAction.QUARANTINED_FILE_PURGED,
+          entityType: 'FileMetadata',
+          entityId: file.id,
+          status: AuditStatus.SUCCESS,
+          level: AuditLevel.SECURITY,
+          metadata: {
+            ownerId: file.ownerId,
+            fileName: file.fileName,
+            purgedBy: 'system:data-retention-sweep',
+          },
+        });
+        purged++;
+      } catch (error) {
+        this.logger.error(
+          `Failed to purge quarantined file ${file.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    if (purged > 0) {
+      this.logger.log(`Purged ${purged} quarantined file(s) past retention`);
+    }
+    return purged;
   }
 
   async listFiles(ownerId: string, page = 1, limit = 20) {

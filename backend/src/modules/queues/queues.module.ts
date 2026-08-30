@@ -8,6 +8,7 @@ import { DocumentQueueProcessor } from './processors/document.processor';
 import { BlockchainQueueProcessor } from './processors/blockchain.processor';
 import { DataSyncQueueProcessor } from './processors/data-sync.processor';
 import { AnalyticsQueueProcessor } from './processors/analytics.processor';
+import { VideoQueueProcessor } from './processors/video.processor';
 import { QueueMonitoringService } from './services/queue-monitoring.service';
 import { QueueManagementService } from './services/queue-management.service';
 import { DeadLetterQueueService } from './services/dead-letter-queue.service';
@@ -23,6 +24,7 @@ import { AgreementsModule } from '../agreements/agreements.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
 import { ReferralModule } from '../referral/referral.module';
 import { AuditLog } from '../audit/entities/audit-log.entity';
+import { DisputeEvidence } from '../disputes/entities/dispute-evidence.entity';
 import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
 
 @Module({
@@ -61,6 +63,7 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
       { name: 'blockchain' },
       { name: 'data-sync' },
       { name: 'analytics' },
+      { name: 'video-processing' },
       { name: DEAD_LETTER_QUEUE_NAME },
     ),
     NotificationsModule,
@@ -69,7 +72,7 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
     AgreementsModule,
     MonitoringModule,
     ReferralModule,
-    TypeOrmModule.forFeature([AuditLog]),
+    TypeOrmModule.forFeature([AuditLog, DisputeEvidence]),
   ],
   providers: [
     EmailQueueProcessor,
@@ -77,6 +80,7 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
     BlockchainQueueProcessor,
     DataSyncQueueProcessor,
     AnalyticsQueueProcessor,
+    VideoQueueProcessor,
     DeadLetterQueueProcessor,
     DeadLetterQueueListener,
     QueueMonitoringService,

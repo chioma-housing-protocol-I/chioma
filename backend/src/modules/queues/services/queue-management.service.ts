@@ -32,6 +32,7 @@ export class QueueManagementService {
     @InjectQueue('blockchain') private blockchainQueue: Queue,
     @InjectQueue('data-sync') private dataSyncQueue: Queue,
     @InjectQueue('analytics') private analyticsQueue: Queue,
+    @InjectQueue('video-processing') private videoProcessingQueue: Queue,
   ) {}
 
   private enrichJobData<T extends Record<string, any>>(
@@ -154,6 +155,36 @@ export class QueueManagementService {
     const enrichedData = this.enrichJobData(data);
     this.logger.debug(`Adding analytics job: ${JSON.stringify(enrichedData)}`);
     return this.analyticsQueue.add(enrichedData, defaultOptions);
+  }
+
+  /**
+   * Add video transcoding job to queue. Video processing is CPU/time
+   * intensive, so retries are fewer and backoff longer than other queues.
+   */
+  async addVideoProcessingJob(
+    data: JobData,
+    options?: QueueJobOptions,
+  ): Promise<Job> {
+    const defaultOptions = {
+      attempts: 2,
+      backoff: {
+        type: 'exponential' as const,
+        delay: 10000,
+      },
+      removeOnComplete: true,
+      removeOnFail: false,
+      ...options,
+    };
+
+    const enrichedData = this.enrichJobData(data);
+    this.logger.debug(
+      `Adding video processing job: ${JSON.stringify(enrichedData)}`,
+    );
+    return this.videoProcessingQueue.add(
+      'transcode',
+      enrichedData,
+      defaultOptions,
+    );
   }
 
   /**
@@ -293,6 +324,8 @@ export class QueueManagementService {
         return this.dataSyncQueue;
       case 'analytics':
         return this.analyticsQueue;
+      case 'video-processing':
+        return this.videoProcessingQueue;
       default:
         throw new Error(`Unknown queue: ${queueName}`);
     }
