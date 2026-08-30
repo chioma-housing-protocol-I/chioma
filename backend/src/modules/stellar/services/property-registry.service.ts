@@ -13,6 +13,7 @@ import {
   PropertyHistory,
 } from '../entities/property-registry.entity';
 import { StellarAccount } from '../entities/stellar-account.entity';
+import { PaginationUtils } from '../../../common/utils';
 import {
   RegisterPropertyDto,
   TransferPropertyDto,
@@ -40,9 +41,9 @@ export class PropertyRegistryService {
   ) {
     const config = this.configService.get<StellarConfig>('stellar')!;
 
-    // FIX 1: Cast config to 'any' to bypass strict interface checking for rpcUrl
     const rpcUrl =
-      (config as any).rpcUrl || 'https://soroban-testnet.stellar.org';
+      this.configService.get<string>('SOROBAN_RPC_URL') ||
+      'https://soroban-testnet.stellar.org';
     this.sorobanRpc = new StellarSdk.SorobanRpc.Server(rpcUrl);
     this.networkPassphrase = config.networkPassphrase;
 
@@ -85,14 +86,9 @@ export class PropertyRegistryService {
 
       const accountInfo = await this.sorobanRpc.getAccount(sourcePublicKey);
 
-      // FIX 2: Cast to 'any' and safely grab the sequence number regardless of SDK version
-      const sequence =
-        (accountInfo as any).sequence ||
-        (accountInfo as any).sequenceNumber?.() ||
-        '0';
       const sourceAccount = new StellarSdk.Account(
         sourcePublicKey,
-        sequence.toString(),
+        accountInfo.sequenceNumber(),
       );
 
       const operation = this.contract.call(functionName, ...args);
@@ -216,10 +212,14 @@ export class PropertyRegistryService {
     return this.propertyRegistryRepo.count();
   }
 
-  async getPropertyHistory(propertyId: string): Promise<PropertyHistory[]> {
-    return this.propertyHistoryRepo.find({
+  async getPropertyHistory(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.propertyHistoryRepo.findAndCount({
       where: { propertyId },
       order: { transferredAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 }

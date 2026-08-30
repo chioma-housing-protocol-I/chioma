@@ -1,12 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
+  IsNotEmpty,
   IsOptional,
   IsEnum,
   IsNumber,
   Min,
   MaxLength,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export class CreateDocumentDto {
   @ApiProperty({ example: 'Lease Agreement.pdf' })
@@ -83,7 +85,50 @@ export class ShareDocumentDto {
   tenantId: string;
 }
 
-export class DocumentFilterDto {
+export class SignDocumentDto {
+  @ApiProperty({
+    description:
+      'Captured signature payload (e.g. base64 signature image or typed name attestation)',
+    example: 'data:image/png;base64,iVBORw0...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100000)
+  signatureData: string;
+}
+
+export class SignatureStatusDto {
+  @ApiProperty()
+  signerId: string;
+
+  @ApiProperty()
+  signedAt: string;
+
+  @ApiProperty({
+    description:
+      'False when the document content changed after signing (tamper detected)',
+  })
+  valid: boolean;
+}
+
+export class SignatureVerificationDto {
+  @ApiProperty()
+  documentId: string;
+
+  @ApiProperty()
+  signatureCount: number;
+
+  @ApiProperty({
+    description:
+      'True when at least one signature exists and every signature hash still matches the document content',
+  })
+  allValid: boolean;
+
+  @ApiProperty({ type: [SignatureStatusDto] })
+  signatures: SignatureStatusDto[];
+}
+
+export class DocumentFilterDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -108,16 +153,6 @@ export class DocumentFilterDto {
   @IsOptional()
   @IsString()
   search?: string;
-
-  @ApiPropertyOptional({ default: 20 })
-  @IsOptional()
-  @IsNumber()
-  limit?: number;
-
-  @ApiPropertyOptional({ default: 0 })
-  @IsOptional()
-  @IsNumber()
-  page?: number;
 }
 
 export class DocumentResponseDto {
@@ -159,6 +194,9 @@ export class DocumentResponseDto {
 
   @ApiProperty({ nullable: true })
   sharedWith: string[] | null;
+
+  @ApiProperty({ type: [SignatureStatusDto], nullable: true })
+  signatures: { signerId: string; signedAt: string }[] | null;
 
   @ApiProperty()
   createdAt: string;

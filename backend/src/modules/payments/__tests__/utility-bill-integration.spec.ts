@@ -377,8 +377,8 @@ describe('Utility Bill Integration Tests', () => {
 
       const result = await paymentService.listPayments({}, testUser.id);
 
-      expect(result.length).toBe(3);
-      expect(result.map((p) => Number(p.amount)).sort()).toEqual([
+      expect(result.data.length).toBe(3);
+      expect(result.data.map((p) => Number(p.amount)).sort()).toEqual([
         100, 200, 300,
       ]);
     });
@@ -398,10 +398,10 @@ describe('Utility Bill Integration Tests', () => {
         testUser.id,
       );
 
-      expect(result.length).toBeGreaterThanOrEqual(1);
-      expect(result.every((p) => p.status === PaymentStatus.COMPLETED)).toBe(
-        true,
-      );
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      expect(
+        result.data.every((p) => p.status === PaymentStatus.COMPLETED),
+      ).toBe(true);
     });
 
     it('should not retrieve bills of other users', async () => {
@@ -619,7 +619,10 @@ describe('Utility Bill Integration Tests', () => {
         testUser.id,
       );
 
-      const payments = await paymentService.listPayments({}, testUser.id);
+      const { data: payments } = await paymentService.listPayments(
+        {},
+        testUser.id,
+      );
       expect(payments.length).toBe(2);
       expect(Number(payments[0].amount)).toBe(100);
       expect(Number(payments[1].amount)).toBe(50);

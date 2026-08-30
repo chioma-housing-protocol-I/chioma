@@ -7,18 +7,15 @@ import {
 } from '@/lib/navigation/role-navigation';
 
 /**
- * Hook to redirect authenticated users to their role-based dashboard
- * Useful on landing page to prevent authenticated users from seeing the login flow
- *
- * Wallet-only accounts (no email yet) go to the dashboard like everyone else;
- * WalletEmailBanner asks for the email once they are there.
+ * Redirect authenticated users away from public entry pages (e.g. landing)
+ * to their role-based dashboard. Navigation ergonomics only — protected
+ * routes are gated server-side in proxy.ts.
  */
 export function useAuthRedirect() {
   const router = useRouter();
   const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to load
     if (loading) return;
     if (!isAuthenticated || !user) return;
 

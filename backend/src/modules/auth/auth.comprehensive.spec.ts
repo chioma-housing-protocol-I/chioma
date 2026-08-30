@@ -90,6 +90,12 @@ describe('AuthService — comprehensive coverage', () => {
   const mockReferralService = {
     generateReferralCode: jest.fn().mockResolvedValue('REF12345'),
     trackReferral: jest.fn().mockResolvedValue(undefined),
+    assignUniqueReferralCode: jest.fn(
+      async (save: (code: string) => Promise<unknown>) => ({
+        code: 'REF12345',
+        result: await save('REF12345'),
+      }),
+    ),
   };
 
   const mockQueueManagementService = {

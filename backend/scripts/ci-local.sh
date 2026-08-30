@@ -16,6 +16,9 @@ npx prettier --check "src/**/*.ts" "test/**/*.ts"
 echo "==> TypeScript"
 npx tsc --noEmit
 
+echo "==> API documentation coverage"
+pnpm run check:api-docs
+
 echo "==> Unit tests"
 pnpm run test
 

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 const PdfDocumentViewer = dynamic(() => import('./PdfDocumentViewer'), {
   loading: () => (
@@ -41,5 +42,9 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
     );
   }
 
-  return <PdfDocumentViewer url={url} name={name} />;
+  return (
+    <FeatureBoundary name="documents:pdf-viewer" label="PDF viewer">
+      <PdfDocumentViewer url={url} name={name} />
+    </FeatureBoundary>
+  );
 };

@@ -112,12 +112,16 @@ describe('Queue Processing Integration', () => {
   });
 
   it('propagates correlation id from requestContext into enqueued job payload', async () => {
-    const { requestContext } = await import('../../../common/request-context/request-context');
+    const { requestContext } =
+      await import('../../../common/request-context/request-context');
     const payload = { transactionId: 'tx-xyz789', action: 'mint-nft' };
 
-    await requestContext.run({ correlationId: 'corr-req-12345', requestId: 'req-987' }, async () => {
-      await service.addBlockchainJob(payload);
-    });
+    await requestContext.run(
+      { correlationId: 'corr-req-12345', requestId: 'req-987' },
+      async () => {
+        await service.addBlockchainJob(payload);
+      },
+    );
 
     expect(mockBlockchainQueue.add).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -176,7 +180,7 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
 
   /** Minimal Bull Job stub */
   const makeJob = (data: BlockchainJobData): Job<BlockchainJobData> =>
-    ({ id: 'integ-job-1', data } as Job<BlockchainJobData>);
+    ({ id: 'integ-job-1', data }) as Job<BlockchainJobData>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -210,7 +214,9 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
   });
 
   it('send-payment: enqueue-to-service round-trip calls PaymentProcessingService', async () => {
-    mockPaymentProcessingService.processRentPayment.mockResolvedValue('tx-hash');
+    mockPaymentProcessingService.processRentPayment.mockResolvedValue(
+      'tx-hash',
+    );
 
     await processor.handleBlockchainJob(
       makeJob({
@@ -225,11 +231,15 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
       }),
     );
 
-    expect(mockPaymentProcessingService.processRentPayment).toHaveBeenCalledTimes(1);
+    expect(
+      mockPaymentProcessingService.processRentPayment,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('create-escrow: enqueue-to-service round-trip calls EscrowIntegrationService', async () => {
-    mockEscrowIntegrationService.createEscrowForAgreement.mockResolvedValue({ id: 1 });
+    mockEscrowIntegrationService.createEscrowForAgreement.mockResolvedValue({
+      id: 1,
+    });
 
     await processor.handleBlockchainJob(
       makeJob({ type: 'create-escrow', data: { agreementId: 'ag-2' } }),
@@ -241,7 +251,9 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
   });
 
   it('release-escrow: enqueue-to-service round-trip calls EscrowIntegrationService', async () => {
-    mockEscrowIntegrationService.approveEscrowRelease.mockResolvedValue(undefined);
+    mockEscrowIntegrationService.approveEscrowRelease.mockResolvedValue(
+      undefined,
+    );
 
     await processor.handleBlockchainJob(
       makeJob({
@@ -287,16 +299,19 @@ describe('BlockchainQueueProcessor — service dispatch integration', () => {
   });
 
   it('restores correlationId and requestId into requestContext during job execution', async () => {
-    const { requestContext } = await import('../../../common/request-context/request-context');
+    const { requestContext } =
+      await import('../../../common/request-context/request-context');
     let capturedCorrelationId: string | undefined;
     let capturedRequestId: string | undefined;
 
-    mockEscrowIntegrationService.createEscrowForAgreement.mockImplementation(async () => {
-      const ctx = requestContext.get();
-      capturedCorrelationId = ctx?.correlationId;
-      capturedRequestId = ctx?.requestId;
-      return { id: 10 };
-    });
+    mockEscrowIntegrationService.createEscrowForAgreement.mockImplementation(
+      async () => {
+        const ctx = requestContext.get();
+        capturedCorrelationId = ctx?.correlationId;
+        capturedRequestId = ctx?.requestId;
+        return { id: 10 };
+      },
+    );
 
     await processor.handleBlockchainJob(
       makeJob({

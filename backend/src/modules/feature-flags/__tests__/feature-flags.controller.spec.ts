@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { FeatureFlagsController } from '../feature-flags.controller';
 import { FeatureFlagsService } from '../feature-flags.service';
+import { AuditLogInterceptor } from '../../audit/interceptors/audit-log.interceptor';
 
 describe('FeatureFlagsController', () => {
   let controller: FeatureFlagsController;
@@ -25,13 +27,11 @@ describe('FeatureFlagsController', () => {
       setRolloutPercentage: jest
         .fn()
         .mockResolvedValue({ key: 'test_flag', rolloutPercentage: 25 }),
-      killSwitch: jest
-        .fn()
-        .mockResolvedValue({
-          key: 'test_flag',
-          enabled: false,
-          rolloutPercentage: 0,
-        }),
+      killSwitch: jest.fn().mockResolvedValue({
+        key: 'test_flag',
+        enabled: false,
+        rolloutPercentage: 0,
+      }),
       deleteFlag: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -43,7 +43,14 @@ describe('FeatureFlagsController', () => {
           useValue: serviceMock,
         },
       ],
-    }).compile();
+    })
+      .overrideInterceptor(AuditLogInterceptor)
+      .useValue({
+        intercept(_ctx: ExecutionContext, next: CallHandler) {
+          return next.handle();
+        },
+      })
+      .compile();
 
     controller = module.get<FeatureFlagsController>(FeatureFlagsController);
     service = module.get(FeatureFlagsService);

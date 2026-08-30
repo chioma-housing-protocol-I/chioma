@@ -187,7 +187,7 @@ describe('PaymentService performance benchmarks', () => {
       orderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([]),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
     };
     paymentRepository.createQueryBuilder.mockReturnValue(qb);
 
@@ -197,7 +197,7 @@ describe('PaymentService performance benchmarks', () => {
 
     expect(elapsed).toBeLessThan(PAYMENT_BENCHMARK_BASELINES.listPaymentsMs);
     expect(paymentRepository.createQueryBuilder).toHaveBeenCalled();
-    expect(qb.getMany).toHaveBeenCalled();
+    expect(qb.getManyAndCount).toHaveBeenCalled();
     // Unfiltered listing must still be bounded rather than selecting the
     // caller's entire payment history.
     expect(qb.take).toHaveBeenCalledWith(PAYMENT_LIST_DEFAULT_LIMIT);

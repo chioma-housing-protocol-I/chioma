@@ -35,10 +35,9 @@ export class ReadReplicaInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const options = this.reflector.getAllAndOverride<ReplicaOptions | undefined>(
-      USE_REPLICA_METADATA_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const options = this.reflector.getAllAndOverride<
+      ReplicaOptions | undefined
+    >(USE_REPLICA_METADATA_KEY, [context.getHandler(), context.getClass()]);
 
     if (options) {
       const req = context.switchToHttp().getRequest();

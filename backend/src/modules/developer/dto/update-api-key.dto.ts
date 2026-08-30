@@ -3,10 +3,12 @@ import {
   IsString,
   IsOptional,
   IsDateString,
+  IsIn,
   MaxLength,
   MinLength,
   IsArray,
 } from 'class-validator';
+import { API_SCOPES } from '../constants/api-scopes';
 
 export class UpdateApiKeyDto {
   @ApiPropertyOptional({
@@ -40,9 +42,13 @@ export class UpdateApiKeyDto {
   @ApiPropertyOptional({
     example: ['properties:read', 'properties:write'],
     description: 'List of permissions/scopes for this key',
+    enum: API_SCOPES,
+    isArray: true,
   })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
+  @IsIn(API_SCOPES, { each: true })
   permissions?: string[];
 }
 

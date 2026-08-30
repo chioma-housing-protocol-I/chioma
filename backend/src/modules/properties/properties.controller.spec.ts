@@ -117,6 +117,7 @@ describe('PropertiesController', () => {
     aiOccupancyPrediction: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockPaginatedResponse = {

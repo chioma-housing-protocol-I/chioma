@@ -10,6 +10,7 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import PropertySummaryCard from './PropertySummaryCard';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 // Fix for default marker icons in Next.js
 import L from 'leaflet';
@@ -117,7 +118,15 @@ function MapBoundsHandler({
   return null;
 }
 
-export default function PropertyMapView({
+export default function PropertyMapView(props: PropertyMapViewProps) {
+  return (
+    <FeatureBoundary name="properties:map" label="Map">
+      <PropertyMapViewInner {...props} />
+    </FeatureBoundary>
+  );
+}
+
+function PropertyMapViewInner({
   properties,
   onBoundsChange,
   searchAsIMove = true,

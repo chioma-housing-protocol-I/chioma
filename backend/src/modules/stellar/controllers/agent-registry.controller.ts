@@ -4,10 +4,16 @@ import {
   Get,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { AgentRegistryService } from '../services/agent-registry.service';
 import {
   RegisterAgentDto,
@@ -15,6 +21,9 @@ import {
   RateAgentDto,
   RegisterTransactionDto,
 } from '../dto/agent-registry.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../../common/decorators/api-paginated-response.decorator';
+import { AgentTransaction } from '../entities/agent-transaction.entity';
 
 @ApiTags('Agent Registry')
 @ApiBearerAuth()
@@ -22,6 +31,7 @@ import {
 export class AgentRegistryController {
   constructor(private readonly agentRegistry: AgentRegistryService) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register agent on-chain' })
@@ -33,6 +43,7 @@ export class AgentRegistryController {
     return { txHash, message: 'Agent registered on-chain' };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[Admin] Verify agent on-chain' })
@@ -44,6 +55,7 @@ export class AgentRegistryController {
     return { txHash, message: 'Agent verified on-chain' };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('rate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rate agent after transaction completion' })
@@ -57,6 +69,7 @@ export class AgentRegistryController {
     return { txHash, message: 'Rating submitted on-chain' };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':agentAddress')
   @ApiOperation({ summary: 'Get agent information from blockchain' })
   async getAgentInfo(@Param('agentAddress') agentAddress: string) {
@@ -67,6 +80,7 @@ export class AgentRegistryController {
     return info;
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get()
   @ApiOperation({ summary: 'Get total agent count' })
   async getAgentCount() {
@@ -74,6 +88,7 @@ export class AgentRegistryController {
     return { count };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('transactions/register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register transaction for agent' })
@@ -86,9 +101,18 @@ export class AgentRegistryController {
     return { txHash, message: 'Transaction registered on-chain' };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('transactions/:agentAddress')
   @ApiOperation({ summary: 'Get transactions for an agent' })
-  async getAgentTransactions(@Param('agentAddress') agentAddress: string) {
-    return this.agentRegistry.getAgentTransactions(agentAddress);
+  @ApiPaginatedResponse(AgentTransaction)
+  async getAgentTransactions(
+    @Param('agentAddress') agentAddress: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.agentRegistry.getAgentTransactions(
+      agentAddress,
+      query.page,
+      query.limit,
+    );
   }
 }

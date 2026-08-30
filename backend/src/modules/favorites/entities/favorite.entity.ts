@@ -29,10 +29,10 @@ export class Favorite {
   createdAt: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE', eager: false })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @ManyToOne(() => Property, { onDelete: 'CASCADE', eager: false })
-  @JoinColumn({ name: 'propertyId' })
+  @JoinColumn({ name: 'property_id' })
   property: Property;
 }

@@ -17,6 +17,7 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { RenewAgreementDto } from './dto/renew-agreement.dto';
+import { SignAgreementDto } from './dto/sign-agreement.dto';
 import { AuditService } from '../audit/audit.service';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
 import { ChiomaContractService } from '../stellar/services/chioma-contract.service';
@@ -29,6 +30,9 @@ import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { AgreementStateService } from './state-machines/agreement-state-machine.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AgreementStatusChangedEvent } from './events/agreement-status-changed.event';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class AgreementsService {
@@ -116,14 +120,22 @@ export class AgreementsService {
     if (agentId) whereClause.agentId = agentId;
     if (propertyId) whereClause.propertyId = propertyId;
 
+    const currentPage = page || 1;
+    const pageSize = limit || 20;
+
     const [data, total] = await this.agreementRepository.findAndCount({
       where: whereClause,
       order: { [sortBy || 'createdAt']: sortOrder || 'DESC' },
-      skip: (page ? page - 1 : 0) * (limit || 10),
-      take: limit || 10,
+      skip: PaginationUtils.calculateOffset(currentPage, pageSize),
+      take: pageSize,
     });
 
-    return { data, total, page: page || 1, limit: limit || 10 };
+    return PaginationUtils.buildPaginationResponse(
+      data,
+      total,
+      currentPage,
+      pageSize,
+    );
   }
 
   async findOne(id: string) {
@@ -238,6 +250,36 @@ export class AgreementsService {
     return saved;
   }
 
+  @Locked({ key: (id: string) => `agreement:sign:${id}`, ttlMs: 10000 })
+  @Idempotent({
+    ttlMs: 604_800_000,
+    key: (id: string, dto: SignAgreementDto) =>
+      dto?.idempotencyKey ? `agreement:sign:${id}:${dto.idempotencyKey}` : null,
+    requireKey: false,
+  })
+  async sign(id: string, _dto: SignAgreementDto) {
+    const agreement = await this.findOne(id);
+    const oldStatus = agreement.status;
+    this.stateService.validateTransition(
+      agreement.status,
+      AgreementStatus.SIGNED,
+    );
+    agreement.status = AgreementStatus.SIGNED;
+    const saved = await this.agreementRepository.save(agreement);
+
+    this.eventEmitter.emit(
+      'agreement.status.changed',
+      new AgreementStatusChangedEvent(
+        id,
+        oldStatus,
+        AgreementStatus.SIGNED,
+        'Agreement signed',
+      ),
+    );
+
+    return saved;
+  }
+
   async getFees(id: string, daysPastDue?: number) {
     const agreement = await this.findOne(id);
     const rent = Number(agreement.monthlyRent);
@@ -309,12 +351,23 @@ export class AgreementsService {
     return await this.paymentRepository.save(payment);
   }
 
-  async getPayments(id: string) {
-    return await this.paymentRepository.find({
+  async getPayments(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<Payment>> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.paymentRepository.findAndCount({
       where: { agreementId: id },
       relations: ['user', 'paymentMethodRelation'],
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**

@@ -17,7 +17,10 @@
  *   ts-node -r tsconfig-paths/register src/database/migration-runner.ts run --dry-run
  */
 
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from './data-source';
+
+const logger = new Logger('MigrationRunner');
 
 const MIGRATIONS_TABLE = 'migrations';
 const LOCK_TABLE = 'migration_lock';
@@ -42,7 +45,7 @@ async function acquireLock(): Promise<boolean> {
         `SELECT pid, locked_at FROM "${LOCK_TABLE}" WHERE id = $1`,
         [LOCK_ID],
       );
-      console.warn(
+      logger.warn(
         `[Lock] Migration lock held by PID ${holder[0]?.pid ?? 'unknown'} since ${holder[0]?.locked_at ?? 'unknown'}`,
       );
       return false;
@@ -104,13 +107,13 @@ async function getExecutedMigrations(): Promise<string[]> {
  * Suggest a pre-migration backup.
  */
 function suggestBackup(): void {
-  console.info(
+  logger.log(
     '[Backup] ⚠️  It is strongly recommended to create a database backup before running migrations.',
   );
-  console.info(
+  logger.log(
     '[Backup] Run: pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USERNAME -d $DB_NAME > backup_$(date +%Y%m%d_%H%M%S).sql',
   );
-  console.info('[Backup] Or use: pnpm run db:backup');
+  logger.log('[Backup] Or use: pnpm run db:backup');
 }
 
 /**
@@ -128,14 +131,14 @@ export async function runMigrationsWithRollback(options?: {
   const dryRun = options?.dryRun ?? false;
 
   if (dryRun) {
-    console.info('[Dry-Run] Checking pending migrations without executing...');
+    logger.log('[Dry-Run] Checking pending migrations without executing...');
     const pending = await getPendingMigrations();
     if (pending.length === 0) {
-      console.info('[Dry-Run] No pending migrations to apply.');
+      logger.log('[Dry-Run] No pending migrations to apply.');
     } else {
-      console.info(`[Dry-Run] Would apply ${pending.length} migration(s):`);
+      logger.log(`[Dry-Run] Would apply ${pending.length} migration(s):`);
       for (const name of pending) {
-        console.info(`  - ${name}`);
+        logger.log(`  - ${name}`);
       }
     }
     return { success: true, run: 0, reverted: false };
@@ -167,11 +170,9 @@ export async function runMigrationsWithRollback(options?: {
       return { success: true, run: 0, reverted: false };
     }
 
-    console.info(
-      `[Migration] Running ${pending.length} pending migration(s)...`,
-    );
+    logger.log(`[Migration] Running ${pending.length} pending migration(s)...`);
     for (const name of pending) {
-      console.info(`[Migration]   → ${name}`);
+      logger.log(`[Migration]   → ${name}`);
     }
 
     await AppDataSource.runMigrations({ transaction: 'each' });
@@ -179,14 +180,14 @@ export async function runMigrationsWithRollback(options?: {
     return { success: true, run, reverted: false };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[Migration] Run failed:', message);
+    logger.error('[Migration] Run failed:', message);
     try {
       await AppDataSource.undoLastMigration();
-      console.error('[Migration] Reverted last migration.');
+      logger.error('[Migration] Reverted last migration.');
     } catch (revertErr) {
       const revertMsg =
         revertErr instanceof Error ? revertErr.message : String(revertErr);
-      console.error('[Migration] Rollback failed:', revertMsg);
+      logger.error('[Migration] Rollback failed:', revertMsg);
       return {
         success: false,
         run,
@@ -270,7 +271,7 @@ export async function verifyAfterMigrations(): Promise<{
     const count = await AppDataSource.query(
       `SELECT COUNT(1) AS cnt FROM "${MIGRATIONS_TABLE}"`,
     );
-    console.info(
+    logger.log(
       `[Verification] ${(count[0] as { cnt: string })?.cnt ?? 0} migration(s) recorded.`,
     );
     return { ok: true };
@@ -296,20 +297,20 @@ export async function showMigrations(): Promise<void> {
     .map((m) => m.name)
     .filter((n): n is string => n != null);
 
-  console.info('\nMigration Status:');
-  console.info('==================');
+  logger.log('\nMigration Status:');
+  logger.log('==================');
   for (const name of all) {
     if (executedNames.has(name)) {
       const row = (executed as { name: string; ts: string }[]).find(
         (r) => r.name === name,
       );
-      console.info(`  ✓ ${name}  (${row?.ts ?? '?'})`);
+      logger.log(`  ✓ ${name}  (${row?.ts ?? '?'})`);
     } else {
-      console.info(`  · ${name}  [PENDING]`);
+      logger.log(`  · ${name}  [PENDING]`);
     }
   }
-  console.info('');
-  console.info(
+  logger.log('');
+  logger.log(
     `${executedNames.size} executed, ${all.length - executedNames.size} pending`,
   );
 }
@@ -324,7 +325,7 @@ async function main(): Promise<void> {
       : undefined;
 
   await AppDataSource.initialize().catch((err) => {
-    console.error('DataSource init failed:', err);
+    logger.error('DataSource init failed:', err);
     process.exit(1);
   });
 
@@ -332,22 +333,22 @@ async function main(): Promise<void> {
     if (command === 'run') {
       const result = await runMigrationsWithRollback({ dryRun });
       if (!result.success) {
-        console.error('[Migration] Run failed.', result.error);
+        logger.error('[Migration] Run failed.', result.error);
         process.exit(1);
       }
       if (!dryRun) {
-        console.info(
+        logger.log(
           `[Migration] ${result.run} migration(s) applied, reverted: ${result.reverted}`,
         );
         const verification = await verifyAfterMigrations();
         if (!verification.ok) {
-          console.error(
+          logger.error(
             '[Migration] Post-migration verification failed:',
             verification.error,
           );
           process.exit(1);
         }
-        console.info('[Migration] Verification passed.');
+        logger.log('[Migration] Verification passed.');
       }
       return;
     }
@@ -355,15 +356,15 @@ async function main(): Promise<void> {
     if (command === 'revert') {
       const result = await revertLastMigration({ to });
       if (!result.success) {
-        console.error('[Migration] Revert failed:', result.error);
+        logger.error('[Migration] Revert failed:', result.error);
         process.exit(1);
       }
       if (to) {
-        console.info(
+        logger.log(
           `[Migration] Reverted ${result.reverted ?? 0} migration(s) down to "${to}".`,
         );
       } else {
-        console.info('[Migration] Last migration reverted.');
+        logger.log('[Migration] Last migration reverted.');
       }
       return;
     }
@@ -373,7 +374,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    console.error(
+    logger.error(
       'Usage: migration-runner.ts run [--dry-run] | revert [--to <name>] | show',
     );
     process.exit(1);

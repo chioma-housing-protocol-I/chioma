@@ -1,11 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InquiriesService } from './inquiries.service';
+import { PropertyInquiryStatus } from './entities/property-inquiry.entity';
+import { InvalidInquiryTransitionError } from './inquiry-state-machine';
 
 describe('InquiriesService', () => {
   const inquiryRepository = {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
   };
 
@@ -93,16 +96,19 @@ describe('InquiriesService', () => {
   });
 
   it('enriches incoming inquiries with property details and sender contact', async () => {
-    inquiryRepository.find.mockResolvedValue([
-      {
-        id: 'inq-1',
-        propertyId: 'property-1',
-        fromUserId: 'tenant-1',
-        toUserId: 'owner-1',
-        senderName: 'Jane',
-        senderEmail: 'jane@example.com',
-        senderPhone: '+2340000000',
-      },
+    inquiryRepository.findAndCount.mockResolvedValue([
+      [
+        {
+          id: 'inq-1',
+          propertyId: 'property-1',
+          fromUserId: 'tenant-1',
+          toUserId: 'owner-1',
+          senderName: 'Jane',
+          senderEmail: 'jane@example.com',
+          senderPhone: '+2340000000',
+        },
+      ],
+      1,
     ]);
     propertyRepository.find.mockResolvedValue([
       {
@@ -116,7 +122,7 @@ describe('InquiriesService', () => {
 
     const result = await service.listIncoming('owner-1');
 
-    expect(result).toEqual([
+    expect(result.data).toEqual([
       expect.objectContaining({
         id: 'inq-1',
         property: {
@@ -137,13 +143,16 @@ describe('InquiriesService', () => {
   });
 
   it('enriches outgoing inquiries with property details and landlord contact', async () => {
-    inquiryRepository.find.mockResolvedValue([
-      {
-        id: 'inq-1',
-        propertyId: 'property-1',
-        fromUserId: 'tenant-1',
-        toUserId: 'owner-1',
-      },
+    inquiryRepository.findAndCount.mockResolvedValue([
+      [
+        {
+          id: 'inq-1',
+          propertyId: 'property-1',
+          fromUserId: 'tenant-1',
+          toUserId: 'owner-1',
+        },
+      ],
+      1,
     ]);
     propertyRepository.find.mockResolvedValue([
       {
@@ -166,7 +175,7 @@ describe('InquiriesService', () => {
 
     const result = await service.listOutgoing('tenant-1');
 
-    expect(result).toEqual([
+    expect(result.data).toEqual([
       expect.objectContaining({
         id: 'inq-1',
         property: {
@@ -184,5 +193,88 @@ describe('InquiriesService', () => {
         },
       }),
     ]);
+  });
+
+  describe('lifecycle transitions', () => {
+    it('marks a pending inquiry as viewed', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.PENDING,
+        viewedAt: null,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.markViewed('inq-1', 'owner-1');
+
+      expect(result.status).toBe(PropertyInquiryStatus.VIEWED);
+      expect(result.viewedAt).toBeInstanceOf(Date);
+    });
+
+    it('is idempotent when re-viewing a viewed inquiry', async () => {
+      const inquiry = {
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.VIEWED,
+      };
+      inquiryRepository.findOne.mockResolvedValue(inquiry);
+
+      await expect(service.markViewed('inq-1', 'owner-1')).resolves.toBe(
+        inquiry,
+      );
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects viewing a closed inquiry with a domain error', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.CLOSED,
+      });
+
+      await expect(service.markViewed('inq-1', 'owner-1')).rejects.toThrow(
+        InvalidInquiryTransitionError,
+      );
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('closes a pending inquiry', async () => {
+      inquiryRepository.findOne.mockResolvedValue({
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.PENDING,
+      });
+      inquiryRepository.save.mockImplementation((inquiry) =>
+        Promise.resolve(inquiry),
+      );
+
+      const result = await service.close('inq-1', 'tenant-1');
+
+      expect(result.status).toBe(PropertyInquiryStatus.CLOSED);
+    });
+
+    it('is idempotent when closing an already closed inquiry', async () => {
+      const inquiry = {
+        id: 'inq-1',
+        fromUserId: 'tenant-1',
+        toUserId: 'owner-1',
+        status: PropertyInquiryStatus.CLOSED,
+      };
+      inquiryRepository.findOne.mockResolvedValue(inquiry);
+
+      await expect(service.close('inq-1', 'tenant-1')).resolves.toBe(inquiry);
+      expect(inquiryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when closing an inquiry the user is not part of', async () => {
+      inquiryRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.close('inq-1', 'stranger')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 });

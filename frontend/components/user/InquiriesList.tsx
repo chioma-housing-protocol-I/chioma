@@ -14,6 +14,7 @@ import {
   Send,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   useIncomingInquiries,
   useOutgoingInquiries,
@@ -51,6 +52,7 @@ interface InquiryCardProps {
 
 function InquiryCard({ inquiry, direction, onOpen }: InquiryCardProps) {
   const [expanded, setExpanded] = React.useState(false);
+  const dateFnsLocale = useDateFnsLocale();
   const isUnread = direction === 'incoming' && inquiry.status === 'pending';
 
   const handleToggle = () => {
@@ -114,6 +116,7 @@ function InquiryCard({ inquiry, direction, onOpen }: InquiryCardProps) {
             &middot;{' '}
             {formatDistanceToNow(new Date(inquiry.createdAt), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </p>
 

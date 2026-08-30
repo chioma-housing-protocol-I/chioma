@@ -101,6 +101,14 @@ Complete reference of all environment variables used by the Chioma backend.
 
 ---
 
+## Search (Elasticsearch)
+
+| Variable            | Type   | Default                 | Dev | Stg | Prd | Test | Description                                                          |
+| -------------------- | ------ | ------------------------ | --- | --- | --- | ---- | --------------------------------------------------------------------- |
+| `ELASTICSEARCH_URL` | string | `http://localhost:9200` | O   | O   | O   | -    | Elasticsearch base URL. Unset means search falls back to PostgreSQL. |
+
+---
+
 ## Stellar / Soroban (Blockchain)
 
 | Variable                      | Type   | Default       | Dev | Stg | Prd | Test | Description                          |
@@ -234,6 +242,21 @@ Complete reference of all environment variables used by the Chioma backend.
 | `HEALTH_CHECK_TIMEOUT`     | number (ms)    | `5000`               | O   | O   | O   | -    | Health check timeout for dependencies |
 | `MEMORY_WARNING_THRESHOLD` | number (bytes) | `536870912` (512 MB) | O   | O   | O   | -    | Memory warning threshold              |
 | `MEMORY_ERROR_THRESHOLD`   | number (bytes) | `1073741824` (1 GB)  | O   | O   | O   | -    | Memory error threshold                |
+| `REDIS_HEALTH_TIMEOUT_MS`         | number (ms) | `2000` | O | O | O | -    | Timeout for the Redis `PING` health check           |
+| `ELASTICSEARCH_HEALTH_TIMEOUT_MS` | number (ms) | `3000` | O | O | O | -    | Timeout for the Elasticsearch `_cluster/health` call |
+
+`/health` and `/health/detailed` report `database`, `redis`, `elasticsearch`, `stellar` and `memory`. Each service entry
+carries a `criticality` of `critical` or `degraded`:
+
+- **`critical`** (`database`) — a failure means the API cannot serve traffic. Overall status becomes `error` and the
+  endpoint responds `503`, which trips the Kubernetes liveness/readiness/startup probes in `k8s/deployment.yaml`.
+- **`degraded`** (`redis`, `elasticsearch`, `stellar`, `memory`) — a failure removes a feature (caching/queues/locks,
+  search, on-chain sync, headroom) but the API keeps serving requests. Overall status becomes `warning` and the
+  endpoint still responds `200`, so a single dependency outage does not restart the whole fleet.
+
+A dependency that isn't configured for the current environment (e.g. Redis when `REDIS_HOST`/`REDIS_URL` are unset, or
+Elasticsearch when `ELASTICSEARCH_URL` is unset) reports `skipped` instead of `down` and never affects the overall
+status. See `backend/src/health/health.constants.ts` for the classification map.
 
 ---
 

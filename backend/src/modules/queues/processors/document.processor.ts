@@ -32,42 +32,47 @@ export class DocumentQueueProcessor {
     const requestId = job.data?.requestId || correlationId;
     const userId = job.data?.userId;
 
-    return requestContext.run({ correlationId, requestId, userId }, async () => {
-      this.logger.log(
-        `Processing document job ${job.id}: ${job.data.type} for file ${job.data.fileKey}`,
-      );
-
-      try {
-        switch (job.data.type) {
-          case 'process-image':
-            await this.processImage(job.data);
-            break;
-
-          case 'generate-thumbnail':
-            await this.generateThumbnail(job.data);
-            break;
-
-          case 'convert-format':
-            await this.convertFormat(job.data);
-            break;
-
-          case 'extract-metadata':
-            await this.extractMetadata(job.data);
-            break;
-
-          default:
-            throw new Error(`Unknown document type: ${String(job.data.type)}`);
-        }
-
-        this.logger.log(`Document job ${job.id} completed successfully`);
-      } catch (error) {
-        this.logger.error(
-          `Document job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          error instanceof Error ? error.stack : '',
+    return requestContext.run(
+      { correlationId, requestId, userId },
+      async () => {
+        this.logger.log(
+          `Processing document job ${job.id}: ${job.data.type} for file ${job.data.fileKey}`,
         );
-        throw error;
-      }
-    });
+
+        try {
+          switch (job.data.type) {
+            case 'process-image':
+              await this.processImage(job.data);
+              break;
+
+            case 'generate-thumbnail':
+              await this.generateThumbnail(job.data);
+              break;
+
+            case 'convert-format':
+              await this.convertFormat(job.data);
+              break;
+
+            case 'extract-metadata':
+              await this.extractMetadata(job.data);
+              break;
+
+            default:
+              throw new Error(
+                `Unknown document type: ${String(job.data.type)}`,
+              );
+          }
+
+          this.logger.log(`Document job ${job.id} completed successfully`);
+        } catch (error) {
+          this.logger.error(
+            `Document job ${job.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error instanceof Error ? error.stack : '',
+          );
+          throw error;
+        }
+      },
+    );
   }
 
   private async processImage(data: DocumentJobData): Promise<void> {

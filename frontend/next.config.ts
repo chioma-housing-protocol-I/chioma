@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // The visual regression suite (`playwright.config.ts`) drives `next dev`
+  // via 127.0.0.1 rather than localhost.
+  allowedDevOrigins: ['127.0.0.1'],
   async headers() {
     return [
       {
@@ -50,13 +53,27 @@ const nextConfig: NextConfig = {
         source: '/api/(.*)',
         headers: [
           {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.CORS_ALLOW_ORIGIN ?? '*',
+          },
+          {
+            key: 'Vary',
+            value: 'Origin',
+          },
+          {
             key: 'Access-Control-Allow-Methods',
             value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
           },
           {
             key: 'Access-Control-Allow-Headers',
             value:
-              'Content-Content, Authorization, X-Requested-With, Idempotency-Key',
+              'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+          },
+          {
+            // Lets browsers cache preflight responses for 24h instead of
+            // re-sending an OPTIONS request before every complex call.
+            key: 'Access-Control-Max-Age',
+            value: '86400',
           },
         ],
       },

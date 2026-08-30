@@ -20,11 +20,13 @@ describe('MaintenanceService', () => {
   const propertiesService = { findOne: jest.fn() };
   const usersService = { getUserById: jest.fn() };
   const reviewPromptService = { promptForMaintenanceReview: jest.fn() };
+  const configService = { get: jest.fn().mockReturnValue(undefined) };
 
   let service: MaintenanceService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    configService.get.mockReturnValue(undefined);
     service = new MaintenanceService(
       maintenanceRepo as never,
       {} as never,
@@ -32,6 +34,7 @@ describe('MaintenanceService', () => {
       propertiesService as never,
       usersService as never,
       reviewPromptService as never,
+      configService as never,
     );
   });
 
@@ -57,7 +60,13 @@ describe('MaintenanceService', () => {
     expect(maintenanceRepo.create).toHaveBeenCalledWith({
       ...dto,
       status: MaintenanceStatus.OPEN,
+      responseDueAt: expect.any(Date),
+      resolutionDueAt: expect.any(Date),
     });
+    const [createCallArg] = maintenanceRepo.create.mock.calls[0];
+    expect(createCallArg.resolutionDueAt.getTime()).toBeGreaterThan(
+      createCallArg.responseDueAt.getTime(),
+    );
     expect(notificationsService.notify).toHaveBeenCalledWith(
       'landlord-1',
       'New Maintenance Request',
@@ -140,6 +149,44 @@ describe('MaintenanceService', () => {
     );
     expect(reviewPromptService.promptForMaintenanceReview).toHaveBeenCalledWith(
       'request-1',
+    );
+  });
+
+  it('computes SLA deadlines from priority-specific configuration', async () => {
+    const dto = {
+      propertyId: 'property-1',
+      tenantId: 'tenant-1',
+      landlordId: 'landlord-1',
+      category: 'plumbing',
+      description: 'Kitchen sink leak',
+      priority: 'URGENT',
+    };
+    propertiesService.findOne.mockResolvedValue({ title: 'Ocean Flat' });
+    usersService.getUserById.mockResolvedValue({});
+    maintenanceRepo.create.mockImplementation((value: any) => value);
+    maintenanceRepo.save.mockImplementation(async (value: any) => ({
+      id: 'request-1',
+      ...value,
+    }));
+
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'MAINTENANCE_SLA_URGENT_RESPONSE_HOURS') return '1';
+      if (key === 'MAINTENANCE_SLA_URGENT_RESOLUTION_HOURS') return '6';
+      return undefined;
+    });
+
+    const before = Date.now();
+    const saved = await service.create(dto);
+    const responseDueAt = (saved as any).responseDueAt as Date;
+    const resolutionDueAt = (saved as any).resolutionDueAt as Date;
+
+    expect(responseDueAt.getTime() - before).toBeCloseTo(
+      1 * 60 * 60 * 1000,
+      -3,
+    );
+    expect(resolutionDueAt.getTime() - before).toBeCloseTo(
+      6 * 60 * 60 * 1000,
+      -3,
     );
   });
 

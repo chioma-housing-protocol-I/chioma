@@ -181,6 +181,12 @@ export class ScreeningService {
       throw new NotFoundException('Screening report not available');
     }
 
+    if (report.accessExpiresAt && report.accessExpiresAt < new Date()) {
+      throw new NotFoundException(
+        'Screening report has expired and must be re-run',
+      );
+    }
+
     const decryptedReport = JSON.parse(
       this.encryptionService.decrypt(report.encryptedReport),
     ) as Record<string, unknown>;
@@ -483,8 +489,8 @@ export class ScreeningService {
   private getDefaultProvider(): UserScreeningProvider {
     return (
       (this.configService.get<string>('USER_SCREENING_DEFAULT_PROVIDER') as
-        | UserScreeningProvider
-        | undefined) ?? UserScreeningProvider.TRANSUNION_SMARTMOVE
+        UserScreeningProvider | undefined) ??
+      UserScreeningProvider.TRANSUNION_SMARTMOVE
     );
   }
 

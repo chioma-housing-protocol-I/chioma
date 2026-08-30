@@ -17,6 +17,7 @@ import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { addDays, calculateNextRunAt, ensureUserId } from './payment.helpers';
 import { PaymentService } from './payment.service';
+import { PaginationUtils } from '../../common/utils';
 
 @Injectable()
 export class ScheduleService {
@@ -89,8 +90,12 @@ export class ScheduleService {
   async listPaymentSchedules(
     filters: PaymentScheduleFiltersDto,
     userId: string,
-  ): Promise<PaymentSchedule[]> {
+  ) {
     ensureUserId(userId);
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
     const query = this.paymentScheduleRepository
       .createQueryBuilder('schedule')
       .leftJoinAndSelect('schedule.paymentMethod', 'paymentMethod');
@@ -105,7 +110,13 @@ export class ScheduleService {
       query.andWhere('schedule.status = :status', { status: filters.status });
     }
 
-    return query.orderBy('schedule.nextRunAt', 'ASC').getMany();
+    const [data, total] = await query
+      .orderBy('schedule.nextRunAt', 'ASC')
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async runPaymentSchedule(id: string, userId: string): Promise<Payment> {

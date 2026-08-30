@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BaseModal } from './BaseModal';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 type Tab = 'security' | 'notifications' | 'privacy' | 'danger';
 
@@ -92,7 +94,11 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
     register,
     handleSubmit,
     reset: resetPassword,
-    formState: { errors: pwErrors, isSubmitting: isPwSubmitting },
+    formState: {
+      errors: pwErrors,
+      isSubmitting: isPwSubmitting,
+      submitCount: pwSubmitCount,
+    },
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
   });
@@ -241,6 +247,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 Change Password
               </h3>
 
+              <FormErrorSummary errors={pwErrors} submitCount={pwSubmitCount} />
+
               {[
                 {
                   field: 'currentPassword' as const,
@@ -268,6 +276,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   <div className="relative">
                     <input
                       {...register(field)}
+                      {...fieldA11yProps(field, pwErrors[field])}
                       type={show ? 'text' : 'password'}
                       className="w-full px-4 py-2.5 pr-12 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
                     />
@@ -281,7 +290,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     </button>
                   </div>
                   {pwErrors[field] && (
-                    <p className="text-xs text-red-500 mt-1">
+                    <p
+                      id={fieldErrorId(field)}
+                      className="text-xs text-red-500 mt-1"
+                    >
                       {pwErrors[field]?.message}
                     </p>
                   )}

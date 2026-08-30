@@ -2,6 +2,7 @@ use soroban_sdk::{Address, Env, String};
 
 use crate::errors::PropertyError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{ContractState, PropertyDetails};
 
@@ -16,6 +17,9 @@ pub fn register_property(
     }
 
     landlord.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &landlord, "register_property")?;
 
     if property_id.is_empty() {
         return Err(PropertyError::InvalidPropertyId);
@@ -66,6 +70,9 @@ pub fn verify_property(
         .ok_or(PropertyError::NotInitialized)?;
 
     admin.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &admin, "verify_property")?;
 
     if admin != state.admin {
         return Err(PropertyError::Unauthorized);
@@ -127,6 +134,9 @@ pub fn transfer_property(
 
     current_landlord.require_auth();
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &current_landlord, "transfer_property")?;
+
     let key = DataKey::Property(property_id.clone());
     let mut property: PropertyDetails = env
         .storage()
@@ -164,6 +174,9 @@ pub fn update_property_metadata(
     }
 
     landlord.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &landlord, "update_property_metadata")?;
 
     if new_metadata_hash.is_empty() {
         return Err(PropertyError::InvalidMetadata);

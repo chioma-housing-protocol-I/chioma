@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './entities/user.entity';
@@ -16,8 +16,13 @@ import {
   ChangePasswordDto,
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
-import { AdminUserQueryDto } from './dto/admin-user-query.dto';
+import {
+  AdminUserQueryDto,
+  AdminUserSortField,
+} from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { AuditService } from '../audit/audit.service';
 import { Locked, LockService } from '../../common/lock';
 import {
@@ -46,13 +51,7 @@ export interface AdminUserView {
   updatedAt: string;
 }
 
-export interface PaginatedAdminUsersResult {
-  data: AdminUserView[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type PaginatedAdminUsersResult = PaginatedResponseDto<AdminUserView>;
 
 @Injectable()
 export class UsersService {
@@ -66,6 +65,7 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly encryptionService: EncryptionService,
     private readonly lockService: LockService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getNotificationPreferences(userId: string): Promise<UserPreferences> {
@@ -136,17 +136,25 @@ export class UsersService {
     );
     user.isActive = false;
     user.refreshToken = null;
-    await this.userRepository.save(user);
-    await this.userRepository.softDelete(userId);
-    await this.auditService.log({
-      action: AuditAction.DELETE,
-      entityType: 'User',
-      entityId: userId,
-      performedBy: userId,
-      status: AuditStatus.SUCCESS,
-      level: AuditLevel.SECURITY,
-      metadata: { type: 'GDPR_DELETE' },
+
+    // The anonymization writes and the audit entry that records this
+    // irreversible, destructive action must commit or roll back together:
+    // if the audit insert fails, the deletion must not silently go
+    // untracked. See modules/audit/audit.service.ts#logInTransaction.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.save(User, user);
+      await manager.softDelete(User, userId);
+      await this.auditService.logInTransaction(manager, {
+        action: AuditAction.DELETE,
+        entityType: 'User',
+        entityId: userId,
+        performedBy: userId,
+        status: AuditStatus.SUCCESS,
+        level: AuditLevel.SECURITY,
+        metadata: { type: 'GDPR_DELETE' },
+      });
     });
+
     this.logger.log(`GDPR account deletion for user: ${userId}`);
     return { message: 'Account deleted and data anonymized (GDPR)' };
   }
@@ -425,19 +433,28 @@ export class UsersService {
       );
     }
 
-    qb.orderBy('user.createdAt', 'DESC')
-      .skip((page - 1) * limit)
+    const sortColumns: Record<AdminUserSortField, string> = {
+      [AdminUserSortField.CREATED_AT]: 'user.createdAt',
+      [AdminUserSortField.EMAIL]: 'user.email',
+      [AdminUserSortField.FIRST_NAME]: 'user.firstName',
+      [AdminUserSortField.LAST_NAME]: 'user.lastName',
+      [AdminUserSortField.ROLE]: 'user.role',
+    };
+    const sortColumn =
+      sortColumns[query.sortBy ?? AdminUserSortField.CREATED_AT];
+
+    qb.orderBy(sortColumn, query.sortOrder ?? 'DESC')
+      .skip(PaginationUtils.calculateOffset(page, limit))
       .take(limit);
 
     const [rows, total] = await qb.getManyAndCount();
 
-    return {
-      data: rows.map((user) => this.toAdminUserView(user)),
+    return PaginationUtils.buildPaginationResponse(
+      rows.map((user) => this.toAdminUserView(user)),
       total,
       page,
       limit,
-      totalPages: Math.max(Math.ceil(total / limit), 1),
-    };
+    );
   }
 
   async adminDeactivateAccount(
@@ -534,9 +551,9 @@ export class UsersService {
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId, true);
-    await this.userRepository.delete(userId);
-    this.logger.log(`Account permanently deleted for user: ${user.email}`);
-    return { message: 'Account permanently deleted' };
+    await this.userRepository.softRemove(user);
+    this.logger.log(`Account soft-deleted for user: ${user.email}`);
+    return { message: 'Account deleted' };
   }
 
   async getUserActivity(userId: string): Promise<{
@@ -572,6 +589,19 @@ export class UsersService {
 
   async getUserById(userId: string, withDeleted = false): Promise<User> {
     return this.findById(userId, withDeleted);
+  }
+
+  /**
+   * IDs of active admin/super-admin users, for internal escalation flows
+   * (e.g. SLA breach notifications) that need to reach "the admins" rather
+   * than a specific user.
+   */
+  async findAdminIds(): Promise<string[]> {
+    const admins = await this.userRepository.find({
+      where: [{ role: UserRole.ADMIN }, { role: UserRole.SUPER_ADMIN }],
+      select: ['id'],
+    });
+    return admins.map((admin) => admin.id);
   }
 
   private hashLookupValue(value: string): string {

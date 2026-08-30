@@ -5,12 +5,16 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String};
 mod errors;
 mod events;
 mod property;
+mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tests_rate_limit;
 
 #[cfg(test)]
 mod tests_rbac;

@@ -51,6 +51,9 @@ import {
 } from './dto/payment-gateway.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { RefundWebhookDto } from './dto/refund-webhook.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Payment } from './entities/payment.entity';
+import { PaymentSchedule } from './entities/payment-schedule.entity';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
@@ -88,7 +91,7 @@ export class PaymentController {
 
   @Get()
   @ApiOperation({ summary: 'List payments with filters' })
-  @ApiResponse({ status: 200, description: 'Paginated payments' })
+  @ApiPaginatedResponse(Payment)
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async listPayments(
     @Query() filters: PaymentFiltersDto,
@@ -97,6 +100,7 @@ export class PaymentController {
     return this.paymentService.listPayments(filters, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('stellar/rent')
   @ApiOperation({ summary: 'Process Stellar rent payment' })
   @AuditLog({
@@ -115,6 +119,7 @@ export class PaymentController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('stellar/escrow')
   @ApiOperation({ summary: 'Create Stellar escrow deposit' })
   @AuditLog({
@@ -130,6 +135,7 @@ export class PaymentController {
     return this.paymentService.createEscrowDeposit(dto, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('stellar/escrow/:escrowId/release')
   @ApiOperation({ summary: 'Release Stellar escrow deposit' })
   @AuditLog({
@@ -150,6 +156,7 @@ export class PaymentController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('stellar/escrow/:escrowId/refund')
   @ApiOperation({ summary: 'Refund Stellar escrow deposit' })
   @AuditLog({
@@ -165,11 +172,16 @@ export class PaymentController {
   ) {
     return this.paymentService.refundEscrowDeposit(
       parseInt(escrowId, 10),
-      { escrowId: parseInt(escrowId, 10), reason: dto.reason },
+      {
+        escrowId: parseInt(escrowId, 10),
+        reason: dto.reason,
+        amount: dto.amount,
+      },
       req.user?.id || '',
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('reconciliation/run')
   @ApiOperation({ summary: 'Reconcile Stellar-backed payments' })
   @AuditLog({
@@ -187,6 +199,7 @@ export class PaymentController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('retry-failed')
   @ApiOperation({ summary: 'Retry failed payment records' })
   @AuditLog({
@@ -204,6 +217,7 @@ export class PaymentController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('analytics/summary')
   @ApiOperation({ summary: 'Get payment analytics summary' })
   async getPaymentAnalytics(@Request() req: { user?: { id: string } }) {
@@ -222,6 +236,8 @@ export class PaymentController {
     return this.paymentService.getPaymentById(id, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Process refund' })
   @Post(':id/refund')
   @AuditLog({
     action: AuditAction.PAYMENT_REFUNDED,
@@ -237,6 +253,8 @@ export class PaymentController {
     return this.refundService.processRefund(id, dto, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Generate receipt' })
   @Get(':id/receipt')
   async generateReceipt(
     @Param('id') id: string,
@@ -252,6 +270,8 @@ export class PaymentController {
 export class PaymentMethodController {
   constructor(private readonly paymentService: PaymentService) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Create payment method' })
   @Post()
   @AuditLog({
     action: AuditAction.CREATE,
@@ -266,6 +286,8 @@ export class PaymentMethodController {
     return this.paymentService.createPaymentMethod(dto, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List payment methods' })
   @Get()
   async listPaymentMethods(
     @Query() filters: PaymentMethodFiltersDto,
@@ -274,6 +296,8 @@ export class PaymentMethodController {
     return this.paymentService.listPaymentMethods(filters, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update payment method' })
   @Patch(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -294,6 +318,8 @@ export class PaymentMethodController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Delete payment method' })
   @Delete(':id')
   @AuditLog({
     action: AuditAction.DELETE,
@@ -360,7 +386,10 @@ export class PaymentScheduleController {
     return this.scheduleService.createPaymentSchedule(dto, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List schedules' })
   @Get()
+  @ApiPaginatedResponse(PaymentSchedule)
   async listSchedules(
     @Query() filters: PaymentScheduleFiltersDto,
     @Request() req: { user?: { id: string } },
@@ -371,6 +400,8 @@ export class PaymentScheduleController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update schedule' })
   @Patch(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -391,6 +422,8 @@ export class PaymentScheduleController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Run schedule' })
   @Post(':id/run')
   @AuditLog({
     action: AuditAction.PAYMENT_INITIATED,
@@ -405,6 +438,8 @@ export class PaymentScheduleController {
     return this.scheduleService.runPaymentSchedule(id, req.user?.id || '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Process due schedules' })
   @Post('process-due')
   @AuditLog({
     action: AuditAction.BULK_OPERATION,
@@ -422,6 +457,7 @@ export class PaymentScheduleController {
 export class PaymentWebhookController {
   constructor(private readonly paymentWebhookService: PaymentWebhookService) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('gateway')
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -447,6 +483,7 @@ export class PaymentWebhookController {
     return this.paymentWebhookService.handlePaymentGatewayWebhook(dto, secret);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('refund')
   @HttpCode(HttpStatus.OK)
   @Public()

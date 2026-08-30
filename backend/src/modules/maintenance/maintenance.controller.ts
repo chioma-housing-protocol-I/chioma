@@ -18,13 +18,18 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
 import { MaintenanceService } from './maintenance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreateMaintenanceRequestDto, UpdateMaintenanceStatusDto } from './dto';
+import {
+  CreateMaintenanceRequestDto,
+  UpdateMaintenanceStatusDto,
+  QueryMaintenanceDto,
+} from './dto';
 import { UserRole } from '../users/entities/user.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { MaintenanceRequest } from './maintenance-request.entity';
 
 @ApiTags('Maintenance')
 @ApiBearerAuth()
@@ -50,11 +55,8 @@ export class MaintenanceController {
   @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'List maintenance requests with filters' })
-  @ApiQuery({ name: 'propertyId', required: false })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'priority', required: false })
-  @ApiResponse({ status: 200, description: 'List of maintenance requests' })
-  async findAll(@Query() query: any) {
+  @ApiPaginatedResponse(MaintenanceRequest)
+  async findAll(@Query() query: QueryMaintenanceDto) {
     return this.maintenanceService.findAll(query);
   }
 

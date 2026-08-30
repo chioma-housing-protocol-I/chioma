@@ -89,6 +89,7 @@ describe('PropertiesService – Pagination', () => {
       aiOccupancyPrediction: null,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-01'),
+      deletedAt: null,
       ...overrides,
     };
   }
@@ -190,9 +191,9 @@ describe('PropertiesService – Pagination', () => {
       const result = await service.findAll({ page: 1, limit: 2 });
 
       expect(result.data).toHaveLength(2);
-      expect(result.meta.total).toBe(20);
-      expect(result.meta.page).toBe(1);
-      expect(result.meta.limit).toBe(2);
+      expect(result.total).toBe(20);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(2);
     });
 
     it('should apply correct skip for page 2', async () => {
@@ -215,14 +216,14 @@ describe('PropertiesService – Pagination', () => {
       expect(mockQb.take).toHaveBeenCalledWith(25);
     });
 
-    it('should use default page=1 and limit=10 when not provided', async () => {
+    it('should use default page=1 and limit=20 when not provided', async () => {
       mockQb = makeQueryBuilder([], 0);
       mockPropertyRepository.createQueryBuilder.mockReturnValue(mockQb);
 
       await service.findAll({});
 
       expect(mockQb.skip).toHaveBeenCalledWith(0);
-      expect(mockQb.take).toHaveBeenCalledWith(10);
+      expect(mockQb.take).toHaveBeenCalledWith(20);
     });
 
     it('should handle last page with fewer items than limit', async () => {
@@ -233,7 +234,7 @@ describe('PropertiesService – Pagination', () => {
       const result = await service.findAll({ page: 3, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.meta.total).toBe(21);
+      expect(result.total).toBe(21);
     });
   });
 
@@ -247,7 +248,7 @@ describe('PropertiesService – Pagination', () => {
       const result = await service.findAll({ status: ListingStatus.PUBLISHED });
 
       expect(result.data).toEqual([]);
-      expect(result.meta.total).toBe(0);
+      expect(result.total).toBe(0);
     });
 
     it('should return empty data for page beyond total', async () => {
@@ -257,7 +258,7 @@ describe('PropertiesService – Pagination', () => {
       const result = await service.findAll({ page: 100, limit: 10 });
 
       expect(result.data).toEqual([]);
-      expect(result.meta.total).toBe(5);
+      expect(result.total).toBe(5);
     });
   });
 
@@ -483,7 +484,7 @@ describe('PropertiesService – Pagination', () => {
       const elapsed = Date.now() - start;
 
       expect(result.data).toHaveLength(100);
-      expect(result.meta.total).toBe(10000);
+      expect(result.total).toBe(10000);
       // Service layer (no DB) should resolve in well under 100ms
       expect(elapsed).toBeLessThan(100);
     });

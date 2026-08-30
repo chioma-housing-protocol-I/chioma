@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { requestContext } from '../../../common/request-context/request-context';
+import { AnalyticsJobData } from '../processors/analytics.processor';
 
 export interface JobData {
   correlationId?: string;
@@ -33,9 +34,12 @@ export class QueueManagementService {
     @InjectQueue('analytics') private analyticsQueue: Queue,
   ) {}
 
-  private enrichJobData<T extends Record<string, any>>(data: T): T & { correlationId?: string; requestId?: string } {
+  private enrichJobData<T extends Record<string, any>>(
+    data: T,
+  ): T & { correlationId?: string; requestId?: string } {
     const ctx = requestContext.get();
-    const correlationId = data.correlationId || ctx?.correlationId || ctx?.requestId;
+    const correlationId =
+      data.correlationId || ctx?.correlationId || ctx?.requestId;
     const requestId = data.requestId || ctx?.requestId || correlationId;
     return {
       ...(correlationId ? { correlationId } : {}),
@@ -132,7 +136,10 @@ export class QueueManagementService {
    * Events are processed asynchronously to avoid impacting request latency.
    * Event loss on queue failure is bounded by retry attempts.
    */
-  async addAnalyticsJob(data: JobData, options?: QueueJobOptions): Promise<Job> {
+  async addAnalyticsJob(
+    data: AnalyticsJobData,
+    options?: QueueJobOptions,
+  ): Promise<Job> {
     const defaultOptions = {
       attempts: 2,
       backoff: {
@@ -171,7 +178,13 @@ export class QueueManagementService {
    * Get all queue statistics
    */
   async getAllQueueStats(): Promise<any[]> {
-    const queues = ['email', 'documents', 'blockchain', 'data-sync', 'analytics'];
+    const queues = [
+      'email',
+      'documents',
+      'blockchain',
+      'data-sync',
+      'analytics',
+    ];
     return Promise.all(queues.map((q) => this.getQueueStats(q)));
   }
 
@@ -263,7 +276,7 @@ export class QueueManagementService {
       maxAttempts: job.opts.attempts,
       failedReason: job.failedReason,
       stacktrace: job.stacktrace,
-      createdAt: (job as any).createdTimestamp || (job as any).timestamp,
+      createdAt: job.timestamp,
       finishedAt: job.finishedOn,
     };
   }

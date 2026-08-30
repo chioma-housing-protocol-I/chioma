@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { QueryThresholdConfig } from './query-threshold.config';
 
 export interface QueryRecord {
   query: string;
@@ -41,10 +42,20 @@ const N_PLUS_ONE_THRESHOLD = 5;
 const N_PLUS_ONE_WINDOW_MS = 5000;
 const MAX_QUERY_HISTORY = 10000;
 const MAX_QUERY_STATS = 500;
-const SLOW_QUERY_DURATION_MS = parseInt(
-  process.env.QUERY_ANALYSIS_SLOW_THRESHOLD_MS ?? '200',
-  10,
-);
+
+/**
+ * TypeORM's public `Driver` interface does not expose `query()` — it is an
+ * implementation detail of concrete drivers (Postgres, MySQL, etc). This
+ * narrow type describes only the shape this service needs to monkey-patch,
+ * and is paired with a runtime `typeof` guard before use.
+ */
+interface InterceptableDriver {
+  query?: (
+    query: string,
+    parameters?: unknown[],
+    ...args: unknown[]
+  ) => unknown;
+}
 
 @Injectable()
 export class QueryAnalysisService implements OnModuleInit {
@@ -60,7 +71,10 @@ export class QueryAnalysisService implements OnModuleInit {
   private readonly maxStats = MAX_QUERY_STATS;
   private intercepting = false;
 
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly queryThreshold: QueryThresholdConfig,
+  ) {}
 
   onModuleInit(): void {
     this.setupQueryInterceptor();
@@ -71,7 +85,7 @@ export class QueryAnalysisService implements OnModuleInit {
     this.intercepting = true;
 
     try {
-      const driver = this.dataSource.driver as any;
+      const driver = this.dataSource.driver as unknown as InterceptableDriver;
       if (!driver || typeof driver.query !== 'function') {
         this.logger.warn(
           'DataSource driver does not support query interception',
@@ -328,15 +342,22 @@ export class QueryAnalysisService implements OnModuleInit {
       totalQueriesTracked: this.queryHistory.length,
       uniqueQueryPatterns: stats.length,
       nPlusOneReports: this.nPlusOneReports.length,
-      slowQueryCount: stats.filter(
-        (s) => s.avgDuration > SLOW_QUERY_DURATION_MS,
+      // Each pattern is compared against the threshold for its own query
+      // class (select/insert/update/delete/other) — see QueryThresholdConfig.
+      slowQueryCount: stats.filter((s) =>
+        this.isSlow(s.sampleQuery, s.avgDuration),
       ).length,
-      slowQueryThresholdMs: SLOW_QUERY_DURATION_MS,
+      slowQueryThresholdMs: this.queryThreshold.defaultThreshold,
       topQueries: stats.sort((a, b) => b.count - a.count).slice(0, 10),
       slowestQueries: stats
         .sort((a, b) => b.avgDuration - a.avgDuration)
         .slice(0, 10),
     };
+  }
+
+  /** True when a query's duration exceeds the threshold for its class. */
+  private isSlow(query: string, duration: number): boolean {
+    return duration > this.queryThreshold.thresholdFor(query);
   }
 
   getQueryHistory(limit = 100, minDuration?: number): QueryRecord[] {
@@ -389,7 +410,13 @@ export class QueryAnalysisService implements OnModuleInit {
   getQueryAnalysisReport(): any {
     const stats = this.getQueryStats();
     const nPlusOneAlerts = this.getNPlusOneReports('medium');
-    const recentSlowQueries = this.getQueryHistory(50, SLOW_QUERY_DURATION_MS);
+    // Per-record filtering (rather than one flat minDuration) so a fast
+    // default-class query and a slow override-class query are each judged
+    // against their own threshold.
+    const recentSlowQueries = this.queryHistory
+      .filter((r) => this.isSlow(r.query, r.duration))
+      .slice(-50)
+      .reverse();
 
     return {
       generatedAt: new Date().toISOString(),
@@ -398,7 +425,7 @@ export class QueryAnalysisService implements OnModuleInit {
         uniquePatterns: stats.uniqueQueryPatterns,
         nPlusOneDetected: stats.nPlusOneReports,
         slowQueries: stats.slowQueryCount,
-        slowQueryThresholdMs: SLOW_QUERY_DURATION_MS,
+        slowQueryThresholdMs: stats.slowQueryThresholdMs,
       },
       frequentQueries: stats.topQueries,
       slowestQueries: stats.slowestQueries,

@@ -35,6 +35,9 @@ import { UserRole } from '../users/entities/user.entity';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Dispute } from './entities/dispute.entity';
 
 @ApiTags('Disputes')
 @ApiBearerAuth('JWT-auth')
@@ -65,7 +68,7 @@ export class DisputesController {
 
   @Get()
   @ApiOperation({ summary: 'List disputes with filters' })
-  @ApiResponse({ status: 200, description: 'Paginated disputes' })
+  @ApiPaginatedResponse(Dispute)
   async findAll(@Query() query: QueryDisputesDto, @Request() req) {
     return this.disputesService.findAll(query, req.user.id);
   }
@@ -79,11 +82,15 @@ export class DisputesController {
     return this.disputesService.findOne(parseInt(id));
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Find by dispute id' })
   @Get('dispute/:disputeId')
   async findByDisputeId(@Param('disputeId') disputeId: string) {
     return this.disputesService.findByDisputeId(disputeId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update' })
   @Put(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -104,6 +111,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add evidence' })
   @Post(':disputeId/evidence')
   @UseInterceptors(FileInterceptor('file'))
   async addEvidence(
@@ -115,6 +124,8 @@ export class DisputesController {
     return this.disputesService.addEvidence(disputeId, file, req.user.id, dto);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Add comment' })
   @Post(':disputeId/comment')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -134,6 +145,8 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Resolve dispute' })
   @Post(':disputeId/resolve')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -156,11 +169,57 @@ export class DisputesController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get agreement disputes' })
   @Get('agreement/:agreementId/disputes')
+  @ApiPaginatedResponse(Dispute)
   async getAgreementDisputes(
     @Param('agreementId') agreementId: string,
     @Request() req,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.disputesService.getAgreementDisputes(agreementId, req.user.id);
+    return this.disputesService.getAgreementDisputes(
+      agreementId,
+      req.user.id,
+      query.page,
+      query.limit,
+    );
+  }
+
+  @Get('payment/:paymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment ID' })
+  @ApiParam({ name: 'paymentId', description: 'General payment UUID' })
+  @ApiResponse({ status: 200, description: 'Disputes linked to the payment' })
+  async getDisputesByPayment(@Param('paymentId') paymentId: string) {
+    return this.disputesService.findDisputesByPayment(paymentId);
+  }
+
+  @Get('rent-payment/:rentPaymentId/disputes')
+  @ApiOperation({ summary: 'Get disputes by rent payment ID' })
+  @ApiParam({ name: 'rentPaymentId', description: 'Rent payment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the rent payment',
+  })
+  async getDisputesByRentPayment(
+    @Param('rentPaymentId') rentPaymentId: string,
+  ) {
+    return this.disputesService.findDisputesByRentPayment(rentPaymentId);
+  }
+
+  @Get('payment-reference/:referenceNumber/disputes')
+  @ApiOperation({ summary: 'Get disputes by payment reference number' })
+  @ApiParam({
+    name: 'referenceNumber',
+    description: 'Payment reference number',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disputes linked to the payment reference',
+  })
+  async getDisputesByPaymentReference(
+    @Param('referenceNumber') referenceNumber: string,
+  ) {
+    return this.disputesService.findDisputesByPaymentReference(referenceNumber);
   }
 }

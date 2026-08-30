@@ -28,6 +28,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './common/services/logger.service';
 import { registerGracefulShutdown } from './config/graceful-shutdown';
 import { OpenApiDocumentRegistryService } from './common/validation/openapi-document-registry.service';
+import { EnvironmentVariables } from './config/environment-variables';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -44,20 +45,22 @@ async function bootstrap() {
   const loggerService = app.get(LoggerService);
   app.useLogger(loggerService);
 
-  const configService = app.get(ConfigService);
+  const configService: ConfigService<EnvironmentVariables, true> =
+    app.get(ConfigService);
 
   // Parse CORS origins from environment variable
   const corsOrigins = configService
-    .get<string>('CORS_ORIGINS')
+    .get('CORS_ORIGINS', { infer: true })
     ?.split(',')
     .map((origin) => origin.trim()) || [
-    configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
+    configService.get('FRONTEND_URL', { infer: true }) ||
+      'http://localhost:3000',
   ];
 
   app.enableCors({
     origin: corsOrigins,
     credentials:
-      configService.get<string>('CORS_CREDENTIALS') === 'true' || true,
+      configService.get('CORS_CREDENTIALS', { infer: true }) === 'true' || true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -90,9 +93,10 @@ async function bootstrap() {
 
   // Configure request size limits
   const jsonLimit =
-    configService.get<string>('REQUEST_SIZE_LIMIT_JSON') || '1mb';
+    configService.get('REQUEST_SIZE_LIMIT_JSON', { infer: true }) || '1mb';
   const urlencodedLimit =
-    configService.get<string>('REQUEST_SIZE_LIMIT_URLENCODED') || '1mb';
+    configService.get('REQUEST_SIZE_LIMIT_URLENCODED', { infer: true }) ||
+    '1mb';
   const rawBodySaver = (
     req: express.Request & { rawBody?: string },
     _res: express.Response,
@@ -136,7 +140,8 @@ async function bootstrap() {
   );
 
   // Enhanced ValidationPipe configuration
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const isProduction =
+    configService.get('NODE_ENV', { infer: true }) === 'production';
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -164,7 +169,8 @@ async function bootstrap() {
     .setContact('Chioma', 'https://chioma.app', 'support@chioma.app')
     .setLicense('Open Source', 'https://github.com/chioma/chioma')
     .addServer(
-      configService.get<string>('API_BASE_URL') || 'http://localhost:5000',
+      configService.get('API_BASE_URL', { infer: true }) ||
+        'http://localhost:5000',
       'Default',
     )
     .addBearerAuth(

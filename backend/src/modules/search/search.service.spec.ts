@@ -141,7 +141,7 @@ describe('SearchService', () => {
 
       const result = await service.searchProperties({}, 1, 10);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
@@ -555,7 +555,7 @@ describe('SearchService', () => {
 
       const result = await service.searchUsers({}, 1, 10);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
@@ -651,7 +651,7 @@ describe('SearchService', () => {
 
       const result = await service.searchDocuments({}, 1, 10);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);

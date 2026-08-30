@@ -1,14 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
+import { readFile } from 'fs/promises';
 import { Dispute, DisputeStatus } from './entities/dispute.entity';
 import { DisputeEvidence } from './entities/dispute-evidence.entity';
+import { MalwareScanService } from '../storage/malware-scan.service';
+import { ScanStatus } from '../storage/file-metadata.entity';
 import { DisputeComment } from './entities/dispute-comment.entity';
 import {
   RentAgreement,
   AgreementStatus,
 } from '../rent/entities/rent-contract.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { Payment as GeneralPayment } from '../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../rent/entities/payment.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddEvidenceDto } from './dto/add-evidence.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
@@ -21,6 +27,7 @@ import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { randomUUID } from 'crypto';
 import { Locked, LockService } from '../../common/lock';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
+import { PaginationUtils } from '../../common/utils';
 import {
   AgreementNotFoundError,
   UserNotFoundError,
@@ -29,6 +36,10 @@ import {
   DisputeNotFoundError,
   ValidationError,
 } from '../../common/errors/domain-errors';
+import {
+  DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+  validateEvidenceFile,
+} from './utils/evidence-file-validation.util';
 
 @Injectable()
 export class DisputesService {
@@ -43,10 +54,16 @@ export class DisputesService {
     private readonly agreementRepository: Repository<RentAgreement>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(GeneralPayment)
+    private readonly generalPaymentRepository: Repository<GeneralPayment>,
+    @InjectRepository(RentPayment)
+    private readonly rentPaymentRepository: Repository<RentPayment>,
     private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
+    private readonly malwareScan: MalwareScanService,
+    @Optional() private readonly configService?: ConfigService,
   ) {}
 
   /**
@@ -122,6 +139,129 @@ export class DisputesService {
         );
       }
 
+      // Validate payment references if provided and gather payment context
+      let paymentContext: {
+        paymentId?: string;
+        rentPaymentId?: string;
+        disputedPaymentAmount?: number;
+        paymentReferenceNumber?: string;
+        paymentDate?: Date;
+      } = {};
+
+      if (createDisputeDto.paymentId) {
+        const generalPayment = await queryRunner.manager.findOne(
+          GeneralPayment,
+          {
+            where: { id: createDisputeDto.paymentId },
+          },
+        );
+
+        if (!generalPayment) {
+          throw new ValidationError(
+            `Payment with ID ${createDisputeDto.paymentId} not found`,
+          );
+        }
+
+        // Validate payment belongs to the same agreement
+        if (generalPayment.agreementId !== createDisputeDto.agreementId) {
+          throw new ValidationError(
+            'Payment does not belong to the specified agreement',
+          );
+        }
+
+        paymentContext = {
+          paymentId: generalPayment.id,
+          disputedPaymentAmount: Number(generalPayment.amount),
+          paymentReferenceNumber: generalPayment.referenceNumber || undefined,
+          paymentDate: generalPayment.processedAt || generalPayment.createdAt,
+        };
+      }
+
+      if (createDisputeDto.rentPaymentId) {
+        const rentPayment = await queryRunner.manager.findOne(RentPayment, {
+          where: { paymentId: createDisputeDto.rentPaymentId },
+        });
+
+        if (!rentPayment) {
+          throw new ValidationError(
+            `Rent payment with ID ${createDisputeDto.rentPaymentId} not found`,
+          );
+        }
+
+        // Validate payment belongs to the same agreement
+        if (rentPayment.agreementId !== createDisputeDto.agreementId) {
+          throw new ValidationError(
+            'Rent payment does not belong to the specified agreement',
+          );
+        }
+
+        paymentContext = {
+          ...paymentContext,
+          rentPaymentId: rentPayment.paymentId,
+          disputedPaymentAmount:
+            paymentContext.disputedPaymentAmount || Number(rentPayment.amount),
+          paymentReferenceNumber:
+            paymentContext.paymentReferenceNumber ||
+            rentPayment.referenceNumber ||
+            undefined,
+          paymentDate: paymentContext.paymentDate || rentPayment.paymentDate,
+        };
+      }
+
+      if (
+        createDisputeDto.paymentReferenceNumber &&
+        !paymentContext.paymentId &&
+        !paymentContext.rentPaymentId
+      ) {
+        // Try to find payment by reference number if no direct payment IDs provided
+        const generalPayment = await queryRunner.manager.findOne(
+          GeneralPayment,
+          {
+            where: {
+              referenceNumber: createDisputeDto.paymentReferenceNumber,
+              agreementId: createDisputeDto.agreementId,
+            },
+          },
+        );
+
+        const rentPayment = await queryRunner.manager.findOne(RentPayment, {
+          where: {
+            referenceNumber: createDisputeDto.paymentReferenceNumber,
+            agreementId: createDisputeDto.agreementId,
+          },
+        });
+
+        if (!generalPayment && !rentPayment) {
+          throw new ValidationError(
+            `No payment found with reference number ${createDisputeDto.paymentReferenceNumber} for this agreement`,
+          );
+        }
+
+        if (generalPayment) {
+          paymentContext = {
+            paymentId: generalPayment.id,
+            disputedPaymentAmount: Number(generalPayment.amount),
+            paymentReferenceNumber: generalPayment.referenceNumber || undefined,
+            paymentDate: generalPayment.processedAt || generalPayment.createdAt,
+          };
+        }
+
+        if (rentPayment) {
+          paymentContext = {
+            ...paymentContext,
+            rentPaymentId: rentPayment.paymentId,
+            disputedPaymentAmount:
+              paymentContext.disputedPaymentAmount ||
+              Number(rentPayment.amount),
+            paymentReferenceNumber:
+              paymentContext.paymentReferenceNumber ||
+              rentPayment.referenceNumber ||
+              undefined,
+            paymentDate: paymentContext.paymentDate || rentPayment.paymentDate,
+          };
+        }
+      }
+
       // Create dispute
       const dispute = queryRunner.manager.create(Dispute, {
         disputeId: randomUUID(),
@@ -134,6 +274,12 @@ export class DisputesService {
         metadata: createDisputeDto.metadata
           ? JSON.parse(createDisputeDto.metadata)
           : null,
+        // Payment correlation fields
+        paymentId: paymentContext.paymentId || null,
+        rentPaymentId: paymentContext.rentPaymentId || null,
+        disputedPaymentAmount: paymentContext.disputedPaymentAmount || null,
+        paymentReferenceNumber: paymentContext.paymentReferenceNumber || null,
+        paymentDate: paymentContext.paymentDate || null,
       });
 
       const savedDispute = await queryRunner.manager.save(dispute);
@@ -158,10 +304,7 @@ export class DisputesService {
   /**
    * Get all disputes with filtering and pagination
    */
-  async findAll(
-    query: QueryDisputesDto,
-    _userId?: string,
-  ): Promise<{ disputes: Dispute[]; total: number }> {
+  async findAll(query: QueryDisputesDto, _userId?: string) {
     const queryBuilder = this.disputeRepository
       .createQueryBuilder('dispute')
       .leftJoinAndSelect('dispute.agreement', 'agreement')
@@ -202,6 +345,28 @@ export class DisputesService {
       });
     }
 
+    // Payment correlation filters
+    if (query.paymentId) {
+      queryBuilder.andWhere('dispute.paymentId = :paymentId', {
+        paymentId: query.paymentId,
+      });
+    }
+
+    if (query.rentPaymentId) {
+      queryBuilder.andWhere('dispute.rentPaymentId = :rentPaymentId', {
+        rentPaymentId: query.rentPaymentId,
+      });
+    }
+
+    if (query.paymentReferenceNumber) {
+      queryBuilder.andWhere(
+        'dispute.paymentReferenceNumber = :paymentReferenceNumber',
+        {
+          paymentReferenceNumber: query.paymentReferenceNumber,
+        },
+      );
+    }
+
     // Apply sorting
     const sortField =
       query.sortBy === 'createdAt'
@@ -212,12 +377,20 @@ export class DisputesService {
     queryBuilder.orderBy(sortField, query.sortOrder);
 
     // Apply pagination
-    const skip = ((query?.page || 1) - 1) * (query?.limit || 10);
-    queryBuilder.skip(skip).take(query?.limit || 10);
+    const page = query?.page || 1;
+    const limit = query?.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+    queryBuilder.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
 
     const [disputes, total] = await queryBuilder.getManyAndCount();
+    disputes.forEach((dispute) => this.filterRetrievableEvidence(dispute));
 
-    return { disputes, total };
+    return PaginationUtils.buildPaginationResponse(
+      disputes,
+      total,
+      page,
+      limit,
+    );
   }
 
   /**
@@ -241,6 +414,7 @@ export class DisputesService {
       throw new DisputeNotFoundError(id.toString());
     }
 
+    this.filterRetrievableEvidence(dispute);
     return dispute;
   }
 
@@ -265,6 +439,7 @@ export class DisputesService {
       throw new DisputeNotFoundError(disputeId);
     }
 
+    this.filterRetrievableEvidence(dispute);
     return dispute;
   }
 
@@ -336,21 +511,48 @@ export class DisputesService {
     // Check permissions
     await this.checkDisputePermission(dispute, userId, 'add_evidence');
 
-    // Validate file
-    this.validateFile(file);
+    // Validate file content (magic bytes), never the declared MIME header
+    const detectedType = this.validateFile(file);
 
-    // Create evidence record
+    // Scan the uploaded file before it becomes part of the dispute record.
+    // FileInterceptor defaults to multer's memory storage (file.buffer),
+    // not disk storage, so only fall back to reading file.path if a buffer
+    // wasn't provided.
+    const buffer = file.buffer ?? (await readFile(file.path));
+    const scanResult = await this.malwareScan.scan(buffer, file.originalname);
+
     const evidence = this.evidenceRepository.create({
       dispute: dispute,
       uploadedBy: userId,
       fileUrl: file.path, // This would be replaced with actual file storage URL
       fileName: file.originalname,
-      fileType: file.mimetype,
+      // Store the sniffed content type, not the client-declared one.
+      fileType: detectedType,
       fileSize: file.size,
       description: dto?.description,
+      scanStatus: scanResult.clean ? ScanStatus.CLEAN : ScanStatus.QUARANTINED,
     });
+    const saved = await this.evidenceRepository.save(evidence);
 
-    return this.evidenceRepository.save(evidence);
+    if (!scanResult.clean) {
+      await this.auditService.log({
+        action: AuditAction.SUSPICIOUS_ACTIVITY,
+        entityType: 'DisputeEvidence',
+        entityId: saved.id.toString(),
+        performedBy: userId,
+        level: AuditLevel.SECURITY,
+        metadata: {
+          disputeId,
+          fileName: file.originalname,
+          reason: scanResult.reason ?? 'malware_detected',
+        },
+      });
+      throw new AuthorizationError(
+        'File failed malware scan and has been quarantined',
+      );
+    }
+
+    return saved;
   }
 
   /**
@@ -452,7 +654,9 @@ export class DisputesService {
   async getAgreementDisputes(
     agreementId: string,
     userId?: string,
-  ): Promise<Dispute[]> {
+    page = 1,
+    limit = 20,
+  ) {
     const agreement = await this.agreementRepository.findOne({
       where: { id: agreementId },
       relations: ['landlord', 'tenant'],
@@ -475,11 +679,16 @@ export class DisputesService {
       }
     }
 
-    return this.disputeRepository.find({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.disputeRepository.findAndCount({
       where: { agreementId },
       relations: ['initiator', 'resolver', 'evidence', 'comments'],
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**
@@ -548,29 +757,81 @@ export class DisputesService {
   }
 
   /**
-   * Validate uploaded file
+   * Unscanned or quarantined evidence must never be exposed to other
+   * parties on the dispute; only malware-scan-clean evidence is retrievable.
    */
-  private validateFile(file: any): void {
-    const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'application/pdf',
-      'text/plain',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    if (!allowedTypes.includes(file.mimetype)) {
-      throw new ValidationError(
-        'Invalid file type. Only images, PDFs, and documents are allowed',
+  private filterRetrievableEvidence(dispute: Dispute): void {
+    if (dispute.evidence) {
+      dispute.evidence = dispute.evidence.filter(
+        (evidence) => evidence.scanStatus === ScanStatus.CLEAN,
       );
     }
+  }
 
-    if (file.size > maxSize) {
-      throw new ValidationError('File size too large. Maximum size is 10MB');
+  /**
+   * Validate uploaded file
+   */
+  /**
+   * Validate an evidence upload by sniffing its content (magic bytes) —
+   * the client-declared MIME type is ignored — and by enforcing the
+   * configurable size cap (`DISPUTE_EVIDENCE_MAX_FILE_SIZE_BYTES`).
+   *
+   * Returns the detected content type on success.
+   */
+  private validateFile(file: any): string {
+    const result = validateEvidenceFile(file, this.getEvidenceMaxSizeBytes());
+    if (!result.isValid || !result.detectedType) {
+      throw new ValidationError(
+        result.error ?? 'Evidence file failed validation',
+      );
     }
+    return result.detectedType;
+  }
+
+  private getEvidenceMaxSizeBytes(): number {
+    const configured = Number(
+      this.configService?.get(
+        'DISPUTE_EVIDENCE_MAX_FILE_SIZE_BYTES',
+        DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+      ) ?? DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES,
+    );
+    return Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_EVIDENCE_MAX_FILE_SIZE_BYTES;
+  }
+
+  /**
+   * Find disputes by payment correlation
+   */
+  async findDisputesByPayment(paymentId: string): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { paymentId },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Find disputes by rent payment correlation
+   */
+  async findDisputesByRentPayment(rentPaymentId: string): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { rentPaymentId },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Find disputes by payment reference number
+   */
+  async findDisputesByPaymentReference(
+    referenceNumber: string,
+  ): Promise<Dispute[]> {
+    return this.disputeRepository.find({
+      where: { paymentReferenceNumber: referenceNumber },
+      relations: ['agreement', 'initiator', 'resolver', 'evidence', 'comments'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

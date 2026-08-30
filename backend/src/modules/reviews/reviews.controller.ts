@@ -13,11 +13,15 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { Review } from './review.entity';
+import { GuestReview } from './entities/guest-review.entity';
+import { HostReview } from './entities/host-review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Reviews')
 @Controller('reviews')
@@ -44,15 +48,16 @@ export class ReviewsController {
     return this.reviewsService.create(payload as Partial<Review>);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get()
   @ApiOperation({
     summary:
       'Get reviews for the authenticated user with pagination and filters',
   })
+  @ApiPaginatedResponse(Review)
   async getMyReviews(
     @Req() req: { user?: { id: string } },
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('rating') rating?: number,
@@ -60,8 +65,8 @@ export class ReviewsController {
   ) {
     return this.reviewsService.getMyReviews(
       req.user?.id ?? '',
-      Number(page),
-      Number(limit),
+      query.page,
+      query.limit,
       { role, status, rating, search },
     );
   }
@@ -69,19 +74,27 @@ export class ReviewsController {
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get reviews for a user' })
   @ApiParam({ name: 'userId', description: 'User ID (reviewee)' })
-  @ApiResponse({ status: 200, description: 'List of reviews' })
-  async getUserReviews(@Param('userId') userId: string): Promise<Review[]> {
-    return this.reviewsService.getUserReviews(userId);
+  @ApiPaginatedResponse(Review)
+  async getUserReviews(
+    @Param('userId') userId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.reviewsService.getUserReviews(userId, query.page, query.limit);
   }
 
   @Get('property/:propertyId')
   @ApiOperation({ summary: 'Get reviews for a property' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'List of reviews' })
+  @ApiPaginatedResponse(Review)
   async getPropertyReviews(
     @Param('propertyId') propertyId: string,
-  ): Promise<Review[]> {
-    return this.reviewsService.getPropertyReviews(propertyId);
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.reviewsService.getPropertyReviews(
+      propertyId,
+      query.page,
+      query.limit,
+    );
   }
 
   @Post('report/:reviewId')
@@ -102,6 +115,8 @@ export class ReviewsController {
     return { success: true };
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Post guest review' })
   @Post('guest')
   async postGuestReview(
     @Body() dto: PostGuestReviewDto,
@@ -110,6 +125,8 @@ export class ReviewsController {
     return this.reviewsService.postGuestReview(dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Post host review' })
   @Post('host')
   async postHostReview(
     @Body() dto: PostHostReviewDto,
@@ -118,37 +135,37 @@ export class ReviewsController {
     return this.reviewsService.postHostReview(dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get guest reviews' })
   @Get('guest/:userId')
+  @ApiPaginatedResponse(GuestReview)
   async getGuestReviews(
     @Param('userId') userId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.reviewsService.getGuestReviews(
-      userId,
-      Number(page),
-      Number(limit),
-    );
+    return this.reviewsService.getGuestReviews(userId, query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get host reviews' })
   @Get('host/:userId')
+  @ApiPaginatedResponse(HostReview)
   async getHostReviews(
     @Param('userId') userId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.reviewsService.getHostReviews(
-      userId,
-      Number(page),
-      Number(limit),
-    );
+    return this.reviewsService.getHostReviews(userId, query.page, query.limit);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get reputation' })
   @Get('reputation/:userId')
   async getReputation(@Param('userId') userId: string) {
     return this.reviewsService.getReputation(userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update review' })
   @Patch(':id')
   async updateReview(
     @Param('id') id: string,
@@ -158,6 +175,8 @@ export class ReviewsController {
     return this.reviewsService.updateReview(id, dto, req.user?.id ?? '');
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Delete review' })
   @Delete(':id')
   async deleteReview(
     @Param('id') id: string,

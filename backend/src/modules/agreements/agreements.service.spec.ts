@@ -21,6 +21,11 @@ import { AgreementStateService } from './state-machines/agreement-state-machine.
 
 describe('AgreementsService (lease extensions)', () => {
   let service: AgreementsService;
+  let mockIdempotencyService: {
+    retrieve: jest.Mock;
+    store: jest.Mock;
+    process: jest.Mock;
+  };
 
   const baseAgreement = {
     id: 'agr-1',
@@ -82,6 +87,19 @@ describe('AgreementsService (lease extensions)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockIdempotencyService = {
+      retrieve: jest.fn().mockResolvedValue(null),
+      store: jest.fn().mockResolvedValue(undefined),
+      process: jest.fn(
+        async (key: string, ttlMs: number, fn: () => Promise<unknown>) => {
+          const existing = await mockIdempotencyService.retrieve(key);
+          if (existing !== null) return existing;
+          const result = await fn();
+          await mockIdempotencyService.store(key, result, ttlMs);
+          return result;
+        },
+      ),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AgreementsService,
@@ -114,10 +132,7 @@ describe('AgreementsService (lease extensions)', () => {
         },
         {
           provide: IdempotencyService,
-          useValue: {
-            get: jest.fn().mockResolvedValue(null),
-            set: jest.fn().mockResolvedValue(undefined),
-          },
+          useFactory: () => mockIdempotencyService,
         },
         {
           provide: AgreementStateService,
@@ -127,7 +142,7 @@ describe('AgreementsService (lease extensions)', () => {
             transition: jest.fn(),
           },
         },
-        { provide: EventEmitter2, useValue: {} },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
@@ -204,6 +219,38 @@ describe('AgreementsService (lease extensions)', () => {
     it('throws when missing', async () => {
       mockAgreementRepo.findOne.mockResolvedValue(null);
       await expect(service.findOne('x')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('sign', () => {
+    it('transitions the agreement to SIGNED', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.PENDING_DEPOSIT,
+      });
+      mockAgreementRepo.save.mockImplementation((a) => Promise.resolve(a));
+
+      const result = await service.sign('agr-1', {});
+
+      expect(result.status).toBe(AgreementStatus.SIGNED);
+    });
+
+    it('returns the original result for a repeated idempotency key without re-signing', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.PENDING_DEPOSIT,
+      });
+      mockAgreementRepo.save.mockImplementation((a) => Promise.resolve(a));
+
+      const dto = { idempotencyKey: 'retry-key-1' };
+      const first = await service.sign('agr-1', dto);
+
+      mockIdempotencyService.retrieve.mockResolvedValue(first);
+
+      const second = await service.sign('agr-1', dto);
+
+      expect(second).toEqual(first);
+      expect(mockAgreementRepo.save).toHaveBeenCalledTimes(1);
     });
   });
 });

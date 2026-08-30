@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { MlModelManagerService } from './ml-model-manager.service';
 import {
   FraudDetectionService,
@@ -20,18 +20,21 @@ export class AiController {
     private readonly recommendationEngine: RecommendationEngineService,
   ) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('models')
   @ApiOperation({ summary: 'List available ML models' })
   getModels() {
     return this.modelManager.listModels();
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('fraud/score')
   @ApiOperation({ summary: 'Score a transaction for fraud risk' })
   scoreFraud(@Body() input: FraudSignalInput) {
     return this.fraudDetection.scoreTransaction(input);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('recommendations/properties')
   @ApiOperation({ summary: 'Generate ranked property recommendations' })
   getRecommendations(

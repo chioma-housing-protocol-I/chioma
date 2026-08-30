@@ -10,17 +10,23 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { FeatureFlagsService } from './feature-flags.service';
 import { CreateFeatureFlagDto } from './dto/create-feature-flag.dto';
 import { UpdateFeatureFlagDto } from './dto/update-feature-flag.dto';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Feature Flags')
 @Controller()
+@UseInterceptors(AuditLogInterceptor)
 export class FeatureFlagsController {
   constructor(private readonly featureFlagsService: FeatureFlagsService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('feature-flags/eval')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Evaluate a single feature flag for a user' })
@@ -37,6 +43,7 @@ export class FeatureFlagsController {
     return { key, userId: userId || null, isEnabled };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('feature-flags/eval-all')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Evaluate all feature flags for a user' })
@@ -47,6 +54,7 @@ export class FeatureFlagsController {
 
   // --- Admin Endpoints ---
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('admin/feature-flags')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List all feature flags (Admin)' })
@@ -54,6 +62,7 @@ export class FeatureFlagsController {
     return this.featureFlagsService.getAllFlags();
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('admin/feature-flags/:key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get feature flag details by key (Admin)' })
@@ -68,13 +77,27 @@ export class FeatureFlagsController {
     status: 201,
     description: 'Feature flag successfully created',
   })
+  @AuditLog({
+    action: AuditAction.CREATE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeNewValues: true,
+  })
   async createFlag(@Body() dto: CreateFeatureFlagDto) {
     return this.featureFlagsService.createFlag(dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('admin/feature-flags/:key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a feature flag rollout/status (Admin)' })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   async updateFlag(
     @Param('key') key: string,
     @Body() dto: UpdateFeatureFlagDto,
@@ -82,10 +105,18 @@ export class FeatureFlagsController {
     return this.featureFlagsService.updateFlag(key, dto);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('admin/feature-flags/:key/rollout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update rollout percentage for a feature flag (Admin)',
+  })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+    includeNewValues: true,
   })
   async setRolloutPercentage(
     @Param('key') key: string,
@@ -94,18 +125,32 @@ export class FeatureFlagsController {
     return this.featureFlagsService.setRolloutPercentage(key, percentage);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('admin/feature-flags/:key/kill')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Trigger emergency kill switch for a feature flag (Admin)',
   })
+  @AuditLog({
+    action: AuditAction.CONFIG_CHANGE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.SECURITY,
+    includeOldValues: true,
+  })
   async killSwitch(@Param('key') key: string) {
     return this.featureFlagsService.killSwitch(key);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete('admin/feature-flags/:key')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a feature flag (Admin)' })
+  @AuditLog({
+    action: AuditAction.DELETE,
+    entityType: 'FeatureFlag',
+    level: AuditLevel.WARN,
+    includeOldValues: true,
+  })
   async deleteFlag(@Param('key') key: string) {
     await this.featureFlagsService.deleteFlag(key);
   }

@@ -1,10 +1,27 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 
 import '@fontsource-variable/inter';
 import '@fontsource-variable/fraunces';
 
 import { RootLayoutClient } from './RootLayoutClient';
+import { env } from '@/lib/env';
+import type { AuthHint } from '@/store/authStore';
+
+const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
+
+async function readAuthHint(): Promise<AuthHint | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(AUTH_HINT_COOKIE_NAME)?.value;
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(decodeURIComponent(raw)) as AuthHint;
+  } catch {
+    return null;
+  }
+}
 
 export const viewport: Viewport = {
   themeColor: '#0d0e12',
@@ -16,8 +33,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
+const APP_URL = env.NEXT_PUBLIC_APP_URL || 'https://chioma-kappa.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -62,11 +78,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const authHint = await readAuthHint();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -82,7 +100,7 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <RootLayoutClient>{children}</RootLayoutClient>
+        <RootLayoutClient authHint={authHint}>{children}</RootLayoutClient>
       </body>
     </html>
   );

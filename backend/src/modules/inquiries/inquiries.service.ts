@@ -13,6 +13,8 @@ import {
   PropertyInquiryStatus,
 } from './entities/property-inquiry.entity';
 import { CreatePropertyInquiryDto } from './dto/create-property-inquiry.dto';
+import { assertInquiryTransition } from './inquiry-state-machine';
+import { PaginationUtils } from '../../common/utils';
 
 export interface InquiryPropertySummary {
   id: string;
@@ -89,17 +91,20 @@ export class InquiriesService {
     return saved;
   }
 
-  async listIncoming(userId: string): Promise<PropertyInquiryWithDetails[]> {
-    const inquiries = await this.inquiryRepository.find({
+  async listIncoming(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [inquiries, total] = await this.inquiryRepository.findAndCount({
       where: { toUserId: userId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
 
     const properties = await this.loadProperties(
       inquiries.map((inquiry) => inquiry.propertyId),
     );
 
-    return inquiries.map((inquiry) => ({
+    const data: PropertyInquiryWithDetails[] = inquiries.map((inquiry) => ({
       ...inquiry,
       property: properties.get(inquiry.propertyId) ?? null,
       counterparty: {
@@ -109,12 +114,17 @@ export class InquiriesService {
         phone: inquiry.senderPhone,
       },
     }));
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async listOutgoing(userId: string): Promise<PropertyInquiryWithDetails[]> {
-    const inquiries = await this.inquiryRepository.find({
+  async listOutgoing(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [inquiries, total] = await this.inquiryRepository.findAndCount({
       where: { fromUserId: userId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
 
     const [properties, landlords] = await Promise.all([
@@ -122,11 +132,13 @@ export class InquiriesService {
       this.loadUsers(inquiries.map((inquiry) => inquiry.toUserId)),
     ]);
 
-    return inquiries.map((inquiry) => ({
+    const data: PropertyInquiryWithDetails[] = inquiries.map((inquiry) => ({
       ...inquiry,
       property: properties.get(inquiry.propertyId) ?? null,
       counterparty: landlords.get(inquiry.toUserId) ?? null,
     }));
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   private async loadProperties(
@@ -196,12 +208,41 @@ export class InquiriesService {
       throw new NotFoundException('Inquiry not found');
     }
 
+    // Idempotent: re-viewing an already viewed inquiry is a no-op.
     if (inquiry.status === PropertyInquiryStatus.VIEWED) {
       return inquiry;
     }
 
+    assertInquiryTransition(inquiry.status, PropertyInquiryStatus.VIEWED);
+
     inquiry.status = PropertyInquiryStatus.VIEWED;
     inquiry.viewedAt = new Date();
+    return this.inquiryRepository.save(inquiry);
+  }
+
+  /**
+   * Close an inquiry. Either party (sender or recipient) may close; closing
+   * is terminal and idempotent.
+   */
+  async close(id: string, userId: string): Promise<PropertyInquiry> {
+    const inquiry = await this.inquiryRepository.findOne({
+      where: [
+        { id, toUserId: userId },
+        { id, fromUserId: userId },
+      ],
+    });
+
+    if (!inquiry) {
+      throw new NotFoundException('Inquiry not found');
+    }
+
+    if (inquiry.status === PropertyInquiryStatus.CLOSED) {
+      return inquiry;
+    }
+
+    assertInquiryTransition(inquiry.status, PropertyInquiryStatus.CLOSED);
+
+    inquiry.status = PropertyInquiryStatus.CLOSED;
     return this.inquiryRepository.save(inquiry);
   }
 }

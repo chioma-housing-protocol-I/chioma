@@ -22,6 +22,7 @@ import {
   PAYMENT_LIST_MAX_LIMIT,
 } from './dto/payment-filters.dto';
 import { PaymentGatewayService } from './payment-gateway.service';
+import { PaginationUtils } from '../../common/utils';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { PaymentMethodFiltersDto } from './dto/payment-method-filters.dto';
@@ -43,7 +44,10 @@ import {
   ProcessStellarRentGatewayDto,
 } from './dto/payment-gateway.dto';
 import { RefundEscrowDto, ReleaseEscrowDto } from '../stellar/dto/escrow.dto';
-import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
+import {
+  EscrowStatus,
+  StellarEscrow,
+} from '../stellar/entities/stellar-escrow.entity';
 import { TransactionStatus } from '../stellar/entities/stellar-transaction.entity';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
@@ -296,10 +300,7 @@ export class PaymentService {
     };
   }
 
-  async listPayments(
-    filters: PaymentFiltersDto,
-    userId: string,
-  ): Promise<Payment[]> {
+  async listPayments(filters: PaymentFiltersDto, userId: string) {
     ensureUserId(userId);
     const query = this.paymentRepository
       .createQueryBuilder('payment')
@@ -345,9 +346,10 @@ export class PaymentService {
       PAYMENT_LIST_MAX_LIMIT,
     );
     const page = filters.page ?? 1;
-    query.skip((page - 1) * limit).take(limit);
+    query.skip(PaginationUtils.calculateOffset(page, limit)).take(limit);
 
-    return query.getMany();
+    const [data, total] = await query.getManyAndCount();
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getPaymentById(id: string, userId: string): Promise<Payment> {
@@ -689,12 +691,27 @@ export class PaymentService {
     const escrow = await this.stellarService.refundEscrow({
       escrowId,
       reason: dto.reason,
+      amount: dto.amount,
     });
-    return this.syncEscrowPaymentFromState(escrowId, escrow.status, userId, {
-      refundTransactionHash: escrow.refundTransactionHash,
-      refundReason: dto.reason,
-      reconciledAt: new Date().toISOString(),
-    });
+    // A partial refund leaves the escrow ACTIVE (which alone would map back
+    // to PENDING); reflect it on the payment ledger explicitly instead.
+    const refundedToDate = Number(escrow.refundedAmount ?? 0);
+    const isPartialRefund =
+      escrow.status === EscrowStatus.ACTIVE && refundedToDate > 0;
+    return this.syncEscrowPaymentFromState(
+      escrowId,
+      escrow.status,
+      userId,
+      {
+        refundTransactionHash: escrow.refundTransactionHash,
+        refundReason: dto.reason,
+        refundedToDate: escrow.refundedAmount,
+        reconciledAt: new Date().toISOString(),
+      },
+      isPartialRefund
+        ? { status: PaymentStatus.PARTIAL_REFUND, refundAmount: refundedToDate }
+        : { refundAmount: refundedToDate },
+    );
   }
 
   async reconcileStellarPayments(userId: string, limit = 50) {
@@ -944,6 +961,7 @@ export class PaymentService {
     status: string,
     userId: string,
     metadata: Record<string, unknown> = {},
+    overrides: { status?: PaymentStatus; refundAmount?: number } = {},
   ): Promise<Payment | null> {
     const referenceNumber = `escrow:${escrowId}`;
     const payment = await this.paymentRepository.findOne({
@@ -954,7 +972,16 @@ export class PaymentService {
       return null;
     }
 
-    payment.status = PAYMENT_STATUS_MAP[status] ?? PaymentStatus.PENDING;
+    // Escrow statuses arrive uppercase (EscrowStatus enum) while the map is
+    // keyed lowercase; normalize so RELEASED/REFUNDED actually map instead
+    // of falling back to PENDING.
+    payment.status =
+      overrides.status ??
+      PAYMENT_STATUS_MAP[status?.toLowerCase()] ??
+      PaymentStatus.PENDING;
+    if (overrides.refundAmount !== undefined) {
+      payment.refundAmount = overrides.refundAmount;
+    }
     payment.metadata = {
       ...(payment.metadata ?? {}),
       ...metadata,

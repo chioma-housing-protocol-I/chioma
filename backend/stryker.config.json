@@ -19,7 +19,7 @@
     "src/**/*.ts",
     "!src/**/*.spec.ts",
     "!src/**/__tests__/**/*.ts",
-    "!src/database/migrations/*.ts",
+    "!src/migrations/*.ts",
     "!src/main.ts"
   ],
   "thresholds": {

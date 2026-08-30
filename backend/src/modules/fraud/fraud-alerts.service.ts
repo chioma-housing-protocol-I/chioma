@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FraudAlertEntity } from './entities/fraud-alert.entity';
 import { FraudAlert, FraudScoreResult, FraudSubjectType } from './fraud.types';
+import { PaginationUtils } from '../../common/utils';
 
 @Injectable()
 export class FraudAlertsService {
@@ -35,12 +36,22 @@ export class FraudAlertsService {
     return this.toDto(saved);
   }
 
-  async listAlerts(status?: 'open' | 'resolved'): Promise<FraudAlert[]> {
-    const rows = await this.fraudAlertRepository.find({
+  async listAlerts(status?: 'open' | 'resolved', page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [rows, total] = await this.fraudAlertRepository.findAndCount({
       where: status ? { status } : {},
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
-    return rows.map((row) => this.toDto(row));
+
+    return PaginationUtils.buildPaginationResponse(
+      rows.map((row) => this.toDto(row)),
+      total,
+      page,
+      limit,
+    );
   }
 
   async resolveAlert(id: string): Promise<FraudAlert> {

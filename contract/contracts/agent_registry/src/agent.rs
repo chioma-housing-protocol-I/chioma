@@ -2,6 +2,7 @@ use soroban_sdk::{Address, Env, String, Vec};
 
 use crate::errors::AgentError;
 use crate::events;
+use crate::rate_limit;
 use crate::storage::DataKey;
 use crate::types::{AgentInfo, AgentTransaction, ContractState};
 
@@ -15,6 +16,9 @@ pub fn register_agent(
     }
 
     agent.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "register_agent")?;
 
     if external_profile_hash.is_empty() {
         return Err(AgentError::InvalidProfileHash);
@@ -60,6 +64,9 @@ pub fn verify_agent(env: &Env, admin: Address, agent: Address) -> Result<(), Age
 
     admin.require_auth();
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &admin, "verify_agent")?;
+
     if admin != state.admin {
         return Err(AgentError::Unauthorized);
     }
@@ -98,6 +105,9 @@ pub fn rate_agent(
     }
 
     rater.require_auth();
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &rater, "rate_agent")?;
 
     if !(1..=5).contains(&score) {
         return Err(AgentError::InvalidRatingScore);
@@ -186,6 +196,9 @@ pub fn register_transaction(
         return Err(AgentError::NotInitialized);
     }
 
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "register_transaction")?;
+
     let agent_key = DataKey::Agent(agent.clone());
     if !env.storage().persistent().has(&agent_key) {
         return Err(AgentError::AgentNotFound);
@@ -218,6 +231,9 @@ pub fn complete_transaction(
     if !env.storage().persistent().has(&DataKey::Initialized) {
         return Err(AgentError::NotInitialized);
     }
+
+    // Rate limiting check
+    rate_limit::check_rate_limit(env, &agent, "complete_transaction")?;
 
     let txn_key = DataKey::Transaction(transaction_id.clone());
     let mut transaction: AgentTransaction = env

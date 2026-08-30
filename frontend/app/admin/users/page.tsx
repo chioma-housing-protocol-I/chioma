@@ -14,6 +14,7 @@ import {
   useAdminUsers,
   useSuspendUser,
   useActivateUser,
+  type AdminUserSortField,
 } from '@/lib/query/hooks/use-admin-users';
 import { BulkUserOperations } from '@/components/admin/BulkUserOperations';
 import { useModal } from '@/contexts/ModalContext';
@@ -25,6 +26,8 @@ interface UserFilters {
   limit: number;
   search: string;
   role: User['role'] | '';
+  sortBy: AdminUserSortField;
+  sortOrder: 'ASC' | 'DESC';
 }
 
 const DEFAULT_FILTERS: UserFilters = {
@@ -32,6 +35,8 @@ const DEFAULT_FILTERS: UserFilters = {
   limit: 20,
   search: '',
   role: '',
+  sortBy: 'createdAt',
+  sortOrder: 'DESC',
 };
 
 export default function AdminUsersPage() {
@@ -71,6 +76,16 @@ export default function AdminUsersPage() {
   };
 
   const handleClearFilters = () => setFilters(DEFAULT_FILTERS);
+
+  const handleSort = (key: AdminUserSortField) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      sortBy: key,
+      sortOrder:
+        prev.sortBy === key && prev.sortOrder === 'ASC' ? 'DESC' : 'ASC',
+    }));
+  };
 
   const hasFilters = filters.search !== '' || filters.role !== '';
 
@@ -255,6 +270,9 @@ export default function AdminUsersPage() {
         isLoading={isLoading}
         page={filters.page}
         setPage={(page) => setFilters((prev) => ({ ...prev, page }))}
+        sortBy={filters.sortBy}
+        sortOrder={filters.sortOrder}
+        onSort={handleSort}
         onBulkSuspend={handleBulkSuspend}
         onBulkActivate={handleBulkActivate}
         onBulkExport={handleBulkExport}

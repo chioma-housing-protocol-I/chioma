@@ -5,127 +5,23 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  IsNumber,
-  IsOptional,
-  IsDateString,
-  IsString,
-  IsEmail,
-  Min,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiProperty,
-  ApiPropertyOptional,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RentService } from './rent.service';
 import { RentReminderService } from './rent-reminder.service';
-
-// ─── DTOs ────────────────────────────────────────────────────────────────────
-
-export class CalculateLateFeeDto {
-  @ApiProperty({
-    example: 1500.0,
-    description: 'Monthly rent amount',
-    minimum: 0,
-  })
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  monthlyRent: number;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Number of days the payment is late',
-    minimum: 0,
-  })
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  daysLate: number;
-
-  @ApiPropertyOptional({
-    example: 5,
-    description: 'Grace period in days before late fees apply',
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  gracePeriodDays?: number;
-
-  @ApiPropertyOptional({
-    example: 0.05,
-    description: 'Daily late fee rate as a decimal (e.g., 0.05 = 5% per day)',
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  lateFeeRate?: number;
-}
-
-export class CalculateProratedRentDto {
-  @ApiProperty({
-    example: 1500.0,
-    description: 'Full monthly rent amount',
-    minimum: 0,
-  })
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  monthlyRent: number;
-
-  @ApiProperty({
-    example: '2026-06-15',
-    description: 'Move-in date for proration calculation (ISO 8601)',
-  })
-  @IsDateString()
-  moveInDate: string;
-}
-
-export class CreateRemindersDto {
-  @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'UUID of the rent agreement',
-  })
-  @IsString()
-  agreementId: string;
-
-  @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'UUID of the tenant',
-  })
-  @IsString()
-  tenantId: string;
-
-  @ApiProperty({
-    example: 'tenant@example.com',
-    description: 'Tenant email address for reminder delivery',
-  })
-  @IsEmail()
-  tenantEmail: string;
-
-  @ApiProperty({
-    example: '2026-07-01',
-    description: 'Rent due date (ISO 8601)',
-  })
-  @IsDateString()
-  dueDate: string;
-
-  @ApiProperty({ example: 1500.0, description: 'Rent amount due', minimum: 0 })
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  amount: number;
-}
+import {
+  CalculateLateFeeDto,
+  CalculateProratedRentDto,
+  CreateRemindersDto,
+} from './dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Payment } from './entities/payment.entity';
+import { RentReminder } from './entities/rent-reminder.entity';
 
 // ─── Controller ──────────────────────────────────────────────────────────────
 
@@ -168,8 +64,12 @@ export class RentController {
   })
   @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/history')
-  async getRentHistory(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentService.getRentHistory(id);
+  @ApiPaginatedResponse(Payment)
+  async getRentHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentService.getRentHistory(id, query.page, query.limit);
   }
 
   @ApiOperation({
@@ -237,8 +137,12 @@ export class RentController {
   @ApiResponse({ status: 200, description: 'Reminders retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Agreement not found' })
   @Get('agreements/:id/reminders')
-  async getReminders(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rentReminderService.getReminders(id);
+  @ApiPaginatedResponse(RentReminder)
+  async getReminders(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.rentReminderService.getReminders(id, query.page, query.limit);
   }
 
   @ApiOperation({
