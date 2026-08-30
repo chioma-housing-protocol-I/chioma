@@ -213,4 +213,15 @@ export const queryKeys = {
     network: (publicKey: string) =>
       [...queryKeys.stellarAccounts.all, 'network', publicKey] as const,
   },
+
+  availability: {
+    all: ['availability'] as const,
+    calendar: (propertyId: string, startDate: string, endDate: string) =>
+      [
+        ...queryKeys.availability.all,
+        propertyId,
+        startDate,
+        endDate,
+      ] as const,
+  },
 } as const;

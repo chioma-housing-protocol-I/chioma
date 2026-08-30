@@ -44,6 +44,41 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+// ─── Stub availability / pricing hook ──────────────────────────────────────
+
+interface MockAvailabilityDay {
+  date: string;
+  available: boolean;
+  customPrice: number | null;
+  notes: string | null;
+  blockedByBookingId: string | null;
+}
+
+const mockUseAvailability = vi.fn<
+  () => { data: MockAvailabilityDay[] | undefined; isLoading: boolean }
+>(() => ({ data: undefined, isLoading: false }));
+
+const mockUseProperty = vi.fn(() => ({ data: undefined }));
+
+vi.mock('@/lib/query/hooks', () => ({
+  useAvailability: (...args: unknown[]) => mockUseAvailability(...args),
+  useProperty: (...args: unknown[]) => mockUseProperty(...args),
+}));
+
+function day(
+  date: string,
+  overrides: Partial<MockAvailabilityDay> = {},
+): MockAvailabilityDay {
+  return {
+    date,
+    available: true,
+    customPrice: null,
+    notes: null,
+    blockedByBookingId: null,
+    ...overrides,
+  };
+}
+
 // ─── Component imports ────────────────────────────────────────────────────
 
 import { BookingStep1 } from '@/components/booking/BookingStep1';
@@ -117,6 +152,75 @@ describe('[E2E] Booking flow – Step 1: Date/guest selection', () => {
       checkOut: LATER_DATE,
       guests: 2,
     });
+  });
+});
+
+// ─── BookingStep1: availability + pricing ──────────────────────────────────
+
+describe('[E2E] Booking flow – Step 1: Availability & pricing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAvailability.mockReturnValue({ data: undefined, isLoading: false });
+  });
+
+  it('renders blocked/unavailable dates as visibly disabled', () => {
+    mockUseAvailability.mockReturnValue({
+      data: [day('2099-03-02', { available: false, blockedByBookingId: 'b1' })],
+      isLoading: false,
+    });
+
+    render(
+      React.createElement(BookingStep1, { onNext: vi.fn(), propertyId: 'p1' }),
+    );
+
+    expect(screen.getByTestId('blocked-dates')).toBeInTheDocument();
+    const chip = screen.getByText('2099-03-02');
+    expect(chip).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('keeps Continue disabled and warns when the range covers a blocked night', () => {
+    mockUseAvailability.mockReturnValue({
+      data: [day('2099-03-02', { available: false })],
+      isLoading: false,
+    });
+
+    const { container } = render(
+      React.createElement(BookingStep1, { onNext: vi.fn(), propertyId: 'p1' }),
+    );
+    const [checkIn, checkOut] =
+      container.querySelectorAll('input[type="date"]');
+    fireEvent.change(checkIn, { target: { value: '2099-03-01' } });
+    fireEvent.change(checkOut, { target: { value: '2099-03-03' } });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  it('shows the computed price using custom and base nightly pricing', () => {
+    mockUseAvailability.mockReturnValue({
+      data: [
+        day('2099-03-01', { customPrice: 120 }),
+        day('2099-03-02'), // falls back to base pricePerNight
+      ],
+      isLoading: false,
+    });
+
+    const { container } = render(
+      React.createElement(BookingStep1, {
+        onNext: vi.fn(),
+        propertyId: 'p1',
+        pricePerNight: 100,
+        currency: 'USD',
+      }),
+    );
+    const [checkIn, checkOut] =
+      container.querySelectorAll('input[type="date"]');
+    fireEvent.change(checkIn, { target: { value: '2099-03-01' } });
+    fireEvent.change(checkOut, { target: { value: '2099-03-03' } });
+
+    const summary = screen.getByTestId('price-summary');
+    expect(summary).toHaveTextContent('2 nights');
+    expect(summary).toHaveTextContent('$220');
   });
 });
 
