@@ -5,6 +5,7 @@ import { RentReminderService } from '../rent/rent-reminder.service';
 import { QueueMonitoringService } from '../queues/services/queue-monitoring.service';
 import { DeadLetterQueueService } from '../queues/services/dead-letter-queue.service';
 import { SecurityPatchManagementService } from '../cleanup/security-patch-management.service';
+import { ScreeningExpiryNotificationService } from '../screening/services/screening-expiry-notification.service';
 
 @Injectable()
 export class ScheduledTasksService {
@@ -16,6 +17,7 @@ export class ScheduledTasksService {
     private readonly queueMonitoring: QueueMonitoringService,
     private readonly deadLetterQueue: DeadLetterQueueService,
     private readonly securityPatch: SecurityPatchManagementService,
+    private readonly screeningExpiryNotification: ScreeningExpiryNotificationService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -46,5 +48,15 @@ export class ScheduledTasksService {
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async runSecurityPatchCheck(): Promise<void> {
     await this.securityPatch.runScheduledSecurityPatchCheck();
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async checkScreeningExpirations(): Promise<void> {
+    this.logger.log('Checking for expiring tenant screening reports');
+    const notified =
+      await this.screeningExpiryNotification.notifyExpiringReports();
+    this.logger.log(
+      `Screening expiry check completed. Notified ${notified} user(s)`,
+    );
   }
 }
