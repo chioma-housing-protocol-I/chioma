@@ -95,6 +95,30 @@ export class WebhooksController {
     );
   }
 
+  @Get(':id/deliveries/:deliveryId')
+  @ApiOperation({
+    summary: 'Inspect a single webhook delivery attempt',
+    description:
+      'Returns the full delivery record for one attempt, including attempt count, ' +
+      'HTTP status, error code, and the scheduled time of the next automatic retry ' +
+      '(null when the delivery succeeded or all retries are exhausted).',
+  })
+  @ApiParam({ name: 'id', description: 'Webhook endpoint ID' })
+  @ApiParam({ name: 'deliveryId', description: 'Webhook delivery ID' })
+  @ApiResponse({ status: 200, type: WebhookDelivery })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  async getDelivery(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Param('deliveryId') deliveryId: string,
+  ) {
+    return this.webhooksService.getDeliveryForUser(
+      req.user.id,
+      id,
+      deliveryId,
+    );
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Update a webhook endpoint' })
   @ApiParam({ name: 'id', description: 'Webhook endpoint ID' })

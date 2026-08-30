@@ -14,6 +14,10 @@ import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookEvent } from './webhook-event';
 import { WebhookSignatureService } from './webhook-signature.service';
 import { PaginationUtils } from '../../common/utils';
+import {
+  MAX_DELIVERY_ATTEMPTS,
+  nextRetryAt,
+} from './webhook-backoff';
 
 export interface WebhookEndpointInput {
   url: string;
@@ -52,15 +56,70 @@ export class WebhooksService {
 
     await Promise.all(
       matchingEndpoints.map((endpoint) =>
-        this.deliverEvent(endpoint, event, payload),
+        this.deliverWithBackoff(endpoint, event, payload),
       ),
     );
+  }
+
+  /**
+   * Attempts to deliver `event` to `endpoint` with bounded exponential
+   * backoff and full jitter.
+   *
+   * Each retry is a separate {@link WebhookDelivery} row so the subscriber
+   * can inspect every attempt via GET /developer/webhooks/:id/deliveries.
+   *
+   * The backoff schedule is defined in {@link BACKOFF_SCHEDULE_MS}:
+   *   attempt 1 → 30 s, attempt 2 → 5 min, attempt 3 → 30 min,
+   *   attempt 4 → 2 h,  attempt 5 → 8 h
+   * All delays carry ±25 % jitter to prevent synchronized retry storms.
+   * After the 5th unsuccessful attempt the delivery is marked exhausted.
+   *
+   * @returns The {@link WebhookDelivery} record for this attempt.
+   */
+  async deliverWithBackoff(
+    endpoint: WebhookEndpoint,
+    event: WebhookEvent,
+    payload: Record<string, unknown>,
+    attemptNumber = 1,
+  ): Promise<WebhookDelivery> {
+    const delivery = await this.deliverEvent(endpoint, event, payload, attemptNumber);
+
+    if (!delivery.successful) {
+      const nextAttempt = attemptNumber + 1;
+      const retryDate = nextRetryAt(nextAttempt);
+
+      if (retryDate !== null) {
+        // Schedule the next retry after the computed jittered delay.
+        delivery.nextRetryAt = retryDate;
+        delivery.exhausted = false;
+        await this.deliveryRepository.save(delivery);
+
+        const delayMs = retryDate.getTime() - Date.now();
+        setTimeout(() => {
+          void this.deliverWithBackoff(endpoint, event, payload, nextAttempt);
+        }, delayMs);
+      } else {
+        // All attempts exhausted — mark the delivery and stop scheduling.
+        delivery.exhausted = true;
+        delivery.nextRetryAt = null;
+        await this.deliveryRepository.save(delivery);
+
+        this.logger.error(
+          `Webhook delivery exhausted after ${MAX_DELIVERY_ATTEMPTS} attempts ` +
+            `for endpoint ${endpoint.id} (event: ${event}). ` +
+            `Last error: ${delivery.responseBody ?? 'unknown'}`,
+        );
+      }
+    }
+
+    return delivery;
   }
 
   async deliverEvent(
     endpoint: WebhookEndpoint,
     event: WebhookEvent,
     payload: Record<string, unknown>,
+    attemptNumber = 1,
   ): Promise<WebhookDelivery> {
     const requestPayload = JSON.stringify({
       event,
@@ -77,7 +136,8 @@ export class WebhooksService {
       event,
       payload: JSON.parse(requestPayload),
       successful: false,
-      attemptCount: 1,
+      attemptCount: attemptNumber,
+      exhausted: false,
     });
 
     try {
@@ -99,6 +159,8 @@ export class WebhooksService {
           ? response.data
           : JSON.stringify(response.data);
       delivery.deliveredAt = new Date();
+      delivery.lastAttemptAt = new Date();
+      delivery.errorCode = null;
     } catch (error) {
       const response = axios.isAxiosError(error) ? error.response : undefined;
       delivery.responseStatus = response?.status;
@@ -110,6 +172,12 @@ export class WebhooksService {
             : error instanceof Error
               ? error.message
               : 'Unknown webhook delivery error';
+      delivery.lastAttemptAt = new Date();
+      delivery.errorCode = response?.status
+        ? `HTTP_${response.status}`
+        : error instanceof Error && error.message.toLowerCase().includes('timeout')
+          ? 'TIMEOUT'
+          : 'NETWORK_ERROR';
       this.logger.warn(
         `Webhook delivery failed for endpoint ${endpoint.id}: ${delivery.responseBody}`,
       );
@@ -203,6 +271,24 @@ export class WebhooksService {
     return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
+  async getDeliveryForUser(
+    userId: string,
+    endpointId: string,
+    deliveryId: string,
+  ): Promise<WebhookDelivery> {
+    await this.getEndpointForUser(userId, endpointId);
+
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: deliveryId, endpointId },
+    });
+
+    if (!delivery) {
+      throw new NotFoundException('Webhook delivery not found');
+    }
+
+    return delivery;
+  }
+
   async triggerTestEvent(
     userId: string,
     endpointId: string,
@@ -233,7 +319,9 @@ export class WebhooksService {
         throw new NotFoundException('Webhook delivery not found');
       }
 
-      return this.deliverEvent(endpoint, delivery.event, delivery.payload);
+      // Manual retry always starts from attempt 1 so the full backoff
+      // schedule is available again.
+      return this.deliverWithBackoff(endpoint, delivery.event, delivery.payload, 1);
     }
 
     if (!options.event) {
@@ -242,6 +330,6 @@ export class WebhooksService {
       );
     }
 
-    return this.deliverEvent(endpoint, options.event, options.payload ?? {});
+    return this.deliverWithBackoff(endpoint, options.event, options.payload ?? {}, 1);
   }
 }

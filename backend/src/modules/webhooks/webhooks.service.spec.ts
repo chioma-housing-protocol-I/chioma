@@ -8,6 +8,12 @@ import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookSignatureService } from './webhook-signature.service';
 import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { WebhookEvent } from './webhook-event';
+import {
+  BACKOFF_SCHEDULE_MS,
+  MAX_DELIVERY_ATTEMPTS,
+  nextRetryDelayMs,
+  nextRetryAt,
+} from './webhook-backoff';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -566,6 +572,226 @@ describe('WebhooksService', () => {
       await expect(
         service.retryDelivery('user-1', 'endpoint-1', {}),
       ).rejects.toThrow('event is required when deliveryId is not provided');
+    });
+  });
+
+  // ── webhook-backoff schedule ───────────────────────────────────────────────
+
+  describe('backoff schedule (webhook-backoff.ts)', () => {
+    it('defines exactly MAX_DELIVERY_ATTEMPTS base delays', () => {
+      expect(BACKOFF_SCHEDULE_MS).toHaveLength(MAX_DELIVERY_ATTEMPTS);
+    });
+
+    it('has MAX_DELIVERY_ATTEMPTS = 5', () => {
+      expect(MAX_DELIVERY_ATTEMPTS).toBe(5);
+    });
+
+    it('schedule is strictly increasing', () => {
+      for (let i = 1; i < BACKOFF_SCHEDULE_MS.length; i++) {
+        expect(BACKOFF_SCHEDULE_MS[i]).toBeGreaterThan(BACKOFF_SCHEDULE_MS[i - 1]);
+      }
+    });
+
+    it('attempt 1 base delay is 30 s', () => {
+      expect(BACKOFF_SCHEDULE_MS[0]).toBe(30_000);
+    });
+
+    it('attempt 5 base delay is 8 h', () => {
+      expect(BACKOFF_SCHEDULE_MS[4]).toBe(28_800_000);
+    });
+
+    it('nextRetryDelayMs returns null beyond MAX_DELIVERY_ATTEMPTS', () => {
+      expect(nextRetryDelayMs(MAX_DELIVERY_ATTEMPTS + 1)).toBeNull();
+    });
+
+    it('nextRetryDelayMs stays within ±25 % of base for every attempt', () => {
+      BACKOFF_SCHEDULE_MS.forEach((base, idx) => {
+        const attempt = idx + 1;
+        // Sample 20 times to verify jitter bounds are respected.
+        for (let i = 0; i < 20; i++) {
+          const delay = nextRetryDelayMs(attempt)!;
+          expect(delay).toBeGreaterThanOrEqual(Math.round(base * 0.75));
+          expect(delay).toBeLessThanOrEqual(Math.round(base * 1.25));
+        }
+      });
+    });
+
+    it('nextRetryAt returns a Date in the future for valid attempts', () => {
+      const now = new Date();
+      const result = nextRetryAt(1, now);
+      expect(result).toBeInstanceOf(Date);
+      expect(result!.getTime()).toBeGreaterThan(now.getTime());
+    });
+
+    it('nextRetryAt returns null for attempt beyond MAX_DELIVERY_ATTEMPTS', () => {
+      expect(nextRetryAt(MAX_DELIVERY_ATTEMPTS + 1)).toBeNull();
+    });
+  });
+
+  // ── deliverWithBackoff ─────────────────────────────────────────────────────
+
+  describe('deliverWithBackoff', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('does not schedule a retry when the initial delivery succeeds', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: 'ok',
+      });
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+      await service.deliverWithBackoff(endpoint, 'payment.received', {});
+
+      expect(setTimeoutSpy).not.toHaveBeenCalled();
+    });
+
+    it('schedules a retry when the first attempt fails', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockRejectedValue(new Error('timeout'));
+      mockedAxios.isAxiosError.mockReturnValue(false);
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+      await service.deliverWithBackoff(endpoint, 'payment.received', {}, 1);
+
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks the delivery exhausted and does not schedule further retries on final attempt', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockRejectedValue(new Error('fail'));
+      mockedAxios.isAxiosError.mockReturnValue(false);
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+      await service.deliverWithBackoff(
+        endpoint,
+        'payment.received',
+        {},
+        MAX_DELIVERY_ATTEMPTS,
+      );
+
+      expect(setTimeoutSpy).not.toHaveBeenCalled();
+      // delivery.save should have been called with exhausted=true
+      const lastSave = deliveryRepository.save.mock.calls.at(-1)?.[0] as WebhookDelivery;
+      expect(lastSave.exhausted).toBe(true);
+      expect(lastSave.nextRetryAt).toBeNull();
+    });
+
+    it('sets nextRetryAt on a failed non-final attempt', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockRejectedValue(new Error('fail'));
+      mockedAxios.isAxiosError.mockReturnValue(false);
+
+      await service.deliverWithBackoff(endpoint, 'payment.received', {}, 1);
+
+      const lastSave = deliveryRepository.save.mock.calls.at(-1)?.[0] as WebhookDelivery;
+      expect(lastSave.nextRetryAt).toBeInstanceOf(Date);
+    });
+
+    it('stamps errorCode HTTP_503 on an HTTP 503 response', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockRejectedValue({
+        response: { status: 503, data: 'unavailable' },
+      });
+      mockedAxios.isAxiosError.mockReturnValue(true);
+
+      const result = await service.deliverWithBackoff(
+        endpoint,
+        'payment.failed',
+        {},
+        MAX_DELIVERY_ATTEMPTS,
+      );
+
+      expect(result.errorCode).toBe('HTTP_503');
+    });
+
+    it('stamps errorCode NETWORK_ERROR on a non-HTTP failure', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockRejectedValue(new Error('ECONNREFUSED'));
+      mockedAxios.isAxiosError.mockReturnValue(false);
+
+      const result = await service.deliverWithBackoff(
+        endpoint,
+        'payment.failed',
+        {},
+        MAX_DELIVERY_ATTEMPTS,
+      );
+
+      expect(result.errorCode).toBe('NETWORK_ERROR');
+    });
+
+    it('stamps lastAttemptAt on every attempt', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
+
+      const result = await service.deliverWithBackoff(
+        endpoint,
+        'payment.received',
+        {},
+      );
+
+      expect(result.lastAttemptAt).toBeInstanceOf(Date);
+    });
+
+    it('records the correct attemptCount on each delivery row', async () => {
+      const endpoint = mockEndpoint();
+      (mockedAxios.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: '',
+      });
+
+      await service.deliverWithBackoff(endpoint, 'payment.received', {}, 3);
+
+      const created = deliveryRepository.create.mock.calls[0][0];
+      expect(created.attemptCount).toBe(3);
+    });
+  });
+
+  // ── getDeliveryForUser ─────────────────────────────────────────────────────
+
+  describe('getDeliveryForUser', () => {
+    it('returns the delivery when it belongs to the endpoint owned by the user', async () => {
+      const endpoint = mockEndpoint();
+      const delivery = mockDelivery();
+      endpointRepository.findOne.mockResolvedValue(endpoint);
+      deliveryRepository.findOne.mockResolvedValue(delivery);
+
+      const result = await service.getDeliveryForUser(
+        'user-1',
+        'endpoint-1',
+        'delivery-1',
+      );
+
+      expect(result).toBe(delivery);
+      expect(deliveryRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'delivery-1', endpointId: 'endpoint-1' },
+      });
+    });
+
+    it('throws NotFoundException when the delivery does not exist', async () => {
+      endpointRepository.findOne.mockResolvedValue(mockEndpoint());
+      deliveryRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getDeliveryForUser('user-1', 'endpoint-1', 'missing'),
+      ).rejects.toThrow('Webhook delivery not found');
+    });
+
+    it('throws NotFoundException when the endpoint is not owned by the user', async () => {
+      endpointRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getDeliveryForUser('user-1', 'missing-endpoint', 'delivery-1'),
+      ).rejects.toThrow('Webhook endpoint not found');
     });
   });
 });
