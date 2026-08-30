@@ -36,8 +36,7 @@ const rawPublicEnv = {
     process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL,
   NEXT_PUBLIC_STELLAR_NETWORK: process.env.NEXT_PUBLIC_STELLAR_NETWORK,
   NEXT_PUBLIC_SOROBAN_RPC_URL: process.env.NEXT_PUBLIC_SOROBAN_RPC_URL,
-  NEXT_PUBLIC_STELLAR_HORIZON_URL:
-    process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL,
+  NEXT_PUBLIC_STELLAR_HORIZON_URL: process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL,
   NEXT_PUBLIC_USE_MOCK_API: process.env.NEXT_PUBLIC_USE_MOCK_API,
 };
 
@@ -70,9 +69,7 @@ if (isProduction) {
     !publicEnv.NEXT_PUBLIC_API_URL &&
     !publicEnv.NEXT_PUBLIC_BACKEND_API_BASE_URL
   ) {
-    missing.push(
-      'NEXT_PUBLIC_API_URL or NEXT_PUBLIC_BACKEND_API_BASE_URL',
-    );
+    missing.push('NEXT_PUBLIC_API_URL or NEXT_PUBLIC_BACKEND_API_BASE_URL');
   }
   if (missing.length > 0) {
     throw new Error(
