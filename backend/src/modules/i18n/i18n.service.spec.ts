@@ -57,6 +57,22 @@ describe('I18nService', () => {
       expect(service.resolveLanguage('FR-ca')).toBe('fr');
       expect(service.resolveLanguage('EN-US')).toBe('en');
     });
+
+    it('falls back to the stored preference when no candidate is given', () => {
+      expect(service.resolveLanguage(undefined, 'es')).toBe('es');
+    });
+
+    it('prefers an explicit candidate over the stored preference', () => {
+      expect(service.resolveLanguage('fr', 'es')).toBe('fr');
+    });
+
+    it('uses the stored preference when the candidate is unsupported', () => {
+      expect(service.resolveLanguage('de', 'ar')).toBe('ar');
+    });
+
+    it('defaults to English when both candidate and fallback are unusable', () => {
+      expect(service.resolveLanguage('de', 'xx')).toBe('en');
+    });
   });
 
   describe('t', () => {

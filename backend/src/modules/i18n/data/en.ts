@@ -25,4 +25,8 @@ export const en = {
     suspiciousActivity: 'Suspicious activity detected',
     accountLocked: 'Account temporarily locked due to failed attempts',
   },
+  notifications: {
+    emailTitle: 'Notification',
+    viewDetails: 'View Details',
+  },
 } as const;

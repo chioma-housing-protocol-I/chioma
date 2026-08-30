@@ -2,6 +2,9 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
+import { User } from '../users/entities/user.entity';
+import { EmailService } from './email.service';
+import { I18nService } from '../i18n/i18n.service';
 import { NotificationsRealtimeService } from './notifications-realtime.service';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -50,8 +53,12 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     @InjectRepository(UserNotificationPreference)
     private readonly preferencesRepository: Repository<UserNotificationPreference>,
+    private readonly emailService: EmailService,
+    private readonly i18nService: I18nService,
     private readonly realtimeService: NotificationsRealtimeService,
     @Inject(forwardRef(() => ErrorNotificationService))
     private readonly errorNotificationService: ErrorNotificationService,
@@ -103,6 +110,45 @@ export class NotificationsService {
       await this.alertNotificationFailure(userId, title, type, error);
       throw error;
     }
+  }
+
+  /**
+   * Sends a notification email to a user, localized to their stored
+   * {@link User.preferredLanguage} preference. No per-request `lang` signal
+   * exists in this background flow, so the stored preference is the only
+   * language source (see I18nService.resolveLanguage). Returns silently when
+   * the user has no email on file (e.g. wallet-only sign-ups).
+   */
+  async sendEmailNotification(
+    userId: string,
+    subject: string,
+    template: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'email', 'preferredLanguage'],
+    });
+
+    if (!user?.email) {
+      this.logger.warn(
+        `Skipping notification email for user ${userId}: no email on file`,
+      );
+      return;
+    }
+
+    const language = this.i18nService.resolveLanguage(
+      undefined,
+      user.preferredLanguage,
+    );
+
+    await this.emailService.sendNotificationEmail(
+      user.email,
+      subject,
+      template,
+      data,
+      language,
+    );
   }
 
   /**

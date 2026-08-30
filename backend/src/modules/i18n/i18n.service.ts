@@ -5,7 +5,9 @@ import { es } from './data/es';
 import { ar } from './data/ar';
 import { FormatUtils } from '../../common/utils';
 
-export type SupportedLanguage = 'en' | 'fr' | 'es' | 'ar';
+export const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'ar'] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 type TranslationTree = Record<string, unknown>;
 
@@ -24,19 +26,38 @@ export class I18nService {
     return Object.keys(this.translations) as SupportedLanguage[];
   }
 
-  resolveLanguage(candidate?: string): SupportedLanguage {
+  /**
+   * Resolves the effective language for a request/operation.
+   *
+   * `candidate` is the per-request signal (a `?lang=` query param or
+   * `Accept-Language`/`x-language` header). When it is absent or
+   * unsupported, `fallback` — typically the user's stored
+   * {@link User.preferredLanguage} preference — is tried next, so outbound
+   * emails and API responses can honour a durable choice without the client
+   * passing `lang` on every request. If neither yields a supported locale,
+   * the service default (`en`) is used.
+   */
+  resolveLanguage(candidate?: string, fallback?: string): SupportedLanguage {
+    return (
+      this.normalizeLanguage(candidate) ??
+      this.normalizeLanguage(fallback) ??
+      this.defaultLanguage
+    );
+  }
+
+  private normalizeLanguage(
+    candidate?: string | null,
+  ): SupportedLanguage | undefined {
     if (!candidate) {
-      return this.defaultLanguage;
+      return undefined;
     }
 
     const normalized = candidate
       .toLowerCase()
       .split('-')[0] as SupportedLanguage;
-    if (this.getSupportedLanguages().includes(normalized)) {
-      return normalized;
-    }
-
-    return this.defaultLanguage;
+    return this.getSupportedLanguages().includes(normalized)
+      ? normalized
+      : undefined;
   }
 
   t(

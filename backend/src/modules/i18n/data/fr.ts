@@ -26,4 +26,8 @@ export const fr = {
     accountLocked:
       'Compte temporairement verrouille apres des tentatives echouees',
   },
+  notifications: {
+    emailTitle: 'Notification',
+    viewDetails: 'Voir les details',
+  },
 } as const;

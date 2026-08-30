@@ -18,8 +18,20 @@ describe('NotificationsService', () => {
     delete: jest.fn(),
   };
 
+  const userRepo = {
+    findOne: jest.fn(),
+  };
+
   const preferenceRepo = {
     findOne: jest.fn(),
+  };
+
+  const emailService = {
+    sendNotificationEmail: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const i18nService = {
+    resolveLanguage: jest.fn().mockReturnValue('en'),
   };
 
   const realtimeService = {
@@ -58,7 +70,10 @@ describe('NotificationsService', () => {
     jest.clearAllMocks();
     service = new NotificationsService(
       notificationRepo as any,
+      userRepo as any,
       preferenceRepo as any,
+      emailService as any,
+      i18nService as any,
       realtimeService as any,
       errorNotificationService as any,
       retryService as any,
@@ -294,5 +309,43 @@ describe('NotificationsService', () => {
     await expect(service.markAsRead('missing', 'user-5')).rejects.toThrow(
       'Notification not found',
     );
+  });
+
+  describe('sendEmailNotification', () => {
+    it("localizes the email to the user's stored preferredLanguage", async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'user-9',
+        email: 'user9@example.com',
+        preferredLanguage: 'fr',
+      });
+      i18nService.resolveLanguage.mockReturnValue('fr');
+
+      await service.sendEmailNotification('user-9', 'Sujet', 'tmpl', {
+        message: 'Bonjour',
+      });
+
+      // No per-request lang exists here, so the stored preference is the
+      // fallback passed to resolveLanguage.
+      expect(i18nService.resolveLanguage).toHaveBeenCalledWith(undefined, 'fr');
+      expect(emailService.sendNotificationEmail).toHaveBeenCalledWith(
+        'user9@example.com',
+        'Sujet',
+        'tmpl',
+        { message: 'Bonjour' },
+        'fr',
+      );
+    });
+
+    it('skips sending when the user has no email on file', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'user-10',
+        email: null,
+        preferredLanguage: 'en',
+      });
+
+      await service.sendEmailNotification('user-10', 'Subject', 'tmpl', {});
+
+      expect(emailService.sendNotificationEmail).not.toHaveBeenCalled();
+    });
   });
 });

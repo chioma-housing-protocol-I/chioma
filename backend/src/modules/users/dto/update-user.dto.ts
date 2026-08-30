@@ -5,12 +5,14 @@ import {
   IsEmail,
   IsOptional,
   IsPhoneNumber,
+  IsIn,
   MinLength,
   Matches,
   IsBoolean,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ValidationUtils } from '../../../common/utils/validation/validation.utils';
+import { SUPPORTED_LANGUAGES } from '../../i18n/i18n.service';
 import { CreateUserDto } from './create-user.dto';
 
 export class UpdateUserProfileDto {
@@ -46,9 +48,16 @@ export class UpdateUserProfileDto {
   @IsString()
   avatarUrl?: string;
 
-  @ApiPropertyOptional({ example: 'en', description: 'Preferred language' })
+  @ApiPropertyOptional({
+    example: 'en',
+    description: 'Preferred language',
+    enum: SUPPORTED_LANGUAGES,
+  })
   @IsOptional()
   @IsString()
+  @IsIn(SUPPORTED_LANGUAGES, {
+    message: `preferredLanguage must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`,
+  })
   preferredLanguage?: string;
 
   @ApiPropertyOptional({ example: 'UTC', description: 'Timezone' })

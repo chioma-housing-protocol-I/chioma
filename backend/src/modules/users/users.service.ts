@@ -247,6 +247,12 @@ export class UsersService {
       }
     }
 
+    // Durable locale preference used as the i18n fallback for API responses
+    // and outbound notification emails when no per-request `lang` is given.
+    if (updateProfileDto.preferredLanguage !== undefined) {
+      user.preferredLanguage = updateProfileDto.preferredLanguage;
+    }
+
     const updatedUser = await this.userRepository.save(user);
 
     // Audit log for PII access

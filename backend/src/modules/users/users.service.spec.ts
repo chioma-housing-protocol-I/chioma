@@ -204,6 +204,22 @@ describe('UsersService', () => {
       );
     });
 
+    it('persists the preferredLanguage locale preference', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+      mockUserRepository.save.mockImplementation((u: unknown) =>
+        Promise.resolve(u),
+      );
+
+      const result = await service.updateProfile('1', {
+        preferredLanguage: 'fr',
+      });
+
+      expect(result.preferredLanguage).toBe('fr');
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ preferredLanguage: 'fr' }),
+      );
+    });
+
     it('should throw NotFoundException if user not found', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 

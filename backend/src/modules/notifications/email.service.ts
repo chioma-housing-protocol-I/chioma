@@ -4,6 +4,7 @@ import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Retry } from '../../common/decorators/retry.decorator';
+import { I18nService } from '../i18n/i18n.service';
 
 @Injectable()
 export class EmailService {
@@ -16,6 +17,7 @@ export class EmailService {
   constructor(
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly i18nService: I18nService,
   ) {
     const service = this.configService.get<string>('EMAIL_SERVICE');
     const user = this.configService.get<string>('EMAIL_USER');
@@ -136,12 +138,13 @@ export class EmailService {
     subject: string,
     template: string,
     data: Record<string, any>,
+    language?: string,
   ): Promise<void> {
     const mailOptions = {
       from: this.configService.get<string>('EMAIL_FROM'),
       to: email,
       subject,
-      html: this.renderTemplate(template, data),
+      html: this.renderTemplate(template, data, language),
     };
 
     try {
@@ -190,9 +193,22 @@ export class EmailService {
     }
   }
 
-  private renderTemplate(template: string, data: Record<string, any>): string {
-    // Simple template rendering - can be extended with more sophisticated templating
-    let html = `<h1>${data.title || 'Notification'}</h1>`;
+  private renderTemplate(
+    template: string,
+    data: Record<string, any>,
+    language?: string,
+  ): string {
+    // Simple template rendering - can be extended with more sophisticated
+    // templating. The recipient's language localizes the chrome (default
+    // title and call-to-action) so emails honour a stored preference even
+    // when the caller only supplies English content.
+    const lang = this.i18nService.resolveLanguage(language);
+    const title =
+      data.title || this.i18nService.t('notifications.emailTitle', lang);
+    const actionText =
+      data.actionText || this.i18nService.t('notifications.viewDetails', lang);
+
+    let html = `<h1>${title}</h1>`;
     html += `<p>${data.message || ''}</p>`;
 
     if (data.items && Array.isArray(data.items)) {
@@ -204,7 +220,7 @@ export class EmailService {
     }
 
     if (data.actionUrl) {
-      html += `<a href="${data.actionUrl}">${data.actionText || 'View Details'}</a>`;
+      html += `<a href="${data.actionUrl}">${actionText}</a>`;
     }
 
     return html;

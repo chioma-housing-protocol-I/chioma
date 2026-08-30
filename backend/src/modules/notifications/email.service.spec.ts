@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from './email.service';
+import { I18nService } from '../i18n/i18n.service';
 import { NetworkError } from '../../common/errors/retry-errors';
 
 jest.mock('nodemailer');
@@ -58,6 +59,7 @@ describe('EmailService', () => {
         EmailService,
         { provide: ConfigService, useValue: configService },
         { provide: CACHE_MANAGER, useValue: cacheManager },
+        I18nService,
       ],
     }).compile();
 
@@ -157,6 +159,7 @@ describe('EmailService', () => {
           EmailService,
           { provide: ConfigService, useValue: configService },
           { provide: CACHE_MANAGER, useValue: createMockCacheManager() },
+          I18nService,
         ],
       }).compile();
       const svc = module.get<EmailService>(EmailService);
@@ -264,6 +267,7 @@ describe('EmailService', () => {
           EmailService,
           { provide: ConfigService, useValue: configService },
           { provide: CACHE_MANAGER, useValue: createMockCacheManager() },
+          I18nService,
         ],
       }).compile();
       const svc = module.get<EmailService>(EmailService);

@@ -67,6 +67,8 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'fr', label: 'French' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'ar', label: 'Arabic' },
 ];
 
 const CURRENCY_OPTIONS = [
@@ -338,6 +340,27 @@ export function SettingsPageClient({
       ...preferences,
       appearanceTheme: theme,
     });
+  };
+
+  const handleLanguageChange = (language: string) => {
+    // Keep the in-app preferences blob in sync (existing behavior)...
+    updatePreference({
+      ...preferences,
+      language,
+    });
+
+    // ...and persist the durable User.preferredLanguage column, which the
+    // backend uses as the i18n fallback for API responses and notification
+    // emails when a request carries no explicit language.
+    if (!accessToken) return;
+    void fetch('/api/users/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ preferredLanguage: language }),
+    }).catch(() => undefined);
   };
 
   const handlePasswordChange = handleSubmit(async (values) => {
@@ -666,12 +689,7 @@ export function SettingsPageClient({
                 id="language"
                 value={preferences.language}
                 disabled={isSavingPreferences}
-                onChange={(event) =>
-                  updatePreference({
-                    ...preferences,
-                    language: event.target.value,
-                  })
-                }
+                onChange={(event) => handleLanguageChange(event.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
               >
                 {LANGUAGE_OPTIONS.map((option) => (
