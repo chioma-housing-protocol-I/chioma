@@ -16,6 +16,15 @@ pub enum DataKey {
     /// Upgrade proposal
     UpgradeProposal(String),
 
+<<<<<<< HEAD
+    /// Rate limit configuration
+    RateLimitConfig,
+
+    /// Per-user per-function call count
+    UserCallCount(Address, String),
+
+    /// Per-block per-function call count
+=======
     /// Rate limiting configuration
     RateLimitConfig,
 
@@ -23,5 +32,6 @@ pub enum DataKey {
     UserCallCount(Address, String),
 
     /// Block call count for rate limiting: DataKey::BlockCallCount(block_number, function_name)
+>>>>>>> upstream/main
     BlockCallCount(u64, String),
 }

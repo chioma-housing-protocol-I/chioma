@@ -17,7 +17,12 @@ pub struct BurnRecord {
     pub reason: String,
 }
 
+<<<<<<< HEAD
+// ─── Rate Limiting Types ──────────────────────────────────────────────────────
+
+=======
 /// Rate limiting configuration.
+>>>>>>> upstream/main
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RateLimitConfig {
@@ -26,7 +31,10 @@ pub struct RateLimitConfig {
     pub cooldown_blocks: u32,
 }
 
+<<<<<<< HEAD
+=======
 /// User call count for rate limiting.
+>>>>>>> upstream/main
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UserCallCount {

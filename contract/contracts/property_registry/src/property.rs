@@ -17,6 +17,7 @@ pub fn register_property(
     }
 
     landlord.require_auth();
+    crate::rate_limit::check_rate_limit(env, &landlord, "register_property")?;
 
     // Rate limiting check
     rate_limit::check_rate_limit(env, &landlord, "register_property")?;
@@ -70,6 +71,7 @@ pub fn verify_property(
         .ok_or(PropertyError::NotInitialized)?;
 
     admin.require_auth();
+    crate::rate_limit::check_rate_limit(env, &admin, "verify_property")?;
 
     // Rate limiting check
     rate_limit::check_rate_limit(env, &admin, "verify_property")?;

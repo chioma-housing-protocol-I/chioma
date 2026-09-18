@@ -12,16 +12,12 @@ mod upgrade;
 
 #[cfg(test)]
 mod tests;
-
 #[cfg(test)]
 mod tests_rate_limit;
-
 #[cfg(test)]
 mod tests_rbac;
-
 #[cfg(test)]
 mod tests_errors;
-
 #[cfg(test)]
 mod tests_events;
 
@@ -31,7 +27,7 @@ pub use property::{
     update_property_metadata, verify_property,
 };
 pub use storage::DataKey;
-pub use types::{ContractState, PropertyDetails};
+pub use types::{ContractState, PropertyDetails, RateLimitConfig, UserCallCount};
 
 #[contract]
 pub struct PropertyRegistryContract;

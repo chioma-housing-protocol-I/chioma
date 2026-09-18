@@ -12,7 +12,6 @@ mod upgrade;
 
 #[cfg(test)]
 mod tests;
-
 #[cfg(test)]
 mod tests_rate_limit;
 
@@ -22,7 +21,7 @@ pub use agent::{
 };
 pub use errors::AgentError;
 pub use storage::DataKey;
-pub use types::{AgentInfo, AgentTransaction, ContractState};
+pub use types::{AgentInfo, AgentTransaction, ContractState, RateLimitConfig, UserCallCount};
 
 #[contract]
 pub struct AgentRegistryContract;
