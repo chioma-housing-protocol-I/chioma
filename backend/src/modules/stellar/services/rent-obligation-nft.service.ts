@@ -2,6 +2,18 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { BlockchainTransactionError } from '../../../common/errors/domain-errors';
+
+/**
+ * Fields read from a Soroban `sendTransaction` response.
+ * `hash` is required to correlate the submission. A missing or empty hash
+ * is a protocol error, not a successful mint, transfer, burn, or reassignment.
+ */
+interface SorobanSendTransactionResponse {
+  hash?: string | null;
+  status?: string;
+  errorResult?: unknown;
+}
 
 export interface MintObligationParams {
   agreementId: string;
@@ -103,13 +115,14 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.requireTransactionHash(response, 'mint_obligation');
 
       this.logger.log(
         `Minted rent obligation NFT for agreement ${params.agreementId}`,
       );
 
       return {
-        txHash: response.hash,
+        txHash,
         obligationId: params.agreementId,
       };
     } catch (error) {
@@ -139,12 +152,16 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.requireTransactionHash(
+        response,
+        'transfer_obligation',
+      );
 
       this.logger.log(
         `Transferred obligation ${params.agreementId} from ${params.fromAddress} to ${params.toAddress}`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(
         `Failed to transfer obligation ${params.agreementId}`,
@@ -324,12 +341,13 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.requireTransactionHash(response, 'burn_nft');
 
       this.logger.log(
         `Burned rent obligation NFT ${params.tokenId} (reason: ${params.reason})`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(`Failed to burn obligation ${params.tokenId}`, error);
       throw error;
@@ -354,12 +372,16 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.requireTransactionHash(
+        response,
+        'admin_reassign_obligation',
+      );
 
       this.logger.log(
         `Admin reassigned obligation ${params.agreementId} to ${params.newOwnerAddress}`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(
         `Failed to admin-reassign obligation ${params.agreementId}`,
@@ -477,6 +499,20 @@ export class RentObligationNftService {
       this.logger.error(`Failed to get burned nfts for ${ownerAddress}`, error);
       return [];
     }
+  }
+
+  private requireTransactionHash(
+    response: SorobanSendTransactionResponse | null | undefined,
+    operation: string,
+  ): string {
+    const hash = response?.hash;
+    if (hash == null || hash === '') {
+      throw new BlockchainTransactionError(
+        `Soroban ${operation} response is missing a transaction hash`,
+        { operation, status: response?.status },
+      );
+    }
+    return hash;
   }
 
   private async buildTransaction(
