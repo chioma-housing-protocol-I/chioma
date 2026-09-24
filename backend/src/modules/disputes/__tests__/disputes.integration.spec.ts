@@ -950,7 +950,9 @@ describe('DisputesService - Integration Tests', () => {
     });
 
     it('should handle finding non-existent dispute', async () => {
-      await expect(service.findOne(99999)).rejects.toThrow(DisputeNotFoundError);
+      await expect(service.findOne(99999)).rejects.toThrow(
+        DisputeNotFoundError,
+      );
     });
 
     it('should handle finding by non-existent disputeId', async () => {

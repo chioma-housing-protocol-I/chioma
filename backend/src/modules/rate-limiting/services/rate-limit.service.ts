@@ -191,8 +191,7 @@ export class RateLimitService {
     const key = this.buildKey(identifier, category);
     if (typeof this.redis?.get === 'function') {
       const current = await this.redis.get(key);
-      const consumed =
-        current == null || current === '' ? 0 : Number(current);
+      const consumed = current == null || current === '' ? 0 : Number(current);
       return Math.max(
         config.points - (Number.isFinite(consumed) ? consumed : 0),
         0,
