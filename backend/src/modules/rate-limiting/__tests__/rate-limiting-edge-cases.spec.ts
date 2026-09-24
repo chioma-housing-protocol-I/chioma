@@ -295,7 +295,7 @@ describe('Rate Limiting Edge Cases', () => {
         .map(() => service.resetLimit(identifier, EndpointCategory.PUBLIC));
 
       await expect(Promise.all(resetPromises)).resolves.not.toThrow();
-      expect(mockCacheManager.del).toHaveBeenCalledTimes(10); // 5 resets * 2 keys each
+      expect(mockCacheManager.del).toHaveBeenCalledTimes(15); // 5 resets * 3 keys each
     });
   });
 
@@ -441,8 +441,8 @@ describe('Rate Limiting Edge Cases', () => {
       const identifier = 'immediate-block-test';
 
       // Simulate a blocked state
-      mockCacheManager.get.mockImplementation((key) => {
-        if (key.includes('block')) return Promise.resolve(true);
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.startsWith('rate_limit:block:')) return Promise.resolve(true);
         return Promise.resolve(0);
       });
 
@@ -460,8 +460,8 @@ describe('Rate Limiting Edge Cases', () => {
     it('should handle block status with expired TTL', async () => {
       const identifier = 'expired-block-test';
 
-      mockCacheManager.get.mockImplementation((key) => {
-        if (key.includes('block')) return Promise.resolve(true);
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.startsWith('rate_limit:block:')) return Promise.resolve(true);
         return Promise.resolve(0);
       });
       mockCacheManager.store.ttl.mockResolvedValue(-1); // Expired

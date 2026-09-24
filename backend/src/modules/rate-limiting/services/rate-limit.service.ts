@@ -44,10 +44,24 @@ export class RateLimitService {
     const config = this.getConfig(tier, category);
     const key = this.buildKey(identifier, category);
     const blockKey = this.buildBlockKey(identifier, category);
+    const userBlockKey = this.buildUserBlockKey(identifier);
 
     try {
+      const whitelisted = await this.cacheManager.get<boolean>(
+        `rate_limit:whitelist:${identifier}`,
+      );
+      if (whitelisted === true) {
+        return {
+          success: true,
+          remainingPoints: config.points,
+          msBeforeNext: 0,
+          isBlocked: false,
+        };
+      }
+
       const isBlocked = await this.cacheManager.get<boolean>(blockKey);
-      if (isBlocked) {
+      const isUserBlocked = await this.cacheManager.get<boolean>(userBlockKey);
+      if (isBlocked || isUserBlocked) {
         const ttl = await this.getTTL(blockKey);
         return {
           success: false,
@@ -67,6 +81,11 @@ export class RateLimitService {
         if (config.blockDuration) {
           await this.cacheManager.set(
             blockKey,
+            true,
+            config.blockDuration * 1000,
+          );
+          await this.cacheManager.set(
+            userBlockKey,
             true,
             config.blockDuration * 1000,
           );
@@ -148,8 +167,13 @@ export class RateLimitService {
     try {
       const key = this.buildKey(identifier, category);
       const blockKey = this.buildBlockKey(identifier, category);
+      const userBlockKey = this.buildUserBlockKey(identifier);
+      if (typeof this.redis?.del === 'function') {
+        await this.redis.del(key);
+      }
       await this.cacheManager.del(key);
       await this.cacheManager.del(blockKey);
+      await this.cacheManager.del(userBlockKey);
     } catch (error) {
       this.logger.error(
         `Failed to reset limit for ${identifier}: ${error.message}`,
@@ -165,6 +189,15 @@ export class RateLimitService {
   ): Promise<number> {
     const config = this.getConfig(tier, category);
     const key = this.buildKey(identifier, category);
+    if (typeof this.redis?.get === 'function') {
+      const current = await this.redis.get(key);
+      const consumed =
+        current == null || current === '' ? 0 : Number(current);
+      return Math.max(
+        config.points - (Number.isFinite(consumed) ? consumed : 0),
+        0,
+      );
+    }
     const current = await this.cacheManager.get<number>(key);
     return config.points - (current || 0);
   }
@@ -225,6 +258,10 @@ export class RateLimitService {
 
   private buildBlockKey(identifier: string, category: string): string {
     return `rate_limit:block:${category}:${identifier}`;
+  }
+
+  private buildUserBlockKey(identifier: string): string {
+    return `rate_limit:block:user:${identifier}`;
   }
 
   private async recordViolation(
