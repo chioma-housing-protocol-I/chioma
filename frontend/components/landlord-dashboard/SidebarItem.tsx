@@ -34,7 +34,7 @@ export default function SidebarItem({
       className={`flex gap-3 items-center px-6 py-3 cursor-pointer transition-all duration-200
         ${
           activeState
-            ? 'bg-white/10 text-white lg:border-l-4 lg:border-blue-500 shadow-lg'
+            ? 'bg-white/10 text-white lg:border-s-4 lg:border-blue-500 shadow-lg'
             : 'text-blue-200/60 hover:bg-white/5 hover:text-white'
         }
         md:flex-col gap-3 md:py-4 lg:flex-row lg:items-center lg:px-6

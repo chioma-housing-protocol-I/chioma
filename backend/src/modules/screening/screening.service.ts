@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import axios from 'axios';
+import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
 import { EncryptionService } from '../security/encryption.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -22,6 +23,7 @@ import { TenantScreeningReport } from './entities/tenant-screening-report.entity
 import { CreateTenantScreeningRequestDto } from './dto/create-tenant-screening-request.dto';
 import { GrantTenantScreeningConsentDto } from './dto/grant-tenant-screening-consent.dto';
 import { TenantScreeningWebhookDto } from './dto/tenant-screening-webhook.dto';
+import { RenewTenantScreeningRequestDto } from './dto/renew-tenant-screening-request.dto';
 import {
   UserScreeningProvider,
   UserScreeningRiskLevel,
@@ -59,6 +61,7 @@ export class ScreeningService {
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
     private readonly webhooksService: WebhooksService,
+    private readonly certificatePinningService: CertificatePinningService,
   ) {}
 
   async createRequest(
@@ -179,6 +182,12 @@ export class ScreeningService {
       throw new NotFoundException('Screening report not available');
     }
 
+    if (report.accessExpiresAt && report.accessExpiresAt < new Date()) {
+      throw new NotFoundException(
+        'Screening report has expired and must be re-run',
+      );
+    }
+
     const decryptedReport = JSON.parse(
       this.encryptionService.decrypt(report.encryptedReport),
     ) as Record<string, unknown>;
@@ -231,6 +240,81 @@ export class ScreeningService {
     }
 
     await this.notifyStakeholders(saved);
+    return saved;
+  }
+
+  async renewRequest(
+    screeningId: string,
+    actor: RequestActor,
+    dto: RenewTenantScreeningRequestDto,
+  ): Promise<TenantScreeningRequest> {
+    const originalScreening = await this.requireScreening(screeningId);
+    this.assertCanAccess(originalScreening, actor);
+
+    // Verify the original screening is completed
+    if (originalScreening.status !== UserScreeningStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Only completed screening requests can be renewed',
+      );
+    }
+
+    // Get the original applicant data
+    const applicantData = JSON.parse(
+      this.encryptionService.decrypt(originalScreening.encryptedApplicantData),
+    ) as Record<string, unknown>;
+
+    // Determine which checks to use
+    const checksToUse =
+      dto.requestedChecks ?? originalScreening.requestedChecks;
+
+    // Create new screening request linked to the original
+    const consentTtlDays = Number(
+      this.configService.get<string>('TENANT_SCREENING_CONSENT_TTL_DAYS', '30'),
+    );
+    const renewedScreening = this.screeningRepository.create({
+      tenantId: originalScreening.tenantId,
+      requestedByUserId: actor.id,
+      provider: originalScreening.provider,
+      requestedChecks: checksToUse,
+      status: UserScreeningStatus.PENDING_CONSENT,
+      consentRequired: true,
+      consentVersion: originalScreening.consentVersion,
+      consentExpiresAt: new Date(
+        Date.now() + consentTtlDays * 24 * 60 * 60 * 1000,
+      ),
+      renewedFromId: originalScreening.id,
+      encryptedApplicantData: originalScreening.encryptedApplicantData,
+      metadata: {
+        propertyId: originalScreening.metadata?.propertyId ?? null,
+        notes: dto.notes ?? originalScreening.metadata?.notes ?? null,
+        renewalReason: 'Proactive renewal before access expiration',
+      },
+    });
+
+    const saved = await this.screeningRepository.save(renewedScreening);
+
+    await this.auditService.log({
+      action: AuditAction.CREATE,
+      entityType: 'TenantScreeningRequest',
+      entityId: saved.id,
+      performedBy: actor.id,
+      level: AuditLevel.SECURITY,
+      metadata: {
+        provider: originalScreening.provider,
+        tenantId: originalScreening.tenantId,
+        requestedChecks: checksToUse,
+        renewedFromId: originalScreening.id,
+      },
+    });
+
+    // Notify stakeholders about renewal
+    await this.notificationsService.notify(
+      actor.id,
+      'Screening renewal initiated',
+      'Your tenant screening request has been renewed. Awaiting consent.',
+      'screening_renewal',
+    );
+
     return saved;
   }
 
@@ -330,6 +414,9 @@ export class ScreeningService {
           'Content-Type': 'application/json',
         },
         timeout: 15000,
+        httpsAgent: this.certificatePinningService.getHttpsAgentForUrl(
+          providerConfig.baseUrl,
+        ),
       },
     );
 
@@ -478,8 +565,8 @@ export class ScreeningService {
   private getDefaultProvider(): UserScreeningProvider {
     return (
       (this.configService.get<string>('USER_SCREENING_DEFAULT_PROVIDER') as
-        | UserScreeningProvider
-        | undefined) ?? UserScreeningProvider.TRANSUNION_SMARTMOVE
+        UserScreeningProvider | undefined) ??
+      UserScreeningProvider.TRANSUNION_SMARTMOVE
     );
   }
 

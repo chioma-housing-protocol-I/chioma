@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Wrench, FileCheck, CreditCard, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface RecentActivityProps {
   viewAllHref?: string;
@@ -11,6 +12,7 @@ interface RecentActivityProps {
 const RecentActivity = ({
   viewAllHref = '/dashboard/notifications',
 }: RecentActivityProps) => {
+  const dateFnsLocale = useDateFnsLocale();
   const MOCK_NOW = new Date('2025-01-24T12:00:00');
 
   // ... activities data ...
@@ -110,6 +112,7 @@ const RecentActivity = ({
                   <span className="text-[10px] font-medium text-blue-300/40 shrink-0 ml-2 uppercase tracking-wider">
                     {formatDistanceToNow(activity.timestamp, {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>

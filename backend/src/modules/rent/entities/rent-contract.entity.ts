@@ -13,6 +13,7 @@ import { RentObligationNft } from '../../agreements/entities/rent-obligation-nft
 export enum AgreementStatus {
   DRAFT = 'draft',
   PENDING_DEPOSIT = 'pending_deposit',
+  SIGNED = 'signed',
   ACTIVE = 'active',
   EXPIRED = 'expired',
   TERMINATED = 'terminated',

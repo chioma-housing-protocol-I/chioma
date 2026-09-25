@@ -1,6 +1,0 @@
-.next
-node_modules
-out
-build
-coverage
-*.min.js

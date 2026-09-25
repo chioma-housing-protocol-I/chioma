@@ -5,15 +5,30 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String};
 mod errors;
 mod events;
 mod property;
+mod rate_limit;
 mod storage;
 mod types;
+mod upgrade;
 
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod tests_rate_limit;
+
+#[cfg(test)]
+mod tests_rbac;
+
+#[cfg(test)]
+mod tests_errors;
+
+#[cfg(test)]
+mod tests_events;
+
 pub use errors::PropertyError;
 pub use property::{
-    get_property, get_property_count, has_property, register_property, verify_property,
+    get_property, get_property_count, has_property, register_property, transfer_property,
+    update_property_metadata, verify_property,
 };
 pub use storage::DataKey;
 pub use types::{ContractState, PropertyDetails};
@@ -131,5 +146,89 @@ impl PropertyRegistryContract {
     /// * `u32` - The total number of properties registered
     pub fn get_property_count(env: Env) -> u32 {
         property::get_property_count(&env)
+    }
+
+    /// Transfer ownership of a property to a new landlord.
+    ///
+    /// # Arguments
+    /// * `current_landlord` - The landlord currently on record for the property
+    /// * `new_landlord` - The address that will become the new landlord
+    /// * `property_id` - The ID of the property to transfer
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `PropertyNotFound` - If the property doesn't exist
+    /// * `Unauthorized` - If `current_landlord` is not the property's actual landlord
+    pub fn transfer_property(
+        env: Env,
+        current_landlord: Address,
+        new_landlord: Address,
+        property_id: String,
+    ) -> Result<(), PropertyError> {
+        property::transfer_property(&env, current_landlord, new_landlord, property_id)
+    }
+
+    /// Update the metadata hash of a registered property.
+    ///
+    /// Resets the property's verification status, since the new metadata
+    /// may describe materially different property details.
+    ///
+    /// # Arguments
+    /// * `landlord` - The landlord on record for the property
+    /// * `property_id` - The ID of the property to update
+    /// * `new_metadata_hash` - The new IPFS hash or metadata reference
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `InvalidMetadata` - If the new metadata hash is empty
+    /// * `PropertyNotFound` - If the property doesn't exist
+    /// * `Unauthorized` - If `landlord` is not the property's actual landlord
+    pub fn update_property_metadata(
+        env: Env,
+        landlord: Address,
+        property_id: String,
+        new_metadata_hash: String,
+    ) -> Result<(), PropertyError> {
+        property::update_property_metadata(&env, landlord, property_id, new_metadata_hash)
+    }
+
+    // --- Upgrade Functions ---
+
+    /// Propose a contract upgrade (admin only).
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: soroban_sdk::Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), PropertyError> {
+        upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve an upgrade proposal (admin only).
+    pub fn approve_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), PropertyError> {
+        upgrade::approve_upgrade(&env, approver, proposal_id)
+    }
+
+    /// Execute an approved upgrade (admin only).
+    pub fn execute_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), PropertyError> {
+        upgrade::execute_upgrade(&env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, PropertyError> {
+        upgrade::get_upgrade_proposal(&env, proposal_id)
     }
 }

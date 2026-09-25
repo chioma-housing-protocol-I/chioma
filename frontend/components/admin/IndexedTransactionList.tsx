@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { getIndexedTransactionExplorerUrl } from '@/lib/indexed-transactions';
 import type { IndexedTransaction, PaginatedResponse } from '@/types';
@@ -23,6 +24,7 @@ export function IndexedTransactionList({
   onSelect,
   onPageChange,
 }: IndexedTransactionListProps) {
+  const dateFnsLocale = useDateFnsLocale();
   const rows = transactions?.data ?? [];
   const totalPages = Math.max(transactions?.totalPages ?? 1, 1);
 
@@ -117,6 +119,7 @@ export function IndexedTransactionList({
                       ? format(
                           new Date(transaction.indexedAt),
                           'MMM d, yyyy HH:mm',
+                          { locale: dateFnsLocale },
                         )
                       : 'Awaiting index'}
                   </td>

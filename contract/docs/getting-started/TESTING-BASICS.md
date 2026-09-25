@@ -3,7 +3,7 @@
 > **Chioma Housing Protocol** — Developer Onboarding  
 > Related Issues: [#01](https://github.com/Listoncrypt/chioma/issues/1), [#04](https://github.com/Listoncrypt/chioma/issues/4)
 
-Testing is a **non-negotiable** part of Chioma contract development. Every new function must ship with corresponding tests. 
+Testing is a **non-negotiable** part of Chioma contract development. Every new function must ship with corresponding tests.
 
 ## Intro
 
@@ -29,7 +29,7 @@ use soroban_sdk::{Env, String, Symbol};
 fn test_register_property() {
     // 1. Create a simulated contract environment ("mock" the blockchain)
     let env = Env::default();
-    
+
     // 2. Register the contract in the environment
     let contract_id = env.register(HousingRegistryContract, ());
     let client = HousingRegistryContractClient::new(&env, &contract_id);
@@ -82,7 +82,7 @@ thread 'test::test_register_property' panicked at 'assertion failed: `(left == r
 
 ### Viewing Print Statements
 
-By default, `cargo test` captures all output printed to the standard output (like `println!` logs) and hides it unless the test fails. 
+By default, `cargo test` captures all output printed to the standard output (like `println!` logs) and hides it unless the test fails.
 
 If you want to debug your contract and see logs during successful tests, add the `--nocapture` flag:
 

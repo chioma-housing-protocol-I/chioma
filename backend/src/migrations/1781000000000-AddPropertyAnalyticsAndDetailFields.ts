@@ -6,43 +6,43 @@ export class AddPropertyAnalyticsAndDetailFields1781000000000 implements Migrati
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "view_count" integer NOT NULL DEFAULT 0
+      ADD COLUMN IF NOT EXISTS "view_count" integer NOT NULL DEFAULT 0
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "favorite_count" integer NOT NULL DEFAULT 0
+      ADD COLUMN IF NOT EXISTS "favorite_count" integer NOT NULL DEFAULT 0
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "last_viewed_at" TIMESTAMP
+      ADD COLUMN IF NOT EXISTS "last_viewed_at" TIMESTAMP
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "verification_status" character varying(50)
+      ADD COLUMN IF NOT EXISTS "verification_status" character varying(50)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "virtual_tour_url" character varying(500)
+      ADD COLUMN IF NOT EXISTS "virtual_tour_url" character varying(500)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "video_url" character varying(500)
+      ADD COLUMN IF NOT EXISTS "video_url" character varying(500)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "floor_plan_url" character varying(500)
+      ADD COLUMN IF NOT EXISTS "floor_plan_url" character varying(500)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "energy_rating" character varying(10)
+      ADD COLUMN IF NOT EXISTS "energy_rating" character varying(10)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "pet_policy" character varying(100)
+      ADD COLUMN IF NOT EXISTS "pet_policy" character varying(100)
     `);
     await queryRunner.query(`
       ALTER TABLE "properties"
-      ADD COLUMN "parking_spaces" integer
+      ADD COLUMN IF NOT EXISTS "parking_spaces" integer
     `);
   }
 

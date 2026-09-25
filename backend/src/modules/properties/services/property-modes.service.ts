@@ -110,7 +110,7 @@ export class PropertyModesService {
     }
 
     // Validate target mode has required fields
-    this.validateModeSettings(dto.newMode, property as any);
+    this.validateModeSettings(dto.newMode, property);
 
     property.rentalMode = dto.newMode;
     const saved = await this.propertyRepo.save(property);
@@ -139,7 +139,13 @@ export class PropertyModesService {
 
   private validateModeSettings(
     mode: PropertyRentalMode,
-    dto: Partial<UpdatePropertyModeDto & Property>,
+    dto: Omit<
+      Partial<UpdatePropertyModeDto & Property>,
+      'maxStayDays' | 'nightlyRate'
+    > & {
+      maxStayDays?: number | null;
+      nightlyRate?: number | null;
+    },
   ): void {
     if (
       mode === PropertyRentalMode.SHORT_TERM ||

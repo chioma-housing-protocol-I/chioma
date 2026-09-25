@@ -13,6 +13,7 @@ import {
   PropertyHistory,
 } from '../entities/property-registry.entity';
 import { StellarAccount } from '../entities/stellar-account.entity';
+import { PaginationUtils } from '../../../common/utils';
 import {
   RegisterPropertyDto,
   TransferPropertyDto,
@@ -25,7 +26,7 @@ import { StellarConfig } from '../config/stellar.config';
 export class PropertyRegistryService {
   private readonly logger = new Logger(PropertyRegistryService.name);
   private readonly sorobanRpc: StellarSdk.SorobanRpc.Server;
-  private readonly contract: StellarSdk.Contract;
+  private readonly contract: StellarSdk.Contract | null;
   private readonly networkPassphrase: string;
 
   constructor(
@@ -40,16 +41,24 @@ export class PropertyRegistryService {
   ) {
     const config = this.configService.get<StellarConfig>('stellar')!;
 
-    // FIX 1: Cast config to 'any' to bypass strict interface checking for rpcUrl
     const rpcUrl =
-      (config as any).rpcUrl || 'https://soroban-testnet.stellar.org';
+      this.configService.get<string>('SOROBAN_RPC_URL') ||
+      'https://soroban-testnet.stellar.org';
     this.sorobanRpc = new StellarSdk.SorobanRpc.Server(rpcUrl);
     this.networkPassphrase = config.networkPassphrase;
 
-    const contractId =
-      this.configService.get<string>('PROPERTY_REGISTRY_CONTRACT_ID') ||
-      'DEFAULT_CONTRACT_ID';
-    this.contract = new StellarSdk.Contract(contractId);
+    const contractId = this.configService.get<string>(
+      'PROPERTY_REGISTRY_CONTRACT_ID',
+    );
+    if (contractId && contractId !== 'DEFAULT_CONTRACT_ID') {
+      this.contract = new StellarSdk.Contract(contractId);
+      this.logger.log(`PropertyRegistry contract initialized: ${contractId}`);
+    } else {
+      this.contract = null;
+      this.logger.warn(
+        'PROPERTY_REGISTRY_CONTRACT_ID not set - on-chain features will be disabled',
+      );
+    }
   }
 
   private async invokeContractFunction(
@@ -57,6 +66,12 @@ export class PropertyRegistryService {
     functionName: string,
     args: StellarSdk.xdr.ScVal[],
   ): Promise<string> {
+    if (!this.contract) {
+      throw new InternalServerErrorException(
+        'On-chain features are disabled - PROPERTY_REGISTRY_CONTRACT_ID not set',
+      );
+    }
+
     try {
       const sourceAccountDb = await this.accountRepository.findOne({
         where: { publicKey: sourcePublicKey },
@@ -71,14 +86,9 @@ export class PropertyRegistryService {
 
       const accountInfo = await this.sorobanRpc.getAccount(sourcePublicKey);
 
-      // FIX 2: Cast to 'any' and safely grab the sequence number regardless of SDK version
-      const sequence =
-        (accountInfo as any).sequence ||
-        (accountInfo as any).sequenceNumber?.() ||
-        '0';
       const sourceAccount = new StellarSdk.Account(
         sourcePublicKey,
-        sequence.toString(),
+        accountInfo.sequenceNumber(),
       );
 
       const operation = this.contract.call(functionName, ...args);
@@ -202,10 +212,14 @@ export class PropertyRegistryService {
     return this.propertyRegistryRepo.count();
   }
 
-  async getPropertyHistory(propertyId: string): Promise<PropertyHistory[]> {
-    return this.propertyHistoryRepo.find({
+  async getPropertyHistory(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.propertyHistoryRepo.findAndCount({
       where: { propertyId },
       order: { transferredAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 }

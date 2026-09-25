@@ -1,0 +1,5 @@
+# Enforce Unix line endings (LF) for git hooks and shell scripts on all platforms
+.husky/* text eol=lf
+.husky/_/* text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf

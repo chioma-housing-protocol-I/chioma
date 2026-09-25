@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { BlockchainTransactionError } from '../../../common/errors';
 
 export interface MintObligationParams {
   agreementId: string;
@@ -18,6 +19,25 @@ export interface RentObligationData {
   agreementId: string;
   owner: string;
   mintedAt: number;
+}
+
+export interface BurnObligationParams {
+  tokenId: string;
+  reason: string;
+  ownerAddress: string;
+}
+
+export interface AdminReassignObligationParams {
+  agreementId: string;
+  newOwnerAddress: string;
+  adminAddress: string;
+}
+
+export interface BurnRecordData {
+  tokenId: string;
+  burnedBy: string;
+  burnedAt: number;
+  reason: string;
 }
 
 @Injectable()
@@ -84,13 +104,17 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `mint_obligation(${params.agreementId})`,
+      );
 
       this.logger.log(
         `Minted rent obligation NFT for agreement ${params.agreementId}`,
       );
 
       return {
-        txHash: response.hash,
+        txHash,
         obligationId: params.agreementId,
       };
     } catch (error) {
@@ -120,12 +144,16 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `transfer_obligation(${params.agreementId})`,
+      );
 
       this.logger.log(
         `Transferred obligation ${params.agreementId} from ${params.fromAddress} to ${params.toAddress}`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(
         `Failed to transfer obligation ${params.agreementId}`,
@@ -288,6 +316,220 @@ export class RentObligationNftService {
     }
   }
 
+  async burnObligation(
+    params: BurnObligationParams,
+  ): Promise<{ txHash: string }> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
+      const tokenIdScVal = xdr.ScVal.scvString(params.tokenId);
+      const reasonScVal = xdr.ScVal.scvString(params.reason);
+
+      const tx = await this.buildTransaction(
+        'burn_nft',
+        [tokenIdScVal, reasonScVal],
+        params.ownerAddress,
+      );
+
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `burn_nft(${params.tokenId})`,
+      );
+
+      this.logger.log(
+        `Burned rent obligation NFT ${params.tokenId} (reason: ${params.reason})`,
+      );
+
+      return { txHash };
+    } catch (error) {
+      this.logger.error(`Failed to burn obligation ${params.tokenId}`, error);
+      throw error;
+    }
+  }
+
+  async adminReassignObligation(
+    params: AdminReassignObligationParams,
+  ): Promise<{ txHash: string }> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        throw new Error('Contract not configured');
+      }
+      const adminAddress = new Address(params.adminAddress);
+      const newOwnerAddress = new Address(params.newOwnerAddress);
+      const agreementIdScVal = xdr.ScVal.scvString(params.agreementId);
+
+      const tx = await this.buildTransaction(
+        'admin_reassign_obligation',
+        [adminAddress.toScVal(), agreementIdScVal, newOwnerAddress.toScVal()],
+        params.adminAddress,
+      );
+
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `admin_reassign_obligation(${params.agreementId})`,
+      );
+
+      this.logger.log(
+        `Admin reassigned obligation ${params.agreementId} to ${params.newOwnerAddress}`,
+      );
+
+      return { txHash };
+    } catch (error) {
+      this.logger.error(
+        `Failed to admin-reassign obligation ${params.agreementId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async canBurn(tokenId: string): Promise<boolean> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        return false;
+      }
+      const tokenIdScVal = xdr.ScVal.scvString(tokenId);
+      const result = this.contract.call('can_burn', tokenIdScVal);
+
+      const simulated = await this.server.simulateTransaction(
+        new StellarSdk.TransactionBuilder(
+          new StellarSdk.Account(
+            this.adminKeypair?.publicKey() ||
+              'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+            '0',
+          ),
+          { fee: '100', networkPassphrase: this.networkPassphrase },
+        )
+          .addOperation(result)
+          .setTimeout(30)
+          .build(),
+      );
+
+      if (SorobanRpc.Api.isSimulationSuccess(simulated)) {
+        return simulated.result?.retval?.switch().name === 'scvBool'
+          ? simulated.result.retval.b()
+          : false;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`Failed to check can_burn for ${tokenId}`, error);
+      return false;
+    }
+  }
+
+  async getBurnRecord(tokenId: string): Promise<BurnRecordData | null> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        return null;
+      }
+      const tokenIdScVal = xdr.ScVal.scvString(tokenId);
+      const result = this.contract.call('get_burn_record', tokenIdScVal);
+
+      const simulated = await this.server.simulateTransaction(
+        new StellarSdk.TransactionBuilder(
+          new StellarSdk.Account(
+            this.adminKeypair?.publicKey() ||
+              'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+            '0',
+          ),
+          { fee: '100', networkPassphrase: this.networkPassphrase },
+        )
+          .addOperation(result)
+          .setTimeout(30)
+          .build(),
+      );
+
+      if (
+        SorobanRpc.Api.isSimulationSuccess(simulated) &&
+        simulated.result?.retval
+      ) {
+        return this.parseBurnRecord(simulated.result.retval);
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to get burn record for ${tokenId}`, error);
+      return null;
+    }
+  }
+
+  async getBurnedNfts(ownerAddress: string): Promise<string[]> {
+    try {
+      if (!this.isConfigured || !this.contract) {
+        return [];
+      }
+      const ownerScVal = new Address(ownerAddress).toScVal();
+      const result = this.contract.call('get_burned_nfts', ownerScVal);
+
+      const simulated = await this.server.simulateTransaction(
+        new StellarSdk.TransactionBuilder(
+          new StellarSdk.Account(
+            this.adminKeypair?.publicKey() ||
+              'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+            '0',
+          ),
+          { fee: '100', networkPassphrase: this.networkPassphrase },
+        )
+          .addOperation(result)
+          .setTimeout(30)
+          .build(),
+      );
+
+      if (
+        SorobanRpc.Api.isSimulationSuccess(simulated) &&
+        simulated.result?.retval?.switch().name === 'scvVec'
+      ) {
+        const vec = simulated.result.retval.vec() || [];
+        return vec
+          .filter((entry) => entry.switch().name === 'scvString')
+          .map((entry) => entry.str().toString());
+      }
+
+      return [];
+    } catch (error) {
+      this.logger.error(`Failed to get burned nfts for ${ownerAddress}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Validates a Soroban `sendTransaction` response and returns the transaction hash.
+   *
+   * Expected response shape (subset of `SorobanRpc.Api.SendTransactionResponse`):
+   * ```
+   * {
+   *   hash:   string;          // hex-encoded transaction hash — REQUIRED
+   *   status: string;          // e.g. "PENDING" | "DUPLICATE" | "TRY_AGAIN_LATER" | "ERROR"
+   *   errorResultXdr?: string; // present only when status === "ERROR"
+   * }
+   * ```
+   *
+   * Throws `BlockchainTransactionError` when `hash` is absent or empty, which can
+   * happen if Soroban returns an incomplete response (e.g. a network interruption
+   * between submission and acknowledgement).
+   *
+   * @param response - Raw response from `SorobanRpc.Server.sendTransaction`
+   * @param operationLabel - Human-readable label used in the error message
+   * @returns The validated transaction hash string
+   */
+  private extractTransactionHash(
+    response: SorobanRpc.Api.SendTransactionResponse,
+    operationLabel: string,
+  ): string {
+    if (!response.hash) {
+      throw new BlockchainTransactionError(
+        `Soroban returned an incomplete response for "${operationLabel}": transaction hash is missing. ` +
+          `Response status: ${response.status ?? 'unknown'}`,
+        { operationLabel, responseStatus: response.status },
+      );
+    }
+    return response.hash;
+  }
+
   private async buildTransaction(
     method: string,
     params: xdr.ScVal[],
@@ -354,6 +596,52 @@ export class RentObligationNftService {
       return data as RentObligationData;
     } catch (error) {
       this.logger.error('Failed to parse obligation data', error);
+      return null;
+    }
+  }
+
+  private parseBurnRecord(scVal: xdr.ScVal): BurnRecordData | null {
+    try {
+      const map = scVal.map();
+      if (!map) return null;
+
+      const data: Partial<BurnRecordData> = {};
+
+      map.forEach((entry) => {
+        const key = entry.key();
+        const val = entry.val();
+
+        if (key.switch().name !== 'scvString') {
+          return;
+        }
+
+        const keyStr = key.str().toString();
+
+        switch (keyStr) {
+          case 'token_id':
+            if (val.switch().name === 'scvString') {
+              data.tokenId = val.str().toString();
+            }
+            break;
+          case 'burned_by':
+            data.burnedBy = Address.fromScVal(val).toString();
+            break;
+          case 'burned_at':
+            if (val.switch().name === 'scvU64') {
+              data.burnedAt = Number(val.u64());
+            }
+            break;
+          case 'reason':
+            if (val.switch().name === 'scvString') {
+              data.reason = val.str().toString();
+            }
+            break;
+        }
+      });
+
+      return data as BurnRecordData;
+    } catch (error) {
+      this.logger.error('Failed to parse burn record', error);
       return null;
     }
   }

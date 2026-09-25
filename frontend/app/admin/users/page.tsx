@@ -14,8 +14,10 @@ import {
   useAdminUsers,
   useSuspendUser,
   useActivateUser,
+  type AdminUserSortField,
 } from '@/lib/query/hooks/use-admin-users';
 import { BulkUserOperations } from '@/components/admin/BulkUserOperations';
+import { useModal } from '@/contexts/ModalContext';
 import toast from 'react-hot-toast';
 import type { User } from '@/types';
 
@@ -24,6 +26,8 @@ interface UserFilters {
   limit: number;
   search: string;
   role: User['role'] | '';
+  sortBy: AdminUserSortField;
+  sortOrder: 'ASC' | 'DESC';
 }
 
 const DEFAULT_FILTERS: UserFilters = {
@@ -31,10 +35,13 @@ const DEFAULT_FILTERS: UserFilters = {
   limit: 20,
   search: '',
   role: '',
+  sortBy: 'createdAt',
+  sortOrder: 'DESC',
 };
 
 export default function AdminUsersPage() {
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_FILTERS);
+  const { openModal } = useModal();
 
   const {
     data: users,
@@ -47,6 +54,20 @@ export default function AdminUsersPage() {
   const suspendUser = useSuspendUser();
   const activateUser = useActivateUser();
 
+  const handleUserClick = (user: User) => {
+    openModal('userManagement', {
+      user: {
+        id: user.id,
+        name: user.name ?? '',
+        email: user.email,
+        role: (user.role === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
+        status: 'active' as const,
+        isVerified: user.isVerified,
+      },
+      mode: 'view',
+    });
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -55,6 +76,16 @@ export default function AdminUsersPage() {
   };
 
   const handleClearFilters = () => setFilters(DEFAULT_FILTERS);
+
+  const handleSort = (key: AdminUserSortField) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      sortBy: key,
+      sortOrder:
+        prev.sortBy === key && prev.sortOrder === 'ASC' ? 'DESC' : 'ASC',
+    }));
+  };
 
   const hasFilters = filters.search !== '' || filters.role !== '';
 
@@ -239,9 +270,13 @@ export default function AdminUsersPage() {
         isLoading={isLoading}
         page={filters.page}
         setPage={(page) => setFilters((prev) => ({ ...prev, page }))}
+        sortBy={filters.sortBy}
+        sortOrder={filters.sortOrder}
+        onSort={handleSort}
         onBulkSuspend={handleBulkSuspend}
         onBulkActivate={handleBulkActivate}
         onBulkExport={handleBulkExport}
+        onRowClick={handleUserClick}
       />
     </div>
   );

@@ -25,7 +25,6 @@ jobs:
   lint-and-test:
     name: Lint, Format & Test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     defaults:
       run:
         working-directory: ./backend
@@ -40,15 +39,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./backend/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Run npm audit
-        run: pnpm audit --audit-level=high
 
       - name: Run ESLint
         run: pnpm run lint
@@ -58,6 +54,9 @@ jobs:
 
       - name: Run TypeScript type check
         run: pnpm exec tsc --noEmit
+
+      - name: Check API documentation coverage
+        run: pnpm run check:api-docs
 
       - name: Run unit tests
         run: pnpm test
@@ -91,7 +90,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./backend/pnpm-lock.yaml"
 

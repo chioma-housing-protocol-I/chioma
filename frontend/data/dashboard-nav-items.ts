@@ -11,32 +11,32 @@ import {
 export const dashboardNavItems: navItems[] = [
   {
     name: 'Overview',
-    href: '/dashboard',
+    href: '/user',
     icon: LayoutDashboard,
   },
   {
     name: 'Agreements',
-    href: '/dashboard/documents',
+    href: '/user/documents',
     icon: FileText,
   },
   {
     name: 'Payments',
-    href: '/dashboard/payments',
+    href: '/user/payments',
     icon: Wallet,
   },
   {
     name: 'Notifications',
-    href: '/dashboard/notifications',
+    href: '/user/notifications',
     icon: BellRing,
   },
   {
     name: 'Profile',
-    href: '/dashboard/profile',
+    href: '/user/profile',
     icon: User,
   },
   {
     name: 'Settings',
-    href: '/dashboard/settings',
+    href: '/user/settings',
     icon: Settings,
   },
 ];

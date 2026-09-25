@@ -182,7 +182,7 @@ describe('StellarAuthService', () => {
       expect(mockUserRepository.create).toHaveBeenCalledWith({
         walletAddress: mockWalletAddress,
         authMethod: AuthMethod.STELLAR,
-        emailVerified: true,
+        emailVerified: false,
         failedLoginAttempts: 0,
         isActive: true,
       });

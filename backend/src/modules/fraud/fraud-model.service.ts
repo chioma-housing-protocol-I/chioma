@@ -2,11 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FraudDecision, FraudFeatures } from './fraud.types';
+import { FraudThresholdsService } from './fraud-thresholds.service';
 
 interface FraudModelArtifact {
   modelVersion: string;
-  thresholdReview: number;
-  thresholdBlock: number;
   featureWeights: Record<string, number>;
 }
 
@@ -16,8 +15,6 @@ export class FraudModelService {
 
   private readonly defaultModel: FraudModelArtifact = {
     modelVersion: 'rules-v1',
-    thresholdReview: 45,
-    thresholdBlock: 75,
     featureWeights: {
       accountAgeDays: -0.6,
       failedLoginAttempts: 2.2,
@@ -34,7 +31,7 @@ export class FraudModelService {
 
   private readonly model: FraudModelArtifact;
 
-  constructor() {
+  constructor(private readonly thresholdsService: FraudThresholdsService) {
     this.model = this.loadModelArtifact();
   }
 
@@ -63,10 +60,12 @@ export class FraudModelService {
       0,
       Math.min(100, Math.round(50 + raw * 10)),
     );
+    const { thresholdReview, thresholdBlock } =
+      this.thresholdsService.getThresholds();
     const decision =
-      normalizedScore >= this.model.thresholdBlock
+      normalizedScore >= thresholdBlock
         ? 'block'
-        : normalizedScore >= this.model.thresholdReview
+        : normalizedScore >= thresholdReview
           ? 'review'
           : 'allow';
 
@@ -95,12 +94,7 @@ export class FraudModelService {
         fs.readFileSync(artifactPath, 'utf-8'),
       ) as FraudModelArtifact;
 
-      if (
-        !artifact.modelVersion ||
-        !artifact.featureWeights ||
-        typeof artifact.thresholdReview !== 'number' ||
-        typeof artifact.thresholdBlock !== 'number'
-      ) {
+      if (!artifact.modelVersion || !artifact.featureWeights) {
         throw new Error('Fraud model artifact is missing required fields');
       }
 

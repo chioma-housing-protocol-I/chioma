@@ -3,12 +3,30 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ArrowRight, CircleDollarSign, Filter, Loader2 } from 'lucide-react';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
+import toast from 'react-hot-toast';
+import {
+  ArrowRight,
+  CheckCircle2,
+  CheckSquare,
+  CircleDollarSign,
+  Filter,
+  Loader2,
+  Square,
+  XCircle,
+} from 'lucide-react';
 import type {
   AdminRefundRequestRow,
   AdminRefundStatus,
 } from '@/lib/admin-refund-requests';
-import { filterByStatus, statusLabel } from '@/lib/admin-refund-requests';
+import {
+  filterByStatus,
+  statusLabel,
+  submitAdminRefundDecision,
+} from '@/lib/admin-refund-requests';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { BulkConfirmDialog } from '@/components/admin/BulkConfirmDialog';
 
 const STATUS_OPTIONS: { value: AdminRefundStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'All statuses' },
@@ -31,21 +49,93 @@ export interface RefundManagementProps {
   rows: AdminRefundRequestRow[];
   loading?: boolean;
   error?: string | null;
+  /** Called after a bulk decision completes, so the caller can re-fetch. */
+  onRefresh?: () => void;
 }
+
+type BulkAction = 'approve' | 'reject';
 
 export function RefundManagement({
   rows,
   loading,
   error,
+  onRefresh,
 }: RefundManagementProps) {
   const [statusFilter, setStatusFilter] = useState<AdminRefundStatus | 'ALL'>(
     'ALL',
   );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const filtered = useMemo(
     () => filterByStatus(rows, statusFilter),
     [rows, statusFilter],
   );
+  const dateFnsLocale = useDateFnsLocale();
+
+  // Only PENDING refunds can be decided (matching RefundRequestDetail.tsx's
+  // own `canDecide = status === 'PENDING'`), so selection is scoped to them.
+  const selectableRows = useMemo(
+    () => filtered.filter((r) => r.status === 'PENDING'),
+    [filtered],
+  );
+  const allSelected =
+    selectableRows.length > 0 &&
+    selectableRows.every((r) => selectedIds.has(r.id));
+
+  const toggleAll = () => {
+    setSelectedIds(
+      allSelected ? new Set() : new Set(selectableRows.map((r) => r.id)),
+    );
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Bulk approve/reject (#1558): submitAdminRefundDecision now throws on
+  // failure instead of swallowing the error, so Promise.allSettled here
+  // gives an accurate success/failure count, matching
+  // BulkUserOperations.tsx's convention.
+  const runBulkAction = async (action: BulkAction) => {
+    const ids = Array.from(selectedIds);
+    setBulkLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          submitAdminRefundDecision(id, {
+            action,
+            notes: `${action === 'approve' ? 'Approved' : 'Rejected'} from admin dashboard (bulk action).`,
+          }),
+        ),
+      );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = ids.length - failed;
+
+      if (failed === 0) {
+        toast.success(
+          `${action === 'approve' ? 'Approved' : 'Rejected'} ${ids.length} refund${ids.length !== 1 ? 's' : ''}`,
+        );
+      } else if (succeeded === 0) {
+        toast.error(
+          `Failed to ${action} ${failed} refund${failed !== 1 ? 's' : ''}`,
+        );
+      } else {
+        toast.error(`${succeeded} succeeded, ${failed} failed to ${action}`);
+      }
+      setSelectedIds(new Set());
+      onRefresh?.();
+    } finally {
+      setBulkLoading(false);
+      setConfirmAction(null);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -93,6 +183,29 @@ export function RefundManagement({
         </span>
       </div>
 
+      {/* Bulk action bar (#1558) */}
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        itemLabel="refund"
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            key: 'approve',
+            label: 'Approve',
+            icon: <CheckCircle2 size={14} />,
+            tone: 'success',
+            onClick: () => setConfirmAction('approve'),
+          },
+          {
+            key: 'reject',
+            label: 'Reject',
+            icon: <XCircle size={14} />,
+            tone: 'danger',
+            onClick: () => setConfirmAction('reject'),
+          },
+        ]}
+      />
+
       <div className="bg-slate-900/80 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
         {loading ? (
           <div className="flex justify-center py-20 text-blue-200/80">
@@ -109,6 +222,21 @@ export function RefundManagement({
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-xs tracking-wider">
                 <tr>
+                  <th className="px-5 py-4 w-10">
+                    <button
+                      onClick={toggleAll}
+                      className="text-slate-500 hover:text-emerald-400 transition-colors"
+                      title={
+                        allSelected ? 'Deselect all' : 'Select all pending'
+                      }
+                    >
+                      {allSelected ? (
+                        <CheckSquare size={18} className="text-emerald-400" />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-5 py-4 font-semibold">Refund</th>
                   <th className="px-5 py-4 font-semibold hidden md:table-cell">
                     Requester
@@ -125,8 +253,27 @@ export function RefundManagement({
                 {filtered.map((row) => (
                   <tr
                     key={row.id}
-                    className="hover:bg-white/5 transition-colors"
+                    className={`hover:bg-white/5 transition-colors ${
+                      selectedIds.has(row.id) ? 'bg-emerald-500/5' : ''
+                    }`}
                   >
+                    <td className="px-5 py-4">
+                      {row.status === 'PENDING' ? (
+                        <button
+                          onClick={() => toggleOne(row.id)}
+                          className="text-slate-500 hover:text-emerald-400 transition-colors"
+                        >
+                          {selectedIds.has(row.id) ? (
+                            <CheckSquare
+                              size={18}
+                              className="text-emerald-400"
+                            />
+                          ) : (
+                            <Square size={18} />
+                          )}
+                        </button>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-4">
                       <p className="text-white font-medium">{row.refundId}</p>
                       <p className="text-slate-500 text-xs mt-0.5 line-clamp-2">
@@ -141,7 +288,7 @@ export function RefundManagement({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-white font-medium whitespace-nowrap">
-                      {row.amount.toLocaleString()} {row.currency}
+                      {formatCurrency(row.amount, row.currency)}
                     </td>
                     <td className="px-5 py-4">
                       <span
@@ -151,7 +298,9 @@ export function RefundManagement({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-slate-500 hidden sm:table-cell whitespace-nowrap">
-                      {format(new Date(row.updatedAt), 'MMM d, yyyy')}
+                      {format(new Date(row.updatedAt), 'MMM d, yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </td>
                     <td className="px-5 py-4">
                       <Link
@@ -169,6 +318,28 @@ export function RefundManagement({
           </div>
         )}
       </div>
+
+      {/* Bulk confirmation dialogs (#1558) */}
+      {confirmAction === 'approve' && (
+        <BulkConfirmDialog
+          title={`Approve ${selectedIds.size} refund${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="Each selected refund will be approved and queued for processing, and logged to the audit trail."
+          onConfirm={() => runBulkAction('approve')}
+          onCancel={() => setConfirmAction(null)}
+          isLoading={bulkLoading}
+          variant="warning"
+        />
+      )}
+      {confirmAction === 'reject' && (
+        <BulkConfirmDialog
+          title={`Reject ${selectedIds.size} refund${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="Each selected refund will be rejected and logged to the audit trail. This cannot be undone from this view."
+          onConfirm={() => runBulkAction('reject')}
+          onCancel={() => setConfirmAction(null)}
+          isLoading={bulkLoading}
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

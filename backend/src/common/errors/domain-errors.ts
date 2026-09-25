@@ -16,11 +16,14 @@ export class AuthenticationError extends BaseAppError {
 }
 
 export class AuthorizationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.AUTH_FORBIDDEN, HttpStatus.FORBIDDEN, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.AUTH_FORBIDDEN,
+      HttpStatus.FORBIDDEN,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -28,11 +31,14 @@ export class AuthorizationError extends BaseAppError {
  * Validation Errors
  */
 export class ValidationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.VALIDATION_FAILED,
+      HttpStatus.BAD_REQUEST,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -53,7 +59,7 @@ export class UserNotFoundError extends ResourceNotFoundError {
   constructor(userId?: string) {
     super(
       ErrorCode.USER_NOT_FOUND,
-      undefined,
+      userId ? `User with ID ${userId} not found` : undefined,
       userId ? { userId } : undefined,
     );
   }
@@ -63,7 +69,7 @@ export class PropertyNotFoundError extends ResourceNotFoundError {
   constructor(propertyId?: string) {
     super(
       ErrorCode.PROPERTY_NOT_FOUND,
-      undefined,
+      propertyId ? `Property with ID ${propertyId} not found` : undefined,
       propertyId ? { propertyId } : undefined,
     );
   }
@@ -73,7 +79,7 @@ export class AgreementNotFoundError extends ResourceNotFoundError {
   constructor(agreementId?: string) {
     super(
       ErrorCode.AGREEMENT_NOT_FOUND,
-      undefined,
+      agreementId ? `Agreement with ID ${agreementId} not found` : undefined,
       agreementId ? { agreementId } : undefined,
     );
   }
@@ -83,7 +89,9 @@ export class MaintenanceNotFoundError extends ResourceNotFoundError {
   constructor(maintenanceId?: string) {
     super(
       ErrorCode.MAINTENANCE_NOT_FOUND,
-      undefined,
+      maintenanceId
+        ? `Maintenance request with ID ${maintenanceId} not found`
+        : undefined,
       maintenanceId ? { maintenanceId } : undefined,
     );
   }
@@ -93,7 +101,7 @@ export class ReviewNotFoundError extends ResourceNotFoundError {
   constructor(reviewId?: string) {
     super(
       ErrorCode.REVIEW_NOT_FOUND,
-      undefined,
+      reviewId ? `Review with ID ${reviewId} not found` : undefined,
       reviewId ? { reviewId } : undefined,
     );
   }
@@ -103,8 +111,30 @@ export class NotificationNotFoundError extends ResourceNotFoundError {
   constructor(notificationId?: string) {
     super(
       ErrorCode.NOTIFICATION_NOT_FOUND,
-      undefined,
+      notificationId
+        ? `Notification with ID ${notificationId} not found`
+        : undefined,
       notificationId ? { notificationId } : undefined,
+    );
+  }
+}
+
+export class DisputeNotFoundError extends ResourceNotFoundError {
+  constructor(disputeId?: string) {
+    super(
+      ErrorCode.DISPUTE_NOT_FOUND,
+      disputeId ? `Dispute with ID ${disputeId} not found` : undefined,
+      disputeId ? { disputeId } : undefined,
+    );
+  }
+}
+
+export class BookingNotFoundError extends ResourceNotFoundError {
+  constructor(bookingId?: string) {
+    super(
+      ErrorCode.BOOKING_NOT_FOUND,
+      bookingId ? `Booking with ID ${bookingId} not found` : undefined,
+      bookingId ? { bookingId } : undefined,
     );
   }
 }
@@ -113,56 +143,74 @@ export class NotificationNotFoundError extends ResourceNotFoundError {
  * Business Logic Errors
  */
 export class BusinessRuleViolationError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.BUSINESS_RULE_VIOLATION, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.BUSINESS_RULE_VIOLATION,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class DuplicateEntryError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.DUPLICATE_ENTRY, HttpStatus.CONFLICT, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.DUPLICATE_ENTRY,
+      HttpStatus.CONFLICT,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class InsufficientFundsError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.INSUFFICIENT_FUNDS, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.INSUFFICIENT_FUNDS,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class InvalidStateTransitionError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.INVALID_STATE_TRANSITION, HttpStatus.UNPROCESSABLE_ENTITY, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.INVALID_STATE_TRANSITION,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class OperationNotAllowedError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.OPERATION_NOT_ALLOWED, HttpStatus.FORBIDDEN, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.OPERATION_NOT_ALLOWED,
+      HttpStatus.FORBIDDEN,
+      message,
+      true,
+      context,
+    );
   }
 }
 
 export class ProhibitedContentError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.PROHIBITED_CONTENT, HttpStatus.BAD_REQUEST, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.PROHIBITED_CONTENT,
+      HttpStatus.BAD_REQUEST,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -245,7 +293,13 @@ export class RateLimitError extends BaseAppError {
     retryAfter?: number,
     context?: Record<string, unknown>,
   ) {
-    super(ErrorCode.RATE_LIMIT_EXCEEDED, HttpStatus.TOO_MANY_REQUESTS, message, true, context);
+    super(
+      ErrorCode.RATE_LIMIT_EXCEEDED,
+      HttpStatus.TOO_MANY_REQUESTS,
+      message,
+      true,
+      context,
+    );
     this.retryAfter = retryAfter;
   }
 
@@ -258,11 +312,14 @@ export class RateLimitError extends BaseAppError {
 }
 
 export class SuspiciousActivityError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.SUSPICIOUS_ACTIVITY, HttpStatus.TOO_MANY_REQUESTS, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.SUSPICIOUS_ACTIVITY,
+      HttpStatus.TOO_MANY_REQUESTS,
+      message,
+      true,
+      context,
+    );
   }
 }
 
@@ -276,7 +333,13 @@ export class SystemError extends BaseAppError {
     isOperational = false,
     context?: Record<string, unknown>,
   ) {
-    super(code, HttpStatus.INTERNAL_SERVER_ERROR, message, isOperational, context);
+    super(
+      code,
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      message,
+      isOperational,
+      context,
+    );
   }
 }
 
@@ -287,10 +350,13 @@ export class ConfigurationError extends SystemError {
 }
 
 export class ServiceUnavailableError extends BaseAppError {
-  constructor(
-    message?: string,
-    context?: Record<string, unknown>,
-  ) {
-    super(ErrorCode.SERVICE_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE, message, true, context);
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(
+      ErrorCode.SERVICE_UNAVAILABLE,
+      HttpStatus.SERVICE_UNAVAILABLE,
+      message,
+      true,
+      context,
+    );
   }
 }

@@ -7,7 +7,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthModule } from '../src/modules/auth/auth.module';
 import { UsersModule } from '../src/modules/users/users.module';
 import { User } from '../src/modules/users/entities/user.entity';
-import { getTestDatabaseConfig } from './test-helpers';
+import { getTestDatabaseConfig, clearRepositories } from './test-helpers';
 
 describe.skip('Auth E2E Tests', () => {
   // Skipped: Requires PostgreSQL database (User entity uses enum types not supported by SQLite)
@@ -43,28 +43,18 @@ describe.skip('Auth E2E Tests', () => {
   });
 
   afterAll(async () => {
-    if (userRepository) {
-      await userRepository.clear();
-    }
+    await clearRepositories([userRepository]);
     if (app) {
       await app.close();
     }
   }, 60000);
 
+  beforeEach(async () => {
+    await clearRepositories([userRepository]);
+  }, 60000);
+
   afterEach(async () => {
-    if (userRepository) {
-      const users = await userRepository.find();
-      const testUser = users.find(
-        (u: any) => u.email === 'testuser@example.com',
-      );
-      if (testUser) {
-        await userRepository.remove(
-          users.filter((u: any) => u.email !== 'testuser@example.com'),
-        );
-      } else {
-        await userRepository.clear();
-      }
-    }
+    await clearRepositories([userRepository]);
   }, 60000);
 
   describe('POST /auth/register', () => {

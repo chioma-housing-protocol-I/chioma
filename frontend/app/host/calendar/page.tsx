@@ -12,11 +12,12 @@ import {
   isSameMonth,
   isToday,
 } from 'date-fns';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 export default function HostCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const { data: properties = [], isLoading: loadingProps } = useQuery({
     queryKey: ['host-listings'],
@@ -47,7 +48,12 @@ export default function HostCalendarPage() {
             Select property
           </p>
           {loadingProps ? (
-            <LoadingSpinner />
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-11 rounded-xl bg-white/5 border border-white/10 animate-pulse"
+              />
+            ))
           ) : properties.length === 0 ? (
             <p className="text-sm text-blue-300/40">No listings found</p>
           ) : (
@@ -91,7 +97,7 @@ export default function HostCalendarPage() {
                 <ChevronLeft size={20} />
               </button>
               <h2 className="text-lg font-semibold">
-                {format(currentMonth, 'MMMM yyyy')}
+                {format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
               </h2>
               <button
                 onClick={() =>
@@ -134,7 +140,7 @@ export default function HostCalendarPage() {
                       : 'text-blue-200/70'
                   } ${!isSameMonth(day, currentMonth) ? 'opacity-30' : ''}`}
                 >
-                  {format(day, 'd')}
+                  {format(day, 'd', { locale: dateFnsLocale })}
                 </button>
               ))}
             </div>

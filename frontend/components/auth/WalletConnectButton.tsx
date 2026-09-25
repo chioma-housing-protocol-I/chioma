@@ -1,16 +1,26 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/store/authStore';
+import { Loader2 } from 'lucide-react';
+import { useAuth, type User } from '@/store/authStore';
+import { StellarWalletsKit } from '@/lib/stellar-wallets-kit';
 import {
-  initializeStellarWalletsKit,
-  StellarWalletsKit,
-} from '@/lib/stellar-wallets-kit';
+  useWallet,
+  classifyWalletError,
+  type WalletError,
+} from '@/hooks/useWallet';
+import WalletSelectorModal from '@/components/auth/WalletSelectorModal';
 import toast from 'react-hot-toast';
 import { requestChallenge, verifySignature } from '@/lib/stellar-auth';
+import {
+  getConfiguredNetwork,
+  getNetworkLabel,
+  getNetworkPassphrase,
+  matchWalletNetwork,
+} from '@/lib/stellar-network';
 import { detectRoleFromWallet } from '@/lib/navigation/detect-user-role';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import { clearEmailOnboardingSkip } from '@/hooks/useOnboardingGate';
 
 interface WalletConnectButtonProps {
   onSuccess?: () => void;
@@ -23,177 +33,205 @@ export default function WalletConnectButton({
   className = '',
   buttonText = 'Connect Wallet',
 }: WalletConnectButtonProps) {
-  const buttonWrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { setTokens, setWalletAddress } = useAuth();
-  const isInitializedRef = useRef(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const wallet = useWallet();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [pendingWalletId, setPendingWalletId] = useState<string | null>(null);
 
-  // Ensure component only renders on client
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isConnecting = wallet.isConnecting || isAuthenticating;
 
-  useEffect(() => {
-    if (!isMounted || !buttonWrapperRef.current || isInitializedRef.current)
-      return;
+  const authenticateWithAddress = async (address: string) => {
+    setIsAuthenticating(true);
 
     try {
-      initializeStellarWalletsKit();
+      // Get Challenge
+      toast.loading('Getting authentication challenge...', {
+        id: 'wallet-challenge',
+      });
+      const challengeXdr = await requestChallenge(address);
+      toast.dismiss('wallet-challenge');
 
-      // Create the wallet kit button
-      StellarWalletsKit.createButton(buttonWrapperRef.current);
-      isInitializedRef.current = true;
+      // Verify the wallet is actually on the network this app is configured
+      // for before asking it to sign anything. Every module in the kit
+      // implements `getNetwork()` (it's a required part of `ModuleInterface`,
+      // not Freighter-specific), but some wallets — Albedo and xBull, at
+      // least — always reject it as unsupported. Signing is blocked in that
+      // "undetermined" case too: this check exists specifically to prevent
+      // an expensive mistake (signing a real transaction thinking it's a
+      // test one, or vice versa), so an inability to verify is treated the
+      // same as a verified mismatch rather than silently let through.
+      let walletNetwork: { network: string; networkPassphrase: string } | null;
+      try {
+        walletNetwork = await StellarWalletsKit.getNetwork();
+      } catch {
+        walletNetwork = null;
+      }
 
-      // Override the button click handler to add our authentication logic
-      const handleWalletConnect = async () => {
-        if (isConnecting) return;
-        setIsConnecting(true);
+      const networkMatch = matchWalletNetwork(walletNetwork);
+      if (networkMatch.status !== 'match') {
+        toast.dismiss('wallet-challenge');
+        const configuredLabel = getNetworkLabel(getConfiguredNetwork());
+        const message =
+          networkMatch.status === 'mismatch'
+            ? `Your wallet is connected to ${networkMatch.walletNetworkLabel}, but this app is configured for ${configuredLabel}. Switch your wallet's network before signing.`
+            : `Could not verify your wallet's network. This app is configured for ${configuredLabel} — please confirm your wallet is on the same network before signing.`;
+        toast.error(message);
+        return;
+      }
 
-        try {
-          const { address } = await StellarWalletsKit.getAddress();
+      // Sign Challenge
+      toast.loading('Please sign the transaction in your wallet...', {
+        id: 'wallet-sign',
+      });
 
-          if (!address) {
-            throw new Error('Failed to get wallet address');
-          }
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+        challengeXdr,
+        {
+          networkPassphrase: getNetworkPassphrase(),
+          address,
+        },
+      );
+      toast.dismiss('wallet-sign');
 
-          // Get Challenge
-          toast.loading('Getting authentication challenge...', {
-            id: 'wallet-challenge',
-          });
-          const challengeXdr = await requestChallenge(address);
-          toast.dismiss('wallet-challenge');
+      // Verify Signature
+      toast.loading('Verifying authentication...', { id: 'wallet-verify' });
+      const result = await verifySignature(address, challengeXdr, signedTxXdr);
+      toast.dismiss('wallet-verify');
 
-          // Sign Challenge
-          toast.loading('Please sign the transaction in your wallet...', {
-            id: 'wallet-sign',
-          });
+      // Manage session state. A refresh token is optional — some auth
+      // backends only issue an access token — so it must not gate the
+      // session, otherwise a valid login is discarded as malformed.
+      if (result.accessToken && result.user) {
+        // Wallet-only accounts have no name on file yet — the backend
+        // returns firstName/lastName as null rather than ''. Every other
+        // login path (password, OAuth) normalizes these before setTokens;
+        // do the same here so consumers that index user.firstName[0]
+        // (e.g. the navbar avatar initial) don't crash on null.
+        const rawUser = result.user;
+        let userRole = rawUser.role;
 
-          const { signedTxXdr } = await StellarWalletsKit.signTransaction(
-            challengeXdr,
-            {
-              networkPassphrase: StellarSdk.Networks.PUBLIC,
-              address,
-            },
-          );
-          toast.dismiss('wallet-sign');
+        // Use the role from the backend response directly
+        // The backend already determines the role based on the wallet address
+        if (!userRole) {
+          // Only detect role if backend didn't provide one (shouldn't happen)
+          toast.loading('Detecting user role...', { id: 'role-detect' });
+          const detectedRole = await detectRoleFromWallet(address);
+          toast.dismiss('role-detect');
 
-          // Verify Signature
-          toast.loading('Verifying authentication...', { id: 'wallet-verify' });
-          const result = await verifySignature(
-            address,
-            challengeXdr,
-            signedTxXdr,
-          );
-          toast.dismiss('wallet-verify');
-
-          // Manage session state
-          if (result.accessToken && result.refreshToken && result.user) {
-            let userWithRole = result.user;
-
-            // Ensure user has a role - detect if missing
-            if (!userWithRole.role) {
-              toast.loading('Detecting user role...', { id: 'role-detect' });
-              const detectedRole = await detectRoleFromWallet(address);
-              toast.dismiss('role-detect');
-
-              if (detectedRole) {
-                userWithRole = { ...userWithRole, role: detectedRole as any };
-              } else {
-                // No role found - this shouldn't happen in production
-                // but handle gracefully
-                toast.error('Unable to determine your role. Please try again.');
-                setIsConnecting(false);
-                return;
-              }
-            }
-
-            setTokens(result.accessToken, result.refreshToken, userWithRole);
-            setWalletAddress(address);
-            toast.success('Successfully logged in with Wallet!');
-
-            console.log('✅ Auth tokens set. User role:', userWithRole.role);
-
-            // Call onSuccess callback if provided
-            if (onSuccess) {
-              onSuccess();
-            } else {
-              // Navigate to dashboard based on role
-              setTimeout(() => {
-                const dashboardRoute =
-                  userWithRole.role === 'admin' ? '/admin' : '/user';
-                console.log('🚀 Navigating to:', dashboardRoute);
-                router.push(dashboardRoute);
-              }, 500); // Small delay to show success message
-            }
+          if (detectedRole) {
+            userRole = detectedRole === 'agent' ? 'agent' : 'user';
           } else {
-            throw new Error('Invalid authentication response');
+            // No role found - this shouldn't happen in production
+            // but handle gracefully
+            toast.error('Unable to determine your role. Please try again.');
+            setIsAuthenticating(false);
+            return;
           }
-        } catch (error: unknown) {
-          toast.dismiss('wallet-challenge');
-          toast.dismiss('wallet-sign');
-          toast.dismiss('wallet-verify');
-
-          // Check if error is a user rejection
-          const isUserRejection =
-            (error instanceof Error &&
-              (error.message.toLowerCase().includes('cancelled') ||
-                error.message.toLowerCase().includes('reject') ||
-                error.message.toLowerCase().includes('user denied'))) ||
-            (typeof error === 'object' &&
-              error !== null &&
-              'code' in error &&
-              (error as any).code === -4);
-
-          if (!isUserRejection) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            toast.error(errorMessage || 'Wallet connection failed');
-            console.error('Wallet connect error:', error);
-          }
-          // Silently ignore user rejections
-        } finally {
-          setIsConnecting(false);
         }
-      };
 
-      // Find and override the button's click handler
-      const observer = new MutationObserver(() => {
-        const button = buttonWrapperRef.current?.querySelector('button');
-        if (button && !button.dataset.customHandler) {
-          button.dataset.customHandler = 'true';
-          button.addEventListener('click', (e) => {
-            e.preventDefault();
-            handleWalletConnect();
-          });
+        const userWithRole: User = {
+          id: rawUser.id,
+          email: rawUser.email ?? '',
+          emailVerified: rawUser.emailVerified ?? false,
+          firstName: rawUser.firstName ?? '',
+          lastName: rawUser.lastName ?? '',
+          avatar: rawUser.avatar,
+          locale: rawUser.locale,
+          role: (userRole as 'admin' | 'user' | 'agent') ?? 'user',
+        };
+
+        setTokens(result.accessToken, result.refreshToken ?? '', userWithRole);
+        setWalletAddress(address);
+        // A deliberate reconnect starts the onboarding prompt fresh.
+        clearEmailOnboardingSkip();
+        toast.success('Successfully logged in with Wallet!');
+
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          // Always land on the dashboard. Accounts with no email yet are
+          // prompted there by WalletEmailBanner rather than being blocked.
+          const isAdmin = ['admin', 'super_admin'].includes(
+            userWithRole.role?.toLowerCase() || '',
+          );
+          const dashboardRoute = isAdmin ? '/admin' : '/user';
+          router.push(dashboardRoute);
         }
-      });
+      } else {
+        throw new Error('Invalid authentication response');
+      }
+    } catch (error: unknown) {
+      toast.dismiss('wallet-challenge');
+      toast.dismiss('wallet-sign');
+      toast.dismiss('wallet-verify');
 
-      observer.observe(buttonWrapperRef.current, {
-        childList: true,
-        subtree: true,
-      });
+      // A rejected signature request (declining to sign the auth challenge)
+      // is a deliberate no-op, same treatment as dismissing the selector.
+      const classified: WalletError =
+        error && typeof error === 'object' && 'reason' in error
+          ? (error as WalletError)
+          : classifyWalletError(error);
 
-      return () => {
-        observer.disconnect();
-      };
-    } catch (error) {
-      console.error('Failed to initialize wallet button:', error);
-      toast.error('Failed to initialize wallet connection');
+      if (classified.reason !== 'rejected') {
+        toast.error(classified.message || 'Wallet connection failed');
+        console.error('Wallet connect error:', error);
+      }
+    } finally {
+      setIsAuthenticating(false);
     }
-  }, [setTokens, setWalletAddress, onSuccess, isConnecting, isMounted]);
+  };
 
-  // Don't render anything until mounted on client
-  if (!isMounted) {
-    return <div className={className} />;
-  }
+  const handleSelectWallet = async (walletId: string) => {
+    setPendingWalletId(walletId);
+    try {
+      const address = await wallet.connect(walletId);
+      setIsSelectorOpen(false);
+      await authenticateWithAddress(address);
+    } catch {
+      // wallet.connect already classified and stored the error on
+      // wallet.error; the selector modal renders it and stays open so the
+      // user can pick a different wallet without restarting the flow.
+    } finally {
+      setPendingWalletId(null);
+    }
+  };
+
+  const handleOpenSelector = async () => {
+    if (isConnecting) return;
+
+    // Reuse an already-connected wallet (e.g. still active from before a
+    // reload) instead of forcing the picker again.
+    if (wallet.address) {
+      await authenticateWithAddress(wallet.address);
+      return;
+    }
+
+    wallet.clearError();
+    setIsSelectorOpen(true);
+  };
 
   return (
-    <div
-      ref={buttonWrapperRef}
-      className={className}
-      suppressHydrationWarning
-    />
+    <>
+      <button
+        type="button"
+        onClick={handleOpenSelector}
+        disabled={isConnecting}
+        className={`inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium transition-colors ${className}`}
+      >
+        {isConnecting && <Loader2 size={16} className="animate-spin" />}
+        {isConnecting ? 'Connecting…' : buttonText}
+      </button>
+
+      <WalletSelectorModal
+        isOpen={isSelectorOpen}
+        onClose={() => setIsSelectorOpen(false)}
+        onSelectWallet={handleSelectWallet}
+        listWallets={wallet.listWallets}
+        connectingWalletId={pendingWalletId}
+        error={wallet.error}
+      />
+    </>
   );
 }

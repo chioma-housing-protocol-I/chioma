@@ -30,7 +30,7 @@ import { AnchorService } from '../services/anchor.service';
 
 @ApiTags('Anchor')
 @ApiBearerAuth('JWT-auth')
-@Controller('v1/anchor')
+@Controller('anchor')
 @UseGuards(JwtAuthGuard)
 export class AnchorController {
   constructor(private readonly anchorService: AnchorService) {}

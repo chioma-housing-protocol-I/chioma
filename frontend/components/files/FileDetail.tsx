@@ -13,6 +13,7 @@ import {
 import { FileMetadata } from '../../lib/api/storage';
 import { FileIcon } from './FileIcon';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '../../lib/utils/date-fns-locale';
 
 interface Props {
   file: FileMetadata | null;
@@ -31,6 +32,7 @@ export const FileDetail: React.FC<Props> = ({
   onRename,
   onShare,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (!file) return null;
 
   const formatSize = (bytes: number) => {
@@ -91,7 +93,9 @@ export const FileDetail: React.FC<Props> = ({
                 </span>
               </div>
               <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                {format(new Date(file.createdAt), 'PPP p')}
+                {format(new Date(file.createdAt), 'PPP p', {
+                  locale: dateFnsLocale,
+                })}
               </span>
             </div>
 

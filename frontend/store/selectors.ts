@@ -12,6 +12,7 @@ import type { NotificationStore } from './notificationStore';
 import type { PropertyStore } from './property-store';
 import type { UIStore } from './ui-store';
 import type { LoadingStore } from './loading-store';
+import type { CancellationMetricsStore } from './cancellation-metrics-store';
 
 // ─── Auth Selectors ──────────────────────────────────────────────────────────
 
@@ -67,3 +68,18 @@ export const selectIsLoadingKey = (key: string) => (state: LoadingStore) =>
   state.loading.get(key) ?? false;
 
 export const selectAnyLoading = (state: LoadingStore) => state.loading.size > 0;
+
+// ─── Cancellation Metrics Selectors ───────────────────────────────────────
+
+export const selectTotalCancelled = (state: CancellationMetricsStore) =>
+  state.totalCancelled;
+
+export const selectTotalTimeSavedMs = (state: CancellationMetricsStore) =>
+  state.totalTimeSavedMs;
+
+export const selectCancellationRecords = (state: CancellationMetricsStore) =>
+  state.records;
+
+export const selectRecentCancellations =
+  (limit: number) => (state: CancellationMetricsStore) =>
+    state.getRecentCancellations(limit);

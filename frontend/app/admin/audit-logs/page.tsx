@@ -12,7 +12,12 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuditLogs } from '@/lib/query/hooks/use-audit-logs';
+import { SortableHeader } from '@/components/admin/SortableHeader';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 import type { AuditLog } from '@/types';
+
+type AuditSortField =
+  'performedAt' | 'action' | 'entityType' | 'status' | 'level';
 
 type AuditFilters = {
   page: number;
@@ -25,6 +30,8 @@ type AuditFilters = {
   level: string;
   startDate: string;
   endDate: string;
+  sortBy: AuditSortField;
+  sortOrder: 'ASC' | 'DESC';
 };
 
 const DEFAULT_FILTERS: AuditFilters = {
@@ -38,6 +45,8 @@ const DEFAULT_FILTERS: AuditFilters = {
   level: '',
   startDate: '',
   endDate: '',
+  sortBy: 'performedAt',
+  sortOrder: 'DESC',
 };
 
 const levelStyles: Record<string, string> = {
@@ -67,7 +76,19 @@ export default function AuditLogsPage() {
     level: filters.level,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
   });
+
+  const handleSort = (key: AuditSortField) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      sortBy: key,
+      sortOrder:
+        prev.sortBy === key && prev.sortOrder === 'ASC' ? 'DESC' : 'ASC',
+    }));
+  };
 
   const rows = useMemo(() => query.data?.data ?? [], [query.data?.data]);
   const metrics = useMemo(() => {
@@ -84,7 +105,14 @@ export default function AuditLogsPage() {
   }, [rows]);
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
-    if (key === 'page' || key === 'limit') return false;
+    if (
+      key === 'page' ||
+      key === 'limit' ||
+      key === 'sortBy' ||
+      key === 'sortOrder'
+    ) {
+      return false;
+    }
     return value !== '';
   });
 
@@ -354,81 +382,113 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-white/10 bg-white/5">
-        <table className="w-full min-w-[1180px] text-left text-sm">
-          <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-blue-200/60">
-            <tr>
-              <th className="px-5 py-4">Time</th>
-              <th className="px-5 py-4">Action</th>
-              <th className="px-5 py-4">Entity</th>
-              <th className="px-5 py-4">Actor</th>
-              <th className="px-5 py-4">Status</th>
-              <th className="px-5 py-4">Level</th>
-              <th className="px-5 py-4">IP address</th>
-            </tr>
-          </thead>
-          <tbody>
-            {query.isLoading ? (
+      <FeatureBoundary name="admin:audit-log-table" label="Audit log table">
+        <div className="overflow-x-auto rounded-3xl border border-white/10 bg-white/5">
+          <table className="w-full min-w-[1180px] text-left text-sm">
+            <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-blue-200/60">
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-5 py-10 text-center text-blue-200/65"
-                >
-                  Loading audit logs...
-                </td>
+                <SortableHeader
+                  label="Time"
+                  sortKey="performedAt"
+                  currentSortBy={filters.sortBy}
+                  currentSortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Action"
+                  sortKey="action"
+                  currentSortBy={filters.sortBy}
+                  currentSortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Entity"
+                  sortKey="entityType"
+                  currentSortBy={filters.sortBy}
+                  currentSortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                />
+                <th className="px-5 py-4">Actor</th>
+                <SortableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSortBy={filters.sortBy}
+                  currentSortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Level"
+                  sortKey="level"
+                  currentSortBy={filters.sortBy}
+                  currentSortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                />
+                <th className="px-5 py-4">IP address</th>
               </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-5 py-10 text-center text-blue-200/65"
-                >
-                  No audit logs matched the current filter set.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="cursor-pointer border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]"
-                  onClick={() => setSelectedLog(row)}
-                >
-                  <td className="px-5 py-4 text-blue-100/85">
-                    {new Date(row.performedAt).toLocaleString()}
-                  </td>
-                  <td className="px-5 py-4 font-medium text-white">
-                    {row.action}
-                  </td>
-                  <td className="px-5 py-4 text-blue-100/80">
-                    {row.entityType ?? 'Unknown'}
-                    <span className="mt-1 block text-xs text-blue-300/45">
-                      {row.entityId ?? 'No entity ID'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-blue-100/80">
-                    {row.user?.email ?? row.performedBy ?? 'System'}
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge
-                      value={row.status ?? 'UNKNOWN'}
-                      styles={statusStyles}
-                    />
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge
-                      value={row.level ?? 'UNSPECIFIED'}
-                      styles={levelStyles}
-                    />
-                  </td>
-                  <td className="px-5 py-4 text-blue-100/80">
-                    {row.ipAddress ?? 'N/A'}
+            </thead>
+            <tbody>
+              {query.isLoading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-10 text-center text-blue-200/65"
+                  >
+                    Loading audit logs...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-10 text-center text-blue-200/65"
+                  >
+                    No audit logs matched the current filter set.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]"
+                    onClick={() => setSelectedLog(row)}
+                  >
+                    <td className="px-5 py-4 text-blue-100/85">
+                      {new Date(row.performedAt).toLocaleString()}
+                    </td>
+                    <td className="px-5 py-4 font-medium text-white">
+                      {row.action}
+                    </td>
+                    <td className="px-5 py-4 text-blue-100/80">
+                      {row.entityType ?? 'Unknown'}
+                      <span className="mt-1 block text-xs text-blue-300/45">
+                        {row.entityId ?? 'No entity ID'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-blue-100/80">
+                      {row.user?.email ?? row.performedBy ?? 'System'}
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge
+                        value={row.status ?? 'UNKNOWN'}
+                        styles={statusStyles}
+                      />
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge
+                        value={row.level ?? 'UNSPECIFIED'}
+                        styles={levelStyles}
+                      />
+                    </td>
+                    <td className="px-5 py-4 text-blue-100/80">
+                      {row.ipAddress ?? 'N/A'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </FeatureBoundary>
 
       <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-blue-200/65">

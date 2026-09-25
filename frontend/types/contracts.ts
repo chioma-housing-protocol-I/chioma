@@ -1,8 +1,5 @@
 export type ContractStage =
-  | 'DRAFTED'
-  | 'TENANT_SIGNED'
-  | 'LANDLORD_SIGNED'
-  | 'DEPOSIT_LOCKED';
+  'DRAFTED' | 'TENANT_SIGNED' | 'LANDLORD_SIGNED' | 'DEPOSIT_LOCKED';
 
 export type ContractStatus = 'ACTIVE' | 'PENDING' | 'EXPIRED';
 
@@ -46,3 +43,26 @@ export const STAGE_LABELS: Record<ContractStage, string> = {
   LANDLORD_SIGNED: 'Landlord Signed',
   DEPOSIT_LOCKED: 'Security Deposit Locked',
 };
+
+export type ProposerRole = 'TENANT' | 'LANDLORD' | 'AGENT';
+
+export interface NegotiationOffer {
+  id: string;
+  contractId: string;
+  proposerRole: ProposerRole;
+  rentAmount: string;
+  startDate: string;
+  endDate: string;
+  message: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COUNTERED';
+  createdAt: string;
+}
+
+export interface NegotiationMessage {
+  id: string;
+  offerId?: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  createdAt: string;
+}

@@ -28,7 +28,7 @@ export class Arbiter {
   })
   stellarAddress: string;
 
-  @Column({ name: 'user_id', nullable: true })
+  @Column({ name: 'user_id', type: 'int', nullable: true })
   userId: number | null;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })

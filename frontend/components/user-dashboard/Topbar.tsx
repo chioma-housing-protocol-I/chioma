@@ -60,7 +60,7 @@ export function Topbar({
           {showNotifications && (
             <button className="relative p-2 hover:bg-white/10 rounded-lg transition-colors">
               <Bell size={20} className="text-blue-300" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+              <span className="absolute top-1 end-1 h-2 w-2 bg-red-500 rounded-full" />
             </button>
           )}
 

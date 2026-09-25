@@ -135,6 +135,7 @@ describe('StellarService', () => {
               ),
             findOne: jest.fn(),
             find: jest.fn().mockResolvedValue([]),
+            findAndCount: jest.fn().mockResolvedValue([[], 0]),
             createQueryBuilder: jest.fn().mockReturnValue({
               leftJoinAndSelect: jest.fn().mockReturnThis(),
               andWhere: jest.fn().mockReturnThis(),
@@ -331,7 +332,7 @@ describe('StellarService', () => {
 
       const result = await service.listTransactions({});
 
-      expect(result.transactions).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
     });
 
@@ -373,7 +374,7 @@ describe('StellarService', () => {
 
       const result = await service.listEscrows({ status: EscrowStatus.ACTIVE });
 
-      expect(result.escrows).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
     });
   });
@@ -386,15 +387,17 @@ describe('StellarService', () => {
       ];
 
       jest
-        .spyOn(accountRepository, 'find')
-        .mockResolvedValue(mockAccounts as any);
+        .spyOn(accountRepository, 'findAndCount')
+        .mockResolvedValue([mockAccounts as any, 2]);
 
       const result = await service.getAccountsByUserId('user-123');
 
-      expect(result).toHaveLength(2);
-      expect(accountRepository.find).toHaveBeenCalledWith({
+      expect(result.data).toHaveLength(2);
+      expect(accountRepository.findAndCount).toHaveBeenCalledWith({
         where: { userId: 'user-123' },
         order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
     });
   });

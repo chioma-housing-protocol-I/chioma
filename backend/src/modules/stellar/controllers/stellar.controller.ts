@@ -38,6 +38,8 @@ import {
 import { StellarAccount } from '../entities/stellar-account.entity';
 import { StellarTransaction } from '../entities/stellar-transaction.entity';
 import { StellarEscrow } from '../entities/stellar-escrow.entity';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Stellar')
 @Controller('stellar')
@@ -86,6 +88,8 @@ export class StellarController {
   /**
    * Get account info by public key
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get account by public key' })
   @Get('accounts/public-key/:publicKey')
   async getAccountByPublicKey(
     @Param('publicKey') publicKey: string,
@@ -97,12 +101,23 @@ export class StellarController {
   /**
    * Get accounts for a user
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get accounts by user id' })
   @Get('accounts/user/:userId')
+  @ApiPaginatedResponse(AccountResponseDto)
   async getAccountsByUserId(
     @Param('userId') userId: string,
-  ): Promise<AccountResponseDto[]> {
-    const accounts = await this.stellarService.getAccountsByUserId(userId);
-    return accounts.map((account) => this.mapAccountToResponse(account));
+    @Query() query: PaginationQueryDto,
+  ) {
+    const result = await this.stellarService.getAccountsByUserId(
+      userId,
+      query.page,
+      query.limit,
+    );
+    return {
+      ...result,
+      data: result.data.map((account) => this.mapAccountToResponse(account)),
+    };
   }
 
   /**
@@ -125,6 +140,8 @@ export class StellarController {
   /**
    * Sync account from Stellar network
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Sync account' })
   @Post('accounts/:publicKey/sync')
   @HttpCode(HttpStatus.OK)
   async syncAccount(
@@ -137,6 +154,8 @@ export class StellarController {
   /**
    * Get account info directly from Stellar network
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get network account info' })
   @Get('accounts/:publicKey/network')
   async getNetworkAccountInfo(
     @Param('publicKey') publicKey: string,
@@ -177,26 +196,23 @@ export class StellarController {
   /**
    * List transactions with filters
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List transactions' })
   @Get('transactions')
-  async listTransactions(@Query() dto: ListTransactionsDto): Promise<{
-    transactions: TransactionResponseDto[];
-    total: number;
-    limit: number;
-    offset: number;
-  }> {
-    const { transactions, total } =
-      await this.stellarService.listTransactions(dto);
+  @ApiPaginatedResponse(TransactionResponseDto)
+  async listTransactions(@Query() dto: ListTransactionsDto) {
+    const result = await this.stellarService.listTransactions(dto);
     return {
-      transactions: transactions.map((tx) => this.mapTransactionToResponse(tx)),
-      total,
-      limit: dto.limit || 20,
-      offset: dto.offset || 0,
+      ...result,
+      data: result.data.map((tx) => this.mapTransactionToResponse(tx)),
     };
   }
 
   /**
    * Get transaction by ID
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get transaction by id' })
   @Get('transactions/:id')
   async getTransactionById(
     @Param('id', ParseIntPipe) id: number,
@@ -208,6 +224,8 @@ export class StellarController {
   /**
    * Get transaction by hash
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get transaction by hash' })
   @Get('transactions/hash/:hash')
   async getTransactionByHash(
     @Param('hash') hash: string,
@@ -234,6 +252,8 @@ export class StellarController {
   /**
    * Release escrow funds to destination
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Release escrow' })
   @Post('escrow/release')
   @HttpCode(HttpStatus.OK)
   async releaseEscrow(
@@ -246,6 +266,8 @@ export class StellarController {
   /**
    * Refund escrow funds to source
    */
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Refund escrow' })
   @Post('escrow/refund')
   @HttpCode(HttpStatus.OK)
   async refundEscrow(@Body() dto: RefundEscrowDto): Promise<EscrowResponseDto> {
@@ -256,6 +278,8 @@ export class StellarController {
   /**
    * Get escrow by ID
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get escrow by id' })
   @Get('escrow/:id')
   async getEscrowById(
     @Param('id', ParseIntPipe) id: number,
@@ -267,19 +291,15 @@ export class StellarController {
   /**
    * List escrows with filters
    */
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'List escrows' })
   @Get('escrows')
-  async listEscrows(@Query() dto: ListEscrowsDto): Promise<{
-    escrows: EscrowResponseDto[];
-    total: number;
-    limit: number;
-    offset: number;
-  }> {
-    const { escrows, total } = await this.stellarService.listEscrows(dto);
+  @ApiPaginatedResponse(EscrowResponseDto)
+  async listEscrows(@Query() dto: ListEscrowsDto) {
+    const result = await this.stellarService.listEscrows(dto);
     return {
-      escrows: escrows.map((escrow) => this.mapEscrowToResponse(escrow)),
-      total,
-      limit: dto.limit || 20,
-      offset: dto.offset || 0,
+      ...result,
+      data: result.data.map((escrow) => this.mapEscrowToResponse(escrow)),
     };
   }
 

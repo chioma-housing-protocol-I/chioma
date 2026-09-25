@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { Notification } from './entities/notification.entity';
 
 interface RequestWithUser extends Request {
   user: {
@@ -19,12 +22,18 @@ interface RequestWithUser extends Request {
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
+@ApiTags('Notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get notifications' })
   @Get()
+  @ApiPaginatedResponse(Notification)
   async getNotifications(
     @Request() req: RequestWithUser,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
     @Query('isRead') isRead?: string,
     @Query('type') type?: string,
   ) {
@@ -38,9 +47,19 @@ export class NotificationsController {
       filters.type = type;
     }
 
-    return this.notificationsService.getUserNotifications(userId, filters);
+    const pageNumber = Math.max(1, parseInt(page, 10));
+    const limitNumber = Math.max(1, parseInt(limit, 10));
+
+    return this.notificationsService.getUserNotifications(
+      userId,
+      filters,
+      pageNumber,
+      limitNumber,
+    );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get unread count' })
   @Get('unread/count')
   async getUnreadCount(@Request() req: RequestWithUser) {
     const userId = req.user.id;
@@ -48,18 +67,24 @@ export class NotificationsController {
     return { count };
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Mark as read' })
   @Patch(':id/read')
   async markAsRead(@Param('id') id: string, @Request() req: RequestWithUser) {
     const userId = req.user.id;
     return this.notificationsService.markAsRead(id, userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Mark all as read' })
   @Patch('read-all')
   async markAllAsRead(@Request() req: RequestWithUser) {
     const userId = req.user.id;
     return this.notificationsService.markAllAsRead(userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Delete notification' })
   @Delete(':id')
   async deleteNotification(
     @Param('id') id: string,
@@ -69,6 +94,8 @@ export class NotificationsController {
     return this.notificationsService.deleteNotification(id, userId);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Clear all' })
   @Delete('clear-all')
   async clearAll(@Request() req: RequestWithUser) {
     const userId = req.user.id;

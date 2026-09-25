@@ -97,6 +97,44 @@ describe('CacheService', () => {
     });
   });
 
+  describe('invalidateDependencies', () => {
+    it('deletes keys registered for matching dependency tags', async () => {
+      await service.set('property:list:1', { a: 1 }, 5000, ['property:p1']);
+
+      await service.invalidateDependencies(['property:p1']);
+
+      expect(mockDel).toHaveBeenCalledWith('property:list:1');
+      expect(service.getStats().dependencyTrackedKeys).toBe(0);
+    });
+  });
+
+  describe('cleanupExpiredDependencies', () => {
+    it('removes dependency metadata for expired cache entries', async () => {
+      mockCacheManager.get.mockResolvedValue(undefined);
+      await service.set('expired-key', { a: 1 }, 1000, ['property:p2']);
+
+      const cleaned = await service.cleanupExpiredDependencies(
+        Date.now() + 2000,
+      );
+
+      expect(cleaned).toBe(1);
+      expect(service.getStats().cleanups).toBe(1);
+      expect(service.getStats().dependencyTrackedKeys).toBe(0);
+    });
+
+    it('keeps dependency metadata when the backing cache still has a value', async () => {
+      mockCacheManager.get.mockResolvedValue({ a: 1 });
+      await service.set('live-key', { a: 1 }, 1000, ['property:p3']);
+
+      const cleaned = await service.cleanupExpiredDependencies(
+        Date.now() + 2000,
+      );
+
+      expect(cleaned).toBe(0);
+      expect(service.getStats().dependencyTrackedKeys).toBe(1);
+    });
+  });
+
   describe('invalidatePropertyDomainCaches', () => {
     it('invalidates list, search, suggest, and optional property key', async () => {
       const inv = jest

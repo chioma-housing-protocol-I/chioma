@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { ReviewCard, type Review } from './ReviewCard';
 import { RatingSummary, type RatingStats } from './RatingSummary';
 import { ReviewForm, type ReviewFormData } from './ReviewForm';
-import { PencilLine } from 'lucide-react';
+import { PencilLine, Star } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface ReviewListProps {
   reviews: Review[];
@@ -76,9 +77,14 @@ export function ReviewList({
             </div>
           ))
         ) : (
-          <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center text-slate-500">
-            <p className="text-lg font-medium">No reviews yet.</p>
-            <p className="text-sm">Be the first to share your experience!</p>
+          <div className="col-span-full">
+            <EmptyState
+              icon={Star}
+              title="No reviews yet"
+              description="Be the first to share your experience with this property!"
+              actionLabel="Write a Review"
+              onAction={() => setShowForm(true)}
+            />
           </div>
         )}
       </div>

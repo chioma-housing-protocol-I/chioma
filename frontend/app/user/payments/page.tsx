@@ -31,10 +31,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import { apiClient } from '@/lib/api-client';
+import { useModal } from '@/contexts/ModalContext';
+import toast from 'react-hot-toast';
 import {
   type DashboardPayment,
   loadTenantPayments,
 } from '@/lib/dashboard-data';
+import { formatCurrency } from '@/lib/utils/format';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 const statusStyles: Record<DashboardPayment['status'], string> = {
   COMPLETED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -59,6 +63,8 @@ const PAGE_SIZE = 6;
 
 export default function TenantPaymentsPage() {
   const { user } = useAuth();
+  const { openModal } = useModal();
+  const dateFnsLocale = useDateFnsLocale();
   const [payments, setPayments] = useState<DashboardPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -107,20 +113,21 @@ export default function TenantPaymentsPage() {
     null,
   );
 
+  const refreshPayments = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const nextPayments = await loadTenantPayments(user.id);
+      setPayments(nextPayments);
+    } catch {
+      toast.error('Failed to load payments history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let active = true;
-    const run = async () => {
-      setLoading(true);
-      const nextPayments = await loadTenantPayments(user?.id);
-      if (active) {
-        setPayments(nextPayments);
-        setLoading(false);
-      }
-    };
-    void run();
-    return () => {
-      active = false;
-    };
+    void refreshPayments();
   }, [user?.id]);
 
   const sortedPayments = useMemo(
@@ -171,16 +178,22 @@ export default function TenantPaymentsPage() {
     .filter((p) => p.direction === 'incoming')
     .reduce((sum, p) => sum + p.amount, 0);
   const monthlyRent = outgoingCompleted[0]?.amount ?? 150000;
+  const primaryCurrency = outgoingCompleted[0]?.currency ?? 'USDC';
   const firstPaymentDate = outgoingCompleted.length
     ? outgoingCompleted.reduce((earliest, payment) => {
         const ts = new Date(payment.paymentDate).getTime();
         return ts < earliest ? ts : earliest;
       }, Number.MAX_SAFE_INTEGER)
     : Date.now();
-  const activeLeaseStart = startOfMonth(
-    outgoingCompleted.length > 0
-      ? new Date(firstPaymentDate)
-      : subMonths(new Date(), 5),
+  const hasCompletedPayments = outgoingCompleted.length > 0;
+  const activeLeaseStart = useMemo(
+    () =>
+      startOfMonth(
+        hasCompletedPayments
+          ? new Date(firstPaymentDate)
+          : subMonths(new Date(), 5),
+      ),
+    [hasCompletedPayments, firstPaymentDate],
   );
   const cycleDates = useMemo(() => {
     const dates: Date[] = [];
@@ -248,6 +261,36 @@ export default function TenantPaymentsPage() {
     }
   };
 
+  const handlePayRent = () => {
+    const primary = outgoingCompleted[0] ?? payments[0];
+    openModal('payment', {
+      agreementId: primary?.agreementId ?? '',
+      amount: monthlyRent,
+      onSubmit: async (data: {
+        agreementId: string;
+        amount: number;
+        paymentMethod: string;
+        paymentMethodId?: string;
+      }) => {
+        if (data.paymentMethod === 'crypto') {
+          throw new Error('Cryptocurrency payments are currently disabled.');
+        }
+
+        if (!data.paymentMethodId) {
+          throw new Error('Please select or add a payment method first.');
+        }
+
+        await apiClient.post('/payments', {
+          agreementId: data.agreementId,
+          amount: data.amount,
+          paymentMethodId: data.paymentMethodId,
+        });
+
+        void refreshPayments();
+      },
+    });
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -265,7 +308,15 @@ export default function TenantPaymentsPage() {
               dispute follow-up.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
+          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center">
+            <button
+              type="button"
+              onClick={handlePayRent}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              <HandCoins className="h-4 w-4" />
+              Pay rent
+            </button>
             <div className="relative w-full lg:w-72">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300/40" />
               <input
@@ -312,19 +363,19 @@ export default function TenantPaymentsPage() {
           <SummaryCard
             icon={<ArrowUpRight className="h-5 w-5 text-rose-400" />}
             label="Total Paid"
-            value={formatCurrency(totalPaid)}
+            value={formatCurrency(totalPaid, primaryCurrency)}
             tone="rose"
           />
           <SummaryCard
             icon={<HandCoins className="h-5 w-5 text-amber-400" />}
             label="Total Owed"
-            value={formatCurrency(totalOwed)}
+            value={formatCurrency(totalOwed, primaryCurrency)}
             tone="amber"
           />
           <SummaryCard
             icon={<ArrowDownLeft className="h-5 w-5 text-sky-400" />}
             label="Balance (paid - owed)"
-            value={formatCurrency(totalPaid - totalOwed)}
+            value={formatCurrency(totalPaid - totalOwed, primaryCurrency)}
             tone="sky"
           />
         </div>
@@ -338,7 +389,10 @@ export default function TenantPaymentsPage() {
             <p className="mt-1 text-sm text-rose-100/80">
               You have {overdueCycles.length} unpaid cycle
               {overdueCycles.length > 1 ? 's' : ''}. Most recent overdue period:{' '}
-              {format(overdueCycles[overdueCycles.length - 1], 'MMM yyyy')}.
+              {format(overdueCycles[overdueCycles.length - 1], 'MMM yyyy', {
+                locale: dateFnsLocale,
+              })}
+              .
             </p>
           </div>
         )}
@@ -371,7 +425,7 @@ export default function TenantPaymentsPage() {
               Prev
             </button>
             <p className="text-sm font-semibold text-white">
-              {format(calendarMonth, 'MMMM yyyy')}
+              {format(calendarMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
             </p>
             <button
               onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
@@ -408,7 +462,7 @@ export default function TenantPaymentsPage() {
                   key={day.toISOString()}
                   className={`rounded-xl border p-2 text-xs ${tone} ${!isCurrentMonth ? 'opacity-50' : ''}`}
                 >
-                  <div>{format(day, 'd')}</div>
+                  <div>{format(day, 'd', { locale: dateFnsLocale })}</div>
                 </div>
               );
             })}
@@ -422,12 +476,14 @@ export default function TenantPaymentsPage() {
             </h3>
             <p className="mt-1 text-xs text-blue-200/50">
               Next due:{' '}
-              {nextDueCycle ? format(nextDueCycle, 'MMM d, yyyy') : 'N/A'}
+              {nextDueCycle
+                ? format(nextDueCycle, 'MMM d, yyyy', { locale: dateFnsLocale })
+                : 'N/A'}
             </p>
             <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
               <p className="text-xs text-blue-200/50">Monthly rent</p>
               <p className="mt-1 text-lg font-bold text-white">
-                {formatCurrency(monthlyRent)}
+                {formatCurrency(monthlyRent, primaryCurrency)}
               </p>
             </div>
           </div>
@@ -439,7 +495,10 @@ export default function TenantPaymentsPage() {
                   Upcoming Payout
                 </h3>
                 <p className="mt-2 text-2xl font-black text-emerald-300">
-                  {formatCurrency(upcomingPayout)}
+                  {formatCurrency(
+                    upcomingPayout,
+                    escrowCycles[0]?.currency ?? 'USDC',
+                  )}
                 </p>
                 <p className="mt-1 text-xs text-blue-200/50">
                   Estimated release from dispute-free escrow cycles.
@@ -463,7 +522,10 @@ export default function TenantPaymentsPage() {
                         {formatCurrency(cycle.amount, cycle.currency)}
                       </p>
                       <p className="mt-1 text-xs text-blue-200/40">
-                        Due {format(parseISO(cycle.dueDate), 'MMM d, yyyy')}
+                        Due{' '}
+                        {format(parseISO(cycle.dueDate), 'MMM d, yyyy', {
+                          locale: dateFnsLocale,
+                        })}
                       </p>
                       <button
                         disabled={
@@ -551,7 +613,9 @@ export default function TenantPaymentsPage() {
                       </p>
                       <p className="mt-0.5 text-xs text-blue-200/40">
                         {payment.agreementReference} ·{' '}
-                        {format(new Date(payment.paymentDate), 'MMM d, yyyy')}
+                        {format(new Date(payment.paymentDate), 'MMM d, yyyy', {
+                          locale: dateFnsLocale,
+                        })}
                       </p>
                       {payment.notes && (
                         <p className="mt-1 text-xs text-blue-200/30">
@@ -652,8 +716,4 @@ function SummaryCard({
       </p>
     </div>
   );
-}
-
-function formatCurrency(amount: number, currency = 'USDC') {
-  return `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount)} ${currency}`;
 }

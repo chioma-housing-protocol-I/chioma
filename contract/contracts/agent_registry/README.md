@@ -5,6 +5,7 @@ The Agent Registry Contract is a Soroban smart contract that tracks verified hou
 ## Overview
 
 This contract enables:
+
 - **Agent Registration**: Agents can self-register with an external profile reference
 - **Admin Verification**: Platform administrators can verify registered agents
 - **Transaction Tracking**: Links agents to property transactions for accountability
@@ -14,6 +15,7 @@ This contract enables:
 ## Data Structures
 
 ### AgentInfo
+
 ```rust
 pub struct AgentInfo {
     pub agent: Address,
@@ -28,6 +30,7 @@ pub struct AgentInfo {
 ```
 
 ### AgentTransaction
+
 ```rust
 pub struct AgentTransaction {
     pub transaction_id: String,
@@ -42,78 +45,98 @@ pub struct AgentTransaction {
 ### Administrative Functions
 
 #### `initialize(admin: Address) -> Result<(), AgentError>`
+
 Initializes the contract with an admin address who has privileges to verify agents.
 
 **Parameters:**
+
 - `admin`: The address that will have admin privileges
 
 **Errors:**
+
 - `AlreadyInitialized`: If contract has already been initialized
 
 #### `get_state() -> Option<ContractState>`
+
 Returns the current contract state including the admin address.
 
 ### Agent Management
 
 #### `register_agent(agent: Address, external_profile_hash: String) -> Result<(), AgentError>`
+
 Allows an agent to self-register with the system.
 
 **Parameters:**
+
 - `agent`: The address of the agent registering
 - `external_profile_hash`: Hash reference to agent's external profile (IPFS hash, etc.)
 
 **Errors:**
+
 - `NotInitialized`: Contract hasn't been initialized
 - `AgentAlreadyRegistered`: Agent is already registered
 - `InvalidProfileHash`: Profile hash is empty
 
 #### `verify_agent(admin: Address, agent: Address) -> Result<(), AgentError>`
+
 Platform admin verifies a registered agent (admin-only function).
 
 **Parameters:**
+
 - `admin`: The admin address performing verification
 - `agent`: The address of the agent to verify
 
 **Errors:**
+
 - `NotInitialized`: Contract hasn't been initialized
 - `Unauthorized`: Caller is not the admin
 - `AgentNotFound`: Agent doesn't exist
 - `AlreadyVerified`: Agent is already verified
 
 #### `get_agent_info(agent: Address) -> Option<AgentInfo>`
+
 Retrieves information about a registered agent.
 
 **Parameters:**
+
 - `agent`: The address of the agent
 
 **Returns:**
+
 - `Option<AgentInfo>`: Agent information if they exist
 
 #### `get_agent_count() -> u32`
+
 Returns the total number of registered agents.
 
 ### Transaction Management
 
 #### `register_transaction(transaction_id: String, agent: Address, parties: Vec<Address>) -> Result<(), AgentError>`
+
 Registers a transaction involving an agent. Called when a rent agreement or property transaction is created.
 
 **Parameters:**
+
 - `transaction_id`: Unique identifier for the transaction
 - `agent`: The agent involved in the transaction
 - `parties`: Vector of addresses involved (tenant, landlord, etc.)
 
 **Errors:**
+
 - `NotInitialized`: Contract hasn't been initialized
 - `AgentNotFound`: Agent doesn't exist
 
 #### `complete_transaction(transaction_id: String, agent: Address) -> Result<(), AgentError>`
+
 Marks a transaction as completed, enabling parties to rate the agent.
 
 **Parameters:**
+
 - `transaction_id`: The ID of the transaction to complete
 - `agent`: The agent address (for verification)
 
 **Errors:**
+
 - `NotInitialized`: Contract hasn't been initialized
 - `TransactionNotFound`: Transaction doesn't exist
 - `Unauthorized`: Caller is not the agent for this transaction
@@ -121,15 +144,18 @@ Marks a transaction as completed, enabling parties to rate the agent.
 ### Rating System
 
 #### `rate_agent(rater: Address, agent: Address, score: u32, transaction_id: String) -> Result<(), AgentError>`
+
 Allows a transaction party (tenant or landlord) to rate an agent after completing a transaction.
 
 **Parameters:**
+
 - `rater`: The address of the person rating
 - `agent`: The address of the agent being rated
 - `score`: The rating score (1-5)
 - `transaction_id`: The ID of the completed transaction
 
 **Errors:**
+
 - `NotInitialized`: Contract hasn't been initialized
 - `InvalidRatingScore`: Score is not between 1 and 5
 - `AgentNotFound`: Agent doesn't exist
@@ -142,6 +168,7 @@ Allows a transaction party (tenant or landlord) to rate an agent after completin
 ## Reputation System
 
 The contract calculates reputation based on:
+
 1. **Average Rating**: Total score divided by number of ratings (1-5 scale)
 2. **Completed Agreements**: Total number of successfully completed transactions
 3. **Total Ratings**: Number of ratings received
@@ -199,6 +226,7 @@ make fmt
 ## Integration with Chioma Ecosystem
 
 This contract integrates with the Chioma rent payment system by:
+
 1. Preventing fraudulent addresses from being added as agents in rent agreements
 2. Tracking agent involvement in property transactions
 3. Building verifiable reputation for agents based on completed transactions

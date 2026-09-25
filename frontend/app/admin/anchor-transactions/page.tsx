@@ -12,6 +12,7 @@ import {
   useAnchorTransactions,
   useAnchorTransactionStats,
 } from '@/lib/query/hooks';
+import type { AnchorTransactionSortField } from '@/lib/query/hooks/use-anchor-transactions';
 import { AnchorTransactionDetail } from '@/components/admin/AnchorTransactionDetail';
 import {
   AnchorTransactionFilters,
@@ -19,8 +20,14 @@ import {
 } from '@/components/admin/AnchorTransactionFilters';
 import { AnchorTransactionList } from '@/components/admin/AnchorTransactionList';
 import { AnchorTransactionStats } from '@/components/admin/AnchorTransactionStats';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
-const DEFAULT_FILTERS: AnchorTransactionFiltersValue = {
+type AnchorTransactionPageFilters = AnchorTransactionFiltersValue & {
+  sortBy: AnchorTransactionSortField;
+  sortOrder: 'ASC' | 'DESC';
+};
+
+const DEFAULT_FILTERS: AnchorTransactionPageFilters = {
   page: 1,
   limit: 20,
   search: '',
@@ -28,11 +35,13 @@ const DEFAULT_FILTERS: AnchorTransactionFiltersValue = {
   status: '',
   startDate: '',
   endDate: '',
+  sortBy: 'createdAt',
+  sortOrder: 'DESC',
 };
 
 export default function AnchorTransactionsPage() {
   const [filters, setFilters] =
-    useState<AnchorTransactionFiltersValue>(DEFAULT_FILTERS);
+    useState<AnchorTransactionPageFilters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const listParams = useMemo(
@@ -65,8 +74,23 @@ export default function AnchorTransactionsPage() {
     deriveAnchorStatsFromTransactions(visibleTransactions);
 
   const hasFilters = Object.entries(filters).some(
-    ([key, value]) => key !== 'page' && key !== 'limit' && value !== '',
+    ([key, value]) =>
+      key !== 'page' &&
+      key !== 'limit' &&
+      key !== 'sortBy' &&
+      key !== 'sortOrder' &&
+      value !== '',
   );
+
+  const handleSort = (key: AnchorTransactionSortField) => {
+    setFilters((current) => ({
+      ...current,
+      page: 1,
+      sortBy: key,
+      sortOrder:
+        current.sortBy === key && current.sortOrder === 'ASC' ? 'DESC' : 'ASC',
+    }));
+  };
 
   const isRefreshing =
     anchorTransactionsQuery.isRefetching ||
@@ -177,21 +201,29 @@ export default function AnchorTransactionsPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(360px,0.95fr)]">
-        <AnchorTransactionList
-          transactions={transactions}
-          isLoading={
-            anchorTransactionsQuery.isLoading && !anchorTransactionsQuery.data
-          }
-          selectedId={effectiveSelectedId}
-          page={filters.page}
-          onSelect={setSelectedId}
-          onPageChange={(page) =>
-            setFilters((current) => ({
-              ...current,
-              page,
-            }))
-          }
-        />
+        <FeatureBoundary
+          name="admin:anchor-transactions-table"
+          label="Transaction table"
+        >
+          <AnchorTransactionList
+            transactions={transactions}
+            isLoading={
+              anchorTransactionsQuery.isLoading && !anchorTransactionsQuery.data
+            }
+            selectedId={effectiveSelectedId}
+            page={filters.page}
+            onSelect={setSelectedId}
+            onPageChange={(page) =>
+              setFilters((current) => ({
+                ...current,
+                page,
+              }))
+            }
+            sortBy={filters.sortBy}
+            sortOrder={filters.sortOrder}
+            onSort={handleSort}
+          />
+        </FeatureBoundary>
 
         <AnchorTransactionDetail
           transaction={selectedTransaction}

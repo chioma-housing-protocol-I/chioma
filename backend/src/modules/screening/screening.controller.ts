@@ -22,6 +22,7 @@ import { ScreeningService } from './screening.service';
 import { CreateTenantScreeningRequestDto } from './dto/create-tenant-screening-request.dto';
 import { GrantTenantScreeningConsentDto } from './dto/grant-tenant-screening-consent.dto';
 import { TenantScreeningWebhookDto } from './dto/tenant-screening-webhook.dto';
+import { RenewTenantScreeningRequestDto } from './dto/renew-tenant-screening-request.dto';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 
@@ -60,6 +61,7 @@ export class ScreeningController {
     );
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post(':id/consent')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -81,6 +83,7 @@ export class ScreeningController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -92,6 +95,7 @@ export class ScreeningController {
     });
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/report')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -103,6 +107,29 @@ export class ScreeningController {
     });
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @Post(':id/renew')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Renew an expired tenant screening request' })
+  renewRequest(
+    @Param('id') screeningId: string,
+    @Req() req: RequestWithUser,
+    @Body() dto: RenewTenantScreeningRequestDto,
+  ) {
+    return this.screeningService.renewRequest(
+      screeningId,
+      {
+        id: req.user.id,
+        role: req.user.role,
+        ipAddress: req.ip,
+        userAgent: this.getUserAgent(req),
+      },
+      dto,
+    );
+  }
+
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('webhook')
   @Public()
   @UseGuards(WebhookSignatureGuard)

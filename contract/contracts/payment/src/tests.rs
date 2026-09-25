@@ -799,6 +799,106 @@ fn test_apply_late_fee_not_late_returns_error() {
     assert!(result.is_err());
 }
 
+// ─── Rent Escalation Tests ───────────────────────────────────────────────────
+
+#[test]
+fn test_calculate_rent_for_period_logic() {
+    let env = Env::default();
+    let config = RentEscalationConfig {
+        agreement_id: String::from_str(&env, "agr_1"),
+        annual_rate_bps: 1000, // 10%
+        payments_per_year: 12,
+        escalation_type: EscalationType::FixedAnnual,
+    };
+
+    // Period 1 (payment 1) -> Base rent
+    assert_eq!(calculate_rent_for_period(1000, 1, &config), 1000);
+
+    // Period 12 (payment 12) -> Still base rent (last payment of 1st year)
+    assert_eq!(calculate_rent_for_period(1000, 12, &config), 1000);
+
+    // Period 13 (payment 13) -> 1st escalation
+    // 1000 + 10% = 1100
+    assert_eq!(calculate_rent_for_period(1000, 13, &config), 1100);
+
+    // Period 25 (payment 25) -> 2nd escalation
+    // 1100 + 10% = 1210
+    assert_eq!(calculate_rent_for_period(1000, 25, &config), 1210);
+}
+
+#[test]
+fn test_set_and_get_rent_escalation_config() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(
+        &env,
+        "re_agr_1",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    seed_agreement(&env, &client, "re_agr_1", &agreement);
+
+    client.set_rent_escalation_config(
+        &String::from_str(&env, "re_agr_1"),
+        &500, // 5%
+        &12,
+        &EscalationType::FixedAnnual,
+    );
+
+    let config = client.get_rent_escalation_config(&String::from_str(&env, "re_agr_1"));
+    assert_eq!(config.annual_rate_bps, 500);
+    assert_eq!(config.payments_per_year, 12);
+    assert_eq!(config.escalation_type, EscalationType::FixedAnnual);
+}
+
+#[test]
+fn test_calculate_rent_for_period_via_contract() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(
+        &env,
+        "re_agr_2",
+        &tenant,
+        &landlord,
+        None,
+        1000,
+        0,
+        AgreementStatus::Active,
+        token,
+    );
+    seed_agreement(&env, &client, "re_agr_2", &agreement);
+
+    client.set_rent_escalation_config(
+        &String::from_str(&env, "re_agr_2"),
+        &1000, // 10%
+        &12,
+        &EscalationType::FixedAnnual,
+    );
+
+    // period_number 12 is the 13th payment (0-indexed)
+    let rent = client.calculate_rent_for_period(&String::from_str(&env, "re_agr_2"), &12);
+    assert_eq!(rent, 1100);
+}
+
 #[test]
 fn test_waive_late_fee() {
     let env = Env::default();
@@ -929,96 +1029,4 @@ fn test_compounding_late_fee_via_contract() {
         &10,
     );
     assert_eq!(fee, 276);
-}
-
-// ─── calculate_rent_for_period tests ─────────────────────────────────────────
-
-#[test]
-fn test_rent_period_zero_returns_base_rent() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-
-    // Period 0 always equals base rent regardless of rate
-    let rent = client.calculate_rent_for_period(&10_000_000_000_i128, &0, &500, &12);
-    assert_eq!(rent, 10_000_000_000_i128);
-}
-
-#[test]
-fn test_rent_no_escalation_stays_flat() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-
-    // rate = 0 bps → rent never changes
-    let base: i128 = 20_000_000_000;
-    for period in [0u32, 11, 12, 23, 24, 35] {
-        let rent = client.calculate_rent_for_period(&base, &period, &0, &12);
-        assert_eq!(rent, base, "flat rent failed at period {period}");
-    }
-}
-
-#[test]
-fn test_rent_escalates_after_full_year_monthly() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-
-    // 5 % annual increase, monthly payments
-    let base: i128 = 10_000_000_000; // 1 000 XLM in stroops
-    let rate_bps: u32 = 500; // 5 %
-    let ppy: u32 = 12;
-
-    // Periods 0–11 → year 0 → base rent
-    for p in 0..12u32 {
-        let rent = client.calculate_rent_for_period(&base, &p, &rate_bps, &ppy);
-        assert_eq!(rent, base, "year-0 rent wrong at period {p}");
-    }
-
-    // Periods 12–23 → year 1 → base * 1.05 (integer truncation)
-    let year1 = base * 10_500 / 10_000; // = 1 050 0000000
-    for p in 12..24u32 {
-        let rent = client.calculate_rent_for_period(&base, &p, &rate_bps, &ppy);
-        assert_eq!(rent, year1, "year-1 rent wrong at period {p}");
-    }
-
-    // Period 24 → year 2 → year1 * 1.05
-    let year2 = year1 * 10_500 / 10_000;
-    let rent = client.calculate_rent_for_period(&base, &24, &rate_bps, &ppy);
-    assert_eq!(rent, year2);
-}
-
-#[test]
-fn test_rent_escalates_weekly_payments() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-
-    // 10 % annual, weekly payments (52 per year)
-    let base: i128 = 5_000_000_000;
-    let rate_bps: u32 = 1_000;
-    let ppy: u32 = 52;
-
-    // Periods 0–51 → year 0
-    let rent = client.calculate_rent_for_period(&base, &51, &rate_bps, &ppy);
-    assert_eq!(rent, base);
-
-    // Period 52 → year 1 → base * 1.10
-    let year1 = base * 11_000 / 10_000;
-    let rent = client.calculate_rent_for_period(&base, &52, &rate_bps, &ppy);
-    assert_eq!(rent, year1);
-}
-
-#[test]
-#[should_panic]
-fn test_rent_invalid_base_rent_panics() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-    // base_rent = 0 should return an error (contract panics on Err)
-    client.calculate_rent_for_period(&0_i128, &0, &500, &12);
-}
-
-#[test]
-#[should_panic]
-fn test_rent_invalid_payments_per_year_panics() {
-    let env = Env::default();
-    let client = crate::PaymentContractClient::new(&env, &env.register(PaymentContract, ()));
-    // payments_per_year = 0 should return an error
-    client.calculate_rent_for_period(&10_000_000_000_i128, &0, &500, &0);
 }

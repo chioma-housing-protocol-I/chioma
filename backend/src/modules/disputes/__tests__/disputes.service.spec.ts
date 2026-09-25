@@ -17,12 +17,17 @@ import { User, UserRole } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { CreateDisputeDto } from '../dto/create-dispute.dto';
 import {
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+  AgreementNotFoundError,
+  AuthorizationError,
+  BusinessRuleViolationError,
+  DisputeNotFoundError,
+} from '../../../common/errors/domain-errors';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
+import { QueueManagementService } from '../../queues/services/queue-management.service';
+import { Payment as GeneralPayment } from '../../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../../rent/entities/payment.entity';
 
 describe('DisputesService', () => {
   let service: DisputesService;
@@ -57,8 +62,8 @@ describe('DisputesService', () => {
   const mockDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute description',
@@ -109,6 +114,14 @@ describe('DisputesService', () => {
           },
         },
         {
+          provide: getRepositoryToken(GeneralPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(RentPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
           provide: DataSource,
           useValue: {
             createQueryRunner: jest.fn().mockReturnValue({
@@ -155,6 +168,14 @@ describe('DisputesService', () => {
               ) => fn(),
             ),
           },
+        },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
+        },
+        {
+          provide: QueueManagementService,
+          useValue: { addVideoProcessingJob: jest.fn() },
         },
       ],
     }).compile();
@@ -207,6 +228,8 @@ describe('DisputesService', () => {
       expect(queryRunner.manager.create).toHaveBeenCalledWith(
         Dispute,
         expect.objectContaining({
+          agreement: mockAgreement,
+          initiatedBy: 'user-1',
           disputeType: DisputeType.RENT_PAYMENT,
           requestedAmount: 500,
           description: 'Test dispute description',
@@ -222,7 +245,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(AgreementNotFoundError);
     });
 
     it('should throw ForbiddenException if user not party to agreement', async () => {
@@ -241,7 +264,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'other-user'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('should throw BadRequestException if active dispute already exists', async () => {
@@ -255,7 +278,7 @@ describe('DisputesService', () => {
 
       await expect(
         service.createDispute(createDisputeDto, 'user-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
   });
 
@@ -275,7 +298,25 @@ describe('DisputesService', () => {
     it('should throw NotFoundException when dispute not found', async () => {
       jest.spyOn(disputeRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(999)).rejects.toThrow(DisputeNotFoundError);
+    });
+
+    it('should strip evidence that is not clean of malware', async () => {
+      const disputeWithEvidence = {
+        ...mockDispute,
+        evidence: [
+          { id: 1, scanStatus: 'clean' },
+          { id: 2, scanStatus: 'quarantined' },
+          { id: 3, scanStatus: 'pending' },
+        ],
+      } as unknown as Dispute;
+      jest
+        .spyOn(disputeRepository, 'findOne')
+        .mockResolvedValue(disputeWithEvidence);
+
+      const result = await service.findOne(1);
+
+      expect(result.evidence).toEqual([{ id: 1, scanStatus: 'clean' }]);
     });
   });
 
@@ -290,6 +331,33 @@ describe('DisputesService', () => {
         where: { disputeId: 'dispute-uuid-1' },
         relations: expect.any(Array),
       });
+    });
+  });
+
+  describe('update', () => {
+    it('allows a non-admin party to appeal a rejected dispute back to OPEN', async () => {
+      const rejectedDispute = {
+        ...mockDispute,
+        status: DisputeStatus.REJECTED,
+        agreement: mockAgreement,
+      } as Dispute;
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(rejectedDispute);
+      jest
+        .spyOn(disputeRepository, 'save')
+        .mockImplementation(async (input) => input as Dispute);
+      jest.spyOn(_userRepository, 'findOne').mockResolvedValue(mockUser);
+
+      const result = await service.update(
+        1,
+        { status: DisputeStatus.OPEN },
+        'user-1',
+      );
+
+      expect(result.status).toBe(DisputeStatus.OPEN);
+      expect(disputeRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: DisputeStatus.OPEN }),
+      );
     });
   });
 

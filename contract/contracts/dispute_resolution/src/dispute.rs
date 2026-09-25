@@ -54,6 +54,15 @@ pub fn set_timeout_config(
         .instance()
         .set(&DataKey::TimeoutConfig, &config);
     env.storage().instance().extend_ttl(500000, 500000);
+
+    events::timeout_config_updated(
+        env,
+        admin,
+        config.escrow_timeout_days,
+        config.dispute_timeout_days,
+        config.payment_timeout_days,
+    );
+
     Ok(())
 }
 
@@ -489,7 +498,7 @@ pub fn create_appeal(
     let appeal = DisputeAppeal {
         id: appeal_id.clone(),
         dispute_id: dispute_id.clone(),
-        appellant,
+        appellant: appellant.clone(),
         reason,
         status: AppealStatus::Pending,
         appeal_arbiters: selected_arbiters,
@@ -525,7 +534,7 @@ pub fn create_appeal(
         .persistent()
         .set(&DataKey::AppealFeeRefunded(appeal_id.clone()), &false);
 
-    events::appeal_created(env, appeal_id.clone(), dispute_id);
+    events::appeal_created(env, appeal_id.clone(), dispute_id, appellant.clone());
 
     Ok(appeal_id)
 }
@@ -741,6 +750,8 @@ pub fn set_arbiter_stats(
     let key = DataKey::ArbiterStats(arbiter.clone());
     env.storage().persistent().set(&key, &stats);
     env.storage().persistent().extend_ttl(&key, 500000, 500000);
+
+    events::arbiter_stats_set(env, arbiter, admin, disputes_resolved, rating);
 
     Ok(())
 }

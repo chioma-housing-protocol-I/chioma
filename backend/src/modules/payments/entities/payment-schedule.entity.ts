@@ -55,7 +55,9 @@ export class PaymentSchedule {
   @Column({ type: 'varchar', length: 20 })
   interval: PaymentInterval;
 
-  @Column({ type: 'timestamp' })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
   nextRunAt: Date;
 
   @Column({
@@ -74,7 +76,10 @@ export class PaymentSchedule {
   @Column({ type: 'text', nullable: true })
   lastError: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-json' : 'jsonb',
+    nullable: true,
+  })
   metadata: Record<string, unknown> | null;
 
   @CreateDateColumn()

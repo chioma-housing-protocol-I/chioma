@@ -12,6 +12,9 @@ export enum ErrorCode {
   AUTH_SESSION_EXPIRED = 'AUTH_1006',
   AUTH_MFA_REQUIRED = 'AUTH_1007',
   AUTH_MFA_INVALID = 'AUTH_1008',
+  AUTH_ACCOUNT_LOCKED = 'AUTH_1009',
+  AUTH_ACCOUNT_DISABLED = 'AUTH_1010',
+  AUTH_USER_NOT_FOUND = 'AUTH_1011',
 
   // Validation (2xxx)
   VALIDATION_FAILED = 'VAL_2001',
@@ -30,6 +33,7 @@ export enum ErrorCode {
   REVIEW_NOT_FOUND = 'RES_3007',
   NOTIFICATION_NOT_FOUND = 'RES_3008',
   MAINTENANCE_NOT_FOUND = 'RES_3009',
+  BOOKING_NOT_FOUND = 'RES_3010',
 
   // Business Logic (4xxx)
   BUSINESS_RULE_VIOLATION = 'BUS_4001',
@@ -90,6 +94,11 @@ export enum ErrorCode {
   CONFIGURATION_ERROR = 'SYS_11004',
   MAINTENANCE_MODE = 'SYS_11005',
 
+  // Resilience & Degradation (12xxx)
+  BULKHEAD_CAPACITY_EXCEEDED = 'RESIL_12001',
+  SERVICE_DEGRADED = 'RESIL_12002',
+  FEATURE_DISABLED = 'RESIL_12003',
+
   // Unknown
   UNKNOWN_ERROR = 'UNKNOWN',
 }
@@ -100,17 +109,26 @@ export enum ErrorCode {
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   // Authentication & Authorization
   [ErrorCode.AUTH_INVALID_CREDENTIALS]: 'Invalid email or password',
-  [ErrorCode.AUTH_TOKEN_EXPIRED]: 'Your session has expired. Please sign in again',
+  [ErrorCode.AUTH_TOKEN_EXPIRED]:
+    'Your session has expired. Please sign in again',
   [ErrorCode.AUTH_TOKEN_INVALID]: 'Invalid authentication token',
-  [ErrorCode.AUTH_UNAUTHORIZED]: 'You must be signed in to access this resource',
-  [ErrorCode.AUTH_FORBIDDEN]: 'You do not have permission to access this resource',
-  [ErrorCode.AUTH_SESSION_EXPIRED]: 'Your session has expired for security reasons',
+  [ErrorCode.AUTH_UNAUTHORIZED]:
+    'You must be signed in to access this resource',
+  [ErrorCode.AUTH_FORBIDDEN]:
+    'You do not have permission to access this resource',
+  [ErrorCode.AUTH_SESSION_EXPIRED]:
+    'Your session has expired for security reasons',
   [ErrorCode.AUTH_MFA_REQUIRED]: 'Multi-factor authentication is required',
   [ErrorCode.AUTH_MFA_INVALID]: 'Invalid verification code',
+  [ErrorCode.AUTH_ACCOUNT_LOCKED]:
+    'Account is temporarily locked due to too many failed attempts',
+  [ErrorCode.AUTH_ACCOUNT_DISABLED]: 'Account has been deactivated',
+  [ErrorCode.AUTH_USER_NOT_FOUND]: 'User not found',
 
   // Validation
   [ErrorCode.VALIDATION_FAILED]: 'The provided data is invalid',
-  [ErrorCode.VALIDATION_INVALID_INPUT]: 'One or more fields contain invalid data',
+  [ErrorCode.VALIDATION_INVALID_INPUT]:
+    'One or more fields contain invalid data',
   [ErrorCode.VALIDATION_MISSING_FIELD]: 'Required field is missing',
   [ErrorCode.VALIDATION_INVALID_FORMAT]: 'Invalid data format',
   [ErrorCode.VALIDATION_OUT_OF_RANGE]: 'Value is out of acceptable range',
@@ -125,6 +143,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.REVIEW_NOT_FOUND]: 'Review not found',
   [ErrorCode.NOTIFICATION_NOT_FOUND]: 'Notification not found',
   [ErrorCode.MAINTENANCE_NOT_FOUND]: 'Maintenance request not found',
+  [ErrorCode.BOOKING_NOT_FOUND]: 'Booking not found',
 
   // Business Logic
   [ErrorCode.BUSINESS_RULE_VIOLATION]: 'This operation violates business rules',
@@ -134,10 +153,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.OPERATION_NOT_ALLOWED]: 'This operation is not allowed',
   [ErrorCode.QUOTA_EXCEEDED]: 'You have exceeded your quota',
   [ErrorCode.ALREADY_EXISTS]: 'This resource already exists',
-  [ErrorCode.PROHIBITED_CONTENT]: 'Content contains prohibited language or material',
+  [ErrorCode.PROHIBITED_CONTENT]:
+    'Content contains prohibited language or material',
 
   // Blockchain & Smart Contracts
-  [ErrorCode.BLOCKCHAIN_CONNECTION_FAILED]: 'Failed to connect to blockchain network',
+  [ErrorCode.BLOCKCHAIN_CONNECTION_FAILED]:
+    'Failed to connect to blockchain network',
   [ErrorCode.BLOCKCHAIN_TRANSACTION_FAILED]: 'Blockchain transaction failed',
   [ErrorCode.BLOCKCHAIN_INSUFFICIENT_BALANCE]: 'Insufficient balance in wallet',
   [ErrorCode.BLOCKCHAIN_INVALID_ADDRESS]: 'Invalid blockchain address',
@@ -146,7 +167,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.BLOCKCHAIN_TIMEOUT]: 'Blockchain operation timed out',
 
   // External Services
-  [ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE]: 'External service is currently unavailable',
+  [ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE]:
+    'External service is currently unavailable',
   [ErrorCode.EXTERNAL_SERVICE_TIMEOUT]: 'External service request timed out',
   [ErrorCode.EXTERNAL_SERVICE_ERROR]: 'External service error',
   [ErrorCode.PAYMENT_PROVIDER_ERROR]: 'Payment provider error',
@@ -161,9 +183,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.MAX_RETRIES_EXCEEDED]: 'Maximum retry attempts exceeded',
 
   // Rate Limiting
-  [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Rate limit exceeded. Please try again later',
+  [ErrorCode.RATE_LIMIT_EXCEEDED]:
+    'Rate limit exceeded. Please try again later',
   [ErrorCode.TOO_MANY_REQUESTS]: 'Too many requests. Please slow down',
-  [ErrorCode.SUSPICIOUS_ACTIVITY]: 'Access temporarily blocked due to suspicious activity',
+  [ErrorCode.SUSPICIOUS_ACTIVITY]:
+    'Access temporarily blocked due to suspicious activity',
 
   // Data & Encryption
   [ErrorCode.ENCRYPTION_ERROR]: 'Data encryption failed',
@@ -184,6 +208,14 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.NOT_IMPLEMENTED]: 'This feature is not yet implemented',
   [ErrorCode.CONFIGURATION_ERROR]: 'System configuration error',
   [ErrorCode.MAINTENANCE_MODE]: 'System is under maintenance',
+
+  // Resilience & Degradation
+  [ErrorCode.BULKHEAD_CAPACITY_EXCEEDED]:
+    'Service is at capacity. Please try again shortly',
+  [ErrorCode.SERVICE_DEGRADED]:
+    'Service is currently running in a degraded state',
+  [ErrorCode.FEATURE_DISABLED]:
+    'This feature is temporarily unavailable due to degraded service',
 
   // Unknown
   [ErrorCode.UNKNOWN_ERROR]: 'An unknown error occurred',

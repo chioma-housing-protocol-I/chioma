@@ -4,6 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAccountBalances } from '@/lib/stellar-horizon';
 import { TrendingUp, Loader2 } from 'lucide-react';
+import { formatCrypto } from '@/lib/utils/format';
 
 interface StellarAccountBalanceProps {
   publicKey: string;
@@ -51,7 +52,7 @@ export function StellarAccountBalance({
         >
           <span className="text-xs font-mono text-slate-400">{row.label}</span>
           <span className="text-sm font-semibold text-white">
-            {parseFloat(row.amount).toFixed(7)}
+            {formatCrypto(row.amount)}
           </span>
         </div>
       ))}

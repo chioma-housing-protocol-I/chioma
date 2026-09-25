@@ -3,8 +3,10 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Retry } from '../../common/decorators/retry.decorator';
+import { PaginationUtils } from '../../common/utils';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   S3Client,
@@ -13,10 +15,16 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { FileMetadata } from './file-metadata.entity';
-
+import { FileMetadata, ScanStatus } from './file-metadata.entity';
+import { MalwareScanService } from './malware-scan.service';
 import { ImageProcessingService } from './image-processing.service';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { AuditService } from '../audit/audit.service';
+import {
+  AuditAction,
+  AuditLevel,
+  AuditStatus,
+} from '../audit/entities/audit-log.entity';
 
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
@@ -45,6 +53,8 @@ export class StorageService {
     @InjectRepository(FileMetadata)
     private readonly fileMetadataRepo: Repository<FileMetadata>,
     private readonly imageProcessing: ImageProcessingService,
+    private readonly malwareScan: MalwareScanService,
+    private readonly auditService: AuditService,
   ) {
     this.region = process.env.AWS_REGION || 'us-east-1';
     this.bucket = process.env.AWS_S3_BUCKET || '';
@@ -106,6 +116,36 @@ export class StorageService {
       throw new BadRequestException('File too large (max 50MB)');
     }
 
+    const scanResult = await this.malwareScan.scan(buffer, fileName);
+    if (!scanResult.clean) {
+      const meta = await this.fileMetadataRepo.save({
+        fileName,
+        fileSize: buffer.length,
+        fileType: contentType,
+        s3Key: key,
+        ownerId,
+        scanStatus: ScanStatus.QUARANTINED,
+      });
+      this.logger.warn(
+        `Quarantined upload ${meta.id}: ${scanResult.reason ?? 'malware detected'}`,
+      );
+      await this.auditService.log({
+        action: AuditAction.SUSPICIOUS_ACTIVITY,
+        entityType: 'FileMetadata',
+        entityId: meta.id,
+        performedBy: ownerId,
+        level: AuditLevel.SECURITY,
+        metadata: {
+          fileName,
+          s3Key: key,
+          reason: scanResult.reason ?? 'malware_detected',
+        },
+      });
+      throw new ForbiddenException(
+        'File failed malware scan and has been quarantined',
+      );
+    }
+
     const variants: Record<string, string> = {};
 
     // Process images and upload all variants
@@ -160,6 +200,7 @@ export class StorageService {
       fileType: contentType,
       s3Key: key,
       ownerId,
+      scanStatus: ScanStatus.CLEAN,
     });
 
     return { url: this.getPublicUrl(key), variants };
@@ -175,6 +216,17 @@ export class StorageService {
     });
     if (!file) {
       throw new NotFoundException('File not found or access denied');
+    }
+
+    if (file.scanStatus === ScanStatus.QUARANTINED) {
+      throw new ForbiddenException(
+        'File is quarantined and cannot be retrieved',
+      );
+    }
+    if (file.scanStatus === ScanStatus.PENDING) {
+      throw new ForbiddenException(
+        'File is pending malware scan and is not yet retrievable',
+      );
     }
 
     // Return CDN URL for public assets if CDN is configured
@@ -211,11 +263,64 @@ export class StorageService {
     this.logger.log(`Deleted file: ${key}`);
   }
 
-  async listFiles(ownerId: string): Promise<FileMetadata[]> {
-    return this.fileMetadataRepo.find({
+  /**
+   * Permanently deletes quarantined files (S3 object + metadata row) whose
+   * quarantine has outlived the given retention window. Part of GDPR-style
+   * data retention enforcement: flagged content shouldn't linger indefinitely
+   * once its investigation window has passed.
+   */
+  async purgeQuarantinedFiles(retentionDays: number): Promise<number> {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const candidates = await this.fileMetadataRepo.find({
+      where: {
+        scanStatus: ScanStatus.QUARANTINED,
+        createdAt: LessThan(cutoff),
+      },
+    });
+
+    let purged = 0;
+    for (const file of candidates) {
+      try {
+        await this.s3.send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: file.s3Key }),
+        );
+        await this.fileMetadataRepo.delete({ id: file.id });
+        await this.auditService.log({
+          action: AuditAction.QUARANTINED_FILE_PURGED,
+          entityType: 'FileMetadata',
+          entityId: file.id,
+          status: AuditStatus.SUCCESS,
+          level: AuditLevel.SECURITY,
+          metadata: {
+            ownerId: file.ownerId,
+            fileName: file.fileName,
+            purgedBy: 'system:data-retention-sweep',
+          },
+        });
+        purged++;
+      } catch (error) {
+        this.logger.error(
+          `Failed to purge quarantined file ${file.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    if (purged > 0) {
+      this.logger.log(`Purged ${purged} quarantined file(s) past retention`);
+    }
+    return purged;
+  }
+
+  async listFiles(ownerId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.fileMetadataRepo.findAndCount({
       where: { ownerId },
       order: { createdAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async updateMetadata(

@@ -3,14 +3,17 @@
  * Maps user roles to their respective dashboard routes
  */
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'user' | 'agent' | 'super_admin';
 
 /**
- * Dashboard route mapping for each role
+ * Dashboard route mapping for each role. There is no separate route for
+ * agents — agent-specific views render inside /user based on user.role.
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
   admin: '/admin',
+  super_admin: '/admin',
   user: '/user',
+  agent: '/user',
 };
 
 /**

@@ -60,11 +60,17 @@ export default function NotificationBell({
         onClick={() => setOpen((prev) => !prev)}
         className={`relative p-2 rounded-full transition-colors cursor-pointer hover:bg-neutral-100/50 ${className}`}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="notifications-menu"
       >
-        <Bell size={size} />
+        <Bell size={size} aria-hidden="true" />
 
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4.5 h-4.5 px-1 text-[10px] font-bold leading-none text-white bg-brand-blue rounded-full shadow-sm">
+          <span
+            aria-live="polite"
+            className="absolute -top-1 -right-1 flex items-center justify-center min-w-4.5 h-4.5 px-1 text-[10px] font-bold leading-none text-white bg-brand-blue rounded-full shadow-sm"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

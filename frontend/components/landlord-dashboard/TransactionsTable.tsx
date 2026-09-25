@@ -13,7 +13,7 @@ import {
   type Transaction,
   getStellarExplorerUrl,
 } from '@/lib/transactions-data';
-import { format } from 'date-fns';
+import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 const TYPE_CONFIG: Record<
   Transaction['type'],
@@ -67,9 +67,11 @@ const STATUS_CONFIG: Record<
 };
 
 function formatAmount(t: Transaction): string {
-  const main = `${t.currency} ${Math.abs(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  const main = formatCurrency(Math.abs(t.amount), t.currency, {
+    minimumFractionDigits: 2,
+  });
   if (t.amountUsd != null && t.currency !== 'USD') {
-    return `${main} (≈ $${t.amountUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })})`;
+    return `${main} (≈ ${formatCurrency(t.amountUsd, 'USD', { minimumFractionDigits: 2 })})`;
   }
   return main;
 }
@@ -125,10 +127,10 @@ export default function TransactionsTable({
                 >
                   <td className="px-6 py-4">
                     <div className="font-bold text-white uppercase tracking-tight">
-                      {format(new Date(tx.date), 'MMM d, yyyy')}
+                      {formatDate(tx.date, { dateStyle: 'medium' })}
                     </div>
                     <div className="text-xs text-blue-300/40 font-bold uppercase tracking-widest mt-1">
-                      {format(new Date(tx.date), 'HH:mm')}
+                      {formatDate(tx.date, { timeStyle: 'short' })}
                     </div>
                   </td>
                   <td className="px-6 py-4">

@@ -16,10 +16,12 @@ import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { DatabaseEncryptionKeyService } from './database-encryption-key.service';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     ConfigModule,
+    AuditModule,
     TypeOrmModule.forFeature([
       SecurityEvent,
       ThreatEvent,

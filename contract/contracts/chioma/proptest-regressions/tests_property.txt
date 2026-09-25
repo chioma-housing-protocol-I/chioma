@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc d67e368801d87256a1d515cd43731f97d73e3279c6333721022106cb666672a9 # shrinks to base_rent = 2, payment_number = 117, annual_rate_bps = 9840, payments_per_year = 1

@@ -6,28 +6,25 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
+import * as Sentry from '@sentry/nestjs';
 import { BaseAppError } from '../errors/base.error';
 import { ErrorCode } from '../errors/error-codes';
-import {
-  TimeoutError,
-  NetworkError,
-  MaxRetriesExceededError,
-} from '../errors/retry-errors';
-import {
-  EncryptionError,
-  DecryptionFailedError,
-} from '../services/encryption.service';
 import { RateLimitError } from '../errors/domain-errors';
+import { ErrorResponseDto } from '../dto/error-response.dto';
 
-interface ErrorResponse {
-  statusCode: number;
-  message: string;
-  error: string;
-  code?: ErrorCode;
-  timestamp?: string;
-  retryAfter?: number;
+/** Express Request extended with fields added by NestJS/Passport middleware. */
+interface AuthenticatedRequest extends Request {
+  requestId?: string;
+  user?: { id: string };
+}
+
+/** Shape of a NestJS ValidationPipe exception response body. */
+interface ValidationExceptionResponse {
+  message: string | string[];
+  error?: string;
+  statusCode?: number;
 }
 
 @Catch()
@@ -37,47 +34,88 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest();
+    const request = ctx.getRequest<AuthenticatedRequest>();
 
-    const { status, body } = this.resolve(exception);
+    const { status, body, retryAfter } = this.resolve(exception, request);
+
+    if (retryAfter !== undefined) {
+      response.setHeader('Retry-After', String(retryAfter));
+    }
 
     // Log error with request context
+    const requestId =
+      request.requestId ?? (request.headers['x-request-id'] as string);
+    const logContext = {
+      requestId,
+      path: request.url,
+      method: request.method,
+      userId: request.user?.id,
+      statusCode: status,
+    };
+
     if (status >= 500) {
       this.logger.error(
-        `${request.method} ${request.url} - ${status}`,
+        `${request.method} ${request.url} - ${status} [${requestId}]`,
         exception instanceof Error ? exception.stack : String(exception),
+        JSON.stringify(logContext),
       );
-    } else if (status >= 400) {
+
+      // Report to Sentry if it's a server error
+      Sentry.captureException(exception, {
+        extra: logContext,
+        user: request.user ? { id: request.user.id } : undefined,
+      });
+    } else {
       this.logger.warn(
-        `${request.method} ${request.url} - ${status}: ${body.message}`,
+        `${request.method} ${request.url} - ${status}: ${Array.isArray(body.message) ? body.message.join(', ') : body.message} [${requestId}]`,
       );
+    }
+
+    if (body.retryAfter) {
+      response.setHeader('Retry-After', String(body.retryAfter));
     }
 
     response.status(status).json(body);
   }
 
-  private resolve(exception: unknown): {
+  private resolve(
+    exception: unknown,
+    request: AuthenticatedRequest,
+  ): {
     status: number;
-    body: ErrorResponse;
+    body: ErrorResponseDto;
+    retryAfter?: number;
   } {
+    const requestId =
+      request.requestId ?? (request.headers['x-request-id'] as string);
+    const path = request.url;
+    const timestamp = new Date().toISOString();
+
+    const baseResponse: Partial<ErrorResponseDto> = {
+      timestamp,
+      requestId,
+      path,
+    };
+
     // Handle our custom BaseAppError instances
     if (exception instanceof BaseAppError) {
-      const body: ErrorResponse = {
+      const body: ErrorResponseDto = {
+        ...baseResponse,
         statusCode: exception.statusCode,
         message: exception.message,
         error: this.getErrorName(exception.statusCode),
         code: exception.code,
-        timestamp: exception.timestamp.toISOString(),
-      };
-
-      // Add retryAfter for rate limit errors
-      if (exception instanceof RateLimitError && exception.retryAfter) {
-        body.retryAfter = exception.retryAfter;
-      }
+      } as ErrorResponseDto;
 
       return {
         status: exception.statusCode,
         body,
+        // Rate limit retry timing goes on the Retry-After header, not the
+        // JSON body, to avoid leaking rate-limit timing info to attackers.
+        retryAfter:
+          exception instanceof RateLimitError && exception.retryAfter
+            ? exception.retryAfter
+            : undefined,
       };
     }
 
@@ -86,32 +124,59 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
+      // Handle rate limiting from Throttler
       if (status === 429) {
         const message =
           typeof exceptionResponse === 'string'
             ? exceptionResponse
             : ((exceptionResponse as Record<string, unknown>)
                 .message as string) || 'Too Many Requests';
+
         return {
           status,
           body: {
+            ...baseResponse,
             statusCode: status,
             message,
             error: 'Too Many Requests',
             code: ErrorCode.RATE_LIMIT_EXCEEDED,
-            retryAfter: 60,
-          },
+          } as ErrorResponseDto,
+          retryAfter: 60,
         };
+      }
+
+      // Handle validation errors from ValidationPipe
+      if (
+        status === (HttpStatus.BAD_REQUEST as number) &&
+        typeof exceptionResponse === 'object'
+      ) {
+        const res = exceptionResponse as ValidationExceptionResponse;
+        if (Array.isArray(res.message)) {
+          return {
+            status,
+            body: {
+              ...baseResponse,
+              statusCode: status,
+              message: res.message,
+              error: 'Bad Request',
+              code: ErrorCode.VALIDATION_FAILED,
+            } as ErrorResponseDto,
+          };
+        }
       }
 
       const body =
         typeof exceptionResponse === 'object'
-          ? (exceptionResponse as ErrorResponse)
-          : {
+          ? ({
+              ...baseResponse,
+              ...(exceptionResponse as Record<string, unknown>),
+            } as ErrorResponseDto)
+          : ({
+              ...baseResponse,
               statusCode: status,
               message: exceptionResponse,
               error: this.getErrorName(status),
-            };
+            } as ErrorResponseDto);
 
       return { status, body };
     }
@@ -121,11 +186,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         status: HttpStatus.NOT_FOUND,
         body: {
+          ...baseResponse,
           statusCode: HttpStatus.NOT_FOUND,
           message: 'Resource not found',
           error: 'Not Found',
           code: ErrorCode.RESOURCE_NOT_FOUND,
-        },
+        } as ErrorResponseDto,
       };
     }
 
@@ -137,46 +203,39 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         status: HttpStatus.CONFLICT,
         body: {
+          ...baseResponse,
           statusCode: HttpStatus.CONFLICT,
           message: 'Duplicate entry found',
           error: 'Conflict',
           code: ErrorCode.DUPLICATE_ENTRY,
-        },
+        } as ErrorResponseDto,
       };
     }
 
     // Handle generic database errors
     if (exception instanceof QueryFailedError) {
-      this.logger.error(
-        'Database query failed',
-        exception instanceof Error ? exception.stack : String(exception),
-      );
       return {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
         body: {
+          ...baseResponse,
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'Database operation failed',
           error: 'Internal Server Error',
           code: ErrorCode.DATABASE_ERROR,
-        },
+        } as ErrorResponseDto,
       };
     }
 
-    // Log unhandled exceptions
-    this.logger.error(
-      'Unhandled exception',
-      exception instanceof Error ? exception.stack : String(exception),
-    );
-
-    // Return generic error response
+    // Return generic error response for unhandled exceptions
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,
       body: {
+        ...baseResponse,
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'An unexpected error occurred',
         error: 'Internal Server Error',
         code: ErrorCode.INTERNAL_SERVER_ERROR,
-      },
+      } as ErrorResponseDto,
     };
   }
 

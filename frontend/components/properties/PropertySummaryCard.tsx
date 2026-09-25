@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { MapPin, Bed, Bath, Ruler, Heart } from 'lucide-react';
 import { useState } from 'react';
+import { formatNumber } from '@/lib/utils/format';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface PropertySummaryCardProps {
   property: {
@@ -93,17 +94,21 @@ export default function PropertySummaryCard({
       {/* Content */}
       <div className="p-4">
         {/* Price */}
-        <p className="text-blue-600 font-bold text-xl mb-2">
+        <p className="text-blue-800 font-bold text-xl mb-2">
           {property.price}{' '}
           <span className="text-gray-500 font-normal text-sm">/yr</span>
         </p>
 
         {/* Title */}
-        <Link href={`/properties/${property.id}`}>
-          <h3 className="font-bold text-gray-900 mb-2 text-base hover:text-blue-600 transition">
+        <PrefetchLink
+          href={`/properties/${property.id}`}
+          prefetchKind="property"
+          prefetchId={String(property.id)}
+        >
+          <h3 className="font-bold text-gray-900 mb-2 text-base hover:text-blue-800 transition">
             {property.title}
           </h3>
-        </Link>
+        </PrefetchLink>
 
         {/* Location */}
         <div className="flex gap-2 text-gray-600 mb-3 text-sm">
@@ -127,12 +132,12 @@ export default function PropertySummaryCard({
           </div>
           {property.viewCount != null && (
             <div className="flex items-center gap-1 text-gray-500">
-              <span>{property.viewCount.toLocaleString()} views</span>
+              <span>{formatNumber(property.viewCount)} views</span>
             </div>
           )}
           {property.favoriteCount != null && (
             <div className="flex items-center gap-1 text-gray-500">
-              <span>{property.favoriteCount.toLocaleString()} favorites</span>
+              <span>{formatNumber(property.favoriteCount)} favorites</span>
             </div>
           )}
         </div>
@@ -149,12 +154,14 @@ export default function PropertySummaryCard({
         )}
 
         {/* View Details Button */}
-        <Link
+        <PrefetchLink
           href={`/properties/${property.id}`}
+          prefetchKind="property"
+          prefetchId={String(property.id)}
           className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
         >
           View Details
-        </Link>
+        </PrefetchLink>
       </div>
     </div>
   );
