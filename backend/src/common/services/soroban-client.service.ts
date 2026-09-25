@@ -14,6 +14,7 @@ import {
   BASE_FEE,
   Account,
 } from '@stellar/stellar-sdk';
+import { waitForSorobanTransactionSuccess } from '../../modules/stellar/services/soroban-transaction-poller';
 
 @Injectable()
 export class SorobanClientService {
@@ -122,22 +123,18 @@ export class SorobanClientService {
     }
 
     const txHash = sendResponse.hash;
-    let getResponse = await this.server.getTransaction(txHash);
-
-    while (
-      getResponse.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND
-    ) {
-      await this.sleep(1000);
-      getResponse = await this.server.getTransaction(txHash);
-    }
-
-    if (getResponse.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+    try {
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        txHash,
+        this.configService,
+      );
       this.logger.log(`Transaction successful: ${txHash}`);
       return txHash;
+    } catch (error) {
+      this.logger.error(`Transaction failed or timed out: ${txHash}`, error);
+      throw new BadRequestException('Transaction failed or timed out');
     }
-
-    this.logger.error(`Transaction failed: ${txHash}`);
-    throw new BadRequestException('Transaction failed');
   }
 
   async simulateTransaction(
@@ -160,7 +157,4 @@ export class SorobanClientService {
     return stellarAddressRegex.test(address);
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }

@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
 
 export interface MintObligationParams {
   agreementId: string;
@@ -103,6 +107,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      );
 
       this.logger.log(
         `Minted rent obligation NFT for agreement ${params.agreementId}`,
@@ -139,6 +149,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      );
 
       this.logger.log(
         `Transferred obligation ${params.agreementId} from ${params.fromAddress} to ${params.toAddress}`,
@@ -324,6 +340,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      );
 
       this.logger.log(
         `Burned rent obligation NFT ${params.tokenId} (reason: ${params.reason})`,
@@ -354,6 +376,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      );
 
       this.logger.log(
         `Admin reassigned obligation ${params.agreementId} to ${params.newOwnerAddress}`,

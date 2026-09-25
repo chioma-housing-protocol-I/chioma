@@ -4,6 +4,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
 import { StellarEscrow, EscrowStatus } from '../entities/stellar-escrow.entity';
 import { EscrowSignature } from '../entities/escrow-signature.entity';
 import {
@@ -126,7 +130,12 @@ export class EscrowContractService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to create escrow: ${error.message}`,
@@ -165,7 +174,12 @@ export class EscrowContractService {
       prepared.sign(callerKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(`Failed to fund escrow: ${error.message}`, error.stack);
       throw error;
@@ -203,7 +217,12 @@ export class EscrowContractService {
       prepared.sign(callerKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to approve release: ${error.message}`,
@@ -244,7 +263,12 @@ export class EscrowContractService {
       prepared.sign(callerKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to raise dispute: ${error.message}`,
@@ -285,7 +309,12 @@ export class EscrowContractService {
       prepared.sign(arbiterKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to resolve dispute: ${error.message}`,
@@ -365,7 +394,12 @@ export class EscrowContractService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      return await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      return await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to release rent for escrow ${escrowId}: ${error.message}`,
@@ -382,31 +416,6 @@ export class EscrowContractService {
     } catch {
       return false;
     }
-  }
-
-  private async pollTransactionStatus(
-    hash: string,
-    maxAttempts = 10,
-  ): Promise<string> {
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      try {
-        const txResponse = await this.server.getTransaction(hash);
-
-        if (txResponse.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
-          return hash;
-        }
-
-        if (txResponse.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
-          throw new Error(`Transaction failed: ${hash}`);
-        }
-      } catch (error) {
-        if (i === maxAttempts - 1) throw error;
-      }
-    }
-
-    throw new Error(`Transaction timeout: ${hash}`);
   }
 
   private parseEscrowResult(result: xdr.ScVal): EscrowData | null {
