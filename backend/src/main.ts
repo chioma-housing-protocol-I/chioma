@@ -11,13 +11,14 @@ Sentry.init({
 });
 
 import * as express from 'express';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './common/services/logger.service';
 
@@ -105,6 +106,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new RateLimitInterceptor(),
+    new DeprecationInterceptor(app.get(Reflector)),
   );
 
   // Enhanced ValidationPipe configuration
