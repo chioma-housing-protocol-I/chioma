@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { xdr, Address } from '@stellar/stellar-sdk';
 import { RentObligationNftService } from './rent-obligation-nft.service';
+import { BlockchainTransactionError } from '../../../common/errors/domain-errors';
 
 const mockSendTransaction = jest.fn();
 const mockSimulateTransaction = jest.fn();
@@ -237,6 +238,66 @@ describe('RentObligationNftService', () => {
       const result = await service.getBurnRecord('token-123');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('transaction response validation', () => {
+    beforeEach(() => {
+      mockGetAccount.mockResolvedValue({ sequenceNumber: () => '1' });
+      mockSimulateTransaction.mockResolvedValue({ result: { retval: {} } });
+      jest
+        .spyOn(
+          require('@stellar/stellar-sdk').SorobanRpc.Api,
+          'isSimulationError',
+        )
+        .mockReturnValue(false);
+    });
+
+    it('throws BlockchainTransactionError when mint response has no hash', async () => {
+      mockSendTransaction.mockResolvedValue({ status: 'PENDING' });
+
+      await expect(
+        service.mintObligation({
+          agreementId: 'agreement-123',
+          adminAddress: ADMIN_ADDRESS,
+        }),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
+    });
+
+    it('throws BlockchainTransactionError when the transfer response is missing', async () => {
+      mockSendTransaction.mockResolvedValue(undefined);
+
+      await expect(
+        service.transferObligation({
+          agreementId: 'agreement-123',
+          fromAddress: OWNER_ADDRESS,
+          toAddress: NEW_OWNER_ADDRESS,
+        }),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
+    });
+
+    it('throws BlockchainTransactionError when the burn hash is empty', async () => {
+      mockSendTransaction.mockResolvedValue({ hash: '', status: 'ERROR' });
+
+      await expect(
+        service.burnObligation({
+          tokenId: 'token-123',
+          reason: 'AgreementTerminated',
+          ownerAddress: OWNER_ADDRESS,
+        }),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
+    });
+
+    it('throws BlockchainTransactionError when admin reassign response is null', async () => {
+      mockSendTransaction.mockResolvedValue(null);
+
+      await expect(
+        service.adminReassignObligation({
+          agreementId: 'agreement-123',
+          newOwnerAddress: NEW_OWNER_ADDRESS,
+          adminAddress: ADMIN_ADDRESS,
+        }),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
   });
 
