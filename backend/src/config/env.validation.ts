@@ -113,20 +113,7 @@ function validateJwtSecret(
   const entropy = calculateShannonEntropyBitsPerChar(value);
   if (entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
     errors.push(
-      `${name} does not have enough entropy (${entropy.toFixed(2)} bits/char, need ${MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR}). It looks repetitive or predictable. ${JWT_SECRET_GENERATION_HINT}`,
-    );
-  }
 
-  if (hasWeakCharacterSet(value)) {
-    errors.push(
-      `${name} has weak character set diversity. Avoid repeating patterns or limited character ranges. ${JWT_SECRET_GENERATION_HINT}`,
-    );
-  }
-
-  // Log warning for borderline weak entropy (between 4.0 and 4.5)
-  if (entropy >= 4.0 && entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
-    console.warn(
-      `[SECURITY WARNING] ${name} has weak entropy (${entropy.toFixed(2)} bits/char). Consider regenerating with stronger randomness.`,
     );
   }
 }
