@@ -143,6 +143,7 @@ export class UsersService {
 
   async exportUserData(
     userId: string,
+    performedBy: string = userId,
   ): Promise<Omit<User, 'password'> & Record<string, unknown>> {
     const user = await this.findById(userId);
     const { password, ...exportData } = user;
@@ -151,10 +152,13 @@ export class UsersService {
       action: AuditAction.DATA_EXPORT,
       entityType: 'User',
       entityId: user.id,
-      performedBy: user.id,
+      performedBy,
       status: AuditStatus.SUCCESS,
       level: AuditLevel.SECURITY,
-      metadata: { type: 'GDPR_EXPORT' },
+      metadata: {
+        type: 'GDPR_EXPORT',
+        ...(performedBy !== userId ? { requestedByAdmin: true } : {}),
+      },
     });
     this.logger.log(`GDPR export for user: ${user.id}`);
     return exportData;

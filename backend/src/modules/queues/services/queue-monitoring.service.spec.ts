@@ -3,7 +3,9 @@ import { getQueueToken } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { MetricsService } from '../../monitoring/metrics.service';
 import { AlertService } from '../../monitoring/alert.service';
+import { IncidentService } from '../../../common/resilience/incident.service';
 import {
+  DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD,
   DEFAULT_STALLED_QUEUE_THRESHOLD_SECONDS,
   QueueMonitoringService,
 } from './queue-monitoring.service';
@@ -35,6 +37,7 @@ describe('QueueMonitoringService', () => {
   let emailQueue: MockQueue;
   let metricsService: { setQueueMetrics: jest.Mock };
   let alertService: { handleAlert: jest.Mock };
+  let incidentService: { declare: jest.Mock };
   let configGet: jest.Mock;
 
   async function buildService(): Promise<void> {
@@ -48,6 +51,7 @@ describe('QueueMonitoringService', () => {
         { provide: getQueueToken('analytics'), useValue: makeQueue() },
         { provide: MetricsService, useValue: metricsService },
         { provide: AlertService, useValue: alertService },
+        { provide: IncidentService, useValue: incidentService },
         { provide: ConfigService, useValue: { get: configGet } },
       ],
     }).compile();
@@ -59,6 +63,7 @@ describe('QueueMonitoringService', () => {
     emailQueue = makeQueue();
     metricsService = { setQueueMetrics: jest.fn() };
     alertService = { handleAlert: jest.fn().mockResolvedValue(undefined) };
+    incidentService = { declare: jest.fn() };
     configGet = jest.fn((_key: string, defaultValue?: unknown) => defaultValue);
     await buildService();
   });
@@ -269,6 +274,139 @@ describe('QueueMonitoringService', () => {
         alerts: [expect.objectContaining({ status: 'firing' })],
       }),
     );
+  });
+
+  describe('DLQ failure escalation (#1548)', () => {
+    it('declares exactly one incident and fires exactly one alert when the failed-job threshold is exceeded', async () => {
+      emailQueue.getJobCounts.mockResolvedValue({
+        active: 0,
+        wait: 0,
+        delayed: 0,
+        failed: DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD + 1,
+        completed: 0,
+      });
+
+      await service.collectMetrics();
+
+      expect(incidentService.declare).toHaveBeenCalledTimes(1);
+      expect(incidentService.declare).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining('email'),
+          affectedServices: ['email'],
+        }),
+      );
+      expect(alertService.handleAlert).toHaveBeenCalledTimes(1);
+      expect(alertService.handleAlert).toHaveBeenCalledWith({
+        alerts: [
+          expect.objectContaining({
+            status: 'firing',
+            labels: expect.objectContaining({
+              alertname: 'QueueFailureThresholdExceeded',
+              queue: 'email',
+            }),
+          }),
+        ],
+      });
+    });
+
+    it('does not re-declare an incident or re-fire while the queue remains above threshold (not once per failure)', async () => {
+      emailQueue.getJobCounts.mockResolvedValue({
+        active: 0,
+        wait: 0,
+        delayed: 0,
+        failed: DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD + 1,
+        completed: 0,
+      });
+
+      await service.collectMetrics();
+      await service.collectMetrics();
+      await service.collectMetrics();
+
+      expect(incidentService.declare).toHaveBeenCalledTimes(1);
+      const firing = alertService.handleAlert.mock.calls.filter(
+        ([payload]) => payload.alerts[0].status === 'firing',
+      );
+      expect(firing).toHaveLength(1);
+    });
+
+    it('resolves the alert (without a new incident) once the queue recovers below threshold', async () => {
+      emailQueue.getJobCounts.mockResolvedValue({
+        active: 0,
+        wait: 0,
+        delayed: 0,
+        failed: DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD + 1,
+        completed: 0,
+      });
+      await service.collectMetrics();
+
+      emailQueue.getJobCounts.mockResolvedValue({ ...healthyCounts });
+      await service.collectMetrics();
+
+      expect(incidentService.declare).toHaveBeenCalledTimes(1);
+      expect(alertService.handleAlert).toHaveBeenLastCalledWith({
+        alerts: [
+          expect.objectContaining({
+            status: 'resolved',
+            labels: expect.objectContaining({
+              alertname: 'QueueFailureThresholdExceeded',
+              queue: 'email',
+            }),
+          }),
+        ],
+      });
+    });
+
+    it('boundary: does not escalate exactly at the threshold, only strictly above it', async () => {
+      emailQueue.getJobCounts.mockResolvedValue({
+        active: 0,
+        wait: 0,
+        delayed: 0,
+        failed: DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD,
+        completed: 0,
+      });
+
+      await service.collectMetrics();
+
+      expect(incidentService.declare).not.toHaveBeenCalled();
+    });
+
+    it('honours a configured failure threshold', async () => {
+      configGet = jest.fn((key: string, def?: unknown) =>
+        key === 'QUEUE_FAILURE_INCIDENT_THRESHOLD' ? 2 : def,
+      );
+      await buildService();
+
+      emailQueue.getJobCounts.mockResolvedValue({
+        active: 0,
+        wait: 0,
+        delayed: 0,
+        failed: 3,
+        completed: 0,
+      });
+
+      await service.collectMetrics();
+
+      expect(incidentService.declare).toHaveBeenCalledTimes(1);
+    });
+
+    it('a burst of failures across a queue produces exactly one incident, not one per failed job', async () => {
+      // Simulates 5 collectMetrics ticks during which the failed count
+      // climbs from a burst of DLQ moves, mirroring the issue's required
+      // test: repeated failures escalate once, not once per failure.
+      const failedCounts = [3, 7, 12, 15, 9];
+      for (const failed of failedCounts) {
+        emailQueue.getJobCounts.mockResolvedValue({
+          active: 0,
+          wait: 0,
+          delayed: 0,
+          failed,
+          completed: 0,
+        });
+        await service.collectMetrics();
+      }
+
+      expect(incidentService.declare).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('keeps collecting for other queues when one queue errors', async () => {

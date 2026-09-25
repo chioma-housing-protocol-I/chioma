@@ -39,7 +39,7 @@ function isPlaceholderSecret(value: string): boolean {
 }
 
 const MIN_JWT_SECRET_BYTES = 32;
-const MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR = 3;
+const MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR = 4.5;
 const JWT_SECRET_GENERATION_HINT =
   'Generate a strong secret with: openssl rand -base64 48';
 
@@ -61,6 +61,37 @@ function calculateShannonEntropyBitsPerChar(value: string): number {
   return entropy;
 }
 
+/**
+ * Checks if a secret has sufficient character set diversity.
+ * A good secret should not be composed of a single repeating pattern.
+ * Detects sequences like "AAAA...BBBB" or "ab" repeated.
+ */
+function hasWeakCharacterSet(value: string): boolean {
+  // A secret with only 1 or 2 unique characters is weak
+  const uniqueChars = new Set(value);
+  if (uniqueChars.size <= 2) {
+    return true;
+  }
+
+  // Check for obvious short repeating patterns (length 1-4)
+  for (let patternLen = 1; patternLen <= 4; patternLen++) {
+    const pattern = value.substring(0, patternLen);
+    let isRepeating = true;
+    for (let i = 0; i < value.length; i += patternLen) {
+      const segment = value.substring(i, i + patternLen);
+      if (segment !== pattern.substring(0, segment.length)) {
+        isRepeating = false;
+        break;
+      }
+    }
+    if (isRepeating && patternLen < value.length) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function validateJwtSecret(
   name: string,
   value: unknown,
@@ -70,18 +101,32 @@ function validateJwtSecret(
     errors.push(`${name} is required. ${JWT_SECRET_GENERATION_HINT}`);
     return;
   }
+
   const byteLength = Buffer.byteLength(value, 'utf8');
   if (byteLength < MIN_JWT_SECRET_BYTES) {
     errors.push(
       `${name} must be at least ${MIN_JWT_SECRET_BYTES} bytes (got ${byteLength}). ${JWT_SECRET_GENERATION_HINT}`,
     );
+    return;
   }
-  if (
-    calculateShannonEntropyBitsPerChar(value) <
-    MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR
-  ) {
+
+  const entropy = calculateShannonEntropyBitsPerChar(value);
+  if (entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
     errors.push(
-      `${name} does not have enough entropy — it looks repetitive or predictable rather than randomly generated. ${JWT_SECRET_GENERATION_HINT}`,
+      `${name} does not have enough entropy (${entropy.toFixed(2)} bits/char, need ${MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR}). It looks repetitive or predictable. ${JWT_SECRET_GENERATION_HINT}`,
+    );
+  }
+
+  if (hasWeakCharacterSet(value)) {
+    errors.push(
+      `${name} has weak character set diversity. Avoid repeating patterns or limited character ranges. ${JWT_SECRET_GENERATION_HINT}`,
+    );
+  }
+
+  // Log warning for borderline weak entropy (between 4.0 and 4.5)
+  if (entropy >= 4.0 && entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
+    console.warn(
+      `[SECURITY WARNING] ${name} has weak entropy (${entropy.toFixed(2)} bits/char). Consider regenerating with stronger randomness.`,
     );
   }
 }
@@ -368,7 +413,7 @@ const stellarSchema = Joi.object({
   STELLAR_SERVER_SECRET_KEY: stellarSecretKey,
   STELLAR_ANCHOR_SECRET_KEY: stellarSecretKey,
   STELLAR_ENCRYPTION_KEY: Joi.string(),
-  DEFAULT_ARBITER_ADDRESS: stellarPublicKey,
+  DEFAULT_ARBITER_ADDRESS: requiredWhenDeployed(stellarPublicKey),
   PROTOCOL_WALLET_ADDRESS: stellarPublicKey,
   CHIOMA_CONTRACT_ID: contractId,
   ESCROW_CONTRACT_ID: contractId,
@@ -384,6 +429,22 @@ const anchorSchema = Joi.object({
   ANCHOR_API_KEY: Joi.string(),
   ANCHOR_USDC_ASSET: Joi.string(),
   SUPPORTED_FIAT_CURRENCIES: Joi.string(),
+});
+
+const fxRateSchema = Joi.object({
+  FX_RATE_PROVIDER: Joi.string().valid('mock', 'external').default('mock'),
+  FX_RATE_PROVIDER_URL: Joi.string()
+    .uri()
+    .when('FX_RATE_PROVIDER', {
+      is: 'external',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(''),
+    }),
+  FX_RATE_PROVIDER_API_KEY: Joi.string().when('FX_RATE_PROVIDER', {
+    is: 'external',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
 });
 
 const storageSchema = Joi.object({
@@ -446,7 +507,13 @@ const securitySchema = Joi.object({
 const loggingSchema = Joi.object({
   LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error'),
   LOG_FORMAT: Joi.string().valid('simple', 'json'),
-  LOG_TRANSPORT: Joi.string(),
+  // Comma-separated list of transport names from resolveTransports's
+  // TRANSPORT_FACTORIES (logger.service.ts) - kept in sync with that map so
+  // a typo here fails fast at startup instead of silently falling back to
+  // console-only (#1547).
+  LOG_TRANSPORT: Joi.string().pattern(
+    /^\s*(console|file|sentry)\s*(,\s*(console|file|sentry)\s*)*$/,
+  ),
   LOG_FILE: Joi.string(),
   LOG_SLOW_REQUEST_THRESHOLD: Joi.number().min(0),
   LOG_SKIP_PATHS: Joi.string(),
@@ -644,6 +711,7 @@ const additionalVarsSchema = appSchema
   .concat(searchSchema)
   .concat(stellarSchema)
   .concat(anchorSchema)
+  .concat(fxRateSchema)
   .concat(storageSchema)
   .concat(paymentSchema)
   .concat(emailSchema)

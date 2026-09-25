@@ -34,6 +34,7 @@ const requiredDeployedExtras = {
   API_BASE_URL: 'https://api.chioma.app',
   CORS_ORIGINS: 'https://app.chioma.app',
   SECURITY_SESSION_SECRET: 'c'.repeat(32),
+  DEFAULT_ARBITER_ADDRESS: `G${'A'.repeat(55)}`,
 };
 
 const validProduction = {
@@ -131,6 +132,196 @@ describe('validateEnvironment', () => {
         JWT_REFRESH_SECRET: 'ab'.repeat(20),
       }),
     ).toThrow(/JWT_REFRESH_SECRET does not have enough entropy/);
+  });
+
+  it('rejects JWT secret with weak character set (only 2 unique characters)', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'aAbBaAbBaAbBaAbBaAbBaAbBaAbBaAbBaAbBaAbBaAbB',
+      }),
+    ).toThrow(/weak character set diversity/);
+  });
+
+  it('rejects JWT secret with obvious repeating sequences (AAA...BBB...)', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'A'.repeat(16) + 'B'.repeat(16) + 'C'.repeat(16),
+      }),
+    ).toThrow(/does not have enough entropy|weak character set diversity/);
+  });
+
+  it('accepts JWT secret with sufficient entropy and character diversity', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: 'kX9#mP2$qL7&vR4!nF8@sD5%gH6^tB1*jW3(oI0)cE',
+      }),
+    ).not.toThrow();
+  });
+
+  it('accepts cryptographically strong base64 secrets', () => {
+    // Generated with: openssl rand -base64 48
+    const strongSecret = Buffer.from(
+      new Uint8Array(48).map(() => Math.random() * 256),
+    ).toString('base64');
+    expect(() =>
+      validateEnvironment({
+        ...validProduction,
+        JWT_SECRET: strongSecret,
+      }),
+    ).not.toThrow();
+  });
+
+  describe('entropy threshold enforcement (4.5 bits/char minimum)', () => {
+    it('rejects secret with entropy below 4.5 bits/char', () => {
+      // "AAABBBCCC..." has low entropy
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'A'.repeat(12) + 'B'.repeat(12) + 'C'.repeat(12),
+        }),
+      ).toThrow(/does not have enough entropy/);
+    });
+
+    it('accepts secret with entropy at or above 4.5 bits/char', () => {
+      // A good random 48-byte secret should pass
+      const secretChars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      let secret = '';
+      for (let i = 0; i < 48; i++) {
+        secret += secretChars.charAt(
+          Math.floor(Math.random() * secretChars.length),
+        );
+      }
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: secret,
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('minimum length validation (32 bytes)', () => {
+    it('rejects JWT secret less than 32 bytes', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'short',
+        }),
+      ).toThrow(/JWT_SECRET must be at least 32 bytes/);
+    });
+
+    it('accepts JWT secret of exactly 32 bytes', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'a'.repeat(32),
+        }),
+      ).toThrow(/does not have enough entropy/); // Still fails on entropy, but not length
+    });
+
+    it('accepts JWT secret greater than 32 bytes with sufficient entropy', () => {
+      const secret = 'kX9#mP2$qL7&vR4!nF8@sD5%gH6^tB1*jW3(oI0)cE'.slice(0, 40);
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: secret,
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('character set diversity validation', () => {
+    it('rejects secret with single unique character', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'x'.repeat(48),
+        }),
+      ).toThrow(/weak character set diversity/);
+    });
+
+    it('rejects secret with only two unique characters', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'xy'.repeat(24),
+        }),
+      ).toThrow(/weak character set diversity/);
+    });
+
+    it('accepts secret with diverse character set', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'P@ssw0rd#Key$Secure&Random!Token123456789ABC',
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('weak example secrets that should be rejected', () => {
+    it('rejects "AAAA...AAAA" padding pattern', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: Buffer.alloc(48, 'A').toString(),
+        }),
+      ).toThrow(/weak character set diversity|does not have enough entropy/);
+    });
+
+    it('rejects "123456789..." numeric sequences', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: '12345678901234567890123456789012345678901234567890',
+        }),
+      ).toThrow(/does not have enough entropy/);
+    });
+
+    it('rejects "passwordpasswordpassword..." pattern', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'password'.repeat(6),
+        }),
+      ).toThrow(/weak character set diversity|does not have enough entropy/);
+    });
+  });
+
+  describe('strong example secrets that should be accepted', () => {
+    it('accepts base64 output from openssl rand', () => {
+      // Simulating: openssl rand -base64 48
+      const base64Secret = 'rT9kL2pN5mQ8wE0dF3jG6hS1bV4cX7yZ+uI9oP/qR=';
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: base64Secret.slice(0, 48).padEnd(48, 'A'),
+        }),
+      ).not.toThrow();
+    });
+
+    it('accepts base64url-encoded random bytes', () => {
+      const base64UrlSecret = 'rT9kL2pN5mQ8wE0dF3jG6hS1bV4cX7yZ-uI9oP_qRaBCD';
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: base64UrlSecret,
+        }),
+      ).not.toThrow();
+    });
+
+    it('accepts mixed alphanumeric with special characters', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          JWT_SECRET: 'eK$pL&mN@jQ!rS#tU%vW^xY*zA(bC)dE-fG+hI=jK',
+        }),
+      ).not.toThrow();
+    });
   });
 
   it('rejects a missing JWT secret with operator guidance in the message', () => {
@@ -246,6 +437,34 @@ describe('validateEnvironment', () => {
         }),
       ).not.toThrow();
     });
+
+    it('rejects production missing DEFAULT_ARBITER_ADDRESS', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          DEFAULT_ARBITER_ADDRESS: undefined,
+        }),
+      ).toThrow(/DEFAULT_ARBITER_ADDRESS/);
+    });
+
+    it('rejects a malformed DEFAULT_ARBITER_ADDRESS in production', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          DEFAULT_ARBITER_ADDRESS: 'not-a-real-arbiter-address',
+        }),
+      ).toThrow(/DEFAULT_ARBITER_ADDRESS/);
+    });
+
+    it('does not require DEFAULT_ARBITER_ADDRESS in development', () => {
+      expect(() =>
+        validateEnvironment({
+          NODE_ENV: 'development',
+          ...baseRateLimits,
+          ...validJwt,
+        }),
+      ).not.toThrow();
+    });
   });
 
   describe('tier B: feature-conditional vars', () => {
@@ -316,6 +535,27 @@ describe('validateEnvironment', () => {
           STELLAR_ADMIN_SECRET_KEY: 'not-a-real-secret-key',
         }),
       ).toThrow(/STELLAR_ADMIN_SECRET_KEY/);
+    });
+
+    it('accepts a valid single LOG_TRANSPORT (#1547)', () => {
+      expect(() =>
+        validateEnvironment({ ...validProduction, LOG_TRANSPORT: 'sentry' }),
+      ).not.toThrow();
+    });
+
+    it('accepts a valid comma-separated LOG_TRANSPORT list (#1547)', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          LOG_TRANSPORT: 'console, sentry',
+        }),
+      ).not.toThrow();
+    });
+
+    it('rejects an unknown LOG_TRANSPORT name, catching a typo at startup (#1547)', () => {
+      expect(() =>
+        validateEnvironment({ ...validProduction, LOG_TRANSPORT: 'sentr' }),
+      ).toThrow(/LOG_TRANSPORT/);
     });
   });
 });

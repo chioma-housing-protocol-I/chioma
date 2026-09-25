@@ -5,6 +5,8 @@ import { Queue, JobCounts } from 'bull';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { MetricsService } from '../../monitoring/metrics.service';
 import { AlertService } from '../../monitoring/alert.service';
+import { IncidentService } from '../../../common/resilience/incident.service';
+import { IncidentSeverity } from '../../../common/resilience/resilience.types';
 
 export interface QueueMetrics {
   timestamp: Date;
@@ -24,6 +26,9 @@ export interface QueueMetrics {
 /** Default age (seconds) a waiting job may reach before the queue counts as stalled. */
 export const DEFAULT_STALLED_QUEUE_THRESHOLD_SECONDS = 300;
 
+/** Default failed-job count a queue may reach before it escalates to an incident. */
+export const DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD = 10;
+
 /** How many waiting jobs to sample when looking for the oldest one. */
 const OLDEST_JOB_SAMPLE_SIZE = 50;
 
@@ -35,6 +40,14 @@ export class QueueMonitoringService {
   /** Queues currently flagged as stalled, so alerts fire only on transitions. */
   private readonly stalledQueues = new Set<string>();
   private readonly stalledThresholdSeconds: number;
+  /**
+   * Queues currently flagged as having a high failure count, so the
+   * escalation (incident + alert) fires once per transition into that
+   * state rather than once per collectMetrics tick while it remains high
+   * (#1548).
+   */
+  private readonly failingQueues = new Set<string>();
+  private readonly failureIncidentThreshold: number;
 
   constructor(
     @InjectQueue('email') private emailQueue: Queue,
@@ -44,6 +57,7 @@ export class QueueMonitoringService {
     @InjectQueue('analytics') private analyticsQueue: Queue,
     private readonly metricsService: MetricsService,
     private readonly alertService: AlertService,
+    private readonly incidentService: IncidentService,
     configService: ConfigService,
   ) {
     const configured = Number(
@@ -56,6 +70,19 @@ export class QueueMonitoringService {
       Number.isFinite(configured) && configured > 0
         ? configured
         : DEFAULT_STALLED_QUEUE_THRESHOLD_SECONDS;
+
+    const configuredFailureThreshold = Number(
+      configService.get(
+        'QUEUE_FAILURE_INCIDENT_THRESHOLD',
+        DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD,
+      ),
+    );
+    this.failureIncidentThreshold =
+      Number.isFinite(configuredFailureThreshold) &&
+      configuredFailureThreshold > 0
+        ? configuredFailureThreshold
+        : DEFAULT_QUEUE_FAILURE_INCIDENT_THRESHOLD;
+
     this.initializeMetrics();
   }
 
@@ -122,10 +149,7 @@ export class QueueMonitoringService {
           stalled,
         });
 
-        // Log warning if queue has too many failed jobs
-        if (counts.failed > 10) {
-          this.logger.warn(`Queue ${name} has ${counts.failed} failed jobs`);
-        }
+        this.evaluateFailureState(metric);
       } catch (error) {
         this.logger.error(
           `Failed to collect metrics for queue ${name}`,
@@ -206,6 +230,68 @@ export class QueueMonitoringService {
     } catch (error) {
       this.logger.error(
         `Failed to dispatch ${status} QueueStalled alert for ${metric.queueName}`,
+        error instanceof Error ? error.stack : 'Unknown error',
+      );
+    }
+  }
+
+  /**
+   * A queue is in a "failing" state once its failed-job count exceeds the
+   * configured threshold. Escalates on the transition into that state -
+   * declaring exactly one incident and firing exactly one alert, not one
+   * per collectMetrics tick - and resolves the alert on recovery, mirroring
+   * evaluateStalledState/fireStalledAlert above (#1548).
+   */
+  private evaluateFailureState(metric: QueueMetrics): void {
+    const failing = metric.failed > this.failureIncidentThreshold;
+    const wasFailing = this.failingQueues.has(metric.queueName);
+
+    if (failing && !wasFailing) {
+      this.failingQueues.add(metric.queueName);
+      this.logger.error(
+        `Queue ${metric.queueName} has ${metric.failed} failed jobs (threshold ${this.failureIncidentThreshold}); escalating`,
+      );
+      this.incidentService.declare({
+        title: `Repeated failures in queue: ${metric.queueName}`,
+        description: `Queue "${metric.queueName}" has ${metric.failed} failed jobs, exceeding the configured threshold of ${this.failureIncidentThreshold}.`,
+        severity: IncidentSeverity.SEV3,
+        category: 'queue-failure',
+        affectedServices: [metric.queueName],
+      });
+      void this.fireFailureAlert(metric, 'firing');
+    } else if (!failing && wasFailing) {
+      this.failingQueues.delete(metric.queueName);
+      this.logger.log(`Queue ${metric.queueName} recovered from repeated failures`);
+      void this.fireFailureAlert(metric, 'resolved');
+    }
+  }
+
+  private async fireFailureAlert(
+    metric: QueueMetrics,
+    status: 'firing' | 'resolved',
+  ): Promise<void> {
+    try {
+      await this.alertService.handleAlert({
+        alerts: [
+          {
+            status,
+            labels: {
+              alertname: 'QueueFailureThresholdExceeded',
+              severity: 'critical',
+              queue: metric.queueName,
+            },
+            annotations: {
+              summary: `Queue ${metric.queueName} has repeated failures`,
+              description: `Queue "${metric.queueName}" has ${metric.failed} failed jobs (threshold ${this.failureIncidentThreshold}).`,
+            },
+            startsAt: metric.timestamp.toISOString(),
+            generatorURL: '',
+          },
+        ],
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to dispatch ${status} QueueFailureThresholdExceeded alert for ${metric.queueName}`,
         error instanceof Error ? error.stack : 'Unknown error',
       );
     }

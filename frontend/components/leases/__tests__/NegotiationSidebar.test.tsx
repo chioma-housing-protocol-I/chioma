@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-import type {
-  Contract,
-  NegotiationOffer,
-  NegotiationMessage,
-} from '@/types/contracts';
+import {
+  MOCK_LEASE_CONTRACT as mockContract,
+  MOCK_NEGOTIATION_OFFERS as mockOffers,
+  MOCK_NEGOTIATION_MESSAGES as mockMessages,
+} from './fixtures';
 
 const mockUseAuthStore = vi.fn();
 
@@ -14,49 +14,6 @@ vi.mock('@/store/authStore', () => ({
 }));
 
 import { NegotiationSidebar } from '../NegotiationSidebar';
-
-const mockContract: Contract = {
-  id: 'lease-1',
-  propertyName: 'Sunset Apartments',
-  propertyAddress: '123 Main St',
-  landlord: { name: 'John Landlord', walletAddress: '', role: 'ADMIN' },
-  tenant: { name: 'Jane Tenant', walletAddress: '', role: 'USER' },
-  agent: { name: '', walletAddress: '', role: 'USER' },
-  rentAmount: '2000',
-  securityDeposit: '2000',
-  commissionRate: '0',
-  startDate: '2026-01-01',
-  endDate: '2026-12-31',
-  status: 'PENDING',
-  stage: 'DRAFTED',
-  stellarTxHash: '',
-  createdAt: '',
-  terms: 'Standard terms',
-};
-
-const mockOffers: NegotiationOffer[] = [
-  {
-    id: 'off-1',
-    contractId: 'lease-1',
-    proposerRole: 'LANDLORD',
-    rentAmount: '2000',
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    message: 'Initial offer',
-    status: 'PENDING',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const mockMessages: NegotiationMessage[] = [
-  {
-    id: 'msg-1',
-    senderId: 'landlord-1',
-    senderName: 'John Landlord',
-    content: 'Hello there',
-    createdAt: new Date().toISOString(),
-  },
-];
 
 function renderSidebar(
   overrides: Partial<React.ComponentProps<typeof NegotiationSidebar>> = {},

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
 import { RefundManagement } from '@/components/admin/refunds/RefundManagement';
@@ -41,6 +41,23 @@ export default function AdminRefundsPage() {
     };
   }, [authLoading, user?.role]);
 
+  // Separate from the mount-time load effect above (kept as an inline IIFE
+  // to match the pre-existing pattern) because refactoring both to share one
+  // named async function trips react-hooks/set-state-in-effect: the linter
+  // only stays quiet when the effect's setState calls are textually inline.
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await loadAdminRefundRequests();
+      setRows(data);
+    } catch {
+      setError('Could not load refund requests.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
@@ -53,5 +70,12 @@ export default function AdminRefundsPage() {
     return null;
   }
 
-  return <RefundManagement rows={rows} loading={loading} error={error} />;
+  return (
+    <RefundManagement
+      rows={rows}
+      loading={loading}
+      error={error}
+      onRefresh={refresh}
+    />
+  );
 }

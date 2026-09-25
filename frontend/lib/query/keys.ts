@@ -85,6 +85,13 @@ export const queryKeys = {
       [...queryKeys.maintenance.all, 'detail', id] as const,
   },
 
+  sublets: {
+    all: ['sublets'] as const,
+    lists: () => [...queryKeys.sublets.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.sublets.lists(), filters] as const,
+    earnings: () => [...queryKeys.sublets.all, 'earnings'] as const,
+  },
+
   user: {
     all: ['user'] as const,
     profile: () => [...queryKeys.user.all, 'profile'] as const,
