@@ -1,5 +1,7 @@
 # Soroban Project
 
+> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
+
 ## Project Structure
 
 This repository uses the recommended structure for a Soroban project:
