@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
+
 ## Getting Started
 
 ### Map Feature
@@ -72,19 +74,7 @@ Shadcn-derived primitives in `components/ui/` (`button.tsx`, `input.tsx`, `selec
 
 ### Running the Development Server
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+See the [root Quickstart](../QUICKSTART.md#5-frontend-nextjs-port-3001) for environment setup and running the app alongside the backend.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
