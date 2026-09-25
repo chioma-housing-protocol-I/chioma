@@ -15,6 +15,7 @@ import {
   BASE_FEE,
   Account,
 } from '@stellar/stellar-sdk';
+import { waitForSorobanTransactionSuccess } from '../../modules/stellar/services/soroban-transaction-poller';
 
 // ── Connection probe constants ────────────────────────────────────────────────
 
@@ -250,6 +251,19 @@ export class SorobanClientService implements OnModuleInit {
     return this.contractId;
   }
 
+    const txHash = sendResponse.hash;
+    try {
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        txHash,
+        this.configService,
+      );
+      this.logger.log(`Transaction successful: ${txHash}`);
+      return txHash;
+    } catch (error) {
+      this.logger.error(`Transaction failed or timed out: ${txHash}`, error);
+      throw new BadRequestException('Transaction failed or timed out');
+    }
   getNetworkPassphraseValue(): string {
     return this.networkPassphrase;
   }

@@ -2,6 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { BlockchainTransactionError } from '../../../common/errors';
 
 export interface MintObligationParams {
@@ -104,6 +109,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
       const txHash = this.extractTransactionHash(
         response,
         `mint_obligation(${params.agreementId})`,
@@ -143,6 +154,12 @@ export class RentObligationNftService {
         params.fromAddress,
       );
 
+      const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
       const response = await this.server.sendTransaction(tx);
       const txHash = this.extractTransactionHash(
         response,
@@ -333,6 +350,12 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
       const txHash = this.extractTransactionHash(
         response,
         `burn_nft(${params.tokenId})`,
@@ -366,6 +389,12 @@ export class RentObligationNftService {
         params.adminAddress,
       );
 
+      const response = await this.server.sendTransaction(tx);
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
       const response = await this.server.sendTransaction(tx);
       const txHash = this.extractTransactionHash(
         response,

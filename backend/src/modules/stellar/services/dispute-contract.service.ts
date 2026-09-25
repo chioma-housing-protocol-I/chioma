@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { TransactionPollingService } from './transaction-polling.service';
 
 export enum DisputeOutcome {
@@ -92,6 +97,11 @@ export class DisputeContractService {
     prepared.sign(this.adminKeypair);
 
     const result = await server.sendTransaction(prepared);
+    assertSorobanSubmissionAccepted(result);
+    return await waitForSorobanTransactionSuccess(
+      server,
+      result.hash,
+      this.configService,
 
     // Poll for final transaction status
     return await this.transactionPollingService.pollTransactionStatusStrict(
@@ -134,6 +144,11 @@ export class DisputeContractService {
     prepared.sign(raiserKeypair);
 
     const result = await server.sendTransaction(prepared);
+    assertSorobanSubmissionAccepted(result);
+    return await waitForSorobanTransactionSuccess(
+      server,
+      result.hash,
+      this.configService,
 
     // Poll for final transaction status
     return await this.transactionPollingService.pollTransactionStatusStrict(
@@ -176,6 +191,11 @@ export class DisputeContractService {
     prepared.sign(arbiterKeypair);
 
     const result = await server.sendTransaction(prepared);
+    assertSorobanSubmissionAccepted(result);
+    return await waitForSorobanTransactionSuccess(
+      server,
+      result.hash,
+      this.configService,
 
     // Poll for final transaction status
     return await this.transactionPollingService.pollTransactionStatusStrict(
@@ -216,6 +236,12 @@ export class DisputeContractService {
     prepared.sign(this.adminKeypair);
 
     const result = await server.sendTransaction(prepared);
+    assertSorobanSubmissionAccepted(result);
+    const txHash = await waitForSorobanTransactionSuccess(
+      server,
+      result.hash,
+      this.configService,
+    );
 
     // Poll for final transaction status
     const txHash =
