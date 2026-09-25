@@ -113,6 +113,13 @@ export class User {
   @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified: boolean;
 
+  @Column({
+    name: 'email_collected_at',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
+  emailCollectedAt: Date | null;
+
   // ✅ Moved inside the class
   @Column({
     name: 'kyc_status',

@@ -30,9 +30,7 @@ export const DEPENDENCY_CRITICALITY: Readonly<
 > = Object.freeze({
   // Nothing can be served without Postgres.
   database: 'critical',
-  // A broken encryption key makes every stored Stellar secret unrecoverable;
-  // the service must not accept traffic with an invalid key.
-  encryption: 'critical',
+
   // Caching, queues, locks and rate limiting degrade; reads still succeed.
   redis: 'degraded',
   // Search falls back to PostgreSQL full-text search.

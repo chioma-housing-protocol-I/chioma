@@ -204,6 +204,7 @@ export class UsersService {
     // ── 1. Prepare anonymized User row ──────────────────────────────────────
     const anonEmail = `deleted_${user.id}@anonymized.local`;
     user.email = anonEmail;
+    user.emailCollectedAt = null;
     user.firstName = null;
     user.lastName = null;
     user.phoneNumber = null;
@@ -503,6 +504,7 @@ export class UsersService {
       emailEncrypted: Buffer.from(encryptedEmail),
       emailHash: this.hashLookupValue(normalizedNew),
       emailVerified: false,
+      emailCollectedAt: new Date(),
       verificationToken,
     });
 
