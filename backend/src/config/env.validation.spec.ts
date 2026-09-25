@@ -18,6 +18,9 @@ const validJwt = {
 const requiredDeployedExtras = {
   STELLAR_NETWORK: 'mainnet',
   SOROBAN_RPC_URL: 'https://soroban-mainnet.stellar.org',
+  SOROBAN_RPC_FALLBACK_URL: 'https://soroban-mainnet-fallback.stellar.org',
+  STELLAR_HORIZON_URL: 'https://horizon.stellar.org',
+  STELLAR_HORIZON_FALLBACK_URL: 'https://horizon-fallback.stellar.org',
   AWS_ACCESS_KEY_ID: 'aws-key',
   AWS_SECRET_ACCESS_KEY: 'aws-secret',
   AWS_REGION: 'us-east-1',
@@ -39,6 +42,9 @@ const validProduction = {
   ...validJwt,
   ...requiredDeployedExtras,
   DATABASE_URL: 'postgresql://user:pass@host/db?sslmode=require',
+  DB_ENCRYPTION_KEY: 'prod-db-encryption-key-value',
+  DB_ENCRYPTION_KEY_VERSION: '1',
+  DB_ENCRYPTION_ROTATION_DAYS: '90',
   REDIS_URL: 'https://example.upstash.io',
   REDIS_TOKEN: 'token',
   ENCRYPTION_KEY_BASE64: Buffer.alloc(32, 1).toString('base64'),
@@ -183,6 +189,33 @@ describe('validateEnvironment', () => {
           SENTRY_DSN: undefined,
         }),
       ).toThrow(/SENTRY_DSN/);
+    });
+
+    it('rejects production missing DB encryption key rotation config', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          DB_ENCRYPTION_ROTATION_DAYS: undefined,
+        }),
+      ).toThrow(/DB_ENCRYPTION_ROTATION_DAYS/);
+    });
+
+    it('rejects production missing blockchain failover config', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          SOROBAN_RPC_FALLBACK_URL: undefined,
+        }),
+      ).toThrow(/SOROBAN_RPC_FALLBACK_URL/);
+    });
+
+    it('rejects weak default values for tier A deployment config', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validProduction,
+          DB_ENCRYPTION_KEY: 'changeme',
+        }),
+      ).toThrow(/DB_ENCRYPTION_KEY must not use a weak\/default value/);
     });
 
     it('does not require SENTRY_DSN in staging', () => {

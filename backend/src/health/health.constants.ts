@@ -30,6 +30,8 @@ export const DEPENDENCY_CRITICALITY: Readonly<
 > = Object.freeze({
   // Nothing can be served without Postgres.
   database: 'critical',
+  // Missing tier-A config should fail readiness before serving traffic.
+  config: 'critical',
   // Caching, queues, locks and rate limiting degrade; reads still succeed.
   redis: 'degraded',
   // Search falls back to PostgreSQL full-text search.

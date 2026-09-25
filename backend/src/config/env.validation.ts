@@ -22,6 +22,7 @@ const PLACEHOLDER_SECRETS = [
 ];
 
 const INSECURE_JWT_PREFIXES = ['test-jwt', 'e2e-jwt'];
+const WEAK_DEFAULT_VALUES = ['changeme', 'change-me', 'example', 'secret'];
 
 export type NodeEnv = 'development' | 'staging' | 'production' | 'test';
 
@@ -141,6 +142,53 @@ function validateRedis(
     errors.push(
       'Redis config required: set REDIS_URL + REDIS_TOKEN (Upstash) or REDIS_HOST + REDIS_PORT',
     );
+  }
+}
+
+function validateTierADeploymentConfig(
+  config: Record<string, unknown>,
+  errors: string[],
+): void {
+  const required = [
+    'DB_ENCRYPTION_KEY',
+    'DB_ENCRYPTION_KEY_VERSION',
+    'DB_ENCRYPTION_ROTATION_DAYS',
+    'STELLAR_HORIZON_URL',
+    'STELLAR_HORIZON_FALLBACK_URL',
+    'SOROBAN_RPC_URL',
+    'SOROBAN_RPC_FALLBACK_URL',
+  ];
+
+  for (const key of required) {
+    if (!isNonEmpty(config[key])) {
+      errors.push(`${key} is required in staging/production`);
+    }
+  }
+
+  for (const key of required) {
+    const value = config[key];
+    if (!isNonEmpty(value)) continue;
+    const normalized = value.trim().toLowerCase();
+    if (
+      isPlaceholderSecret(normalized) ||
+      WEAK_DEFAULT_VALUES.includes(normalized)
+    ) {
+      errors.push(`${key} must not use a weak/default value`);
+    }
+  }
+
+  if (
+    isNonEmpty(config.STELLAR_HORIZON_URL) &&
+    config.STELLAR_HORIZON_URL === config.STELLAR_HORIZON_FALLBACK_URL
+  ) {
+    errors.push('STELLAR_HORIZON_FALLBACK_URL must differ from STELLAR_HORIZON_URL');
+  }
+
+  if (
+    isNonEmpty(config.SOROBAN_RPC_URL) &&
+    config.SOROBAN_RPC_URL === config.SOROBAN_RPC_FALLBACK_URL
+  ) {
+    errors.push('SOROBAN_RPC_FALLBACK_URL must differ from SOROBAN_RPC_URL');
   }
 }
 
@@ -311,6 +359,8 @@ const stellarSchema = Joi.object({
   SOROBAN_RPC_URL: requiredWhenDeployed(Joi.string().uri()),
   STELLAR_HORIZON_URL: Joi.string().uri(),
   HORIZON_URL: Joi.string().uri(),
+  STELLAR_HORIZON_FALLBACK_URL: requiredWhenDeployed(Joi.string().uri()),
+  SOROBAN_RPC_FALLBACK_URL: requiredWhenDeployed(Joi.string().uri()),
   STELLAR_FRIENDBOT_URL: Joi.string().uri(),
   STELLAR_BASE_FEE: Joi.number().min(0),
   STELLAR_ADMIN_SECRET_KEY: stellarSecretKey,
@@ -679,6 +729,7 @@ export function validateEnvironment(
     validateDatabase(config, errors);
     validateRedis(config, errors);
     validateEncryptionKeys(config, errors);
+    validateTierADeploymentConfig(config, errors);
     validateSecurityEncryptionKey(config.SECURITY_ENCRYPTION_KEY, errors, true);
 
     if (!isNonEmpty(config.PAYMENT_WEBHOOK_SECRET)) {

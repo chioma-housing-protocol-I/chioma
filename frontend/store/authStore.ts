@@ -2,6 +2,7 @@
 
 import { AppError } from '@/lib/errors';
 import { apiClient, setApiClientToken } from '@/lib/api-client';
+import { clearEmailOnboardingSkip } from '@/lib/onboarding/email-onboarding';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
 import { useUIStore } from './ui-store';
@@ -412,6 +413,7 @@ export const useAuthStore = create<AuthStore>()(
             set((state) => {
               state.user = updatedUser;
             });
+            clearEmailOnboardingSkip();
           }
 
           return { success: true };
@@ -532,6 +534,7 @@ export const useAuthStore = create<AuthStore>()(
             get().refreshToken,
             currentUser,
           );
+          clearEmailOnboardingSkip();
 
           return { success: true };
         } catch (error) {

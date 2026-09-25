@@ -8,6 +8,7 @@ import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
 import { RedisHealthIndicator } from './indicators/redis.indicator';
 import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.indicator';
+import { ConfigHealthIndicator } from './indicators/config.indicator';
 
 @ApiTags('Health')
 @Controller('health')
@@ -20,6 +21,7 @@ export class HealthController {
     private memoryHealthIndicator: MemoryHealthIndicator,
     private redisHealthIndicator: RedisHealthIndicator,
     private elasticsearchHealthIndicator: ElasticsearchHealthIndicator,
+    private configHealthIndicator: ConfigHealthIndicator,
   ) {}
 
   /**
@@ -31,6 +33,7 @@ export class HealthController {
   private indicatorChecks() {
     return [
       () => this.databaseHealthIndicator.isHealthy('database'),
+      () => this.configHealthIndicator.isHealthy('config'),
       () => this.redisHealthIndicator.isHealthy('redis'),
       () => this.elasticsearchHealthIndicator.isHealthy('elasticsearch'),
       () => this.stellarHealthIndicator.isHealthy('stellar'),
