@@ -8,6 +8,8 @@ import {
   Query,
   UseGuards,
   Req,
+  Res,
+  Header,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,12 +17,14 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AvailabilityService } from './availability.service';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { BlockDatesDto } from './dto/block-dates.dto';
 import { SetPriceDto } from './dto/set-price.dto';
+import { SetPriceRangeDto } from './dto/set-price-range.dto';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Property Availability')
@@ -104,5 +108,43 @@ export class AvailabilityController {
       dto,
       (req.user as any).id,
     );
+  }
+
+  @Post('price-range')
+  @ApiOperation({
+    summary:
+      'Set custom price across a date range (optionally only on given weekdays)',
+  })
+  @ApiParam({ name: 'propertyId', type: String })
+  async setPriceRange(
+    @Param('propertyId') propertyId: string,
+    @Body() dto: SetPriceRangeDto,
+    @Req() req: Request,
+  ) {
+    return this.availabilityService.setPriceRange(
+      propertyId,
+      dto,
+      (req.user as any).id,
+    );
+  }
+
+  @Public()
+  @Get('calendar.ics')
+  @Header('Cache-Control', 'public, max-age=900')
+  @ApiOperation({
+    summary: 'iCal (RFC 5545) feed of blocked dates for external calendars',
+  })
+  @ApiParam({ name: 'propertyId', type: String })
+  async getICalFeed(
+    @Param('propertyId') propertyId: string,
+    @Res() res: Response,
+  ) {
+    const feed = await this.availabilityService.getICalFeed(propertyId);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="property-${propertyId}.ics"`,
+    );
+    res.send(feed);
   }
 }

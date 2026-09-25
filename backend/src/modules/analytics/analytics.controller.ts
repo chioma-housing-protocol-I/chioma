@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -10,6 +11,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { AnalyticsService } from './analytics.service';
 import { LandlordAnalyticsQueryDto } from './dto/landlord-analytics-query.dto';
+import { ExportAnalyticsDto } from './dto/export-analytics.dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -34,5 +36,27 @@ export class AnalyticsController {
       user.id,
       query.days ?? 30,
     );
+  }
+
+  @Get('landlord/export')
+  @ApiOperation({
+    summary: 'Export landlord analytics as CSV, JSON or Excel (.xlsx)',
+  })
+  async exportLandlordAnalytics(
+    @CurrentUser() user: User,
+    @Query() query: ExportAnalyticsDto,
+    @Res() res: Response,
+  ) {
+    const file = await this.analyticsService.exportAnalytics(
+      user.id,
+      query.format,
+      query.days ?? 30,
+    );
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    res.send(file.body);
   }
 }

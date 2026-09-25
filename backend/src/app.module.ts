@@ -54,6 +54,7 @@ import { ScreeningModule } from './modules/screening/screening.module';
 import { ReferralModule } from './modules/referral/referral.module';
 import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { LockModule } from './common/lock';
 import { IdempotencyModule } from './common/idempotency';
 import { FraudModule } from './modules/fraud/fraud.module';
@@ -230,6 +231,7 @@ const appLogger = new Logger('AppModule');
     ReferralModule,
     InquiriesModule,
     AnalyticsModule,
+    DocumentsModule,
     ...(process.env.OPENAPI_GENERATE !== 'true' ? [RateLimitingModule] : []),
     // Maintenance module
     require('./modules/maintenance/maintenance.module').MaintenanceModule,

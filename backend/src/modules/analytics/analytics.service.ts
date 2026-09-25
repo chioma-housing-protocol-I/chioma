@@ -9,6 +9,15 @@ import {
   PropertyInquiry,
   PropertyInquiryStatus,
 } from '../inquiries/entities/property-inquiry.entity';
+import { ExportFormat } from './dto/export-analytics.dto';
+import { Row, toCsv } from './utils/csv-serializer';
+import { toXlsx } from './utils/excel-serializer';
+
+export interface AnalyticsExportFile {
+  filename: string;
+  contentType: string;
+  body: string | Buffer;
+}
 
 export interface CityAggregate {
   city: string;
@@ -27,6 +36,50 @@ export class AnalyticsService {
     @InjectRepository(PropertyInquiry)
     private readonly inquiryRepository: Repository<PropertyInquiry>,
   ) {}
+
+  async exportAnalytics(
+    ownerId: string,
+    format: ExportFormat = ExportFormat.JSON,
+    days = 30,
+  ): Promise<AnalyticsExportFile> {
+    const dashboard = await this.getLandlordDashboard(ownerId, days);
+    const stamp = dashboard.generatedAt.slice(0, 10);
+    const basename = `landlord-analytics-${stamp}`;
+
+    switch (format) {
+      case ExportFormat.CSV:
+        return {
+          filename: `${basename}.csv`,
+          contentType: 'text/csv; charset=utf-8',
+          body: toCsv(this.flattenForExport(dashboard)),
+        };
+      case ExportFormat.EXCEL:
+        return {
+          filename: `${basename}.xlsx`,
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          body: toXlsx(this.flattenForExport(dashboard)),
+        };
+      default:
+        return {
+          filename: `${basename}.json`,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify(dashboard, null, 2),
+        };
+    }
+  }
+
+  /** Flattens nested dashboard data into `metric`/`value` rows. */
+  flattenForExport(data: unknown, prefix = '', rows: Row[] = []): Row[] {
+    if (data !== null && typeof data === 'object' && !(data instanceof Date)) {
+      Object.entries(data as Record<string, unknown>).forEach(([key, value]) =>
+        this.flattenForExport(value, prefix ? `${prefix}.${key}` : key, rows),
+      );
+    } else {
+      rows.push({ metric: prefix, value: data });
+    }
+    return rows;
+  }
 
   async getLandlordDashboard(ownerId: string, days = 30) {
     const normalizedDays = this.normalizeDays(days);
