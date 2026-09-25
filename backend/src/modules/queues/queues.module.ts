@@ -11,6 +11,11 @@ import { QueuesController } from './controllers/queues.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeadLetterJob } from './entities/dead-letter-job.entity';
+import { DeadLetterQueueService } from './services/dead-letter-queue.service';
+import { DeadLetterQueueListener } from './listeners/dead-letter-queue.listener';
+import { DlqProcessor } from './dlq.processor';
 
 @Module({
   imports: [
@@ -51,6 +56,7 @@ import { StellarModule } from '../stellar/stellar.module';
     NotificationsModule,
     StorageModule,
     StellarModule,
+    TypeOrmModule.forFeature([DeadLetterJob]),
   ],
   providers: [
     EmailQueueProcessor,
@@ -59,8 +65,15 @@ import { StellarModule } from '../stellar/stellar.module';
     DataSyncQueueProcessor,
     QueueMonitoringService,
     QueueManagementService,
+    DeadLetterQueueService,
+    DeadLetterQueueListener,
+    DlqProcessor,
   ],
   controllers: [QueuesController],
-  exports: [QueueManagementService, QueueMonitoringService],
+  exports: [
+    QueueManagementService,
+    QueueMonitoringService,
+    DeadLetterQueueService,
+  ],
 })
 export class QueuesModule {}

@@ -8,15 +8,18 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { PropertiesModule } from '../properties/properties.module';
 import { UsersModule } from '../users/users.module';
+import { PaymentModule } from '../payments/payment.module';
+import { Vendor } from './entities/vendor.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MaintenanceRequest]),
+    TypeOrmModule.forFeature([MaintenanceRequest, Vendor]),
     StorageModule,
     NotificationsModule,
     ReviewsModule,
     PropertiesModule,
     UsersModule,
+    PaymentModule,
   ],
   providers: [MaintenanceService],
   controllers: [MaintenanceController],
