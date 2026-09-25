@@ -9,12 +9,13 @@ import { RateLimitService } from '../services/rate-limit.service';
 import { AbuseDetectionService } from '../services/abuse-detection.service';
 import { UserTier, EndpointCategory } from '../types/rate-limit.types';
 
-describe.skip('Rate Limiting Integration Tests', () => {
+describe('Rate Limiting Integration Tests', () => {
   let app: INestApplication;
   let moduleRef: TestingModule;
   let rateLimitService: RateLimitService;
   let abuseDetectionService: AbuseDetectionService;
   let _dataSource: DataSource;
+  let cacheManager: any;
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -44,6 +45,7 @@ describe.skip('Rate Limiting Integration Tests', () => {
       AbuseDetectionService,
     );
     _dataSource = moduleRef.get<DataSource>(DataSource);
+    cacheManager = moduleRef.get('CACHE_MANAGER');
   });
 
   afterAll(async () => {
@@ -52,12 +54,43 @@ describe.skip('Rate Limiting Integration Tests', () => {
   });
 
   beforeEach(async () => {
-    // Clear cache before each test
-    const cacheManager = moduleRef.get('CACHE_MANAGER');
     if (cacheManager && cacheManager.store && cacheManager.store.reset) {
       await cacheManager.store.reset();
     }
   });
+
+  function createSharedRedisCounter() {
+    let now = 0;
+    const values = new Map<string, { value: number; expiresAt: number }>();
+
+    return {
+      advance(ms: number): void {
+        now += ms;
+      },
+      client: {
+        async eval(
+          _script: string,
+          _numKeys: number,
+          key: string,
+          points: number,
+          durationSeconds: number,
+        ): Promise<number> {
+          const existing = values.get(key);
+          const current =
+            existing && existing.expiresAt > now ? existing.value : 0;
+          const next = current + points;
+          values.set(key, {
+            value: next,
+            expiresAt:
+              current === 0
+                ? now + durationSeconds * 1000
+                : existing!.expiresAt,
+          });
+          return next;
+        },
+      },
+    };
+  }
 
   describe('Rate Limit Service Integration', () => {
     describe('Concurrent Request Handling', () => {
@@ -84,6 +117,63 @@ describe.skip('Rate Limiting Integration Tests', () => {
 
         expect(successfulRequests.length).toBe(50); // All 50 should succeed
         expect(failedRequests.length).toBe(0);
+      });
+
+      it('should enforce one shared threshold across distributed instances', async () => {
+        const redis = createSharedRedisCounter();
+        const firstInstance = new RateLimitService(cacheManager, redis.client);
+        const secondInstance = new RateLimitService(cacheManager, redis.client);
+        const identifier = 'distributed-user';
+
+        const results = await Promise.all(
+          Array.from({ length: 120 }, (_, index) => {
+            const service = index % 2 === 0 ? firstInstance : secondInstance;
+            return service.consumePoints(
+              identifier,
+              UserTier.FREE,
+              EndpointCategory.PUBLIC,
+              1,
+            );
+          }),
+        );
+
+        expect(results.filter((result) => result.success)).toHaveLength(100);
+        expect(results.filter((result) => !result.success)).toHaveLength(20);
+      });
+
+      it('should reset Redis-backed counters after the rate limit window expires', async () => {
+        const redis = createSharedRedisCounter();
+        const service = new RateLimitService(cacheManager, redis.client);
+        const identifier = 'window-reset-user';
+
+        for (let i = 0; i < 100; i++) {
+          const result = await service.consumePoints(
+            identifier,
+            UserTier.FREE,
+            EndpointCategory.PUBLIC,
+            1,
+          );
+          expect(result.success).toBe(true);
+        }
+
+        const blocked = await service.consumePoints(
+          identifier,
+          UserTier.FREE,
+          EndpointCategory.PUBLIC,
+          1,
+        );
+        expect(blocked.success).toBe(false);
+
+        redis.advance(60_001);
+        const afterReset = await service.consumePoints(
+          identifier,
+          UserTier.FREE,
+          EndpointCategory.PUBLIC,
+          1,
+        );
+
+        expect(afterReset.success).toBe(true);
+        expect(afterReset.remainingPoints).toBe(99);
       });
 
       it('should handle burst requests correctly', async () => {

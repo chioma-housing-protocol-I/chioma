@@ -112,6 +112,14 @@ pub enum PaymentStatus {
 
 #### 3. Escrow Contract
 
+> **Note**: the function/struct names below are illustrative placeholders
+> and do not match the real `escrow` crate's actual API (e.g. the real
+> entry point is `create`, not `create_escrow`; escrow IDs are
+> `BytesN<32>`, not `String`). For the real, current dispute-related API
+> and data shape, see **"Dispute Resolution Flow"** above and
+> `contract/contracts/escrow/src/{types.rs,dispute.rs,escrow_impl.rs}`
+> directly.
+
 **Purpose**: Secure fund holding with timeout protection
 
 **Key Features**:
@@ -163,6 +171,15 @@ pub enum EscrowStatus {
 ```
 
 #### 4. Dispute Resolution Contract
+
+> **Note**: the function/struct names below are illustrative placeholders
+> and do not match the real `dispute_resolution` crate's actual API (e.g.
+> the real entry points are `raise_dispute`/`vote_on_dispute`/
+> `resolve_dispute`/`create_appeal`, keyed by `agreement_id: String`, not
+> `create_dispute`/`vote`/`dispute_id`). For the real, current API and data
+> shape, see **"Dispute Resolution Flow"** above and
+> `contract/contracts/dispute_resolution/src/{types.rs,dispute.rs}`
+> directly.
 
 **Purpose**: Manage disputes with voting-based resolution
 
@@ -449,12 +466,68 @@ Tenant → Payment Contract → Escrow Contract → Landlord
 
 ### Dispute Resolution Flow
 
+There is a single dispute path in this system, and it is entirely
+cross-contract: `escrow` never resolves a dispute on its own authority.
+
 ```
-Tenant/Landlord → Dispute Contract → Voting → Resolution
-      │                │              │          │
-      └─ Initiate      └─ Track       └─ Vote   └─ Enforce
-         Dispute          Status         & Tally   (Release/Refund)
+Depositor/Beneficiary
+      │
+      │ initiate_dispute(escrow_id, caller, reason)
+      ▼
+┌─────────────┐   invoke_contract("raise_dispute")   ┌────────────────────┐
+│   Escrow    │ ────────────────────────────────────▶│ Dispute Resolution │
+│             │   (escrow.agreement_id, caller,       │                    │
+│ status ->   │    reason as details_hash)             │  arbiter voting /  │
+│ Disputed    │                                        │  appeal system     │
+│ (funds      │                                        │  (system of record │
+│  frozen)    │                                        │  for the dispute)  │
+└─────────────┘                                        └────────────────────┘
+      ▲                                                           │
+      │  resolve_dispute_from_arbitration(escrow_id, release_to)  │
+      │  invoke_contract, caller authenticated as the             │
+      │  dispute_resolution contract's OWN address                │
+      └───────────────────────────────────────────────────────────┘
+                     (only after voting/appeal concludes)
 ```
+
+**Why one path, and why this shape** (issue #1560): `escrow` used to
+implement its own, fully independent `initiate_dispute`/`resolve_dispute`
+pair, resolved unilaterally by a single per-escrow `arbiter` address, with no
+call into `dispute_resolution` at all — a dispute raised through escrow
+could be resolved by one address's say-so, completely bypassing arbitration.
+That local resolution path has been removed. The only way disputed funds can
+move now is:
+
+1. **Initiate** — `escrow::initiate_dispute` freezes the escrow locally
+   (status → `Disputed`, approvals cleared, so no other release path can
+   fire) and cross-contract calls `dispute_resolution::raise_dispute`,
+   keyed by the escrow's stored `agreement_id` (not `escrow_id` —
+   `dispute_resolution`'s whole API, including the agreement lookup it
+   performs against the `chioma` contract, is keyed by `agreement_id`). The
+   dispute's reason/content, voting, and appeal state all live in
+   `dispute_resolution` from this point on; escrow keeps only a local copy
+   of the reason for convenience reads.
+2. **Arbitrate** — `dispute_resolution` owns arbiter voting and the appeal
+   window entirely; see its own module docs for that lifecycle.
+3. **Resolve** — once arbitration concludes, the outcome is delivered back
+   to escrow via `resolve_dispute_from_arbitration`, callable *only* by the
+   escrow's own configured `dispute_resolution_contract` address (set once,
+   at escrow creation time). Escrow verifies this by requiring auth on that
+   stored address directly — for a contract address, Soroban's auth
+   framework treats a contract's direct call to another contract as
+   self-authorized with no signature needed, so this can only succeed when
+   `dispute_resolution` itself is the actual, direct caller.
+
+This mirrors the one pre-existing cross-contract precedent in this codebase
+(`dispute_resolution::raise_dispute` already calls into `chioma` via
+`env.invoke_contract` to fetch and validate a `RentAgreement`), extended with
+a resolution callback in the reverse direction so the contract that actually
+holds the funds (`escrow`) is the one that moves them.
+
+The escrow's legacy `arbiter` field still exists on the `Escrow` struct for
+backward-compatible reads and for its separate, pre-existing role in the
+2-of-3 multi-sig `approve_release` flow and `release_rent`, but it is no
+longer consulted anywhere in dispute resolution.
 
 ### Rent Obligation Flow
 

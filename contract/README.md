@@ -21,6 +21,29 @@ This repository uses the recommended structure for a Soroban project:
 - Contracts should have their own `Cargo.toml` files that rely on the top-level `Cargo.toml` workspace for their dependencies.
 - Frontend libraries can be added to the top-level directory as well. If you initialized this project with a frontend template via `--frontend-template` you will have those files already included.
 
+## Multi-Contract Integration Tests
+
+`contracts/integration_tests` (`cargo test -p integration-tests`) registers
+several real contracts together in one `Env` and drives scenarios across
+them, rather than each contract's suite only testing itself in isolation.
+It also surfaced a pre-existing bug: `dispute_resolution`'s cross-contract
+call into `chioma` (the only place one contract in this workspace calls
+another on-chain) currently fails against the real `chioma` contract due to
+a wrong invoke symbol and a mismatched `RentAgreement` shape. See
+[docs/testing/INTEGRATION-TESTS.md](docs/testing/INTEGRATION-TESTS.md) for
+details.
+
+## Public Surface Convention
+
+Each contract's `#[contract]` struct and `#[contractimpl]` block are
+normally declared directly in that contract's `lib.rs`, so its full external
+interface is visible in one place. `escrow` and `user_profile` are the two
+exceptions: their impl blocks live in `escrow_impl.rs` and `profile.rs`
+respectively, for historical reasons. Both `lib.rs` files carry a doc comment
+pointing to where the real surface is, per #1684 — if you're adding a new
+contract, prefer the in-`lib.rs` convention that every other contract in this
+workspace follows.
+
 ## Emergency Pause (Chioma Contract)
 
 The `contracts/chioma` contract now includes an emergency pause mechanism:

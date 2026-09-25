@@ -44,6 +44,12 @@ export default [
     },
   },
   {
+    files: ['lib/offline/**/*.ts'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
+  {
     // Mock data must stay in tests and mock infrastructure — never in shipped UI.
     files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
     rules: {

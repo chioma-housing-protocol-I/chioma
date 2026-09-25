@@ -6,6 +6,8 @@ import {
   assertSorobanSubmissionAccepted,
   waitForSorobanTransactionSuccess,
 } from './soroban-transaction-poller';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { BlockchainTransactionError } from '../../../common/errors';
 
 export interface MintObligationParams {
   agreementId: string;
@@ -112,6 +114,10 @@ export class RentObligationNftService {
         this.server,
         response.hash,
         this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `mint_obligation(${params.agreementId})`,
       );
 
       this.logger.log(
@@ -119,7 +125,7 @@ export class RentObligationNftService {
       );
 
       return {
-        txHash: response.hash,
+        txHash,
         obligationId: params.agreementId,
       };
     } catch (error) {
@@ -154,13 +160,17 @@ export class RentObligationNftService {
         this.server,
         response.hash,
         this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `transfer_obligation(${params.agreementId})`,
       );
 
       this.logger.log(
         `Transferred obligation ${params.agreementId} from ${params.fromAddress} to ${params.toAddress}`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(
         `Failed to transfer obligation ${params.agreementId}`,
@@ -345,13 +355,17 @@ export class RentObligationNftService {
         this.server,
         response.hash,
         this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `burn_nft(${params.tokenId})`,
       );
 
       this.logger.log(
         `Burned rent obligation NFT ${params.tokenId} (reason: ${params.reason})`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(`Failed to burn obligation ${params.tokenId}`, error);
       throw error;
@@ -381,13 +395,17 @@ export class RentObligationNftService {
         this.server,
         response.hash,
         this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `admin_reassign_obligation(${params.agreementId})`,
       );
 
       this.logger.log(
         `Admin reassigned obligation ${params.agreementId} to ${params.newOwnerAddress}`,
       );
 
-      return { txHash: response.hash };
+      return { txHash };
     } catch (error) {
       this.logger.error(
         `Failed to admin-reassign obligation ${params.agreementId}`,
@@ -505,6 +523,40 @@ export class RentObligationNftService {
       this.logger.error(`Failed to get burned nfts for ${ownerAddress}`, error);
       return [];
     }
+  }
+
+  /**
+   * Validates a Soroban `sendTransaction` response and returns the transaction hash.
+   *
+   * Expected response shape (subset of `SorobanRpc.Api.SendTransactionResponse`):
+   * ```
+   * {
+   *   hash:   string;          // hex-encoded transaction hash — REQUIRED
+   *   status: string;          // e.g. "PENDING" | "DUPLICATE" | "TRY_AGAIN_LATER" | "ERROR"
+   *   errorResultXdr?: string; // present only when status === "ERROR"
+   * }
+   * ```
+   *
+   * Throws `BlockchainTransactionError` when `hash` is absent or empty, which can
+   * happen if Soroban returns an incomplete response (e.g. a network interruption
+   * between submission and acknowledgement).
+   *
+   * @param response - Raw response from `SorobanRpc.Server.sendTransaction`
+   * @param operationLabel - Human-readable label used in the error message
+   * @returns The validated transaction hash string
+   */
+  private extractTransactionHash(
+    response: SorobanRpc.Api.SendTransactionResponse,
+    operationLabel: string,
+  ): string {
+    if (!response.hash) {
+      throw new BlockchainTransactionError(
+        `Soroban returned an incomplete response for "${operationLabel}": transaction hash is missing. ` +
+          `Response status: ${response.status ?? 'unknown'}`,
+        { operationLabel, responseStatus: response.status },
+      );
+    }
+    return response.hash;
   }
 
   private async buildTransaction(

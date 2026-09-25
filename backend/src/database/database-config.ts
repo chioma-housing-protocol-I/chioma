@@ -1,6 +1,7 @@
 import { DataSourceOptions } from 'typeorm';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { PoolConfigValidator } from './pool-config.validator';
 
 type DatabaseEnv = Record<string, string | undefined>;
 
@@ -79,6 +80,23 @@ export function createDatabaseConnectionOptions(
   migrations: string[],
   env: DatabaseEnv = process.env,
 ): DataSourceOptions {
+  const poolMin = parseNumber(env.DB_POOL_MIN, 5);
+  const poolMax = parseNumber(env.DB_POOL_MAX, 20);
+  const poolIdleTimeout = parseNumber(env.DB_POOL_IDLE_TIMEOUT, 30000);
+  const poolConnTimeout = parseNumber(env.DB_POOL_CONNECTION_TIMEOUT, 2000);
+
+  // Validate pool configuration
+  const validator = new PoolConfigValidator();
+  validator.validateAndLog(
+    {
+      min: poolMin,
+      max: poolMax,
+      idleTimeoutMillis: poolIdleTimeout,
+      connectionTimeoutMillis: poolConnTimeout,
+    },
+    false, // Non-strict mode: warn but don't throw
+  );
+
   const baseOptions: DataSourceOptions = {
     type: 'postgres',
     namingStrategy: new SnakeNamingStrategy(),
@@ -90,13 +108,10 @@ export function createDatabaseConnectionOptions(
     logging: env.TYPEORM_LOGGING === 'true',
     logger: 'advanced-console',
     extra: {
-      max: parseNumber(env.DB_POOL_MAX, 20),
-      min: parseNumber(env.DB_POOL_MIN, 5),
-      idleTimeoutMillis: parseNumber(env.DB_POOL_IDLE_TIMEOUT, 30000),
-      connectionTimeoutMillis: parseNumber(
-        env.DB_POOL_CONNECTION_TIMEOUT,
-        2000,
-      ),
+      max: poolMax,
+      min: poolMin,
+      idleTimeoutMillis: poolIdleTimeout,
+      connectionTimeoutMillis: poolConnTimeout,
     },
   };
 

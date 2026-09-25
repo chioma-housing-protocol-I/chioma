@@ -1,6 +1,7 @@
 import { Injectable, Logger, Scope } from '@nestjs/common';
 import * as fs from 'fs';
 import * as Sentry from '@sentry/nestjs';
+import { trace } from '@opentelemetry/api';
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
@@ -11,6 +12,7 @@ export interface LogContext {
   requestId?: string;
   correlationId?: string;
   traceId?: string;
+  spanId?: string;
   duration?: number;
   context?: any;
 }
@@ -128,9 +130,12 @@ export class LoggerService {
     context: LogContext = {},
     error?: Error,
   ) {
+    const activeSpanContext = trace.getActiveSpan()?.spanContext();
     const logEntry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
+      traceId: activeSpanContext?.traceId,
+      spanId: activeSpanContext?.spanId,
       ...context,
       message,
       error: error ? error.stack || error.message : undefined,

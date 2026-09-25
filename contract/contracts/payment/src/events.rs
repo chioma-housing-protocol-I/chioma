@@ -123,6 +123,33 @@ pub struct PlatformFeeCollectorUpdated {
     pub updated_at: u64,
 }
 
+/// Event emitted when the contract admin is initialized (#1689)
+/// Topics: ["admin_initialized", admin: Address]
+#[contractevent(topics = ["admin_initialized"])]
+pub struct AdminInitialized {
+    #[topic]
+    pub admin: Address,
+    pub initialized_at: u64,
+}
+
+/// Event emitted when the contract is globally paused (#1689)
+/// Topics: ["contract_paused", caller: Address]
+#[contractevent(topics = ["contract_paused"])]
+pub struct ContractPausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub paused_at: u64,
+}
+
+/// Event emitted when the contract is unpaused (#1689)
+/// Topics: ["contract_unpaused", caller: Address]
+#[contractevent(topics = ["contract_unpaused"])]
+pub struct ContractUnpausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub unpaused_at: u64,
+}
+
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String, proposer: Address]
 #[contractevent(topics = ["upgrade_proposed"])]
@@ -290,6 +317,30 @@ pub(crate) fn platform_fee_collector_updated(env: &Env, collector: Address) {
     PlatformFeeCollectorUpdated {
         collector,
         updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn admin_initialized(env: &Env, admin: Address) {
+    AdminInitialized {
+        admin,
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn contract_paused(env: &Env, caller: Address) {
+    ContractPausedEvent {
+        caller,
+        paused_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn contract_unpaused(env: &Env, caller: Address) {
+    ContractUnpausedEvent {
+        caller,
+        unpaused_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

@@ -4,13 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth, type User } from '@/store/authStore';
+import { StellarWalletsKit } from '@/lib/stellar-wallets-kit';
 import {
-  initializeStellarWalletsKit,
-  StellarWalletsKit,
-} from '@/lib/stellar-wallets-kit';
+  useWallet,
+  classifyWalletError,
+  type WalletError,
+} from '@/hooks/useWallet';
+import WalletSelectorModal from '@/components/auth/WalletSelectorModal';
 import toast from 'react-hot-toast';
 import { requestChallenge, verifySignature } from '@/lib/stellar-auth';
-import { getNetworkPassphrase } from '@/lib/stellar-network';
+import {
+  getConfiguredNetwork,
+  getNetworkLabel,
+  getNetworkPassphrase,
+  matchWalletNetwork,
+} from '@/lib/stellar-network';
 import { detectRoleFromWallet } from '@/lib/navigation/detect-user-role';
 import { clearEmailOnboardingSkip } from '@/hooks/useOnboardingGate';
 
@@ -20,35 +28,6 @@ interface WalletConnectButtonProps {
   buttonText?: string;
 }
 
-/**
- * The kit throws `{ code: -1, message: 'The user closed the modal.' }` (or
- * similar wording) when the picker is dismissed without selecting a wallet,
- * and wallet extensions throw their own "user rejected" style errors when
- * the sign request is declined. Both are a deliberate no-op, not a failure.
- */
-function isUserDismissal(error: unknown): boolean {
-  if (typeof error === 'object' && error !== null && 'code' in error) {
-    if ((error as { code?: number }).code === -1) return true;
-    if ((error as { code?: number }).code === -4) return true;
-  }
-
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'object' && error !== null && 'message' in error
-        ? String((error as { message?: unknown }).message)
-        : '';
-
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes('closed the modal') ||
-    normalized.includes('cancelled') ||
-    normalized.includes('canceled') ||
-    normalized.includes('reject') ||
-    normalized.includes('user denied')
-  );
-}
-
 export default function WalletConnectButton({
   onSuccess,
   className = '',
@@ -56,38 +35,51 @@ export default function WalletConnectButton({
 }: WalletConnectButtonProps) {
   const router = useRouter();
   const { setTokens, setWalletAddress } = useAuth();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const wallet = useWallet();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [pendingWalletId, setPendingWalletId] = useState<string | null>(null);
 
-  const handleWalletConnect = async () => {
-    if (isConnecting) return;
-    setIsConnecting(true);
+  const isConnecting = wallet.isConnecting || isAuthenticating;
+
+  const authenticateWithAddress = async (address: string) => {
+    setIsAuthenticating(true);
 
     try {
-      initializeStellarWalletsKit();
-
-      // If a wallet is already active in the kit (e.g. it stayed connected
-      // across a reload), reuse it. Otherwise open the picker and wait for
-      // the user to actually finish selecting one — calling getAddress()
-      // before that resolves throws "No wallet has been connected", which
-      // is why the previous implementation (hijacking the kit's own button
-      // click) failed on every first-time connect.
-      let address: string;
-      try {
-        ({ address } = await StellarWalletsKit.getAddress());
-      } catch {
-        ({ address } = await StellarWalletsKit.authModal());
-      }
-
-      if (!address) {
-        throw new Error('Failed to get wallet address');
-      }
-
       // Get Challenge
       toast.loading('Getting authentication challenge...', {
         id: 'wallet-challenge',
       });
       const challengeXdr = await requestChallenge(address);
       toast.dismiss('wallet-challenge');
+
+      // Verify the wallet is actually on the network this app is configured
+      // for before asking it to sign anything. Every module in the kit
+      // implements `getNetwork()` (it's a required part of `ModuleInterface`,
+      // not Freighter-specific), but some wallets — Albedo and xBull, at
+      // least — always reject it as unsupported. Signing is blocked in that
+      // "undetermined" case too: this check exists specifically to prevent
+      // an expensive mistake (signing a real transaction thinking it's a
+      // test one, or vice versa), so an inability to verify is treated the
+      // same as a verified mismatch rather than silently let through.
+      let walletNetwork: { network: string; networkPassphrase: string } | null;
+      try {
+        walletNetwork = await StellarWalletsKit.getNetwork();
+      } catch {
+        walletNetwork = null;
+      }
+
+      const networkMatch = matchWalletNetwork(walletNetwork);
+      if (networkMatch.status !== 'match') {
+        toast.dismiss('wallet-challenge');
+        const configuredLabel = getNetworkLabel(getConfiguredNetwork());
+        const message =
+          networkMatch.status === 'mismatch'
+            ? `Your wallet is connected to ${networkMatch.walletNetworkLabel}, but this app is configured for ${configuredLabel}. Switch your wallet's network before signing.`
+            : `Could not verify your wallet's network. This app is configured for ${configuredLabel} — please confirm your wallet is on the same network before signing.`;
+        toast.error(message);
+        return;
+      }
 
       // Sign Challenge
       toast.loading('Please sign the transaction in your wallet...', {
@@ -134,7 +126,7 @@ export default function WalletConnectButton({
             // No role found - this shouldn't happen in production
             // but handle gracefully
             toast.error('Unable to determine your role. Please try again.');
-            setIsConnecting(false);
+            setIsAuthenticating(false);
             return;
           }
         }
@@ -175,27 +167,71 @@ export default function WalletConnectButton({
       toast.dismiss('wallet-sign');
       toast.dismiss('wallet-verify');
 
-      if (!isUserDismissal(error)) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        toast.error(errorMessage || 'Wallet connection failed');
+      // A rejected signature request (declining to sign the auth challenge)
+      // is a deliberate no-op, same treatment as dismissing the selector.
+      const classified: WalletError =
+        error && typeof error === 'object' && 'reason' in error
+          ? (error as WalletError)
+          : classifyWalletError(error);
+
+      if (classified.reason !== 'rejected') {
+        toast.error(classified.message || 'Wallet connection failed');
         console.error('Wallet connect error:', error);
       }
-      // Silently ignore user rejections / dismissed modals
     } finally {
-      setIsConnecting(false);
+      setIsAuthenticating(false);
     }
   };
 
+  const handleSelectWallet = async (walletId: string) => {
+    setPendingWalletId(walletId);
+    try {
+      const address = await wallet.connect(walletId);
+      setIsSelectorOpen(false);
+      await authenticateWithAddress(address);
+    } catch {
+      // wallet.connect already classified and stored the error on
+      // wallet.error; the selector modal renders it and stays open so the
+      // user can pick a different wallet without restarting the flow.
+    } finally {
+      setPendingWalletId(null);
+    }
+  };
+
+  const handleOpenSelector = async () => {
+    if (isConnecting) return;
+
+    // Reuse an already-connected wallet (e.g. still active from before a
+    // reload) instead of forcing the picker again.
+    if (wallet.address) {
+      await authenticateWithAddress(wallet.address);
+      return;
+    }
+
+    wallet.clearError();
+    setIsSelectorOpen(true);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={handleWalletConnect}
-      disabled={isConnecting}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium transition-colors ${className}`}
-    >
-      {isConnecting && <Loader2 size={16} className="animate-spin" />}
-      {isConnecting ? 'Connecting…' : buttonText}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleOpenSelector}
+        disabled={isConnecting}
+        className={`inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium transition-colors ${className}`}
+      >
+        {isConnecting && <Loader2 size={16} className="animate-spin" />}
+        {isConnecting ? 'Connecting…' : buttonText}
+      </button>
+
+      <WalletSelectorModal
+        isOpen={isSelectorOpen}
+        onClose={() => setIsSelectorOpen(false)}
+        onSelectWallet={handleSelectWallet}
+        listWallets={wallet.listWallets}
+        connectingWalletId={pendingWalletId}
+        error={wallet.error}
+      />
+    </>
   );
 }

@@ -17,6 +17,7 @@ import { StellarService } from '../stellar/services/stellar.service';
 import { LockService } from '../../common/lock';
 import { IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { FxRateService } from './fx-rate.service';
 
 // ─── Mock Factories (fresh per test) ────────────────────────────────────────
 
@@ -62,6 +63,7 @@ describe('PaymentService – edge cases & isolation', () => {
     getTransactionByHash: jest.Mock;
   };
   let mockPaymentProcessing: { processRentPayment: jest.Mock };
+  let mockFxRate: { getRate: jest.Mock; convert: jest.Mock };
 
   beforeEach(async () => {
     paymentRepo = makePaymentRepo();
@@ -77,6 +79,7 @@ describe('PaymentService – edge cases & isolation', () => {
       onPaymentRecorded: jest.fn().mockResolvedValue(undefined),
       checkTransactionBeforeRecording: jest.fn().mockResolvedValue(undefined),
     } as any;
+    mockFxRate = { getRate: jest.fn(), convert: jest.fn() };
     mockLock = {
       withLock: jest.fn(
         async (_k: string, _t: number, fn: () => Promise<unknown>) => fn(),
@@ -112,6 +115,7 @@ describe('PaymentService – edge cases & isolation', () => {
         { provide: LockService, useValue: mockLock },
         { provide: IdempotencyService, useValue: mockIdempotency },
         { provide: FraudHooksService, useValue: mockFraud },
+        { provide: FxRateService, useValue: mockFxRate },
       ],
     }).compile();
 
