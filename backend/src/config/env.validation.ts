@@ -96,6 +96,7 @@ function validateJwtSecret(
   name: string,
   value: unknown,
   errors: string[],
+  isProduction: boolean = false,
 ): void {
   if (!isNonEmpty(value)) {
     errors.push(`${name} is required. ${JWT_SECRET_GENERATION_HINT}`);
@@ -774,10 +775,10 @@ export function validateEnvironment(
     return config;
   }
 
-  validateJwtSecret('JWT_SECRET', config.JWT_SECRET, errors);
-  validateJwtSecret('JWT_REFRESH_SECRET', config.JWT_REFRESH_SECRET, errors);
-
   const isDeployed = nodeEnv === 'production' || nodeEnv === 'staging';
+
+  validateJwtSecret('JWT_SECRET', config.JWT_SECRET, errors, isDeployed);
+  validateJwtSecret('JWT_REFRESH_SECRET', config.JWT_REFRESH_SECRET, errors, isDeployed);
 
   if (isDeployed) {
     validateProductionSecrets(config, errors);

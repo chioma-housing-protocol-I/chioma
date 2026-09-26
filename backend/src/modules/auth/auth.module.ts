@@ -27,10 +27,11 @@ import { OAuth2Service } from './oauth/oauth2.service';
 import { OAuth2ClientService } from './oauth/oauth2-client.service';
 import { OAuth2Controller } from './oauth/oauth2.controller';
 import { OAuthAccount } from './oauth/entities/oauth-account.entity';
+import { OAuthState } from './oauth/entities/oauth-state.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice, OAuthAccount]),
+    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice, OAuthAccount, OAuthState]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
