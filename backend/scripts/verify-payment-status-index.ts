@@ -10,14 +10,15 @@
  */
 
 import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../src/database/data-source';
 
 const INDEX_NAME = 'IDX_payments_user_status_created_at';
+const CONTEXT = 'VerifyPaymentStatusIndex';
 
 async function verify(): Promise<void> {
   await AppDataSource.initialize();
-  console.log('Connected to database:', AppDataSource.options.database);
-  console.log('');
+  Logger.log('Database connection initialized successfully.', CONTEXT);
 
   try {
     const indexes: Array<{ indexname: string; indexdef: string }> =
@@ -33,17 +34,16 @@ async function verify(): Promise<void> {
       );
 
     if (indexes.length === 0) {
-      console.error(`✗ Missing index: ${INDEX_NAME}`);
-      console.error(
-        '  Run migrations, then re-run this script. Expected columns: (user_id, status, created_at)',
+      Logger.error(
+        `Missing index: ${INDEX_NAME}. Run migrations, then re-run this script. Expected columns: (user_id, status, created_at)`,
+        undefined,
+        CONTEXT,
       );
       process.exitCode = 1;
       return;
     }
 
-    console.log(`✓ Index present: ${INDEX_NAME}`);
-    console.log(`  ${indexes[0].indexdef}`);
-    console.log('');
+    Logger.log(`Index present: ${INDEX_NAME} (${indexes[0].indexdef})`, CONTEXT);
 
     // EXPLAIN (no ANALYZE) — confirms the planner can choose an Index Scan
     // without requiring representative row volume.
@@ -57,9 +57,7 @@ async function verify(): Promise<void> {
     `);
 
     const planText = plan.map((row) => row['QUERY PLAN']).join('\n');
-    console.log('=== QUERY PLAN (listPayments pattern) ===\n');
-    console.log(planText);
-    console.log('');
+    Logger.log(`Query plan:\n${planText}`, CONTEXT);
 
     const usesComposite =
       planText.includes(INDEX_NAME) ||
@@ -67,15 +65,14 @@ async function verify(): Promise<void> {
       planText.toLowerCase().includes('index only scan');
 
     if (usesComposite) {
-      console.log(
-        '✓ Query planner can use an index scan for (user_id, status, created_at) filtering/sorting.',
+      Logger.log(
+        'Query planner can use an index scan for (user_id, status, created_at) filtering/sorting.',
+        CONTEXT,
       );
     } else {
-      console.warn(
-        '⚠ Planner did not show an Index Scan (table may be empty/tiny — sequential scan can still win).',
-      );
-      console.warn(
-        '  On production-sized tables, expect Index Scan Backward on IDX_payments_user_status_created_at.',
+      Logger.warn(
+        'Planner did not show an Index Scan (table may be empty/tiny — sequential scan can still win). On production-sized tables, expect Index Scan Backward on IDX_payments_user_status_created_at.',
+        CONTEXT,
       );
     }
   } finally {
@@ -85,9 +82,11 @@ async function verify(): Promise<void> {
 
 verify()
   .then(() => {
-    console.log('\nPayment status index verification complete.');
+    Logger.log('Payment status index verification complete.', CONTEXT);
   })
-  .catch((err) => {
-    console.error('Verification failed:', err);
+  .catch((err: unknown) => {
+    const stack = err instanceof Error ? err.stack : undefined;
+    const message = err instanceof Error ? err.message : String(err);
+    Logger.error(`Verification failed: ${message}`, stack, CONTEXT);
     process.exit(1);
   });

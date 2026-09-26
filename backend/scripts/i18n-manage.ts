@@ -1,27 +1,27 @@
+import { Logger } from '@nestjs/common';
 import { I18nService } from '../src/modules/i18n/i18n.service';
+
+const CONTEXT = 'I18nManage';
 
 function run(): void {
   const i18n = new I18nService();
   const languages = i18n.getSupportedLanguages();
 
-  console.log('I18n Language Coverage Report');
-  console.log('============================');
+  Logger.log('Starting I18n language coverage audit', CONTEXT);
 
   for (const language of languages) {
     const coverage = i18n.translationCoverage(language);
-    console.log(
-      `${language}: ${coverage.percent}% (${coverage.translated}/${coverage.total})`,
+    Logger.log(
+      `Coverage for ${language}: ${coverage.percent}% (${coverage.translated}/${coverage.total} keys)`,
+      CONTEXT,
     );
   }
 
-  console.log('');
-  console.log('Sample translation checks');
-  console.log(`en common.ok: ${i18n.t('common.ok', 'en')}`);
-  console.log(`fr common.ok: ${i18n.t('common.ok', 'fr')}`);
-  console.log(`es auth.loginSuccess: ${i18n.t('auth.loginSuccess', 'es')}`);
-  console.log(
-    `ar security.accountLocked: ${i18n.t('security.accountLocked', 'ar')}`,
+  Logger.log(
+    `Sample translation checks: en=${i18n.t('common.ok', 'en')}, fr=${i18n.t('common.ok', 'fr')}, es=${i18n.t('auth.loginSuccess', 'es')}, ar=${i18n.t('security.accountLocked', 'ar')}`,
+    CONTEXT,
   );
+  Logger.log('I18n language coverage audit completed', CONTEXT);
 }
 
 run();

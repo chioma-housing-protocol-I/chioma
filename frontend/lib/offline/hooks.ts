@@ -14,6 +14,7 @@ import {
   onSyncComplete,
   type SyncResult,
 } from './sync-manager';
+import { Logger } from '../logger';
 import {
   hasUnresolvedConflicts,
   getConflictsForReview,
@@ -108,7 +109,7 @@ export function useSync() {
     try {
       const result = await syncOfflineData({
         onProgress: (current, total) => {
-          console.log(`Syncing: ${current}/${total}`);
+          Logger.log(`Syncing: ${current}/${total}`);
         },
       });
       setLastSyncResult(result);

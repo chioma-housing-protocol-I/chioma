@@ -116,6 +116,7 @@ export class AuthService {
       emailVerified: false,
       failedLoginAttempts: 0,
       isActive: true,
+      emailCollectedAt: new Date(),
     });
 
     const verificationToken = this.issueVerificationToken(user);
@@ -520,6 +521,12 @@ export class AuthService {
     user.email = normalizedEmail;
     user.emailHash = this.hashLookupValue(normalizedEmail);
     user.emailVerified = false;
+    // Record when the email was first collected. Preserve the original
+    // timestamp so subsequent updates (e.g. changing email address) do not
+    // reset the compliance clock.
+    if (!user.emailCollectedAt) {
+      user.emailCollectedAt = new Date();
+    }
     if (dto.firstName) user.firstName = dto.firstName;
     if (dto.lastName) user.lastName = dto.lastName;
 

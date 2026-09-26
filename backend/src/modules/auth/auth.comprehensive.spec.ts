@@ -33,6 +33,7 @@ describe('AuthService — comprehensive coverage', () => {
     role: UserRole.USER,
     isActive: true,
     emailVerified: true,
+    emailCollectedAt: new Date('2024-01-01'),
     failedLoginAttempts: 0,
     accountLockedUntil: null,
     resetToken: null,

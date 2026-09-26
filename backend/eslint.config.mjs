@@ -19,7 +19,8 @@ export default tseslint.config(
       'coverage/',
       '*.js',
       '*.json',
-      'scripts/',
+      'scripts/*.sh',
+      'scripts/*.mjs',
       // These files are missing class declarations in upstream — pre-existing parse errors
       'src/modules/users/users.controller.ts',
       'src/modules/users/users.service.ts',
@@ -64,8 +65,16 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.ts'],
-    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/__tests__/**'],
+    files: ['src/**/*.ts', 'scripts/**/*.ts'],
+    ignores: [
+      '**/*.spec.ts',
+      '**/*.e2e-spec.ts',
+      '**/__tests__/**',
+      'scripts/check-api-docs.ts',
+      'scripts/db-performance-report.ts',
+      'scripts/db-index-review.ts',
+      'scripts/generate-openapi.ts',
+    ],
     rules: {
       'no-console': 'error',
       'no-restricted-syntax': [
