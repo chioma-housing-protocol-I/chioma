@@ -223,19 +223,19 @@ export function useUpdateAdminDisputeStatus() {
       status: AdminDisputeStatus;
       resolution?: string;
     }) => {
-      try {
-        // disputeId here is the numeric database ID (as a string), not the string disputeId field
-        // The backend route is PATCH /admin/disputes/:id where :id is the numeric database ID
-        await apiClient.patch(`/admin/disputes/${disputeId}`, {
-          status,
-          resolution,
-        });
-      } catch (error) {
-        console.error('Failed to update dispute status:', error);
-        return { localOnly: true };
-      }
-
-      return { localOnly: false };
+      // disputeId here is the numeric database ID (as a string), not the string disputeId field
+      // The backend route is PATCH /admin/disputes/:id where :id is the numeric database ID
+      //
+      // Previously this swallowed the error and returned {localOnly: true},
+      // which made a failed update look successful (#1558): the toast said
+      // "Updated locally" while the server call — and the @AuditLog entry
+      // it produces — never happened. Bulk-action failure counting also
+      // depends on this throwing, matching BulkUserOperations.tsx's
+      // Promise.allSettled convention.
+      await apiClient.patch(`/admin/disputes/${disputeId}`, {
+        status,
+        resolution,
+      });
     },
     onMutate: async ({ disputeId, status, resolution }) => {
       await queryClient.cancelQueries({ queryKey: ADMIN_DISPUTES_QUERY_KEY });

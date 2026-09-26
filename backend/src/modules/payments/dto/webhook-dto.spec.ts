@@ -49,6 +49,8 @@ describe('RefundWebhookDto (zod)', () => {
   it('accepts a valid refund webhook payload', () => {
     const parsed = refundWebhookSchema.parse({
       eventType: 'refund.completed',
+      idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+      timestamp: new Date().toISOString(),
       paymentId: 'pay_1',
       refundId: 're_1',
       amount: 25,
@@ -61,6 +63,8 @@ describe('RefundWebhookDto (zod)', () => {
     expect(
       refundWebhookSchema.safeParse({
         eventType: 'refund.completed',
+        idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        timestamp: new Date().toISOString(),
         paymentId: 'pay_1',
         amount: 0,
         status: 'completed',
@@ -81,5 +85,26 @@ describe('RefundWebhookDto (zod)', () => {
         status: 'completed',
       }),
     ).toThrow(/Invalid refund webhook payload/);
+  });
+
+  it('rejects missing idempotency keys and stale timestamps', () => {
+    expect(() =>
+      parseRefundWebhookDto({
+        eventType: 'refund.completed',
+        timestamp: new Date().toISOString(),
+        paymentId: 'pay_1',
+        status: 'completed',
+      }),
+    ).toThrow(/idempotencyKey/);
+
+    expect(() =>
+      parseRefundWebhookDto({
+        eventType: 'refund.completed',
+        idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        paymentId: 'pay_1',
+        status: 'completed',
+      }),
+    ).toThrow(/timestamp/);
   });
 });

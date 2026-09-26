@@ -2,7 +2,7 @@
 use soroban_sdk::{Address, Env, String};
 
 use crate::errors::PaymentError;
-use crate::storage::DataKey;
+use crate::storage::{extend_persistent_ttl, DataKey};
 use crate::types::{
     AgreementStatus, EscalationType, PaymentRecord, RentAgreement, RentEscalationConfig,
 };
@@ -145,15 +145,16 @@ pub fn pay_rent_with_agent(
     agreement.payment_count += 1;
 
     // Persist updated agreement
-    env.storage()
-        .persistent()
-        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+    let agreement_key = DataKey::Agreement(agreement_id.clone());
+    env.storage().persistent().set(&agreement_key, &agreement);
+    extend_persistent_ttl(&env, &agreement_key);
 
     // Persist payment record
-    env.storage().persistent().set(
-        &DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count),
-        &payment_record,
-    );
+    let payment_record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
+    env.storage()
+        .persistent()
+        .set(&payment_record_key, &payment_record);
+    extend_persistent_ttl(&env, &payment_record_key);
 
     // Emit event
     env.events().publish(

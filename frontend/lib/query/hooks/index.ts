@@ -15,14 +15,6 @@ export {
 } from './use-payments';
 
 export {
-  useNotificationsQuery,
-  useUnreadCount,
-  useMarkNotificationRead,
-  useMarkAllNotificationsRead,
-  useDeleteNotification,
-} from './use-notifications';
-
-export {
   useFavorites,
   useFavoriteStatus,
   useFavoriteCount,
@@ -114,6 +106,23 @@ export { useLandlordPropertyAnalytics } from './use-property-analytics';
 export { useFeesSummary } from './use-fees-summary';
 
 export { useReferrals } from './use-referrals';
+
+export {
+  useSubletRequests,
+  useSubletBookings,
+  useSubletEarnings,
+  useCreateSubletRequest,
+  useApproveSubletRequest,
+  useDenySubletRequest,
+} from './use-sublets';
+export type {
+  SubletRequest,
+  SubletRequestStatus,
+  SubletBooking,
+  SubletEarningsSummary,
+  SubletRequestFilters,
+  CreateSubletRequestPayload,
+} from './use-sublets';
 
 export { useOptimisticUpdate } from './use-optimistic-update';
 export type {

@@ -1,3 +1,15 @@
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  PerformanceAlertService,
+  ThresholdBreach,
+} from './performance-alert.service';
+import { AlertSeverity } from './entities/performance-alert.entity';
+
+export const PERFORMANCE_THRESHOLDS = {
+  httpDurationMs: 2000,
+  dbQueryMs: 1000,
+  blockchainDurationMs: 30000,
+};
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   Registry,
@@ -183,6 +195,24 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  constructor(
+    @Optional() private readonly alertService?: PerformanceAlertService,
+  ) {
+    this.logger.log('MetricsService initialized (simplified mode)');
+  }
+
+  // HTTP Metrics Methods
+  recordHttpRequest(method: string, route: string, status: number) {
+    const key = `http_requests_${method}_${route}_${status}`;
+    this.incrementMetric(key);
+    if (status >= 500) {
+      this.raiseAlert({
+        metric: `http_5xx_${method}_${route}`,
+        severity: AlertSeverity.CRITICAL,
+        message: `${method} ${route} returned ${status}`,
+        value: status,
+      });
+    }
   private readonly queueStalledState = new Gauge({
     name: 'queue_stalled',
     help: 'Whether the queue is considered stalled (1): jobs are waiting longer than the stall threshold',
@@ -259,6 +289,15 @@ export class MetricsService implements OnModuleInit {
     method: string,
     route: string,
     status: number,
+    duration: number,
+  ) {
+    const key = `http_duration_${method}_${route}`;
+    this.recordHistogram(key, duration);
+    this.checkThreshold(
+      key,
+      duration,
+      PERFORMANCE_THRESHOLDS.httpDurationMs,
+      `Slow HTTP request ${method} ${route}`,
     durationMs: number,
   ): void {
     this.httpDuration.observe(
@@ -277,8 +316,22 @@ export class MetricsService implements OnModuleInit {
   recordBlockchainFailure(type: string, error: string): void {
     this.blockchainFailures.inc({ type });
     this.logger.warn(`Blockchain failure: ${type} - ${error}`);
+    this.raiseAlert({
+      metric: key,
+      severity: AlertSeverity.CRITICAL,
+      message: `Blockchain failure: ${type} - ${error}`,
+    });
   }
 
+  recordBlockchainDuration(type: string, duration: number) {
+    const key = `blockchain_duration_${type}`;
+    this.recordHistogram(key, duration);
+    this.checkThreshold(
+      key,
+      duration,
+      PERFORMANCE_THRESHOLDS.blockchainDurationMs,
+      `Slow blockchain transaction ${type}`,
+    );
   recordBlockchainDuration(type: string, durationMs: number): void {
     this.blockchainDuration.observe({ type }, durationMs);
   }
@@ -295,6 +348,28 @@ export class MetricsService implements OnModuleInit {
     this.dbPoolWaiting.set(waiting);
   }
 
+  recordDatabaseQuery(queryType: string, duration: number) {
+    const key = `db_query_${queryType}`;
+    this.recordHistogram(key, duration);
+    this.checkThreshold(
+      key,
+      duration,
+      PERFORMANCE_THRESHOLDS.dbQueryMs,
+      `Slow database query ${queryType}`,
+    );
+  }
+
+  // Business Metrics Methods
+  recordRentPayment(status: 'success' | 'failed') {
+    const key = `rent_payment_${status}`;
+    this.incrementMetric(key);
+    if (status === 'failed') {
+      this.raiseAlert({
+        metric: key,
+        severity: AlertSeverity.WARNING,
+        message: 'Rent payment failed',
+      });
+    }
   setDatabaseSize(bytes: number): void {
     this.dbSizeBytes.set(bytes);
   }
@@ -321,6 +396,35 @@ export class MetricsService implements OnModuleInit {
     this.dbQueryDuration.observe({ query_type: queryType }, durationMs);
   }
 
+  private checkThreshold(
+    metric: string,
+    value: number,
+    threshold: number,
+    label: string,
+  ) {
+    if (value <= threshold) return;
+    this.raiseAlert({
+      metric,
+      severity:
+        value > threshold * 2 ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
+      message: `${label}: ${value}ms exceeds ${threshold}ms`,
+      value,
+      threshold,
+    });
+  }
+
+  private raiseAlert(breach: ThresholdBreach) {
+    if (!this.alertService) return;
+    this.alertService
+      .recordBreach(breach)
+      .catch((err) =>
+        this.logger.error(`Failed to persist alert: ${err?.message ?? err}`),
+      );
+  }
+
+  private incrementMetric(key: string) {
+    const current = this.metrics.get(key) || 0;
+    this.metrics.set(key, current + 1);
   recordCacheOperation(hit: boolean): void {
     const result = hit ? 'hit' : 'miss';
     this.cacheOperations.inc({ result });

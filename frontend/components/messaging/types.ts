@@ -26,7 +26,9 @@ export interface ChatRoom {
   unreadCount?: number;
 }
 
-export type MessageStatus = 'pending' | 'sent' | 'failed';
+// 'queued' (#1557): composed while offline, persisted to the offline sync
+// queue, and waiting for a reconnect to be re-dispatched over the socket.
+export type MessageStatus = 'pending' | 'sent' | 'failed' | 'queued';
 
 export interface Message {
   id: string;
