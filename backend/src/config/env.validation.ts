@@ -38,7 +38,7 @@ function isPlaceholderSecret(value: string): boolean {
 }
 
 const MIN_JWT_SECRET_BYTES = 32;
-const MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR = 3;
+const MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR = 4.5;
 const JWT_SECRET_GENERATION_HINT =
   'Generate a strong secret with: openssl rand -base64 48';
 
@@ -60,27 +60,131 @@ function calculateShannonEntropyBitsPerChar(value: string): number {
   return entropy;
 }
 
+/**
+ * Detects predictable character sequences (e.g., "AAAABBBB", "abcabcabc").
+ * Returns the ratio of consecutive identical characters or character pairs.
+ */
+function detectSequencePatterns(value: string): number {
+  let sequenceLength = 0;
+  let maxSequence = 1;
+  let patternMatches = 0;
+  const charCounts = new Map<string, number>();
+
+  // Find longest consecutive identical characters
+  for (let i = 0; i < value.length; i++) {
+    if (i > 0 && value[i] === value[i - 1]) {
+      sequenceLength++;
+    } else {
+      maxSequence = Math.max(maxSequence, sequenceLength + 1);
+      sequenceLength = 0;
+    }
+  }
+  maxSequence = Math.max(maxSequence, sequenceLength + 1);
+
+  // Detect repeating character pairs
+  if (value.length >= 4) {
+    for (let i = 0; i < value.length - 2; i++) {
+      const pair = value.substring(i, i + 2);
+      charCounts.set(pair, (charCounts.get(pair) ?? 0) + 1);
+    }
+    for (const count of charCounts.values()) {
+      if (count >= 3) {
+        patternMatches++;
+      }
+    }
+  }
+
+  return Math.max(maxSequence / value.length, patternMatches / value.length);
+}
+
+/**
+ * Validates that secret uses diverse character sets (uppercase, lowercase, digits, special).
+ * Returns the count of character set types found.
+ */
+function validateCharacterSetDiversity(value: string): {
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasDigits: boolean;
+  hasSpecial: boolean;
+  setCount: number;
+} {
+  const hasUppercase = /[A-Z]/.test(value);
+  const hasLowercase = /[a-z]/.test(value);
+  const hasDigits = /\d/.test(value);
+  const hasSpecial = /[!@#$%^&*\-_=+\[\]{};:'",.<>?/\\|`~]/.test(value);
+
+  return {
+    hasUppercase,
+    hasLowercase,
+    hasDigits,
+    hasSpecial,
+    setCount: [hasUppercase, hasLowercase, hasDigits, hasSpecial].filter(
+      Boolean,
+    ).length,
+  };
+}
+
 function validateJwtSecret(
   name: string,
   value: unknown,
   errors: string[],
+  isProduction: boolean = false,
 ): void {
   if (!isNonEmpty(value)) {
     errors.push(`${name} is required. ${JWT_SECRET_GENERATION_HINT}`);
     return;
   }
+
   const byteLength = Buffer.byteLength(value, 'utf8');
   if (byteLength < MIN_JWT_SECRET_BYTES) {
     errors.push(
       `${name} must be at least ${MIN_JWT_SECRET_BYTES} bytes (got ${byteLength}). ${JWT_SECRET_GENERATION_HINT}`,
     );
+    return;
   }
-  if (
-    calculateShannonEntropyBitsPerChar(value) <
-    MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR
-  ) {
+
+  const entropy = calculateShannonEntropyBitsPerChar(value);
+  if (entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
     errors.push(
-      `${name} does not have enough entropy — it looks repetitive or predictable rather than randomly generated. ${JWT_SECRET_GENERATION_HINT}`,
+      `${name} does not have enough entropy (${entropy.toFixed(2)} bits/char, minimum ${MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR}). It looks repetitive or predictable rather than randomly generated. ${JWT_SECRET_GENERATION_HINT}`,
+    );
+    return;
+  }
+
+  // Detect highly repetitive patterns
+  const sequenceRatio = detectSequencePatterns(value);
+  if (sequenceRatio > 0.15) {
+    errors.push(
+      `${name} contains too many repetitive patterns (${(sequenceRatio * 100).toFixed(1)}% sequences). Avoid patterns like "AAAA" or "abcabcabc". ${JWT_SECRET_GENERATION_HINT}`,
+    );
+    return;
+  }
+
+  // Validate character set diversity
+  const charSetInfo = validateCharacterSetDiversity(value);
+  if (isProduction && charSetInfo.setCount < 3) {
+    const missing: string[] = [];
+    if (!charSetInfo.hasUppercase) missing.push('uppercase letters');
+    if (!charSetInfo.hasLowercase) missing.push('lowercase letters');
+    if (!charSetInfo.hasDigits) missing.push('digits');
+    if (!charSetInfo.hasSpecial) missing.push('special characters');
+    errors.push(
+      `${name} should use diverse character sets in production (missing: ${missing.join(', ')}). ${JWT_SECRET_GENERATION_HINT}`,
+    );
+    return;
+  }
+
+  // Warn about low entropy even if it passes threshold
+  if (isProduction && entropy < 5.0) {
+    console.warn(
+      `⚠️  [SECURITY] ${name} entropy is ${entropy.toFixed(2)} bits/char. While it passes validation, consider using a higher-entropy secret for better security.`,
+    );
+  }
+
+  // Warn about character set diversity in non-production if weak
+  if (!isProduction && charSetInfo.setCount < 2) {
+    console.warn(
+      `⚠️  [SECURITY] ${name} uses limited character sets. For better security, use uppercase, lowercase, digits, and special characters.`,
     );
   }
 }
@@ -669,10 +773,10 @@ export function validateEnvironment(
     return config;
   }
 
-  validateJwtSecret('JWT_SECRET', config.JWT_SECRET, errors);
-  validateJwtSecret('JWT_REFRESH_SECRET', config.JWT_REFRESH_SECRET, errors);
-
   const isDeployed = nodeEnv === 'production' || nodeEnv === 'staging';
+
+  validateJwtSecret('JWT_SECRET', config.JWT_SECRET, errors, isDeployed);
+  validateJwtSecret('JWT_REFRESH_SECRET', config.JWT_REFRESH_SECRET, errors, isDeployed);
 
   if (isDeployed) {
     validateProductionSecrets(config, errors);
