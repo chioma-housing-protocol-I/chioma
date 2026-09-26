@@ -847,36 +847,76 @@ Target metrics:
 
 ## 8. Monitoring Checklist
 
-Pre-deployment:
+### 8.1 Pre-Deployment Checklist
 
-- [ ] Metrics endpoints accessible
-- [ ] Prometheus scraping targets
-- [ ] Alertmanager routing configured
-- [ ] Dashboards provisioned
-- [ ] Alert runbooks documented
-- [ ] On-call rotation configured
-- [ ] Escalation policy defined
-- [ ] Incident response plan reviewed
+Complete before production deployment:
 
-Post-deployment:
+- [ ] Metrics endpoints accessible (`/metrics` endpoint responding)
+- [ ] Prometheus scraping targets configured and healthy
+- [ ] Alertmanager routing configured with all receivers
+- [ ] Dashboards provisioned and loading correctly
+- [ ] Alert runbooks documented with clear remediation steps
+- [ ] On-call rotation configured in alerting system
+- [ ] Escalation policy defined and tested
+- [ ] Incident response plan reviewed by team
+- [ ] Alert thresholds validated against baseline metrics
+- [ ] Notification channels tested (Slack, PagerDuty, email)
+- [ ] Grafana datasources verified
+- [ ] Alert inhibition rules configured
+- [ ] Metric retention policies set
+- [ ] Backup and recovery procedures documented
 
-- [ ] Verify metrics flowing
-- [ ] Verify alerts firing correctly
-- [ ] Verify dashboards loading
-- [ ] Verify alert routing
-- [ ] Test alert acknowledgment
-- [ ] Test escalation flow
-- [ ] Document any anomalies
+### 8.2 Post-Deployment Checklist
 
-Ongoing:
+Complete after production deployment:
 
-- [ ] Review alert volume weekly
-- [ ] Tune noisy alerts monthly
-- [ ] Update dashboards as needed
-- [ ] Rotate on-call schedule
-- [ ] Conduct incident reviews
-- [ ] Update runbooks
-- [ ] Train new team members
+- [ ] Verify metrics flowing into Prometheus
+- [ ] Verify alerts firing correctly on test conditions
+- [ ] Verify dashboards loading with real data
+- [ ] Verify alert routing to correct channels
+- [ ] Test alert acknowledgment workflow
+- [ ] Test escalation flow (15min, 30min, 60min)
+- [ ] Document any anomalies or unexpected behavior
+- [ ] Verify health check endpoints responding
+- [ ] Confirm on-call team received notifications
+- [ ] Validate dashboard auto-refresh working
+- [ ] Check metric cardinality is acceptable
+- [ ] Verify no alert storms occurring
+
+### 8.3 Ongoing Maintenance Checklist
+
+Recurring tasks for monitoring health:
+
+**Weekly:**
+
+- [ ] Review alert volume and trends
+- [ ] Check for alert fatigue (>50 alerts/day)
+- [ ] Verify on-call handoff completed
+- [ ] Review incident reports
+- [ ] Check Prometheus disk usage
+- [ ] Verify backup jobs completed
+
+**Monthly:**
+
+- [ ] Tune noisy alerts (>10% false positive rate)
+- [ ] Update dashboards with new metrics
+- [ ] Review and update runbooks
+- [ ] Analyze alert response times
+- [ ] Capacity planning review
+- [ ] Update alert thresholds based on trends
+- [ ] Review and rotate on-call schedule
+- [ ] Conduct alert effectiveness review
+
+**Quarterly:**
+
+- [ ] Comprehensive monitoring audit
+- [ ] Update alert coverage for new features
+- [ ] Review and update escalation policies
+- [ ] Conduct disaster recovery drill
+- [ ] Update documentation
+- [ ] Team training on new tools/procedures
+- [ ] Review SLA compliance
+- [ ] Plan monitoring improvements
 
 ---
 
@@ -884,58 +924,379 @@ Ongoing:
 
 ### 9.1 Metrics Not Appearing
 
-Check:
+**Symptoms:**
 
-- Prometheus target status: `http://localhost:9090/targets`
-- application `/metrics` endpoint accessibility
-- network connectivity between Prometheus and targets
-- scrape interval and timeout configuration
-- authentication if required
+- Prometheus shows "no data" for metrics
+- Grafana dashboards blank
+- Metrics endpoint not responding
+
+**Diagnostics:**
+
+```bash
+# Check Prometheus target status
+curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | select(.job=="chioma-backend")'
+
+# Check application metrics endpoint
+curl http://localhost:5000/metrics | head -20
+
+# Check Prometheus scrape logs
+docker logs prometheus | grep "chioma-backend" | tail -20
+
+# Verify network connectivity
+docker exec prometheus ping backend
+
+# Check metric cardinality
+curl http://localhost:9090/api/v1/query?query='count(count by (__name__) ({__name__=~".+"}))'
+```
+
+**Common Causes & Solutions:**
+
+| Cause                               | Solution                                               |
+| ----------------------------------- | ------------------------------------------------------ |
+| Application not exposing `/metrics` | Verify Prometheus client library initialized in app    |
+| Network connectivity issue          | Check firewall rules, DNS resolution                   |
+| Prometheus scrape timeout           | Increase `scrape_timeout` in prometheus.yml            |
+| High cardinality metrics            | Remove high-cardinality labels (user IDs, request IDs) |
+| Metrics endpoint authentication     | Add auth credentials to scrape config                  |
+| Application crash                   | Check application logs for errors                      |
+| Prometheus disk full                | Clean up old data or increase storage                  |
 
 ### 9.2 Alerts Not Firing
 
-Check:
+**Symptoms:**
 
-- alert rule syntax in Prometheus
-- alert evaluation interval
-- alert `for` duration
-- metric availability
-- Alertmanager connectivity
+- Alert rules show "inactive"
+- No notifications received
+- Alert status shows "pending"
+
+**Diagnostics:**
+
+```bash
+# Check alert rule status
+curl http://localhost:9090/api/v1/rules | jq '.data.groups[].rules[] | select(.name=="ServiceDown")'
+
+# Check alert evaluation
+curl http://localhost:9090/api/v1/query?query='up{job="chioma-backend"}'
+
+# Check Prometheus logs
+docker logs prometheus | grep -i alert | tail -20
+
+# Verify metric exists
+curl http://localhost:9090/api/v1/query?query='up'
+
+# Check alert for duration
+curl http://localhost:9090/api/v1/query?query='ALERTS{alertname="ServiceDown"}'
+```
+
+**Common Causes & Solutions:**
+
+| Cause                           | Solution                                 |
+| ------------------------------- | ---------------------------------------- |
+| Metric doesn't exist            | Verify metric is being scraped           |
+| Alert `for` duration not met    | Condition must persist for full duration |
+| Alert rule syntax error         | Validate PromQL expression               |
+| Prometheus not evaluating rules | Check `evaluation_interval` setting      |
+| Alert inhibition rule active    | Review inhibition rules in Alertmanager  |
+| Threshold too high              | Adjust threshold based on baseline       |
 
 ### 9.3 Alerts Not Routing
 
-Check:
+**Symptoms:**
 
-- Alertmanager configuration
-- receiver configuration (webhook URLs, API keys)
-- routing rules and matchers
-- inhibition rules
-- silences
+- Alerts firing but no notifications
+- Notifications going to wrong channel
+- Slack/PagerDuty integration not working
+
+**Diagnostics:**
+
+```bash
+# Check Alertmanager status
+curl http://localhost:9093/api/v1/status | jq '.data'
+
+# Check alert routing
+curl http://localhost:9093/api/v1/alerts | jq '.data[] | {labels, status}'
+
+# Check Alertmanager logs
+docker logs alertmanager | tail -50
+
+# Test webhook
+curl -X POST http://localhost:9093/api/v1/alerts \
+  -H "Content-Type: application/json" \
+  -d '[{"labels":{"alertname":"TestAlert","severity":"critical"}}]'
+
+# Verify receiver configuration
+docker exec alertmanager cat /etc/alertmanager/alertmanager.yml | grep -A 10 "receivers:"
+```
+
+**Common Causes & Solutions:**
+
+| Cause                     | Solution                                    |
+| ------------------------- | ------------------------------------------- |
+| Webhook URL invalid       | Verify URL and test connectivity            |
+| API key expired           | Regenerate and update configuration         |
+| Routing rule not matching | Check label matchers in routing rules       |
+| Receiver not configured   | Add receiver to alertmanager.yml            |
+| Silences active           | Check Alertmanager silences page            |
+| Network connectivity      | Verify firewall allows outbound connections |
 
 ### 9.4 Dashboards Not Loading
 
-Check:
+**Symptoms:**
 
-- Grafana datasource configuration
-- Prometheus connectivity
-- query syntax
-- time range selection
-- dashboard permissions
+- Grafana shows "No data"
+- Dashboard panels blank
+- Query errors in panel
+
+**Diagnostics:**
+
+```bash
+# Check Grafana datasource
+curl http://localhost:3000/api/datasources | jq '.[] | select(.name=="Prometheus")'
+
+# Test datasource connectivity
+curl http://localhost:3000/api/datasources/1/health
+
+# Check dashboard JSON
+curl http://localhost:3000/api/dashboards/uid/service-overview | jq '.dashboard.panels[0].targets'
+
+# Check Grafana logs
+docker logs grafana | grep -i error | tail -20
+
+# Verify Prometheus connectivity
+curl http://localhost:9090/api/v1/query?query='up'
+```
+
+**Common Causes & Solutions:**
+
+| Cause                     | Solution                                  |
+| ------------------------- | ----------------------------------------- |
+| Datasource not configured | Add Prometheus datasource in Grafana      |
+| Datasource URL wrong      | Verify Prometheus URL is correct          |
+| Query syntax error        | Check PromQL expression in panel          |
+| Time range too narrow     | Expand time range to include data         |
+| Metric doesn't exist      | Verify metric is being scraped            |
+| Grafana permissions       | Check user role and dashboard permissions |
 
 ### 9.5 High Cardinality Issues
 
-Symptoms:
+**Symptoms:**
 
-- Prometheus memory usage high
-- slow query performance
-- scrape timeouts
+- Prometheus memory usage high (>80%)
+- Slow query performance
+- Scrape timeouts
+- "out of memory" errors
 
-Solutions:
+**Diagnostics:**
 
-- reduce label cardinality
-- drop unused metrics
-- increase Prometheus resources
-- implement metric relabeling
+```bash
+# Check cardinality by metric
+curl http://localhost:9090/api/v1/query?query='count by (__name__) ({__name__=~".+"})'
+
+# Find high-cardinality metrics
+curl http://localhost:9090/api/v1/query?query='topk(10, count by (__name__) ({__name__=~".+"}))'
+
+# Check label cardinality
+curl http://localhost:9090/api/v1/query?query='count by (job, instance) (up)'
+
+# Check Prometheus memory
+docker stats prometheus
+
+# Check TSDB stats
+curl http://localhost:9090/api/v1/query?query='prometheus_tsdb_symbol_table_size_bytes'
+```
+
+**Common Causes & Solutions:**
+
+| Cause                  | Solution                                             |
+| ---------------------- | ---------------------------------------------------- |
+| User ID in labels      | Remove user ID, use separate dimension               |
+| Request ID in labels   | Remove request ID, use separate dimension            |
+| Timestamp in labels    | Remove timestamp, use metric value instead           |
+| Unbounded label values | Add label relabeling to drop high-cardinality labels |
+| Too many instances     | Aggregate or filter targets                          |
+
+**Remediation:**
+
+```yaml
+# In prometheus.yml, add metric relabeling
+metric_relabel_configs:
+  # Drop high-cardinality labels
+  - source_labels: [user_id]
+    action: drop
+
+  # Keep only important labels
+  - source_labels: [__name__]
+    regex: 'http_requests_total'
+    action: keep
+    target_label: __tmp_keep
+```
+
+### 9.6 Alert Fatigue
+
+**Symptoms:**
+
+- > 50 alerts per day
+- Repeated alerts for same issue
+- Team ignoring alerts
+- High false positive rate
+
+**Diagnostics:**
+
+```bash
+# Count alerts by name
+curl http://localhost:9093/api/v1/alerts | jq '.data | group_by(.labels.alertname) | map({name: .[0].labels.alertname, count: length})'
+
+# Check alert firing frequency
+curl http://localhost:9090/api/v1/query?query='rate(ALERTS_FOR_STATE[1h])'
+
+# Analyze alert history
+# Check Alertmanager logs for patterns
+docker logs alertmanager | grep "alert" | wc -l
+```
+
+**Solutions:**
+
+1. **Increase `for` duration** to reduce transient alerts
+2. **Adjust thresholds** based on historical data
+3. **Add inhibition rules** to prevent cascading alerts
+4. **Remove non-actionable alerts** (move to dashboards)
+5. **Aggregate related alerts** into single alert
+6. **Add alert grouping** to reduce notification volume
+
+### 9.7 Slow Prometheus Queries
+
+**Symptoms:**
+
+- Dashboard panels slow to load
+- Query timeout errors
+- High CPU usage
+
+**Diagnostics:**
+
+```bash
+# Check query performance
+curl 'http://localhost:9090/api/v1/query_range?query=up&start=1609459200&end=1609545600&step=15s' \
+  -w "Query time: %{time_total}s\n"
+
+# Check slow queries
+docker logs prometheus | grep "query took"
+
+# Check Prometheus resource usage
+docker stats prometheus
+
+# Check TSDB stats
+curl http://localhost:9090/api/v1/query?query='prometheus_tsdb_compaction_duration_seconds'
+```
+
+**Solutions:**
+
+1. **Simplify queries** - avoid complex regex or joins
+2. **Increase step size** - use larger time intervals
+3. **Add recording rules** - pre-compute complex queries
+4. **Increase Prometheus resources** - CPU and memory
+5. **Reduce retention** - keep less historical data
+6. **Optimize scrape interval** - reduce scrape frequency
+
+### 9.8 Prometheus Disk Full
+
+**Symptoms:**
+
+- Prometheus stops accepting metrics
+- "no space left on device" errors
+- Scrape failures
+
+**Diagnostics:**
+
+```bash
+# Check disk usage
+df -h /prometheus
+
+# Check Prometheus data size
+du -sh /prometheus/data
+
+# Check retention settings
+curl http://localhost:9090/api/v1/query?query='prometheus_tsdb_retention_limit_bytes'
+
+# Check TSDB blocks
+ls -lh /prometheus/data/wal/
+```
+
+**Solutions:**
+
+1. **Reduce retention period** - keep less historical data
+2. **Increase disk space** - add more storage
+3. **Enable compression** - reduce data size
+4. **Delete old blocks** - manually clean up old data
+5. **Downsample metrics** - reduce resolution over time
+
+### 9.9 Grafana Performance Issues
+
+**Symptoms:**
+
+- Slow dashboard loading
+- Timeout errors
+- High memory usage
+
+**Diagnostics:**
+
+```bash
+# Check Grafana logs
+docker logs grafana | grep -i error
+
+# Check database size
+docker exec grafana-db du -sh /var/lib/postgresql/data
+
+# Check Grafana resource usage
+docker stats grafana
+
+# Check dashboard query count
+curl http://localhost:3000/api/dashboards/uid/service-overview | jq '.dashboard.panels | length'
+```
+
+**Solutions:**
+
+1. **Reduce panel count** - simplify dashboards
+2. **Optimize queries** - use recording rules
+3. **Increase refresh interval** - reduce query frequency
+4. **Upgrade Grafana** - use latest version
+5. **Scale Grafana** - use multiple instances with load balancer
+
+### 9.10 Monitoring Stack Recovery
+
+**Complete monitoring stack restart:**
+
+```bash
+#!/bin/bash
+# restart-monitoring.sh
+
+set -euo pipefail
+
+echo "Restarting monitoring stack..."
+
+# Stop services
+docker-compose -f docker-compose.monitoring.yml down
+
+# Clean up volumes (optional - removes all data)
+# docker volume rm prometheus_data grafana_data
+
+# Start services
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# Wait for services to be ready
+sleep 10
+
+# Verify services
+echo "Checking Prometheus..."
+curl -f http://localhost:9090/-/healthy || exit 1
+
+echo "Checking Alertmanager..."
+curl -f http://localhost:9093/-/healthy || exit 1
+
+echo "Checking Grafana..."
+curl -f http://localhost:3000/api/health || exit 1
+
+echo "Monitoring stack restarted successfully"
+```
 
 ---
 

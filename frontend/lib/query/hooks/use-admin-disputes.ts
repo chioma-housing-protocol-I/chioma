@@ -4,11 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 
 export type AdminDisputeStatus =
-  | 'OPEN'
-  | 'UNDER_REVIEW'
-  | 'RESOLVED'
-  | 'REJECTED'
-  | 'WITHDRAWN';
+  'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED' | 'WITHDRAWN';
 
 export type AdminDisputeType =
   | 'RENT_PAYMENT'
@@ -76,7 +72,7 @@ const ADMIN_DISPUTES_QUERY_KEY = ['admin-disputes'] as const;
 
 const mockDisputes: AdminDisputeRecord[] = [
   {
-    id: 'dis-101',
+    id: '1',
     disputeId: 'DSP-2026-004',
     agreementReference: 'AGR-2025-021',
     propertyName: 'Glover Road, Ikoyi',
@@ -94,7 +90,7 @@ const mockDisputes: AdminDisputeRecord[] = [
     updatedAt: '2026-03-04T08:45:00.000Z',
   },
   {
-    id: 'dis-102',
+    id: '2',
     disputeId: 'DSP-2026-002',
     agreementReference: 'AGR-2025-010',
     propertyName: 'Admiralty Way, Block 4',
@@ -112,7 +108,7 @@ const mockDisputes: AdminDisputeRecord[] = [
     updatedAt: '2026-03-03T10:00:00.000Z',
   },
   {
-    id: 'dis-103',
+    id: '3',
     disputeId: 'DSP-2026-001',
     agreementReference: 'AGR-2025-014',
     propertyName: 'Sunset Apartments, Unit 4B',
@@ -227,16 +223,19 @@ export function useUpdateAdminDisputeStatus() {
       status: AdminDisputeStatus;
       resolution?: string;
     }) => {
-      try {
-        await apiClient.patch(`/admin/disputes/${disputeId}`, {
-          status,
-          resolution,
-        });
-      } catch {
-        return { localOnly: true };
-      }
-
-      return { localOnly: false };
+      // disputeId here is the numeric database ID (as a string), not the string disputeId field
+      // The backend route is PATCH /admin/disputes/:id where :id is the numeric database ID
+      //
+      // Previously this swallowed the error and returned {localOnly: true},
+      // which made a failed update look successful (#1558): the toast said
+      // "Updated locally" while the server call — and the @AuditLog entry
+      // it produces — never happened. Bulk-action failure counting also
+      // depends on this throwing, matching BulkUserOperations.tsx's
+      // Promise.allSettled convention.
+      await apiClient.patch(`/admin/disputes/${disputeId}`, {
+        status,
+        resolution,
+      });
     },
     onMutate: async ({ disputeId, status, resolution }) => {
       await queryClient.cancelQueries({ queryKey: ADMIN_DISPUTES_QUERY_KEY });

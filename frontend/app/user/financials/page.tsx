@@ -1,16 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { format, subMonths } from 'date-fns';
+import { getDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency, formatNumber } from '@/lib/utils/format';
+import { useI18nStore } from '@/lib/i18n';
 import { Eye, ShieldCheck } from 'lucide-react';
+import { useTransactions } from '@/lib/query/hooks/use-transactions';
+import dynamic from 'next/dynamic';
+
+const AreaChartWrapper = dynamic(
+  () => import('@/components/charts/AreaChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
+import { useFeesSummary } from '@/lib/query/hooks/use-fees-summary';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+  useStellarNetworkAccount,
+  readAssetBalance,
+} from '@/lib/query/hooks/use-stellar-account';
+import { useAuth } from '@/store/authStore';
+import type { Transaction as ApiTransaction } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,18 +36,21 @@ interface RevenueDataPoint {
 
 interface Transaction {
   hash: string;
+  /** Stable route segment for escrow preview detail (avoids hash/ellipsis mismatch). */
+  escrowPreviewId?: string;
   date: string;
   type: string;
   property: string;
   amount: number;
+  currency: string;
   status: string;
   inflow: boolean;
   previewImage: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Mock Data (dev fallback while the account has no real transactions) ─────
 
-const revenueData: RevenueDataPoint[] = [
+const MOCK_REVENUE_DATA: RevenueDataPoint[] = [
   { month: 'Jul', revenue: 3200000 },
   { month: 'Aug', revenue: 3800000 },
   { month: 'Sep', revenue: 3500000 },
@@ -47,13 +65,14 @@ const revenueData: RevenueDataPoint[] = [
   { month: 'Jun', revenue: 7100000 },
 ];
 
-const transactions: Transaction[] = [
+const MOCK_TRANSACTIONS: Transaction[] = [
   {
     hash: 'GABC3F9K…7X1A',
     date: 'Jun 15, 2025',
     type: 'Rent Collected',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -65,6 +84,7 @@ const transactions: Transaction[] = [
     type: 'Rent Collected',
     property: 'Block 4, Admiralty Way',
     amount: 3800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -76,6 +96,7 @@ const transactions: Transaction[] = [
     type: 'Platform Fee',
     property: 'Platform',
     amount: 38000,
+    currency: 'USDC',
     status: 'Deducted',
     inflow: false,
     previewImage:
@@ -83,10 +104,12 @@ const transactions: Transaction[] = [
   },
   {
     hash: 'GLMN5R7T…8C4D',
+    escrowPreviewId: 'escrow-deposit-refund-ikoyi',
     date: 'Jun 05, 2025',
     type: 'Deposit Refund',
     property: 'Glover Road, Ikoyi',
     amount: 500000,
+    currency: 'USDC',
     status: 'Processed',
     inflow: false,
     previewImage:
@@ -98,6 +121,7 @@ const transactions: Transaction[] = [
     type: 'Rent Collected',
     property: 'Glover Road, Ikoyi',
     amount: 1800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -109,6 +133,7 @@ const transactions: Transaction[] = [
     type: 'Smart Contract Payout',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -120,6 +145,7 @@ const transactions: Transaction[] = [
     type: 'Platform Fee',
     property: 'Platform',
     amount: 25000,
+    currency: 'USDC',
     status: 'Deducted',
     inflow: false,
     previewImage:
@@ -131,6 +157,7 @@ const transactions: Transaction[] = [
     type: 'Rent Collected',
     property: 'Block 4, Admiralty Way',
     amount: 3800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
@@ -138,10 +165,12 @@ const transactions: Transaction[] = [
   },
   {
     hash: 'GABD6E9F…4M5N',
+    escrowPreviewId: 'escrow-security-adeola',
     date: 'Apr 28, 2025',
     type: 'Security Deposit',
     property: '101 Adeola Odeku St',
     amount: 2500000,
+    currency: 'USDC',
     status: 'Held',
     inflow: true,
     previewImage:
@@ -153,12 +182,70 @@ const transactions: Transaction[] = [
     type: 'Rent Collected',
     property: 'Glover Road, Ikoyi',
     amount: 1800000,
+    currency: 'USDC',
     status: 'Confirmed',
     inflow: true,
     previewImage:
       'https://images.unsplash.com/photo-1512915922686-57c11dde9b6b?auto=format&fit=crop&w=160&q=80',
   },
 ];
+
+// ─── API mapping ──────────────────────────────────────────────────────────────
+
+const TX_TYPE_LABELS: Record<ApiTransaction['type'], string> = {
+  payment: 'Rent Collected',
+  deposit: 'Security Deposit',
+  refund: 'Deposit Refund',
+  withdrawal: 'Smart Contract Payout',
+};
+
+const TX_STATUS_LABELS: Record<ApiTransaction['status'], string> = {
+  completed: 'Confirmed',
+  pending: 'Held',
+  failed: 'Failed',
+};
+
+const TX_PREVIEW_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=160&q=80';
+
+const shortenHash = (hash: string): string =>
+  hash.length > 14 ? `${hash.slice(0, 8)}…${hash.slice(-4)}` : hash;
+
+const mapApiTransaction = (tx: ApiTransaction): Transaction => ({
+  hash: shortenHash(tx.blockchainTxHash ?? tx.id),
+  date: format(new Date(tx.createdAt), 'MMM dd, yyyy', {
+    locale: getDateFnsLocale(useI18nStore.getState().locale),
+  }),
+  type: TX_TYPE_LABELS[tx.type] ?? tx.type,
+  property: tx.description || '—',
+  amount: tx.amount,
+  currency: tx.currency,
+  status: TX_STATUS_LABELS[tx.status] ?? tx.status,
+  inflow: tx.type === 'payment' || tx.type === 'deposit',
+  previewImage:
+    typeof tx.metadata?.previewImage === 'string'
+      ? tx.metadata.previewImage
+      : TX_PREVIEW_FALLBACK,
+});
+
+/** Sums completed inflows per calendar month over the trailing 12 months. */
+const deriveMonthlyRevenue = (items: ApiTransaction[]): RevenueDataPoint[] => {
+  const now = new Date();
+  const locale = getDateFnsLocale(useI18nStore.getState().locale);
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = subMonths(now, 11 - i);
+    const key = format(month, 'yyyy-MM');
+    const revenue = items
+      .filter(
+        (tx) =>
+          tx.status === 'completed' &&
+          (tx.type === 'payment' || tx.type === 'deposit') &&
+          format(new Date(tx.createdAt), 'yyyy-MM') === key,
+      )
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return { month: format(month, 'MMM', { locale }), revenue };
+  });
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -167,7 +254,8 @@ const fmt = (n: number): string =>
     ? `$${(n / 1_000_000).toFixed(1)}M USDC`
     : `$${(n / 1_000).toFixed(0)}K USDC`;
 
-const fmtFull = (n: number): string => `$${n.toLocaleString()} USDC`;
+const fmtFull = (n: number, currency: string): string =>
+  formatCurrency(n, currency);
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
@@ -211,30 +299,40 @@ const StatusBadge = ({ status }: { status: string }) => (
   </span>
 );
 
-const EscrowPreviewLink = ({ tx }: { tx: Transaction }) => (
-  <Link
-    href={`/user/financials/escrows/${encodeURIComponent(tx.hash)}`}
-    className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 hover:text-white transition-all"
-    aria-label={`Preview escrow for ${tx.property}`}
-  >
-    <span className="relative h-7 w-7 overflow-hidden rounded-lg border border-white/10 bg-white/5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={tx.previewImage}
-        alt=""
-        className="h-full w-full object-cover"
-        loading="lazy"
-      />
-      <span className="absolute inset-0 flex items-center justify-center bg-slate-950/25">
-        <ShieldCheck size={14} className="text-white" />
+const ESCROW_THUMB_FALLBACK =
+  'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=160&q=80';
+
+const EscrowPreviewLink = ({ tx }: { tx: Transaction }) => {
+  const previewSegment = encodeURIComponent(tx.escrowPreviewId ?? tx.hash);
+  return (
+    <Link
+      href={`/user/financials/escrows/${previewSegment}`}
+      className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 hover:text-white transition-all"
+      aria-label={`Preview escrow for ${tx.property}`}
+    >
+      <span className="relative h-7 w-7 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={tx.previewImage}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.src = ESCROW_THUMB_FALLBACK;
+          }}
+        />
+        <span className="absolute inset-0 flex items-center justify-center bg-slate-950/25">
+          <ShieldCheck size={14} className="text-white" />
+        </span>
       </span>
-    </span>
-    <span className="inline-flex items-center gap-1">
-      <Eye size={12} />
-      Preview
-    </span>
-  </Link>
-);
+      <span className="inline-flex items-center gap-1">
+        <Eye size={12} />
+        Preview
+      </span>
+    </Link>
+  );
+};
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
 
@@ -290,20 +388,42 @@ const TX_TYPES = [
 
 export default function FinancialsPage() {
   const [filter, setFilter] = useState('All');
+  const { walletAddress } = useAuth();
+
+  const { data: txPage } = useTransactions({ limit: 100 });
+  const { data: networkAccount } = useStellarNetworkAccount(walletAddress);
+
+  const usingMock = (txPage?.data ?? []).length === 0;
+
+  const transactions = useMemo(() => {
+    const items = txPage?.data ?? [];
+    return items.length === 0
+      ? MOCK_TRANSACTIONS
+      : items.map(mapApiTransaction);
+  }, [txPage]);
+  const revenueData = useMemo(() => {
+    const items = txPage?.data ?? [];
+    return items.length === 0 ? MOCK_REVENUE_DATA : deriveMonthlyRevenue(items);
+  }, [txPage]);
+
+  const xlmBalance = readAssetBalance(networkAccount, 'XLM');
 
   const filtered =
     filter === 'All'
       ? transactions
       : transactions.filter((t) => t.type === filter);
 
+  const { data: feesData, isLoading: feesLoading } = useFeesSummary();
+
   const totalRevenue =
     transactions.filter((t) => t.inflow).reduce((s, t) => s + t.amount, 0) +
-    37900000;
-  const feesRemitted =
-    transactions
-      .filter((t) => t.type === 'Platform Fee')
-      .reduce((s, t) => s + t.amount, 0) + 450000;
-  const pendingPayout = 3800000;
+    (usingMock ? 37900000 : 0);
+  const feesRemitted = feesLoading ? 0 : (feesData?.totalPlatformFees ?? 0);
+  const pendingPayout = usingMock
+    ? 3800000
+    : transactions
+        .filter((t) => t.inflow && t.status === 'Held')
+        .reduce((s, t) => s + t.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -324,7 +444,11 @@ export default function FinancialsPage() {
               <p className="text-[10px] text-blue-300/40 font-bold tracking-widest uppercase">
                 Stellar Wallet
               </p>
-              <p className="text-sm font-bold text-white">45,200 XLM</p>
+              <p className="text-sm font-bold text-white">
+                {xlmBalance !== null
+                  ? `${formatNumber(xlmBalance)} XLM`
+                  : 'Not connected'}
+              </p>
             </div>
           </div>
           <button className="bg-blue-600/50 border border-blue-500/30 text-white rounded-2xl px-6 py-3 text-xs font-bold hover:bg-blue-600 hover:border-blue-400 transition-all shadow-xl uppercase tracking-widest">
@@ -383,54 +507,16 @@ export default function FinancialsPage() {
             ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart
+        <div className="h-[280px]">
+          <AreaChartWrapper
             data={revenueData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: 'rgba(147, 197, 253, 0.4)',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-              dy={15}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: 'rgba(147, 197, 253, 0.4)',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-              tickFormatter={(v: number) => fmt(v)}
-              width={50}
-            />
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ stroke: 'rgba(59, 130, 246, 0.2)', strokeWidth: 2 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#60a5fa"
-              strokeWidth={3}
-              fill="url(#revenueGrad)"
-              dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#1e293b' }}
-              activeDot={{ r: 6, fill: '#60a5fa', strokeWidth: 0 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+            dataKeyX="month"
+            dataKeyY="revenue"
+            strokeColor="#60a5fa"
+            name="Revenue"
+            formatter={(v) => fmt(v)}
+          />
+        </div>
       </div>
 
       {/* ── Transaction Ledger ── */}
@@ -496,7 +582,7 @@ export default function FinancialsPage() {
               <span
                 className={`text-sm font-bold ${tx.inflow ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gradient-to-r from-rose-400 to-orange-400'} bg-clip-text text-transparent`}
               >
-                {tx.inflow ? '+' : '−'} {fmtFull(tx.amount)}
+                {tx.inflow ? '+' : '−'} {fmtFull(tx.amount, tx.currency)}
               </span>
               <div className="flex justify-start">
                 <div className="flex items-center gap-2">

@@ -24,7 +24,7 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
       <header className="flex items-center justify-between px-3 py-2 md:p-4 backdrop-blur-xl bg-slate-900/80 border-b border-white/10 shadow-lg">
         <div className="flex items-center gap-3 md:gap-4">
           <button
-            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-white/10 text-white -ml-1 transition-colors"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-white/10 text-white -ms-1 transition-colors"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
@@ -118,9 +118,9 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
         />
 
         <aside
-          className={`relative flex flex-col justify-between h-full bg-slate-900/95 backdrop-blur-xl border-r border-white/10 shadow-2xl
+          className={`relative flex flex-col justify-between h-full bg-slate-900/95 backdrop-blur-xl border-e border-white/10 shadow-2xl
             transform transition-transform duration-300
-            ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+            ${mobileOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
             w-64
           `}
         >
@@ -171,7 +171,7 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
           </div>
 
           <div className="p-4 border-t border-white/10">
-            <button className="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all w-full text-left">
+            <button className="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all w-full text-start">
               <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/20">
                 <Image
                   src={user?.avatar || '/avatar.png'}
@@ -196,7 +196,7 @@ export default function AdminTopbar({ pageTitle }: { pageTitle: string }) {
                 </span>
               </div>
 
-              <FaArrowRightFromBracket className="ml-auto h-5 w-5 text-blue-300/40 group-hover:text-blue-300" />
+              <FaArrowRightFromBracket className="ms-auto h-5 w-5 text-blue-300/40 group-hover:text-blue-300" />
             </button>
           </div>
         </aside>

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -60,6 +62,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   page,
   setPage,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (isLoading) {
     return (
       <div className="h-64 flex items-center justify-center bg-white/5 rounded-3xl border border-white/10">
@@ -131,7 +134,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                       {tx.type === 'payment' || tx.type === 'withdrawal'
                         ? '-'
                         : '+'}
-                      {tx.amount.toLocaleString()} {tx.currency}
+                      {formatCurrency(tx.amount, tx.currency)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -142,7 +145,9 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-blue-200/60">
-                    {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm')}
+                    {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm', {
+                      locale: dateFnsLocale,
+                    })}
                   </td>
                   <td className="px-6 py-4 text-right">
                     {tx.blockchainTxHash ? (

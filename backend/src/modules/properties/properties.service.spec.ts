@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+  PropertyNotFoundError,
+  AuthorizationError,
+  BusinessRuleViolationError,
+} from '../../common/errors/domain-errors';
 import { CacheService } from '../../common/cache/cache.service';
 import { PropertiesService } from './properties.service';
 import {
@@ -21,6 +21,7 @@ import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../search/saved-search.service';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -36,6 +37,7 @@ describe('PropertiesService', () => {
     role: UserRole.ADMIN,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -47,6 +49,7 @@ describe('PropertiesService', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     kycStatus: KycStatus.PENDING,
     loginCount: 0,
     preferredLanguage: 'en',
@@ -138,6 +141,7 @@ describe('PropertiesService', () => {
     aiOccupancyPrediction: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockPropertyRepository = {
@@ -145,6 +149,7 @@ describe('PropertiesService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    softRemove: jest.fn(),
     increment: jest.fn(),
     update: jest.fn(),
     createQueryBuilder: jest.fn(),
@@ -186,6 +191,11 @@ describe('PropertiesService', () => {
 
   const mockFraudHooksService = {
     onListingPublished: jest.fn().mockResolvedValue(undefined),
+    checkListingBeforePublishing: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockSavedSearchService = {
+    notifyMatchingSearches: jest.fn().mockResolvedValue(0),
   };
 
   beforeEach(async () => {
@@ -226,6 +236,10 @@ describe('PropertiesService', () => {
         {
           provide: FraudHooksService,
           useValue: mockFraudHooksService,
+        },
+        {
+          provide: SavedSearchService,
+          useValue: mockSavedSearchService,
         },
       ],
     }).compile();
@@ -345,7 +359,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('non-existent-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
     });
 
@@ -360,7 +374,7 @@ describe('PropertiesService', () => {
     it('should treat empty string id as not found when repository returns null', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne('')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('')).rejects.toThrow(PropertyNotFoundError);
       expect(mockPropertyRepository.findOne).toHaveBeenCalledWith({
         where: { id: '' },
         relations: ['images', 'amenities', 'rentalUnits', 'owner'],
@@ -395,7 +409,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
 
       await expect(service.findOnePublic('property-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
     });
 
@@ -483,7 +497,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
 
       await expect(service.recordView('property-id')).rejects.toThrow(
-        NotFoundException,
+        PropertyNotFoundError,
       );
       expect(mockPropertyRepository.increment).not.toHaveBeenCalled();
     });
@@ -546,7 +560,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.update('property-id', { title: 'Hack' }, mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('should strip verificationStatus for non-admin owners', async () => {
@@ -587,13 +601,15 @@ describe('PropertiesService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a property by owner', async () => {
+    it('should archive a property by owner', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
-      mockPropertyRepository.remove.mockResolvedValue(mockProperty);
+      mockPropertyRepository.softRemove.mockResolvedValue(mockProperty);
 
       await service.remove('property-id', mockOwner);
 
-      expect(mockPropertyRepository.remove).toHaveBeenCalledWith(mockProperty);
+      expect(mockPropertyRepository.softRemove).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ListingStatus.ARCHIVED }),
+      );
     });
 
     it('should throw ForbiddenException for non-owner', async () => {
@@ -601,7 +617,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.remove('property-id', mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -622,6 +638,9 @@ describe('PropertiesService', () => {
       expect(mockFraudHooksService.onListingPublished).toHaveBeenCalledWith(
         'property-id',
       );
+      expect(
+        mockSavedSearchService.notifyMatchingSearches,
+      ).toHaveBeenCalledWith(publishedProperty);
     });
 
     it('should throw BadRequestException if already published', async () => {
@@ -632,7 +651,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(publishedProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
 
@@ -644,7 +663,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(archivedProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
 
@@ -658,7 +677,7 @@ describe('PropertiesService', () => {
       mockPropertyRepository.findOne.mockResolvedValue(incompleteProperty);
 
       await expect(service.publish('property-id', mockOwner)).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationError,
       );
     });
   });
@@ -683,7 +702,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.archive('property-id', mockOtherUser),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -718,9 +737,9 @@ describe('PropertiesService', () => {
       const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.meta.total).toBe(1);
-      expect(result.meta.page).toBe(1);
-      expect(result.meta.limit).toBe(10);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
 
     it('should apply filters correctly', async () => {

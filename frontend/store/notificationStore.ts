@@ -26,13 +26,15 @@ interface NotificationState {
 
 interface NotificationActions {
   /** Load notifications from the API. */
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (page?: number, limit?: number) => Promise<void>;
   /** Mark a single notification as read. */
-  markAsRead: (id: string) => void;
+  markAsRead: (id: string) => Promise<void>;
   /** Mark a single notification as unread. */
   markAsUnread: (id: string) => void;
   /** Mark every notification as read. */
-  markAllAsRead: () => void;
+  markAllAsRead: () => Promise<void>;
+  /** Delete a notification. */
+  deleteNotification: (id: string) => Promise<void>;
   /** Push a new notification (e.g. from SSE / real-time). */
   addNotification: (notification: Notification) => void;
 }
@@ -68,11 +70,15 @@ export const useNotificationStore = create<NotificationStore>()(
       isLoaded: false,
 
       // — actions
-      fetchNotifications: async () => {
+      fetchNotifications: async (page = 1, limit = 20) => {
         try {
-          const { data } =
-            await apiClient.get<BackendNotification[]>('/notifications');
-          const sorted: Notification[] = data
+          const { data } = await apiClient.get<{
+            data: BackendNotification[];
+            total: number;
+            page: number;
+            totalPages: number;
+          }>(`/notifications?page=${page}&limit=${limit}`);
+          const sorted: Notification[] = data.data
             .map((notification) => ({
               id: notification.id,
               type: normalizeNotificationType(notification.type),
@@ -88,37 +94,62 @@ export const useNotificationStore = create<NotificationStore>()(
             );
 
           set((state) => {
-            state.notifications = sorted;
+            state.notifications =
+              page === 1 ? sorted : [...state.notifications, ...sorted];
             state.isLoaded = true;
           });
         } catch {
           set((state) => {
-            state.notifications = [];
+            if (page === 1) state.notifications = [];
             state.isLoaded = true;
           });
         }
       },
 
-      markAsRead: (id) => {
-        set((state) => {
-          const target = state.notifications.find((n) => n.id === id);
-          if (target) target.read = true;
-        });
+      markAsRead: async (id) => {
+        try {
+          await apiClient.patch(`/notifications/${id}/read`);
+          set((state) => {
+            const target = state.notifications.find((n) => n.id === id);
+            if (target) target.read = true;
+          });
+        } catch (error) {
+          console.error('Failed to mark as read', error);
+        }
       },
 
       markAsUnread: (id) => {
+        // Backend currently doesn't have an unread endpoint but we can update state
         set((state) => {
           const target = state.notifications.find((n) => n.id === id);
           if (target) target.read = false;
         });
       },
 
-      markAllAsRead: () => {
-        set((state) => {
-          state.notifications.forEach((n) => {
-            n.read = true;
+      markAllAsRead: async () => {
+        try {
+          await apiClient.patch('/notifications/read-all');
+          set((state) => {
+            state.notifications.forEach((n) => {
+              n.read = true;
+            });
           });
-        });
+        } catch (error) {
+          console.error('Failed to mark all as read', error);
+        }
+      },
+
+      deleteNotification: async (id) => {
+        try {
+          await apiClient.delete(`/notifications/${id}`);
+          set((state) => {
+            state.notifications = state.notifications.filter(
+              (n) => n.id !== id,
+            );
+          });
+        } catch (error) {
+          console.error('Failed to delete notification', error);
+        }
       },
 
       addNotification: (notification) => {

@@ -2,10 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Check, Eye, FileText, Search, X } from 'lucide-react';
+import { Check, Eye, FileText, Search, X, ShieldCheck } from 'lucide-react';
 import type { KycVerification, PaginatedResponse } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface PendingKYCListProps {
   data?: PaginatedResponse<KycVerification>;
@@ -43,13 +44,12 @@ export function PendingKYCList({
 
   if (!rows.length) {
     return (
-      <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-10 text-center">
-        <Search className="mx-auto mb-3 text-blue-300/40" size={24} />
-        <p className="text-white font-semibold">No pending KYC verifications</p>
-        <p className="text-blue-200/60 text-sm mt-1">
-          You are all caught up for now.
-        </p>
-      </div>
+      <EmptyState
+        icon={ShieldCheck}
+        title="No pending KYC verifications"
+        description="You are all caught up for now. New verification requests will appear here."
+        variant="dark"
+      />
     );
   }
 

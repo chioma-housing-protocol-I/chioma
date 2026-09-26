@@ -8,7 +8,7 @@ const steps = [
     description: 'Find verified listings and book smart-lock tours instantly.',
     icon: <MapPin className="w-8 h-8" strokeWidth={1.5} />,
     iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    iconColor: 'text-blue-800',
   },
   {
     id: 2,
@@ -16,7 +16,7 @@ const steps = [
     description: 'Execute a tamper-proof lease on the blockchain in seconds.',
     icon: <FileText className="w-8 h-8" strokeWidth={1.5} />,
     iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    iconColor: 'text-blue-800',
   },
   {
     id: 3,
@@ -24,7 +24,7 @@ const steps = [
     description: 'Get keys instantly and earn rewards for on-time payments.',
     icon: <Home className="w-8 h-8" strokeWidth={1.5} />,
     iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    iconColor: 'text-blue-800',
   },
 ];
 

@@ -6,15 +6,15 @@ Contract changes must include meaningful tests for changed behavior. The target 
 
 ## Required Coverage by Change Type
 
-| Change type | Required coverage |
-|---|---|
-| New public method | Success, invalid input, unauthorized caller, emitted event, storage state |
-| Bug fix | Regression test that fails before the fix and passes after it |
-| Storage change | Read/write behavior, missing key behavior, compatibility notes |
-| Error change | Exact error variant and caller-visible behavior |
-| Event change | Topic and payload assertion |
-| Timeout/rate limit change | Before boundary, at boundary, after boundary |
-| WASM-facing change | `cargo build --target wasm32-unknown-unknown --release` |
+| Change type               | Required coverage                                                         |
+| ------------------------- | ------------------------------------------------------------------------- |
+| New public method         | Success, invalid input, unauthorized caller, emitted event, storage state |
+| Bug fix                   | Regression test that fails before the fix and passes after it             |
+| Storage change            | Read/write behavior, missing key behavior, compatibility notes            |
+| Error change              | Exact error variant and caller-visible behavior                           |
+| Event change              | Topic and payload assertion                                               |
+| Timeout/rate limit change | Before boundary, at boundary, after boundary                              |
+| WASM-facing change        | `cargo build --target wasm32-unknown-unknown --release`                   |
 
 ## Critical Invariants
 

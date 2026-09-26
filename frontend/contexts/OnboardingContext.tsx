@@ -22,7 +22,10 @@ interface OnboardingContextValue {
   totalSteps: number;
   setCurrentStep: (step: number) => void;
   setTotalSteps: (steps: number) => void;
-  track: (eventName: OnboardingEventName, payload?: OnboardingEventPayload) => void;
+  track: (
+    eventName: OnboardingEventName,
+    payload?: OnboardingEventPayload,
+  ) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -58,7 +61,8 @@ export function OnboardingProvider({
       totalSteps,
       setCurrentStep,
       setTotalSteps,
-      track: (eventName, payload = {}) => emitOnboardingEvent(eventName, payload),
+      track: (eventName, payload = {}) =>
+        emitOnboardingEvent(eventName, payload),
     }),
     [currentStep, totalSteps],
   );
@@ -73,7 +77,9 @@ export function OnboardingProvider({
 export function useOnboardingContext() {
   const value = useContext(OnboardingContext);
   if (!value) {
-    throw new Error('useOnboardingContext must be used within OnboardingProvider');
+    throw new Error(
+      'useOnboardingContext must be used within OnboardingProvider',
+    );
   }
   return value;
 }

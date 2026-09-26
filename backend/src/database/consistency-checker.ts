@@ -6,7 +6,10 @@
  *   ts-node -r tsconfig-paths/register src/database/consistency-checker.ts
  */
 
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from './data-source';
+
+const logger = new Logger('ConsistencyChecker');
 
 /** Critical tables that must exist after migrations. */
 const CRITICAL_TABLES = [
@@ -88,11 +91,11 @@ export async function runConsistencyChecks(): Promise<ConsistencyResult> {
 async function main(): Promise<void> {
   const result = await runConsistencyChecks();
   for (const c of result.checks) {
-    console.log(
+    logger.log(
       `${c.passed ? '✓' : '✗'} ${c.name}${c.detail ? `: ${c.detail}` : ''}`,
     );
   }
-  if (result.error) console.error(result.error);
+  if (result.error) logger.error(result.error);
   process.exit(result.ok ? 0 : 1);
 }
 

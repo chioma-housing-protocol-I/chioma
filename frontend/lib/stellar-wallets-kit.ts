@@ -1,5 +1,9 @@
 import { StellarWalletsKit } from '@jsr/creit-tech__stellar-wallets-kit/sdk';
-import { SwkAppDarkTheme } from '@jsr/creit-tech__stellar-wallets-kit/types';
+import {
+  SwkAppDarkTheme,
+  KitEventType,
+  type ISupportedWallet,
+} from '@jsr/creit-tech__stellar-wallets-kit/types';
 import { defaultModules } from '@jsr/creit-tech__stellar-wallets-kit/modules/utils';
 
 let isInitialized = false;
@@ -18,4 +22,5 @@ export const initializeStellarWalletsKit = () => {
   }
 };
 
-export { StellarWalletsKit };
+export { StellarWalletsKit, KitEventType };
+export type { ISupportedWallet };

@@ -6,6 +6,9 @@ import {
 import * as winston from 'winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 import { ConfigService } from '@nestjs/config';
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import { requestContext } from '../request-context/request-context';
 
 type AnyRecord = Record<string, any>;
 
@@ -41,6 +44,16 @@ function getRedactKeysFromEnv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function parseRetentionDays(
+  value: string | undefined,
+  fallback: number,
+): number {
+  if (!value) return fallback;
+  const match = value.trim().match(/^(\d+)(d)?$/i);
+  if (!match) return fallback;
+  return Math.max(1, Number(match[1]));
+}
+
 function createRedactor(options: {
   redactKeys: string[];
   placeholder: string;
@@ -57,6 +70,19 @@ function createRedactor(options: {
 
     if (Array.isArray(value)) {
       return value.map((v) => redact(v, depth + 1));
+    }
+
+    if (depth === 0) {
+      const obj = value as AnyRecord;
+      for (const [k, v] of Object.entries(obj)) {
+        const nk = normalizeKey(k);
+        if (redactSet.has(nk)) {
+          obj[k] = placeholder;
+        } else {
+          obj[k] = redact(v, depth + 1);
+        }
+      }
+      return obj;
     }
 
     const obj = value as AnyRecord;
@@ -113,6 +139,20 @@ export class LoggerService implements NestLoggerService {
       this.configService?.get('LOG_FORMAT') ||
       process.env.LOG_FORMAT ||
       (env === 'production' ? 'json' : 'simple');
+    const logDir =
+      this.configService?.get('LOG_DIR') || process.env.LOG_DIR || 'logs';
+    const logMaxSize =
+      this.configService?.get('LOG_MAX_SIZE') ||
+      process.env.LOG_MAX_SIZE ||
+      '20m';
+    const logMaxFiles =
+      this.configService?.get('LOG_MAX_FILES') ||
+      process.env.LOG_MAX_FILES ||
+      '14d';
+    const errorLogMaxFiles =
+      this.configService?.get('LOG_ERROR_MAX_FILES') ||
+      process.env.LOG_ERROR_MAX_FILES ||
+      '30d';
 
     const redactKeys = [
       ...DEFAULT_REDACT_KEYS,
@@ -190,10 +230,10 @@ export class LoggerService implements NestLoggerService {
       // Combined logs with rotation
       transports.push(
         new DailyRotateFile({
-          filename: 'logs/application-%DATE%.log',
+          filename: path.join(logDir, 'application-%DATE%.log'),
           datePattern: 'YYYY-MM-DD',
-          maxSize: '20m',
-          maxFiles: '14d',
+          maxSize: logMaxSize,
+          maxFiles: logMaxFiles,
           level: logLevel,
           format: winston.format.combine(
             winston.format.timestamp(),
@@ -205,10 +245,10 @@ export class LoggerService implements NestLoggerService {
       // Error logs with rotation
       transports.push(
         new DailyRotateFile({
-          filename: 'logs/error-%DATE%.log',
+          filename: path.join(logDir, 'error-%DATE%.log'),
           datePattern: 'YYYY-MM-DD',
-          maxSize: '20m',
-          maxFiles: '30d',
+          maxSize: logMaxSize,
+          maxFiles: errorLogMaxFiles,
           level: 'error',
           format: winston.format.combine(
             winston.format.timestamp(),
@@ -246,7 +286,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.info(message, { context: finalContext, ...meta });
+    this.logger.info(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -263,9 +303,12 @@ export class LoggerService implements NestLoggerService {
     const contextStr = typeof ctx === 'string' ? ctx : String(ctx);
 
     if (typeof traceOrMeta === 'string') {
-      this.logger.error(message, { context: contextStr, stack: traceOrMeta });
+      this.logger.error(
+        message,
+        this.buildLogPayload(contextStr, { stack: traceOrMeta }),
+      );
     } else {
-      this.logger.error(message, { context: contextStr, ...traceOrMeta });
+      this.logger.error(message, this.buildLogPayload(contextStr, traceOrMeta));
     }
   }
 
@@ -283,7 +326,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.warn(message, { context: finalContext, ...meta });
+    this.logger.warn(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -300,7 +343,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.debug(message, { context: finalContext, ...meta });
+    this.logger.debug(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -317,7 +360,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.verbose(message, { context: finalContext, ...meta });
+    this.logger.verbose(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -333,11 +376,63 @@ export class LoggerService implements NestLoggerService {
     return { meta: metaOrContext || {}, ctx: context };
   }
 
+  private buildLogPayload(
+    context: string,
+    meta: Record<string, any> = {},
+  ): Record<string, any> {
+    const ctx = requestContext.get();
+
+    return {
+      context,
+      ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
+      ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
+      ...(ctx?.userId ? { userId: ctx.userId } : {}),
+      ...meta,
+    };
+  }
+
   /**
    * Create a child logger with a specific context
    */
   child(context: string): LoggerService {
     const childLogger = new LoggerService(this.configService, context);
     return childLogger;
+  }
+
+  async cleanupOldLogFiles(
+    logDir = this.configService?.get('LOG_DIR') ||
+      process.env.LOG_DIR ||
+      'logs',
+    retentionDays = parseRetentionDays(
+      this.configService?.get('LOG_MAX_FILES') || process.env.LOG_MAX_FILES,
+      14,
+    ),
+  ): Promise<number> {
+    const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    let removed = 0;
+
+    try {
+      const entries = await fs.readdir(logDir, { withFileTypes: true });
+      await Promise.all(
+        entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.log'))
+          .map(async (entry) => {
+            const filePath = path.join(logDir, entry.name);
+            const stat = await fs.stat(filePath);
+            if (stat.mtimeMs >= cutoff) {
+              return;
+            }
+
+            await fs.unlink(filePath);
+            removed++;
+          }),
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        this.warn('Log cleanup failed', { error: (error as Error).message });
+      }
+    }
+
+    return removed;
   }
 }

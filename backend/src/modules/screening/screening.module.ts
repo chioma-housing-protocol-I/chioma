@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScreeningController } from './screening.controller';
 import { ScreeningService } from './screening.service';
+import { ScreeningExpiryNotificationService } from './services/screening-expiry-notification.service';
 import { TenantScreeningRequest } from './entities/tenant-screening-request.entity';
 import { TenantScreeningConsent } from './entities/tenant-screening-consent.entity';
 import { TenantScreeningReport } from './entities/tenant-screening-report.entity';
@@ -23,7 +24,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     WebhooksModule,
   ],
   controllers: [ScreeningController],
-  providers: [ScreeningService],
-  exports: [ScreeningService],
+  providers: [ScreeningService, ScreeningExpiryNotificationService],
+  exports: [ScreeningService, ScreeningExpiryNotificationService],
 })
 export class ScreeningModule {}

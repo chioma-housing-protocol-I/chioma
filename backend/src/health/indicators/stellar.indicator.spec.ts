@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { HealthCheckError } from '@nestjs/terminus';
 import { of, throwError } from 'rxjs';
+import { MetricsService } from '../../modules/monitoring/metrics.service';
 import { AxiosResponse } from 'axios';
 import { StellarHealthIndicator } from './stellar.indicator';
 
@@ -27,6 +28,12 @@ describe('StellarHealthIndicator', () => {
             get: jest
               .fn()
               .mockReturnValue('https://horizon-testnet.stellar.org'),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordBlockchainConnectivityCheck: jest.fn(),
           },
         },
       ],
@@ -109,6 +116,12 @@ describe('StellarHealthIndicator', () => {
               get: jest.fn().mockReturnValue('https://horizon.stellar.org'),
             },
           },
+          {
+            provide: MetricsService,
+            useValue: {
+              recordBlockchainConnectivityCheck: jest.fn(),
+            },
+          },
         ],
       }).compile();
 
@@ -152,6 +165,12 @@ describe('StellarHealthIndicator', () => {
               get: jest
                 .fn()
                 .mockReturnValue('https://custom-horizon.example.com'),
+            },
+          },
+          {
+            provide: MetricsService,
+            useValue: {
+              recordBlockchainConnectivityCheck: jest.fn(),
             },
           },
         ],

@@ -93,16 +93,14 @@ export default function NotificationsList({ userId }: NotificationsListProps) {
         }>
       >('/notifications');
 
-      return data.map(
-        (notification): LandlordNotification => ({
-          id: notification.id,
-          title: notification.title,
-          message: notification.message,
-          isRead: notification.isRead,
-          type: normalizeNotificationType(notification.type),
-          createdAt: notification.createdAt,
-        }),
-      );
+      return data.map((notification): LandlordNotification => ({
+        id: notification.id,
+        title: notification.title,
+        message: notification.message,
+        isRead: notification.isRead,
+        type: normalizeNotificationType(notification.type),
+        createdAt: notification.createdAt,
+      }));
     },
     enabled: Boolean(userId),
   });

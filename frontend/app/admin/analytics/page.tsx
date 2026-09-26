@@ -1,6 +1,6 @@
 'use client';
 
-import { SystemAnalytics } from '@/components/admin/SystemAnalytics';
+import { LazySystemAnalytics } from '@/components/charts/lazy';
 import { useAuth } from '@/store/authStore';
 
 export default function AdminAnalyticsPage() {
@@ -17,5 +17,5 @@ export default function AdminAnalyticsPage() {
     );
   }
 
-  return <SystemAnalytics />;
+  return <LazySystemAnalytics />;
 }

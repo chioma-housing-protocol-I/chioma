@@ -8,6 +8,7 @@
 
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
+pub mod admin;
 pub mod errors;
 pub mod events;
 pub mod late_fee;
@@ -15,6 +16,7 @@ pub mod payment_impl;
 pub mod rate_limit;
 pub mod storage;
 pub mod types;
+pub mod upgrade;
 
 #[cfg(test)]
 mod tests;
@@ -25,9 +27,15 @@ mod tests_recurring;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_property;
+
+#[cfg(test)]
+mod tests_pause;
+
 // Re-export public APIs
 pub use errors::PaymentError;
-pub use payment_impl::{calculate_payment_split, create_payment_record};
+pub use payment_impl::{calculate_payment_split, calculate_rent_for_period, create_payment_record};
 pub use storage::DataKey;
 pub use types::{
     EscalationType, ExecutionStatus, LateFeeConfig, LateFeeRecord, PaymentExecution,
@@ -36,6 +44,7 @@ pub use types::{
 };
 
 use crate::errors::PaymentError as Error;
+use crate::storage::extend_persistent_ttl;
 use crate::storage::DataKey as StorageKey;
 use crate::types::{AgreementStatus, RentAgreement};
 
@@ -72,6 +81,7 @@ impl PaymentContract {
         env.storage()
             .persistent()
             .set(&StorageKey::FailedRecurringPayments, &failed);
+        extend_persistent_ttl(&env, &StorageKey::FailedRecurringPayments);
     }
 
     fn remove_failed_payment(env: &Env, recurring_id: &String) {
@@ -92,6 +102,7 @@ impl PaymentContract {
         env.storage()
             .persistent()
             .set(&StorageKey::FailedRecurringPayments, &updated);
+        extend_persistent_ttl(&env, &StorageKey::FailedRecurringPayments);
     }
 
     fn execute_recurring_payment_internal(
@@ -99,6 +110,8 @@ impl PaymentContract {
         recurring_id: &String,
         require_auth: bool,
     ) -> Result<(), Error> {
+        admin::require_not_paused(env)?;
+
         let mut recurring: RecurringPayment = env
             .storage()
             .persistent()
@@ -124,10 +137,9 @@ impl PaymentContract {
 
         if now > recurring.end_date && !recurring.auto_renew {
             recurring.status = RecurringStatus::Completed;
-            env.storage().persistent().set(
-                &StorageKey::RecurringPayment(recurring_id.clone()),
-                &recurring,
-            );
+            let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+            env.storage().persistent().set(&recurring_key, &recurring);
+            extend_persistent_ttl(&env, &recurring_key);
             return Err(Error::RecurringPaymentAlreadyCompleted);
         }
 
@@ -139,16 +151,21 @@ impl PaymentContract {
             transaction_hash: None,
         };
 
+        let executions_key = StorageKey::PaymentExecutions(recurring_id.clone());
         let mut executions: Vec<PaymentExecution> = env
             .storage()
             .persistent()
-            .get(&StorageKey::PaymentExecutions(recurring_id.clone()))
+            .get(&executions_key)
             .unwrap_or_else(|| Vec::new(env));
         executions.push_back(execution);
-        env.storage().persistent().set(
-            &StorageKey::PaymentExecutions(recurring_id.clone()),
-            &executions,
-        );
+        // Bounded to MAX_PAYMENT_EXECUTIONS so a long-lived recurring
+        // payment (e.g. monthly rent over many years) can't grow this key
+        // unbounded; the oldest execution records are dropped first (#1683).
+        while executions.len() > crate::storage::MAX_PAYMENT_EXECUTIONS {
+            executions.remove(0);
+        }
+        env.storage().persistent().set(&executions_key, &executions);
+        extend_persistent_ttl(&env, &executions_key);
 
         let interval = Self::frequency_to_seconds(&recurring.frequency);
         recurring.next_payment_date = recurring.next_payment_date.saturating_add(interval);
@@ -161,10 +178,9 @@ impl PaymentContract {
             }
         }
 
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
 
         Self::remove_failed_payment(env, recurring_id);
 
@@ -183,6 +199,38 @@ impl PaymentContract {
         env.storage()
             .instance()
             .set(&StorageKey::PlatformFeeCollector, &collector);
+        env.storage()
+            .instance()
+            .extend_ttl(crate::storage::TTL_THRESHOLD, crate::storage::TTL_BUMP);
+
+        events::platform_fee_collector_updated(&env, collector);
+    }
+
+    /// Initialize the contract admin (#1689). Callable once.
+    pub fn initialize_admin(env: Env, admin: Address) -> Result<(), Error> {
+        admin::initialize_admin(env, admin)
+    }
+
+    /// Get the current contract admin, if configured.
+    pub fn get_admin(env: Env) -> Option<Address> {
+        admin::get_admin(&env)
+    }
+
+    /// Pause the contract, blocking all state-changing entry points (#1689).
+    /// Reads remain available. Admin only.
+    pub fn pause(env: Env, caller: Address) -> Result<(), Error> {
+        admin::pause(env, caller)
+    }
+
+    /// Unpause the contract, restoring state-changing entry points (#1689).
+    /// Admin only.
+    pub fn unpause(env: Env, caller: Address) -> Result<(), Error> {
+        admin::unpause(env, caller)
+    }
+
+    /// Whether the contract is currently globally paused.
+    pub fn is_paused(env: Env) -> bool {
+        admin::is_paused(&env)
     }
 
     /// Get a payment record by ID
@@ -254,6 +302,9 @@ impl PaymentContract {
     ) -> Result<(), Error> {
         use soroban_sdk::token;
 
+        // Contract must not be paused (#1689)
+        admin::require_not_paused(&env)?;
+
         // Authorization
         from.require_auth();
 
@@ -280,7 +331,19 @@ impl PaymentContract {
             return Err(Error::InvalidPaymentAmount);
         }
 
-        if payment_amount != agreement.monthly_rent {
+        let payment_number = agreement.payment_history.len() + 1;
+        let expected_amount = if let Some(config) = env
+            .storage()
+            .persistent()
+            .get::<StorageKey, RentEscalationConfig>(&StorageKey::RentEscalationConfig(
+                agreement_id.clone(),
+            )) {
+            calculate_rent_for_period(agreement.monthly_rent, payment_number, &config)
+        } else {
+            agreement.monthly_rent
+        };
+
+        if payment_amount != expected_amount {
             return Err(Error::InvalidPaymentAmount);
         }
 
@@ -321,6 +384,17 @@ impl PaymentContract {
         token_client.transfer(&from, &agreement.landlord, &landlord_amount);
         token_client.transfer(&from, &platform_collector, &platform_amount);
 
+        events::rent_paid(
+            &env,
+            agreement_id,
+            from,
+            agreement.landlord.clone(),
+            agreement.payment_token.clone(),
+            payment_amount,
+            landlord_amount,
+            platform_amount,
+        );
+
         Ok(())
     }
 
@@ -351,6 +425,8 @@ impl PaymentContract {
         end_date: u64,
         auto_renew: bool,
     ) -> Result<String, Error> {
+        admin::require_not_paused(&env)?;
+
         let agreement: RentAgreement = env
             .storage()
             .persistent()
@@ -389,13 +465,15 @@ impl PaymentContract {
             auto_renew,
         };
 
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
         env.storage()
             .instance()
             .set(&StorageKey::RecurringPaymentCount, &count);
+        env.storage()
+            .instance()
+            .extend_ttl(crate::storage::TTL_THRESHOLD, crate::storage::TTL_BUMP);
 
         let _event = RecurringPaymentEvent::RecurringPaymentCreated {
             recurring_id: recurring_id.clone(),
@@ -412,6 +490,8 @@ impl PaymentContract {
     }
 
     pub fn pause_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
+        admin::require_not_paused(&env)?;
+
         let mut recurring: RecurringPayment = env
             .storage()
             .persistent()
@@ -433,10 +513,9 @@ impl PaymentContract {
         }
 
         recurring.status = RecurringStatus::Paused;
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
 
         let _event = RecurringPaymentEvent::RecurringPaymentPaused {
             recurring_id: recurring_id.clone(),
@@ -447,6 +526,8 @@ impl PaymentContract {
     }
 
     pub fn resume_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
+        admin::require_not_paused(&env)?;
+
         let mut recurring: RecurringPayment = env
             .storage()
             .persistent()
@@ -460,10 +541,9 @@ impl PaymentContract {
         }
 
         recurring.status = RecurringStatus::Active;
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
 
         let _event = RecurringPaymentEvent::RecurringPaymentResumed {
             recurring_id: recurring_id.clone(),
@@ -474,6 +554,8 @@ impl PaymentContract {
     }
 
     pub fn cancel_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
+        admin::require_not_paused(&env)?;
+
         let mut recurring: RecurringPayment = env
             .storage()
             .persistent()
@@ -487,10 +569,9 @@ impl PaymentContract {
         }
 
         recurring.status = RecurringStatus::Cancelled;
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
 
         let _event = RecurringPaymentEvent::RecurringPaymentCancelled {
             recurring_id: recurring_id.clone(),
@@ -528,6 +609,12 @@ impl PaymentContract {
     }
 
     pub fn process_due_payments(env: Env) -> Result<Vec<String>, Error> {
+        // Checked up front (in addition to execute_recurring_payment_internal's
+        // own check) so a paused contract rejects the whole batch cleanly
+        // rather than marking every due payment Failed, which the per-item
+        // Err(_) branch below would otherwise do (#1689).
+        admin::require_not_paused(&env)?;
+
         let due = Self::get_due_payments(env.clone())?;
         let mut processed = Vec::new(&env);
 
@@ -546,10 +633,9 @@ impl PaymentContract {
                         ))
                     {
                         recurring.status = RecurringStatus::Failed;
-                        env.storage().persistent().set(
-                            &StorageKey::RecurringPayment(recurring_id.clone()),
-                            &recurring,
-                        );
+                        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+                        env.storage().persistent().set(&recurring_key, &recurring);
+                        extend_persistent_ttl(&env, &recurring_key);
                         Self::add_failed_payment(&env, &recurring_id);
 
                         let _event = RecurringPaymentEvent::RecurringPaymentFailed {
@@ -596,6 +682,10 @@ impl PaymentContract {
     }
 
     pub fn retry_failed_payment(env: Env, recurring_id: String) -> Result<(), Error> {
+        // Checked up front so a paused contract rejects cleanly rather than
+        // flipping status to Active and then failing the execute step (#1689).
+        admin::require_not_paused(&env)?;
+
         let mut recurring: RecurringPayment = env
             .storage()
             .persistent()
@@ -609,10 +699,9 @@ impl PaymentContract {
         }
 
         recurring.status = RecurringStatus::Active;
-        env.storage().persistent().set(
-            &StorageKey::RecurringPayment(recurring_id.clone()),
-            &recurring,
-        );
+        let recurring_key = StorageKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().set(&recurring_key, &recurring);
+        extend_persistent_ttl(&env, &recurring_key);
 
         Self::execute_recurring_payment_internal(&env, &recurring_id, true)
             .map_err(|_| Error::RecurringPaymentExecutionFailed)
@@ -640,6 +729,8 @@ impl PaymentContract {
     ) -> Result<(), Error> {
         use crate::types::LateFeeConfig;
 
+        admin::require_not_paused(&env)?;
+
         if late_fee_percentage == 0 || late_fee_percentage > 100 {
             return Err(Error::InvalidLateFeePercentage);
         }
@@ -660,9 +751,11 @@ impl PaymentContract {
             compounding,
         };
 
+        let late_fee_config_key = StorageKey::LateFeeConfig(agreement_id.clone());
         env.storage()
             .persistent()
-            .set(&StorageKey::LateFeeConfig(agreement_id.clone()), &config);
+            .set(&late_fee_config_key, &config);
+        extend_persistent_ttl(&env, &late_fee_config_key);
 
         crate::events::late_fee_config_set(
             &env,
@@ -705,6 +798,8 @@ impl PaymentContract {
         payment_id: String,
     ) -> Result<crate::types::LateFeeRecord, Error> {
         use crate::types::LateFeeRecord;
+
+        admin::require_not_paused(&env)?;
 
         // Ensure not already applied
         if env
@@ -761,9 +856,11 @@ impl PaymentContract {
             waive_reason: None,
         };
 
+        let late_fee_record_key = StorageKey::LateFeeRecord(payment_id.clone());
         env.storage()
             .persistent()
-            .set(&StorageKey::LateFeeRecord(payment_id.clone()), &record);
+            .set(&late_fee_record_key, &record);
+        extend_persistent_ttl(&env, &late_fee_record_key);
 
         crate::events::late_fee_applied(&env, payment_id, late_fee, days_over_grace);
 
@@ -790,6 +887,8 @@ impl PaymentContract {
     ) -> Result<(), Error> {
         use crate::types::LateFeeRecord;
 
+        admin::require_not_paused(&env)?;
+
         let agreement: crate::types::RentAgreement = env
             .storage()
             .persistent()
@@ -812,60 +911,94 @@ impl PaymentContract {
         record.waive_reason = Some(reason.clone());
         record.total_due = record.base_amount; // remove late fee from total
 
+        let late_fee_record_key = StorageKey::LateFeeRecord(payment_id.clone());
         env.storage()
             .persistent()
-            .set(&StorageKey::LateFeeRecord(payment_id.clone()), &record);
+            .set(&late_fee_record_key, &record);
+        extend_persistent_ttl(&env, &late_fee_record_key);
 
         crate::events::late_fee_waived(&env, payment_id, reason);
 
         Ok(())
     }
 
-    /// Calculate the rent amount due for a specific payment period, applying
-    /// programmable annual escalation.
-    ///
-    /// # Arguments
-    /// * `base_rent`        – Rent amount for period 0 (first payment), in token stroops
-    /// * `period_number`    – 0-indexed period (0 = first payment, 1 = second, …)
-    /// * `annual_rate_bps`  – Annual increase in basis points (500 = 5 %)
-    /// * `payments_per_year`– How many payments make one year (12 = monthly, 52 = weekly)
-    ///
-    /// # Returns
-    /// The rent amount for the requested period, rounded down to the nearest stroop.
-    ///
-    /// # Errors
-    /// * `InvalidAmount`   – if `base_rent` ≤ 0 or `payments_per_year` == 0
-    pub fn calculate_rent_for_period(
-        _env: Env,
-        base_rent: i128,
-        period_number: u32,
+    /// Set or update rent escalation configuration for an agreement
+    pub fn set_rent_escalation_config(
+        env: Env,
+        agreement_id: String,
         annual_rate_bps: u32,
         payments_per_year: u32,
+        escalation_type: EscalationType,
+    ) -> Result<(), Error> {
+        admin::require_not_paused(&env)?;
+
+        let agreement: RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
+
+        agreement.landlord.require_auth();
+
+        let config = RentEscalationConfig {
+            agreement_id: agreement_id.clone(),
+            annual_rate_bps,
+            payments_per_year,
+            escalation_type,
+        };
+
+        let escalation_key = StorageKey::RentEscalationConfig(agreement_id.clone());
+        env.storage().persistent().set(&escalation_key, &config);
+        extend_persistent_ttl(&env, &escalation_key);
+
+        crate::events::rent_escalation_config_set(&env, agreement_id, annual_rate_bps);
+
+        Ok(())
+    }
+
+    /// Get rent escalation configuration for an agreement
+    pub fn get_rent_escalation_config(
+        env: Env,
+        agreement_id: String,
+    ) -> Result<RentEscalationConfig, Error> {
+        env.storage()
+            .persistent()
+            .get(&StorageKey::RentEscalationConfig(agreement_id))
+            .ok_or(Error::AgreementNotFound)
+    }
+
+    /// Calculate the rent amount due for a specific payment period, applying
+    /// programmable annual escalation from the stored configuration.
+    pub fn calculate_rent_for_period(
+        env: Env,
+        agreement_id: String,
+        period_number: u32,
     ) -> Result<i128, Error> {
-        if base_rent <= 0 {
-            return Err(Error::InvalidAmount);
-        }
-        if payments_per_year == 0 {
-            return Err(Error::InvalidAmount);
-        }
+        let agreement: RentAgreement = env
+            .storage()
+            .persistent()
+            .get(&StorageKey::Agreement(agreement_id.clone()))
+            .ok_or(Error::AgreementNotFound)?;
 
-        // Flat rent — no calculation needed
-        if annual_rate_bps == 0 {
-            return Ok(base_rent);
-        }
+        let config = env
+            .storage()
+            .persistent()
+            .get::<StorageKey, RentEscalationConfig>(&StorageKey::RentEscalationConfig(
+                agreement_id,
+            ))
+            .unwrap_or(RentEscalationConfig {
+                agreement_id: String::from_str(&env, ""),
+                annual_rate_bps: 0,
+                payments_per_year: 12,
+                escalation_type: EscalationType::None,
+            });
 
-        // Determine how many full years have elapsed
-        let full_years = period_number / payments_per_year;
-
-        // Apply compound escalation: rent *= (10_000 + rate) / 10_000 once per year
-        // Using i128 throughout avoids floats; integer truncation is intentional
-        // (landlord/admin always receives a round number of stroops).
-        let mut rent = base_rent;
-        let multiplier = (10_000_i128) + (annual_rate_bps as i128);
-        for _ in 0..full_years {
-            rent = rent * multiplier / 10_000;
-        }
-
-        Ok(rent)
+        // period_number is 0-indexed (0 = 1st payment)
+        // payment_impl expects 1-indexed payment number
+        Ok(payment_impl::calculate_rent_for_period(
+            agreement.monthly_rent,
+            period_number + 1,
+            &config,
+        ))
     }
 }

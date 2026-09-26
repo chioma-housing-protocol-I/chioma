@@ -27,7 +27,12 @@ export default function NotificationDropdown({
   const recent = notifications.slice(0, MAX_VISIBLE);
 
   return (
-    <div className="fixed inset-x-0 top-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-full mt-2 mx-3 sm:mx-0 sm:w-80 backdrop-blur-xl bg-slate-900/95 rounded-xl shadow-2xl border border-white/10 z-[70] overflow-hidden animate-dropdown">
+    <div
+      id="notifications-menu"
+      role="dialog"
+      aria-label="Notifications"
+      className="fixed inset-x-0 top-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-full mt-2 mx-3 sm:mx-0 sm:w-80 backdrop-blur-xl bg-slate-900/95 rounded-xl shadow-2xl border border-white/10 z-[70] overflow-hidden animate-dropdown"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10 bg-white/5">
         <h3 className="text-sm font-semibold text-white">
@@ -42,23 +47,31 @@ export default function NotificationDropdown({
         {unreadCount > 0 && (
           <button
             onClick={markAllAsRead}
+            aria-label="Mark all notifications as read"
             className="flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors cursor-pointer"
           >
-            <CheckCheck size={14} />
+            <CheckCheck size={14} aria-hidden="true" />
             Mark all read
           </button>
         )}
       </div>
 
       {/* List */}
-      <div className="divide-y divide-white/5">
+      <div
+        role="list"
+        aria-label="Recent notifications"
+        className="divide-y divide-white/5"
+      >
         {recent.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-blue-200/40">
+          <p
+            role="status"
+            className="px-3 py-6 text-center text-sm text-blue-200/40"
+          >
             No notifications yet.
           </p>
         ) : (
           recent.map((n) => (
-            <div key={n.id} onClick={onClose}>
+            <div key={n.id} role="listitem" onClick={onClose}>
               <NotificationItem
                 notification={n}
                 onToggleRead={markAsRead}

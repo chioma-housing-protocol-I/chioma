@@ -10,14 +10,15 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import PropertySummaryCard from './PropertySummaryCard';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 
 // Fix for default marker icons in Next.js
 import L from 'leaflet';
 
 // Fix default marker icon issue (Next.js requires full paths)
 if (typeof window !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => string })
+    ._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -117,7 +118,15 @@ function MapBoundsHandler({
   return null;
 }
 
-export default function PropertyMapView({
+export default function PropertyMapView(props: PropertyMapViewProps) {
+  return (
+    <FeatureBoundary name="properties:map" label="Map">
+      <PropertyMapViewInner {...props} />
+    </FeatureBoundary>
+  );
+}
+
+function PropertyMapViewInner({
   properties,
   onBoundsChange,
   searchAsIMove = true,

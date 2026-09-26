@@ -9,6 +9,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import toast from 'react-hot-toast';
 
 interface DisputeInfo {
@@ -44,6 +45,7 @@ export const DisputeResolutionModal: React.FC<DisputeResolutionModalProps> = ({
 }) => {
   const [resolution, setResolution] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   if (!dispute) return null;
 
@@ -188,7 +190,9 @@ export const DisputeResolutionModal: React.FC<DisputeResolutionModalProps> = ({
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Filed by {dispute.raisedByName} on{' '}
-                {format(new Date(dispute.createdAt), 'MMMM d, yyyy')}
+                {format(new Date(dispute.createdAt), 'MMMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </p>
             </div>
           </div>

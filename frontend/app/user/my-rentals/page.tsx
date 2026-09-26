@@ -12,6 +12,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils/format';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface RentalProperty {
   id: string;
@@ -47,10 +49,7 @@ export default function MyRentalsPage() {
     HistoricalRental[]
   >([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void fetchRentals();
-  }, []);
+  const dateFnsLocale = useDateFnsLocale();
 
   const fetchRentals = async () => {
     try {
@@ -91,6 +90,10 @@ export default function MyRentalsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchRentals();
+  }, []);
 
   if (loading) {
     return (
@@ -149,21 +152,26 @@ export default function MyRentalsPage() {
                       color: 'text-blue-400',
                       bg: 'bg-blue-500/10 border-blue-500/20',
                       label: 'Monthly Rent',
-                      value: `${rental.currency} ${rental.monthlyRent.toLocaleString()}`,
+                      value: formatCurrency(
+                        rental.monthlyRent,
+                        rental.currency,
+                      ),
                     },
                     {
                       icon: Calendar,
                       color: 'text-rose-400',
                       bg: 'bg-rose-500/10 border-rose-500/20',
                       label: 'Next Due Date',
-                      value: format(rental.nextDueDate, 'MMM dd, yyyy'),
+                      value: format(rental.nextDueDate, 'MMM dd, yyyy', {
+                        locale: dateFnsLocale,
+                      }),
                     },
                     {
                       icon: Clock,
                       color: 'text-purple-400',
                       bg: 'bg-purple-500/10 border-purple-500/20',
                       label: 'Lease Period',
-                      value: `${format(rental.leaseStartDate, 'MMM yyyy')} – ${format(rental.leaseEndDate, 'MMM yyyy')}`,
+                      value: `${format(rental.leaseStartDate, 'MMM yyyy', { locale: dateFnsLocale })} – ${format(rental.leaseEndDate, 'MMM yyyy', { locale: dateFnsLocale })}`,
                     },
                   ].map(({ icon: Icon, color, bg, label, value }) => (
                     <div key={label} className="flex items-start gap-3">
@@ -247,11 +255,16 @@ export default function MyRentalsPage() {
                         </p>
                       </td>
                       <td className="px-6 py-4 text-blue-200/60">
-                        {format(rental.leaseStartDate, 'MMM yyyy')} –{' '}
-                        {format(rental.leaseEndDate, 'MMM yyyy')}
+                        {format(rental.leaseStartDate, 'MMM yyyy', {
+                          locale: dateFnsLocale,
+                        })}{' '}
+                        –{' '}
+                        {format(rental.leaseEndDate, 'MMM yyyy', {
+                          locale: dateFnsLocale,
+                        })}
                       </td>
                       <td className="px-6 py-4 font-semibold text-white">
-                        {rental.currency} {rental.monthlyRent.toLocaleString()}
+                        {formatCurrency(rental.monthlyRent, rental.currency)}
                       </td>
                       <td className="px-6 py-4">
                         <span

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,11 +12,12 @@ import {
   UserCheck,
   UserX,
   Download,
-  Loader2,
-  AlertTriangle,
-  X,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/admin/users/UserAvatar';
+import { SortableHeader } from '@/components/admin/SortableHeader';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { BulkConfirmDialog } from '@/components/admin/BulkConfirmDialog';
+import type { AdminUserSortField } from '@/lib/query/hooks/use-admin-users';
 import type { User, PaginatedResponse } from '@/types';
 
 interface BulkUserOperationsProps {
@@ -23,66 +25,13 @@ interface BulkUserOperationsProps {
   isLoading: boolean;
   page: number;
   setPage: (page: number) => void;
+  sortBy?: AdminUserSortField;
+  sortOrder?: 'ASC' | 'DESC';
+  onSort?: (key: AdminUserSortField) => void;
   onBulkSuspend: (ids: string[]) => Promise<void>;
   onBulkActivate: (ids: string[]) => Promise<void>;
   onBulkExport: (ids: string[]) => void;
-}
-
-interface ConfirmDialogProps {
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  variant: 'danger' | 'warning';
-}
-
-function ConfirmDialog({
-  title,
-  message,
-  onConfirm,
-  onCancel,
-  isLoading,
-  variant,
-}: ConfirmDialogProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-      <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6">
-        <div className="flex items-start gap-4">
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center border flex-shrink-0 ${variant === 'danger' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}
-          >
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">{title}</h3>
-            <p className="text-blue-200/60 text-sm mt-1">{message}</p>
-          </div>
-        </div>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            disabled={isLoading}
-            className="px-5 py-2.5 text-sm font-bold text-blue-200/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 ${variant === 'danger' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-amber-500 hover:bg-amber-600'}`}
-          >
-            {isLoading && <Loader2 size={16} className="animate-spin" />}
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  onRowClick?: (user: User) => void;
 }
 
 function getRoleBadge(role: User['role']): string {
@@ -98,13 +47,18 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
   isLoading,
   page,
   setPage,
+  sortBy,
+  sortOrder,
+  onSort,
   onBulkSuspend,
   onBulkActivate,
   onBulkExport,
+  onRowClick,
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | 'suspend' | 'activate'>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   const data = users?.data ?? [];
   const totalPages = users?.totalPages ?? 1;
@@ -162,45 +116,33 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
     <>
       <div className="space-y-4">
         {/* Bulk action bar */}
-        {selectedCount > 0 && (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CheckSquare size={18} className="text-blue-400" />
-              <span className="text-sm font-bold text-white">
-                {selectedCount} user{selectedCount !== 1 ? 's' : ''} selected
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => onBulkExport(Array.from(selectedIds))}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-blue-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
-              >
-                <Download size={14} />
-                Export
-              </button>
-              <button
-                onClick={() => setConfirm('activate')}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-emerald-300 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/20 transition-all"
-              >
-                <UserCheck size={14} />
-                Activate
-              </button>
-              <button
-                onClick={() => setConfirm('suspend')}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 rounded-xl border border-rose-500/20 transition-all"
-              >
-                <UserX size={14} />
-                Suspend
-              </button>
-              <button
-                onClick={() => setSelectedIds(new Set())}
-                className="p-1.5 text-blue-300/60 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <BulkActionBar
+          selectedCount={selectedCount}
+          itemLabel="user"
+          onClear={() => setSelectedIds(new Set())}
+          actions={[
+            {
+              key: 'export',
+              label: 'Export',
+              icon: <Download size={14} />,
+              onClick: () => onBulkExport(Array.from(selectedIds)),
+            },
+            {
+              key: 'activate',
+              label: 'Activate',
+              icon: <UserCheck size={14} />,
+              tone: 'success',
+              onClick: () => setConfirm('activate'),
+            },
+            {
+              key: 'suspend',
+              label: 'Suspend',
+              icon: <UserX size={14} />,
+              tone: 'danger',
+              onClick: () => setConfirm('suspend'),
+            },
+          ]}
+        />
 
         {/* Table */}
         <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-xl">
@@ -221,29 +163,66 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    User
-                  </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    Role
-                  </th>
+                  {onSort ? (
+                    <SortableHeader
+                      label="User"
+                      sortKey="email"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      User
+                    </th>
+                  )}
+                  {onSort ? (
+                    <SortableHeader
+                      label="Role"
+                      sortKey="role"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      Role
+                    </th>
+                  )}
                   <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
                     Status
                   </th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
-                    Joined
-                  </th>
+                  {onSort ? (
+                    <SortableHeader
+                      label="Joined"
+                      sortKey="createdAt"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={onSort}
+                      className="font-bold uppercase tracking-widest text-[10px]"
+                    />
+                  ) : (
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">
+                      Joined
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {data.map((user) => (
                   <tr
                     key={user.id}
-                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''}`}
+                    className={`hover:bg-white/5 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-500/5' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    onClick={onRowClick ? () => onRowClick(user) : undefined}
                   >
                     <td className="px-5 py-4">
                       <button
-                        onClick={() => toggleOne(user.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleOne(user.id);
+                        }}
                         className="text-blue-300/40 hover:text-blue-400 transition-colors"
                       >
                         {selectedIds.has(user.id) ? (
@@ -288,7 +267,9 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-blue-200/60">
-                      {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                      {format(new Date(user.createdAt), 'MMM d, yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </td>
                   </tr>
                 ))}
@@ -343,7 +324,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
 
       {/* Confirmation dialogs */}
       {confirm === 'suspend' && (
-        <ConfirmDialog
+        <BulkConfirmDialog
           title={`Suspend ${selectedCount} user${selectedCount !== 1 ? 's' : ''}?`}
           message="Suspended users will lose access to the platform. This action can be reversed by activating the users again."
           onConfirm={handleConfirm}
@@ -353,7 +334,7 @@ export const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({
         />
       )}
       {confirm === 'activate' && (
-        <ConfirmDialog
+        <BulkConfirmDialog
           title={`Activate ${selectedCount} user${selectedCount !== 1 ? 's' : ''}?`}
           message="Activated users will regain access to the platform."
           onConfirm={handleConfirm}

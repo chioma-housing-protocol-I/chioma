@@ -1,28 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Toaster, toast, type ToastOptions } from 'react-hot-toast';
 
 const baseToastOptions: ToastOptions = {
   className: 'rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm',
   duration: 4000,
+  ariaProps: {
+    role: 'status',
+    'aria-live': 'polite',
+  },
 };
 
 export function ToastProvider() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
   return (
-    <Toaster
-      position="bottom-right"
-      toastOptions={baseToastOptions}
-      containerClassName="!bottom-5 !right-5"
-    />
+    <div role="region" aria-label="Notifications" aria-live="polite">
+      <Toaster
+        position="bottom-right"
+        toastOptions={baseToastOptions}
+        containerClassName="!bottom-5 !right-5"
+      />
+    </div>
   );
 }
 

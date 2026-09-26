@@ -10,7 +10,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 describe('AvailabilityService', () => {
   let service: AvailabilityService;
   let availabilityRepo: Repository<PropertyAvailability>;
-  let propertyRepo: Repository<Property>;
+  let _propertyRepo: Repository<Property>;
 
   const mockAvailabilityRepo = {
     find: jest.fn(),
@@ -44,7 +44,7 @@ describe('AvailabilityService', () => {
     availabilityRepo = module.get<Repository<PropertyAvailability>>(
       getRepositoryToken(PropertyAvailability),
     );
-    propertyRepo = module.get<Repository<Property>>(
+    _propertyRepo = module.get<Repository<Property>>(
       getRepositoryToken(Property),
     );
   });

@@ -4,7 +4,10 @@
 use crate::storage::DataKey;
 use crate::types::*;
 use crate::PaymentContract;
-use soroban_sdk::{testutils::Address as _, Address, Env, Map, String};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger as _},
+    Address, Env, Map, String,
+};
 
 fn create_test_agreement(
     env: &Env,
@@ -320,4 +323,80 @@ fn test_get_failed_payments_empty() {
     let client = create_payment_contract(&env);
     let failed = client.try_get_failed_payments().unwrap().unwrap();
     assert_eq!(failed.len(), 0);
+}
+
+#[test]
+fn test_payment_executions_bounded_by_max() {
+    // A recurring payment executed far more times than MAX_PAYMENT_EXECUTIONS
+    // (120) must not let its execution history grow unbounded (#1683): the
+    // oldest executions are dropped once the cap is exceeded.
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(&env, "agr_bound", &tenant, &landlord, 1000, token);
+    seed_agreement(&env, &client, "agr_bound", &agreement);
+
+    let recurring_id = client.create_recurring_payment(
+        &String::from_str(&env, "agr_bound"),
+        &1000,
+        &PaymentFrequency::Daily,
+        &0,
+        &(86_400 * 200),
+        &true,
+    );
+
+    for _ in 0..125 {
+        client.execute_recurring_payment(&recurring_id);
+        env.ledger().with_mut(|l| {
+            l.timestamp += 86_400;
+        });
+    }
+
+    let executions = client.get_payment_executions(&recurring_id);
+    assert_eq!(executions.len(), 120);
+}
+
+#[test]
+fn test_create_recurring_payment_extends_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_payment_contract(&env);
+    let tenant = Address::generate(&env);
+    let landlord = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let token = create_token(&env, &token_admin);
+
+    let agreement = create_test_agreement(&env, "agr_ttl", &tenant, &landlord, 1000, token);
+    seed_agreement(&env, &client, "agr_ttl", &agreement);
+
+    let recurring_id = client.create_recurring_payment(
+        &String::from_str(&env, "agr_ttl"),
+        &1000,
+        &PaymentFrequency::Monthly,
+        &0,
+        &(2_592_000 * 12),
+        &true,
+    );
+
+    // Before this fix (#1683), payment's storage writes never called
+    // extend_ttl at all, so a recurring payment with no further writes
+    // could be archived out from under an active schedule.
+    let ttl = env.as_contract(&client.address, || {
+        let key = DataKey::RecurringPayment(recurring_id.clone());
+        env.storage().persistent().get_ttl(&key)
+    });
+
+    assert!(
+        ttl >= 499_000,
+        "expected the recurring payment key's TTL to be bumped close to the 500_000-ledger threshold, got {ttl}"
+    );
 }

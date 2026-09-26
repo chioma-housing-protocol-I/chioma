@@ -28,6 +28,9 @@ export class FileUploadService {
           'text/plain',
           'application/msword',
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'video/mp4',
+          'video/quicktime',
+          'video/webm',
         ];
 
         if (allowedMimes.includes(file.mimetype)) {
@@ -35,14 +38,14 @@ export class FileUploadService {
         } else {
           cb(
             new Error(
-              'Invalid file type. Only images, PDFs, and documents are allowed.',
+              'Invalid file type. Only images, videos, PDFs, and documents are allowed.',
             ),
             false,
           );
         }
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        fileSize: 500 * 1024 * 1024, // 500MB (accommodates video evidence)
       },
     };
   }
@@ -66,22 +69,26 @@ export class FileUploadService {
       'text/plain',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'video/mp4',
+      'video/quicktime',
+      'video/webm',
     ];
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const isVideo = file.mimetype?.startsWith('video/');
+    const maxSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024; // 500MB videos, 10MB otherwise
 
     if (!allowedMimes.includes(file.mimetype)) {
       return {
         isValid: false,
         error:
-          'Invalid file type. Only images, PDFs, and documents are allowed',
+          'Invalid file type. Only images, videos, PDFs, and documents are allowed',
       };
     }
 
     if (file.size > maxSize) {
       return {
         isValid: false,
-        error: 'File size too large. Maximum size is 10MB',
+        error: `File size too large. Maximum size is ${Math.floor(maxSize / (1024 * 1024))}MB`,
       };
     }
 

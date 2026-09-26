@@ -1,10 +1,14 @@
 import 'reflect-metadata';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import * as dotenv from 'dotenv';
+import { createDatabaseConnectionOptions } from './database-config';
 
-dotenv.config();
+// Mirror AppModule's ConfigModule.forRoot({ envFilePath: [`.env.${NODE_ENV}`, '.env'] })
+// so migrations/seeds always target the same database as the running server.
+dotenv.config({
+  path: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+});
 
 /** e.g. .../src or .../dist/src */
 const rootDir = path.join(__dirname, '..');
@@ -18,38 +22,9 @@ const backendRootDir = path.join(rootDir, '..');
  *
  * Connection: prefer `DATABASE_URL` when set; otherwise `DB_HOST`, `DB_PORT`, etc.
  */
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  url: process.env.DATABASE_URL || undefined,
-  host: process.env.DATABASE_URL
-    ? undefined
-    : process.env.DB_HOST || 'localhost',
-  port: process.env.DATABASE_URL
-    ? undefined
-    : parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DATABASE_URL
-    ? undefined
-    : process.env.DB_USERNAME || 'postgres',
-  password: process.env.DATABASE_URL
-    ? undefined
-    : process.env.DB_PASSWORD || 'password',
-  database: process.env.DATABASE_URL
-    ? undefined
-    : process.env.DB_NAME || 'chioma_db',
-  ssl:
-    process.env.DB_SSL === 'true'
-      ? {
-          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
-        }
-      : false,
-  namingStrategy: new SnakeNamingStrategy(),
-  entities: [path.join(rootDir, 'modules', '**', '*.entity{.ts,.js}')],
-  migrations: [
+export const AppDataSource = new DataSource(
+  createDatabaseConnectionOptions(rootDir, [
     path.join(rootDir, 'migrations', '*{.ts,.js}'),
     path.join(backendRootDir, 'migrations', '*{.ts,.js}'),
-  ],
-  migrationsTableName: 'migrations',
-  migrationsTransactionMode: 'each',
-  synchronize: false,
-  logging: process.env.TYPEORM_LOGGING === 'true',
-});
+  ]),
+);

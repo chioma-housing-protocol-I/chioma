@@ -201,6 +201,81 @@ pub fn execute_action(env: &Env, caller: Address, action_id: String) -> Result<(
     Ok(())
 }
 
+/// Accept a queued `UpdateAdmin` transfer once its ETA has been reached.
+///
+/// This is the second step of the two-step admin rotation: `queue_action`
+/// (called by the current admin) proposes `target` as the new admin;
+/// `accept_admin_transfer` requires `target`'s own auth to actually apply
+/// the change, so a malicious or mistaken proposal cannot complete without
+/// the intended new admin's consent. Reuses the same delay, executed, and
+/// cancelled gates as `execute_action` — a proposal can still be cancelled
+/// by the current admin (via `cancel_action`) any time before this is
+/// called.
+///
+/// # Errors
+/// - `TimelockNotFound` if the action does not exist.
+/// - `InvalidState` if the action's type is not `UpdateAdmin` (use
+///   `execute_action` for other action types).
+/// - `Unauthorized` if the caller is not `action.target` (the pending admin).
+/// - `TimelockAlreadyExecuted` / `TimelockAlreadyCancelled` if the action was
+///   already resolved.
+/// - `TimelockEtaNotReached` if the delay has not yet elapsed.
+pub fn accept_admin_transfer(
+    env: &Env,
+    caller: Address,
+    action_id: String,
+) -> Result<(), RentalError> {
+    caller.require_auth();
+
+    let mut action: TimelockAction = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TimelockAction(action_id.clone()))
+        .ok_or(RentalError::TimelockNotFound)?;
+
+    if action.action_type != TimelockActionType::UpdateAdmin {
+        return Err(RentalError::InvalidState);
+    }
+
+    if action.target != caller {
+        return Err(RentalError::Unauthorized);
+    }
+
+    if action.executed {
+        return Err(RentalError::TimelockAlreadyExecuted);
+    }
+
+    if action.cancelled {
+        return Err(RentalError::TimelockAlreadyCancelled);
+    }
+
+    if env.ledger().timestamp() < action.eta {
+        return Err(RentalError::TimelockEtaNotReached);
+    }
+
+    let mut state: ContractState = env
+        .storage()
+        .instance()
+        .get(&DataKey::State)
+        .ok_or(RentalError::InvalidState)?;
+    let old_admin = state.admin.clone();
+    state.admin = caller.clone();
+    env.storage().instance().set(&DataKey::State, &state);
+    env.storage().instance().extend_ttl(500000, 500000);
+
+    action.executed = true;
+    env.storage()
+        .persistent()
+        .set(&DataKey::TimelockAction(action_id.clone()), &action);
+
+    remove_from_active(env, &action_id);
+
+    events::admin_transfer_accepted(env, action_id.clone(), old_admin, caller);
+    events::timelock_action_executed(env, action_id);
+
+    Ok(())
+}
+
 /// Cancel a queued action before it has been executed.
 ///
 /// Only the contract admin may cancel. The action must not have been

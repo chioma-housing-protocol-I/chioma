@@ -6,10 +6,17 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  BeforeInsert,
+  BeforeUpdate,
+  AfterLoad,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import {
+  parsePaymentMethodMetadata,
+  type PaymentMethodMetadata,
+} from '../schemas/payment-metadata.schema';
 
-export type PaymentMethodMetadata = Record<string, unknown>;
+export type { PaymentMethodMetadata } from '../schemas/payment-metadata.schema';
 
 @Entity('payment_methods')
 @Index('idx_payment_methods_user_id', ['userId'])
@@ -36,7 +43,7 @@ export class PaymentMethod {
   isDefault: boolean;
 
   @Column({
-    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-json' : 'jsonb',
     nullable: true,
   })
   metadata: PaymentMethodMetadata | null;
@@ -49,4 +56,11 @@ export class PaymentMethod {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  @AfterLoad()
+  validateMetadata(): void {
+    this.metadata = parsePaymentMethodMetadata(this.metadata);
+  }
 }

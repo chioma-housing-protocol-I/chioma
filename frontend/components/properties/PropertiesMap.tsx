@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import L from 'leaflet';
 
 // Fix for default Leaflet marker icons with Next.js/Webpack
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => string })
+  ._getIconUrl;
 
 // Custom styling for the markers instead of default leaflet pins
 const createCustomIcon = (price: string) => {

@@ -4,6 +4,7 @@ import {
   HousePlus,
   MessageSquareQuote,
   Receipt,
+  Search,
   Settings,
   Wallet,
   PieChart,
@@ -11,6 +12,7 @@ import {
   Users,
   Flag,
   MessageSquare,
+  Inbox,
 } from 'lucide-react';
 
 export const userNavItems: navItems[] = [
@@ -18,6 +20,11 @@ export const userNavItems: navItems[] = [
     name: 'Overview',
     href: '/user',
     icon: Home,
+  },
+  {
+    name: 'Browse Properties',
+    href: '/properties',
+    icon: Search,
   },
   {
     name: 'Wallet',
@@ -43,6 +50,11 @@ export const userNavItems: navItems[] = [
     name: 'Messages',
     href: '/user/messages',
     icon: MessageSquare,
+  },
+  {
+    name: 'Inquiries',
+    href: '/user/inquiries',
+    icon: Inbox,
   },
   {
     name: 'Contracts',

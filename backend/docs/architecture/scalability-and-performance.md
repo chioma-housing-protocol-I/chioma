@@ -2,6 +2,8 @@
 
 This document outlines the scalability strategies, performance optimization techniques, capacity planning, and load testing procedures for the Chioma backend.
 
+> **Operational tuning:** For day-to-day knobs (env vars, checklists, troubleshooting), see [Performance Tuning Guidelines](./PERFORMANCE_TUNING_GUIDELINES.md).
+
 ## 1. Horizontal Scaling
 
 Horizontal scaling involves adding more instances of the API or services to distribute the load.

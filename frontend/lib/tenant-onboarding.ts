@@ -2,17 +2,9 @@
 
 export type PropertyType = 'apartment' | 'house' | 'studio' | 'condo' | 'any';
 export type BudgetRange =
-  | 'under-500'
-  | '500-1000'
-  | '1000-2000'
-  | '2000-3500'
-  | 'over-3500';
+  'under-500' | '500-1000' | '1000-2000' | '2000-3500' | 'over-3500';
 export type MoveInTimeline =
-  | 'asap'
-  | '1-month'
-  | '3-months'
-  | '6-months'
-  | 'flexible';
+  'asap' | '1-month' | '3-months' | '6-months' | 'flexible';
 
 export interface TenantOnboardingData {
   profile: {

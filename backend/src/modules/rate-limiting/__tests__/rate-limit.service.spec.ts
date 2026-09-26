@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { RateLimitService } from '../services/rate-limit.service';
 import { UserTier, EndpointCategory } from '../types/rate-limit.types';
+import { REDIS_CLIENT } from '../../../common/lock/redis-client.token';
 
 describe('RateLimitService', () => {
   let service: RateLimitService;
@@ -16,21 +17,24 @@ describe('RateLimitService', () => {
     },
   };
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
-
+  // No Redis client configured — exercises the single-instance
+  // cache-manager get/set fallback path (matches NODE_ENV=test in the real
+  // LockModule factory).
+  async function buildServiceWithoutRedis(): Promise<RateLimitService> {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RateLimitService,
-        {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
-        },
+        { provide: CACHE_MANAGER, useValue: mockCacheManager },
+        { provide: REDIS_CLIENT, useValue: null },
       ],
     }).compile();
+    return module.get<RateLimitService>(RateLimitService);
+  }
 
-    service = module.get<RateLimitService>(RateLimitService);
-    _cacheManager = module.get(CACHE_MANAGER);
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    service = await buildServiceWithoutRedis();
+    _cacheManager = mockCacheManager;
   });
 
   it('should be defined', () => {
@@ -207,6 +211,131 @@ describe('RateLimitService', () => {
       );
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('distributed counters via Redis (#1600)', () => {
+    let redisService: RateLimitService;
+    let mockRedis: { eval: jest.Mock };
+
+    async function buildServiceWithRedis(): Promise<RateLimitService> {
+      mockRedis = { eval: jest.fn() };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          RateLimitService,
+          { provide: CACHE_MANAGER, useValue: mockCacheManager },
+          { provide: REDIS_CLIENT, useValue: mockRedis },
+        ],
+      }).compile();
+      return module.get<RateLimitService>(RateLimitService);
+    }
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+      redisService = await buildServiceWithRedis();
+      mockCacheManager.get.mockResolvedValue(null); // block-key check misses
+    });
+
+    it('increments the counter via a single atomic Redis eval call, not get-then-set', async () => {
+      mockRedis.eval.mockResolvedValue(1);
+
+      const result = await redisService.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockRedis.eval).toHaveBeenCalledTimes(1);
+      // Never falls back to a non-atomic cacheManager set for the counter
+      // itself when Redis is available.
+      expect(mockCacheManager.set).not.toHaveBeenCalledWith(
+        expect.stringContaining('rate_limit:public'),
+        expect.any(Number),
+        expect.any(Number),
+      );
+    });
+
+    it('passes the key, increment amount, and window duration to the Lua script', async () => {
+      mockRedis.eval.mockResolvedValue(1);
+
+      await redisService.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        3,
+      );
+
+      const [script, numKeys, key, points, durationSeconds] =
+        mockRedis.eval.mock.calls[0];
+      expect(typeof script).toBe('string');
+      expect(numKeys).toBe(1);
+      expect(key).toContain('user:123');
+      expect(points).toBe(3);
+      expect(typeof durationSeconds).toBe('number');
+    });
+
+    it('blocks the request once the atomic counter exceeds the configured limit', async () => {
+      // Simulate the 101st point consumed in a 100-point window — the
+      // exact scenario that a get-then-set race could under-count under
+      // concurrent load across replicas.
+      mockRedis.eval.mockResolvedValue(101);
+
+      const result = await redisService.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.remainingPoints).toBe(0);
+    });
+
+    it('reports remaining points computed from the atomic counter value', async () => {
+      mockRedis.eval.mockResolvedValue(40);
+
+      const result = await redisService.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(60); // 100 - 40
+    });
+
+    it('degrades safely (fails open) when the Redis script call errors', async () => {
+      mockRedis.eval.mockRejectedValue(new Error('ECONNREFUSED'));
+
+      const result = await redisService.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.isBlocked).toBe(false);
+    });
+
+    it('does not use the Redis path when no client is configured (single-instance fallback)', async () => {
+      mockCacheManager.get.mockImplementation((key: string) =>
+        Promise.resolve(key.includes('block') ? null : 5),
+      );
+
+      const result = await service.consumePoints(
+        'user:123',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(94); // 100 - (5 + 1)
+      expect(mockCacheManager.set).toHaveBeenCalled();
     });
   });
 });

@@ -19,6 +19,8 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
+import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -32,35 +34,28 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
-import { ListingStatus } from './entities/property.entity';
+import { ListingStatus, Property } from './entities/property.entity';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
+@ApiStandardErrors()
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new property listing',
     description:
-      'Creates a new property listing. Only landlords and admins can create properties.',
+      'Creates a new property listing. Only agents (landlords) and admins can create properties.',
   })
   @ApiResponse({
     status: 201,
     description: 'Property created successfully',
-  })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token required',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - insufficient permissions',
   })
   async create(
     @Body() createPropertyDto: CreatePropertyDto,
@@ -74,15 +69,16 @@ export class PropertiesController {
   }
 
   @Get()
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Browse listings tolerate brief replication lag',
+  })
   @ApiOperation({
     summary: 'List all properties',
     description:
       'Retrieve a paginated list of property listings with optional filtering. By default, returns only published properties for public access.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Properties retrieved successfully',
-  })
+  @ApiPaginatedResponse(Property)
   async findAll(@Query() query: QueryPropertyDto) {
     // For public access, only show published properties unless status is explicitly set
     if (!query.status) {
@@ -98,14 +94,7 @@ export class PropertiesController {
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'User properties retrieved successfully',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token required',
-  })
+  @ApiPaginatedResponse(Property)
   async findMyProperties(
     @Query() query: QueryPropertyDto,
     @CurrentUser() user: User,
@@ -130,7 +119,6 @@ export class PropertiesController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({ status: 200, description: 'View recorded' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
   async recordView(@Param('id', ParseUUIDPipe) id: string) {
     return await this.propertiesService.recordView(id);
   }
@@ -153,6 +141,10 @@ export class PropertiesController {
   }
 
   @Get(':id')
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property detail view tolerates brief replication lag',
+  })
   @ApiOperation({
     summary: 'Get a specific property',
     description:
@@ -338,9 +330,10 @@ export class PropertiesController {
     return await this.propertiesService.markAsRented(id, user);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('/property-listings/wizard/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -354,9 +347,10 @@ export class PropertiesController {
     return await this.propertiesService.startWizard(user.id, body.data);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch('/property-listings/wizard/:id/step')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -371,9 +365,10 @@ export class PropertiesController {
     return await this.propertiesService.updateWizardStep(id, user.id, body);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get wizard draft',
@@ -386,14 +381,15 @@ export class PropertiesController {
     return await this.propertiesService.getWizardDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete('/property-listings/wizard/:id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete wizard draft',
-    description: 'Deletes a wizard draft for the current landlord.',
+    description: 'Deletes a wizard draft for the current user.',
   })
   async deleteListingWizardDraft(
     @Param('id', ParseUUIDPipe) id: string,
@@ -402,9 +398,10 @@ export class PropertiesController {
     await this.propertiesService.deleteWizardDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('/property-listings/wizard/:id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

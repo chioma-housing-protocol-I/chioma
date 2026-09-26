@@ -6,3 +6,6 @@ target
 .stellar
 
 */*/test_snapshots/tests/*
+
+# Local clippy output
+clippy_log.txt
