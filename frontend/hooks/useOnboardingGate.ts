@@ -14,6 +14,11 @@ export {
 /**
  * Single source of truth for "this account still owes us an email".
  *
+ * Uses the server-minted `emailCollectedAt` timestamp (present on the JWT
+ * payload and stored in the auth store) as the authoritative signal.  Falling
+ * back to the `email` string preserves backward compatibility with sessions
+ * established before the #1832 migration ran.
+ *
  * Wallet-first sign-in mints a session with no email attached (see
  * stellar-auth.service). Those users get routed through complete-profile
  * before the dashboard; everyone else passes straight through.
@@ -21,9 +26,15 @@ export {
 export function needsEmailOnboarding(
   user: {
     email?: string | null;
+    emailCollectedAt?: string | null;
   } | null,
 ): boolean {
   if (!user) return false;
+  // emailCollectedAt is the canonical server-side signal (issue #1832).
+  // Fall back to email presence for sessions predating the migration.
+  if ('emailCollectedAt' in user) {
+    return !user.emailCollectedAt;
+  }
   return !user.email;
 }
 

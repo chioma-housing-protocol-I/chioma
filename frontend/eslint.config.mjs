@@ -26,21 +26,30 @@ export default [
       'react-hooks/incompatible-library': 'warn',
       'react-hooks/preserve-manual-memoization': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
+      'no-console': 'error',
     },
   },
   {
-    // Test utilities and mock setups may use unknown or explicit any with justification
-    files: ['**/__tests__/**', 'test/**', 'mocks/**'],
+    // Test utilities, mocks, scripts, and demo code may use console output
+    files: [
+      '**/__tests__/**',
+      'test/**',
+      'mocks/**',
+      'scripts/**',
+      'app/modals-demo/**',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': 'off',
     },
   },
   {
     // Plain CommonJS Node scripts run directly via `node`, not bundled —
     // require() is correct here, not a TS-import-style violation.
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
     },
   },
   {

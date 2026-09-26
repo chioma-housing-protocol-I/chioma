@@ -6,6 +6,7 @@ import { clearEmailOnboardingSkip } from '@/lib/onboarding/email-onboarding';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
 import { useUIStore } from './ui-store';
+import { clearEmailOnboardingSkip } from '@/hooks/useOnboardingGate';
 
 // --- Types -------------------------------------------------------------------
 
@@ -19,6 +20,14 @@ export interface BaseUser {
   lastName: string;
   avatar?: string;
   locale?: string;
+  /**
+   * ISO timestamp from the server indicating when the user first supplied an
+   * email address. Null for wallet-only accounts that haven't completed
+   * onboarding. The EmailRequiredGuard uses this on the backend; the frontend
+   * uses it to determine whether to show the onboarding gate again after a
+   * session refresh.
+   */
+  emailCollectedAt: string | null;
 }
 
 export type AdminUser = BaseUser & { role: 'admin' };
@@ -54,6 +63,7 @@ interface AuthApiUser {
   role: string;
   avatar?: string;
   locale?: string;
+  emailCollectedAt?: string | null;
 }
 
 interface AuthSuccessResponse {
@@ -311,6 +321,7 @@ function normalizeUser(user: AuthApiUser): User {
     role: user.role,
     avatar: user.avatar,
     locale: user.locale,
+    emailCollectedAt: user.emailCollectedAt ?? null,
   };
 }
 
@@ -534,6 +545,11 @@ export const useAuthStore = create<AuthStore>()(
             get().refreshToken,
             currentUser,
           );
+          clearEmailOnboardingSkip();
+
+          // AC (issue #1832): clear the session-scoped skip flag on each
+          // token refresh so that wallet-only users who deferred email
+          // collection are re-prompted on a new session boundary.
           clearEmailOnboardingSkip();
 
           return { success: true };

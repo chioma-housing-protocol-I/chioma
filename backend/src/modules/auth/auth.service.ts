@@ -117,6 +117,7 @@ export class AuthService {
       emailCollectedAt: new Date(),
       failedLoginAttempts: 0,
       isActive: true,
+      emailCollectedAt: new Date(),
     });
 
     const verificationToken = this.issueVerificationToken(user);

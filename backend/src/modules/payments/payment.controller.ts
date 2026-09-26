@@ -35,6 +35,7 @@ import { CreatePaymentScheduleDto } from './dto/create-payment-schedule.dto';
 import { UpdatePaymentScheduleDto } from './dto/update-payment-schedule.dto';
 import { PaymentScheduleFiltersDto } from './dto/payment-schedule-filters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EmailRequiredGuard } from '../auth/guards/email-required.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
@@ -57,7 +58,7 @@ import { PaymentSchedule } from './entities/payment-schedule.entity';
 
 @ApiTags('Payments')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EmailRequiredGuard)
 @Controller('payments')
 @UseInterceptors(AuditLogInterceptor)
 export class PaymentController {
