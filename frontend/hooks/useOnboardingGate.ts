@@ -1,36 +1,15 @@
 'use client';
 
 import { useAuth } from '@/store/authStore';
+import { hasSkippedEmailOnboarding } from '@/lib/onboarding/email-onboarding';
 
 /** Route that collects the missing email for wallet-only accounts. */
 export const COMPLETE_PROFILE_ROUTE = '/complete-profile';
 
-/**
- * sessionStorage key backing "Skip for now". Deliberately session-scoped: the
- * prompt should come back on the next visit rather than being dismissed for
- * good, since we still need an email for receipts and account recovery.
- *
- * The server also enforces this: `emailCollectedAt` is checked by
- * EmailRequiredGuard before any sensitive operation proceeds (issue #1832).
- * `clearEmailOnboardingSkip()` is called on every token refresh so wallet-only
- * users who chose "skip" are re-prompted on a new session boundary.
- */
-const SKIP_KEY = 'chioma_onboarding_email_skipped';
-
-export function skipEmailOnboarding(): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem(SKIP_KEY, '1');
-}
-
-export function clearEmailOnboardingSkip(): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(SKIP_KEY);
-}
-
-function hasSkipped(): boolean {
-  if (typeof window === 'undefined') return false;
-  return sessionStorage.getItem(SKIP_KEY) === '1';
-}
+export {
+  clearEmailOnboardingSkip,
+  skipEmailOnboarding,
+} from '@/lib/onboarding/email-onboarding';
 
 /**
  * Single source of truth for "this account still owes us an email".
@@ -76,7 +55,7 @@ export function useOnboardingGate(): OnboardingGate {
 
   return {
     needsEmail,
-    shouldPrompt: needsEmail && !hasSkipped(),
+    shouldPrompt: needsEmail && !hasSkippedEmailOnboarding(),
     loading,
   };
 }

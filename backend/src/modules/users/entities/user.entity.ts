@@ -113,12 +113,6 @@ export class User {
   @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified: boolean;
 
-  /**
-   * Timestamp when the user first provided their email address (either during
-   * registration or via POST /auth/complete-profile for wallet-only accounts).
-   * Null means the user has never supplied an email — used for server-side
-   * enforcement of the onboarding gate.
-   */
   @Column({
     name: 'email_collected_at',
     nullable: true,

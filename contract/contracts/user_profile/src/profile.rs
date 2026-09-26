@@ -1,7 +1,7 @@
 use crate::errors::ContractError;
 use crate::events;
 use crate::rate_limit;
-use crate::storage::DataKey;
+use crate::storage::{extend_persistent_ttl, DataKey};
 use crate::types::{AccountType, UserProfile};
 use crate::upgrade;
 use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String};
@@ -22,6 +22,9 @@ impl UserProfileContract {
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Initialized, &true);
+        env.storage()
+            .instance()
+            .extend_ttl(crate::storage::TTL_THRESHOLD, crate::storage::TTL_BUMP);
 
         events::initialized(&env, admin);
 
@@ -69,6 +72,7 @@ impl UserProfileContract {
 
         // Store profile in persistent storage
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit creation event
         events::profile_created(&env, account_id, account_type, data_hash);
@@ -117,6 +121,7 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit update event
         events::profile_updated(
@@ -181,6 +186,7 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit verification event
         events::profile_verified(&env, account_id, admin);
@@ -226,6 +232,7 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit unverification event
         // No reason is captured by the current public entrypoint signature.

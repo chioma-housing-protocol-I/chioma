@@ -7,6 +7,31 @@ import { syncOfflineData } from './sync-manager';
 import { setMetadata, getMetadata } from './db';
 import { Logger } from '../logger';
 
+declare global {
+  interface Window {
+    __CHIOMA_CLIENT_LOGGER__?: {
+      info?: (message: string, meta?: unknown) => void;
+      warn?: (message: string, meta?: unknown) => void;
+      error?: (message: string, meta?: unknown) => void;
+    };
+  }
+}
+
+const logger = {
+  info(message: string, meta?: unknown): void {
+    if (typeof window === 'undefined') return;
+    window.__CHIOMA_CLIENT_LOGGER__?.info?.(message, meta);
+  },
+  warn(message: string, meta?: unknown): void {
+    if (typeof window === 'undefined') return;
+    window.__CHIOMA_CLIENT_LOGGER__?.warn?.(message, meta);
+  },
+  error(message: string, meta?: unknown): void {
+    if (typeof window === 'undefined') return;
+    window.__CHIOMA_CLIENT_LOGGER__?.error?.(message, meta);
+  },
+};
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SYNC_TAG = 'chioma-offline-sync';
@@ -20,7 +45,7 @@ const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
  */
 export async function registerBackgroundSync(): Promise<boolean> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    Logger.warn('Service Worker not supported');
+    logger.warn('Service Worker not supported');
     return false;
   }
 
@@ -36,16 +61,16 @@ export async function registerBackgroundSync(): Promise<boolean> {
         }
       ).sync;
       await syncManager.register(SYNC_TAG);
-      Logger.log('Background sync registered');
+      logger.info('Background sync registered');
       return true;
     } else {
-      Logger.warn('Background Sync not supported');
+      logger.warn('Background Sync not supported');
       // Fall back to periodic sync
       setupPeriodicSync();
       return false;
     }
   } catch (error) {
-    Logger.error('Failed to register background sync:', error);
+    logger.error('Failed to register background sync', error);
     return false;
   }
 }
@@ -59,12 +84,12 @@ export async function triggerSync(): Promise<void> {
     await setMetadata(LAST_SYNC_KEY, Date.now());
 
     if (result.success) {
-      Logger.log('Sync completed successfully:', result);
+      logger.info('Sync completed successfully', result);
     } else {
-      Logger.warn('Sync completed with errors:', result);
+      logger.warn('Sync completed with errors', result);
     }
   } catch (error) {
-    Logger.error('Sync failed:', error);
+    logger.error('Sync failed', error);
   }
 }
 
@@ -122,7 +147,7 @@ export function stopPeriodicSync(): void {
  */
 export function setupAutoSync(): () => void {
   const handleOnline = async () => {
-    Logger.log('Connection restored, triggering sync...');
+    logger.info('Connection restored, triggering sync');
     await triggerSync();
   };
 

@@ -30,10 +30,14 @@ export const DEPENDENCY_CRITICALITY: Readonly<
 > = Object.freeze({
   // Nothing can be served without Postgres.
   database: 'critical',
+
   // Caching, queues, locks and rate limiting degrade; reads still succeed.
   redis: 'degraded',
   // Search falls back to PostgreSQL full-text search.
   elasticsearch: 'degraded',
+  // On-chain writes via Soroban RPC are queued/retried by background jobs;
+  // an RPC outage does not block non-blockchain request paths.
+  soroban: 'degraded',
   // On-chain writes are queued and retried by the blockchain sync jobs.
   stellar: 'degraded',
   // Heap pressure is a warning signal, not a reason to drop out of the LB.

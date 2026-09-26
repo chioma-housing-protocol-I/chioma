@@ -1,5 +1,17 @@
 #![no_std]
 
+//! User Profile Contract
+//!
+//! ## Public surface
+//!
+//! Unlike most contracts in this workspace, the `#[contract]` struct and its
+//! `#[contractimpl]` block are **not** in this file — they live in
+//! [`profile`], re-exported below via `pub use profile::*`. See
+//! `profile.rs` for the full list of external entry points (initialize,
+//! create_profile, update_profile, verify_profile, unverify_profile,
+//! delete_profile, propose_upgrade, etc). This file only wires modules and
+//! re-exports; see #1684.
+
 mod errors;
 mod events;
 mod profile;

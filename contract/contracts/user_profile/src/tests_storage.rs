@@ -202,3 +202,32 @@ fn test_get_admin_reflects_initialized_admin() {
 
     assert_eq!(client.get_admin(), admin);
 }
+
+#[test]
+fn test_create_profile_extends_persistent_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+
+    let env = Env::default();
+    let client = create_contract(&env);
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+    let data_hash = Bytes::from_array(&env, &[0u8; 32]);
+
+    env.mock_all_auths();
+    client.initialize(&admin);
+    client.create_profile(&user, &crate::types::AccountType::Tenant, &data_hash);
+
+    // Before this fix (#1683), user_profile's storage writes never called
+    // extend_ttl at all, so a profile with no further writes could be
+    // archived out from under an active account.
+    let ttl = env.as_contract(&client.address, || {
+        let key = crate::storage::DataKey::Profile(user.clone());
+        env.storage().persistent().get_ttl(&key)
+    });
+
+    assert!(
+        ttl >= 499_000,
+        "expected the profile key's TTL to be bumped close to the 500_000-ledger threshold, got {ttl}"
+    );
+}

@@ -2,18 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Contract, SorobanRpc, xdr, Address } from '@stellar/stellar-sdk';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { BlockchainTransactionError } from '../../../common/errors/domain-errors';
-
-/**
- * Fields read from a Soroban `sendTransaction` response.
- * `hash` is required to correlate the submission. A missing or empty hash
- * is a protocol error, not a successful mint, transfer, burn, or reassignment.
- */
-interface SorobanSendTransactionResponse {
-  hash?: string | null;
-  status?: string;
-  errorResult?: unknown;
-}
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { BlockchainTransactionError } from '../../../common/errors';
 
 export interface MintObligationParams {
   agreementId: string;
@@ -115,7 +109,16 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
-      const txHash = this.requireTransactionHash(response, 'mint_obligation');
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `mint_obligation(${params.agreementId})`,
+      );
 
       this.logger.log(
         `Minted rent obligation NFT for agreement ${params.agreementId}`,
@@ -152,9 +155,15 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
-      const txHash = this.requireTransactionHash(
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
         response,
-        'transfer_obligation',
+        `transfer_obligation(${params.agreementId})`,
       );
 
       this.logger.log(
@@ -341,7 +350,16 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
-      const txHash = this.requireTransactionHash(response, 'burn_nft');
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
+        response,
+        `burn_nft(${params.tokenId})`,
+      );
 
       this.logger.log(
         `Burned rent obligation NFT ${params.tokenId} (reason: ${params.reason})`,
@@ -372,9 +390,15 @@ export class RentObligationNftService {
       );
 
       const response = await this.server.sendTransaction(tx);
-      const txHash = this.requireTransactionHash(
+      assertSorobanSubmissionAccepted(response);
+      await waitForSorobanTransactionSuccess(
+        this.server,
+        response.hash,
+        this.configService,
+      const response = await this.server.sendTransaction(tx);
+      const txHash = this.extractTransactionHash(
         response,
-        'admin_reassign_obligation',
+        `admin_reassign_obligation(${params.agreementId})`,
       );
 
       this.logger.log(
@@ -501,18 +525,38 @@ export class RentObligationNftService {
     }
   }
 
-  private requireTransactionHash(
-    response: SorobanSendTransactionResponse | null | undefined,
-    operation: string,
+  /**
+   * Validates a Soroban `sendTransaction` response and returns the transaction hash.
+   *
+   * Expected response shape (subset of `SorobanRpc.Api.SendTransactionResponse`):
+   * ```
+   * {
+   *   hash:   string;          // hex-encoded transaction hash — REQUIRED
+   *   status: string;          // e.g. "PENDING" | "DUPLICATE" | "TRY_AGAIN_LATER" | "ERROR"
+   *   errorResultXdr?: string; // present only when status === "ERROR"
+   * }
+   * ```
+   *
+   * Throws `BlockchainTransactionError` when `hash` is absent or empty, which can
+   * happen if Soroban returns an incomplete response (e.g. a network interruption
+   * between submission and acknowledgement).
+   *
+   * @param response - Raw response from `SorobanRpc.Server.sendTransaction`
+   * @param operationLabel - Human-readable label used in the error message
+   * @returns The validated transaction hash string
+   */
+  private extractTransactionHash(
+    response: SorobanRpc.Api.SendTransactionResponse,
+    operationLabel: string,
   ): string {
-    const hash = response?.hash;
-    if (hash == null || hash === '') {
+    if (!response.hash) {
       throw new BlockchainTransactionError(
-        `Soroban ${operation} response is missing a transaction hash`,
-        { operation, status: response?.status },
+        `Soroban returned an incomplete response for "${operationLabel}": transaction hash is missing. ` +
+          `Response status: ${response.status ?? 'unknown'}`,
+        { operationLabel, responseStatus: response.status },
       );
     }
-    return hash;
+    return response.hash;
   }
 
   private async buildTransaction(
