@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import * as Sentry from '@sentry/nestjs';
 import { sanitizeBody } from '../middleware/logger.middleware';
+import { requestContext } from '../request-context/request-context';
 
 const SENSITIVE_HEADERS = ['authorization', 'cookie', 'x-api-key'];
 
@@ -39,6 +40,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const { method, url, ip } = req;
     const correlationId: string =
       (req as Record<string, any>).correlationId ||
+      (req as Record<string, any>).requestId ||
       (req.headers['x-request-id'] as string) ||
       'unknown';
     const userAgent: string = (req.headers['user-agent'] as string) || '';
@@ -50,6 +52,11 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // Store sanitized body on res.locals for middleware to access
     res.locals.requestBody = sanitizedBody;
+    requestContext.set({
+      requestId: correlationId,
+      correlationId,
+      userId: req.user?.id,
+    });
 
     Sentry.getCurrentScope().setContext('request', {
       method,

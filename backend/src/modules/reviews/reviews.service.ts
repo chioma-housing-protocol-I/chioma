@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './review.entity';
@@ -13,10 +9,21 @@ import { HostReview } from './entities/host-review.entity';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { PaginationUtils } from '../../common/utils';
 import {
   AgreementStatus,
   RentAgreement,
 } from '../rent/entities/rent-contract.entity';
+import {
+  ReviewNotFoundError,
+  AuthorizationError,
+  ValidationError,
+  BusinessRuleViolationError,
+  AgreementNotFoundError,
+} from '../../common/errors/domain-errors';
+
+/** Days after a booking completes during which reviews are accepted. */
+export const DEFAULT_REVIEW_WINDOW_DAYS = 30;
 
 @Injectable()
 export class ReviewsService {
@@ -29,24 +36,112 @@ export class ReviewsService {
     private readonly hostReviewRepository: Repository<HostReview>,
     @InjectRepository(RentAgreement)
     private readonly agreementRepository: Repository<RentAgreement>,
+    private readonly configService: ConfigService,
   ) {}
+
+  /** Review window in days, configurable via `REVIEW_WINDOW_DAYS`. */
+  private getReviewWindowDays(): number {
+    const configured = Number(
+      this.configService.get('REVIEW_WINDOW_DAYS', DEFAULT_REVIEW_WINDOW_DAYS),
+    );
+    return Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_REVIEW_WINDOW_DAYS;
+  }
+
+  /**
+   * Reject reviews for bookings that completed longer than the review
+   * window ago. Agreements without any completion timestamp (legacy rows)
+   * are not window-checked, since there is nothing to measure from.
+   */
+  private assertWithinReviewWindow(agreement: RentAgreement): void {
+    const completedAt = agreement.endDate ?? agreement.updatedAt;
+    if (!completedAt) {
+      return;
+    }
+    const windowDays = this.getReviewWindowDays();
+    const windowMs = windowDays * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(completedAt).getTime() > windowMs) {
+      throw new BusinessRuleViolationError(
+        `Review window of ${windowDays} days has closed for this booking`,
+      );
+    }
+  }
+
+  /**
+   * Find the most recent completed (expired) agreement connecting the two
+   * users — in either tenant/landlord direction — optionally scoped to a
+   * property. This is what qualifies someone to post a review.
+   */
+  private async findQualifyingAgreement(
+    reviewerId: string,
+    revieweeId: string,
+    propertyId?: string | null,
+  ): Promise<RentAgreement | null> {
+    const propertyFilter = propertyId ? { propertyId } : {};
+    const agreements = await this.agreementRepository.find({
+      where: [
+        {
+          userId: reviewerId,
+          adminId: revieweeId,
+          status: AgreementStatus.EXPIRED,
+          ...propertyFilter,
+        },
+        {
+          userId: revieweeId,
+          adminId: reviewerId,
+          status: AgreementStatus.EXPIRED,
+          ...propertyFilter,
+        },
+      ],
+      order: { updatedAt: 'DESC' },
+      take: 1,
+    });
+    return agreements[0] ?? null;
+  }
 
   async create(reviewData: Partial<Review>): Promise<Review> {
     if (containsProhibitedLanguage(reviewData.comment ?? '')) {
       throw new Error('Review contains prohibited language.');
     }
+    if (!reviewData.reviewerId || !reviewData.revieweeId) {
+      throw new ValidationError('reviewerId and revieweeId are required');
+    }
+
+    const agreement = await this.findQualifyingAgreement(
+      reviewData.reviewerId,
+      reviewData.revieweeId,
+      reviewData.propertyId,
+    );
+    if (!agreement) {
+      throw new BusinessRuleViolationError(
+        'A completed booking between the reviewer and reviewee is required before submitting a review',
+      );
+    }
+    this.assertWithinReviewWindow(agreement);
+
     const review = this.reviewRepository.create(reviewData);
     return this.reviewRepository.save(review);
   }
 
-  async getUserReviews(userId: string): Promise<Review[]> {
-    return this.reviewRepository.find({
+  async getUserReviews(userId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.reviewRepository.findAndCount({
       where: [{ reviewerId: userId }, { revieweeId: userId }],
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  async getPropertyReviews(propertyId: string): Promise<Review[]> {
-    return this.reviewRepository.find({ where: { propertyId } });
+  async getPropertyReviews(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.reviewRepository.findAndCount({
+      where: { propertyId },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getAverageRatingForUser(userId: string): Promise<number> {
@@ -76,7 +171,7 @@ export class ReviewsService {
     hostId: string,
   ): Promise<GuestReview> {
     if (containsProhibitedLanguage(dto.comment ?? '')) {
-      throw new BadRequestException('Review contains prohibited language.');
+      throw new ValidationError('Review contains prohibited language.');
     }
 
     const agreement = await this.agreementRepository.findOne({
@@ -84,15 +179,16 @@ export class ReviewsService {
     });
 
     if (!agreement) {
-      throw new NotFoundException('Booking not found');
+      throw new AgreementNotFoundError(dto.bookingId);
     }
 
     if (agreement.status !== AgreementStatus.EXPIRED) {
-      throw new BadRequestException('Booking must be completed');
+      throw new BusinessRuleViolationError('Booking must be completed');
     }
+    this.assertWithinReviewWindow(agreement);
 
     if (agreement.adminId !== hostId) {
-      throw new ForbiddenException('Not authorized');
+      throw new AuthorizationError('Not authorized');
     }
 
     const existing = await this.guestReviewRepository.findOne({
@@ -100,7 +196,7 @@ export class ReviewsService {
     });
 
     if (existing) {
-      throw new BadRequestException('Review already posted');
+      throw new BusinessRuleViolationError('Review already posted');
     }
 
     const review = this.guestReviewRepository.create({
@@ -122,7 +218,7 @@ export class ReviewsService {
     guestId: string,
   ): Promise<HostReview> {
     if (containsProhibitedLanguage(dto.comment ?? '')) {
-      throw new BadRequestException('Review contains prohibited language.');
+      throw new ValidationError('Review contains prohibited language.');
     }
 
     const agreement = await this.agreementRepository.findOne({
@@ -130,15 +226,16 @@ export class ReviewsService {
     });
 
     if (!agreement) {
-      throw new NotFoundException('Booking not found');
+      throw new AgreementNotFoundError(dto.bookingId);
     }
 
     if (agreement.status !== AgreementStatus.EXPIRED) {
-      throw new BadRequestException('Booking must be completed');
+      throw new BusinessRuleViolationError('Booking must be completed');
     }
+    this.assertWithinReviewWindow(agreement);
 
     if (agreement.userId !== guestId) {
-      throw new ForbiddenException('Not authorized');
+      throw new AuthorizationError('Not authorized');
     }
 
     const existing = await this.hostReviewRepository.findOne({
@@ -146,7 +243,7 @@ export class ReviewsService {
     });
 
     if (existing) {
-      throw new BadRequestException('Review already posted');
+      throw new BusinessRuleViolationError('Review already posted');
     }
 
     const review = this.hostReviewRepository.create({
@@ -166,25 +263,27 @@ export class ReviewsService {
   }
 
   async getGuestReviews(userId: string, page = 1, limit = 20) {
-    const [items, total] = await this.guestReviewRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.guestReviewRepository.findAndCount({
       where: { guestId: userId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getHostReviews(userId: string, page = 1, limit = 20) {
-    const [items, total] = await this.hostReviewRepository.findAndCount({
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.hostReviewRepository.findAndCount({
       where: { hostId: userId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
       take: limit,
     });
 
-    return { items, total, page, limit };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async getReputation(userId: string) {
@@ -240,13 +339,56 @@ export class ReviewsService {
     };
   }
 
+  async getMyReviews(userId: string, page = 1, limit = 20, filters: any = {}) {
+    const query = this.reviewRepository
+      .createQueryBuilder('review')
+      .where('(review.reviewerId = :userId OR review.revieweeId = :userId)', {
+        userId,
+      });
+
+    if (filters.rating) {
+      query.andWhere('review.rating = :rating', { rating: filters.rating });
+    }
+    if (filters.status) {
+      if (filters.status === 'FLAGGED') {
+        query.andWhere('review.reported = :reported', { reported: true });
+      } else if (filters.status === 'PUBLISHED') {
+        query.andWhere('review.reported = :reported', { reported: false });
+      }
+    }
+    if (filters.search) {
+      query.andWhere('review.comment ILIKE :search', {
+        search: `%${filters.search}%`,
+      });
+    }
+
+    const [data, total] = await query
+      .orderBy('review.createdAt', 'DESC')
+      .skip(PaginationUtils.calculateOffset(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
+  }
+
   async updateReview(id: string, dto: UpdateReviewDto, userId: string) {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+    });
+    if (review) {
+      if (review.reviewerId !== userId) {
+        throw new AuthorizationError('Not authorized');
+      }
+      Object.assign(review, dto);
+      return this.reviewRepository.save(review);
+    }
+
     const guestReview = await this.guestReviewRepository.findOne({
       where: { id },
     });
     if (guestReview) {
       if (guestReview.hostId !== userId) {
-        throw new ForbiddenException('Not authorized');
+        throw new AuthorizationError('Not authorized');
       }
       Object.assign(guestReview, dto);
       return this.guestReviewRepository.save(guestReview);
@@ -257,24 +399,35 @@ export class ReviewsService {
     });
     if (hostReview) {
       if (hostReview.guestId !== userId) {
-        throw new ForbiddenException('Not authorized');
+        throw new AuthorizationError('Not authorized');
       }
       Object.assign(hostReview, dto);
       return this.hostReviewRepository.save(hostReview);
     }
 
-    throw new NotFoundException('Review not found');
+    throw new ReviewNotFoundError(id);
   }
 
   async deleteReview(id: string, userId: string) {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+    });
+    if (review) {
+      if (review.reviewerId !== userId) {
+        throw new AuthorizationError('Not authorized');
+      }
+      await this.reviewRepository.softDelete({ id });
+      return { deleted: true };
+    }
+
     const guestReview = await this.guestReviewRepository.findOne({
       where: { id },
     });
     if (guestReview) {
       if (guestReview.hostId !== userId) {
-        throw new ForbiddenException('Not authorized');
+        throw new AuthorizationError('Not authorized');
       }
-      await this.guestReviewRepository.delete({ id });
+      await this.guestReviewRepository.softDelete({ id });
       return { deleted: true };
     }
 
@@ -283,12 +436,12 @@ export class ReviewsService {
     });
     if (hostReview) {
       if (hostReview.guestId !== userId) {
-        throw new ForbiddenException('Not authorized');
+        throw new AuthorizationError('Not authorized');
       }
-      await this.hostReviewRepository.delete({ id });
+      await this.hostReviewRepository.softDelete({ id });
       return { deleted: true };
     }
 
-    throw new NotFoundException('Review not found');
+    throw new ReviewNotFoundError(id);
   }
 }

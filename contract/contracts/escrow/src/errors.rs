@@ -40,4 +40,59 @@ pub enum EscrowError {
     RateLimitExceeded = 16,
     /// Cooldown period not met
     CooldownNotMet = 17,
+    /// Escrow is frozen - no fund movements allowed
+    EscrowFrozen = 18,
+    /// Escrow is already frozen
+    AlreadyFrozen = 19,
+    /// Escrow is not frozen
+    NotFrozen = 20,
+    /// Empty freeze reason string
+    EmptyFreezeReason = 21,
+    /// System admin not set
+    AdminNotSet = 22,
+    /// Agreement id must not be empty
+    EmptyAgreementId = 23,
+    /// Caller is not the configured dispute_resolution contract
+    NotDisputeResolutionContract = 24,
+    /// Contract is globally paused; state-changing operations are blocked
+    ContractPaused = 23,
+    /// Contract is not currently paused
+    NotPaused = 24,
+}
+
+/// Pins every `EscrowError` discriminant so off-chain code that maps error
+/// codes to messages cannot silently misreport after a variant is added or
+/// reordered (#1686). If this test fails to compile or assert, a
+/// discriminant changed and every off-chain consumer needs to be checked.
+#[cfg(test)]
+mod pin_tests {
+    use super::EscrowError;
+
+    #[test]
+    fn error_codes_are_pinned() {
+        assert_eq!(EscrowError::NotAuthorized as u32, 1);
+        assert_eq!(EscrowError::InvalidState as u32, 2);
+        assert_eq!(EscrowError::InsufficientFunds as u32, 3);
+        assert_eq!(EscrowError::AlreadySigned as u32, 4);
+        assert_eq!(EscrowError::InvalidSigner as u32, 5);
+        assert_eq!(EscrowError::DisputeActive as u32, 6);
+        assert_eq!(EscrowError::InvalidRelease as u32, 7);
+        assert_eq!(EscrowError::InvalidEscrowId as u32, 8);
+        assert_eq!(EscrowError::EscrowNotFound as u32, 9);
+        assert_eq!(EscrowError::EmptyDisputeReason as u32, 10);
+        assert_eq!(EscrowError::InvalidApprovalTarget as u32, 11);
+        assert_eq!(EscrowError::TimeoutNotReached as u32, 12);
+        assert_eq!(EscrowError::InvalidTimeoutConfig as u32, 13);
+        assert_eq!(EscrowError::InvalidAmount as u32, 14);
+        assert_eq!(EscrowError::EmptyReleaseReason as u32, 15);
+        assert_eq!(EscrowError::RateLimitExceeded as u32, 16);
+        assert_eq!(EscrowError::CooldownNotMet as u32, 17);
+        assert_eq!(EscrowError::EscrowFrozen as u32, 18);
+        assert_eq!(EscrowError::AlreadyFrozen as u32, 19);
+        assert_eq!(EscrowError::NotFrozen as u32, 20);
+        assert_eq!(EscrowError::EmptyFreezeReason as u32, 21);
+        assert_eq!(EscrowError::AdminNotSet as u32, 22);
+        assert_eq!(EscrowError::ContractPaused as u32, 23);
+        assert_eq!(EscrowError::NotPaused as u32, 24);
+    }
 }

@@ -3,3 +3,4 @@ export * from './messages';
 export * from './classify';
 export * from './logger';
 export * from './recovery';
+export * from './circuit-breaker';

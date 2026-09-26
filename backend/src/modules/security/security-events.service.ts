@@ -6,6 +6,7 @@ import {
   SecurityEventType,
   SecurityEventSeverity,
 } from './entities/security-event.entity';
+import { PaginationUtils } from '../../common/utils';
 
 export interface CreateSecurityEventDto {
   userId?: string;
@@ -53,17 +54,15 @@ export class SecurityEventsService {
   /**
    * Get security events for a user
    */
-  async getUserEvents(
-    userId: string,
-    limit: number = 100,
-    offset: number = 0,
-  ): Promise<SecurityEvent[]> {
-    return this.securityEventRepository.find({
+  async getUserEvents(userId: string, page: number = 1, limit: number = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.securityEventRepository.findAndCount({
       where: { userId },
       order: { createdAt: 'DESC' },
       take: limit,
-      skip: offset,
+      skip: PaginationUtils.calculateOffset(page, limit),
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**
@@ -103,16 +102,20 @@ export class SecurityEventsService {
    */
   async getRecentEvents(
     hours: number = 24,
-    limit: number = 100,
-  ): Promise<SecurityEvent[]> {
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    PaginationUtils.validatePagination(page, limit);
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-    return this.securityEventRepository.find({
+    const [data, total] = await this.securityEventRepository.findAndCount({
       where: {
         createdAt: Between(since, new Date()),
       },
       order: { createdAt: 'DESC' },
       take: limit,
+      skip: PaginationUtils.calculateOffset(page, limit),
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**
@@ -136,7 +139,11 @@ export class SecurityEventsService {
    * Check for suspicious activity patterns
    */
   async detectSuspiciousActivity(userId: string): Promise<boolean> {
-    const recentEvents = await this.getUserEvents(userId, 50);
+    const recentEvents = await this.securityEventRepository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
 
     // Check for multiple failed logins
     const failedLogins = recentEvents.filter(

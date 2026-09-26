@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { I18nService } from './i18n.service';
 import { LocalizedContentService } from './localized-content.service';
 import { I18nResponseInterceptor } from './interceptors/i18n-response.interceptor';
@@ -13,6 +13,7 @@ export class I18nController {
     private readonly localizedContentService: LocalizedContentService,
   ) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('languages')
   @ApiOperation({ summary: 'List supported languages and coverage' })
   getLanguages() {
@@ -28,6 +29,7 @@ export class I18nController {
     };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('translate')
   @ApiOperation({ summary: 'Translate a key for a given language' })
   translate(@Query('key') key: string, @Query('lang') lang?: string) {
@@ -38,6 +40,7 @@ export class I18nController {
     };
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('format-demo')
   @ApiOperation({ summary: 'Show currency/date/number localization sample' })
   formatDemo(

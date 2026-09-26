@@ -14,10 +14,17 @@ import { Payment } from '../rent/entities/payment.entity';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 import { RentObligationNft } from './entities/rent-obligation-nft.entity';
 import { NFTTransfer } from './entities/nft-transfer.entity';
+import { TerminationReconciliation } from './entities/termination-reconciliation.entity';
 
 import { AuditModule } from '../audit/audit.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
+
+import { AgreementStateService } from './state-machines/agreement-state-machine.service';
+import { AgreementsEventListener } from './listeners/agreement-event-listener';
+import { AgreementCronService } from './cron/agreement-cron.service';
 
 @Module({
   imports: [
@@ -27,10 +34,13 @@ import { StellarModule } from '../stellar/stellar.module';
       StellarEscrow,
       RentObligationNft,
       NFTTransfer,
+      TerminationReconciliation,
     ]),
     AuditModule,
     ReviewsModule,
     StellarModule,
+    EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
   ],
   controllers: [AgreementsController, AgreementNftController],
   providers: [
@@ -41,6 +51,9 @@ import { StellarModule } from '../stellar/stellar.module';
     EscrowIntegrationService,
     TemplateRenderingService,
     PDFGenerationService,
+    AgreementStateService,
+    AgreementsEventListener,
+    AgreementCronService,
   ],
   exports: [
     AgreementsService,

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="420" viewBox="0 0 920 420" role="img" aria-labelledby="title desc">
+  <title id="title">rent_obligation test coverage result</title>
+  <desc id="desc">Terminal-style screenshot showing make test succeeded with 33 passing rent_obligation tests.</desc>
+  <rect width="920" height="420" rx="16" fill="#0d1117"/>
+  <rect x="0" y="0" width="920" height="42" rx="16" fill="#161b22"/>
+  <circle cx="24" cy="21" r="7" fill="#ff5f56"/>
+  <circle cx="48" cy="21" r="7" fill="#ffbd2e"/>
+  <circle cx="72" cy="21" r="7" fill="#27c93f"/>
+  <text x="100" y="27" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">rent_obligation coverage verification</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">
+    <text x="32" y="84" fill="#7ee787">$ make test</text>
+    <text x="32" y="122" fill="#c9d1d9">cargo test</text>
+    <text x="32" y="160" fill="#c9d1d9">running 33 tests</text>
+    <text x="32" y="198" fill="#c9d1d9">test tests::test_obligation_lifecycle_accrual_and_settlement_uses_deterministic_time ... ok</text>
+    <text x="32" y="236" fill="#c9d1d9">test tests::test_partial_payment_keeps_obligation_active_until_full_settlement ... ok</text>
+    <text x="32" y="274" fill="#c9d1d9">test tests::test_late_payment_settlement_records_actual_late_timestamp ... ok</text>
+    <text x="32" y="312" fill="#c9d1d9">test tests::test_error_paths_return_contract_errors_without_mutating_state ... ok</text>
+    <text x="32" y="360" fill="#3fb950">test result: ok. 33 passed; 0 failed; finished in 0.17s</text>
+  </g>
+</svg>

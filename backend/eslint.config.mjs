@@ -19,7 +19,6 @@ export default tseslint.config(
       'coverage/',
       '*.js',
       '*.json',
-      'scripts/',
       // These files are missing class declarations in upstream — pre-existing parse errors
       'src/modules/users/users.controller.ts',
       'src/modules/users/users.service.ts',
@@ -61,6 +60,26 @@ export default tseslint.config(
         },
       ],
       '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'scripts/**/*.ts'],
+    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/__tests__/**'],
+    rules: {
+      'no-console': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression > TSAnyKeyword',
+          message:
+            "Do not use 'as any'. Use a proper type, a validated parse, or a documented narrow type with a runtime guard instead.",
+        },
+        {
+          selector: 'TSTypeAssertion > TSAnyKeyword',
+          message:
+            "Do not use '<any>' type assertions. Use a proper type, a validated parse, or a documented narrow type with a runtime guard instead.",
+        },
+      ],
     },
   },
 );

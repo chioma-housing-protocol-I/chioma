@@ -17,7 +17,7 @@ export function Locked(options: LockedOptions): MethodDecorator {
       const lockService: LockService = this.lockService;
       if (!lockService) {
         throw new Error(
-          `@Locked requires 'lockService: LockService' to be injected on ${(target as any).constructor.name}`,
+          `@Locked requires 'lockService: LockService' to be injected on ${target.constructor.name}`,
         );
       }
       const resolvedKey =

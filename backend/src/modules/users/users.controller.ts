@@ -33,12 +33,15 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { User, UserRole } from './entities/user.entity';
+import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 
 @ApiTags('Users')
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
-@UseInterceptors(ClassSerializerInterceptor)
+@UseInterceptors(ClassSerializerInterceptor, AuditLogInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -54,6 +57,13 @@ export class UsersController {
   }
 
   @Put('me')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'User',
+    level: AuditLevel.INFO,
+    includeOldValues: true,
+    includeNewValues: true,
+  })
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
@@ -79,6 +89,12 @@ export class UsersController {
   }
 
   @Post('me/password')
+  @AuditLog({
+    action: AuditAction.PASSWORD_CHANGE,
+    entityType: 'User',
+    level: AuditLevel.SECURITY,
+    sensitive: true,
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change password' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
@@ -195,8 +211,10 @@ export class UsersController {
 
   @Delete(':id/permanent')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Permanently delete user account (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Account permanently deleted' })
+  @ApiOperation({
+    summary: 'Delete user account while preserving history (Admin only)',
+  })
+  @ApiResponse({ status: 200, description: 'Account deleted' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async hardDeleteAccount(@Param('id') id: string) {

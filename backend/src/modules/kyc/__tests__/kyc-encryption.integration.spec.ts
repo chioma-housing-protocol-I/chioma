@@ -10,6 +10,7 @@ import { SubmitKycDto } from '../kyc.dto';
 import { UserKycStatusService } from '../../users/user-kyc-status.service';
 import { AuditService } from '../../audit/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { User } from '../../users/entities/user.entity';
 
 /**
  * Integration tests for KYC encryption with the KYC service
@@ -50,6 +51,10 @@ describe('KYC Encryption - Integration Tests', () => {
         EncryptionService,
         { provide: ConfigService, useValue: mockConfigService },
         { provide: getRepositoryToken(Kyc), useValue: mockKycRepository },
+        {
+          provide: getRepositoryToken(User),
+          useValue: { find: jest.fn(), findOne: jest.fn() },
+        },
         {
           provide: UserKycStatusService,
           useValue: mockUserKycStatusService,

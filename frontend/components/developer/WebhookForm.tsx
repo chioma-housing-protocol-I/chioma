@@ -58,51 +58,30 @@ export function WebhookForm({
   const [authValue, setAuthValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!webhook) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLabel('');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUrl('');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMethod('POST');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEvents([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHeadersText('');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRetryPolicy('standard');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTimeoutMs(10000);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthentication('none');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthValue('');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLabel(webhook.label);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(webhook.url);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMethod(webhook.method);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEvents(webhook.events);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHeadersText(headersToText(webhook.headers));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRetryPolicy(webhook.retryPolicy);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimeoutMs(webhook.timeoutMs);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthentication(webhook.authentication);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthValue(webhook.authValue ?? '');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
   }, [webhook, isOpen]);
 

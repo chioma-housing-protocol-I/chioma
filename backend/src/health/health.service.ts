@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HealthCheckResult, HealthCheckError } from '@nestjs/terminus';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  DependencyCriticality,
+  getDependencyCriticality,
+  isDegradedStatus,
+  isFailingStatus,
+} from './health.constants';
 
 export interface EnhancedHealthResult {
   status: 'ok' | 'error' | 'warning';
@@ -57,10 +63,10 @@ export class HealthService {
     let services = {};
     let status: 'ok' | 'error' | 'warning' = 'error';
 
-    // Extract information from HealthCheckError if available
-    if (error instanceof HealthCheckError && error.causes) {
-      services = this.formatServices(error.causes);
-      status = this.determineOverallStatusFromError(error.causes);
+    const causes = this.extractIndicatorDetails(error);
+    if (causes) {
+      services = this.formatServices(causes);
+      status = this.determineOverallStatusFromError(causes);
     }
 
     const result: EnhancedHealthResult = {
@@ -86,38 +92,89 @@ export class HealthService {
     return result;
   }
 
+  /**
+   * Pulls the per-indicator details out of whatever the health check threw.
+   *
+   * An individual indicator throws `HealthCheckError` (details on `causes`),
+   * while `HealthCheckService.check()` rejects with a Nest
+   * `ServiceUnavailableException` whose response body is the full
+   * `HealthCheckResult`. Both carry every indicator — healthy ones included —
+   * which is what the degraded/unhealthy classification needs to see.
+   */
+  private extractIndicatorDetails(error: any): Record<string, any> | undefined {
+    if (error instanceof HealthCheckError && error.causes) {
+      return error.causes as Record<string, any>;
+    }
+
+    const response =
+      typeof error?.getResponse === 'function'
+        ? error.getResponse()
+        : error?.response;
+
+    if (response && typeof response === 'object') {
+      const details = (response as HealthCheckResult).details;
+      if (details && typeof details === 'object') {
+        return details as Record<string, any>;
+      }
+    }
+
+    return undefined;
+  }
+
   private determineOverallStatus(
     result: HealthCheckResult,
   ): 'ok' | 'error' | 'warning' {
-    if (result.status === 'ok') {
-      return 'ok';
-    }
-
-    // Check if any services are still healthy (partial failure)
-    const services = Object.values(result.details || {});
-    const hasHealthyServices = services.some(
-      (service: any) => service.status === 'up',
-    );
-
-    return hasHealthyServices ? 'warning' : 'error';
+    return this.classifyServices(result.details);
   }
 
   private determineOverallStatusFromError(
     causes: Record<string, any>,
   ): 'ok' | 'error' | 'warning' {
-    const services = Object.values(causes || {});
-    const healthyServices = services.filter(
-      (service: any) => service.status === 'up',
-    );
-    const totalServices = services.length;
+    return this.classifyServices(causes);
+  }
 
-    if (healthyServices.length === totalServices) {
+  /**
+   * Folds the per-indicator statuses into one overall status using the
+   * criticality classification in `health.constants.ts`.
+   *
+   * - A failing `critical` dependency makes the whole service `error` (503).
+   * - A failing or warning `degraded` dependency makes it `warning` (200), so
+   *   an outage in Redis, Elasticsearch or Stellar is visible without taking
+   *   the pod out of the load balancer.
+   * - `skipped` indicators (not configured in this environment) are ignored.
+   */
+  private classifyServices(
+    services: Record<string, any> | undefined,
+  ): 'ok' | 'error' | 'warning' {
+    const entries = Object.entries(services || {});
+
+    if (entries.length === 0) {
       return 'ok';
-    } else if (healthyServices.length > 0) {
-      return 'warning';
-    } else {
-      return 'error';
     }
+
+    let degraded = false;
+
+    for (const [name, service] of entries) {
+      const status = service?.status;
+
+      if (isFailingStatus(status)) {
+        if (this.criticalityOf(name) === 'critical') {
+          return 'error';
+        }
+        degraded = true;
+        continue;
+      }
+
+      if (isDegradedStatus(status)) {
+        degraded = true;
+      }
+    }
+
+    return degraded ? 'warning' : 'ok';
+  }
+
+  private criticalityOf(name: string): DependencyCriticality {
+    return getDependencyCriticality(name);
   }
 
   private formatServices(
@@ -139,8 +196,11 @@ export class HealthService {
                 ? 'error'
                 : value.status === 'warning'
                   ? 'warning'
-                  : 'error',
+                  : value.status === 'skipped'
+                    ? 'skipped'
+                    : 'error',
           responseTime: value.responseTime || null,
+          criticality: getDependencyCriticality(key),
           ...value,
         };
       } else {

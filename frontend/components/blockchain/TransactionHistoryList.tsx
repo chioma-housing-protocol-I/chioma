@@ -5,6 +5,7 @@ import type { BlockchainTxRow } from '@/components/blockchain/types';
 import { getStellarExpertTxUrl } from '@/lib/stellar-network';
 import { ArrowDownLeft, ArrowUpRight, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 export interface TransactionHistoryListProps {
   items: BlockchainTxRow[];
@@ -19,6 +20,7 @@ export function TransactionHistoryList({
   emptyMessage = 'No on-chain transactions yet.',
   className = '',
 }: TransactionHistoryListProps) {
+  const dateFnsLocale = useDateFnsLocale();
   if (loading) {
     return (
       <div
@@ -78,7 +80,9 @@ export function TransactionHistoryList({
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
             <span className="text-xs text-slate-500 whitespace-nowrap">
-              {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm')}
+              {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm', {
+                locale: dateFnsLocale,
+              })}
             </span>
             <a
               href={getStellarExpertTxUrl(tx.hash)}

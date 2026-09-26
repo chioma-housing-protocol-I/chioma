@@ -18,11 +18,13 @@ import { PropertyAvailability } from './entities/property-availability.entity';
 import { AvailabilityService } from './availability.service';
 import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
+import { SearchModule } from '../search/search.module';
 
 @Module({
   imports: [
     ScheduleModule,
     FraudModule,
+    SearchModule,
     TypeOrmModule.forFeature([
       Property,
       PropertyImage,

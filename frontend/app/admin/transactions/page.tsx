@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTransactions } from '@/lib/query/hooks/use-transactions';
 import { TransactionHistory } from '@/components/admin/TransactionHistory';
+import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 import toast from 'react-hot-toast';
 import type { Transaction } from '@/types';
 
@@ -295,12 +296,17 @@ export default function TransactionsPage() {
       </div>
 
       {/* Table */}
-      <TransactionHistory
-        transactions={transactions}
-        isLoading={isLoading}
-        page={filters.page}
-        setPage={(page) => setFilters((prev) => ({ ...prev, page }))}
-      />
+      <FeatureBoundary
+        name="admin:transactions-table"
+        label="Transaction table"
+      >
+        <TransactionHistory
+          transactions={transactions}
+          isLoading={isLoading}
+          page={filters.page}
+          setPage={(page) => setFilters((prev) => ({ ...prev, page }))}
+        />
+      </FeatureBoundary>
     </div>
   );
 }

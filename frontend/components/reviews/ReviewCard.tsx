@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { User, ShieldCheck } from 'lucide-react';
 import { StarRatingInput } from './StarRatingInput';
 
@@ -26,7 +27,11 @@ export function ReviewCard({ review }: ReviewCardProps) {
     typeof review.createdAt === 'string'
       ? review.createdAt
       : review.createdAt.toISOString();
-  const timeAgo = formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+  const dateFnsLocale = useDateFnsLocale();
+  const timeAgo = formatDistanceToNow(new Date(dateStr), {
+    addSuffix: true,
+    locale: dateFnsLocale,
+  });
 
   return (
     <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-xl hover:bg-white/10 transition-all duration-300 group">

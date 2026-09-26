@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Footer from '@/components/Footer';
+import Footer from '@/components/landing/Footer';
 
 export default function TermsPage() {
   const [accepted, setAccepted] = useState(false);

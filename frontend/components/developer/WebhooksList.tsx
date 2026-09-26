@@ -9,8 +9,10 @@ import {
   Play,
   RefreshCw,
   Trash2,
+  Webhook as WebhookIcon,
 } from 'lucide-react';
 import type { DeveloperWebhook, WebhookStatus } from '@/lib/developer-webhooks';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type WebhooksListProps = {
   webhooks: DeveloperWebhook[];
@@ -22,6 +24,7 @@ type WebhooksListProps = {
   onArchive: (webhook: DeveloperWebhook) => void;
   onTest: (webhook: DeveloperWebhook) => void;
   onRetry: (webhook: DeveloperWebhook) => void;
+  onCreate: () => void;
 };
 
 const PAGE_SIZE = 5;
@@ -36,6 +39,7 @@ export function WebhooksList({
   onArchive,
   onTest,
   onRetry,
+  onCreate,
 }: WebhooksListProps) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | WebhookStatus>(
@@ -89,18 +93,14 @@ export function WebhooksList({
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // Reset to page 1 when filters change
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [query, sortBy, statusFilter]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // Adjust current page if it exceeds total pages
     if (page > totalPages && totalPages > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPage(totalPages);
     }
   }, [totalPages]);
@@ -157,14 +157,15 @@ export function WebhooksList({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="mt-6 rounded-3xl border border-dashed border-white/15 bg-slate-950/30 p-10 text-center">
-          <h3 className="text-lg font-semibold text-white">
-            No webhooks found
-          </h3>
-          <p className="mt-2 text-sm text-slate-300">
-            Create a webhook or adjust the filters to see matching integrations.
-          </p>
-        </div>
+        <EmptyState
+          icon={WebhookIcon}
+          title="No webhooks found"
+          description="Create a webhook or adjust the filters to see matching integrations."
+          actionLabel="New webhook"
+          onAction={onCreate}
+          variant="dark"
+          className="mt-6"
+        />
       ) : (
         <div className="mt-6 space-y-3">
           {paginated.map((webhook) => {

@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentService } from './payment.service';
+import { RefundService } from './refund.service';
+import { ScheduleService } from './schedule.service';
+import { PaymentWebhookService } from './payment-webhook.service';
+import { FxRateService } from './fx-rate.service';
 import {
   PaymentController,
   AgreementPaymentController,
@@ -19,14 +23,25 @@ import { User } from '../users/entities/user.entity';
 import { AdminRefundsController } from './admin-refunds.controller';
 import { AdminRefundsService } from './admin-refunds.service';
 import { FraudModule } from '../fraud/fraud.module';
+import { AuditModule } from '../audit/audit.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
+import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, PaymentMethod, PaymentSchedule, User]),
+    TypeOrmModule.forFeature([
+      Payment,
+      PaymentMethod,
+      PaymentSchedule,
+      User,
+      SupportedCurrency,
+    ]),
     NotificationsModule,
     UsersModule,
     StellarModule,
     FraudModule,
+    AuditModule,
+    WebhooksModule,
   ],
   controllers: [
     PaymentController,
@@ -36,7 +51,15 @@ import { FraudModule } from '../fraud/fraud.module';
     PaymentWebhookController,
     AdminRefundsController,
   ],
-  providers: [PaymentService, PaymentGatewayService, AdminRefundsService],
-  exports: [PaymentService, PaymentGatewayService],
+  providers: [
+    PaymentService,
+    RefundService,
+    ScheduleService,
+    PaymentWebhookService,
+    PaymentGatewayService,
+    AdminRefundsService,
+    FxRateService,
+  ],
+  exports: [PaymentService, PaymentGatewayService, FxRateService],
 })
 export class PaymentModule {}

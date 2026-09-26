@@ -5,7 +5,11 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { ProfileService } from './profile.service';
+import {
+  ProfileService,
+  profileCacheDependencyTag,
+  profileCacheKey,
+} from './profile.service';
 import { ProfileMetadata } from './entities/profile-metadata.entity';
 import { SorobanClientService } from '../../common/services/soroban-client.service';
 import { ProfileContractService } from '../../blockchain/profile/profile.service';
@@ -13,9 +17,73 @@ import { IpfsService } from './services/ipfs.service';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AccountTypeDto } from './dto/create-profile.dto';
+import { CacheService } from '../../common/cache/cache.service';
+
+/**
+ * A minimal in-memory stand-in for CacheService that exercises the same
+ * get/set/getOrSet/dependency-invalidation contract the real
+ * Redis-backed implementation provides, without requiring a real cache
+ * manager in unit tests.
+ */
+class FakeCacheService {
+  private readonly store = new Map<string, unknown>();
+  private readonly depToKeys = new Map<string, Set<string>>();
+
+  async get<T>(key: string): Promise<T | null> {
+    return (this.store.get(key) as T) ?? null;
+  }
+
+  async set<T>(
+    key: string,
+    value: T,
+    _ttlMs?: number,
+    dependencies?: string[],
+  ): Promise<void> {
+    this.store.set(key, value);
+    for (const dep of dependencies ?? []) {
+      if (!this.depToKeys.has(dep)) {
+        this.depToKeys.set(dep, new Set());
+      }
+      this.depToKeys.get(dep)!.add(key);
+    }
+  }
+
+  async getOrSet<T>(
+    key: string,
+    factory: () => Promise<T>,
+    ttlMs?: number,
+    options?: { dependencies?: string[] },
+  ): Promise<T> {
+    const cached = await this.get<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+    const value = await factory();
+    await this.set(key, value, ttlMs, options?.dependencies);
+    return value;
+  }
+
+  async invalidateDependencies(dependencies: string[]): Promise<void> {
+    for (const dep of dependencies) {
+      const keys = this.depToKeys.get(dep);
+      if (!keys) {
+        continue;
+      }
+      for (const key of keys) {
+        this.store.delete(key);
+      }
+      this.depToKeys.delete(dep);
+    }
+  }
+
+  has(key: string): boolean {
+    return this.store.has(key);
+  }
+}
 
 describe('ProfileService', () => {
   let service: ProfileService;
+  let fakeCache: FakeCacheService;
 
   const mockUser: User = {
     id: 'user-123',
@@ -28,6 +96,7 @@ describe('ProfileService', () => {
     role: UserRole.USER,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -94,6 +163,8 @@ describe('ProfileService', () => {
   };
 
   beforeEach(async () => {
+    fakeCache = new FakeCacheService();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileService,
@@ -116,6 +187,10 @@ describe('ProfileService', () => {
         {
           provide: IpfsService,
           useValue: mockIpfsService,
+        },
+        {
+          provide: CacheService,
+          useValue: fakeCache,
         },
       ],
     }).compile();
@@ -331,6 +406,149 @@ describe('ProfileService', () => {
 
       await expect(service.getProfileByWallet('invalid')).rejects.toThrow(
         BadRequestException,
+      );
+    });
+
+    it('serves a cached result on a repeat read without re-querying the chain', async () => {
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue({
+        owner: mockUser.walletAddress,
+        version: 1,
+        accountType: 0,
+        lastUpdated: Date.now(),
+        dataHash: mockProfileMetadata.dataHash,
+        isVerified: true,
+      });
+      mockProfileMetadataRepository.findOne.mockResolvedValue(
+        mockProfileMetadata,
+      );
+      mockIpfsService.getGatewayUrl.mockReturnValue('https://gateway/ipfs/cid');
+
+      await service.getProfileByWallet(mockUser.walletAddress!);
+      await service.getProfileByWallet(mockUser.walletAddress!);
+
+      expect(mockProfileContract.getProfile).toHaveBeenCalledTimes(1);
+      expect(mockProfileMetadataRepository.findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('populates the cache under the documented key for the wallet', async () => {
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue(null);
+      mockProfileMetadataRepository.findOne.mockResolvedValue(null);
+
+      await service.getProfileByWallet(mockUser.walletAddress!);
+
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('cache invalidation on profile write (#1597)', () => {
+    async function primeCachedRead(displayName: string): Promise<void> {
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue(null);
+      mockProfileMetadataRepository.findOne.mockResolvedValue({
+        ...mockProfileMetadata,
+        displayName,
+      });
+      await service.getProfileByWallet(mockUser.walletAddress!);
+    }
+
+    it('updateProfile invalidates the cached public read so it reflects the new data next time', async () => {
+      await primeCachedRead('Stale Name');
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        true,
+      );
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockProfileMetadataRepository.findOne.mockResolvedValue(
+        mockProfileMetadata,
+      );
+      mockIpfsService.computeDataHashHex.mockReturnValue('c'.repeat(64));
+      mockIpfsService.isConfigured.mockReturnValue(false);
+      mockProfileMetadataRepository.save.mockResolvedValue({
+        ...mockProfileMetadata,
+        displayName: 'Fresh Name',
+        dataHash: 'c'.repeat(64),
+      });
+
+      await service.updateProfile('user-123', { displayName: 'Fresh Name' });
+
+      // The write must clear the entry registered under this wallet's tag.
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        false,
+      );
+
+      // The next read is visible immediately (re-fetches instead of
+      // serving the stale cached value).
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue(null);
+      mockProfileMetadataRepository.findOne.mockResolvedValue({
+        ...mockProfileMetadata,
+        displayName: 'Fresh Name',
+      });
+
+      const result = await service.getProfileByWallet(mockUser.walletAddress!);
+      expect(result.offChain?.displayName).toBe('Fresh Name');
+    });
+
+    it('invalidation is scoped to the written wallet and does not clear other wallets', async () => {
+      const otherWallet =
+        'GDIFFERENTWALLETADDRESSFORTESTINGABCDEFGHIJKLMNOPQRSTUV';
+
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue(null);
+      mockProfileMetadataRepository.findOne.mockResolvedValue(
+        mockProfileMetadata,
+      );
+      await service.getProfileByWallet(otherWallet);
+      await service.getProfileByWallet(mockUser.walletAddress!);
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockIpfsService.computeDataHashHex.mockReturnValue('c'.repeat(64));
+      mockIpfsService.isConfigured.mockReturnValue(false);
+      mockProfileMetadataRepository.save.mockResolvedValue(mockProfileMetadata);
+
+      await service.updateProfile('user-123', { displayName: 'Fresh Name' });
+
+      expect(fakeCache.has(profileCacheKey(otherWallet))).toBe(true);
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        false,
+      );
+    });
+
+    it('createProfile invalidates any cached (e.g. not-found) read for the wallet', async () => {
+      mockSorobanClient.verifyStellarAddress.mockReturnValue(true);
+      mockProfileContract.getProfile.mockResolvedValue(null);
+      mockProfileMetadataRepository.findOne.mockResolvedValueOnce(null); // pre-create read
+      await service.getProfileByWallet(mockUser.walletAddress!);
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        true,
+      );
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockProfileMetadataRepository.findOne.mockResolvedValueOnce(null); // no existing profile
+      mockIpfsService.isConfigured.mockReturnValue(false);
+      mockIpfsService.computeDataHashHex.mockReturnValue('d'.repeat(64));
+      mockProfileContract.createProfile.mockResolvedValue('tx-create');
+      mockProfileMetadataRepository.create.mockReturnValue(mockProfileMetadata);
+      mockProfileMetadataRepository.save.mockResolvedValue(mockProfileMetadata);
+
+      await service.createProfile('user-123', {
+        displayName: 'New User',
+        accountType: AccountTypeDto.User,
+      });
+
+      expect(fakeCache.has(profileCacheKey(mockUser.walletAddress!))).toBe(
+        false,
+      );
+    });
+
+    it('the dependency tag is derived from the wallet address', () => {
+      expect(profileCacheDependencyTag('GABC')).toContain('GABC');
+      expect(profileCacheDependencyTag('GABC')).not.toBe(
+        profileCacheDependencyTag('GXYZ'),
       );
     });
   });

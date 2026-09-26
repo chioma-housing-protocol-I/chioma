@@ -1,88 +1,109 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { SearchService, SearchFilters } from './search.service';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import {
-  PropertyType,
-  ListingStatus,
-} from '../properties/entities/property.entity';
+  SearchService,
+  SearchFilters,
+  UserSearchFilters,
+  DocumentSearchFilters,
+} from './search.service';
+import {
+  SearchPropertiesDto,
+  SearchUsersDto,
+  SearchDocumentsDto,
+  SuggestDto,
+} from './dto';
 
 @ApiTags('Search')
 @Controller('search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('properties')
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Property search results tolerate brief replication lag',
+  })
   @ApiOperation({ summary: 'Full-text property search with faceted filtering' })
-  @ApiQuery({ name: 'q', required: false })
-  @ApiQuery({ name: 'city', required: false })
-  @ApiQuery({ name: 'type', required: false, enum: PropertyType })
-  @ApiQuery({ name: 'minPrice', required: false })
-  @ApiQuery({ name: 'maxPrice', required: false })
-  @ApiQuery({ name: 'bedrooms', required: false })
-  @ApiQuery({ name: 'lat', required: false })
-  @ApiQuery({ name: 'lng', required: false })
-  @ApiQuery({ name: 'radiusKm', required: false })
-  @ApiQuery({ name: 'amenities', required: false, isArray: true })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  async searchProperties(
-    @Query('q') query?: string,
-    @Query('city') city?: string,
-    @Query('state') state?: string,
-    @Query('country') country?: string,
-    @Query('type') type?: PropertyType,
-    @Query('status') status?: ListingStatus,
-    @Query('minPrice') minPrice?: string,
-    @Query('maxPrice') maxPrice?: string,
-    @Query('bedrooms') bedrooms?: string,
-    @Query('bathrooms') bathrooms?: string,
-    @Query('furnished') furnished?: string,
-    @Query('parking') parking?: string,
-    @Query('petsAllowed') petsAllowed?: string,
-    @Query('amenities') amenities?: string | string[],
-    @Query('lat') lat?: string,
-    @Query('lng') lng?: string,
-    @Query('radiusKm') radiusKm?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
-    const amenityList = amenities
-      ? Array.isArray(amenities)
-        ? amenities
-        : amenities.split(',').map((a) => a.trim())
-      : undefined;
-
+  async searchProperties(@Query() query: SearchPropertiesDto) {
     const filters: SearchFilters = {
-      query,
-      city,
-      state,
-      country,
-      type,
-      status,
-      minPrice: minPrice ? parseFloat(minPrice) : undefined,
-      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
-      bedrooms: bedrooms ? parseInt(bedrooms) : undefined,
-      bathrooms: bathrooms ? parseInt(bathrooms) : undefined,
-      isFurnished: furnished !== undefined ? furnished === 'true' : undefined,
-      hasParking: parking !== undefined ? parking === 'true' : undefined,
-      petsAllowed:
-        petsAllowed !== undefined ? petsAllowed === 'true' : undefined,
-      amenities: amenityList,
-      lat: lat ? parseFloat(lat) : undefined,
-      lng: lng ? parseFloat(lng) : undefined,
-      radiusKm: radiusKm ? parseFloat(radiusKm) : undefined,
+      query: query.q,
+      city: query.city,
+      state: query.state,
+      country: query.country,
+      type: query.type,
+      status: query.status,
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      bedrooms: query.bedrooms,
+      bathrooms: query.bathrooms,
+      isFurnished: query.furnished,
+      hasParking: query.parking,
+      petsAllowed: query.petsAllowed,
+      amenities: query.amenities,
+      lat: query.lat,
+      lng: query.lng,
+      radiusKm: query.radiusKm,
     };
     return this.searchService.searchProperties(
       filters,
-      page ? parseInt(page) : 1,
-      limit ? Math.min(parseInt(limit), 100) : 20,
+      query.page,
+      query.limit,
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @Get('users')
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'User search results tolerate brief replication lag',
+  })
+  @ApiOperation({ summary: 'Search users with filters' })
+  async searchUsers(@Query() query: SearchUsersDto) {
+    const filters: UserSearchFilters = {
+      query: query.q,
+      role: query.role,
+      isActive: query.isActive,
+      kycVerified: query.kycVerified,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    };
+    return this.searchService.searchUsers(filters, query.page, query.limit);
+  }
+
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @Get('documents')
+  @UseReplica({
+    maxStaleness: '1m',
+    reason: 'Document search results tolerate brief replication lag',
+  })
+  @ApiOperation({ summary: 'Search documents (agreements) with filters' })
+  async searchDocuments(@Query() query: SearchDocumentsDto) {
+    const filters: DocumentSearchFilters = {
+      query: query.q,
+      status: query.status,
+      propertyId: query.propertyId,
+      userId: query.userId,
+      adminId: query.adminId,
+      minRent: query.minRent,
+      maxRent: query.maxRent,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    };
+    return this.searchService.searchDocuments(filters, query.page, query.limit);
+  }
+
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get('suggest')
+  @UseReplica({
+    maxStaleness: '5m',
+    reason: 'Autocomplete suggestions tolerate staleness',
+  })
   @ApiOperation({ summary: 'Autocomplete suggestions for search' })
-  @ApiQuery({ name: 'q', required: true })
-  async suggest(@Query('q') q: string) {
-    return this.searchService.suggest(q);
+  async suggest(@Query() query: SuggestDto) {
+    return this.searchService.suggest(query.q);
   }
 }

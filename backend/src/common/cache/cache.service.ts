@@ -20,12 +20,15 @@ export class CacheService {
     misses: 0,
     sets: 0,
     evictions: 0,
+    cleanups: 0,
   };
 
   /** tag -> cache keys that must be cleared when the tag is invalidated */
   private readonly depToKeys = new Map<string, Set<string>>();
   /** cache key -> dependency tags */
   private readonly keyToDeps = new Map<string, string[]>();
+  /** cache key -> epoch milliseconds when local dependency metadata expires */
+  private readonly keyExpiresAt = new Map<string, number>();
 
   private readonly inflight = new Map<string, Promise<unknown>>();
 
@@ -49,6 +52,11 @@ export class CacheService {
   ): Promise<void> {
     if (dependencies?.length) {
       this.registerKeyDependencies(key, dependencies);
+    }
+    if (ttlMs && ttlMs > 0) {
+      this.keyExpiresAt.set(key, Date.now() + ttlMs);
+    } else {
+      this.keyExpiresAt.delete(key);
     }
     await this.cacheManager.set(key, value, ttlMs);
     this.stats.sets++;
@@ -108,6 +116,45 @@ export class CacheService {
   }
 
   /**
+   * Invalidates cache entries registered against one or more dependency tags.
+   */
+  async invalidateDependencies(dependencies: string[]): Promise<void> {
+    const keys = new Set<string>();
+    for (const dependency of dependencies) {
+      for (const key of this.keysFromDependencyTags(dependency)) {
+        keys.add(key);
+      }
+    }
+
+    await Promise.all([...keys].map((key) => this.deleteKey(key)));
+  }
+
+  /**
+   * Removes dependency metadata for keys that expired from the backing cache.
+   * This keeps in-memory invalidation maps bounded without flushing Redis.
+   */
+  async cleanupExpiredDependencies(now = Date.now()): Promise<number> {
+    let cleaned = 0;
+
+    for (const [key, expiresAt] of [...this.keyExpiresAt]) {
+      if (expiresAt > now) {
+        continue;
+      }
+
+      const value = await this.cacheManager.get(key);
+      if (value !== undefined && value !== null) {
+        continue;
+      }
+
+      this.unregisterKey(key);
+      cleaned++;
+    }
+
+    this.stats.cleanups += cleaned;
+    return cleaned;
+  }
+
+  /**
    * Clears all application-namespaced property/search caches (does not flush the entire Redis DB).
    */
   async invalidateAll(): Promise<void> {
@@ -143,6 +190,7 @@ export class CacheService {
       misses: this.stats.misses,
       sets: this.stats.sets,
       evictions: this.stats.evictions,
+      cleanups: this.stats.cleanups,
       hitRate,
       missRate,
       dependencyTrackedKeys: this.keyToDeps.size,
@@ -154,6 +202,7 @@ export class CacheService {
     this.stats.misses = 0;
     this.stats.sets = 0;
     this.stats.evictions = 0;
+    this.stats.cleanups = 0;
   }
 
   private registerKeyDependencies(key: string, dependencies: string[]): void {
@@ -180,6 +229,7 @@ export class CacheService {
       }
     }
     this.keyToDeps.delete(key);
+    this.keyExpiresAt.delete(key);
   }
 
   private keysFromDependencyTags(pattern: string): string[] {

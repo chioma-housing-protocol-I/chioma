@@ -30,6 +30,7 @@ interface ApiKeysListProps {
   onEdit: (id: string) => void;
   onRevoke: (id: string) => void;
   onRotate: (id: string) => void;
+  isLoading?: boolean;
 }
 
 export function ApiKeysList({
@@ -39,6 +40,7 @@ export function ApiKeysList({
   onEdit,
   onRevoke,
   onRotate,
+  isLoading = false,
 }: ApiKeysListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<

@@ -9,18 +9,28 @@ import {
   Download,
   MousePointer2,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from 'recharts';
 import toast from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+
+const MultiLineChartWrapper = dynamic(
+  () => import('@/components/charts/MultiLineChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
+
+const MultiBarChartWrapper = dynamic(
+  () => import('@/components/charts/MultiBarChartWrapper'),
+  {
+    loading: () => (
+      <div className="h-full w-full bg-white/5 animate-pulse rounded-2xl" />
+    ),
+    ssr: false,
+  },
+);
 
 // Types for auth metrics data
 interface AuthStats {
@@ -200,49 +210,15 @@ export default function AuthMetricsPage() {
             Login Trends
           </h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.dailyTrend}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="date"
-                  stroke="rgba(255,255,255,0.5)"
-                  tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                  tickFormatter={(val) => val.split('-').slice(1).join('/')}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.5)"
-                  tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F172A',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="successes"
-                  name="Success"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="failures"
-                  name="Failure"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <MultiLineChartWrapper
+              data={stats.dailyTrend}
+              dataKeyX="date"
+              series={[
+                { key: 'successes', name: 'Success', stroke: '#10b981' },
+                { key: 'failures', name: 'Failure', stroke: '#ef4444' },
+              ]}
+              tickFormatter={(val) => val.split('-').slice(1).join('/')}
+            />
           </div>
         </div>
 
@@ -251,58 +227,25 @@ export default function AuthMetricsPage() {
             Method Breakdown
           </h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[
-                  {
-                    name: 'Password',
-                    attempts: stats.methodBreakdown.password.attempts,
-                    successes: stats.methodBreakdown.password.successes,
-                  },
-                  {
-                    name: 'Stellar Auth',
-                    attempts: stats.methodBreakdown.stellar.attempts,
-                    successes: stats.methodBreakdown.stellar.successes,
-                  },
-                ]}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  stroke="rgba(255,255,255,0.5)"
-                  tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                />
-                <YAxis
-                  stroke="rgba(255,255,255,0.5)"
-                  tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F172A',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                  }}
-                />
-                <Bar
-                  dataKey="attempts"
-                  name="Attempts"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                  barSize={40}
-                />
-                <Bar
-                  dataKey="successes"
-                  name="Successes"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
-                  barSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <MultiBarChartWrapper
+              data={[
+                {
+                  name: 'Password',
+                  attempts: stats.methodBreakdown.password.attempts,
+                  successes: stats.methodBreakdown.password.successes,
+                },
+                {
+                  name: 'Stellar Auth',
+                  attempts: stats.methodBreakdown.stellar.attempts,
+                  successes: stats.methodBreakdown.stellar.successes,
+                },
+              ]}
+              dataKeyX="name"
+              series={[
+                { key: 'attempts', name: 'Attempts', fill: '#3b82f6' },
+                { key: 'successes', name: 'Successes', fill: '#10b981' },
+              ]}
+            />
           </div>
         </div>
       </div>

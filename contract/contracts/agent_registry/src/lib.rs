@@ -5,11 +5,16 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 mod agent;
 mod errors;
 mod events;
+mod rate_limit;
 mod storage;
 mod types;
+mod upgrade;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tests_rate_limit;
 
 pub use agent::{
     complete_transaction, get_agent_count, get_agent_info, rate_agent, register_agent,
@@ -180,5 +185,45 @@ impl AgentRegistryContract {
         agent: Address,
     ) -> Result<(), AgentError> {
         agent::complete_transaction(&env, transaction_id, agent)
+    }
+
+    // --- Upgrade Functions ---
+
+    /// Propose a contract upgrade (admin only).
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: soroban_sdk::Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), AgentError> {
+        upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve an upgrade proposal (admin only).
+    pub fn approve_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), AgentError> {
+        upgrade::approve_upgrade(&env, approver, proposal_id)
+    }
+
+    /// Execute an approved upgrade (admin only).
+    pub fn execute_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), AgentError> {
+        upgrade::execute_upgrade(&env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, AgentError> {
+        upgrade::get_upgrade_proposal(&env, proposal_id)
     }
 }

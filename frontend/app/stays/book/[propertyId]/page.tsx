@@ -8,6 +8,7 @@ import { BookingStep1 } from '@/components/booking/BookingStep1';
 import { BookingStep2 } from '@/components/booking/BookingStep2';
 import { BookingStep3 } from '@/components/booking/BookingStep3';
 import { BookingStep4 } from '@/components/booking/BookingStep4';
+import { useProperty } from '@/lib/query/hooks';
 import toast from 'react-hot-toast';
 
 interface BookingData {
@@ -23,6 +24,7 @@ const STEPS = ['Dates', 'Requests', 'Payment', 'Review'];
 export default function BookingPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const router = useRouter();
+  const { data: property } = useProperty(propertyId);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<BookingData>({
@@ -88,7 +90,14 @@ export default function BookingPage() {
         </div>
 
         <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-6">
-          {step === 1 && <BookingStep1 onNext={handleNext} />}
+          {step === 1 && (
+            <BookingStep1
+              onNext={handleNext}
+              propertyId={propertyId}
+              pricePerNight={property?.price}
+              currency={property?.currency}
+            />
+          )}
           {step === 2 && (
             <BookingStep2 onNext={handleNext} onPrevious={() => setStep(1)} />
           )}

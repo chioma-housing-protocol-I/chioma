@@ -8,10 +8,7 @@ import {
 } from '../dto/query-indexed-transactions.dto';
 
 export type IndexedTransactionStatus =
-  | 'pending'
-  | 'indexed'
-  | 'confirmed'
-  | 'failed';
+  'pending' | 'indexed' | 'confirmed' | 'failed';
 
 export interface IndexedTransactionRecord extends IndexedTransaction {
   indexingStatus: IndexedTransactionStatus;

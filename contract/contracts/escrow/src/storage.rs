@@ -12,6 +12,18 @@ impl EscrowStorage {
     pub const DEFAULT_DISPUTE_TIMEOUT_DAYS: u64 = 30;
     pub const DEFAULT_PAYMENT_TIMEOUT_DAYS: u64 = 7;
 
+    /// Rent bump threshold/amount for persistent entity keys, in ledgers.
+    /// Matches the 500_000-ledger convention used across the other Chioma
+    /// contracts (roughly a month at ~5s/ledger). See #1683.
+    const TTL_THRESHOLD: u32 = 500_000;
+    const TTL_BUMP: u32 = 500_000;
+
+    /// An escrow's release history is append-only and unbounded in
+    /// principle, but a single escrow only receives partial releases while
+    /// it's open; this cap exists to bound worst-case storage cost per
+    /// escrow rather than to reflect a realistic release count. See #1683.
+    const MAX_RELEASE_HISTORY: u32 = 64;
+
     /// Retrieve an escrow by ID.
     /// Returns None if escrow doesn't exist.
     pub fn get(env: &Env, id: &BytesN<32>) -> Option<Escrow> {
@@ -24,6 +36,9 @@ impl EscrowStorage {
     pub fn save(env: &Env, escrow: &Escrow) {
         let key = DataKey::Escrow(escrow.id.clone());
         env.storage().persistent().set(&key, escrow);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Retrieve all approvals for an escrow release.
@@ -41,12 +56,18 @@ impl EscrowStorage {
     }
 
     /// Add a new approval for fund release.
-    /// Appends to existing approvals list.
+    /// Appends to existing approvals list. Bounded implicitly: approvals
+    /// are cleared via `clear_approvals` once a release target is reached,
+    /// and the multi-sig scheme caps live signers well below
+    /// MAX_RELEASE_HISTORY.
     pub fn add_approval(env: &Env, escrow_id: &BytesN<32>, approval: ReleaseApproval) {
         let mut approvals = Self::get_approvals(env, escrow_id);
         approvals.push_back(approval);
         let key = DataKey::Approvals(escrow_id.clone());
         env.storage().persistent().set(&key, &approvals);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Clear all approvals for an escrow.
@@ -71,6 +92,9 @@ impl EscrowStorage {
         let count = Self::get_approval_count_for_target(env, escrow_id, release_to);
         let key = DataKey::ApprovalCount(escrow_id.clone(), release_to.clone());
         env.storage().persistent().set(&key, &(count + 1));
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Check if a specific signer has already approved a specific target (O(1) lookup).
@@ -96,6 +120,9 @@ impl EscrowStorage {
     ) {
         let key = DataKey::SignerApproved(escrow_id.clone(), signer.clone(), release_to.clone());
         env.storage().persistent().set(&key, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Clear approval counts and signer flags for given targets.
@@ -130,6 +157,9 @@ impl EscrowStorage {
         env.storage()
             .instance()
             .set(&DataKey::EscrowCount, &(count + 1));
+        env.storage()
+            .instance()
+            .extend_ttl(Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Fetch timeout config or return defaults.
@@ -149,6 +179,9 @@ impl EscrowStorage {
         env.storage()
             .instance()
             .set(&DataKey::TimeoutConfig, config);
+        env.storage()
+            .instance()
+            .extend_ttl(Self::TTL_THRESHOLD, Self::TTL_BUMP);
     }
 
     /// Retrieve release history for an escrow.
@@ -166,11 +199,48 @@ impl EscrowStorage {
     }
 
     /// Add a new release record to the history.
-    /// Appends to existing release history list.
+    /// Appends to existing release history list, dropping the oldest
+    /// record once MAX_RELEASE_HISTORY is exceeded so a single escrow
+    /// can't grow this key unbounded (see #1683).
     pub fn add_release_record(env: &Env, escrow_id: &BytesN<32>, record: ReleaseRecord) {
         let mut history = Self::get_release_history(env, escrow_id);
         history.push_back(record);
+        while history.len() > Self::MAX_RELEASE_HISTORY {
+            history.remove(0);
+        }
         let key = DataKey::ReleaseHistory(escrow_id.clone());
         env.storage().persistent().set(&key, &history);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, Self::TTL_THRESHOLD, Self::TTL_BUMP);
+    }
+
+    /// Get the system admin address.
+    /// Returns None if admin has not been set.
+    pub fn get_admin(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::SystemAdmin)
+    }
+
+    /// Set the system admin address.
+    /// Only the admin can freeze/unfreeze escrows.
+    pub fn set_admin(env: &Env, admin: &Address) {
+        env.storage().instance().set(&DataKey::SystemAdmin, admin);
+        env.storage()
+            .instance()
+            .extend_ttl(Self::TTL_THRESHOLD, Self::TTL_BUMP);
+    }
+
+    /// Whether the contract is globally paused (#1689).
+    /// Defaults to `false` (not paused) when never explicitly set.
+    pub fn is_paused(env: &Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false)
+    }
+
+    /// Set the contract's global paused flag.
+    pub fn set_paused(env: &Env, paused: bool) {
+        env.storage().instance().set(&DataKey::Paused, &paused);
     }
 }

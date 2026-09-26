@@ -1,5 +1,6 @@
 'use client';
 
+import EnvSelfCheck from '@/components/developer/EnvSelfCheck';
 import { CheckCircle, AlertCircle, Clock, Activity } from 'lucide-react';
 
 const SERVICES = [
@@ -140,6 +141,8 @@ export default function ApiStatusPage() {
           {hasIncident ? 'Partial Outage' : 'All Systems Operational'}
         </div>
       </div>
+
+      <EnvSelfCheck />
 
       {/* Services grid */}
       <div className="space-y-3">

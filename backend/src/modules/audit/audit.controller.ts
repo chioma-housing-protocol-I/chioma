@@ -21,6 +21,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth('JWT-auth')
@@ -35,54 +37,35 @@ export class AuditController {
 
   @Get()
   @ApiOperation({ summary: 'Query audit logs with filtering and pagination' })
-  @ApiResponse({
-    status: 200,
-    description: 'Audit logs retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/AuditLog' },
-        },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        limit: { type: 'number' },
-        totalPages: { type: 'number' },
-      },
-    },
-  })
+  @ApiPaginatedResponse(AuditLog)
   async queryAuditLogs(@Query() queryDto: QueryAuditLogsDto) {
     return this.auditService.query(queryDto);
   }
 
   @Get('trail/:entityType/:entityId')
   @ApiOperation({ summary: 'Get audit trail for a specific entity' })
-  @ApiResponse({
-    status: 200,
-    description: 'Audit trail retrieved successfully',
-    type: [AuditLog],
-  })
+  @ApiPaginatedResponse(AuditLog)
   async getAuditTrail(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
-    @Query('limit') limit?: number,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.auditService.getAuditTrail(entityType, entityId, limit);
+    return this.auditService.getAuditTrail(
+      entityType,
+      entityId,
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('user-activity/:userId')
   @ApiOperation({ summary: 'Get activity logs for a specific user' })
-  @ApiResponse({
-    status: 200,
-    description: 'User activity retrieved successfully',
-    type: [AuditLog],
-  })
+  @ApiPaginatedResponse(AuditLog)
   async getUserActivity(
     @Param('userId') userId: string,
-    @Query('limit') limit?: number,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.auditService.getUserActivity(userId, limit);
+    return this.auditService.getUserActivity(userId, query.page, query.limit);
   }
 
   @Get('stats')

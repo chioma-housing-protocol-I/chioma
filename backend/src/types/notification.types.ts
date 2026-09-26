@@ -15,7 +15,8 @@ export type NotificationType =
   | 'dispute_resolved'
   | 'message_received'
   | 'low_balance_warning'
-  | 'transaction_failed';
+  | 'transaction_failed'
+  | 'saved_search_match';
 
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -40,11 +41,7 @@ export interface Notification {
 
   // References
   relatedEntityType?:
-    | 'property'
-    | 'agreement'
-    | 'payment'
-    | 'dispute'
-    | 'transaction';
+    'property' | 'agreement' | 'payment' | 'dispute' | 'transaction';
   relatedEntityId?: UUID;
 
   // Actions

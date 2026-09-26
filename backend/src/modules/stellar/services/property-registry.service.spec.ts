@@ -15,7 +15,7 @@ jest.mock('@stellar/stellar-sdk', () => {
   return {
     SorobanRpc: {
       Server: jest.fn().mockImplementation(() => ({
-        getAccount: jest.fn().mockResolvedValue({ sequence: '1' }),
+        getAccount: jest.fn().mockResolvedValue({ sequenceNumber: () => '1' }),
         prepareTransaction: jest.fn().mockResolvedValue(mockTx),
         sendTransaction: jest
           .fn()
@@ -53,6 +53,7 @@ describe('PropertyRegistryService', () => {
     create: jest.fn().mockImplementation((dto) => dto),
     save: jest.fn().mockResolvedValue({}),
     find: jest.fn(),
+    findAndCount: jest.fn(),
   };
 
   const mockStellarAccountRepo = {
@@ -63,9 +64,9 @@ describe('PropertyRegistryService', () => {
     get: jest.fn((key: string) => {
       if (key === 'stellar')
         return {
-          rpcUrl: 'http://localhost',
           networkPassphrase: 'Test SDF Network',
         };
+      if (key === 'SOROBAN_RPC_URL') return 'http://localhost';
       if (key === 'PROPERTY_REGISTRY_CONTRACT_ID') return 'C_MOCK_CONTRACT_ID';
       return null;
     }),
@@ -204,12 +205,14 @@ describe('PropertyRegistryService', () => {
     });
 
     it('getPropertyHistory should return history array', async () => {
-      mockPropertyHistoryRepo.find.mockResolvedValue([{ id: 1 }]);
+      mockPropertyHistoryRepo.findAndCount.mockResolvedValue([[{ id: 1 }], 1]);
       const result = await service.getPropertyHistory('prop-1');
-      expect(result).toEqual([{ id: 1 }]);
-      expect(mockPropertyHistoryRepo.find).toHaveBeenCalledWith({
+      expect(result.data).toEqual([{ id: 1 }]);
+      expect(mockPropertyHistoryRepo.findAndCount).toHaveBeenCalledWith({
         where: { propertyId: 'prop-1' },
         order: { transferredAt: 'DESC' },
+        skip: 0,
+        take: 20,
       });
     });
   });

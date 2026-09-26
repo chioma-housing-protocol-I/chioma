@@ -1,9 +1,20 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plane, Heart, Star, Search } from 'lucide-react';
 import Link from 'next/link';
 
 export default function GuestDashboardPage() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    router.push(query ? `/stays?city=${encodeURIComponent(query)}` : '/stays');
+  };
+
   const quickLinks = [
     {
       label: 'Find a Stay',
@@ -58,19 +69,21 @@ export default function GuestDashboardPage() {
 
       <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-4">Quick search</h2>
-        <div className="flex gap-3">
+        <form onSubmit={handleSearch} className="flex gap-3">
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Where do you want to go?"
             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-blue-300/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
-          <Link
-            href="/stays"
+          <button
+            type="submit"
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center gap-2"
           >
             <Search size={18} /> Search
-          </Link>
-        </div>
+          </button>
+        </form>
       </div>
     </div>
   );

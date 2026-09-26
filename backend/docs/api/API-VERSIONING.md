@@ -78,6 +78,16 @@ When a breaking change is unavoidable, we follow a strict deprecation process.
     - `Link: <replacement-url>; rel="successor-version"`
 4.  **Logging:** Backend logs should track the usage of deprecated endpoints to identify high-impact removals.
 
+> [!TIP]
+> This is implemented via the `@Deprecated()` decorator
+> (`backend/src/common/decorators/deprecated.decorator.ts`) and the global
+> `DeprecationInterceptor`
+> (`backend/src/common/interceptors/deprecation.interceptor.ts`). Annotate a
+> handler with `@Deprecated({ sunsetDate, replacementEndpoint,
+> migrationGuideUrl })` to get the headers above plus a per-call warning log,
+> and the route is automatically flagged `deprecated: true` in the OpenAPI
+> spec.
+
 ---
 
 ## 6. Migration Procedures

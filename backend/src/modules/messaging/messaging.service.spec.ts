@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Message } from './entities/message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Participant } from './entities/participant.entity';
+import { MessageRead } from './entities/message-read.entity';
 
 const mockRepo = () => ({
   create: jest.fn(),
@@ -22,6 +23,7 @@ describe('MessagingService', () => {
         { provide: getRepositoryToken(Message), useFactory: mockRepo },
         { provide: getRepositoryToken(ChatRoom), useFactory: mockRepo },
         { provide: getRepositoryToken(Participant), useFactory: mockRepo },
+        { provide: getRepositoryToken(MessageRead), useFactory: mockRepo },
       ],
     }).compile();
 
@@ -46,5 +48,36 @@ describe('MessagingService', () => {
     messageRepo.find.mockResolvedValue(messages);
     const result = await service.getHistory('group1', 1, 2);
     expect(result).toEqual(messages);
+  });
+
+  describe('sendDirectMessage', () => {
+    it('bridges two users into a room and posts a message', async () => {
+      const room = {
+        id: 7,
+        participants: [{ userId: 1 }, { userId: 2 }],
+      };
+      jest.spyOn(service, 'findOrCreateRoom').mockResolvedValue(room as any);
+      messageRepo.create.mockImplementation((input) => input);
+      messageRepo.save.mockImplementation(async (input) => ({
+        id: 99,
+        ...input,
+      }));
+
+      const result = await service.sendDirectMessage('1', '2', 'hi there');
+
+      expect(service.findOrCreateRoom).toHaveBeenCalledWith('1', '2');
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          senderId: 1,
+          receiverId: 2,
+          content: 'hi there',
+          chatRoom: room,
+          sender: { userId: 1 },
+          receiver: { userId: 2 },
+        }),
+      );
+      expect(result.room).toBe(room);
+      expect(result.message.id).toBe(99);
+    });
   });
 });

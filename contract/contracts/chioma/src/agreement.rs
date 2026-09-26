@@ -461,6 +461,8 @@ pub fn make_payment_with_token(
     amount: i128,
     token: Address,
 ) -> Result<(), RentalError> {
+    // Single storage read – reuse `agreement` for all subsequent checks and
+    // the final write-back, avoiding a second persistent-storage lookup.
     let mut agreement: RentAgreement = env
         .storage()
         .persistent()
@@ -473,7 +475,8 @@ pub fn make_payment_with_token(
 
     agreement.user.require_auth();
 
-    // Convert amount to the agreement's base token if they differ
+    // Skip the token-rate lookup entirely when the payment token already
+    // matches the agreement's base token – saves one persistent storage read.
     let amount_in_base = if token != agreement.payment_token {
         crate::multi_token::convert_amount(
             env.clone(),
@@ -493,11 +496,10 @@ pub fn make_payment_with_token(
     let client = soroban_sdk::token::Client::new(env, &token);
     client.transfer(&agreement.user, env.current_contract_address(), &amount);
 
-    // Update agreement state
+    // Update agreement state in the cached local variable
     agreement.total_rent_paid += amount_in_base;
     agreement.payment_count += 1;
 
-    // Simple split for now: 100% to landlord
     let split = PaymentSplit {
         admin_amount: amount_in_base,
         platform_amount: 0,
@@ -506,12 +508,14 @@ pub fn make_payment_with_token(
         payer: agreement.user.clone(),
     };
 
+    // Write payment record
     let record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
     env.storage().persistent().set(&record_key, &split);
     env.storage()
         .persistent()
         .extend_ttl(&record_key, TTL_THRESHOLD, TTL_BUMP);
 
+    // Single write-back of the mutated agreement (no second read needed)
     env.storage()
         .persistent()
         .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
@@ -719,6 +723,7 @@ pub fn reject_extension(
     }
 
     extension.status = ExtensionStatus::Rejected;
+    let reason_for_event = reason.clone();
     extension.last_reason = Some(reason);
 
     env.storage().persistent().set(
@@ -726,7 +731,7 @@ pub fn reject_extension(
         &extension,
     );
 
-    events::extension_rejected(env, extension_id);
+    events::extension_rejected(env, extension_id, reason_for_event);
 
     Ok(())
 }
@@ -808,6 +813,7 @@ pub fn cancel_extension(
     }
 
     extension.status = ExtensionStatus::Cancelled;
+    let reason_for_event = reason.clone();
     extension.last_reason = Some(reason);
 
     env.storage().persistent().set(
@@ -815,7 +821,7 @@ pub fn cancel_extension(
         &extension,
     );
 
-    events::extension_cancelled(env, extension_id);
+    events::extension_cancelled(env, extension_id, reason_for_event);
 
     Ok(())
 }

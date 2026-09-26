@@ -68,11 +68,7 @@ export interface UserProfile {
 
   // Employment
   employmentStatus?:
-    | 'employed'
-    | 'self_employed'
-    | 'unemployed'
-    | 'student'
-    | 'retired';
+    'employed' | 'self_employed' | 'unemployed' | 'student' | 'retired';
   employer?: string;
   monthlyIncome?: string;
 

@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
 
@@ -44,4 +45,7 @@ export class Review {
 
   @Column({ default: false })
   reported: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt: Date | null;
 }

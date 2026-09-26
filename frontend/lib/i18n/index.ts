@@ -2,11 +2,18 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { en, es, fr, type TranslationKeys } from './translations';
+import { en, es, fr, ar, type TranslationKeys } from './translations';
+import {
+  formatDate,
+  formatNumber,
+  formatCurrency,
+  formatCrypto,
+} from '../utils/format';
+import { createVersionedPersistConfig } from '@/store/persistence';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SupportedLocale = 'en' | 'es' | 'fr';
+export type SupportedLocale = 'en' | 'es' | 'fr' | 'ar';
 
 export interface LocaleOption {
   code: SupportedLocale;
@@ -19,18 +26,30 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'en', label: 'English', nativeLabel: 'English', dir: 'ltr' },
   { code: 'es', label: 'Spanish', nativeLabel: 'Español', dir: 'ltr' },
   { code: 'fr', label: 'French', nativeLabel: 'Français', dir: 'ltr' },
+  // RTL verification locale — see translations/ar.ts.
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl' },
 ];
 
-const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = { en, es, fr };
+const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
+  en,
+  es,
+  fr,
+  ar,
+};
+
+/** Bump when persisted locale state shape changes. */
+export const I18N_STORE_VERSION = 1;
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface I18nState {
   locale: SupportedLocale;
+  _hasHydrated: boolean;
 }
 
 interface I18nActions {
   setLocale: (locale: SupportedLocale) => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 type I18nStore = I18nState & I18nActions;
@@ -39,9 +58,46 @@ export const useI18nStore = create<I18nStore>()(
   persist(
     (set) => ({
       locale: 'en',
+      _hasHydrated: false,
       setLocale: (locale) => set({ locale }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
-    { name: 'chioma-locale' },
+    createVersionedPersistConfig<I18nStore, Pick<I18nStore, 'locale'>>({
+      name: 'chioma-locale',
+      version: I18N_STORE_VERSION,
+      partialize: (state: I18nStore) => ({ locale: state.locale }),
+      migrations: {
+        1: (state) => {
+          const legacy = state as Record<string, unknown>;
+          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
+            ? (legacy.locale as SupportedLocale)
+            : 'en';
+          return { locale };
+        },
+      },
+      onRehydrateStorage: () => (state: I18nStore | undefined) => {
+        if (state) {
+          state.setHasHydrated(true);
+
+          // Language detection on first load (if localStorage was empty)
+          // `zustand/persist` merges the stored state. If it wasn't there, it stays default 'en'.
+          // We can check if chioma-locale exists in localStorage before it rehydrated,
+          // but easier: if it's running in browser, we can just detect if it wasn't set.
+          // Since onRehydrateStorage runs after hydration, if the locale is still 'en'
+          // and they actually have a different browser language, we might not want to override
+          // if they genuinely chose 'en', but checking localStorage is safer.
+          if (
+            typeof window !== 'undefined' &&
+            !localStorage.getItem('chioma-locale')
+          ) {
+            const browserLang = navigator.language.split('-')[0];
+            if (['en', 'es', 'fr'].includes(browserLang)) {
+              state.setLocale(browserLang as SupportedLocale);
+            }
+          }
+        }
+      },
+    }),
   ),
 );
 
@@ -70,19 +126,48 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
 }
 
 /**
- * Primary i18n hook. Returns a `t()` function and locale helpers.
+ * Primary i18n hook. Returns a `t()` function, locale helpers, and formatting functions.
  *
  * @example
- * const { t, locale, setLocale } = useTranslation();
- * <p>{t('common.save')}</p>
+ * const { t, locale, setLocale, formatDate, formatNumber, formatCurrency, formatCrypto } = useTranslation();
+ * <p>{formatDate(new Date())}</p>
  */
 export function useTranslation() {
-  const { locale, setLocale } = useI18nStore();
-  const dict = TRANSLATIONS[locale] as unknown as Record<string, unknown>;
+  const { locale, setLocale, _hasHydrated } = useI18nStore();
+
+  // During SSR and first client render (before hydration), use 'en'
+  // to avoid hydration mismatch with server-rendered text.
+  const activeLocale = _hasHydrated ? locale : 'en';
+
+  const dict = TRANSLATIONS[activeLocale] as unknown as Record<string, unknown>;
 
   function t(key: TranslationPath): string {
     return getNestedValue(dict, key);
   }
 
-  return { t, locale, setLocale, localeOptions: LOCALE_OPTIONS };
+  return {
+    t,
+    locale: activeLocale,
+    setLocale,
+    localeOptions: LOCALE_OPTIONS,
+    formatDate: (
+      date: Date | string | number | null | undefined,
+      options?: Intl.DateTimeFormatOptions,
+    ) => formatDate(date, activeLocale, options),
+    formatNumber: (
+      num: number | string | null | undefined,
+      options?: Intl.NumberFormatOptions,
+    ) => formatNumber(num, activeLocale, options),
+    formatCurrency: (
+      amount: number | string | null | undefined,
+      currency: string = 'USD',
+      options?: Intl.NumberFormatOptions,
+    ) => formatCurrency(amount, currency, activeLocale, options),
+    formatCrypto: (
+      amount: number | string | null | undefined,
+      symbol?: string,
+      options?: Intl.NumberFormatOptions,
+    ) => formatCrypto(amount, symbol, activeLocale, options),
+    isHydrated: _hasHydrated,
+  };
 }

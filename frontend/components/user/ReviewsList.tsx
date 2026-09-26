@@ -13,25 +13,30 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, Filter, Loader2, Star, Edit3, Trash2 } from 'lucide-react';
 import { StarRating } from '@/components/common/StarRating';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   useTenantReviews,
   TenantReviewRecord,
 } from '@/lib/query/hooks/use-tenant-reviews';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface ReviewsListProps {
   className?: string;
 }
 
 export function ReviewsList({ className = '' }: ReviewsListProps) {
+  const router = useRouter();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
   const [ratingFilter, setRatingFilter] = React.useState<string>('ALL');
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const {
     data: reviews = [],
@@ -107,6 +112,7 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
           <span className="text-blue-200/50 text-sm">
             {formatDistanceToNow(new Date(row.getValue('createdAt')), {
               addSuffix: true,
+              locale: dateFnsLocale,
             })}
           </span>
         ),
@@ -129,7 +135,7 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
         ),
       },
     ],
-    [],
+    [dateFnsLocale],
   );
 
   const table = useReactTable({
@@ -209,21 +215,15 @@ export function ReviewsList({ className = '' }: ReviewsListProps) {
             <span className="text-blue-200/50">Loading your reviews...</span>
           </div>
         ) : reviews.length === 0 ? (
-          <div className="p-16 text-center">
-            <Star className="w-12 h-12 text-blue-300/20 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-white mb-1">
-              No reviews yet
-            </h3>
-            <p className="text-blue-200/40 text-sm mb-5">
-              Your review history will appear here.
-            </p>
-            <Link
-              href="/user/reviews/new"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors"
-            >
-              Write Your First Review
-            </Link>
-          </div>
+          <EmptyState
+            icon={Star}
+            title="No reviews yet"
+            description="Your review history will appear here."
+            actionLabel="Write Your First Review"
+            onAction={() => router.push('/user/reviews/new')}
+            variant="dark"
+            className="border-0"
+          />
         ) : (
           <>
             <div className="px-6 py-4 border-b border-white/5">

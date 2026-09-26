@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Shield, Wallet } from 'lucide-react';
-import { format } from 'date-fns';
 import type { SecurityDepositsSectionProps } from './types';
 
 const SecurityDepositsSection = ({

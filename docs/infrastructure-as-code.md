@@ -101,7 +101,7 @@ COPY --from=builder --chown=chioma:chioma /app/package.json ./package.json
 
 USER chioma
 
-EXPOSE 3001
+EXPOSE 5000
 
 CMD ["npm", "start"]
 ```
@@ -125,12 +125,12 @@ docker push ghcr.io/chioma-housing-protocol-i/chioma/backend:latest
 
 ### 1.3 Image Tagging Convention
 
-| Tag | When to use |
-|---|---|
-| `latest` | Most recent stable build from `main` |
-| `v1.2.3` | Semantic version release |
-| `sha-abc1234` | Specific git commit (used in CI) |
-| `staging` | Current staging deployment |
+| Tag           | When to use                          |
+| ------------- | ------------------------------------ |
+| `latest`      | Most recent stable build from `main` |
+| `v1.2.3`      | Semantic version release             |
+| `sha-abc1234` | Specific git commit (used in CI)     |
+| `staging`     | Current staging deployment           |
 
 Always pin production deployments to a specific tag or SHA — never use `latest` in Kubernetes manifests.
 
@@ -149,13 +149,13 @@ services:
   backend:
     build:
       context: ./backend
-      target: builder          # Use builder stage for hot-reload
+      target: builder # Use builder stage for hot-reload
     command: npm run start:dev
     ports:
       - "3000:3000"
-      - "9229:9229"            # Node.js inspector
+      - "9229:9229" # Node.js inspector
     volumes:
-      - ./backend/src:/app/src  # Mount source for hot-reload
+      - ./backend/src:/app/src # Mount source for hot-reload
     env_file:
       - ./backend/.env
     depends_on:
@@ -171,7 +171,7 @@ services:
       target: builder
     command: npm run dev
     ports:
-      - "3001:3001"
+      - "5000:5000"
     volumes:
       - ./frontend/app:/app/app
       - ./frontend/components:/app/components
@@ -318,7 +318,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0      # Zero-downtime rolling update
+      maxUnavailable: 0 # Zero-downtime rolling update
       maxSurge: 1
   template:
     metadata:
@@ -364,7 +364,7 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "sleep 5"]  # Drain in-flight requests
+                command: ["/bin/sh", "-c", "sleep 5"] # Drain in-flight requests
 ```
 
 ### 3.3 Service and Ingress
@@ -612,26 +612,26 @@ terraform -chdir=infrastructure import aws_s3_bucket.assets chioma-prod-assets
 
 ### 5.1 Variable Categories
 
-| Category | Prefix | Example |
-|---|---|---|
-| Database | `DB_` | `DB_HOST`, `DB_PORT` |
-| Authentication | `JWT_` | `JWT_SECRET`, `JWT_EXPIRATION` |
-| Stellar/Blockchain | `STELLAR_`, `SOROBAN_` | `STELLAR_NETWORK`, `CHIOMA_CONTRACT_ID` |
-| Storage | `AWS_` | `AWS_S3_BUCKET`, `AWS_REGION` |
-| Cache / Queue | `REDIS_`, `BULL_` | `REDIS_HOST`, `BULL_QUEUE_EMAIL_ATTEMPTS` |
-| Payment Gateways | `PAYSTACK_`, `FLUTTERWAVE_` | `PAYSTACK_SECRET_KEY` |
-| Monitoring | `SENTRY_`, `LOG_`, `METRICS_` | `SENTRY_DSN`, `LOG_LEVEL` |
-| Security | `SECURITY_` | `SECURITY_ENCRYPTION_KEY`, `SECURITY_CSRF_ENABLED` |
-| Frontend Public | `NEXT_PUBLIC_` | `NEXT_PUBLIC_API_URL` |
+| Category           | Prefix                        | Example                                            |
+| ------------------ | ----------------------------- | -------------------------------------------------- |
+| Database           | `DB_`                         | `DB_HOST`, `DB_PORT`                               |
+| Authentication     | `JWT_`                        | `JWT_SECRET`, `JWT_EXPIRATION`                     |
+| Stellar/Blockchain | `STELLAR_`, `SOROBAN_`        | `STELLAR_NETWORK`, `CHIOMA_CONTRACT_ID`            |
+| Storage            | `AWS_`                        | `AWS_S3_BUCKET`, `AWS_REGION`                      |
+| Cache / Queue      | `REDIS_`, `BULL_`             | `REDIS_HOST`, `BULL_QUEUE_EMAIL_ATTEMPTS`          |
+| Payment Gateways   | `PAYSTACK_`, `FLUTTERWAVE_`   | `PAYSTACK_SECRET_KEY`                              |
+| Monitoring         | `SENTRY_`, `LOG_`, `METRICS_` | `SENTRY_DSN`, `LOG_LEVEL`                          |
+| Security           | `SECURITY_`                   | `SECURITY_ENCRYPTION_KEY`, `SECURITY_CSRF_ENABLED` |
+| Frontend Public    | `NEXT_PUBLIC_`                | `NEXT_PUBLIC_API_URL`                              |
 
 ### 5.2 Environment Tiers
 
-| Tier | File | Committed to Git |
-|---|---|---|
-| Local development | `.env` | No — gitignored |
-| Template | `.env.example` | Yes — sanitized defaults |
-| CI/CD | Repository secrets | No |
-| Staging/Production | Kubernetes Secrets or AWS SSM | No |
+| Tier               | File                          | Committed to Git         |
+| ------------------ | ----------------------------- | ------------------------ |
+| Local development  | `.env`                        | No — gitignored          |
+| Template           | `.env.example`                | Yes — sanitized defaults |
+| CI/CD              | Repository secrets            | No                       |
+| Staging/Production | Kubernetes Secrets or AWS SSM | No                       |
 
 ### 5.3 Validation at Startup
 
@@ -639,11 +639,11 @@ Validate required variables at application start so failures are immediate and c
 
 ```typescript
 // backend/src/config/env.validation.ts
-import { plainToClass } from 'class-transformer';
-import { IsString, IsNumber, IsIn, validateSync } from 'class-validator';
+import { plainToClass } from "class-transformer";
+import { IsString, IsNumber, IsIn, validateSync } from "class-validator";
 
 class EnvironmentVariables {
-  @IsIn(['development', 'staging', 'production', 'test'])
+  @IsIn(["development", "staging", "production", "test"])
   NODE_ENV: string;
 
   @IsString()
@@ -677,8 +677,8 @@ Register in `AppModule`:
 ConfigModule.forRoot({
   isGlobal: true,
   validate,
-  envFilePath: '.env',
-})
+  envFilePath: ".env",
+});
 ```
 
 ---
@@ -823,8 +823,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
@@ -913,38 +913,38 @@ jobs:
 ### 7.2 IaC Changes in CI
 
 ```yaml
-  terraform:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infrastructure
-    steps:
-      - uses: actions/checkout@v4
+terraform:
+  runs-on: ubuntu-latest
+  defaults:
+    run:
+      working-directory: infrastructure
+  steps:
+    - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.6"
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.6"
 
-      - name: Terraform Init
-        run: terraform init
+    - name: Terraform Init
+      run: terraform init
 
-      - name: Terraform Plan
-        run: terraform plan -no-color -out=tfplan
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Terraform Plan
+      run: terraform plan -no-color -out=tfplan
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Post plan to PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const plan = require('fs').readFileSync('infrastructure/tfplan.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `\`\`\`terraform\n${plan}\n\`\`\``
-            });
+    - name: Post plan to PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const plan = require('fs').readFileSync('infrastructure/tfplan.txt', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `\`\`\`terraform\n${plan}\n\`\`\``
+          });
 ```
 
 ---
@@ -992,6 +992,7 @@ resources:
 ### 8.4 Health Checks
 
 Every service must expose:
+
 - `GET /health` — liveness probe (is the process alive?)
 - `GET /health/detailed` — readiness probe (is it ready to serve traffic?)
 
@@ -1003,7 +1004,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Handle SIGTERM from Kubernetes
-  process.on('SIGTERM', async () => {
+  process.on("SIGTERM", async () => {
     await app.close();
     process.exit(0);
   });

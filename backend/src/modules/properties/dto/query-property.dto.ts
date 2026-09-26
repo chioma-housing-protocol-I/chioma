@@ -3,6 +3,7 @@ import {
   IsString,
   IsEnum,
   IsNumber,
+  IsBoolean,
   IsArray,
   Min,
   Max,
@@ -11,6 +12,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PropertyType, ListingStatus } from '../entities/property.entity';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 /** Trims a string and strips ASCII / unicode control characters. */
 function sanitizeString(value: unknown): unknown {
@@ -20,7 +22,7 @@ function sanitizeString(value: unknown): unknown {
   return value.trim().replace(/\p{Cc}/gu, '');
 }
 
-export class QueryPropertyDto {
+export class QueryPropertyDto extends PaginationQueryDto {
   // Filters
   @ApiPropertyOptional({
     description: 'Filter by property type',
@@ -148,6 +150,79 @@ export class QueryPropertyDto {
   amenities?: string[];
 
   @ApiPropertyOptional({
+    description: 'Filter by furnished status',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isFurnished?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by parking availability',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  hasParking?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by pets allowed',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  petsAllowed?: boolean;
+
+  // Proximity / geospatial filters
+  @ApiPropertyOptional({
+    description: 'Latitude for proximity search (requires lng and radiusKm)',
+    example: 40.7128,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude for proximity search (requires lat and radiusKm)',
+    example: -74.006,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
+
+  @ApiPropertyOptional({
+    description: 'Search radius in kilometres (requires lat and lng)',
+    example: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.1)
+  @Max(500)
+  radiusKm?: number;
+
+  @ApiPropertyOptional({
     description: 'Filter by owner ID',
     example: 'uuid-string',
     maxLength: 36,
@@ -168,33 +243,6 @@ export class QueryPropertyDto {
   @IsString()
   @MaxLength(200)
   search?: string;
-
-  // Pagination
-  @ApiPropertyOptional({
-    description: 'Page number for pagination',
-    example: 1,
-    minimum: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
-    description: 'Number of items per page',
-    example: 10,
-    minimum: 1,
-    maximum: 100,
-    default: 10,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  limit?: number = 10;
 
   // Sorting
   @ApiPropertyOptional({

@@ -10,14 +10,190 @@ export const PERFORMANCE_THRESHOLDS = {
   dbQueryMs: 1000,
   blockchainDurationMs: 30000,
 };
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Registry,
+  Histogram,
+  Counter,
+  Gauge,
+  collectDefaultMetrics,
+} from 'prom-client';
 
-// Simplified metrics service without prom-client dependency
-// Install prom-client to enable full functionality: pnpm add prom-client
+function statusClass(status: number): string {
+  if (status >= 200 && status < 300) return '2xx';
+  if (status >= 300 && status < 400) return '3xx';
+  if (status >= 400 && status < 500) return '4xx';
+  if (status >= 500) return '5xx';
+  return 'unknown';
+}
 
 @Injectable()
-export class MetricsService {
+export class MetricsService implements OnModuleInit {
   private readonly logger = new Logger(MetricsService.name);
-  private metrics: Map<string, any> = new Map();
+  readonly registry = new Registry();
+
+  private readonly httpDuration = new Histogram({
+    name: 'http_request_duration_ms',
+    help: 'HTTP request latency in milliseconds',
+    labelNames: ['route', 'method', 'status_class'] as const,
+    buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
+    registers: [this.registry],
+  });
+
+  private readonly httpRequests = new Counter({
+    name: 'http_requests_total',
+    help: 'Total number of HTTP requests',
+    labelNames: ['route', 'method', 'status_class'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainTx = new Counter({
+    name: 'blockchain_transactions_total',
+    help: 'Total blockchain transactions',
+    labelNames: ['type', 'status'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainFailures = new Counter({
+    name: 'blockchain_failures_total',
+    help: 'Total blockchain failures',
+    labelNames: ['type'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainDuration = new Histogram({
+    name: 'blockchain_operation_duration_ms',
+    help: 'Blockchain operation latency in milliseconds',
+    labelNames: ['type'] as const,
+    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10000],
+    registers: [this.registry],
+  });
+
+  private readonly dbQueryDuration = new Histogram({
+    name: 'db_query_duration_ms',
+    help: 'Database query latency in milliseconds',
+    labelNames: ['query_type'] as const,
+    buckets: [1, 5, 10, 25, 50, 100, 250, 500],
+    registers: [this.registry],
+  });
+
+  private readonly dbPoolActive = new Gauge({
+    name: 'database_pool_active',
+    help: 'Active database pool connections',
+    registers: [this.registry],
+  });
+
+  private readonly dbPoolIdle = new Gauge({
+    name: 'database_pool_idle',
+    help: 'Idle database pool connections',
+    registers: [this.registry],
+  });
+
+  private readonly dbPoolMax = new Gauge({
+    name: 'database_pool_max',
+    help: 'Maximum database pool connections',
+    registers: [this.registry],
+  });
+
+  private readonly dbPoolWaiting = new Gauge({
+    name: 'database_pool_waiting',
+    help: 'Waiting database pool connections',
+    registers: [this.registry],
+  });
+
+  private readonly dbSizeBytes = new Gauge({
+    name: 'database_size_bytes',
+    help: 'Database size in bytes',
+    registers: [this.registry],
+  });
+
+  private readonly dbQueryAvgTimeMs = new Gauge({
+    name: 'database_query_avg_time_ms',
+    help: 'Average database query time in milliseconds',
+    registers: [this.registry],
+  });
+
+  private readonly dbTps = new Gauge({
+    name: 'database_tps',
+    help: 'Database transactions per second',
+    registers: [this.registry],
+  });
+
+  private readonly dbCacheHitRatio = new Gauge({
+    name: 'database_cache_hit_ratio',
+    help: 'Database cache hit ratio',
+    registers: [this.registry],
+  });
+
+  private readonly cacheOperations = new Counter({
+    name: 'cache_operations_total',
+    help: 'Total cache operations by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly cacheHitRatio = new Gauge({
+    name: 'cache_hit_ratio',
+    help: 'Cache hit ratio (hits / total operations)',
+    registers: [this.registry],
+  });
+
+  private cacheHits = 0;
+  private cacheTotal = 0;
+  private readonly dbReplicationLagSeconds = new Gauge({
+    name: 'database_replication_lag_seconds',
+    help: 'Replication lag for each database replica in seconds',
+    labelNames: ['replica'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly dbReplicaHealthy = new Gauge({
+    name: 'database_replica_healthy',
+    help: 'Replica health state where 1 is healthy and 0 is unhealthy',
+    labelNames: ['replica'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly dbReplicaCount = new Gauge({
+    name: 'database_replica_count',
+    help: 'Number of configured database replicas currently observed',
+    registers: [this.registry],
+  });
+
+  private readonly queueDepth = new Gauge({
+    name: 'queue_depth',
+    help: 'Jobs waiting or delayed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueOldestJobAgeSeconds = new Gauge({
+    name: 'queue_oldest_job_age_seconds',
+    help: 'Age in seconds of the oldest waiting job in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueActiveJobs = new Gauge({
+    name: 'queue_active_jobs',
+    help: 'Jobs currently being processed in the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queueFailedJobs = new Gauge({
+    name: 'queue_failed_jobs',
+    help: 'Jobs in the failed state for the queue',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly queuePaused = new Gauge({
+    name: 'queue_paused',
+    help: 'Whether the queue is paused (1) or running (0)',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
 
   constructor(
     @Optional() private readonly alertService?: PerformanceAlertService,
@@ -37,6 +213,76 @@ export class MetricsService {
         value: status,
       });
     }
+  private readonly queueStalledState = new Gauge({
+    name: 'queue_stalled',
+    help: 'Whether the queue is considered stalled (1): jobs are waiting longer than the stall threshold',
+    labelNames: ['queue'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly rentPayments = new Counter({
+    name: 'rent_payments_total',
+    help: 'Total rent payment attempts',
+    labelNames: ['status'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly nftMints = new Counter({
+    name: 'nft_mints_total',
+    help: 'Total NFT mints',
+    labelNames: ['type'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly disputes = new Counter({
+    name: 'disputes_total',
+    help: 'Total disputes',
+    labelNames: ['type', 'status'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly webhookSignatureVerifications = new Counter({
+    name: 'webhook_signature_verifications_total',
+    help: 'Total webhook signature verification attempts by result',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityUp = new Gauge({
+    name: 'blockchain_connectivity_up',
+    help: 'Whether the blockchain RPC/Horizon endpoint is reachable (1) or not (0)',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityResponseTime = new Gauge({
+    name: 'blockchain_connectivity_response_time_ms',
+    help: 'Latency of the last blockchain connectivity check in milliseconds',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityConsecutiveFailures = new Gauge({
+    name: 'blockchain_connectivity_consecutive_failures',
+    help: 'Number of consecutive failed blockchain connectivity checks',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly blockchainConnectivityLastSuccess = new Gauge({
+    name: 'blockchain_connectivity_last_success_timestamp',
+    help: 'Unix timestamp (seconds) of the last successful blockchain connectivity check',
+    labelNames: ['network'] as const,
+    registers: [this.registry],
+  });
+
+  onModuleInit(): void {
+    collectDefaultMetrics({ register: this.registry });
+    this.logger.log('MetricsService initialised with prom-client');
+  }
+
+  recordHttpRequest(method: string, route: string, status: number): void {
+    this.httpRequests.inc({ route, method, status_class: statusClass(status) });
   }
 
   recordHttpDuration(
@@ -52,18 +298,23 @@ export class MetricsService {
       duration,
       PERFORMANCE_THRESHOLDS.httpDurationMs,
       `Slow HTTP request ${method} ${route}`,
+    durationMs: number,
+  ): void {
+    this.httpDuration.observe(
+      { route, method, status_class: statusClass(status) },
+      durationMs,
     );
   }
 
-  // Blockchain Metrics Methods
-  recordBlockchainTransaction(type: string, status: 'success' | 'failure') {
-    const key = `blockchain_tx_${type}_${status}`;
-    this.incrementMetric(key);
+  recordBlockchainTransaction(
+    type: string,
+    status: 'success' | 'failure',
+  ): void {
+    this.blockchainTx.inc({ type, status });
   }
 
-  recordBlockchainFailure(type: string, error: string) {
-    const key = `blockchain_failure_${type}`;
-    this.incrementMetric(key);
+  recordBlockchainFailure(type: string, error: string): void {
+    this.blockchainFailures.inc({ type });
     this.logger.warn(`Blockchain failure: ${type} - ${error}`);
     this.raiseAlert({
       metric: key,
@@ -81,11 +332,20 @@ export class MetricsService {
       PERFORMANCE_THRESHOLDS.blockchainDurationMs,
       `Slow blockchain transaction ${type}`,
     );
+  recordBlockchainDuration(type: string, durationMs: number): void {
+    this.blockchainDuration.observe({ type }, durationMs);
   }
 
-  // Database Metrics Methods
-  setDatabaseConnections(count: number) {
-    this.metrics.set('database_connections', count);
+  setDatabasePoolUsage(
+    active: number,
+    idle: number,
+    max: number,
+    waiting: number,
+  ): void {
+    this.dbPoolActive.set(active);
+    this.dbPoolIdle.set(idle);
+    this.dbPoolMax.set(max);
+    this.dbPoolWaiting.set(waiting);
   }
 
   recordDatabaseQuery(queryType: string, duration: number) {
@@ -110,33 +370,30 @@ export class MetricsService {
         message: 'Rent payment failed',
       });
     }
+  setDatabaseSize(bytes: number): void {
+    this.dbSizeBytes.set(bytes);
   }
 
-  recordNftMint(type: string) {
-    const key = `nft_mint_${type}`;
-    this.incrementMetric(key);
+  setQueryMetrics(avgTimeMs: number, tps: number, cacheHitRatio: number): void {
+    this.dbQueryAvgTimeMs.set(avgTimeMs);
+    this.dbTps.set(tps);
+    this.dbCacheHitRatio.set(cacheHitRatio);
   }
 
-  recordDispute(type: string, status: string) {
-    const key = `dispute_${type}_${status}`;
-    this.incrementMetric(key);
+  setReplicationLag(replica: string, lagSeconds: number): void {
+    this.dbReplicationLagSeconds.set({ replica }, lagSeconds);
   }
 
-  // Get metrics in Prometheus format
-  async getMetrics(): Promise<string> {
-    let output = '# Chioma Backend Metrics\n';
+  setReplicaHealth(replica: string, healthy: boolean): void {
+    this.dbReplicaHealthy.set({ replica }, healthy ? 1 : 0);
+  }
 
-    for (const [key, value] of this.metrics.entries()) {
-      if (typeof value === 'number') {
-        output += `${key} ${value}\n`;
-      } else if (Array.isArray(value)) {
-        const avg = value.reduce((a, b) => a + b, 0) / value.length;
-        output += `${key}_avg ${avg.toFixed(3)}\n`;
-        output += `${key}_count ${value.length}\n`;
-      }
-    }
+  setReplicaCount(count: number): void {
+    this.dbReplicaCount.set(count);
+  }
 
-    return output;
+  recordDatabaseQuery(queryType: string, durationMs: number): void {
+    this.dbQueryDuration.observe({ query_type: queryType }, durationMs);
   }
 
   private checkThreshold(
@@ -168,19 +425,87 @@ export class MetricsService {
   private incrementMetric(key: string) {
     const current = this.metrics.get(key) || 0;
     this.metrics.set(key, current + 1);
+  recordCacheOperation(hit: boolean): void {
+    const result = hit ? 'hit' : 'miss';
+    this.cacheOperations.inc({ result });
+    this.cacheTotal++;
+    if (hit) this.cacheHits++;
+    this.cacheHitRatio.set(
+      this.cacheTotal > 0 ? this.cacheHits / this.cacheTotal : 0,
+    );
   }
 
-  private recordHistogram(key: string, value: number) {
-    const current = this.metrics.get(key) || [];
-    current.push(value);
-    // Keep only last 100 values
-    if (current.length > 100) {
-      current.shift();
+  /**
+   * Export per-queue gauges so a stalled or backed-up background processor
+   * is visible on the Prometheus metrics endpoint before user-facing
+   * symptoms appear.
+   */
+  setQueueMetrics(
+    queue: string,
+    metrics: {
+      depth: number;
+      oldestJobAgeSeconds: number;
+      active: number;
+      failed: number;
+      paused: boolean;
+      stalled: boolean;
+    },
+  ): void {
+    this.queueDepth.set({ queue }, metrics.depth);
+    this.queueOldestJobAgeSeconds.set({ queue }, metrics.oldestJobAgeSeconds);
+    this.queueActiveJobs.set({ queue }, metrics.active);
+    this.queueFailedJobs.set({ queue }, metrics.failed);
+    this.queuePaused.set({ queue }, metrics.paused ? 1 : 0);
+    this.queueStalledState.set({ queue }, metrics.stalled ? 1 : 0);
+  }
+
+  recordRentPayment(status: 'success' | 'failed'): void {
+    this.rentPayments.inc({ status });
+  }
+
+  recordNftMint(type: string): void {
+    this.nftMints.inc({ type });
+  }
+
+  recordDispute(type: string, status: string): void {
+    this.disputes.inc({ type, status });
+  }
+
+  /**
+   * Record the outcome of a webhook signature verification. `result` is
+   * `success` for accepted requests or one of the machine-readable rejection
+   * reasons (e.g. `signature_mismatch`, `timestamp_expired`) so tampering and
+   * replay attempts can be alerted on.
+   */
+  recordWebhookSignatureVerification(result: string): void {
+    this.webhookSignatureVerifications.inc({ result });
+  }
+
+  recordBlockchainConnectivityCheck(
+    network: string,
+    healthy: boolean,
+    responseTimeMs: number,
+    consecutiveFailures: number,
+  ): void {
+    this.blockchainConnectivityUp.set({ network }, healthy ? 1 : 0);
+    this.blockchainConnectivityResponseTime.set({ network }, responseTimeMs);
+    this.blockchainConnectivityConsecutiveFailures.set(
+      { network },
+      consecutiveFailures,
+    );
+    if (healthy) {
+      this.blockchainConnectivityLastSuccess.set(
+        { network },
+        Math.floor(Date.now() / 1000),
+      );
     }
-    this.metrics.set(key, current);
   }
 
-  getRegistry(): any {
-    return null; // Placeholder for prom-client registry
+  async getMetrics(): Promise<string> {
+    return this.registry.metrics();
+  }
+
+  getRegistry(): Registry {
+    return this.registry;
   }
 }

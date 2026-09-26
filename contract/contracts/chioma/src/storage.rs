@@ -40,4 +40,6 @@ pub enum DataKey {
     UpgradeProposal(String),
     UpgradeProposalCount,
     ActiveUpgradeProposals,
+    // Gas optimisation metrics (keyed by operation name string)
+    GasMetrics(String),
 }

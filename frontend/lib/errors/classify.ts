@@ -47,6 +47,20 @@ export function createHttpError(
     });
   }
 
+  if (status === 429) {
+    const msg = getErrorMessage('NETWORK_RATE_LIMIT');
+    return new AppError({
+      code: 'NETWORK_RATE_LIMIT',
+      category: 'network',
+      severity: 'warning',
+      message: `HTTP 429 Too Many Requests`,
+      userMessage: msg.message,
+      recoverable: true,
+      status,
+      context,
+    });
+  }
+
   if (status >= 500) {
     const msg = getErrorMessage('SYSTEM_UNEXPECTED');
     return new AppError({
@@ -81,6 +95,24 @@ export function classifyUnknownError(
   if (error instanceof AppError) return error;
 
   if (error instanceof DOMException && error.name === 'AbortError') {
+    const isUserCancellation =
+      context?.metadata?.cancellationReason === 'user' ||
+      context?.action?.startsWith('cancel:');
+
+    if (isUserCancellation) {
+      const msg = getErrorMessage('REQUEST_CANCELLED');
+      return new AppError({
+        code: 'REQUEST_CANCELLED',
+        category: 'network',
+        severity: 'info',
+        message: error.message,
+        userMessage: msg.message,
+        recoverable: true,
+        cause: error,
+        context,
+      });
+    }
+
     const msg = getErrorMessage('NETWORK_TIMEOUT');
     return new AppError({
       code: 'NETWORK_TIMEOUT',

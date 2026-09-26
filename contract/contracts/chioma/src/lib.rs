@@ -5,6 +5,7 @@
 //!
 //! @title Chioma
 //! @notice On-chain rental agreement lifecycle: create, sign, submit, cancel, and query agreements.
+//! Optimized for gas efficiency and security.
 
 use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 
@@ -12,6 +13,7 @@ mod agreement;
 mod deposit_interest;
 mod errors;
 mod events;
+mod gas_optimization;
 mod multi_sig;
 mod multi_token;
 mod rate_limit;
@@ -50,6 +52,18 @@ mod tests_timelock;
 #[cfg(test)]
 mod tests_version_pause;
 
+#[cfg(test)]
+mod tests_rbac;
+
+#[cfg(test)]
+mod tests_lease_negotiation;
+
+#[cfg(test)]
+mod tests_property;
+
+#[cfg(test)]
+mod tests_gas_benchmarks;
+
 pub use agreement::{
     accept_extension, activate_extension, approve_agreement, cancel_agreement, cancel_extension,
     create_agreement, create_agreement_with_token, get_agreement, get_agreement_count,
@@ -60,6 +74,10 @@ pub use agreement::{
     validate_agreement_params,
 };
 pub use errors::RentalError;
+pub use gas_optimization::{
+    estimate_gas_cost, get_gas_metrics, optimize_operation, GasMetrics, OperationType,
+    OptimizationSuggestion,
+};
 pub use multi_token::{
     add_supported_token, convert_amount, get_exchange_rate, get_supported_tokens,
     is_token_supported, remove_supported_token, set_exchange_rate,
@@ -1253,6 +1271,21 @@ impl Contract {
         timelock::cancel_action(&env, caller, action_id)
     }
 
+    /// Accept a queued admin transfer (second step of the two-step rotation).
+    ///
+    /// The current admin proposes a rotation via `queue_timelock_action` with
+    /// `action_type: UpdateAdmin` and `target` set to the proposed new admin.
+    /// Once the 7-day delay has elapsed, the proposed new admin (not anyone
+    /// else) calls this to actually take over as admin. The current admin can
+    /// cancel the proposal any time before this via `cancel_timelock_action`.
+    pub fn accept_admin_transfer(
+        env: Env,
+        caller: Address,
+        action_id: String,
+    ) -> Result<(), RentalError> {
+        timelock::accept_admin_transfer(&env, caller, action_id)
+    }
+
     /// Retrieve a timelock action by ID.
     pub fn get_timelock_action(env: Env, action_id: String) -> Result<TimelockAction, RentalError> {
         timelock::get_action(&env, action_id)
@@ -1266,5 +1299,27 @@ impl Contract {
     /// Get total count of timelock actions ever queued.
     pub fn get_timelock_action_count(env: Env) -> u32 {
         timelock::get_action_count(&env)
+    }
+
+    // ─── Gas Optimisation ─────────────────────────────────────────────────────
+
+    /// Estimate the gas cost for a given operation type.
+    ///
+    /// Returns a conservative upper-bound estimate in Soroban gas units.
+    pub fn estimate_gas_cost(env: Env, operation: OperationType) -> Result<u64, RentalError> {
+        gas_optimization::estimate_gas_cost(env, operation)
+    }
+
+    /// Return persisted gas metrics for all tracked operations.
+    pub fn get_gas_metrics(env: Env) -> Result<Vec<GasMetrics>, RentalError> {
+        gas_optimization::get_gas_metrics(env)
+    }
+
+    /// Return an optimisation suggestion for the given operation.
+    pub fn optimize_operation(
+        env: Env,
+        operation: OperationType,
+    ) -> Result<OptimizationSuggestion, RentalError> {
+        gas_optimization::optimize_operation(env, operation)
     }
 }

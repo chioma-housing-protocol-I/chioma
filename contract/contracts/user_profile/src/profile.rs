@@ -1,7 +1,9 @@
 use crate::errors::ContractError;
 use crate::events;
-use crate::storage::DataKey;
+use crate::rate_limit;
+use crate::storage::{extend_persistent_ttl, DataKey};
 use crate::types::{AccountType, UserProfile};
+use crate::upgrade;
 use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String};
 
 #[contract]
@@ -20,6 +22,9 @@ impl UserProfileContract {
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Initialized, &true);
+        env.storage()
+            .instance()
+            .extend_ttl(crate::storage::TTL_THRESHOLD, crate::storage::TTL_BUMP);
 
         events::initialized(&env, admin);
 
@@ -36,6 +41,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        rate_limit::check_rate_limit(&env, &account_id, "create_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -65,6 +72,7 @@ impl UserProfileContract {
 
         // Store profile in persistent storage
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit creation event
         events::profile_created(&env, account_id, account_type, data_hash);
@@ -82,6 +90,8 @@ impl UserProfileContract {
     ) -> Result<UserProfile, ContractError> {
         // Require authorization from the account owner
         account_id.require_auth();
+
+        rate_limit::check_rate_limit(&env, &account_id, "update_profile")?;
 
         let key = DataKey::Profile(account_id.clone());
 
@@ -111,6 +121,7 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit update event
         events::profile_updated(
@@ -158,6 +169,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "verify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -173,9 +186,10 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit verification event
-        events::profile_verified(&env, account_id);
+        events::profile_verified(&env, account_id, admin);
 
         Ok(profile)
     }
@@ -201,6 +215,8 @@ impl UserProfileContract {
             return Err(ContractError::UnauthorizedAdmin);
         }
 
+        rate_limit::check_rate_limit(&env, &admin, "unverify_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         // Get profile
@@ -216,9 +232,11 @@ impl UserProfileContract {
 
         // Save updated profile
         env.storage().persistent().set(&key, &profile);
+        extend_persistent_ttl(&env, &key);
 
         // Emit unverification event
-        events::profile_unverified(&env, account_id);
+        // No reason is captured by the current public entrypoint signature.
+        events::profile_unverified(&env, account_id, admin, String::from_str(&env, ""));
 
         Ok(profile)
     }
@@ -238,6 +256,8 @@ impl UserProfileContract {
         // Require authorization from the account owner
         account_id.require_auth();
 
+        rate_limit::check_rate_limit(&env, &account_id, "delete_profile")?;
+
         let key = DataKey::Profile(account_id.clone());
 
         if !env.storage().persistent().has(&key) {
@@ -248,9 +268,50 @@ impl UserProfileContract {
         env.storage().persistent().remove(&key);
 
         // Emit deletion event
-        events::profile_deleted(&env, account_id);
+        // Deletion is self-service, so the account is also the actor.
+        events::profile_deleted(&env, account_id.clone(), account_id);
 
         Ok(())
+    }
+
+    // --- Upgrade Functions ---
+
+    /// Propose a contract upgrade (admin only).
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: soroban_sdk::Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), ContractError> {
+        upgrade::propose_upgrade(&env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve an upgrade proposal (admin only).
+    pub fn approve_upgrade(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), ContractError> {
+        upgrade::approve_upgrade(&env, approver, proposal_id)
+    }
+
+    /// Execute an approved upgrade (admin only).
+    pub fn execute_upgrade(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), ContractError> {
+        upgrade::execute_upgrade(&env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, ContractError> {
+        upgrade::get_upgrade_proposal(&env, proposal_id)
     }
 }
 

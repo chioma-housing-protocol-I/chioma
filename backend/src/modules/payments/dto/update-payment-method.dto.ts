@@ -24,4 +24,8 @@ export class UpdatePaymentMethodDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  sensitiveMetadata?: Record<string, unknown>;
 }

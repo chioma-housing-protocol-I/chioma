@@ -3,7 +3,7 @@ import Image from 'next/image';
 import ImageGallery from '@/components/properties/ImageGallery';
 import { MapPin, User, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import Footer from '@/components/landing/Footer';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import AmenitiesList, {
   type Amenity,

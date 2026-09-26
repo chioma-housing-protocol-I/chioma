@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { UserAvatar } from '@/components/admin/users/UserAvatar';
 import { useAdminUserDetailBundle } from '@/lib/query/hooks/use-admin-user-detail';
 import { useUserTransactions } from '@/lib/query/hooks/use-transactions';
 import {
@@ -26,10 +27,11 @@ import {
   Mail,
   Phone,
   Shield,
-  User,
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import toast from 'react-hot-toast';
 
 const KYC_BADGE: Record<KycStatus, string> = {
@@ -74,6 +76,7 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
   const [actionLoading, setActionLoading] = useState(false);
   /** Overrides server mock when suspend/activate succeeds before detail payload updates. */
   const [localSuspended, setLocalSuspended] = useState<boolean | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const user = data?.user;
   const extras = data?.extras;
@@ -197,18 +200,14 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
         <div className="xl:col-span-1 space-y-6">
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center overflow-hidden">
-                {user.avatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={user.avatar}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User size={40} className="text-slate-500" />
-                )}
-              </div>
+              <UserAvatar
+                name={user.name}
+                email={user.email}
+                src={user.avatar}
+                sizeClassName="w-24 h-24 border-4 border-slate-700 bg-slate-800"
+                textClassName="text-3xl"
+                iconSize={40}
+              />
               <div>
                 <h2 className="text-xl font-bold text-white">
                   {user.name || 'Unknown'}
@@ -246,7 +245,10 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
               </div>
               <div className="flex items-center gap-3">
                 <Calendar size={16} className="text-slate-500 shrink-0" />
-                Joined {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                Joined{' '}
+                {format(new Date(user.createdAt), 'MMM d, yyyy', {
+                  locale: dateFnsLocale,
+                })}
               </div>
             </div>
           </div>
@@ -264,7 +266,10 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
               </span>
               {extras.kycUpdatedAt && (
                 <span className="text-xs text-slate-500">
-                  Updated {format(new Date(extras.kycUpdatedAt), 'MMM d, yyyy')}
+                  Updated{' '}
+                  {format(new Date(extras.kycUpdatedAt), 'MMM d, yyyy', {
+                    locale: dateFnsLocale,
+                  })}
                 </span>
               )}
             </div>
@@ -397,11 +402,13 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
                           </span>
                           <p className="text-slate-500 text-xs mt-0.5 line-clamp-2 md:hidden">
                             {tx.status} ·{' '}
-                            {format(new Date(tx.createdAt), 'MMM d, yyyy')}
+                            {format(new Date(tx.createdAt), 'MMM d, yyyy', {
+                              locale: dateFnsLocale,
+                            })}
                           </p>
                         </td>
                         <td className="px-4 py-3 text-white whitespace-nowrap">
-                          {tx.amount.toLocaleString()} {tx.currency}
+                          {formatCurrency(tx.amount, tx.currency)}
                         </td>
                         <td
                           className={`px-4 py-3 capitalize hidden sm:table-cell ${txStatusClass(tx.status)}`}
@@ -409,7 +416,9 @@ export function AdminUserDetailView({ userId }: AdminUserDetailViewProps) {
                           {tx.status}
                         </td>
                         <td className="px-4 py-3 text-slate-500 hidden md:table-cell whitespace-nowrap">
-                          {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm')}
+                          {format(new Date(tx.createdAt), 'MMM d, yyyy HH:mm', {
+                            locale: dateFnsLocale,
+                          })}
                         </td>
                       </tr>
                     ))}

@@ -4,8 +4,10 @@ import React from 'react';
 import Image from 'next/image';
 import { Download, Filter, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 const PropertyPortfolio = () => {
+  const dateFnsLocale = useDateFnsLocale();
   const properties = [
     {
       id: 1,
@@ -210,7 +212,9 @@ const PropertyPortfolio = () => {
                   <td className="py-4 px-4">
                     {property.leaseEnds ? (
                       <span className="text-sm text-blue-200 font-medium">
-                        {format(property.leaseEnds, 'MMM yyyy')}
+                        {format(property.leaseEnds, 'MMM yyyy', {
+                          locale: dateFnsLocale,
+                        })}
                       </span>
                     ) : (
                       <span className="text-sm text-blue-200/40">--</span>
@@ -283,7 +287,9 @@ const PropertyPortfolio = () => {
                       Lease Ends
                     </p>
                     <p className="font-bold text-white">
-                      {format(property.leaseEnds, 'MMM yyyy')}
+                      {format(property.leaseEnds, 'MMM yyyy', {
+                        locale: dateFnsLocale,
+                      })}
                     </p>
                   </div>
                 )}

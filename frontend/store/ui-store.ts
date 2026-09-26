@@ -3,6 +3,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { withMiddleware } from './middleware';
+import { createVersionedPersistConfig } from './persistence';
+
+/** Bump when persisted UI state shape changes. */
+export const UI_STORE_VERSION = 1;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -139,8 +143,12 @@ export const useUIStore = create<UIStore>()(
       }),
       'ui',
     ),
-    {
+    createVersionedPersistConfig<
+      UIStore,
+      Pick<UIStore, 'theme' | 'sidebarCollapsed'>
+    >({
       name: 'chioma-ui',
+      version: UI_STORE_VERSION,
       storage: createJSONStorage(() =>
         typeof window !== 'undefined' ? localStorage : noopStorage,
       ),
@@ -148,6 +156,24 @@ export const useUIStore = create<UIStore>()(
         theme: state.theme,
         sidebarCollapsed: state.sidebarCollapsed,
       }),
-    },
+      migrations: {
+        1: (state) => {
+          const legacy = state as Record<string, unknown>;
+          const theme = ['light', 'dark', 'system'].includes(
+            legacy.theme as ThemeMode,
+          )
+            ? (legacy.theme as ThemeMode)
+            : 'system';
+
+          return {
+            theme,
+            sidebarCollapsed:
+              typeof legacy.sidebarCollapsed === 'boolean'
+                ? legacy.sidebarCollapsed
+                : false,
+          };
+        },
+      },
+    }),
   ),
 );

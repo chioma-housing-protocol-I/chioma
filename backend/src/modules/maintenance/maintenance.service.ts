@@ -1,11 +1,7 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   MaintenanceRequest,
   MaintenanceStatus,
@@ -50,6 +46,14 @@ export const MAINTENANCE_TRANSITIONS: Record<
   [MaintenanceStatus.RESOLVED]: [MaintenanceStatus.CLOSED],
   [MaintenanceStatus.CLOSED]: [],
 };
+import {
+  MaintenanceNotFoundError,
+  AuthorizationError,
+  ValidationError,
+} from '../../common/errors/domain-errors';
+import { computeSlaDeadlines } from './sla.config';
+import { PaginationUtils } from '../../common/utils';
+import { QueryMaintenanceDto } from './dto';
 
 export interface CreateMaintenanceDto {
   propertyId: string;
@@ -67,6 +71,8 @@ export interface MaintenanceFilter {
 
 @Injectable()
 export class MaintenanceService {
+  private readonly logger = new Logger(MaintenanceService.name);
+
   constructor(
     @InjectRepository(MaintenanceRequest)
     private readonly maintenanceRepo: Repository<MaintenanceRequest>,
@@ -78,6 +84,7 @@ export class MaintenanceService {
     @InjectRepository(Vendor)
     private readonly vendorRepo: Repository<Vendor>,
     private readonly paymentService: PaymentService,
+    private readonly configService: ConfigService,
   ) {}
 
   private assertTransition(from: MaintenanceStatus, to: MaintenanceStatus) {
@@ -90,23 +97,32 @@ export class MaintenanceService {
 
   async create(dto: CreateMaintenanceDto): Promise<MaintenanceRequest> {
     const property = await this.propertiesService.findOne(dto.propertyId);
-    if (!property) throw new BadRequestException('Invalid property');
+    if (!property) throw new ValidationError('Invalid property');
 
     const tenant = await this.usersService.getUserById(dto.tenantId);
     const landlord = await this.usersService.getUserById(dto.landlordId);
-    if (!tenant || !landlord) throw new BadRequestException('Invalid user');
+    if (!tenant || !landlord) throw new ValidationError('Invalid user');
 
     if (dto.mediaUrls && dto.mediaUrls.length > 0) {
       for (const url of dto.mediaUrls) {
         if (!url.includes(dto.tenantId)) {
-          throw new BadRequestException('Invalid media ownership');
+          throw new ValidationError('Invalid media ownership');
         }
       }
     }
 
+    const now = new Date();
+    const { responseDueAt, resolutionDueAt } = computeSlaDeadlines(
+      now,
+      dto.priority as string | undefined,
+      this.configService,
+    );
+
     const req = this.maintenanceRepo.create({
       ...dto,
       status: MaintenanceStatus.OPEN,
+      responseDueAt,
+      resolutionDueAt,
     });
 
     const saved = await this.maintenanceRepo.save(req);
@@ -121,14 +137,28 @@ export class MaintenanceService {
     return saved;
   }
 
-  async findAll(filter: MaintenanceFilter): Promise<MaintenanceRequest[]> {
-    // Removed the erroneous `as MaintenanceRequest[]` cast — find() already returns the correct type
-    return this.maintenanceRepo.find({ where: filter });
+  async findAll(query: QueryMaintenanceDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    PaginationUtils.validatePagination(page, limit);
+
+    const where: MaintenanceFilter = {};
+    if (query.propertyId) where.propertyId = query.propertyId;
+    if (query.status) where.status = query.status;
+    if (query.priority) where.priority = query.priority;
+
+    const [data, total] = await this.maintenanceRepo.findAndCount({
+      where,
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOne(id: string): Promise<MaintenanceRequest> {
     const req = await this.maintenanceRepo.findOne({ where: { id } });
-    if (!req) throw new NotFoundException('Maintenance request not found');
+    if (!req) throw new MaintenanceNotFoundError(id);
     return req;
   }
 
@@ -140,7 +170,7 @@ export class MaintenanceService {
   ): Promise<MaintenanceRequest> {
     const req = await this.findOne(id);
 
-    if (!isLandlordOrAgent) throw new ForbiddenException('Not authorized');
+    if (!isLandlordOrAgent) throw new AuthorizationError('Not authorized');
 
     this.assertTransition(req.status, status);
     req.status = status;
@@ -155,7 +185,14 @@ export class MaintenanceService {
 
     // Trigger review prompt if closed
     if (status === MaintenanceStatus.CLOSED) {
-      await this.reviewPromptService.promptForMaintenanceReview(id);
+      try {
+        await this.reviewPromptService.promptForMaintenanceReview(id);
+      } catch (error) {
+        this.logger.error(
+          `Failed to send maintenance review prompt for request ${id}`,
+          error,
+        );
+      }
     }
 
     return saved;

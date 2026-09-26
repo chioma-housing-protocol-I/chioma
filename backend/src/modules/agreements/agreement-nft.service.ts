@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RentObligationNftService } from '../stellar/services/rent-obligation-nft.service';
 import { RentObligationNft } from './entities/rent-obligation-nft.entity';
+import { PaginationUtils } from '../../common/utils';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
 @Injectable()
 export class AgreementNftService {
@@ -84,6 +86,71 @@ export class AgreementNftService {
     return nft;
   }
 
+  async burnNftForAgreement(
+    agreementId: string,
+    reason: string,
+  ): Promise<RentObligationNft> {
+    const nft = await this.nftRepository.findOne({ where: { agreementId } });
+
+    if (!nft) {
+      throw new Error(`NFT not found for agreement ${agreementId}`);
+    }
+
+    if (nft.status === 'burned') {
+      return nft;
+    }
+
+    const { txHash } = await this.nftContractService.burnObligation({
+      tokenId: nft.tokenId,
+      reason,
+      ownerAddress: nft.currentOwner,
+    });
+
+    nft.status = 'burned';
+    nft.isActive = false;
+    nft.burnTxHash = txHash;
+    nft.burnedAt = new Date();
+
+    await this.nftRepository.save(nft);
+
+    this.logger.log(
+      `NFT burned for agreement ${agreementId} (reason: ${reason}): ${txHash}`,
+    );
+
+    return nft;
+  }
+
+  async adminReassignNft(
+    agreementId: string,
+    newOwnerAddress: string,
+    adminAddress: string,
+  ): Promise<RentObligationNft> {
+    const nft = await this.nftRepository.findOne({ where: { agreementId } });
+
+    if (!nft) {
+      throw new Error(`NFT not found for agreement ${agreementId}`);
+    }
+
+    const { txHash } = await this.nftContractService.adminReassignObligation({
+      agreementId,
+      newOwnerAddress,
+      adminAddress,
+    });
+
+    nft.currentOwner = newOwnerAddress;
+    nft.lastTransferTxHash = txHash;
+    nft.lastTransferredAt = new Date();
+    nft.transferCount += 1;
+
+    await this.nftRepository.save(nft);
+
+    this.logger.log(
+      `NFT admin-reassigned for agreement ${agreementId} to ${newOwnerAddress}: ${txHash}`,
+    );
+
+    return nft;
+  }
+
   async syncNftOwnership(agreementId: string): Promise<void> {
     const nft = await this.nftRepository.findOne({ where: { agreementId } });
 
@@ -109,8 +176,20 @@ export class AgreementNftService {
     return this.nftRepository.findOne({ where: { agreementId } });
   }
 
-  async getNftsByOwner(ownerAddress: string): Promise<RentObligationNft[]> {
-    return this.nftRepository.find({ where: { currentOwner: ownerAddress } });
+  async getNftsByOwner(
+    ownerAddress: string,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedResponseDto<RentObligationNft>> {
+    PaginationUtils.validatePagination(page, limit);
+
+    const [data, total] = await this.nftRepository.findAndCount({
+      where: { currentOwner: ownerAddress },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
+    });
+
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async verifyOwnership(
