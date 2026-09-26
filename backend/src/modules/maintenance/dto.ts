@@ -1,5 +1,9 @@
 import {
   IsArray,
+  IsBoolean,
+  IsEmail,
+  IsNumber,
+  Min,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -41,6 +45,57 @@ export class UpdateMaintenanceStatusDto {
   status: MaintenanceStatus;
 }
 
+export class CreateVendorDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsArray()
+  @IsOptional()
+  specialties?: string[];
+}
+
+export class AssignVendorDto {
+  @IsUUID()
+  vendorId: string;
+}
+
+export class SubmitCostEstimateDto {
+  @IsNumber()
+  @Min(0)
+  estimatedCost: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  notes?: string;
+}
+
+export class ReviewCostEstimateDto {
+  @IsBoolean()
+  approved: boolean;
+
+  @IsString()
+  @IsOptional()
+  reason?: string;
+}
+
+export class PayMaintenanceCostDto {
+  @IsString()
+  @IsNotEmpty()
+  paymentMethodId: string;
+
+  @IsUUID()
+  @IsOptional()
+  agreementId?: string;
 export class QueryMaintenanceDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by property UUID' })
   @IsOptional()

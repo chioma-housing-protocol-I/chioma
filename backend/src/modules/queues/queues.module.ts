@@ -20,6 +20,11 @@ import { QueuesController } from './controllers/queues.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeadLetterJob } from './entities/dead-letter-job.entity';
+import { DeadLetterQueueService } from './services/dead-letter-queue.service';
+import { DeadLetterQueueListener } from './listeners/dead-letter-queue.listener';
+import { DlqProcessor } from './dlq.processor';
 import { AgreementsModule } from '../agreements/agreements.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
 import { ReferralModule } from '../referral/referral.module';
@@ -69,6 +74,7 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
     NotificationsModule,
     StorageModule,
     StellarModule,
+    TypeOrmModule.forFeature([DeadLetterJob]),
     AgreementsModule,
     MonitoringModule,
     ReferralModule,
@@ -86,6 +92,8 @@ import { DEAD_LETTER_QUEUE_NAME } from './queues.constants';
     QueueMonitoringService,
     QueueManagementService,
     DeadLetterQueueService,
+    DeadLetterQueueListener,
+    DlqProcessor,
   ],
   controllers: [QueuesController],
   exports: [
