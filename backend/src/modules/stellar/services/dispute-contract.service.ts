@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { TransactionPollingService } from './transaction-polling.service';
 
 export enum DisputeOutcome {
   FAVOR_LANDLORD = 'FavorLandlord',
@@ -39,7 +40,10 @@ export class DisputeContractService {
   private readonly network: string;
   private readonly adminKeypair?: StellarSdk.Keypair;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private transactionPollingService: TransactionPollingService,
+  ) {
     this.contractId =
       this.configService.get<string>('DISPUTE_CONTRACT_ID') || '';
     this.rpcUrl =
@@ -88,7 +92,12 @@ export class DisputeContractService {
     prepared.sign(this.adminKeypair);
 
     const result = await server.sendTransaction(prepared);
-    return result.hash;
+
+    // Poll for final transaction status
+    return await this.transactionPollingService.pollTransactionStatusStrict(
+      result.hash,
+      { maxAttempts: 30, initialDelayMs: 1000, backoffMultiplier: 1.5 },
+    );
   }
 
   async raiseDispute(
@@ -125,7 +134,12 @@ export class DisputeContractService {
     prepared.sign(raiserKeypair);
 
     const result = await server.sendTransaction(prepared);
-    return result.hash;
+
+    // Poll for final transaction status
+    return await this.transactionPollingService.pollTransactionStatusStrict(
+      result.hash,
+      { maxAttempts: 30, initialDelayMs: 1000, backoffMultiplier: 1.5 },
+    );
   }
 
   async voteOnDispute(
@@ -162,7 +176,12 @@ export class DisputeContractService {
     prepared.sign(arbiterKeypair);
 
     const result = await server.sendTransaction(prepared);
-    return result.hash;
+
+    // Poll for final transaction status
+    return await this.transactionPollingService.pollTransactionStatusStrict(
+      result.hash,
+      { maxAttempts: 30, initialDelayMs: 1000, backoffMultiplier: 1.5 },
+    );
   }
 
   async resolveDispute(
@@ -198,8 +217,15 @@ export class DisputeContractService {
 
     const result = await server.sendTransaction(prepared);
 
+    // Poll for final transaction status
+    const txHash =
+      await this.transactionPollingService.pollTransactionStatusStrict(
+        result.hash,
+        { maxAttempts: 30, initialDelayMs: 1000, backoffMultiplier: 1.5 },
+      );
+
     const outcome = await this.getDisputeOutcome(agreementId);
-    return { outcome, txHash: result.hash };
+    return { outcome, txHash };
   }
 
   async getDispute(agreementId: string): Promise<DisputeInfo | null> {

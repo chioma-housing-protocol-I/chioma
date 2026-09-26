@@ -272,6 +272,7 @@ When upgrading contracts and modifying storage:
 
 ## Related Documentation
 
+- [Storage Growth & TTL Policy](STORAGE-GROWTH-AND-TTL.md)
 - [Contract Architecture](../architecture/CONTRACT-ARCHITECTURE.md)
 - [Testing Strategy](../testing/TESTING-STRATEGY.md)
 - [Deployment Guide](../deployment/DEPLOYMENT.md)

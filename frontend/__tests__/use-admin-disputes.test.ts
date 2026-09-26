@@ -65,7 +65,12 @@ describe('useUpdateAdminDisputeStatus', () => {
     );
   });
 
-  it('should handle non-numeric IDs gracefully', async () => {
+  it('rejects instead of silently reporting success when the request fails (#1558)', async () => {
+    // Previously this swallowed the error and resolved with
+    // `{ localOnly: true }`, which made a failed update look successful —
+    // no audit-log entry was ever produced server-side, but the caller had
+    // no way to tell. It must now reject so callers (and bulk-action
+    // failure counting) can react honestly.
     mockedApiClient.patch.mockRejectedValueOnce(new Error('404 Not Found'));
 
     const { result } = renderHook(() => useUpdateAdminDisputeStatus(), {
@@ -76,12 +81,12 @@ describe('useUpdateAdminDisputeStatus', () => {
       expect(result.current.isPending).toBe(false);
     });
 
-    const response = await result.current.mutateAsync({
-      disputeId: 'invalid-id',
-      status: 'RESOLVED',
-    });
-
-    expect(response.localOnly).toBe(true);
+    await expect(
+      result.current.mutateAsync({
+        disputeId: 'invalid-id',
+        status: 'RESOLVED',
+      }),
+    ).rejects.toThrow('404 Not Found');
   });
 });
 

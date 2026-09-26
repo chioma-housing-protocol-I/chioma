@@ -17,6 +17,7 @@ import { RentObligationNftService } from '../services/rent-obligation-nft.servic
 import { NftEventProcessor } from '../services/nft-event-processor.service';
 import { AgentRegistryService } from '../services/agent-registry.service';
 import { PropertyRegistryService } from '../services/property-registry.service';
+import { TransactionPollingService } from '../services/transaction-polling.service';
 import { AgentRegistryController } from '../controllers/agent-registry.controller';
 import { DisputeController } from '../controllers/dispute.controller';
 import { PropertyRegistryController } from '../controllers/property-registry.controller';
@@ -43,6 +44,7 @@ import { WebhooksModule } from '../../webhooks/webhooks.module';
     PropertyRegistryController,
   ],
   providers: [
+    TransactionPollingService,
     ChiomaContractService,
     EscrowContractService,
     DisputeContractService,
@@ -53,6 +55,7 @@ import { WebhooksModule } from '../../webhooks/webhooks.module';
     PropertyRegistryService,
   ],
   exports: [
+    TransactionPollingService,
     ChiomaContractService,
     EscrowContractService,
     DisputeContractService,

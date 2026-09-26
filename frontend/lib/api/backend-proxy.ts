@@ -29,6 +29,7 @@ const ALLOWED_PATHS = new Set([
   '/refunds',
   '/admin',
   '/version',
+  '/subletting',
 ]);
 
 const REQUEST_HEADERS_ALLOWLIST = new Set([
