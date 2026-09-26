@@ -33,6 +33,16 @@ export interface SyncOptions {
 const DEFAULT_MAX_RETRIES = 3;
 const SYNC_BATCH_SIZE = 10;
 
+/**
+ * Entities that own their own replay logic instead of the generic
+ * create=POST/update=PUT/delete=DELETE REST mapping below. Chat messages
+ * (#1557) are sent over the messaging socket, not REST, and are flushed by
+ * `components/messaging/useMessaging.ts` on reconnect — this queue only
+ * holds them so the offline infrastructure can track/surface them
+ * consistently with every other queued action.
+ */
+const SELF_MANAGED_ENTITIES = new Set(['chat-message']);
+
 // ─── Sync State ──────────────────────────────────────────────────────────────
 
 let isSyncing = false;
@@ -124,14 +134,20 @@ export async function syncOfflineData(
 
   try {
     const queue = await getSyncQueue();
-    const total = queue.length;
     let processed = 0;
     let failed = 0;
     let conflicts = 0;
 
-    // Process in batches to avoid overwhelming the server
-    for (let i = 0; i < queue.length; i += SYNC_BATCH_SIZE) {
-      const batch = queue.slice(i, i + SYNC_BATCH_SIZE);
+    // Process in batches to avoid overwhelming the server. Self-managed
+    // entities (e.g. chat messages) are skipped here — their own consumer
+    // replays them and removes them from the queue itself.
+    const replayable = queue.filter(
+      (item) => !SELF_MANAGED_ENTITIES.has(item.entity),
+    );
+    const total = replayable.length;
+
+    for (let i = 0; i < replayable.length; i += SYNC_BATCH_SIZE) {
+      const batch = replayable.slice(i, i + SYNC_BATCH_SIZE);
 
       await Promise.all(
         batch.map(async (item) => {

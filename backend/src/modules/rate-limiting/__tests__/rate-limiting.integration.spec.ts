@@ -9,72 +9,13 @@ import { AbuseDetectionService } from '../services/abuse-detection.service';
 import { UserTier, EndpointCategory } from '../types/rate-limit.types';
 import { REDIS_CLIENT } from '../../../common/lock/redis-client.token';
 
-function createMemoryRedis() {
-  const store = new Map<string, { value: string; expiresAt: number | null }>();
-
-  const read = (key: string): string | null => {
-    const entry = store.get(key);
-    if (!entry) {
-      return null;
-    }
-    if (entry.expiresAt != null && entry.expiresAt <= Date.now()) {
-      store.delete(key);
-      return null;
-    }
-    return entry.value;
-  };
-
-  return {
-    async get(key: string): Promise<string | null> {
-      return read(key);
-    },
-    async del(key: string): Promise<number> {
-      return store.delete(key) ? 1 : 0;
-    },
-    async eval(
-      _script: string,
-      _numKeys: number,
-      key: string,
-      points: number | string,
-      durationSeconds: number | string,
-    ): Promise<number> {
-      const currentRaw = read(key);
-      const current = currentRaw == null ? 0 : Number(currentRaw);
-      const next = current + Number(points);
-      const previous = store.get(key);
-      store.set(key, {
-        value: String(next),
-        expiresAt:
-          currentRaw == null
-            ? Date.now() + Number(durationSeconds) * 1000
-            : (previous?.expiresAt ?? null),
-      });
-      return next;
-    },
-    reset(): void {
-      store.clear();
-    },
-  };
-}
-
-const memoryRedis = createMemoryRedis();
-
-@Module({})
-class RateLimitRedisTestModule {}
-
-const redisModule = {
-  module: RateLimitRedisTestModule,
-  global: true,
-  providers: [{ provide: REDIS_CLIENT, useValue: memoryRedis }],
-  exports: [REDIS_CLIENT],
-};
-
 describe('Rate Limiting Integration Tests', () => {
   let app: INestApplication;
   let moduleRef: TestingModule;
   let rateLimitService: RateLimitService;
   let abuseDetectionService: AbuseDetectionService;
   let _dataSource: DataSource;
+  let cacheManager: any;
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -106,6 +47,7 @@ describe('Rate Limiting Integration Tests', () => {
       AbuseDetectionService,
     );
     _dataSource = moduleRef.get<DataSource>(DataSource);
+    cacheManager = moduleRef.get('CACHE_MANAGER');
   });
 
   afterAll(async () => {
@@ -118,12 +60,43 @@ describe('Rate Limiting Integration Tests', () => {
   });
 
   beforeEach(async () => {
-    memoryRedis.reset();
-    const cacheManager = moduleRef.get(CACHE_MANAGER);
-    if (cacheManager && typeof cacheManager.clear === 'function') {
-      await cacheManager.clear();
+    if (cacheManager && cacheManager.store && cacheManager.store.reset) {
+      await cacheManager.store.reset();
     }
   });
+
+  function createSharedRedisCounter() {
+    let now = 0;
+    const values = new Map<string, { value: number; expiresAt: number }>();
+
+    return {
+      advance(ms: number): void {
+        now += ms;
+      },
+      client: {
+        async eval(
+          _script: string,
+          _numKeys: number,
+          key: string,
+          points: number,
+          durationSeconds: number,
+        ): Promise<number> {
+          const existing = values.get(key);
+          const current =
+            existing && existing.expiresAt > now ? existing.value : 0;
+          const next = current + points;
+          values.set(key, {
+            value: next,
+            expiresAt:
+              current === 0
+                ? now + durationSeconds * 1000
+                : existing!.expiresAt,
+          });
+          return next;
+        },
+      },
+    };
+  }
 
   describe('Rate Limit Service Integration', () => {
     describe('Concurrent Request Handling', () => {
@@ -150,6 +123,63 @@ describe('Rate Limiting Integration Tests', () => {
 
         expect(successfulRequests.length).toBe(50); // All 50 should succeed
         expect(failedRequests.length).toBe(0);
+      });
+
+      it('should enforce one shared threshold across distributed instances', async () => {
+        const redis = createSharedRedisCounter();
+        const firstInstance = new RateLimitService(cacheManager, redis.client);
+        const secondInstance = new RateLimitService(cacheManager, redis.client);
+        const identifier = 'distributed-user';
+
+        const results = await Promise.all(
+          Array.from({ length: 120 }, (_, index) => {
+            const service = index % 2 === 0 ? firstInstance : secondInstance;
+            return service.consumePoints(
+              identifier,
+              UserTier.FREE,
+              EndpointCategory.PUBLIC,
+              1,
+            );
+          }),
+        );
+
+        expect(results.filter((result) => result.success)).toHaveLength(100);
+        expect(results.filter((result) => !result.success)).toHaveLength(20);
+      });
+
+      it('should reset Redis-backed counters after the rate limit window expires', async () => {
+        const redis = createSharedRedisCounter();
+        const service = new RateLimitService(cacheManager, redis.client);
+        const identifier = 'window-reset-user';
+
+        for (let i = 0; i < 100; i++) {
+          const result = await service.consumePoints(
+            identifier,
+            UserTier.FREE,
+            EndpointCategory.PUBLIC,
+            1,
+          );
+          expect(result.success).toBe(true);
+        }
+
+        const blocked = await service.consumePoints(
+          identifier,
+          UserTier.FREE,
+          EndpointCategory.PUBLIC,
+          1,
+        );
+        expect(blocked.success).toBe(false);
+
+        redis.advance(60_001);
+        const afterReset = await service.consumePoints(
+          identifier,
+          UserTier.FREE,
+          EndpointCategory.PUBLIC,
+          1,
+        );
+
+        expect(afterReset.success).toBe(true);
+        expect(afterReset.remainingPoints).toBe(99);
       });
 
       it('should handle burst requests correctly', async () => {

@@ -122,6 +122,8 @@ Stellar Network
 
 ---
 
+Major structural decisions are recorded as Architecture Decision Records in [`docs/adr/`](docs/adr/README.md). New structural decisions require an ADR.
+
 ## Open Source First
 
 Chioma is being built **fully open‑source**

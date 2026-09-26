@@ -185,7 +185,10 @@ export class BlockchainAuditService {
 
     tx.sign(keypair);
     const result = await server.submitTransaction(tx);
-    return result.hash as string;
+    if (typeof result.hash !== 'string' || !result.hash) {
+      throw new Error('Stellar transaction hash missing');
+    }
+    return result.hash;
   }
 
   // ─── DB helpers ──────────────────────────────────────────────────────────

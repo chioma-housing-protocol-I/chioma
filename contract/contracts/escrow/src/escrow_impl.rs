@@ -22,6 +22,7 @@ impl EscrowContract {
     /// CHECKS:
     /// - Amount must be positive
     /// - All addresses must be distinct
+    /// - `agreement_id` must not be empty
     ///
     /// EFFECTS:
     /// - Creates new Escrow with Pending status
@@ -31,6 +32,7 @@ impl EscrowContract {
     /// INTERACTIONS:
     /// - Token transfer from depositor (not yet implemented in this version)
     ///   would happen after state update
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         env: Env,
         depositor: Address,
@@ -40,7 +42,12 @@ impl EscrowContract {
         agent_referral: Address,
         amount: i128,
         token: Address,
+        agreement_id: String,
+        dispute_resolution_contract: Address,
     ) -> Result<BytesN<32>, EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Validate inputs
         if amount <= 0 {
             return Err(EscrowError::InsufficientFunds);
@@ -49,6 +56,10 @@ impl EscrowContract {
         // Ensure primary parties are distinct
         if depositor == beneficiary || depositor == arbiter || beneficiary == arbiter {
             return Err(EscrowError::InvalidSigner);
+        }
+
+        if agreement_id.is_empty() {
+            return Err(EscrowError::EmptyAgreementId);
         }
 
         // Generate unique escrow ID from hash of parameters
@@ -65,11 +76,13 @@ impl EscrowContract {
         // EFFECTS: Create and save escrow
         let escrow = Escrow {
             id: escrow_id.clone(),
+            agreement_id,
             depositor: depositor.clone(),
             beneficiary: beneficiary.clone(),
             arbiter: arbiter.clone(),
             platform_governance: platform_governance.clone(),
             agent_referral: agent_referral.clone(),
+            dispute_resolution_contract,
             amount,
             token: token.clone(),
             status: EscrowStatus::Pending,
@@ -118,6 +131,9 @@ impl EscrowContract {
         escrow_id: BytesN<32>,
         caller: Address,
     ) -> Result<(), EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Get and validate escrow
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
@@ -168,6 +184,9 @@ impl EscrowContract {
         caller: Address,
         release_to: Address,
     ) -> Result<(), EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Get and validate escrow
         let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
@@ -265,19 +284,29 @@ impl EscrowContract {
         DisputeHandler::initiate_dispute(env, escrow_id, caller, reason)
     }
 
-    /// Resolve a dispute by releasing funds to a target.
-    pub fn resolve_dispute(
+    /// Resolve a dispute by releasing funds according to a completed
+    /// `dispute_resolution` arbitration outcome.
+    ///
+    /// This is the ONLY way funds can move out of a `Disputed` escrow. The
+    /// old unilateral single-arbiter `resolve_dispute` has been removed
+    /// (issue #1560): a single address's say-so can no longer release
+    /// disputed funds. Only the escrow's own configured
+    /// `dispute_resolution_contract`, calling in as itself, may invoke this.
+    /// See `dispute::DisputeHandler::resolve_dispute_from_arbitration` for
+    /// the full authorization/caller-identity discussion.
+    pub fn resolve_dispute_from_arbitration(
         env: Env,
         escrow_id: BytesN<32>,
-        caller: Address,
         release_to: Address,
     ) -> Result<(), EscrowError> {
-        DisputeHandler::resolve_dispute(env, escrow_id, caller, release_to)
+        DisputeHandler::resolve_dispute_from_arbitration(env, escrow_id, release_to)
     }
 
     /// Refund escrow to depositor if escrow timeout has elapsed.
     /// Intended for stale escrows that are not released yet.
     pub fn release_escrow_on_timeout(env: Env, escrow_id: BytesN<32>) -> Result<(), EscrowError> {
+        AccessControl::require_not_paused(&env)?;
+
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         if escrow.status != EscrowStatus::Pending && escrow.status != EscrowStatus::Funded {
@@ -383,6 +412,9 @@ impl EscrowContract {
         caller: Address,
         release_to: Address,
     ) -> Result<(), EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Get and validate escrow
         let escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
@@ -448,6 +480,9 @@ impl EscrowContract {
         recipient: Address,
         reason: soroban_sdk::String,
     ) -> Result<(), EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Get and validate escrow
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
@@ -545,6 +580,9 @@ impl EscrowContract {
         damage_amount: i128,
         reason: soroban_sdk::String,
     ) -> Result<(), EscrowError> {
+        // CHECKS: Contract must not be paused (#1689)
+        AccessControl::require_not_paused(&env)?;
+
         // CHECKS: Get and validate escrow
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
@@ -710,6 +748,61 @@ impl EscrowContract {
         EscrowStorage::get_admin(&env)
     }
 
+    /// Pause the contract, blocking all state-changing entry points (#1689).
+    /// Reads (get_escrow, get_admin, is_paused, etc.) remain available.
+    /// Only the system admin may pause.
+    ///
+    /// CHECKS:
+    /// - Caller must be system admin
+    /// - Contract must not already be paused
+    ///
+    /// EFFECTS:
+    /// - Set the global paused flag
+    /// - Emit ContractPaused event
+    pub fn pause(env: Env, caller: Address) -> Result<(), EscrowError> {
+        AccessControl::is_system_admin(&env, &caller)?;
+        caller.require_auth();
+
+        if EscrowStorage::is_paused(&env) {
+            return Err(EscrowError::ContractPaused);
+        }
+
+        EscrowStorage::set_paused(&env, true);
+        events::contract_paused(&env, caller);
+
+        Ok(())
+    }
+
+    /// Unpause the contract, restoring state-changing entry points (#1689).
+    /// Only the system admin may unpause.
+    ///
+    /// CHECKS:
+    /// - Caller must be system admin
+    /// - Contract must currently be paused
+    ///
+    /// EFFECTS:
+    /// - Clear the global paused flag
+    /// - Emit ContractUnpaused event
+    pub fn unpause(env: Env, caller: Address) -> Result<(), EscrowError> {
+        AccessControl::is_system_admin(&env, &caller)?;
+        caller.require_auth();
+
+        if !EscrowStorage::is_paused(&env) {
+            return Err(EscrowError::NotPaused);
+        }
+
+        EscrowStorage::set_paused(&env, false);
+        events::contract_unpaused(&env, caller);
+
+        Ok(())
+    }
+
+    /// Whether the contract is currently globally paused.
+    /// Read-only view function.
+    pub fn is_paused(env: Env) -> bool {
+        EscrowStorage::is_paused(&env)
+    }
+
     /// Freeze an escrow to prevent all fund movements.
     /// Used in case of verified exploit, major dispute, or security incident.
     /// Only the system admin or arbiter can freeze an escrow.
@@ -844,6 +937,8 @@ impl EscrowContract {
         escrow_id: BytesN<32>,
         caller: Address,
     ) -> Result<(), EscrowError> {
+        AccessControl::require_not_paused(&env)?;
+
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         AccessControl::is_arbiter(&escrow, &caller)?;
@@ -913,6 +1008,8 @@ impl EscrowContract {
         escrow_id: BytesN<32>,
         caller: Address,
     ) -> Result<(), EscrowError> {
+        AccessControl::require_not_paused(&env)?;
+
         let mut escrow = EscrowStorage::get(&env, &escrow_id).ok_or(EscrowError::EscrowNotFound)?;
 
         AccessControl::is_depositor(&escrow, &caller)?;

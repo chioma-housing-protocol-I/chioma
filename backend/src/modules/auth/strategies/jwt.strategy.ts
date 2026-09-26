@@ -7,7 +7,7 @@ import { ValidationUtils } from '../../../common/utils/validation/validation.uti
 
 export interface JwtPayload {
   sub: string;
-  email: string;
+  email: string | null;
   role: string;
   type: 'access' | 'refresh';
 }

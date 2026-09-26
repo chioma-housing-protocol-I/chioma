@@ -15,6 +15,13 @@ export enum ReferralStatus {
   COMPLETED = 'completed',
   REWARDED = 'rewarded',
   CANCELLED = 'cancelled',
+  /**
+   * The reward payout attempt failed (misconfiguration, missing wallet
+   * address, or a real on-chain payment error) and was NOT recorded as
+   * paid. Distinct from a fabricated/successful state — a referral in this
+   * status is retryable via {@link ReferralService.retryFailedReward}.
+   */
+  REWARD_FAILED = 'reward_failed',
 }
 
 @Entity('referrals')

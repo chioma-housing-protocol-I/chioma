@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AvailabilityService } from './availability.service';
+import { ICalService } from './services/ical.service';
 import { PropertyAvailability } from './entities/property-availability.entity';
 import { Property } from './entities/property.entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -27,6 +28,7 @@ describe('AvailabilityService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AvailabilityService,
+        ICalService,
         {
           provide: getRepositoryToken(PropertyAvailability),
           useValue: mockAvailabilityRepo,

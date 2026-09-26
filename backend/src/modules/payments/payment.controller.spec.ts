@@ -28,6 +28,8 @@ import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guar
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { WEBHOOK_SECRET_METADATA_KEY } from '../webhooks/decorators/webhook-secret.decorator';
 
 const mockPaymentService = {
   recordPayment: jest.fn(),
@@ -281,6 +283,8 @@ describe('Payment Controllers', () => {
   it('handles refund webhook', async () => {
     const dto: RefundWebhookDto = {
       eventType: 'refund.completed',
+      idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+      timestamp: new Date().toISOString(),
       paymentId: 'pay_1',
       status: 'completed',
       amount: 50,
@@ -290,5 +294,24 @@ describe('Payment Controllers', () => {
       dto,
       'secret',
     );
+  });
+
+  it('requires HMAC signature validation on all payment webhook endpoints', () => {
+    const gatewayHandler =
+      PaymentWebhookController.prototype.handleGatewayWebhook;
+    const refundHandler = PaymentWebhookController.prototype.handleRefundWebhook;
+
+    expect(Reflect.getMetadata(GUARDS_METADATA, gatewayHandler)).toContain(
+      WebhookSignatureGuard,
+    );
+    expect(Reflect.getMetadata(GUARDS_METADATA, refundHandler)).toContain(
+      WebhookSignatureGuard,
+    );
+    expect(
+      Reflect.getMetadata(WEBHOOK_SECRET_METADATA_KEY, gatewayHandler),
+    ).toBe('PAYMENT_WEBHOOK_SECRET');
+    expect(
+      Reflect.getMetadata(WEBHOOK_SECRET_METADATA_KEY, refundHandler),
+    ).toBe('PAYMENT_WEBHOOK_SECRET');
   });
 });

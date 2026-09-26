@@ -18,6 +18,8 @@ fn setup_test(
     Address,
     Address,
     Address,
+    soroban_sdk::String,
+    Address,
 ) {
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(env, &contract_id);
@@ -33,6 +35,9 @@ fn setup_test(
         .register_stellar_asset_contract_v2(token_admin)
         .address();
 
+    let agreement_id = soroban_sdk::String::from_str(env, "agreement-1");
+    let dispute_resolution_contract = crate::tests_support::deploy_mock_dispute_resolution(env);
+
     (
         client,
         depositor,
@@ -41,6 +46,8 @@ fn setup_test(
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     )
 }
 
@@ -57,6 +64,8 @@ fn test_escrow_lifecycle() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -69,6 +78,8 @@ fn test_escrow_lifecycle() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
     assert_eq!(escrow.status, EscrowStatus::Pending);
@@ -123,6 +134,8 @@ fn test_dispute_resolution() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -134,25 +147,45 @@ fn test_dispute_resolution() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
     client.fund_escrow(&escrow_id, &depositor);
 
-    // Initiate dispute
+    // Initiate dispute: this now cross-contract delegates into
+    // dispute_resolution (issue #1560) instead of resolving anything
+    // locally.
     let reason = soroban_sdk::String::from_str(&env, "Service not delivered");
     client.initiate_dispute(&escrow_id, &beneficiary, &reason);
 
     let escrow = client.get_escrow(&escrow_id);
     assert_eq!(escrow.status, EscrowStatus::Disputed);
-    assert_eq!(escrow.dispute_reason, Some(reason));
+    assert_eq!(escrow.dispute_reason, Some(reason.clone()));
 
-    // Resolve dispute by arbiter (refund to depositor)
-    client.resolve_dispute(&escrow_id, &arbiter, &depositor);
+    // Prove the dispute was genuinely delegated: dispute_resolution's own
+    // record shows exactly one raise_dispute call, keyed by the escrow's
+    // agreement_id, carrying the same reason text.
+    let mock_client =
+        crate::tests_support::MockDisputeResolutionClient::new(&env, &dispute_resolution_contract);
+    let calls = mock_client.raise_dispute_calls(&agreement_id);
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls.get(0).unwrap(), reason);
+
+    // No single address (not even the legacy `arbiter`) can resolve the
+    // dispute directly anymore: `resolve_dispute` no longer exists on the
+    // contract at all, and escrow remains Disputed — funds stay frozen
+    // until arbitration concludes.
+    assert_eq!(client.get_escrow(&escrow_id).status, EscrowStatus::Disputed);
+
+    // Only a completed arbitration outcome, delivered via
+    // dispute_resolution's own resolve callback, can release funds.
+    mock_client.resolve_and_release(&client.address, &escrow_id, &depositor);
 
     let escrow = client.get_escrow(&escrow_id);
-    assert_eq!(escrow.status, EscrowStatus::Released); // resolve_dispute currently sets status to Released regardless of target
+    assert_eq!(escrow.status, EscrowStatus::Released);
 
     let token_client = TokenClient::new(&env, &token_address);
     assert_eq!(token_client.balance(&depositor), amount);
@@ -170,6 +203,8 @@ fn test_unauthorized_funding() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -181,6 +216,8 @@ fn test_unauthorized_funding() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     // Try to fund from beneficiary (should fail since only depositor can fund)
@@ -206,6 +243,8 @@ fn test_unique_escrow_ids() {
     let platform_governance = Address::generate(&env);
     let agent_referral = Address::generate(&env);
     let token = Address::generate(&env);
+    let agreement_id = soroban_sdk::String::from_str(&env, "agreement-unique-ids");
+    let dispute_resolution_contract = crate::tests_support::deploy_mock_dispute_resolution(&env);
 
     let escrow_id1 = env
         .as_contract(&contract_id, || {
@@ -218,6 +257,8 @@ fn test_unique_escrow_ids() {
                 agent_referral.clone(),
                 1000,
                 token.clone(),
+                agreement_id.clone(),
+                dispute_resolution_contract.clone(),
             )
         })
         .unwrap();
@@ -235,6 +276,8 @@ fn test_unique_escrow_ids() {
                 agent_referral.clone(),
                 1000,
                 token.clone(),
+                agreement_id.clone(),
+                dispute_resolution_contract.clone(),
             )
         })
         .unwrap();
@@ -272,6 +315,8 @@ fn test_duplicate_approval_rejected() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -283,6 +328,8 @@ fn test_duplicate_approval_rejected() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -314,6 +361,8 @@ fn test_approval_count_tracks_per_target() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -325,6 +374,8 @@ fn test_approval_count_tracks_per_target() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -363,6 +414,8 @@ fn test_release_escrow_on_timeout_refunds_depositor() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -381,6 +434,8 @@ fn test_release_escrow_on_timeout_refunds_depositor() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -409,6 +464,8 @@ fn test_release_escrow_on_timeout_before_deadline_fails() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -427,6 +484,8 @@ fn test_release_escrow_on_timeout_before_deadline_fails() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -449,6 +508,8 @@ fn test_resolve_dispute_on_timeout_refunds_depositor() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -460,6 +521,8 @@ fn test_resolve_dispute_on_timeout_refunds_depositor() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -500,6 +563,8 @@ fn test_partial_release_success() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let partial_amount = 300i128;
@@ -513,6 +578,8 @@ fn test_partial_release_success() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -560,6 +627,8 @@ fn test_partial_release_insufficient_approvals() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let partial_amount = 300i128;
@@ -573,6 +642,8 @@ fn test_partial_release_insufficient_approvals() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -602,6 +673,8 @@ fn test_partial_release_exceeds_balance() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let excessive_amount = 1500i128;
@@ -615,6 +688,8 @@ fn test_partial_release_exceeds_balance() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -645,6 +720,8 @@ fn test_multiple_partial_releases() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -657,6 +734,8 @@ fn test_multiple_partial_releases() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -709,6 +788,8 @@ fn test_damage_deduction_success() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let damage_amount = 200i128;
@@ -722,6 +803,8 @@ fn test_damage_deduction_success() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -764,6 +847,8 @@ fn test_damage_deduction_full_amount() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let damage_amount = 1000i128; // Full damage
@@ -777,6 +862,8 @@ fn test_damage_deduction_full_amount() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -815,6 +902,8 @@ fn test_damage_deduction_no_damage() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let damage_amount = 0i128; // No damage
@@ -828,6 +917,8 @@ fn test_damage_deduction_no_damage() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -862,6 +953,8 @@ fn test_damage_deduction_exceeds_balance() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let damage_amount = 1500i128; // Exceeds balance
@@ -875,6 +968,8 @@ fn test_damage_deduction_exceeds_balance() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -904,6 +999,8 @@ fn test_damage_deduction_insufficient_approvals() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let damage_amount = 200i128;
@@ -917,6 +1014,8 @@ fn test_damage_deduction_insufficient_approvals() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -945,6 +1044,8 @@ fn test_partial_release_invalid_recipient() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let invalid_recipient = Address::generate(&env);
@@ -958,6 +1059,8 @@ fn test_partial_release_invalid_recipient() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -983,6 +1086,8 @@ fn test_partial_release_empty_reason() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -995,6 +1100,8 @@ fn test_partial_release_empty_reason() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -1027,6 +1134,8 @@ fn test_is_depositor_correct_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1038,6 +1147,8 @@ fn test_is_depositor_correct_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1057,6 +1168,8 @@ fn test_is_depositor_incorrect_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let wrong_address = Address::generate(&env);
@@ -1069,6 +1182,8 @@ fn test_is_depositor_incorrect_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1088,6 +1203,8 @@ fn test_is_beneficiary_correct_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1099,6 +1216,8 @@ fn test_is_beneficiary_correct_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1118,6 +1237,8 @@ fn test_is_beneficiary_incorrect_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let wrong_address = Address::generate(&env);
@@ -1130,6 +1251,8 @@ fn test_is_beneficiary_incorrect_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1149,6 +1272,8 @@ fn test_is_arbiter_correct_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1160,6 +1285,8 @@ fn test_is_arbiter_correct_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1179,6 +1306,8 @@ fn test_is_arbiter_incorrect_address() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let wrong_address = Address::generate(&env);
@@ -1191,6 +1320,8 @@ fn test_is_arbiter_incorrect_address() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1210,6 +1341,8 @@ fn test_is_party_depositor() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1221,6 +1354,8 @@ fn test_is_party_depositor() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1245,6 +1380,8 @@ fn test_is_party_beneficiary() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1256,6 +1393,8 @@ fn test_is_party_beneficiary() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1280,6 +1419,8 @@ fn test_is_party_arbiter() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1291,6 +1432,8 @@ fn test_is_party_arbiter() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1313,6 +1456,8 @@ fn test_is_party_non_party() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
     let non_party = Address::generate(&env);
@@ -1325,6 +1470,8 @@ fn test_is_party_non_party() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let escrow = client.get_escrow(&escrow_id);
 
@@ -1347,6 +1494,8 @@ fn test_authorization_fund_escrow_depositor_only() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1358,6 +1507,8 @@ fn test_authorization_fund_escrow_depositor_only() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     // Only depositor can fund
@@ -1380,6 +1531,8 @@ fn test_authorization_fund_escrow_beneficiary_fails() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1391,6 +1544,8 @@ fn test_authorization_fund_escrow_beneficiary_fails() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     // Beneficiary cannot fund
@@ -1409,6 +1564,8 @@ fn test_authorization_fund_escrow_arbiter_fails() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1420,6 +1577,8 @@ fn test_authorization_fund_escrow_arbiter_fails() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     // Arbiter cannot fund
@@ -1440,6 +1599,8 @@ fn test_authorization_initiate_dispute_beneficiary() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1451,6 +1612,8 @@ fn test_authorization_initiate_dispute_beneficiary() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -1475,6 +1638,8 @@ fn test_authorization_initiate_dispute_depositor() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1486,6 +1651,8 @@ fn test_authorization_initiate_dispute_depositor() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -1510,6 +1677,8 @@ fn test_authorization_initiate_dispute_arbiter_fails() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1521,6 +1690,8 @@ fn test_authorization_initiate_dispute_arbiter_fails() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -1532,8 +1703,21 @@ fn test_authorization_initiate_dispute_arbiter_fails() {
     assert!(result.is_err());
 }
 
+// NOTE (issue #1560): the following three tests originally asserted
+// "only arbiter can resolve_dispute" / "depositor/beneficiary cannot
+// resolve_dispute" against the old unilateral single-arbiter
+// `resolve_dispute`. That function has been removed entirely — no single
+// address (arbiter included) can resolve a dispute anymore. They are
+// migrated here to assert the equivalent property under the new model:
+// resolution is exclusively a function of *which contract* is calling
+// `resolve_dispute_from_arbitration`, not which human/party address is
+// passed as an argument (there is no such argument anymore). A fuller,
+// genuinely cross-contract version of this coverage — proving a real
+// dispute_resolution-shaped caller succeeds while a direct call does not —
+// lives in `tests_dispute_resolution_integration`.
+
 #[test]
-fn test_authorization_resolve_dispute_arbiter_only() {
+fn test_authorization_resolve_dispute_only_dispute_resolution_contract() {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -1545,6 +1729,8 @@ fn test_authorization_resolve_dispute_arbiter_only() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test(&env);
     let amount = 1000i128;
 
@@ -1556,6 +1742,8 @@ fn test_authorization_resolve_dispute_arbiter_only() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
     let token_admin = TokenAdminClient::new(&env, &token_address);
     token_admin.mint(&depositor, &amount);
@@ -1566,88 +1754,34 @@ fn test_authorization_resolve_dispute_arbiter_only() {
         &soroban_sdk::String::from_str(&env, "dispute"),
     );
 
-    // Only arbiter can resolve
-    let result = client.try_resolve_dispute(&escrow_id, &arbiter, &depositor);
-    assert!(result.is_ok());
+    // The legacy `arbiter` address alone can no longer resolve anything —
+    // `resolve_dispute` (arbiter-gated) no longer exists on the contract at
+    // all. Only the escrow's configured dispute_resolution_contract, acting
+    // through a completed arbitration outcome, can release funds.
+    let mock_client =
+        crate::tests_support::MockDisputeResolutionClient::new(&env, &dispute_resolution_contract);
+    let result = mock_client.try_resolve_and_release(&client.address, &escrow_id, &depositor);
+    assert!(
+        result.is_ok(),
+        "the escrow's own configured dispute_resolution_contract should be able to resolve"
+    );
+    assert_eq!(client.get_escrow(&escrow_id).status, EscrowStatus::Released);
 }
 
-#[test]
-fn test_authorization_resolve_dispute_depositor_fails() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let (
-        client,
-        depositor,
-        beneficiary,
-        arbiter,
-        platform_governance,
-        agent_referral,
-        token_address,
-    ) = setup_test(&env);
-    let amount = 1000i128;
-
-    let escrow_id = client.create(
-        &depositor,
-        &beneficiary,
-        &arbiter,
-        &platform_governance,
-        &agent_referral,
-        &amount,
-        &token_address,
-    );
-    let token_admin = TokenAdminClient::new(&env, &token_address);
-    token_admin.mint(&depositor, &amount);
-    client.fund_escrow(&escrow_id, &depositor);
-    client.initiate_dispute(
-        &escrow_id,
-        &beneficiary,
-        &soroban_sdk::String::from_str(&env, "dispute"),
-    );
-
-    // Depositor cannot resolve
-    let result = client.try_resolve_dispute(&escrow_id, &depositor, &depositor);
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_authorization_resolve_dispute_beneficiary_fails() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let (
-        client,
-        depositor,
-        beneficiary,
-        arbiter,
-        platform_governance,
-        agent_referral,
-        token_address,
-    ) = setup_test(&env);
-    let amount = 1000i128;
-
-    let escrow_id = client.create(
-        &depositor,
-        &beneficiary,
-        &arbiter,
-        &platform_governance,
-        &agent_referral,
-        &amount,
-        &token_address,
-    );
-    let token_admin = TokenAdminClient::new(&env, &token_address);
-    token_admin.mint(&depositor, &amount);
-    client.fund_escrow(&escrow_id, &depositor);
-    client.initiate_dispute(
-        &escrow_id,
-        &beneficiary,
-        &soroban_sdk::String::from_str(&env, "dispute"),
-    );
-
-    // Beneficiary cannot resolve
-    let result = client.try_resolve_dispute(&escrow_id, &beneficiary, &depositor);
-    assert!(result.is_err());
-}
+// A test proving a DIRECT (non-dispute_resolution) call to
+// resolve_dispute_from_arbitration is rejected cannot use
+// `env.mock_all_auths()` here: blanket mocking authorizes every
+// `require_auth()` call unconditionally ("It is not currently possible to
+// mock a subset of auths" — soroban_sdk::Env::mock_all_auths), so it cannot
+// distinguish a genuine dispute_resolution-contract caller from any other
+// caller. That precise boundary is instead proven in
+// `tests_dispute_resolution_integration`, without `mock_all_auths()`, by
+// actually attempting the call from outside dispute_resolution's own
+// invocation and observing the host reject it, alongside the positive case
+// (a call genuinely routed through the mock dispute_resolution contract
+// succeeding with zero extra auth setup, per
+// `Env::authorize_as_current_contract`'s documented "direct calls ... are
+// always considered to have been authorized" rule).
 
 // ─── Issue #650: Rate Limiting Tests ───────────────────────────────────────
 
@@ -1666,6 +1800,8 @@ fn setup_test_with_fees(
     Address,
     Address,
     Address,
+    soroban_sdk::String,
+    Address,
 ) {
     let contract_id = env.register(EscrowContract, ());
     let client = EscrowContractClient::new(env, &contract_id);
@@ -1681,6 +1817,9 @@ fn setup_test_with_fees(
         .register_stellar_asset_contract_v2(token_admin)
         .address();
 
+    let agreement_id = soroban_sdk::String::from_str(env, "agreement-fees-1");
+    let dispute_resolution_contract = crate::tests_support::deploy_mock_dispute_resolution(env);
+
     (
         client,
         depositor,
@@ -1689,6 +1828,8 @@ fn setup_test_with_fees(
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     )
 }
 
@@ -1705,6 +1846,8 @@ fn test_release_rent_splits_90_5_5() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 1000i128;
 
@@ -1716,6 +1859,8 @@ fn test_release_rent_splits_90_5_5() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1749,6 +1894,8 @@ fn test_release_rent_rounding_remainder_goes_to_agent() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     // 101 * 90 / 100 = 90, 101 * 5 / 100 = 5, remainder = 101 - 90 - 5 = 6
     let amount = 101i128;
@@ -1761,6 +1908,8 @@ fn test_release_rent_rounding_remainder_goes_to_agent() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1789,6 +1938,8 @@ fn test_release_rent_only_arbiter_can_call() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 1000i128;
 
@@ -1800,6 +1951,8 @@ fn test_release_rent_only_arbiter_can_call() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1826,6 +1979,8 @@ fn test_release_rent_blocked_when_disputed() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 1000i128;
 
@@ -1837,6 +1992,8 @@ fn test_release_rent_blocked_when_disputed() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1866,6 +2023,8 @@ fn test_withdraw_safety_deposit_success_after_timeout() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 500i128;
 
@@ -1877,6 +2036,8 @@ fn test_withdraw_safety_deposit_success_after_timeout() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1913,6 +2074,8 @@ fn test_withdraw_safety_deposit_blocked_before_timeout() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 500i128;
 
@@ -1924,6 +2087,8 @@ fn test_withdraw_safety_deposit_blocked_before_timeout() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1947,6 +2112,8 @@ fn test_withdraw_safety_deposit_blocked_when_disputed() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 500i128;
 
@@ -1958,6 +2125,8 @@ fn test_withdraw_safety_deposit_blocked_when_disputed() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -1993,6 +2162,8 @@ fn test_withdraw_safety_deposit_only_depositor_can_call() {
         platform_governance,
         agent_referral,
         token_address,
+        agreement_id,
+        dispute_resolution_contract,
     ) = setup_test_with_fees(&env);
     let amount = 500i128;
 
@@ -2004,6 +2175,8 @@ fn test_withdraw_safety_deposit_only_depositor_can_call() {
         &agent_referral,
         &amount,
         &token_address,
+        &agreement_id,
+        &dispute_resolution_contract,
     );
 
     let token_admin = TokenAdminClient::new(&env, &token_address);
@@ -2018,4 +2191,98 @@ fn test_withdraw_safety_deposit_only_depositor_can_call() {
 
     let result = client.try_withdraw_safety_deposit(&escrow_id, &beneficiary);
     assert!(result.is_err());
+}
+
+#[test]
+fn test_release_history_bounded_by_max() {
+    use crate::storage::EscrowStorage;
+    use crate::types::ReleaseRecord;
+    use soroban_sdk::contract;
+
+    #[contract]
+    struct TestContract;
+
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ());
+    let escrow_id = soroban_sdk::BytesN::from_array(&env, &[7u8; 32]);
+    let recipient = Address::generate(&env);
+
+    // Appending well past MAX_RELEASE_HISTORY (64) must not let the list
+    // grow unbounded (#1683): the oldest entries are dropped instead.
+    env.as_contract(&contract_id, || {
+        for i in 0..100u32 {
+            EscrowStorage::add_release_record(
+                &env,
+                &escrow_id,
+                ReleaseRecord {
+                    escrow_id: escrow_id.clone(),
+                    amount: i as i128,
+                    recipient: recipient.clone(),
+                    released_at: env.ledger().timestamp(),
+                    reason: soroban_sdk::String::from_str(&env, "partial"),
+                },
+            );
+        }
+    });
+
+    let history = env.as_contract(&contract_id, || {
+        EscrowStorage::get_release_history(&env, &escrow_id)
+    });
+
+    assert_eq!(history.len(), 64);
+    // The oldest 36 records (amount 0..=35) should have been evicted,
+    // leaving the most recent 64 (amount 36..=99).
+    assert_eq!(history.get(0).unwrap().amount, 36);
+    assert_eq!(history.get(63).unwrap().amount, 99);
+}
+
+#[test]
+fn test_save_extends_escrow_ttl() {
+    use crate::storage::EscrowStorage;
+    use crate::types::{Escrow, EscrowStatus};
+    use soroban_sdk::testutils::storage::Persistent as _;
+    use soroban_sdk::{contract, BytesN};
+
+    #[contract]
+    struct TestContract;
+
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ());
+    let escrow_id = BytesN::from_array(&env, &[3u8; 32]);
+    let party = Address::generate(&env);
+    let token = Address::generate(&env);
+
+    let escrow = Escrow {
+        id: escrow_id.clone(),
+        depositor: party.clone(),
+        beneficiary: party.clone(),
+        arbiter: party.clone(),
+        platform_governance: party.clone(),
+        agent_referral: party.clone(),
+        amount: 1000,
+        token,
+        status: EscrowStatus::Pending,
+        created_at: env.ledger().timestamp(),
+        timeout_days: 14,
+        disputed_at: None,
+        dispute_reason: None,
+        is_frozen: false,
+        frozen_at: None,
+        freeze_reason: None,
+    };
+
+    // save() must extend the entity's TTL (#1683): before this fix, only
+    // rate-limit and upgrade keys ever called extend_ttl, so an escrow
+    // that received no further writes could be archived out from under an
+    // open, funded position.
+    let ttl = env.as_contract(&contract_id, || {
+        EscrowStorage::save(&env, &escrow);
+        let key = crate::types::DataKey::Escrow(escrow_id.clone());
+        env.storage().persistent().get_ttl(&key)
+    });
+
+    assert!(
+        ttl >= 499_000,
+        "expected the escrow key's TTL to be bumped close to the 500_000-ledger threshold, got {ttl}"
+    );
 }

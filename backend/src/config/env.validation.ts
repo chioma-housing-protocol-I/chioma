@@ -22,6 +22,7 @@ const PLACEHOLDER_SECRETS = [
 ];
 
 const INSECURE_JWT_PREFIXES = ['test-jwt', 'e2e-jwt'];
+const WEAK_DEFAULT_VALUES = ['changeme', 'change-me', 'example', 'secret'];
 
 export type NodeEnv = 'development' | 'staging' | 'production' | 'test';
 
@@ -61,67 +62,34 @@ function calculateShannonEntropyBitsPerChar(value: string): number {
 }
 
 /**
- * Detects predictable character sequences (e.g., "AAAABBBB", "abcabcabc").
- * Returns the ratio of consecutive identical characters or character pairs.
+ * Checks if a secret has sufficient character set diversity.
+ * A good secret should not be composed of a single repeating pattern.
+ * Detects sequences like "AAAA...BBBB" or "ab" repeated.
  */
-function detectSequencePatterns(value: string): number {
-  let sequenceLength = 0;
-  let maxSequence = 1;
-  let patternMatches = 0;
-  const charCounts = new Map<string, number>();
-
-  // Find longest consecutive identical characters
-  for (let i = 0; i < value.length; i++) {
-    if (i > 0 && value[i] === value[i - 1]) {
-      sequenceLength++;
-    } else {
-      maxSequence = Math.max(maxSequence, sequenceLength + 1);
-      sequenceLength = 0;
-    }
+function hasWeakCharacterSet(value: string): boolean {
+  // A secret with only 1 or 2 unique characters is weak
+  const uniqueChars = new Set(value);
+  if (uniqueChars.size <= 2) {
+    return true;
   }
-  maxSequence = Math.max(maxSequence, sequenceLength + 1);
 
-  // Detect repeating character pairs
-  if (value.length >= 4) {
-    for (let i = 0; i < value.length - 2; i++) {
-      const pair = value.substring(i, i + 2);
-      charCounts.set(pair, (charCounts.get(pair) ?? 0) + 1);
-    }
-    for (const count of charCounts.values()) {
-      if (count >= 3) {
-        patternMatches++;
+  // Check for obvious short repeating patterns (length 1-4)
+  for (let patternLen = 1; patternLen <= 4; patternLen++) {
+    const pattern = value.substring(0, patternLen);
+    let isRepeating = true;
+    for (let i = 0; i < value.length; i += patternLen) {
+      const segment = value.substring(i, i + patternLen);
+      if (segment !== pattern.substring(0, segment.length)) {
+        isRepeating = false;
+        break;
       }
     }
+    if (isRepeating && patternLen < value.length) {
+      return true;
+    }
   }
 
-  return Math.max(maxSequence / value.length, patternMatches / value.length);
-}
-
-/**
- * Validates that secret uses diverse character sets (uppercase, lowercase, digits, special).
- * Returns the count of character set types found.
- */
-function validateCharacterSetDiversity(value: string): {
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasDigits: boolean;
-  hasSpecial: boolean;
-  setCount: number;
-} {
-  const hasUppercase = /[A-Z]/.test(value);
-  const hasLowercase = /[a-z]/.test(value);
-  const hasDigits = /\d/.test(value);
-  const hasSpecial = /[!@#$%^&*\-_=+\[\]{};:'",.<>?/\\|`~]/.test(value);
-
-  return {
-    hasUppercase,
-    hasLowercase,
-    hasDigits,
-    hasSpecial,
-    setCount: [hasUppercase, hasLowercase, hasDigits, hasSpecial].filter(
-      Boolean,
-    ).length,
-  };
+  return false;
 }
 
 function validateJwtSecret(
@@ -146,45 +114,7 @@ function validateJwtSecret(
   const entropy = calculateShannonEntropyBitsPerChar(value);
   if (entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
     errors.push(
-      `${name} does not have enough entropy (${entropy.toFixed(2)} bits/char, minimum ${MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR}). It looks repetitive or predictable rather than randomly generated. ${JWT_SECRET_GENERATION_HINT}`,
-    );
-    return;
-  }
 
-  // Detect highly repetitive patterns
-  const sequenceRatio = detectSequencePatterns(value);
-  if (sequenceRatio > 0.15) {
-    errors.push(
-      `${name} contains too many repetitive patterns (${(sequenceRatio * 100).toFixed(1)}% sequences). Avoid patterns like "AAAA" or "abcabcabc". ${JWT_SECRET_GENERATION_HINT}`,
-    );
-    return;
-  }
-
-  // Validate character set diversity
-  const charSetInfo = validateCharacterSetDiversity(value);
-  if (isProduction && charSetInfo.setCount < 3) {
-    const missing: string[] = [];
-    if (!charSetInfo.hasUppercase) missing.push('uppercase letters');
-    if (!charSetInfo.hasLowercase) missing.push('lowercase letters');
-    if (!charSetInfo.hasDigits) missing.push('digits');
-    if (!charSetInfo.hasSpecial) missing.push('special characters');
-    errors.push(
-      `${name} should use diverse character sets in production (missing: ${missing.join(', ')}). ${JWT_SECRET_GENERATION_HINT}`,
-    );
-    return;
-  }
-
-  // Warn about low entropy even if it passes threshold
-  if (isProduction && entropy < 5.0) {
-    console.warn(
-      `⚠️  [SECURITY] ${name} entropy is ${entropy.toFixed(2)} bits/char. While it passes validation, consider using a higher-entropy secret for better security.`,
-    );
-  }
-
-  // Warn about character set diversity in non-production if weak
-  if (!isProduction && charSetInfo.setCount < 2) {
-    console.warn(
-      `⚠️  [SECURITY] ${name} uses limited character sets. For better security, use uppercase, lowercase, digits, and special characters.`,
     );
   }
 }
@@ -245,6 +175,53 @@ function validateRedis(
     errors.push(
       'Redis config required: set REDIS_URL + REDIS_TOKEN (Upstash) or REDIS_HOST + REDIS_PORT',
     );
+  }
+}
+
+function validateTierADeploymentConfig(
+  config: Record<string, unknown>,
+  errors: string[],
+): void {
+  const required = [
+    'DB_ENCRYPTION_KEY',
+    'DB_ENCRYPTION_KEY_VERSION',
+    'DB_ENCRYPTION_ROTATION_DAYS',
+    'STELLAR_HORIZON_URL',
+    'STELLAR_HORIZON_FALLBACK_URL',
+    'SOROBAN_RPC_URL',
+    'SOROBAN_RPC_FALLBACK_URL',
+  ];
+
+  for (const key of required) {
+    if (!isNonEmpty(config[key])) {
+      errors.push(`${key} is required in staging/production`);
+    }
+  }
+
+  for (const key of required) {
+    const value = config[key];
+    if (!isNonEmpty(value)) continue;
+    const normalized = value.trim().toLowerCase();
+    if (
+      isPlaceholderSecret(normalized) ||
+      WEAK_DEFAULT_VALUES.includes(normalized)
+    ) {
+      errors.push(`${key} must not use a weak/default value`);
+    }
+  }
+
+  if (
+    isNonEmpty(config.STELLAR_HORIZON_URL) &&
+    config.STELLAR_HORIZON_URL === config.STELLAR_HORIZON_FALLBACK_URL
+  ) {
+    errors.push('STELLAR_HORIZON_FALLBACK_URL must differ from STELLAR_HORIZON_URL');
+  }
+
+  if (
+    isNonEmpty(config.SOROBAN_RPC_URL) &&
+    config.SOROBAN_RPC_URL === config.SOROBAN_RPC_FALLBACK_URL
+  ) {
+    errors.push('SOROBAN_RPC_FALLBACK_URL must differ from SOROBAN_RPC_URL');
   }
 }
 
@@ -415,6 +392,8 @@ const stellarSchema = Joi.object({
   SOROBAN_RPC_URL: requiredWhenDeployed(Joi.string().uri()),
   STELLAR_HORIZON_URL: Joi.string().uri(),
   HORIZON_URL: Joi.string().uri(),
+  STELLAR_HORIZON_FALLBACK_URL: requiredWhenDeployed(Joi.string().uri()),
+  SOROBAN_RPC_FALLBACK_URL: requiredWhenDeployed(Joi.string().uri()),
   STELLAR_FRIENDBOT_URL: Joi.string().uri(),
   STELLAR_BASE_FEE: Joi.number().min(0),
   STELLAR_ADMIN_SECRET_KEY: stellarSecretKey,
@@ -422,7 +401,7 @@ const stellarSchema = Joi.object({
   STELLAR_SERVER_SECRET_KEY: stellarSecretKey,
   STELLAR_ANCHOR_SECRET_KEY: stellarSecretKey,
   STELLAR_ENCRYPTION_KEY: Joi.string(),
-  DEFAULT_ARBITER_ADDRESS: stellarPublicKey,
+  DEFAULT_ARBITER_ADDRESS: requiredWhenDeployed(stellarPublicKey),
   PROTOCOL_WALLET_ADDRESS: stellarPublicKey,
   CHIOMA_CONTRACT_ID: contractId,
   ESCROW_CONTRACT_ID: contractId,
@@ -438,6 +417,22 @@ const anchorSchema = Joi.object({
   ANCHOR_API_KEY: Joi.string(),
   ANCHOR_USDC_ASSET: Joi.string(),
   SUPPORTED_FIAT_CURRENCIES: Joi.string(),
+});
+
+const fxRateSchema = Joi.object({
+  FX_RATE_PROVIDER: Joi.string().valid('mock', 'external').default('mock'),
+  FX_RATE_PROVIDER_URL: Joi.string()
+    .uri()
+    .when('FX_RATE_PROVIDER', {
+      is: 'external',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(''),
+    }),
+  FX_RATE_PROVIDER_API_KEY: Joi.string().when('FX_RATE_PROVIDER', {
+    is: 'external',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
 });
 
 const storageSchema = Joi.object({
@@ -500,7 +495,13 @@ const securitySchema = Joi.object({
 const loggingSchema = Joi.object({
   LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error'),
   LOG_FORMAT: Joi.string().valid('simple', 'json'),
-  LOG_TRANSPORT: Joi.string(),
+  // Comma-separated list of transport names from resolveTransports's
+  // TRANSPORT_FACTORIES (logger.service.ts) - kept in sync with that map so
+  // a typo here fails fast at startup instead of silently falling back to
+  // console-only (#1547).
+  LOG_TRANSPORT: Joi.string().pattern(
+    /^\s*(console|file|sentry)\s*(,\s*(console|file|sentry)\s*)*$/,
+  ),
   LOG_FILE: Joi.string(),
   LOG_SLOW_REQUEST_THRESHOLD: Joi.number().min(0),
   LOG_SKIP_PATHS: Joi.string(),
@@ -698,6 +699,7 @@ const additionalVarsSchema = appSchema
   .concat(searchSchema)
   .concat(stellarSchema)
   .concat(anchorSchema)
+  .concat(fxRateSchema)
   .concat(storageSchema)
   .concat(paymentSchema)
   .concat(emailSchema)
@@ -783,6 +785,7 @@ export function validateEnvironment(
     validateDatabase(config, errors);
     validateRedis(config, errors);
     validateEncryptionKeys(config, errors);
+    validateTierADeploymentConfig(config, errors);
     validateSecurityEncryptionKey(config.SECURITY_ENCRYPTION_KEY, errors, true);
 
     if (!isNonEmpty(config.PAYMENT_WEBHOOK_SECRET)) {

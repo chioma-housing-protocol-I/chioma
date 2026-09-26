@@ -342,6 +342,16 @@ pub struct TimelockActionCancelled {
     pub action_id: String,
 }
 
+/// Event emitted when a two-step admin transfer is accepted by the new admin.
+/// Topics: ["admin_transfer_accepted", action_id: String]
+#[contractevent(topics = ["admin_transfer_accepted"])]
+pub struct AdminTransferAccepted {
+    #[topic]
+    pub action_id: String,
+    pub old_admin: Address,
+    pub new_admin: Address,
+}
+
 // ─── Versioning Events ────────────────────────────────────────────────────────
 
 /// Event emitted when the contract version is updated
@@ -754,6 +764,20 @@ pub(crate) fn timelock_action_executed(env: &Env, action_id: String) {
 
 pub(crate) fn timelock_action_cancelled(env: &Env, action_id: String) {
     TimelockActionCancelled { action_id }.publish(env);
+}
+
+pub(crate) fn admin_transfer_accepted(
+    env: &Env,
+    action_id: String,
+    old_admin: Address,
+    new_admin: Address,
+) {
+    AdminTransferAccepted {
+        action_id,
+        old_admin,
+        new_admin,
+    }
+    .publish(env);
 }
 
 pub(crate) fn version_updated(env: &Env, major: u32, minor: u32, patch: u32) {

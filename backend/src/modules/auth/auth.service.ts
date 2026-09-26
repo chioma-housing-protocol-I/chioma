@@ -114,6 +114,7 @@ export class AuthService {
       lastName,
       role,
       emailVerified: false,
+      emailCollectedAt: new Date(),
       failedLoginAttempts: 0,
       isActive: true,
     });
@@ -520,6 +521,7 @@ export class AuthService {
     user.email = normalizedEmail;
     user.emailHash = this.hashLookupValue(normalizedEmail);
     user.emailVerified = false;
+    user.emailCollectedAt = new Date();
     if (dto.firstName) user.firstName = dto.firstName;
     if (dto.lastName) user.lastName = dto.lastName;
 

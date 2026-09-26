@@ -178,6 +178,24 @@ pub struct AdminUpdated {
     pub updated_at: u64,
 }
 
+/// Event emitted when the contract is globally paused (#1689)
+/// Topics: ["contract_paused", caller: Address]
+#[contractevent(topics = ["contract_paused"])]
+pub struct ContractPausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub paused_at: u64,
+}
+
+/// Event emitted when the contract is unpaused (#1689)
+/// Topics: ["contract_unpaused", caller: Address]
+#[contractevent(topics = ["contract_unpaused"])]
+pub struct ContractUnpausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub unpaused_at: u64,
+}
+
 /// Event emitted when the escrow status is updated
 /// Topics: ["escrow_status_updated", escrow_id: BytesN<32>]
 #[contractevent(topics = ["escrow_status_updated"])]
@@ -425,6 +443,24 @@ pub(crate) fn admin_updated(env: &Env, old_admin: Address, new_admin: Address) {
         old_admin,
         new_admin,
         updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit contract paused event
+pub(crate) fn contract_paused(env: &Env, caller: Address) {
+    ContractPausedEvent {
+        caller,
+        paused_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit contract unpaused event
+pub(crate) fn contract_unpaused(env: &Env, caller: Address) {
+    ContractUnpausedEvent {
+        caller,
+        unpaused_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

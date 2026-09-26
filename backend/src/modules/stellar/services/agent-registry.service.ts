@@ -6,6 +6,10 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { Contract, SorobanRpc, xdr } from '@stellar/stellar-sdk';
 import { AgentTransaction } from '../entities/agent-transaction.entity';
 import { PaginationUtils } from '../../../common/utils';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
 
 export interface AgentInfo {
   agent: string;
@@ -86,7 +90,12 @@ export class AgentRegistryService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      const hash = await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
       this.logger.log(`Agent registered: ${agentAddress} tx=${hash}`);
       return hash;
     } catch (error) {
@@ -130,7 +139,12 @@ export class AgentRegistryService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      const hash = await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
       this.logger.log(`Agent verified: ${agentAddress} tx=${hash}`);
       return hash;
     } catch (error) {
@@ -179,7 +193,12 @@ export class AgentRegistryService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      const hash = await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
       this.logger.log(
         `Rating submitted: agent=${agentAddress} score=${score} tx=${hash}`,
       );
@@ -313,7 +332,12 @@ export class AgentRegistryService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      const hash = await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
 
       await this.agentTransactionRepo.save({
         transactionId,
@@ -364,7 +388,12 @@ export class AgentRegistryService {
       prepared.sign(this.adminKeypair);
 
       const result = await this.server.sendTransaction(prepared);
-      const hash = await this.pollTransactionStatus(result.hash);
+      assertSorobanSubmissionAccepted(result);
+      const hash = await waitForSorobanTransactionSuccess(
+        this.server,
+        result.hash,
+        this.configService,
+      );
 
       await this.agentTransactionRepo.update(
         { transactionId },
@@ -393,24 +422,4 @@ export class AgentRegistryService {
     return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
-  private async pollTransactionStatus(
-    hash: string,
-    maxAttempts = 15,
-  ): Promise<string> {
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      try {
-        const txResponse = await this.server.getTransaction(hash);
-        if (txResponse.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
-          return hash;
-        }
-        if (txResponse.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
-          throw new Error(`Transaction failed: ${hash}`);
-        }
-      } catch (error) {
-        if (i === maxAttempts - 1) throw error;
-      }
-    }
-    throw new Error(`Transaction timeout: ${hash}`);
-  }
 }
