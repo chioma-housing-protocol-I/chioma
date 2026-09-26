@@ -106,7 +106,6 @@ export class DisputesService {
       // Validate agreement exists and user has permission
       const agreement = await queryRunner.manager.findOne(RentAgreement, {
         where: { id: createDisputeDto.agreementId },
-        relations: ['landlord', 'tenant'],
       });
 
       if (!agreement) {
@@ -693,7 +692,6 @@ export class DisputesService {
   ) {
     const agreement = await this.agreementRepository.findOne({
       where: { id: agreementId },
-      relations: ['landlord', 'tenant'],
     });
 
     if (!agreement) {
