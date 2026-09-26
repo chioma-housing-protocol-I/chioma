@@ -1,5 +1,7 @@
 # Chioma
 
+> **New here?** Follow the [root Quickstart](./QUICKSTART.md) to go from a clean clone to a running full stack.
+
 **Chioma** is an open‑source platform built on the **Stellar blockchain** that connects **landlords (property owners), house agents, and tenants** through transparent, low‑cost, and programmable rental payments.
 
 Chioma focuses on what blockchains do best: **money movement, trust minimization, and verifiable agreements**, while keeping complex business logic off‑chain for usability and scale.

@@ -139,7 +139,10 @@ describe('RateLimitService', () => {
       expect(mockCacheManager.del).toHaveBeenCalledWith(
         expect.stringContaining('user:123'),
       );
-      expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'rate_limit:block:user:user:123',
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledTimes(3);
     });
   });
 
