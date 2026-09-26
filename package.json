@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "prepare": "husky install",
-    "seed": "pnpm --dir backend run seed"
+    "seed": "pnpm --dir backend run seed",
+    "seed:scenarios": "pnpm --dir backend run seed -- --scenario=all"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
