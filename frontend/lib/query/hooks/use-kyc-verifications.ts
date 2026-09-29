@@ -206,30 +206,7 @@ export function useRejectKycVerification() {
   });
 }
 
-export function useKycStatus() {
-  return useQuery({
-    queryKey: [...queryKeys.kyc.all, 'status'],
-    queryFn: async () => {
-      const { data } = await apiClient.get<{
-        status: KycStatus;
-        reason?: string;
-      }>('/kyc/status');
-      return data;
-    },
-  });
-}
-
-export function useSubmitKyc() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (kycData: Record<string, unknown>) => {
-      const { data } = await apiClient.post('/kyc/submit', { kycData });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [...queryKeys.kyc.all, 'status'],
-      });
-    },
-  });
-}
+// User-facing KYC hooks live in their own modules; re-exported for
+// existing imports.
+export { useKycStatus } from './use-kyc-status';
+export { useKycSubmit as useSubmitKyc } from './use-kyc-submit';

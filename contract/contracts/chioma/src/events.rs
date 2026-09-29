@@ -3,7 +3,7 @@ use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct ContractInitialized {
     #[topic]
     pub admin: Address,
@@ -14,7 +14,7 @@ pub struct ContractInitialized {
 
 /// Event emitted when an agreement is created
 /// Topics: ["agreement_created", user: Address, admin: Address]
-#[contractevent(topics = ["agreement_created"])]
+#[contractevent(topics = ["v1", "agreement_created"])]
 pub struct AgreementCreated {
     #[topic]
     pub user: Address,
@@ -30,7 +30,7 @@ pub struct AgreementCreated {
 
 /// Event emitted when an agreement is signed
 /// Topics: ["agreement_signed", user: Address, admin: Address]
-#[contractevent(topics = ["agreement_signed"])]
+#[contractevent(topics = ["v1", "agreement_signed"])]
 pub struct AgreementSigned {
     #[topic]
     pub user: Address,
@@ -42,7 +42,7 @@ pub struct AgreementSigned {
 
 /// Event emitted when an agreement is submitted for signing
 /// Topics: ["agreement_submitted", admin: Address, user: Address]
-#[contractevent(topics = ["agreement_submitted"])]
+#[contractevent(topics = ["v1", "agreement_submitted"])]
 pub struct AgreementSubmitted {
     #[topic]
     pub admin: Address,
@@ -53,7 +53,7 @@ pub struct AgreementSubmitted {
 
 /// Event emitted when an agreement is cancelled
 /// Topics: ["agreement_cancelled", admin: Address, user: Address]
-#[contractevent(topics = ["agreement_cancelled"])]
+#[contractevent(topics = ["v1", "agreement_cancelled"])]
 pub struct AgreementCancelled {
     #[topic]
     pub admin: Address,
@@ -64,7 +64,7 @@ pub struct AgreementCancelled {
 
 /// Event emitted when an agreement is approved by a witness (PendingApproval → Active)
 /// Topics: ["agreement_approved", approver: Address]
-#[contractevent(topics = ["agreement_approved"])]
+#[contractevent(topics = ["v1", "agreement_approved"])]
 pub struct AgreementApproved {
     #[topic]
     pub approver: Address,
@@ -73,7 +73,7 @@ pub struct AgreementApproved {
 
 /// Event emitted when the contract configuration is updated
 /// Topics: ["config_updated", admin: Address]
-#[contractevent(topics = ["config_updated"])]
+#[contractevent(topics = ["v1", "config_updated"])]
 pub struct ConfigUpdated {
     #[topic]
     pub admin: Address,
@@ -87,7 +87,7 @@ pub struct ConfigUpdated {
 
 /// Event emitted when the contract is paused
 /// Topics: ["paused", paused_by: Address]
-#[contractevent(topics = ["paused"])]
+#[contractevent(topics = ["v1", "paused"])]
 pub struct Paused {
     #[topic]
     pub paused_by: Address,
@@ -96,7 +96,7 @@ pub struct Paused {
 
 /// Event emitted when the contract is unpaused
 /// Topics: ["unpaused", unpaused_by: Address]
-#[contractevent(topics = ["unpaused"])]
+#[contractevent(topics = ["v1", "unpaused"])]
 pub struct Unpaused {
     #[topic]
     pub unpaused_by: Address,
@@ -106,7 +106,7 @@ pub struct Unpaused {
 
 /// Event emitted when a supported token is added
 /// Topics: ["token_added", token: Address]
-#[contractevent(topics = ["token_added"])]
+#[contractevent(topics = ["v1", "token_added"])]
 pub struct TokenAdded {
     #[topic]
     pub token: Address,
@@ -115,7 +115,7 @@ pub struct TokenAdded {
 
 /// Event emitted when a supported token is removed
 /// Topics: ["token_removed", token: Address]
-#[contractevent(topics = ["token_removed"])]
+#[contractevent(topics = ["v1", "token_removed"])]
 pub struct TokenRemoved {
     #[topic]
     pub token: Address,
@@ -123,7 +123,7 @@ pub struct TokenRemoved {
 
 /// Event emitted when an exchange rate between two tokens is updated
 /// Topics: ["exchange_rate_updated", from_token: Address, to_token: Address]
-#[contractevent(topics = ["exchange_rate_updated"])]
+#[contractevent(topics = ["v1", "exchange_rate_updated"])]
 pub struct ExchangeRateUpdated {
     #[topic]
     pub from_token: Address,
@@ -134,7 +134,7 @@ pub struct ExchangeRateUpdated {
 
 /// Event emitted when a payment is made using a non-native token
 /// Topics: ["payment_made_with_token", agreement_id: String, token: Address]
-#[contractevent(topics = ["payment_made_with_token"])]
+#[contractevent(topics = ["v1", "payment_made_with_token"])]
 pub struct PaymentMadeWithToken {
     #[topic]
     pub agreement_id: String,
@@ -145,7 +145,7 @@ pub struct PaymentMadeWithToken {
 
 /// Event emitted when escrow funds are released using a non-native token
 /// Topics: ["escrow_released_with_token", escrow_id: String, token: Address]
-#[contractevent(topics = ["escrow_released_with_token"])]
+#[contractevent(topics = ["v1", "escrow_released_with_token"])]
 pub struct EscrowReleasedWithToken {
     #[topic]
     pub escrow_id: String,
@@ -158,7 +158,7 @@ pub struct EscrowReleasedWithToken {
 
 /// Event emitted when deposit interest configuration is set
 /// Topics: ["interest_config_set", agreement_id: String]
-#[contractevent(topics = ["interest_config_set"])]
+#[contractevent(topics = ["v1", "interest_config_set"])]
 pub struct InterestConfigSet {
     #[topic]
     pub agreement_id: String,
@@ -167,7 +167,7 @@ pub struct InterestConfigSet {
 
 /// Event emitted when interest is accrued on a deposit
 /// Topics: ["interest_accrued", escrow_id: String]
-#[contractevent(topics = ["interest_accrued"])]
+#[contractevent(topics = ["v1", "interest_accrued"])]
 pub struct InterestAccruedEvent {
     #[topic]
     pub escrow_id: String,
@@ -177,7 +177,7 @@ pub struct InterestAccruedEvent {
 
 /// Event emitted when accrued interest is distributed
 /// Topics: ["interest_distributed", escrow_id: String]
-#[contractevent(topics = ["interest_distributed"])]
+#[contractevent(topics = ["v1", "interest_distributed"])]
 pub struct InterestDistributed {
     #[topic]
     pub escrow_id: String,
@@ -187,7 +187,7 @@ pub struct InterestDistributed {
 
 /// Event emitted when a contract operation results in an error
 /// Topics: ["error_occurred"]
-#[contractevent(topics = ["error_occurred"])]
+#[contractevent(topics = ["v1", "error_occurred"])]
 pub struct ErrorOccurred {
     pub error_code: u32,
     pub operation: String,
@@ -198,7 +198,7 @@ pub struct ErrorOccurred {
 
 /// Event emitted when an NFT royalty is configured
 /// Topics: ["royalty_set", token_id: String, recipient: Address]
-#[contractevent(topics = ["royalty_set"])]
+#[contractevent(topics = ["v1", "royalty_set"])]
 pub struct RoyaltySet {
     #[topic]
     pub token_id: String,
@@ -209,7 +209,7 @@ pub struct RoyaltySet {
 
 /// Event emitted when a royalty payment is made
 /// Topics: ["royalty_paid", token_id: String, recipient: Address]
-#[contractevent(topics = ["royalty_paid"])]
+#[contractevent(topics = ["v1", "royalty_paid"])]
 pub struct RoyaltyPaid {
     #[topic]
     pub token_id: String,
@@ -222,7 +222,7 @@ pub struct RoyaltyPaid {
 
 /// Event emitted when a rate limit is exceeded
 /// Topics: ["rate_limit_exceeded", user: Address]
-#[contractevent(topics = ["rate_limit_exceeded"])]
+#[contractevent(topics = ["v1", "rate_limit_exceeded"])]
 pub struct RateLimitExceeded {
     #[topic]
     pub user: Address,
@@ -233,7 +233,7 @@ pub struct RateLimitExceeded {
 
 /// Event emitted when rate limit configuration is updated
 /// Topics: ["rate_limit_config_updated"]
-#[contractevent(topics = ["rate_limit_config_updated"])]
+#[contractevent(topics = ["v1", "rate_limit_config_updated"])]
 pub struct RateLimitConfigUpdated {
     pub max_calls_per_block: u32,
     pub max_calls_per_user_per_day: u32,
@@ -244,7 +244,7 @@ pub struct RateLimitConfigUpdated {
 
 /// Event emitted when the multi-sig system is initialized
 /// Topics: ["multisig_initialized"]
-#[contractevent(topics = ["multisig_initialized"])]
+#[contractevent(topics = ["v1", "multisig_initialized"])]
 pub struct MultiSigInitialized {
     pub admins: u32,
     pub required_signatures: u32,
@@ -252,7 +252,7 @@ pub struct MultiSigInitialized {
 
 /// Event emitted when a multi-sig action is proposed
 /// Topics: ["action_proposed", proposal_id: String, proposer: Address]
-#[contractevent(topics = ["action_proposed"])]
+#[contractevent(topics = ["v1", "action_proposed"])]
 pub struct ActionProposed {
     #[topic]
     pub proposal_id: String,
@@ -263,7 +263,7 @@ pub struct ActionProposed {
 
 /// Event emitted when a multi-sig action is approved by a signer
 /// Topics: ["action_approved", proposal_id: String, approver: Address]
-#[contractevent(topics = ["action_approved"])]
+#[contractevent(topics = ["v1", "action_approved"])]
 pub struct ActionApproved {
     #[topic]
     pub proposal_id: String,
@@ -274,7 +274,7 @@ pub struct ActionApproved {
 
 /// Event emitted when a multi-sig action is executed
 /// Topics: ["action_executed", proposal_id: String]
-#[contractevent(topics = ["action_executed"])]
+#[contractevent(topics = ["v1", "action_executed"])]
 pub struct ActionExecuted {
     #[topic]
     pub proposal_id: String,
@@ -283,7 +283,7 @@ pub struct ActionExecuted {
 
 /// Event emitted when a multi-sig action is rejected
 /// Topics: ["action_rejected", proposal_id: String]
-#[contractevent(topics = ["action_rejected"])]
+#[contractevent(topics = ["v1", "action_rejected"])]
 pub struct ActionRejected {
     #[topic]
     pub proposal_id: String,
@@ -291,7 +291,7 @@ pub struct ActionRejected {
 
 /// Event emitted when a new admin is added to multi-sig
 /// Topics: ["admin_added", admin: Address]
-#[contractevent(topics = ["admin_added"])]
+#[contractevent(topics = ["v1", "admin_added"])]
 pub struct AdminAdded {
     #[topic]
     pub admin: Address,
@@ -300,7 +300,7 @@ pub struct AdminAdded {
 
 /// Event emitted when an admin is removed from multi-sig
 /// Topics: ["admin_removed", admin: Address]
-#[contractevent(topics = ["admin_removed"])]
+#[contractevent(topics = ["v1", "admin_removed"])]
 pub struct AdminRemoved {
     #[topic]
     pub admin: Address,
@@ -309,7 +309,7 @@ pub struct AdminRemoved {
 
 /// Event emitted when the required number of multi-sig signatures changes
 /// Topics: ["signatures_updated"]
-#[contractevent(topics = ["signatures_updated"])]
+#[contractevent(topics = ["v1", "signatures_updated"])]
 pub struct RequiredSignaturesUpdated {
     pub old_required: u32,
     pub new_required: u32,
@@ -319,7 +319,7 @@ pub struct RequiredSignaturesUpdated {
 
 /// Event emitted when a timelocked action is queued
 /// Topics: ["timelock_queued", action_id: String]
-#[contractevent(topics = ["timelock_queued"])]
+#[contractevent(topics = ["v1", "timelock_queued"])]
 pub struct TimelockActionQueued {
     #[topic]
     pub action_id: String,
@@ -328,7 +328,7 @@ pub struct TimelockActionQueued {
 
 /// Event emitted when a timelocked action is executed
 /// Topics: ["timelock_executed", action_id: String]
-#[contractevent(topics = ["timelock_executed"])]
+#[contractevent(topics = ["v1", "timelock_executed"])]
 pub struct TimelockActionExecuted {
     #[topic]
     pub action_id: String,
@@ -336,17 +336,27 @@ pub struct TimelockActionExecuted {
 
 /// Event emitted when a timelocked action is cancelled
 /// Topics: ["timelock_cancelled", action_id: String]
-#[contractevent(topics = ["timelock_cancelled"])]
+#[contractevent(topics = ["v1", "timelock_cancelled"])]
 pub struct TimelockActionCancelled {
     #[topic]
     pub action_id: String,
+}
+
+/// Event emitted when a two-step admin transfer is accepted by the new admin.
+/// Topics: ["admin_transfer_accepted", action_id: String]
+#[contractevent(topics = ["v1", "admin_transfer_accepted"])]
+pub struct AdminTransferAccepted {
+    #[topic]
+    pub action_id: String,
+    pub old_admin: Address,
+    pub new_admin: Address,
 }
 
 // ─── Versioning Events ────────────────────────────────────────────────────────
 
 /// Event emitted when the contract version is updated
 /// Topics: ["version_updated"]
-#[contractevent(topics = ["version_updated"])]
+#[contractevent(topics = ["v1", "version_updated"])]
 pub struct VersionUpdated {
     pub major: u32,
     pub minor: u32,
@@ -357,7 +367,7 @@ pub struct VersionUpdated {
 
 /// Event emitted when an agreement extension is proposed
 /// Topics: ["extension_proposed", extension_id: String]
-#[contractevent(topics = ["extension_proposed"])]
+#[contractevent(topics = ["v1", "extension_proposed"])]
 pub struct ExtensionProposed {
     #[topic]
     pub extension_id: String,
@@ -367,7 +377,7 @@ pub struct ExtensionProposed {
 
 /// Event emitted when an agreement extension is accepted by both parties
 /// Topics: ["extension_accepted", extension_id: String]
-#[contractevent(topics = ["extension_accepted"])]
+#[contractevent(topics = ["v1", "extension_accepted"])]
 pub struct ExtensionAccepted {
     #[topic]
     pub extension_id: String,
@@ -375,7 +385,7 @@ pub struct ExtensionAccepted {
 
 /// Event emitted when an agreement extension is rejected by a party
 /// Topics: ["extension_rejected", extension_id: String]
-#[contractevent(topics = ["extension_rejected"])]
+#[contractevent(topics = ["v1", "extension_rejected"])]
 pub struct ExtensionRejected {
     #[topic]
     pub extension_id: String,
@@ -384,7 +394,7 @@ pub struct ExtensionRejected {
 
 /// Event emitted when an agreement extension is activated (applied to agreement)
 /// Topics: ["extension_activated", extension_id: String]
-#[contractevent(topics = ["extension_activated"])]
+#[contractevent(topics = ["v1", "extension_activated"])]
 pub struct ExtensionActivated {
     #[topic]
     pub extension_id: String,
@@ -392,7 +402,7 @@ pub struct ExtensionActivated {
 
 /// Event emitted when an agreement extension is cancelled before activation
 /// Topics: ["extension_cancelled", extension_id: String]
-#[contractevent(topics = ["extension_cancelled"])]
+#[contractevent(topics = ["v1", "extension_cancelled"])]
 pub struct ExtensionCancelled {
     #[topic]
     pub extension_id: String,
@@ -403,7 +413,7 @@ pub struct ExtensionCancelled {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -412,7 +422,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade receives approval
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -421,7 +431,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is successfully executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,
@@ -754,6 +764,20 @@ pub(crate) fn timelock_action_executed(env: &Env, action_id: String) {
 
 pub(crate) fn timelock_action_cancelled(env: &Env, action_id: String) {
     TimelockActionCancelled { action_id }.publish(env);
+}
+
+pub(crate) fn admin_transfer_accepted(
+    env: &Env,
+    action_id: String,
+    old_admin: Address,
+    new_admin: Address,
+) {
+    AdminTransferAccepted {
+        action_id,
+        old_admin,
+        new_admin,
+    }
+    .publish(env);
 }
 
 pub(crate) fn version_updated(env: &Env, major: u32, minor: u32, patch: u32) {

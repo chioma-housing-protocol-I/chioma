@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 export enum FeedbackType {
@@ -12,7 +13,14 @@ export enum FeedbackType {
   GENERAL = 'general',
 }
 
+export enum FeedbackStatus {
+  NEW = 'new',
+  REVIEWED = 'reviewed',
+  ACTIONED = 'actioned',
+}
+
 @Entity('feedback')
+@Index('IDX_feedback_status_created_at', ['status', 'createdAt'])
 export class Feedback {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,6 +36,15 @@ export class Feedback {
 
   @Column({ type: 'uuid', nullable: true })
   userId: string | null;
+
+  @Column({ type: 'varchar', length: 20, default: FeedbackStatus.NEW })
+  status: FeedbackStatus;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

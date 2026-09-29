@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PaymentWebhookService } from './payment-webhook.service';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { IdempotencyService } from '../../common/idempotency';
@@ -13,6 +17,13 @@ const mockPaymentRepository = () => ({
 describe('PaymentWebhookService', () => {
   let service: PaymentWebhookService;
   let paymentRepository: ReturnType<typeof mockPaymentRepository>;
+  let idempotencyService: {
+    process: jest.Mock;
+    retrieve: jest.Mock;
+    store: jest.Mock;
+    claim: jest.Mock;
+    releaseClaim: jest.Mock;
+  };
   let originalSecret: string | undefined;
 
   beforeAll(() => {
@@ -24,6 +35,17 @@ describe('PaymentWebhookService', () => {
   });
 
   beforeEach(async () => {
+    idempotencyService = {
+      process: jest.fn(
+        async (_key: string, _ttlMs: number, fn: () => Promise<unknown>) =>
+          fn(),
+      ),
+      retrieve: jest.fn().mockResolvedValue(null),
+      store: jest.fn().mockResolvedValue(undefined),
+      claim: jest.fn().mockResolvedValue('claim-token'),
+      releaseClaim: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentWebhookService,
@@ -33,15 +55,7 @@ describe('PaymentWebhookService', () => {
         },
         {
           provide: IdempotencyService,
-          useValue: {
-            process: jest.fn(
-              async (
-                _key: string,
-                _ttlMs: number,
-                fn: () => Promise<unknown>,
-              ) => fn(),
-            ),
-          },
+          useValue: idempotencyService,
         },
       ],
     }).compile();
@@ -96,20 +110,25 @@ describe('PaymentWebhookService', () => {
       expect(paymentRepository.findOne).not.toHaveBeenCalled();
     });
 
-    it('rejects the webhook when the secret header is missing but a secret is configured', async () => {
+    it('accepts missing legacy secret header because HMAC guard validates signatures', async () => {
       process.env.PAYMENT_WEBHOOK_SECRET = 'configured-secret';
+      paymentRepository.findOne.mockResolvedValue({
+        id: 'pay_1',
+        status: PaymentStatus.PENDING,
+        metadata: {},
+      });
+      paymentRepository.save.mockResolvedValue({
+        id: 'pay_1',
+        status: PaymentStatus.COMPLETED,
+      });
 
-      await expect(
-        service.handlePaymentGatewayWebhook(
-          {
-            eventType: 'payment.completed',
-            paymentId: 'pay_1',
-            status: 'completed',
-          },
-          undefined,
-        ),
-      ).rejects.toThrow(UnauthorizedException);
-      expect(paymentRepository.findOne).not.toHaveBeenCalled();
+      const result = await service.handlePaymentGatewayWebhook({
+        eventType: 'payment.completed',
+        paymentId: 'pay_1',
+        status: 'completed',
+      });
+
+      expect(result.processed).toBe(true);
     });
   });
 
@@ -211,6 +230,8 @@ describe('PaymentWebhookService', () => {
 
       const result = await service.handleRefundWebhook({
         eventType: 'refund.completed',
+        idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        timestamp: new Date().toISOString(),
         paymentId: 'pay_1',
         refundId: 're_1',
         amount: 100,
@@ -221,12 +242,59 @@ describe('PaymentWebhookService', () => {
       expect((result.payment as Payment).status).toBe(PaymentStatus.REFUNDED);
       expect((result.payment as Payment).refundStatus).toBe('completed');
       expect((result.payment as Payment).metadata?.refundId).toBe('re_1');
+      expect(idempotencyService.store).toHaveBeenCalledWith(
+        'webhook:refund:0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        expect.any(Object),
+        expect.any(Number),
+      );
+      expect(idempotencyService.claim).toHaveBeenCalledWith(
+        'webhook:refund:0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        expect.any(Number),
+      );
+    });
+
+    it('rejects duplicate refund webhook deliveries with conflict', async () => {
+      idempotencyService.claim.mockResolvedValue(null);
+
+      await expect(
+        service.handleRefundWebhook({
+          eventType: 'refund.completed',
+          idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+          timestamp: new Date().toISOString(),
+          paymentId: 'pay_1',
+          refundId: 're_1',
+          amount: 100,
+          status: 'completed',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(paymentRepository.findOne).not.toHaveBeenCalled();
+      expect(idempotencyService.store).not.toHaveBeenCalled();
+    });
+
+    it('releases an unprocessed claim when refund processing fails', async () => {
+      paymentRepository.findOne.mockRejectedValue(new Error('database error'));
+
+      await expect(
+        service.handleRefundWebhook({
+          eventType: 'refund.completed',
+          idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+          timestamp: new Date().toISOString(),
+          paymentId: 'pay_1',
+          status: 'completed',
+        }),
+      ).rejects.toThrow('database error');
+      expect(idempotencyService.releaseClaim).toHaveBeenCalledWith(
+        'webhook:refund:0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+        'claim-token',
+      );
     });
 
     it('rejects invalid refund webhook payloads', async () => {
       await expect(
         service.handleRefundWebhook({
           eventType: 'refund.completed',
+          idempotencyKey: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d',
+          timestamp: new Date().toISOString(),
           status: 'completed',
         }),
       ).rejects.toThrow(BadRequestException);

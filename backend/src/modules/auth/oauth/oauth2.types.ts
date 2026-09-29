@@ -1,6 +1,7 @@
 export enum OAuth2Provider {
   GOOGLE = 'google',
   GITHUB = 'github',
+  DISCORD = 'discord',
 }
 
 export interface OAuth2UserProfile {

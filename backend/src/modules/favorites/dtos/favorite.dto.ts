@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Property } from '../../properties/entities/property.entity';
 
 /** Page size applied when the client omits `limit`. */
@@ -34,6 +44,12 @@ export class FavoriteItemDto {
     required: false,
   })
   createdAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Collection ID (null = Uncategorized)',
+    nullable: true,
+  })
+  collectionId?: string | null;
 }
 
 export class AddFavoriteDto {
@@ -43,6 +59,38 @@ export class AddFavoriteDto {
   })
   @IsUUID()
   propertyId: string;
+
+  @ApiPropertyOptional({
+    description: 'Collection to place the favorite in (omit for Uncategorized)',
+  })
+  @IsOptional()
+  @IsUUID()
+  collectionId?: string;
+}
+
+export class MoveFavoriteDto {
+  @ApiPropertyOptional({
+    description: 'Target collection ID; null or omitted moves to Uncategorized',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  collectionId?: string | null;
+}
+
+export class CollectionNameDto {
+  @ApiProperty({ description: 'Collection name', example: 'Downtown options' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  name: string;
+}
+
+export class FavoriteCollectionDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiProperty() favoriteCount: number;
+  @ApiPropertyOptional() createdAt?: string;
 }
 
 export class FavoritesQueryDto {
@@ -71,6 +119,16 @@ export class FavoritesQueryDto {
   @Min(1)
   @Max(MAX_FAVORITES_PAGE_SIZE)
   limit?: number;
+
+  @ApiPropertyOptional({
+    description: "Filter by collection ID, or 'uncategorized'",
+  })
+  @IsOptional()
+  @Matches(
+    /^(uncategorized|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    { message: "collectionId must be a UUID or 'uncategorized'" },
+  )
+  collectionId?: string;
 }
 
 export class PaginatedFavoritesDto {

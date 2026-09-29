@@ -11,6 +11,10 @@ import { Property } from './entities/property.entity';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { BlockDatesDto } from './dto/block-dates.dto';
 import { SetPriceDto } from './dto/set-price.dto';
+import { SetPriceRangeDto } from './dto/set-price-range.dto';
+import { ICalService } from './services/ical.service';
+
+const MAX_RANGE_DAYS = 366;
 
 @Injectable()
 export class AvailabilityService {
@@ -19,6 +23,7 @@ export class AvailabilityService {
     private readonly availabilityRepo: Repository<PropertyAvailability>,
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
+    private readonly icalService: ICalService,
   ) {}
 
   async getAvailability(
@@ -122,6 +127,68 @@ export class AvailabilityService {
     return this.availabilityRepo.findOneOrFail({
       where: { propertyId, date: dto.date },
     });
+  }
+
+  async setPriceRange(
+    propertyId: string,
+    dto: SetPriceRangeDto,
+    userId: string,
+  ): Promise<{ success: boolean; updatedDates: number; dates: string[] }> {
+    if (dto.startDate > dto.endDate) {
+      throw new BadRequestException(
+        'startDate must be before or equal to endDate',
+      );
+    }
+    await this.verifyOwnership(propertyId, userId);
+
+    let dates = this.generateDateRange(dto.startDate, dto.endDate);
+    if (dates.length > MAX_RANGE_DAYS) {
+      throw new BadRequestException(
+        `Date range cannot exceed ${MAX_RANGE_DAYS} days`,
+      );
+    }
+    if (dto.daysOfWeek?.length) {
+      const weekdays = new Set(dto.daysOfWeek);
+      dates = dates.filter((date) =>
+        weekdays.has(new Date(`${date}T00:00:00Z`).getUTCDay()),
+      );
+    }
+
+    if (dates.length) {
+      await this.availabilityRepo.upsert(
+        dates.map((date) => ({ propertyId, date, customPrice: dto.price })),
+        ['propertyId', 'date'],
+      );
+    }
+
+    return { success: true, updatedDates: dates.length, dates };
+  }
+
+  async getICalFeed(propertyId: string, months = 12): Promise<string> {
+    const property = await this.propertyRepo.findOne({
+      where: { id: propertyId },
+    });
+    if (!property) {
+      throw new NotFoundException(`Property ${propertyId} not found`);
+    }
+
+    const start = new Date();
+    const end = new Date(start);
+    end.setUTCMonth(end.getUTCMonth() + months);
+    const startDate = start.toISOString().split('T')[0];
+    const endDate = end.toISOString().split('T')[0];
+
+    const rows = await this.availabilityRepo.find({
+      where: { propertyId, date: Between(startDate, endDate) },
+      order: { date: 'ASC' },
+    });
+
+    return this.icalService.buildFeed(
+      propertyId,
+      property.title ?? 'Property',
+      rows.map((row) => ({ date: row.date, available: row.available })),
+      start,
+    );
   }
 
   private async verifyOwnership(

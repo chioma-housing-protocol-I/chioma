@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { MetricsService } from '../monitoring/metrics.service';
+import {
+  SecurityEventSeverity,
+  SecurityEventType,
+} from '../security/entities/security-event.entity';
+import { SecurityEventsService } from '../security/security-events.service';
 
 export const WEBHOOK_SIGNATURE_HEADER = 'x-webhook-signature';
 export const WEBHOOK_TIMESTAMP_HEADER = 'x-webhook-timestamp';
@@ -81,7 +86,10 @@ export interface WebhookSignatureVerificationLog {
 export class WebhookSignatureService {
   private readonly logger = new Logger(WebhookSignatureService.name);
 
-  constructor(@Optional() private readonly metricsService?: MetricsService) {}
+  constructor(
+    @Optional() private readonly metricsService?: MetricsService,
+    @Optional() private readonly securityEventsService?: SecurityEventsService,
+  ) {}
 
   generateSignature(
     payload: string,
@@ -109,7 +117,7 @@ export class WebhookSignatureService {
     payload: string,
     signature: string | undefined,
     timestamp: string | undefined,
-    secret: string | undefined,
+    secret: string | readonly string[] | undefined,
     toleranceMs: number = DEFAULT_TOLERANCE_MS,
     context: WebhookVerificationContext = {},
   ): void {
@@ -128,7 +136,11 @@ export class WebhookSignatureService {
       throw new UnauthorizedException('Missing webhook signature');
     }
 
-    if (!secret) {
+    const secrets = (Array.isArray(secret) ? secret : [secret]).filter(
+      (value): value is string => Boolean(value),
+    );
+    const secrets = this.resolveSecrets(secret);
+    if (secrets.length === 0) {
       this.logRejection(
         WEBHOOK_SIGNATURE_REJECTION_REASONS.SECRET_NOT_CONFIGURED,
         'Webhook secret is not configured',
@@ -167,18 +179,41 @@ export class WebhookSignatureService {
       throw new UnauthorizedException('Webhook timestamp expired');
     }
 
-    const expectedSignature = this.generateSignature(
-      payload,
-      timestamp,
-      secret,
-    );
     const signatureBuffer = Buffer.from(signature, 'hex');
-    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    let expectedSignature = '';
+    let matched = false;
+    for (const candidateSecret of secrets) {
+      const candidateSignature = this.generateSignature(
+    const matchingSecret = secrets.find((candidateSecret) => {
+      const expectedSignature = this.generateSignature(
+        payload,
+        timestamp,
+        candidateSecret,
+      );
+      const expectedBuffer = Buffer.from(candidateSignature, 'hex');
+      const candidateMatched =
+        signatureBuffer.length === expectedBuffer.length &&
+        crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+      matched = candidateMatched || matched;
+      if (!expectedSignature) expectedSignature = candidateSignature;
+    }
 
-    if (
-      signatureBuffer.length !== expectedBuffer.length ||
-      !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
-    ) {
+    if (!matched) {
+      const signatureBuffer = Buffer.from(signature, 'hex');
+      const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+      return (
+        signatureBuffer.length === expectedBuffer.length &&
+        crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+      );
+    });
+
+    if (!matchingSecret) {
+      const expectedSignature = this.generateSignature(
+        payload,
+        timestamp,
+        secrets[0],
+      );
       this.logRejection(
         WEBHOOK_SIGNATURE_REJECTION_REASONS.SIGNATURE_MISMATCH,
         'Rejected webhook with invalid signature',
@@ -241,7 +276,76 @@ export class WebhookSignatureService {
       );
     }
 
+    this.recordSecurityEvent(reason, message, context, metadata);
     this.metricsService?.recordWebhookSignatureVerification(reason);
+  }
+
+  private resolveSecrets(secret: string | undefined): string[] {
+    const trimmed = secret?.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    if (trimmed.startsWith('[')) {
+      try {
+        const candidate = JSON.parse(trimmed);
+        if (Array.isArray(candidate)) {
+          return candidate
+            .map((value) => String(value).trim())
+            .filter((value) => value.length > 0);
+        }
+      } catch {
+        // Fall back to comma-separated parsing below.
+      }
+    }
+
+    return trimmed
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  private recordSecurityEvent(
+    reason: WebhookSignatureRejectionReason,
+    message: string,
+    context: WebhookVerificationContext,
+    metadata: WebhookSignatureVerificationLog,
+  ): void {
+    if (!this.securityEventsService) {
+      return;
+    }
+
+    void this.securityEventsService
+      .createEvent({
+        eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+        severity:
+          reason === WEBHOOK_SIGNATURE_REJECTION_REASONS.SECRET_NOT_CONFIGURED
+            ? SecurityEventSeverity.CRITICAL
+            : reason === WEBHOOK_SIGNATURE_REJECTION_REASONS.SIGNATURE_MISMATCH
+              ? SecurityEventSeverity.HIGH
+              : SecurityEventSeverity.MEDIUM,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        details: {
+          event: metadata.event,
+          reason,
+          path: context.path,
+          method: context.method,
+          endpoint: context.endpoint,
+          receivedTimestamp: metadata.receivedTimestamp,
+          payloadHash: metadata.payloadHash,
+          expectedSignaturePrefix: metadata.expectedSignaturePrefix,
+          timestampSkewMs: metadata.timestampSkewMs,
+        },
+        success: false,
+        errorMessage: message,
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(
+          'Failed to record webhook signature security event',
+          error instanceof Error ? error.message : String(error),
+        );
+      });
   }
 
   private hashPayload(payload: string): string {

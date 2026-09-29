@@ -46,6 +46,13 @@ export class Review {
   @Column({ default: false })
   reported: boolean;
 
+  /** Public response from the reviewee (host/landlord). One per review. */
+  @Column({ name: 'response', type: 'text', nullable: true })
+  response: string | null;
+
+  @Column({ name: 'responded_at', type: 'timestamp', nullable: true })
+  respondedAt: Date | null;
+
   @DeleteDateColumn({ name: 'deleted_at', nullable: true })
   deletedAt: Date | null;
 }

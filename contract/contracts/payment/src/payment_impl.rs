@@ -1,12 +1,121 @@
 //! Payment processing implementation.
-use soroban_sdk::{Address, Env, String};
+use soroban_sdk::{contracttype, Address, Env, IntoVal, String};
 
 use crate::errors::PaymentError;
-use crate::storage::DataKey;
+use crate::storage::{extend_persistent_ttl, DataKey};
 use crate::types::{
     AgreementStatus, EscalationType, PaymentRecord, RentAgreement, RentEscalationConfig,
 };
 use crate::upgrade;
+
+/// Mirrors `chioma::types::AgreementStatus` field-for-field. Soroban decodes
+/// `#[contracttype]` enums/structs by name, not position, so a cross-contract
+/// call into the real `chioma` contract can only decode successfully if this
+/// matches exactly, including the `PendingApproval` variant this module
+/// never itself checks for.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ChiomaAgreementStatus {
+    Draft,
+    Pending,
+    PendingApproval,
+    Active,
+    Completed,
+    Cancelled,
+    Terminated,
+    Disputed,
+}
+
+/// Mirrors `chioma::types::RentAgreement` field-for-field, so
+/// `verify_agreement_with_chioma` below can decode the real
+/// `chioma::get_agreement` response. `payment` has no crate dependency on
+/// `chioma` (Soroban contracts are independently deployed, not linked), so
+/// this local mirror type is how the cross-contract read is decoded; see the
+/// identical pattern (and its rationale) in
+/// `dispute_resolution::dispute::ChiomaRentAgreement`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChiomaRentAgreement {
+    pub agreement_id: String,
+    pub admin: Address,
+    pub user: Address,
+    pub agent: Option<Address>,
+    pub monthly_rent: i128,
+    pub security_deposit: i128,
+    pub start_date: u64,
+    pub end_date: u64,
+    pub agent_commission_rate: u32,
+    pub status: ChiomaAgreementStatus,
+    pub total_rent_paid: i128,
+    pub payment_count: u32,
+    pub signed_at: Option<u64>,
+    pub witness_id: Option<Address>,
+    pub payment_token: Address,
+    pub next_payment_due: u64,
+    pub metadata_uri: String,
+    pub attributes: soroban_sdk::Vec<ChiomaAttribute>,
+}
+
+/// Mirrors `chioma::types::Attribute` field-for-field; only needed so
+/// `ChiomaRentAgreement.attributes` can decode, its contents are never read
+/// here.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChiomaAttribute {
+    pub trait_type: String,
+    pub value: String,
+}
+
+/// Cross-checks `payment`'s local agreement record against `chioma`'s
+/// authoritative one before a payment is processed (#1559).
+///
+/// Before this fix, `payment` kept an entirely independent
+/// `DataKey::Agreement` copy with no live link to `chioma` (or
+/// `property_registry`), so the two could silently drift with no on-chain
+/// signal -- a correctness risk for a protocol whose whole value
+/// proposition is trustless on-chain state. This does not remove
+/// `payment`'s local storage (it still owns payment-specific bookkeeping:
+/// `next_payment_due`, `payment_history`, late fee/escalation config, none
+/// of which `chioma` tracks), but it makes `chioma` the checked source of
+/// truth for the fields both contracts claim to represent (tenant/landlord,
+/// monthly rent, active status) by cross-contract call, on every payment,
+/// rather than assuming payment's local copy is still correct.
+///
+/// Cross-contract call failure (the configured `chioma` contract address is
+/// unset, unreachable, not actually a `chioma` instance, or reverts) is
+/// handled explicitly via `try_invoke_contract` and returns
+/// `ChiomaAgreementLookupFailed`/`ChiomaContractNotSet` rather than letting
+/// the whole payment invocation panic and abort with an opaque host trap.
+pub fn verify_agreement_with_chioma(
+    env: &Env,
+    chioma_contract: &Address,
+    agreement_id: &String,
+    local_agreement: &RentAgreement,
+) -> Result<(), PaymentError> {
+    let remote: ChiomaRentAgreement = match env
+        .try_invoke_contract::<Option<ChiomaRentAgreement>, soroban_sdk::Error>(
+            chioma_contract,
+            &soroban_sdk::Symbol::new(env, "get_agreement"),
+            soroban_sdk::vec![env, agreement_id.into_val(env)],
+        ) {
+        Ok(Ok(Some(agreement))) => agreement,
+        Ok(Ok(None)) => return Err(PaymentError::ChiomaAgreementLookupFailed),
+        Ok(Err(_)) | Err(_) => return Err(PaymentError::ChiomaAgreementLookupFailed),
+    };
+
+    let remote_active = remote.status == ChiomaAgreementStatus::Active;
+    let local_active = local_agreement.status == AgreementStatus::Active;
+
+    if remote.user != local_agreement.tenant
+        || remote.admin != local_agreement.landlord
+        || remote.monthly_rent != local_agreement.monthly_rent
+        || remote_active != local_active
+    {
+        return Err(PaymentError::AgreementDataMismatch);
+    }
+
+    Ok(())
+}
 
 /// Calculate the rent amount for a specific period (payment number) with escalation
 pub fn calculate_rent_for_period(
@@ -145,15 +254,16 @@ pub fn pay_rent_with_agent(
     agreement.payment_count += 1;
 
     // Persist updated agreement
-    env.storage()
-        .persistent()
-        .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+    let agreement_key = DataKey::Agreement(agreement_id.clone());
+    env.storage().persistent().set(&agreement_key, &agreement);
+    extend_persistent_ttl(&env, &agreement_key);
 
     // Persist payment record
-    env.storage().persistent().set(
-        &DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count),
-        &payment_record,
-    );
+    let payment_record_key = DataKey::PaymentRecord(agreement_id.clone(), agreement.payment_count);
+    env.storage()
+        .persistent()
+        .set(&payment_record_key, &payment_record);
+    extend_persistent_ttl(&env, &payment_record_key);
 
     // Emit event
     env.events().publish(

@@ -9,7 +9,7 @@ use crate::types::AccountType;
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct Initialized {
     #[topic]
     pub admin: Address,
@@ -18,7 +18,7 @@ pub struct Initialized {
 
 /// Event emitted when a user profile is created
 /// Topics: ["profile_created", account_id: Address]
-#[contractevent(topics = ["profile_created"])]
+#[contractevent(topics = ["v1", "profile_created"])]
 pub struct ProfileCreated {
     #[topic]
     pub account_id: Address,
@@ -28,7 +28,7 @@ pub struct ProfileCreated {
 
 /// Event emitted when a user profile is updated
 /// Topics: ["profile_updated", account_id: Address]
-#[contractevent(topics = ["profile_updated"])]
+#[contractevent(topics = ["v1", "profile_updated"])]
 pub struct ProfileUpdated {
     #[topic]
     pub account_id: Address,
@@ -38,7 +38,7 @@ pub struct ProfileUpdated {
 
 /// Event emitted when a user profile is verified
 /// Topics: ["profile_verified", account_id: Address]
-#[contractevent(topics = ["profile_verified"])]
+#[contractevent(topics = ["v1", "profile_verified"])]
 pub struct ProfileVerified {
     #[topic]
     pub account_id: Address,
@@ -48,7 +48,7 @@ pub struct ProfileVerified {
 
 /// Event emitted when a user profile is unverified
 /// Topics: ["profile_unverified", account_id: Address]
-#[contractevent(topics = ["profile_unverified"])]
+#[contractevent(topics = ["v1", "profile_unverified"])]
 pub struct ProfileUnverified {
     #[topic]
     pub account_id: Address,
@@ -58,7 +58,7 @@ pub struct ProfileUnverified {
 
 /// Event emitted when a user profile is deleted
 /// Topics: ["profile_deleted", account_id: Address]
-#[contractevent(topics = ["profile_deleted"])]
+#[contractevent(topics = ["v1", "profile_deleted"])]
 pub struct ProfileDeleted {
     #[topic]
     pub account_id: Address,
@@ -68,7 +68,7 @@ pub struct ProfileDeleted {
 
 /// Event emitted when the platform admin is updated
 /// Topics: ["platform_admin_updated", old_admin: Address, new_admin: Address]
-#[contractevent(topics = ["platform_admin_updated"])]
+#[contractevent(topics = ["v1", "platform_admin_updated"])]
 pub struct PlatformAdminUpdated {
     #[topic]
     pub old_admin: Address,
@@ -79,7 +79,7 @@ pub struct PlatformAdminUpdated {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -90,7 +90,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -100,7 +100,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,

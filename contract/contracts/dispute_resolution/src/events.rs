@@ -4,7 +4,7 @@ use crate::types::DisputeOutcome;
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct ContractInitialized {
     #[topic]
     pub admin: Address,
@@ -13,7 +13,7 @@ pub struct ContractInitialized {
 
 /// Event emitted when an arbiter is added to the registry
 /// Topics: ["arbiter_added", arbiter: Address, admin: Address]
-#[contractevent(topics = ["arbiter_added"])]
+#[contractevent(topics = ["v1", "arbiter_added"])]
 pub struct ArbiterAdded {
     #[topic]
     pub arbiter: Address,
@@ -24,7 +24,7 @@ pub struct ArbiterAdded {
 
 /// Event emitted when a dispute is raised (simple voting flow)
 /// Topics: ["dispute_raised", agreement_id: String]
-#[contractevent(topics = ["dispute_raised"])]
+#[contractevent(topics = ["v1", "dispute_raised"])]
 pub struct DisputeRaised {
     #[topic]
     pub agreement_id: String,
@@ -34,7 +34,7 @@ pub struct DisputeRaised {
 
 /// Event emitted when an arbiter casts a vote on a dispute
 /// Topics: ["vote_cast", agreement_id: String, arbiter: Address]
-#[contractevent(topics = ["vote_cast"])]
+#[contractevent(topics = ["v1", "vote_cast"])]
 pub struct VoteCast {
     #[topic]
     pub agreement_id: String,
@@ -46,7 +46,7 @@ pub struct VoteCast {
 
 /// Event emitted when a dispute is resolved with simple majority
 /// Topics: ["dispute_resolved", agreement_id: String]
-#[contractevent(topics = ["dispute_resolved"])]
+#[contractevent(topics = ["v1", "dispute_resolved"])]
 pub struct DisputeResolved {
     #[topic]
     pub agreement_id: String,
@@ -58,7 +58,7 @@ pub struct DisputeResolved {
 
 /// Event emitted when a dispute times out
 /// Topics: ["dispute_timeout", agreement_id: String]
-#[contractevent(topics = ["dispute_timeout"])]
+#[contractevent(topics = ["v1", "dispute_timeout"])]
 pub struct DisputeTimeout {
     #[topic]
     pub agreement_id: String,
@@ -67,7 +67,7 @@ pub struct DisputeTimeout {
 
 /// Event emitted when dispute timeout configuration is updated
 /// Topics: ["timeout_config_updated", admin: Address]
-#[contractevent(topics = ["timeout_config_updated"])]
+#[contractevent(topics = ["v1", "timeout_config_updated"])]
 pub struct TimeoutConfigUpdated {
     #[topic]
     pub admin: Address,
@@ -79,7 +79,7 @@ pub struct TimeoutConfigUpdated {
 
 /// Event emitted when an arbiter's stats are updated (manual override)
 /// Topics: ["arbiter_stats_set", arbiter: Address, admin: Address]
-#[contractevent(topics = ["arbiter_stats_set"])]
+#[contractevent(topics = ["v1", "arbiter_stats_set"])]
 pub struct ArbiterStatsSet {
     #[topic]
     pub arbiter: Address,
@@ -92,7 +92,7 @@ pub struct ArbiterStatsSet {
 
 /// Event emitted when an appeal is created
 /// Topics: ["appeal_created", appeal_id: String, dispute_id: String]
-#[contractevent(topics = ["appeal_created"])]
+#[contractevent(topics = ["v1", "appeal_created"])]
 pub struct AppealCreated {
     #[topic]
     pub appeal_id: String,
@@ -104,7 +104,7 @@ pub struct AppealCreated {
 
 /// Event emitted when an appeal receives a vote
 /// Topics: ["appeal_voted", appeal_id: String, arbiter: Address]
-#[contractevent(topics = ["appeal_voted"])]
+#[contractevent(topics = ["v1", "appeal_voted"])]
 pub struct AppealVoted {
     #[topic]
     pub appeal_id: String,
@@ -115,7 +115,7 @@ pub struct AppealVoted {
 
 /// Event emitted when an appeal is resolved
 /// Topics: ["appeal_resolved", appeal_id: String]
-#[contractevent(topics = ["appeal_resolved"])]
+#[contractevent(topics = ["v1", "appeal_resolved"])]
 pub struct AppealResolved {
     #[topic]
     pub appeal_id: String,
@@ -125,7 +125,7 @@ pub struct AppealResolved {
 
 /// Event emitted when an appeal is cancelled
 /// Topics: ["appeal_cancelled", appeal_id: String]
-#[contractevent(topics = ["appeal_cancelled"])]
+#[contractevent(topics = ["v1", "appeal_cancelled"])]
 pub struct AppealCancelled {
     #[topic]
     pub appeal_id: String,
@@ -134,7 +134,7 @@ pub struct AppealCancelled {
 
 /// Event emitted when a weighted vote is cast
 /// Topics: ["weighted_vote_cast", dispute_id: String, arbiter: Address]
-#[contractevent(topics = ["weighted_vote_cast"])]
+#[contractevent(topics = ["v1", "weighted_vote_cast"])]
 pub struct WeightedVoteCast {
     #[topic]
     pub dispute_id: String,
@@ -146,7 +146,7 @@ pub struct WeightedVoteCast {
 
 /// Event emitted when a weighted-voting dispute is resolved
 /// Topics: ["dispute_resolved_by_weight", dispute_id: String]
-#[contractevent(topics = ["dispute_resolved_by_weight"])]
+#[contractevent(topics = ["v1", "dispute_resolved_by_weight"])]
 pub struct DisputeResolvedByWeight {
     #[topic]
     pub dispute_id: String,
@@ -157,7 +157,7 @@ pub struct DisputeResolvedByWeight {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -168,7 +168,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -178,7 +178,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,

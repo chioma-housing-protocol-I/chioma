@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   Award,
   CheckCircle2,
+  CheckSquare,
   Eye,
   RefreshCw,
+  Square,
   Star,
   Trash2,
   Plus,
@@ -17,6 +19,8 @@ import {
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/store/authStore';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { BulkConfirmDialog } from '@/components/admin/BulkConfirmDialog';
 import {
   useAdminArbiters,
   useRegisterArbiter,
@@ -38,6 +42,9 @@ export default function AdminArbitersPage() {
   const [selected, setSelected] = useState<AdminArbiterRecord | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDeregister, setConfirmBulkDeregister] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [registerForm, setRegisterForm] = useState<RegisterArbiterPayload>({
     arbiterAddress: '',
     qualifications: '',
@@ -88,6 +95,33 @@ export default function AdminArbitersPage() {
     );
   }, [arbiters]);
 
+  // Only active arbiters can be deregistered (matching the per-row action's
+  // own `arbiter.active` condition), so selection is scoped to them.
+  const selectableArbiters = useMemo(
+    () => filteredArbiters.filter((a) => a.active),
+    [filteredArbiters],
+  );
+  const allSelected =
+    selectableArbiters.length > 0 &&
+    selectableArbiters.every((a) => selectedIds.has(a.stellarAddress));
+
+  const toggleAll = () => {
+    setSelectedIds(
+      allSelected
+        ? new Set()
+        : new Set(selectableArbiters.map((a) => a.stellarAddress)),
+    );
+  };
+
+  const toggleOne = (address: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(address)) next.delete(address);
+      else next.add(address);
+      return next;
+    });
+  };
+
   const handleRegister = async () => {
     if (
       !registerForm.arbiterAddress ||
@@ -122,6 +156,39 @@ export default function AdminArbitersPage() {
       setSelected(null);
     } catch (_error) {
       toast.error('Failed to deregister arbiter');
+    }
+  };
+
+  // Bulk deregister (#1558): only active arbiters can be deregistered
+  // (matching the per-row action's own condition), with a confirmation
+  // step before applying, per the issue's explicit acceptance criterion.
+  const handleBulkDeregister = async () => {
+    const addresses = Array.from(selectedIds);
+    setBulkLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        addresses.map((address) =>
+          deregisterMutation.mutateAsync({ arbiterAddress: address }),
+        ),
+      );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = addresses.length - failed;
+
+      if (failed === 0) {
+        toast.success(
+          `Deregistered ${addresses.length} arbiter${addresses.length !== 1 ? 's' : ''}`,
+        );
+      } else if (succeeded === 0) {
+        toast.error(
+          `Failed to deregister ${failed} arbiter${failed !== 1 ? 's' : ''}`,
+        );
+      } else {
+        toast.error(`${succeeded} succeeded, ${failed} failed to deregister`);
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setBulkLoading(false);
+      setConfirmBulkDeregister(false);
     }
   };
 
@@ -242,11 +309,40 @@ export default function AdminArbitersPage() {
         />
       </div>
 
+      {/* Bulk action bar (#1558) */}
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        itemLabel="arbiter"
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            key: 'deregister',
+            label: 'Deregister',
+            icon: <Trash2 size={14} />,
+            tone: 'danger',
+            onClick: () => setConfirmBulkDeregister(true),
+          },
+        ]}
+      />
+
       {/* Table */}
       <div className="rounded-2xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
+              <th className="p-4 text-left">
+                <button
+                  onClick={toggleAll}
+                  className="text-blue-300/40 hover:text-blue-400 transition-colors"
+                  title={allSelected ? 'Deselect all' : 'Select all active'}
+                >
+                  {allSelected ? (
+                    <CheckSquare size={18} className="text-blue-400" />
+                  ) : (
+                    <Square size={18} />
+                  )}
+                </button>
+              </th>
               <th className="p-4 text-left text-white font-semibold">
                 Address
               </th>
@@ -266,7 +362,7 @@ export default function AdminArbitersPage() {
           <tbody>
             {filteredArbiters.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-blue-200/60">
+                <td colSpan={7} className="p-4 text-center text-blue-200/60">
                   No arbiters found
                 </td>
               </tr>
@@ -274,8 +370,26 @@ export default function AdminArbitersPage() {
               filteredArbiters.map((arbiter) => (
                 <tr
                   key={arbiter.id}
-                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  className={`border-b border-white/5 hover:bg-white/5 transition-colors ${
+                    selectedIds.has(arbiter.stellarAddress)
+                      ? 'bg-blue-500/5'
+                      : ''
+                  }`}
                 >
+                  <td className="p-4">
+                    {arbiter.active ? (
+                      <button
+                        onClick={() => toggleOne(arbiter.stellarAddress)}
+                        className="text-blue-300/40 hover:text-blue-400 transition-colors"
+                      >
+                        {selectedIds.has(arbiter.stellarAddress) ? (
+                          <CheckSquare size={18} className="text-blue-400" />
+                        ) : (
+                          <Square size={18} />
+                        )}
+                      </button>
+                    ) : null}
+                  </td>
                   <td className="p-4 text-white font-mono text-xs">
                     {arbiter.stellarAddress.substring(0, 16)}...
                   </td>
@@ -622,6 +736,18 @@ export default function AdminArbitersPage() {
           currentUserId={selected.userId}
           onUserSelected={handleLinkUser}
           isLoading={linkUserMutation.isPending}
+        />
+      )}
+
+      {/* Bulk deregister confirmation (#1558) */}
+      {confirmBulkDeregister && (
+        <BulkConfirmDialog
+          title={`Deregister ${selectedIds.size} arbiter${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="Deregistered arbiters can no longer be assigned to new disputes. This action is logged to the audit trail."
+          onConfirm={handleBulkDeregister}
+          onCancel={() => setConfirmBulkDeregister(false)}
+          isLoading={bulkLoading}
+          variant="danger"
         />
       )}
     </section>

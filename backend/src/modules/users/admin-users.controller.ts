@@ -86,4 +86,13 @@ export class AdminUsersController {
   async restore(@Param('id') id: string, @CurrentUser() admin: User) {
     return this.usersService.adminRestoreAccount(id, admin.id);
   }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: 'Export a user\'s data on their behalf (admin, GDPR)' })
+  @ApiResponse({ status: 200, description: 'User data export successful' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async exportUserData(@Param('id') id: string, @CurrentUser() admin: User) {
+    return this.usersService.exportUserData(id, admin.id);
+  }
 }

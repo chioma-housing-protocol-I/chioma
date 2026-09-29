@@ -3,7 +3,10 @@ use crate::{
     types::{Config, TimelockActionType},
     Contract, ContractClient,
 };
-use soroban_sdk::{testutils::Address as _, testutils::Ledger as _, Address, Bytes, Env, String};
+use soroban_sdk::{
+    testutils::Address as _, testutils::Events as _, testutils::Ledger as _, Address, Bytes, Env,
+    String,
+};
 
 // ─── Minimum delays (seconds) – must match timelock.rs constants ──────────────
 const MIN_DELAY_UPDATE_ADMIN: u64 = 7 * 24 * 60 * 60;
@@ -425,4 +428,214 @@ fn test_execute_at_exact_eta() {
 
     let result = client.try_execute_timelock_action(&admin, &action_id);
     assert!(result.is_ok());
+}
+
+// ─── Two-Step Admin Transfer Tests (accept_admin_transfer) ───────────────────
+//
+// #1688: admin rotation is a two-step propose/accept flow gated by the
+// existing UpdateAdmin timelock action. `queue_timelock_action` (the
+// current admin) proposes; `accept_admin_transfer` (the proposed new admin)
+// must independently consent once the delay elapses before the rotation
+// actually takes effect.
+
+#[test]
+fn test_admin_transfer_requires_new_admin_acceptance() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_ADMIN + 1;
+    });
+
+    // Admin is unchanged until the proposed new admin accepts.
+    let state = client.get_state().unwrap();
+    assert_eq!(state.admin, admin);
+
+    let result = client.try_accept_admin_transfer(&new_admin, &action_id);
+    assert!(result.is_ok());
+
+    let state = client.get_state().unwrap();
+    assert_eq!(state.admin, new_admin);
+
+    let action = client.get_timelock_action(&action_id);
+    assert!(action.executed);
+}
+
+#[test]
+fn test_admin_transfer_rejects_wrong_caller() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let impostor = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_ADMIN + 1;
+    });
+
+    // Neither the current admin nor a third party can accept on the
+    // proposed new admin's behalf — only `new_admin` itself can.
+    let result = client.try_accept_admin_transfer(&admin, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
+
+    let result = client.try_accept_admin_transfer(&impostor, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
+
+    // Rejected attempts leave the admin and the action untouched.
+    let state = client.get_state().unwrap();
+    assert_eq!(state.admin, admin);
+    let action = client.get_timelock_action(&action_id);
+    assert!(!action.executed);
+}
+
+#[test]
+fn test_admin_transfer_before_eta_fails() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    // ETA not reached yet, even though the correct caller is accepting.
+    let result = client.try_accept_admin_transfer(&new_admin, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::TimelockEtaNotReached)));
+}
+
+#[test]
+fn test_admin_transfer_pending_is_cancellable() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    // Current admin cancels the proposal before it is accepted.
+    let result = client.try_cancel_timelock_action(&admin, &action_id);
+    assert!(result.is_ok());
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_ADMIN + 1;
+    });
+
+    // The proposed new admin can no longer accept a cancelled proposal.
+    let result = client.try_accept_admin_transfer(&new_admin, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::TimelockAlreadyCancelled)));
+
+    let state = client.get_state().unwrap();
+    assert_eq!(state.admin, admin);
+}
+
+#[test]
+fn test_admin_transfer_cannot_be_accepted_twice() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_ADMIN + 1;
+    });
+
+    client.accept_admin_transfer(&new_admin, &action_id);
+
+    let result = client.try_accept_admin_transfer(&new_admin, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::TimelockAlreadyExecuted)));
+}
+
+#[test]
+fn test_accept_admin_transfer_rejects_non_update_admin_action() {
+    let (env, client, admin) = setup();
+
+    let target = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    // A non-UpdateAdmin action (e.g. UpdateConfig) cannot be "accepted" as
+    // an admin transfer, even by its own target address.
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateConfig,
+        &target,
+        &data,
+        &MIN_DELAY_UPDATE_CONFIG,
+    );
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_CONFIG + 1;
+    });
+
+    let result = client.try_accept_admin_transfer(&target, &action_id);
+    assert_eq!(result, Err(Ok(RentalError::InvalidState)));
+}
+
+#[test]
+fn test_admin_transfer_emits_expected_events() {
+    let (env, client, admin) = setup();
+
+    let new_admin = Address::generate(&env);
+    let data = Bytes::new(&env);
+
+    let action_id = client.queue_timelock_action(
+        &admin,
+        &TimelockActionType::UpdateAdmin,
+        &new_admin,
+        &data,
+        &MIN_DELAY_UPDATE_ADMIN,
+    );
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += MIN_DELAY_UPDATE_ADMIN + 1;
+    });
+
+    let events_before = env.events().all().len();
+    client.accept_admin_transfer(&new_admin, &action_id);
+    let events_after = env.events().all();
+
+    // accept_admin_transfer publishes both admin_transfer_accepted and the
+    // shared timelock_executed event.
+    assert!(
+        events_after.len() > events_before,
+        "expected new events after accept_admin_transfer: before={}, after={}",
+        events_before,
+        events_after.len()
+    );
 }

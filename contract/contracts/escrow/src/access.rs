@@ -78,4 +78,15 @@ impl AccessControl {
             Ok(())
         }
     }
+
+    /// Verify the contract is not globally paused (#1689).
+    /// State-changing entry points should check this before proceeding;
+    /// reads remain available while paused.
+    pub fn require_not_paused(env: &Env) -> Result<(), EscrowError> {
+        if EscrowStorage::is_paused(env) {
+            Err(EscrowError::ContractPaused)
+        } else {
+            Ok(())
+        }
+    }
 }

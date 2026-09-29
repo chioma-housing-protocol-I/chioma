@@ -2,7 +2,7 @@ use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct ContractInitialized {
     #[topic]
     pub admin: Address,
@@ -11,7 +11,7 @@ pub struct ContractInitialized {
 
 /// Event emitted when an agent is registered
 /// Topics: ["agent_registered", agent: Address]
-#[contractevent(topics = ["agent_registered"])]
+#[contractevent(topics = ["v1", "agent_registered"])]
 pub struct AgentRegistered {
     #[topic]
     pub agent: Address,
@@ -21,7 +21,7 @@ pub struct AgentRegistered {
 
 /// Event emitted when an agent is verified
 /// Topics: ["agent_verified", admin: Address, agent: Address]
-#[contractevent(topics = ["agent_verified"])]
+#[contractevent(topics = ["v1", "agent_verified"])]
 pub struct AgentVerified {
     #[topic]
     pub admin: Address,
@@ -32,7 +32,7 @@ pub struct AgentVerified {
 
 /// Event emitted when an agent is rated
 /// Topics: ["agent_rated", agent: Address, rater: Address]
-#[contractevent(topics = ["agent_rated"])]
+#[contractevent(topics = ["v1", "agent_rated"])]
 pub struct AgentRated {
     #[topic]
     pub agent: Address,
@@ -45,7 +45,7 @@ pub struct AgentRated {
 
 /// Event emitted when a transaction is registered
 /// Topics: ["transaction_registered", transaction_id: String, agent: Address]
-#[contractevent(topics = ["transaction_registered"])]
+#[contractevent(topics = ["v1", "transaction_registered"])]
 pub struct TransactionRegistered {
     #[topic]
     pub transaction_id: String,
@@ -56,7 +56,7 @@ pub struct TransactionRegistered {
 
 /// Event emitted when a transaction is marked completed
 /// Topics: ["transaction_completed", transaction_id: String, agent: Address]
-#[contractevent(topics = ["transaction_completed"])]
+#[contractevent(topics = ["v1", "transaction_completed"])]
 pub struct TransactionCompleted {
     #[topic]
     pub transaction_id: String,
@@ -67,7 +67,7 @@ pub struct TransactionCompleted {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -78,7 +78,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -88,7 +88,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,

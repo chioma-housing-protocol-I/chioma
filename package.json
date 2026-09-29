@@ -2,9 +2,12 @@
   "private": true,
   "scripts": {
     "prepare": "husky install",
-    "seed": "pnpm --dir backend run seed"
+    "seed": "pnpm --dir backend run seed",
+    "seed:scenarios": "pnpm --dir backend run seed -- --scenario=all"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@jest/globals": "^30.3.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.6.0",

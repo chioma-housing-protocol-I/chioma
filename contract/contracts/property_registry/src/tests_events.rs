@@ -36,7 +36,7 @@ fn test_initialize_emits_contract_initialized_event() {
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
     // Topics: [event_name, admin]
-    assert_eq!(event.1.len(), 2);
+    assert_eq!(event.1.len(), 3);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_register_property_emits_property_registered_event() {
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
     // Topics: [event_name, landlord, property_id]
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 4);
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn test_verify_property_emits_property_verified_event() {
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
     // Topics: [event_name, admin, property_id]
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 4);
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn test_transfer_property_emits_property_transferred_event() {
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
     // Topics: [event_name, previous_landlord, property_id]
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 4);
 }
 
 #[test]
@@ -185,7 +185,7 @@ fn test_update_property_metadata_emits_event() {
     let event = events.last().unwrap();
     assert_eq!(event.0, client.address);
     // Topics: [event_name, landlord, property_id]
-    assert_eq!(event.1.len(), 3);
+    assert_eq!(event.1.len(), 4);
 }
 
 #[test]

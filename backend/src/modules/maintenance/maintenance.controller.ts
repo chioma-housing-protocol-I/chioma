@@ -23,6 +23,13 @@ import {
 import { MaintenanceService } from './maintenance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
+  AssignVendorDto,
+  CreateMaintenanceRequestDto,
+  CreateVendorDto,
+  PayMaintenanceCostDto,
+  ReviewCostEstimateDto,
+  SubmitCostEstimateDto,
+  UpdateMaintenanceStatusDto,
   CreateMaintenanceRequestDto,
   UpdateMaintenanceStatusDto,
   QueryMaintenanceDto,
@@ -36,6 +43,93 @@ import { MaintenanceRequest } from './maintenance-request.entity';
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Post('vendors')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Register a maintenance vendor/contractor' })
+  @ApiBody({ type: CreateVendorDto })
+  async createVendor(@Body() body: CreateVendorDto, @Req() req: any) {
+    return this.maintenanceService.createVendor(body, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('vendors')
+  @ApiOperation({ summary: 'List vendors registered by the current landlord' })
+  async findVendors(@Req() req: any) {
+    return this.maintenanceService.findVendors(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/vendor')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Assign a vendor to a maintenance request' })
+  @ApiParam({ name: 'id', required: true })
+  @ApiBody({ type: AssignVendorDto })
+  async assignVendor(
+    @Param('id') id: string,
+    @Body() body: AssignVendorDto,
+    @Req() req: any,
+  ) {
+    return this.maintenanceService.assignVendor(id, body.vendorId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/cost-estimate')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Submit a cost estimate for approval' })
+  @ApiParam({ name: 'id', required: true })
+  @ApiBody({ type: SubmitCostEstimateDto })
+  async submitCostEstimate(
+    @Param('id') id: string,
+    @Body() body: SubmitCostEstimateDto,
+    @Req() req: any,
+  ) {
+    return this.maintenanceService.submitCostEstimate(
+      id,
+      body.estimatedCost,
+      body.notes,
+      req.user.id,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/cost-estimate/review')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Approve or reject a submitted cost estimate' })
+  @ApiParam({ name: 'id', required: true })
+  @ApiBody({ type: ReviewCostEstimateDto })
+  async reviewCostEstimate(
+    @Param('id') id: string,
+    @Body() body: ReviewCostEstimateDto,
+    @Req() req: any,
+  ) {
+    return this.maintenanceService.reviewCostEstimate(
+      id,
+      body.approved,
+      body.reason,
+      req.user.id,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pay')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Pay an approved maintenance cost' })
+  @ApiParam({ name: 'id', required: true })
+  @ApiBody({ type: PayMaintenanceCostDto })
+  async payCost(
+    @Param('id') id: string,
+    @Body() body: PayMaintenanceCostDto,
+    @Req() req: any,
+  ) {
+    return this.maintenanceService.payApprovedCost(
+      id,
+      body.paymentMethodId,
+      body.agreementId,
+      req.user.id,
+    );
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post()

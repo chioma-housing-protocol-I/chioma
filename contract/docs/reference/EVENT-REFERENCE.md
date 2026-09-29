@@ -3,6 +3,47 @@
 This document is the canonical reference for events emitted by contracts in `contract/contracts`.
 It covers event names/topics, parameters, meanings, usage patterns, examples, and integration guidance.
 
+## Schema Versioning (#1681)
+
+Every event topic list in this document begins with a `"v1"` version segment
+that is **not shown in the tables below** to keep them readable; wherever a
+table row lists topics as `["some_event"]`, the actual on-chain topic list is
+`["v1", "some_event"]`, and similarly for rows with additional topic fields
+(e.g. `["agent_registered"], agent` is really
+`["v1", "agent_registered"], agent`).
+
+Before this version segment existed, a payload shape change on any event was
+indistinguishable from the old shape to a consumer reading historical ledger
+data — there was no way to tell "this `RentPaid` event predates the 2024
+schema change" from "this is the current schema" without out-of-band
+knowledge. Every contract's events (including the small number in
+`upgrade_registry` still using the raw, deprecated
+`env.events().publish(topics, data)` API rather than the `#[contractevent]`
+macro) now carry this version consistently, as the first topic element.
+
+### Version history
+
+| Version | Contracts                                                                                                             | Notes                                                                             |
+| ------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `v1`    | `agent_registry`, `chioma`, `dispute_resolution`, `escrow`, `payment`, `property_registry`, `rent_obligation`, `upgrade_registry`, `user_profile` | Baseline version. Every event topic list documented below is implicitly `v1` today; no event predates versioning. |
+
+### Consumer guidance
+
+- Dispatch on `topics[0]` (the version) before decoding the rest of the topic
+  list or the data payload, rather than assuming a fixed shape.
+- A future breaking payload/topic-shape change to any event must bump this to
+  `"v2"` (etc.) for that event specifically, not workspace-wide — different
+  events evolve independently, so there is no single global schema version.
+- Add the new version to the table above alongside a description of what
+  changed, and keep decoding logic for the previous version until all
+  historical data that might still be queried has been migrated or is no
+  longer relevant.
+- The backend indexer (`backend/src/modules/stellar/services/blockchain-event.service.ts`)
+  is currently a scaffold (`startListening`/`stopListening` with no real
+  Soroban RPC event subscription wired in yet); when that subscription is
+  implemented, it should dispatch on `topics[0]` per the guidance above
+  rather than assuming every event it receives is `v1`.
+
 ## Event List
 
 ### `agent_registry`

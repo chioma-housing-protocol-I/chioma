@@ -61,6 +61,7 @@ import { ScreeningModule } from './modules/screening/screening.module';
 import { ReferralModule } from './modules/referral/referral.module';
 import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { LockModule } from './common/lock';
 import { IdempotencyModule } from './common/idempotency';
 import { ResilienceModule } from './common/resilience';
@@ -265,6 +266,7 @@ const appLogger = new Logger('AppModule');
     ReferralModule,
     InquiriesModule,
     AnalyticsModule,
+    DocumentsModule,
     require('./modules/database-performance/database-performance.module')
       .DatabasePerformanceModule,
     TransactionModule,

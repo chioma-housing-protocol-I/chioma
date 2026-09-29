@@ -1,0 +1,19 @@
+[package]
+name = "integration-tests"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+property_registry = { path = "../property_registry" }
+agent_registry = { path = "../agent_registry" }
+escrow = { path = "../escrow" }
+dispute_resolution = { path = "../dispute_resolution" }
+payment = { path = "../payment" }
+chioma = { path = "../chioma" }

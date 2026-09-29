@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plane, Heart, Star, Search } from 'lucide-react';
 import Link from 'next/link';
+import { RecommendedForYou } from '@/components/recommendations/RecommendedForYou';
 
 export default function GuestDashboardPage() {
   const router = useRouter();
@@ -85,6 +86,8 @@ export default function GuestDashboardPage() {
           </button>
         </form>
       </div>
+
+      <RecommendedForYou />
     </div>
   );
 }

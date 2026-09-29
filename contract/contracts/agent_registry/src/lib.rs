@@ -16,6 +16,9 @@ mod tests;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_property;
+
 pub use agent::{
     complete_transaction, get_agent_count, get_agent_info, rate_agent, register_agent,
     register_transaction, verify_agent,

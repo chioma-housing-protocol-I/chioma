@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   User,
   Mail,
@@ -245,9 +246,12 @@ export default function UserProfilePage() {
         <div className="flex items-center space-x-3">
           {getKycBadge()}
           {kyc.level !== 'Full' && (
-            <button className="text-sm font-semibold text-blue-400 hover:text-blue-300 flex items-center transition-colors">
-              Learn about KYC <ExternalLink size={14} className="ml-1" />
-            </button>
+            <Link
+              href="/user/verification"
+              className="text-sm font-semibold text-blue-400 hover:text-blue-300 flex items-center transition-colors"
+            >
+              Verify your identity <ExternalLink size={14} className="ml-1" />
+            </Link>
           )}
         </div>
       </div>

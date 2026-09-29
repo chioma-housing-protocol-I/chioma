@@ -266,9 +266,10 @@ fn test_create_agreement_success() {
     let events = env.events().all();
     assert_eq!(events.len(), 1);
     // Event structure: (contract_id, topics, data)
-    // Topics now include: ["agr_created", tenant, landlord]
+    // Topics now include: ["v1", "agr_created", tenant, landlord] (#1681
+    // added the leading schema-version topic segment)
     let event = events.last().unwrap();
-    assert_eq!(event.1.len(), 3); // 3 topics: event name + tenant + landlord
+    assert_eq!(event.1.len(), 4); // 4 topics: version + event name + tenant + landlord
 }
 
 #[test]

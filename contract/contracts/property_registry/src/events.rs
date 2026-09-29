@@ -7,7 +7,7 @@ use soroban_sdk::{contractevent, Address, Bytes, Env, String};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct ContractInitialized {
     #[topic]
     pub admin: Address,
@@ -16,7 +16,7 @@ pub struct ContractInitialized {
 
 /// Event emitted when a property is registered
 /// Topics: ["property_registered", property_id: String, owner: Address]
-#[contractevent(topics = ["property_registered"])]
+#[contractevent(topics = ["v1", "property_registered"])]
 pub struct PropertyRegistered {
     #[topic]
     pub property_id: String,
@@ -27,7 +27,7 @@ pub struct PropertyRegistered {
 
 /// Event emitted when a property is verified
 /// Topics: ["property_verified", property_id: String, admin: Address]
-#[contractevent(topics = ["property_verified"])]
+#[contractevent(topics = ["v1", "property_verified"])]
 pub struct PropertyVerified {
     #[topic]
     pub property_id: String,
@@ -38,7 +38,7 @@ pub struct PropertyVerified {
 
 /// Event emitted when a property is updated
 /// Topics: ["property_updated", property_id: String, updater: Address]
-#[contractevent(topics = ["property_updated"])]
+#[contractevent(topics = ["v1", "property_updated"])]
 pub struct PropertyUpdated {
     #[topic]
     pub property_id: String,
@@ -49,7 +49,7 @@ pub struct PropertyUpdated {
 
 /// Event emitted when property admin is updated
 /// Topics: ["admin_updated", old_admin: Address, new_admin: Address]
-#[contractevent(topics = ["admin_updated"])]
+#[contractevent(topics = ["v1", "admin_updated"])]
 pub struct AdminUpdated {
     #[topic]
     pub old_admin: Address,
@@ -60,7 +60,7 @@ pub struct AdminUpdated {
 
 /// Event emitted when property metadata is updated
 /// Topics: ["metadata_updated", property_id: String, owner: Address]
-#[contractevent(topics = ["metadata_updated"])]
+#[contractevent(topics = ["v1", "metadata_updated"])]
 pub struct MetadataUpdated {
     #[topic]
     pub property_id: String,
@@ -71,7 +71,7 @@ pub struct MetadataUpdated {
 
 /// Event emitted when a property ownership is transferred
 /// Topics: ["ownership_transferred", property_id: String, new_owner: Address]
-#[contractevent(topics = ["ownership_transferred"])]
+#[contractevent(topics = ["v1", "ownership_transferred"])]
 pub struct OwnershipTransferred {
     #[topic]
     pub property_id: String,
@@ -82,7 +82,7 @@ pub struct OwnershipTransferred {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -93,7 +93,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -103,7 +103,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,
@@ -113,7 +113,7 @@ pub struct UpgradeExecuted {
 
 /// Event emitted when a property's ownership is transferred
 /// Topics: ["property_transferred", previous_landlord: Address, property_id: String]
-#[contractevent(topics = ["property_transferred"])]
+#[contractevent(topics = ["v1", "property_transferred"])]
 pub struct PropertyTransferred {
     #[topic]
     pub previous_landlord: Address,
@@ -124,7 +124,7 @@ pub struct PropertyTransferred {
 
 /// Event emitted when a property's metadata is updated
 /// Topics: ["property_metadata_updated", landlord: Address, property_id: String]
-#[contractevent(topics = ["property_metadata_updated"])]
+#[contractevent(topics = ["v1", "property_metadata_updated"])]
 pub struct PropertyMetadataUpdated {
     #[topic]
     pub landlord: Address,

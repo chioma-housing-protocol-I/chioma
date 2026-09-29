@@ -8,12 +8,14 @@ import { WebhooksService } from './webhooks.service';
 import { WebhookSignatureGuard } from './guards/webhook-signature.guard';
 import { WebhooksController } from './webhooks.controller';
 import { MonitoringModule } from '../monitoring/monitoring.module';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([WebhookEndpoint, WebhookDelivery]),
     MonitoringModule,
+    SecurityModule,
   ],
   controllers: [WebhooksController],
   providers: [WebhookSignatureService, WebhooksService, WebhookSignatureGuard],

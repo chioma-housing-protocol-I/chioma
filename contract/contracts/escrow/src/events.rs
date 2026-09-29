@@ -9,7 +9,7 @@ use crate::types::EscrowStatus;
 
 /// Event emitted when an escrow is created
 /// Topics: ["escrow_created", escrow_id: BytesN<32>]
-#[contractevent(topics = ["escrow_created"])]
+#[contractevent(topics = ["v1", "escrow_created"])]
 pub struct EscrowCreated {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -25,7 +25,7 @@ pub struct EscrowCreated {
 
 /// Event emitted when an escrow is funded
 /// Topics: ["escrow_funded", escrow_id: BytesN<32>, funder: Address]
-#[contractevent(topics = ["escrow_funded"])]
+#[contractevent(topics = ["v1", "escrow_funded"])]
 pub struct EscrowFunded {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -37,7 +37,7 @@ pub struct EscrowFunded {
 
 /// Event emitted when a release is approved by a party
 /// Topics: ["release_approved", escrow_id: BytesN<32>, approver: Address]
-#[contractevent(topics = ["release_approved"])]
+#[contractevent(topics = ["v1", "release_approved"])]
 pub struct ReleaseApproved {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -49,7 +49,7 @@ pub struct ReleaseApproved {
 
 /// Event emitted when funds are released from escrow
 /// Topics: ["escrow_released", escrow_id: BytesN<32>]
-#[contractevent(topics = ["escrow_released"])]
+#[contractevent(topics = ["v1", "escrow_released"])]
 pub struct EscrowReleased {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -62,7 +62,7 @@ pub struct EscrowReleased {
 
 /// Event emitted when an escrow times out
 /// Topics: ["escrow_timeout", escrow_id: BytesN<32>]
-#[contractevent(topics = ["escrow_timeout"])]
+#[contractevent(topics = ["v1", "escrow_timeout"])]
 pub struct EscrowTimeout {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -71,7 +71,7 @@ pub struct EscrowTimeout {
 
 /// Event emitted when a partial release occurs
 /// Topics: ["partial_release", escrow_id: BytesN<32>, recipient: Address]
-#[contractevent(topics = ["partial_release"])]
+#[contractevent(topics = ["v1", "partial_release"])]
 pub struct PartialRelease {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -83,7 +83,7 @@ pub struct PartialRelease {
 
 /// Event emitted when damages are deducted
 /// Topics: ["damage_deduction", escrow_id: BytesN<32>]
-#[contractevent(topics = ["damage_deduction"])]
+#[contractevent(topics = ["v1", "damage_deduction"])]
 pub struct DamageDeduction {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -94,7 +94,7 @@ pub struct DamageDeduction {
 
 /// Event emitted when an escrow is frozen
 /// Topics: ["escrow_frozen", escrow_id: BytesN<32>, caller: Address]
-#[contractevent(topics = ["escrow_frozen"])]
+#[contractevent(topics = ["v1", "escrow_frozen"])]
 pub struct EscrowFrozen {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -106,7 +106,7 @@ pub struct EscrowFrozen {
 
 /// Event emitted when an escrow is unfrozen
 /// Topics: ["escrow_unfrozen", escrow_id: BytesN<32>, caller: Address]
-#[contractevent(topics = ["escrow_unfrozen"])]
+#[contractevent(topics = ["v1", "escrow_unfrozen"])]
 pub struct EscrowUnfrozen {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -117,7 +117,7 @@ pub struct EscrowUnfrozen {
 
 /// Event emitted when rent is released from escrow
 /// Topics: ["rent_released", escrow_id: BytesN<32>]
-#[contractevent(topics = ["rent_released"])]
+#[contractevent(topics = ["v1", "rent_released"])]
 pub struct RentReleased {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -129,7 +129,7 @@ pub struct RentReleased {
 
 /// Event emitted when safety deposit is withdrawn
 /// Topics: ["safety_deposit_withdrawn", escrow_id: BytesN<32>]
-#[contractevent(topics = ["safety_deposit_withdrawn"])]
+#[contractevent(topics = ["v1", "safety_deposit_withdrawn"])]
 pub struct SafetyDepositWithdrawn {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -137,9 +137,23 @@ pub struct SafetyDepositWithdrawn {
     pub withdrawn_at: u64,
 }
 
+/// Event emitted whenever the platform governance fee is collected from a
+/// `release_rent` call (#1563), carrying the running total so an off-chain
+/// indexer can audit cumulative fee revenue without separately querying
+/// contract storage.
+/// Topics: ["governance_fees_accrued", escrow_id: BytesN<32>]
+#[contractevent(topics = ["v1", "governance_fees_accrued"])]
+pub struct GovernanceFeesAccrued {
+    #[topic]
+    pub escrow_id: BytesN<32>,
+    pub amount: i128,
+    pub total_governance_fees: i128,
+    pub accrued_at: u64,
+}
+
 /// Event emitted when a dispute times out
 /// Topics: ["dispute_timeout", escrow_id: BytesN<32>]
-#[contractevent(topics = ["dispute_timeout"])]
+#[contractevent(topics = ["v1", "dispute_timeout"])]
 pub struct DisputeTimeout {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -148,7 +162,7 @@ pub struct DisputeTimeout {
 
 /// Event emitted when escrow timeout configuration is updated
 /// Topics: ["timeout_config_updated", admin: Address]
-#[contractevent(topics = ["timeout_config_updated"])]
+#[contractevent(topics = ["v1", "timeout_config_updated"])]
 pub struct TimeoutConfigUpdated {
     #[topic]
     pub admin: Address,
@@ -160,7 +174,7 @@ pub struct TimeoutConfigUpdated {
 
 /// Event emitted when the admin is initialized
 /// Topics: ["admin_initialized", admin: Address]
-#[contractevent(topics = ["admin_initialized"])]
+#[contractevent(topics = ["v1", "admin_initialized"])]
 pub struct AdminInitialized {
     #[topic]
     pub admin: Address,
@@ -169,7 +183,7 @@ pub struct AdminInitialized {
 
 /// Event emitted when the admin is updated
 /// Topics: ["admin_updated", old_admin: Address, new_admin: Address]
-#[contractevent(topics = ["admin_updated"])]
+#[contractevent(topics = ["v1", "admin_updated"])]
 pub struct AdminUpdated {
     #[topic]
     pub old_admin: Address,
@@ -178,9 +192,27 @@ pub struct AdminUpdated {
     pub updated_at: u64,
 }
 
+/// Event emitted when the contract is globally paused (#1689)
+/// Topics: ["contract_paused", caller: Address]
+#[contractevent(topics = ["v1", "contract_paused"])]
+pub struct ContractPausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub paused_at: u64,
+}
+
+/// Event emitted when the contract is unpaused (#1689)
+/// Topics: ["contract_unpaused", caller: Address]
+#[contractevent(topics = ["v1", "contract_unpaused"])]
+pub struct ContractUnpausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub unpaused_at: u64,
+}
+
 /// Event emitted when the escrow status is updated
 /// Topics: ["escrow_status_updated", escrow_id: BytesN<32>]
-#[contractevent(topics = ["escrow_status_updated"])]
+#[contractevent(topics = ["v1", "escrow_status_updated"])]
 pub struct EscrowStatusUpdated {
     #[topic]
     pub escrow_id: BytesN<32>,
@@ -190,7 +222,7 @@ pub struct EscrowStatusUpdated {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -201,7 +233,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -211,7 +243,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,
@@ -373,6 +405,22 @@ pub(crate) fn rent_released(
     .publish(env);
 }
 
+/// Helper function to emit the governance-fees-accrued event (#1563)
+pub(crate) fn governance_fees_accrued(
+    env: &Env,
+    escrow_id: BytesN<32>,
+    amount: i128,
+    total_governance_fees: i128,
+) {
+    GovernanceFeesAccrued {
+        escrow_id,
+        amount,
+        total_governance_fees,
+        accrued_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
 /// Helper function to emit safety deposit withdrawn event
 pub(crate) fn safety_deposit_withdrawn(env: &Env, escrow_id: BytesN<32>, amount: i128) {
     SafetyDepositWithdrawn {
@@ -425,6 +473,24 @@ pub(crate) fn admin_updated(env: &Env, old_admin: Address, new_admin: Address) {
         old_admin,
         new_admin,
         updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit contract paused event
+pub(crate) fn contract_paused(env: &Env, caller: Address) {
+    ContractPausedEvent {
+        caller,
+        paused_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit contract unpaused event
+pub(crate) fn contract_unpaused(env: &Env, caller: Address) {
+    ContractUnpausedEvent {
+        caller,
+        unpaused_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

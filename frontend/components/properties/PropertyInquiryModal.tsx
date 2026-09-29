@@ -1,13 +1,21 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogIn } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { BaseModal } from '@/components/modals/BaseModal';
 import { notify } from '@/components/ui';
 import { useAuth } from '@/store/authStore';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 import type { PropertyInquiryData } from '@/components/modals/types';
+import {
+  propertyInquirySchema,
+  type PropertyInquiryFormValues,
+} from '@/lib/validation/propertyInquiry.schema';
 
 interface PropertyInquiryModalProps {
   isOpen: boolean;
@@ -17,8 +25,6 @@ interface PropertyInquiryModalProps {
   onSubmit?: (data: PropertyInquiryData) => Promise<void>;
 }
 
-type FormErrors = Partial<Record<keyof PropertyInquiryData, string>>;
-
 export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
   isOpen,
   onClose,
@@ -26,16 +32,6 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
   propertyTitle = 'this property',
   onSubmit,
 }) => {
-  const [form, setForm] = useState<PropertyInquiryData>({
-    propertyId,
-    propertyTitle,
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const pathname = usePathname();
 
@@ -44,6 +40,23 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
       `Hello, I am interested in ${propertyTitle}. Please share next steps.`,
     [propertyTitle],
   );
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting, submitCount },
+  } = useForm<PropertyInquiryFormValues>({
+    resolver: zodResolver(propertyInquirySchema),
+    defaultValues: {
+      propertyId,
+      propertyTitle,
+      name: '',
+      email: '',
+      phone: '',
+      message: initialMessage,
+    },
+  });
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -54,7 +67,7 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
       isAuthenticated && user
         ? `${user.firstName} ${user.lastName}`.trim()
         : '';
-    setForm({
+    reset({
       propertyId,
       propertyTitle,
       name: knownName,
@@ -62,7 +75,6 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
       phone: '',
       message: initialMessage,
     });
-    setErrors({});
   }, [
     initialMessage,
     isOpen,
@@ -70,35 +82,19 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
     propertyTitle,
     isAuthenticated,
     user,
+    reset,
   ]);
 
-  const validate = () => {
-    const nextErrors: FormErrors = {};
-    if (!form.name.trim()) nextErrors.name = 'Name is required';
-    if (!form.email.trim()) nextErrors.email = 'Email is required';
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) {
-      nextErrors.email = 'Enter a valid email address';
-    }
-    if (!form.message.trim()) nextErrors.message = 'Message is required';
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleSubmit = async () => {
+  const onFormSubmit = async (values: PropertyInquiryFormValues) => {
     if (!onSubmit) return;
-    if (!validate()) return;
-
-    setIsSubmitting(true);
     try {
-      await onSubmit(form);
+      await onSubmit(values);
       notify.success('Inquiry sent successfully');
       onClose();
     } catch (error) {
       notify.error(
         error instanceof Error ? error.message : 'Failed to send inquiry',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -157,8 +153,8 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
             Cancel
           </button>
           <button
-            type="button"
-            onClick={handleSubmit}
+            type="submit"
+            form="property-inquiry-form"
             disabled={isSubmitting}
             className="rounded-xl bg-brand-blue px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           >
@@ -167,21 +163,28 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
         </div>
       }
     >
-      <div className="space-y-4">
+      <form
+        id="property-inquiry-form"
+        onSubmit={handleSubmit(onFormSubmit)}
+        noValidate
+        className="space-y-4"
+      >
+        <FormErrorSummary errors={errors} submitCount={submitCount} />
+
         <div>
           <label className="mb-1 block text-sm font-semibold text-neutral-700">
             Name *
           </label>
           <input
-            value={form.name}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, name: e.target.value }))
-            }
+            {...register('name')}
+            {...fieldA11yProps('name', errors.name)}
             className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
             placeholder="Your full name"
           />
           {errors.name && (
-            <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+            <p id={fieldErrorId('name')} className="mt-1 text-xs text-red-600">
+              {errors.name.message}
+            </p>
           )}
         </div>
         <div>
@@ -190,15 +193,15 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
           </label>
           <input
             type="email"
-            value={form.email}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, email: e.target.value }))
-            }
+            {...register('email')}
+            {...fieldA11yProps('email', errors.email)}
             className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
             placeholder="name@email.com"
           />
           {errors.email && (
-            <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+            <p id={fieldErrorId('email')} className="mt-1 text-xs text-red-600">
+              {errors.email.message}
+            </p>
           )}
         </div>
         <div>
@@ -206,10 +209,7 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
             Phone
           </label>
           <input
-            value={form.phone}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, phone: e.target.value }))
-            }
+            {...register('phone')}
             className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
             placeholder="+1 555 123 4567"
           />
@@ -219,18 +219,21 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
             Message *
           </label>
           <textarea
-            value={form.message}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, message: e.target.value }))
-            }
+            {...register('message')}
+            {...fieldA11yProps('message', errors.message)}
             rows={5}
             className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
           {errors.message && (
-            <p className="mt-1 text-xs text-red-600">{errors.message}</p>
+            <p
+              id={fieldErrorId('message')}
+              className="mt-1 text-xs text-red-600"
+            >
+              {errors.message.message}
+            </p>
           )}
         </div>
-      </div>
+      </form>
     </BaseModal>
   );
 };

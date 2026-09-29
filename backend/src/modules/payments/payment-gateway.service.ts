@@ -27,6 +27,20 @@ export type GatewayRefundResponse = {
   error?: string;
 };
 
+export type TokenizePaymentMethodRequest = {
+  gatewayReference: string;
+  userEmail: string;
+};
+
+export type TokenizePaymentMethodResponse = {
+  success: boolean;
+  token?: string;
+  last4?: string;
+  expiryMonth?: number;
+  expiryYear?: number;
+  error?: string;
+};
+
 export type GatewayChargeRequest = {
   paymentMethod: PaymentMethod;
   amount: number;
@@ -110,12 +124,38 @@ export class PaymentGatewayService {
     return { success: true, refundId: `refund_${Date.now()}` };
   }
 
-  async savePaymentMethod(
-    userId: string,
-  ): Promise<{ success: boolean; methodId?: string; error?: string }> {
-    // Placeholder for tokenization flows
-    this.logger.log(`Saving payment method for user ${userId}`);
-    return { success: true, methodId: `method_${Date.now()}` };
+  /**
+   * Tokenizes a saved payment method by verifying a client-supplied gateway
+   * reference against the real gateway (Paystack/Flutterwave), rather than
+   * trusting anything the client claims about the card. The client must have
+   * already collected card details and completed a charge/tokenize step
+   * client-side via the gateway's own SDK (PCI-DSS requires raw card data
+   * never touch this backend); this method's job is to re-fetch the
+   * authoritative result server-side from the gateway using the reference
+   * and return only gateway-confirmed values.
+   */
+  async tokenizePaymentMethod(
+    request: TokenizePaymentMethodRequest,
+  ): Promise<TokenizePaymentMethodResponse> {
+    const { gatewayReference, userEmail } = request;
+
+    if (!gatewayReference || typeof gatewayReference !== 'string') {
+      return { success: false, error: 'A valid gatewayReference is required' };
+    }
+
+    this.logger.log(
+      `Tokenizing payment method via gateway reference ${gatewayReference}`,
+    );
+
+    if (this.gateway === 'paystack') {
+      return this.verifyAndTokenizePaystack(gatewayReference);
+    }
+
+    if (this.gateway === 'flutterwave') {
+      return this.verifyAndTokenizeFlutterwave(gatewayReference, userEmail);
+    }
+
+    return { success: true, token: `mock_token_${Date.now()}` };
   }
 
   /**
@@ -266,6 +306,173 @@ export class PaymentGatewayService {
         },
         { retryableErrors: [NetworkError, TimeoutError] },
         'PaymentGateway.chargeFlutterwave',
+      ),
+    );
+  }
+
+  /**
+   * Verifies a Paystack transaction reference server-side and extracts the
+   * real authorization from the response. This IS the tokenization step:
+   * Paystack has no separate "tokenize without charging" endpoint — the
+   * client charges via Paystack.js/Popup and hands us the resulting
+   * `reference`, and this verify call is the only trustworthy source of the
+   * `authorization_code` we later charge against.
+   */
+  private async verifyAndTokenizePaystack(
+    gatewayReference: string,
+  ): Promise<TokenizePaymentMethodResponse> {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+      throw new BadRequestException('PAYSTACK_SECRET_KEY is not configured');
+    }
+
+    return this.executeGatewayCall('payment-gateway:paystack:tokenize', () =>
+      this.retryService.execute(
+        async () => {
+          const response = await this.http.get(
+            `https://api.paystack.co/transaction/verify/${encodeURIComponent(gatewayReference)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${secret}`,
+              },
+              httpsAgent:
+                this.certificatePinningService.getHttpsAgent('api.paystack.co'),
+            },
+          );
+
+          const data = response.data?.data;
+          if (
+            response.data?.status !== true ||
+            data?.status !== 'success' ||
+            !data?.authorization
+          ) {
+            return {
+              success: false,
+              error: response.data?.message || 'Paystack verification failed',
+            };
+          }
+
+          const authorization = data.authorization;
+          if (!authorization.authorization_code) {
+            return {
+              success: false,
+              error:
+                'Paystack verification did not return an authorization code',
+            };
+          }
+
+          return {
+            success: true,
+            token: authorization.authorization_code,
+            last4: authorization.last4,
+            expiryMonth: authorization.exp_month
+              ? parseInt(authorization.exp_month, 10)
+              : undefined,
+            expiryYear: authorization.exp_year
+              ? parseInt(authorization.exp_year, 10)
+              : undefined,
+          };
+        },
+        { retryableErrors: [NetworkError, TimeoutError] },
+        'PaymentGateway.verifyAndTokenizePaystack',
+      ),
+    );
+  }
+
+  /**
+   * Verifies a Flutterwave transaction server-side and extracts the real
+   * card token from the response, mirroring chargeFlutterwave's request
+   * pattern (executeGatewayCall + retryService + certificate-pinned http
+   * client). `gatewayReference` is Flutterwave's `tx_ref` (the client-side
+   * reference generated before charging), verified via the
+   * verify_by_reference endpoint.
+   *
+   * NOTE (uncertain, flagged explicitly): I could not verify with full
+   * confidence the exact response field name Flutterwave uses for the
+   * reusable card token on this endpoint. `chargeFlutterwave` in this file
+   * already reads a `token` field from stored metadata, so I mirror that
+   * name here and read it from `data.card.token`, which matches Flutterwave's
+   * documented card-tokenization response shape, but this specific field
+   * path is the one piece of this implementation I am not fully certain of
+   * without live-testing against the real API. `last4`/expiry extraction
+   * from `data.card.last_4digits` and `data.card.expiry` (a combined "MM/YY"
+   * string) is based on Flutterwave's general transaction-verify response
+   * shape and should be double-checked against a real response before
+   * relying on it in production.
+   */
+  private async verifyAndTokenizeFlutterwave(
+    gatewayReference: string,
+    _userEmail: string,
+  ): Promise<TokenizePaymentMethodResponse> {
+    const secret = process.env.FLUTTERWAVE_SECRET_KEY;
+    if (!secret) {
+      throw new BadRequestException('FLUTTERWAVE_SECRET_KEY is not configured');
+    }
+
+    return this.executeGatewayCall('payment-gateway:flutterwave:tokenize', () =>
+      this.retryService.execute(
+        async () => {
+          const response = await this.http.get(
+            `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(gatewayReference)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${secret}`,
+              },
+              httpsAgent: this.certificatePinningService.getHttpsAgent(
+                'api.flutterwave.com',
+              ),
+            },
+          );
+
+          const data = response.data?.data;
+          if (response.data?.status !== 'success' || !data) {
+            return {
+              success: false,
+              error:
+                response.data?.message || 'Flutterwave verification failed',
+            };
+          }
+
+          if (data.status !== 'successful') {
+            return {
+              success: false,
+              error: `Flutterwave transaction status was "${data.status}", expected "successful"`,
+            };
+          }
+
+          const cardToken: string | undefined = data.card?.token;
+          if (!cardToken) {
+            return {
+              success: false,
+              error:
+                'Flutterwave verification did not return a reusable card token',
+            };
+          }
+
+          const last4: string | undefined = data.card?.last_4digits;
+          let expiryMonth: number | undefined;
+          let expiryYear: number | undefined;
+          const expiry: string | undefined = data.card?.expiry;
+          if (expiry && expiry.includes('/')) {
+            const [month, year] = expiry.split('/');
+            expiryMonth = parseInt(month, 10) || undefined;
+            const parsedYear = parseInt(year, 10);
+            if (!isNaN(parsedYear)) {
+              // Flutterwave returns a 2-digit year in this field.
+              expiryYear = parsedYear < 100 ? 2000 + parsedYear : parsedYear;
+            }
+          }
+
+          return {
+            success: true,
+            token: cardToken,
+            last4,
+            expiryMonth,
+            expiryYear,
+          };
+        },
+        { retryableErrors: [NetworkError, TimeoutError] },
+        'PaymentGateway.verifyAndTokenizeFlutterwave',
       ),
     );
   }

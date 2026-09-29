@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
       "**/.git/**",
     ],
   },
+  {
+    rules: {
+      "no-console": "error",
+    },
+  },
 ]);
 
 export default eslintConfig;

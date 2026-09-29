@@ -160,6 +160,7 @@ export interface EnvironmentVariables {
   FLUTTERWAVE_SECRET_KEY?: string;
   PAYMENT_GATEWAY_TIMEOUT_MS?: string;
   PAYMENT_WEBHOOK_SECRET?: string;
+  PAYMENT_WEBHOOK_SECRET_PREVIOUS?: string;
 
   // Email
   EMAIL_SERVICE?: string;

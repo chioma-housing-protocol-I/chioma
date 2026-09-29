@@ -19,6 +19,12 @@ mod tests_rbac;
 #[cfg(test)]
 mod tests_rate_limit;
 
+#[cfg(test)]
+mod tests_events;
+
+#[cfg(test)]
+mod tests_property;
+
 use access::AccessControl;
 
 pub use errors::ObligationError;

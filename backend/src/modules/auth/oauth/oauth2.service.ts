@@ -6,12 +6,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import * as crypto from 'crypto';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { AuthService } from '../auth.service';
 import { OAuth2ClientService } from './oauth2-client.service';
 import { OAuthAccount } from './entities/oauth-account.entity';
+import { OAuthState } from './entities/oauth-state.entity';
 import {
   OAuth2AuthResult,
   OAuth2AuthorizationResult,
@@ -22,18 +23,11 @@ import {
 import { OAUTH_STATE_EXPIRY_MINUTES } from '../../../common/constants/business-rules.constants';
 
 const STATE_EXPIRY_MINUTES = OAUTH_STATE_EXPIRY_MINUTES;
-
-interface PendingOAuthState {
-  provider: OAuth2Provider;
-  redirectUri: string;
-  userId?: string;
-  expiresAt: Date;
-}
+const STATE_LENGTH = 32; // 256 bits of entropy
 
 @Injectable()
 export class OAuth2Service {
   private readonly logger = new Logger(OAuth2Service.name);
-  private readonly pendingStates = new Map<string, PendingOAuthState>();
   private readonly providerTokens = new Map<
     string,
     { provider: OAuth2Provider; accessToken: string; refreshToken: string }
@@ -44,6 +38,8 @@ export class OAuth2Service {
     private readonly userRepository: Repository<User>,
     @InjectRepository(OAuthAccount)
     private readonly oauthAccountRepository: Repository<OAuthAccount>,
+    @InjectRepository(OAuthState)
+    private readonly oauthStateRepository: Repository<OAuthState>,
     private readonly oauth2Client: OAuth2ClientService,
     private readonly authService: AuthService,
   ) {}
@@ -52,16 +48,23 @@ export class OAuth2Service {
     provider: OAuth2Provider,
     redirectUri?: string,
   ): OAuth2AuthorizationResult {
-    this.cleanupExpiredStates();
     const resolvedRedirectUri =
       redirectUri ??
       this.oauth2Client.getProviderConfig(provider).defaultRedirectUri;
-    const state = crypto.randomBytes(24).toString('hex');
-
-    this.pendingStates.set(state, {
+    
+    // Generate cryptographically secure state parameter
+    const state = crypto.randomBytes(STATE_LENGTH).toString('hex');
+    
+    // Store state in database with expiration
+    const expiresAt = new Date(Date.now() + STATE_EXPIRY_MINUTES * 60 * 1000);
+    const oauthState = this.oauthStateRepository.create({
+      state,
       provider,
       redirectUri: resolvedRedirectUri,
-      expiresAt: new Date(Date.now() + STATE_EXPIRY_MINUTES * 60 * 1000),
+      expiresAt,
+    });
+    this.oauthStateRepository.save(oauthState).catch((error) => {
+      this.logger.error(`Failed to store OAuth state: ${error.message}`);
     });
 
     const authorizationUrl = this.oauth2Client.buildAuthorizationUrl(
@@ -79,7 +82,7 @@ export class OAuth2Service {
     state: string,
     redirectUri?: string,
   ): Promise<OAuth2AuthResult> {
-    const pending = this.validateState(state, provider);
+    const pending = await this.validateStateAsync(state, provider);
     const resolvedRedirectUri = redirectUri ?? pending.redirectUri;
 
     const tokenResponse = await this.oauth2Client.exchangeAuthorizationCode(
@@ -104,7 +107,7 @@ export class OAuth2Service {
     await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
 
     this.storeProviderTokens(user.id, provider, tokenResponse);
-    this.pendingStates.delete(state);
+    await this.oauthStateRepository.delete({ state });
 
     this.logger.log(
       `OAuth2 login completed for user ${user.id} via ${provider}`,
@@ -132,14 +135,9 @@ export class OAuth2Service {
     state: string,
     redirectUri?: string,
   ): Promise<OAuth2LinkResult> {
-    const pending = this.validateState(state, provider);
-    if (pending.userId && pending.userId !== userId) {
-      throw new UnauthorizedException(
-        'OAuth state does not match the current user',
-      );
-    }
-
+    const pending = await this.validateStateAsync(state, provider, userId);
     const resolvedRedirectUri = redirectUri ?? pending.redirectUri;
+
     const tokenResponse = await this.oauth2Client.exchangeAuthorizationCode(
       provider,
       code,
@@ -163,7 +161,7 @@ export class OAuth2Service {
 
     const link = await this.ensureOAuthLink(userId, provider, profile);
     this.storeProviderTokens(userId, provider, tokenResponse);
-    this.pendingStates.delete(state);
+    await this.oauthStateRepository.delete({ state });
 
     return {
       id: link.id,
@@ -180,10 +178,8 @@ export class OAuth2Service {
     redirectUri?: string,
   ): OAuth2AuthorizationResult {
     const result = this.initiateAuthorization(provider, redirectUri);
-    const pending = this.pendingStates.get(result.state);
-    if (pending) {
-      pending.userId = userId;
-    }
+    // Store userId association after state is created in DB
+    this.oauthStateRepository.update({ state: result.state }, { userId });
     return result;
   }
 
@@ -237,27 +233,42 @@ export class OAuth2Service {
     await this.oauth2Client.revokeToken(provider, token);
   }
 
-  private validateState(
+  private async validateStateAsync(
     state: string,
     provider: OAuth2Provider,
-  ): PendingOAuthState {
-    this.cleanupExpiredStates();
-    const pending = this.pendingStates.get(state);
+    expectedUserId?: string,
+  ): Promise<OAuthState> {
+    const oauthState = await this.oauthStateRepository.findOne({
+      where: { state },
+    });
 
-    if (!pending) {
+    if (!oauthState) {
       throw new UnauthorizedException('Invalid or expired OAuth state');
     }
 
-    if (pending.provider !== provider) {
-      throw new BadRequestException('OAuth provider mismatch');
+    if (!oauthState.isValid(provider)) {
+      // Clean up invalid state
+      await this.oauthStateRepository.delete({ state });
+      throw new BadRequestException('OAuth provider mismatch or state expired');
     }
 
-    if (pending.expiresAt < new Date()) {
-      this.pendingStates.delete(state);
-      throw new UnauthorizedException('OAuth state has expired');
+    if (expectedUserId && oauthState.userId !== expectedUserId) {
+      throw new UnauthorizedException(
+        'OAuth state does not match the current user',
+      );
     }
 
-    return pending;
+    return oauthState;
+  }
+
+  private cleanupExpiredStates(): void {
+    const now = new Date();
+    // Clean up expired states in database
+    this.oauthStateRepository
+      .delete({ expiresAt: LessThan(now) })
+      .catch((error) => {
+        this.logger.error(`Failed to cleanup expired states: ${error.message}`);
+      });
   }
 
   private async findOrCreateUser(profile: OAuth2UserProfile): Promise<User> {

@@ -1,4 +1,25 @@
 //! NFT Royalty Mechanism for Chioma rental agreements.
+//!
+//! ## Relationship to platform/governance fees (#1563)
+//!
+//! This module is a distinct fee mechanism from `payment`'s platform fee
+//! (`platform_fee_collector`, 10% of each rent payment, see
+//! `payment::pay_rent`) and `escrow`'s governance share
+//! (`platform_governance`, 5% of each rent release, see
+//! `escrow::release_rent`): those two charge a fee on *ongoing rent flow*,
+//! while `transfer_with_royalty` below charges a royalty on a *secondary
+//! sale of the agreement itself* (an NFT-style creator royalty paid to
+//! `royalty_recipient` when `admin` transfers agreement ownership to a new
+//! `to` address for `sale_price`). They are not two disconnected
+//! implementations of the same feature -- royalties.rs is fully wired in
+//! for its own purpose (`set_royalty`/`get_royalty`/`transfer_with_royalty`/
+//! `get_royalty_payments` are all real, tested, public entry points on
+//! `chioma`, see `tests_royalties.rs`) and is not dangling or unused.
+//!
+//! What was missing (and is now fixed) was on-chain, queryable running
+//! totals for the *other* two fee mechanisms: see
+//! `payment::get_total_fees_collected` and
+//! `escrow::EscrowContract::get_total_governance_fees`.
 
 use soroban_sdk::{token, Address, Env, String, Vec};
 

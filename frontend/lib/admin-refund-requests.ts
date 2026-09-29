@@ -306,15 +306,17 @@ export async function submitAdminRefundDecision(
     notes: string;
   },
 ): Promise<void> {
-  try {
-    await apiClient.post(
-      `/admin/refunds/${encodeURIComponent(refundRequestId)}/decision`,
-      {
-        action: payload.action,
-        notes: payload.notes,
-      },
-    );
-  } catch {
-    // offline-friendly
-  }
+  // Previously swallowed the request error (#1558): a failed decision
+  // looked identical to a successful one to the caller, and the backend's
+  // `POST :id/decision` route is @AuditLog'd (AuditAction.PAYMENT_REFUNDED),
+  // so a swallowed failure here also meant no audit entry was written while
+  // the UI reported success. Must throw so the caller (and bulk-action
+  // failure counting) can react honestly.
+  await apiClient.post(
+    `/admin/refunds/${encodeURIComponent(refundRequestId)}/decision`,
+    {
+      action: payload.action,
+      notes: payload.notes,
+    },
+  );
 }

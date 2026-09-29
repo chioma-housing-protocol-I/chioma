@@ -47,6 +47,7 @@ import { RateLimitCategory, EndpointCategory } from '../rate-limiting';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
+import { SkipEmailCheck } from './decorators/skip-email-check.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -513,6 +514,7 @@ export class AuthController {
 
   @Post('complete-profile')
   @UseGuards(JwtAuthGuard)
+  @SkipEmailCheck()
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })

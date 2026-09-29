@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Param,
   Body,
   Query,
@@ -24,6 +25,9 @@ import { User } from '../users/entities/user.entity';
 import { FavoritesService } from './favorites.service';
 import {
   AddFavoriteDto,
+  CollectionNameDto,
+  FavoriteCollectionDto,
+  MoveFavoriteDto,
   FavoriteItemDto,
   FavoriteStatusDto,
   FavoritesQueryDto,
@@ -57,7 +61,83 @@ export class FavoritesController {
     @CurrentUser() user: User,
     @Query() query: FavoritesQueryDto,
   ): Promise<PaginatedFavoritesDto> {
-    return this.favoritesService.getFavorites(user.id, query.page, query.limit);
+    return this.favoritesService.getFavorites(
+      user.id,
+      query.page,
+      query.limit,
+      query.collectionId,
+    );
+  }
+
+  @Get('collections')
+  @ApiOperation({ summary: "List the current user's favorite collections" })
+  @ApiResponse({ status: 200, type: [FavoriteCollectionDto] })
+  listCollections(@CurrentUser() user: User): Promise<FavoriteCollectionDto[]> {
+    return this.favoritesService.listCollections(user.id);
+  }
+
+  @Post('collections')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a favorite collection' })
+  @ApiResponse({ status: 409, description: 'Name already in use' })
+  async createCollection(
+    @CurrentUser() user: User,
+    @Body() dto: CollectionNameDto,
+  ): Promise<FavoriteCollectionDto> {
+    const c = await this.favoritesService.createCollection(user.id, dto.name);
+    return {
+      id: c.id,
+      name: c.name,
+      favoriteCount: 0,
+      createdAt: c.createdAt.toISOString(),
+    };
+  }
+
+  @Patch('collections/:collectionId')
+  @ApiOperation({ summary: 'Rename a favorite collection' })
+  async renameCollection(
+    @CurrentUser() user: User,
+    @Param('collectionId', ParseUUIDPipe) collectionId: string,
+    @Body() dto: CollectionNameDto,
+  ) {
+    const c = await this.favoritesService.renameCollection(
+      user.id,
+      collectionId,
+      dto.name,
+    );
+    return { id: c.id, name: c.name };
+  }
+
+  @Delete('collections/:collectionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a collection (its favorites move to Uncategorized)',
+  })
+  async deleteCollection(
+    @CurrentUser() user: User,
+    @Param('collectionId', ParseUUIDPipe) collectionId: string,
+  ): Promise<void> {
+    await this.favoritesService.deleteCollection(user.id, collectionId);
+  }
+
+  @Patch(':propertyId/collection')
+  @ApiOperation({ summary: 'Move a favorite to another collection' })
+  async moveFavorite(
+    @CurrentUser() user: User,
+    @Param('propertyId', ParseUUIDPipe) propertyId: string,
+    @Body() dto: MoveFavoriteDto,
+  ): Promise<FavoriteItemDto> {
+    const f = await this.favoritesService.moveFavorite(
+      user.id,
+      propertyId,
+      dto.collectionId,
+    );
+    return {
+      id: f.id,
+      propertyId: f.propertyId,
+      collectionId: f.collectionId,
+      createdAt: f.createdAt.toISOString(),
+    };
   }
 
   @Get(':propertyId')
@@ -106,10 +186,12 @@ export class FavoritesController {
     const favorite = await this.favoritesService.addFavorite(
       user.id,
       dto.propertyId,
+      dto.collectionId,
     );
     return {
       id: favorite.id,
       propertyId: favorite.propertyId,
+      collectionId: favorite.collectionId,
       createdAt: favorite.createdAt.toISOString(),
     };
   }

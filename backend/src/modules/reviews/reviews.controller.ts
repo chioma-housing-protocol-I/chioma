@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { RespondReviewDto } from './dto/respond-review.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
 
@@ -162,6 +164,23 @@ export class ReviewsController {
   @Get('reputation/:userId')
   async getReputation(@Param('userId') userId: string) {
     return this.reviewsService.getReputation(userId);
+  }
+
+  @ApiResponse({ status: 200, description: 'Response saved' })
+  @ApiResponse({ status: 403, description: 'Not the reviewed party' })
+  @ApiOperation({
+    summary: 'Respond to a review',
+    description:
+      'Create or edit the public response to a review. Only the reviewed party (host/landlord) may respond; one response per review.',
+  })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @Put(':id/response')
+  async respondToReview(
+    @Param('id') id: string,
+    @Body() dto: RespondReviewDto,
+    @Req() req: { user?: { id: string } },
+  ): Promise<Review> {
+    return this.reviewsService.respondToReview(id, dto, req.user?.id ?? '');
   }
 
   @ApiResponse({ status: 200, description: 'Updated' })

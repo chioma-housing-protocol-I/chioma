@@ -2,7 +2,7 @@ use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when a recurring payment schedule is created
 /// Topics: ["recurring_payment_created", agreement_id: String]
-#[contractevent(topics = ["recurring_payment_created"])]
+#[contractevent(topics = ["v1", "recurring_payment_created"])]
 pub struct RecurringPaymentCreated {
     #[topic]
     pub agreement_id: String,
@@ -13,7 +13,7 @@ pub struct RecurringPaymentCreated {
 
 /// Event emitted when a recurring payment is executed successfully
 /// Topics: ["recurring_payment_executed", recurring_id: String]
-#[contractevent(topics = ["recurring_payment_executed"])]
+#[contractevent(topics = ["v1", "recurring_payment_executed"])]
 pub struct RecurringPaymentExecuted {
     #[topic]
     pub recurring_id: String,
@@ -22,7 +22,7 @@ pub struct RecurringPaymentExecuted {
 
 /// Event emitted when a recurring payment is paused
 /// Topics: ["recurring_payment_paused", recurring_id: String]
-#[contractevent(topics = ["recurring_payment_paused"])]
+#[contractevent(topics = ["v1", "recurring_payment_paused"])]
 pub struct RecurringPaymentPaused {
     #[topic]
     pub recurring_id: String,
@@ -31,7 +31,7 @@ pub struct RecurringPaymentPaused {
 
 /// Event emitted when a recurring payment is resumed
 /// Topics: ["recurring_payment_resumed", recurring_id: String]
-#[contractevent(topics = ["recurring_payment_resumed"])]
+#[contractevent(topics = ["v1", "recurring_payment_resumed"])]
 pub struct RecurringPaymentResumed {
     #[topic]
     pub recurring_id: String,
@@ -40,7 +40,7 @@ pub struct RecurringPaymentResumed {
 
 /// Event emitted when a recurring payment is cancelled
 /// Topics: ["recurring_payment_cancelled", recurring_id: String]
-#[contractevent(topics = ["recurring_payment_cancelled"])]
+#[contractevent(topics = ["v1", "recurring_payment_cancelled"])]
 pub struct RecurringPaymentCancelled {
     #[topic]
     pub recurring_id: String,
@@ -49,7 +49,7 @@ pub struct RecurringPaymentCancelled {
 
 /// Event emitted when a recurring payment fails
 /// Topics: ["recurring_payment_failed", recurring_id: String]
-#[contractevent(topics = ["recurring_payment_failed"])]
+#[contractevent(topics = ["v1", "recurring_payment_failed"])]
 pub struct RecurringPaymentFailed {
     #[topic]
     pub recurring_id: String,
@@ -58,7 +58,7 @@ pub struct RecurringPaymentFailed {
 
 /// Event emitted when a late fee is applied to a payment
 /// Topics: ["late_fee_applied", payment_id: String]
-#[contractevent(topics = ["late_fee_applied"])]
+#[contractevent(topics = ["v1", "late_fee_applied"])]
 pub struct LateFeeApplied {
     #[topic]
     pub payment_id: String,
@@ -69,7 +69,7 @@ pub struct LateFeeApplied {
 
 /// Event emitted when a late fee is waived
 /// Topics: ["late_fee_waived", payment_id: String]
-#[contractevent(topics = ["late_fee_waived"])]
+#[contractevent(topics = ["v1", "late_fee_waived"])]
 pub struct LateFeeWaived {
     #[topic]
     pub payment_id: String,
@@ -79,7 +79,7 @@ pub struct LateFeeWaived {
 
 /// Event emitted when late fee configuration is set
 /// Topics: ["late_fee_config_set", agreement_id: String]
-#[contractevent(topics = ["late_fee_config_set"])]
+#[contractevent(topics = ["v1", "late_fee_config_set"])]
 pub struct LateFeeConfigSet {
     #[topic]
     pub agreement_id: String,
@@ -90,7 +90,7 @@ pub struct LateFeeConfigSet {
 
 /// Event emitted when rent escalation configuration is set
 /// Topics: ["rent_escalation_config_set", agreement_id: String]
-#[contractevent(topics = ["rent_escalation_config_set"])]
+#[contractevent(topics = ["v1", "rent_escalation_config_set"])]
 pub struct RentEscalationConfigSet {
     #[topic]
     pub agreement_id: String,
@@ -100,7 +100,7 @@ pub struct RentEscalationConfigSet {
 
 /// Event emitted when a rent payment is processed
 /// Topics: ["rent_paid", agreement_id: String, from: Address]
-#[contractevent(topics = ["rent_paid"])]
+#[contractevent(topics = ["v1", "rent_paid"])]
 pub struct RentPaid {
     #[topic]
     pub agreement_id: String,
@@ -116,16 +116,66 @@ pub struct RentPaid {
 
 /// Event emitted when platform fee collector is updated
 /// Topics: ["platform_fee_collector_updated", collector: Address]
-#[contractevent(topics = ["platform_fee_collector_updated"])]
+#[contractevent(topics = ["v1", "platform_fee_collector_updated"])]
 pub struct PlatformFeeCollectorUpdated {
     #[topic]
     pub collector: Address,
     pub updated_at: u64,
 }
 
+/// Event emitted whenever a platform fee is collected from a payment
+/// (#1563), carrying the running total so an off-chain indexer can audit
+/// cumulative fee revenue without separately querying contract storage.
+/// Topics: ["fees_accrued", agreement_id: String]
+#[contractevent(topics = ["v1", "fees_accrued"])]
+pub struct FeesAccrued {
+    #[topic]
+    pub agreement_id: String,
+    pub amount: i128,
+    pub total_fees_collected: i128,
+    pub accrued_at: u64,
+}
+
+/// Event emitted when the `chioma` contract address used for cross-contract
+/// agreement verification is updated (#1559)
+/// Topics: ["chioma_contract_updated", chioma_contract: Address]
+#[contractevent(topics = ["v1", "chioma_contract_updated"])]
+pub struct ChiomaContractUpdated {
+    #[topic]
+    pub chioma_contract: Address,
+    pub updated_at: u64,
+}
+
+/// Event emitted when the contract admin is initialized (#1689)
+/// Topics: ["admin_initialized", admin: Address]
+#[contractevent(topics = ["v1", "admin_initialized"])]
+pub struct AdminInitialized {
+    #[topic]
+    pub admin: Address,
+    pub initialized_at: u64,
+}
+
+/// Event emitted when the contract is globally paused (#1689)
+/// Topics: ["contract_paused", caller: Address]
+#[contractevent(topics = ["v1", "contract_paused"])]
+pub struct ContractPausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub paused_at: u64,
+}
+
+/// Event emitted when the contract is unpaused (#1689)
+/// Topics: ["contract_unpaused", caller: Address]
+#[contractevent(topics = ["v1", "contract_unpaused"])]
+pub struct ContractUnpausedEvent {
+    #[topic]
+    pub caller: Address,
+    pub unpaused_at: u64,
+}
+
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String, proposer: Address]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -137,7 +187,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade is approved
 /// Topics: ["upgrade_approved", proposal_id: String, approver: Address]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -149,7 +199,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String, executor: Address]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,
@@ -285,11 +335,59 @@ pub(crate) fn rent_paid(
     .publish(env);
 }
 
+/// Helper function to emit the fees-accrued event (#1563)
+pub(crate) fn fees_accrued(
+    env: &Env,
+    agreement_id: String,
+    amount: i128,
+    total_fees_collected: i128,
+) {
+    FeesAccrued {
+        agreement_id,
+        amount,
+        total_fees_collected,
+        accrued_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
 /// Helper function to emit platform fee collector updated event
 pub(crate) fn platform_fee_collector_updated(env: &Env, collector: Address) {
     PlatformFeeCollectorUpdated {
         collector,
         updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn chioma_contract_updated(env: &Env, chioma_contract: Address) {
+    ChiomaContractUpdated {
+        chioma_contract,
+        updated_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn admin_initialized(env: &Env, admin: Address) {
+    AdminInitialized {
+        admin,
+        initialized_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn contract_paused(env: &Env, caller: Address) {
+    ContractPausedEvent {
+        caller,
+        paused_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+pub(crate) fn contract_unpaused(env: &Env, caller: Address) {
+    ContractUnpausedEvent {
+        caller,
+        unpaused_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

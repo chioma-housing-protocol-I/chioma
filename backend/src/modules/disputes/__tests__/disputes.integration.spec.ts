@@ -998,6 +998,25 @@ describe('DisputesService - Integration Tests', () => {
   });
 
   describe('Integration: Multi-user dispute scenarios', () => {
+    let outsider: User;
+
+    beforeAll(async () => {
+      outsider = await dataSource.getRepository(User).save({
+        email: 'outsider@test.com',
+        firstName: 'Out',
+        lastName: 'Sider',
+        role: UserRole.USER,
+        isActive: true,
+        password: 'hashed_password',
+      } as User);
+    });
+
+    it('lets tenant raise, landlord respond, and admin resolve one dispute', async () => {
+      const dispute = await service.createDispute(
+        {
+          agreementId: testAgreement.id,
+          disputeType: DisputeType.MAINTENANCE,
+          description: 'Heating broken for two weeks',
     it('lets the tenant open a dispute, the landlord comment, and an admin resolve it', async () => {
       const dispute = await service.createDispute(
         {
@@ -1008,6 +1027,11 @@ describe('DisputesService - Integration Tests', () => {
         tenantUser.id,
       );
 
+      await service.addComment(
+        dispute.disputeId,
+        { content: 'Repair scheduled for Monday' } as AddCommentDto,
+        landlordUser.id,
+      );
       const landlordComment = await service.addComment(
         dispute.disputeId,
         { content: 'Landlord acknowledges the report', isInternal: false },
@@ -1020,6 +1044,9 @@ describe('DisputesService - Integration Tests', () => {
         { status: DisputeStatus.UNDER_REVIEW },
         adminUser.id,
       );
+      const resolved = await service.resolveDispute(
+        dispute.disputeId,
+        { resolution: 'Rent credit issued' } as ResolveDisputeDto,
 
       const resolved = await service.resolveDispute(
         dispute.disputeId,
@@ -1028,6 +1055,13 @@ describe('DisputesService - Integration Tests', () => {
       );
 
       expect(resolved.status).toBe(DisputeStatus.RESOLVED);
+      const comments = await dataSource
+        .getRepository(DisputeComment)
+        .find({ where: { disputeId: dispute.id } });
+      expect(comments.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('prevents an unrelated user from raising or viewing a dispute', async () => {
       expect(resolved.initiatedBy).toBe(tenantUser.id);
       expect(resolved.resolvedBy).toBe(adminUser.id);
 
@@ -1054,6 +1088,90 @@ describe('DisputesService - Integration Tests', () => {
         service.createDispute(
           {
             agreementId: testAgreement.id,
+            disputeType: DisputeType.OTHER,
+            description: 'Not my agreement',
+          },
+          outsider.id,
+        ),
+      ).rejects.toThrow();
+
+      await expect(
+        service.getAgreementDisputes(testAgreement.id, outsider.id),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Integration: Dispute state transitions', () => {
+    let dispute: Dispute;
+
+    beforeEach(async () => {
+      await dataSource
+        .getRepository(RentAgreement)
+        .update(testAgreement.id, { status: AgreementStatus.ACTIVE });
+      dispute = await service.createDispute(
+        {
+          agreementId: testAgreement.id,
+          disputeType: DisputeType.RENT_PAYMENT,
+          description: 'Payment not credited',
+        },
+        tenantUser.id,
+      );
+    });
+
+    it('starts in OPEN', () => {
+      expect(dispute.status).toBe(DisputeStatus.OPEN);
+    });
+
+    it('follows OPEN -> UNDER_REVIEW -> RESOLVED', async () => {
+      await service.update(
+        dispute.id,
+        { status: DisputeStatus.UNDER_REVIEW },
+        adminUser.id,
+      );
+      const resolved = await service.resolveDispute(
+        dispute.disputeId,
+        { resolution: 'Payment located' } as ResolveDisputeDto,
+        adminUser.id,
+      );
+      expect(resolved.status).toBe(DisputeStatus.RESOLVED);
+    });
+
+    it('rejects OPEN -> RESOLVED directly', async () => {
+      await expect(
+        service.update(
+          dispute.id,
+          { status: DisputeStatus.RESOLVED },
+          adminUser.id,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('persists each transition to the database', async () => {
+      await service.update(
+        dispute.id,
+        { status: DisputeStatus.UNDER_REVIEW },
+        adminUser.id,
+      );
+      const stored = await dataSource
+        .getRepository(Dispute)
+        .findOne({ where: { id: dispute.id } });
+      expect(stored?.status).toBe(DisputeStatus.UNDER_REVIEW);
+    });
+  });
+
+  describe('Integration: Blockchain state alignment', () => {
+    beforeEach(async () => {
+      await dataSource
+        .getRepository(RentAgreement)
+        .update(testAgreement.id, { status: AgreementStatus.ACTIVE });
+    });
+
+    it('marks the agreement DISPUTED on create and ACTIVE after resolution', async () => {
+      const dispute = await service.createDispute(
+        {
+          agreementId: testAgreement.id,
+          disputeType: DisputeType.SECURITY_DEPOSIT,
+          description: 'Deposit withheld',
             disputeType: DisputeType.MAINTENANCE,
             description: 'Outsider attempt',
           },
@@ -1136,11 +1254,44 @@ describe('DisputesService - Integration Tests', () => {
         tenantUser.id,
       );
 
+      const agreementRepo = dataSource.getRepository(RentAgreement);
+      expect(
+        (await agreementRepo.findOne({ where: { id: testAgreement.id } }))
+          ?.status,
+      ).toBe(AgreementStatus.DISPUTED);
+
+      await service.update(
       const underReview = await service.update(
         dispute.id,
         { status: DisputeStatus.UNDER_REVIEW },
         adminUser.id,
       );
+      await service.resolveDispute(
+        dispute.disputeId,
+        { resolution: 'Deposit returned' } as ResolveDisputeDto,
+        adminUser.id,
+      );
+
+      expect(
+        (await agreementRepo.findOne({ where: { id: testAgreement.id } }))
+          ?.status,
+      ).toBe(AgreementStatus.ACTIVE);
+    });
+
+    it('does not fabricate on-chain sync data for off-chain disputes', async () => {
+      const dispute = await service.createDispute(
+        {
+          agreementId: testAgreement.id,
+          disputeType: DisputeType.OTHER,
+          description: 'Off-chain only',
+        },
+        tenantUser.id,
+      );
+      const stored = await dataSource
+        .getRepository(Dispute)
+        .findOne({ where: { id: dispute.id } });
+      expect(stored?.blockchainOutcome ?? null).toBeNull();
+      expect(stored?.blockchainSyncedAt ?? null).toBeNull();
       expect(underReview.status).toBe(DisputeStatus.UNDER_REVIEW);
 
       const resolved = await service.resolveDispute(

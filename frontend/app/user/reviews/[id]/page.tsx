@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { Suspense } from 'react';
-import { ReviewForm } from '@/components/user/ReviewForm';
+import { ReviewForm } from '@/components/reviews/ReviewForm';
 
 interface Params {
   params: Promise<{ id: string }>;

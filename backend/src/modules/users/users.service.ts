@@ -143,6 +143,7 @@ export class UsersService {
 
   async exportUserData(
     userId: string,
+    performedBy: string = userId,
   ): Promise<Omit<User, 'password'> & Record<string, unknown>> {
     const user = await this.findById(userId);
     const { password, ...exportData } = user;
@@ -151,10 +152,13 @@ export class UsersService {
       action: AuditAction.DATA_EXPORT,
       entityType: 'User',
       entityId: user.id,
-      performedBy: user.id,
+      performedBy,
       status: AuditStatus.SUCCESS,
       level: AuditLevel.SECURITY,
-      metadata: { type: 'GDPR_EXPORT' },
+      metadata: {
+        type: 'GDPR_EXPORT',
+        ...(performedBy !== userId ? { requestedByAdmin: true } : {}),
+      },
     });
     this.logger.log(`GDPR export for user: ${user.id}`);
     return exportData;
@@ -200,6 +204,7 @@ export class UsersService {
     // ── 1. Prepare anonymized User row ──────────────────────────────────────
     const anonEmail = `deleted_${user.id}@anonymized.local`;
     user.email = anonEmail;
+    user.emailCollectedAt = null;
     user.firstName = null;
     user.lastName = null;
     user.phoneNumber = null;
@@ -499,6 +504,7 @@ export class UsersService {
       emailEncrypted: Buffer.from(encryptedEmail),
       emailHash: this.hashLookupValue(normalizedNew),
       emailVerified: false,
+      emailCollectedAt: new Date(),
       verificationToken,
     });
 

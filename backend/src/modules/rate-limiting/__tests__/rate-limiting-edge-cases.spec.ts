@@ -108,7 +108,10 @@ describe('Rate Limiting Edge Cases', () => {
       expect(result.remainingPoints).toBe(0);
     });
 
-    it.skip('should reject requests that exceed limit', async () => {
+    it('should reject requests that exceed limit', async () => {
+      // Cache returns 100 (already consumed all FREE+PUBLIC points).
+      // consumePoints will call incrementCounter which reads 100, adds 1,
+      // stores 101, and returns 101. 101 > 100 → success: false.
       mockCacheManager.get.mockImplementation((key: string) => {
         if (key.includes('block')) return Promise.resolve(false);
         return Promise.resolve(100); // Already at limit
@@ -123,6 +126,9 @@ describe('Rate Limiting Edge Cases', () => {
 
       expect(result.success).toBe(false);
       expect(result.remainingPoints).toBe(0);
+      // FREE+PUBLIC has no blockDuration — over-limit is rejected but not blocked
+      expect(result.isBlocked).toBe(false);
+      expect(result.msBeforeNext).toBe(60 * 1000); // config.duration * 1000
     });
   });
 
@@ -514,6 +520,285 @@ describe('Rate Limiting Edge Cases', () => {
         // Should handle error gracefully
         expect(error).toBeDefined();
       }
+    });
+  });
+
+  // ── #1809: Concurrent requests ─────────────────────────────────────────────
+  describe('Concurrent Request Limit Enforcement', () => {
+    /**
+     * The fallback incrementCounter path (no Redis client) is a non-atomic
+     * get → add → set, so concurrent calls each read the same stale counter
+     * and write the same new value — in tests every call effectively sees an
+     * independent counter.  What we verify here is that the *per-call*
+     * decision logic (consumed > limit → reject) behaves correctly when
+     * different callers arrive with counters already at various points.
+     */
+
+    it('should allow all requests when none exceed the limit', async () => {
+      // Counter starts at 0 for each call (cache miss → treated as 0).
+      // 0 + 1 = 1, which is ≤ 100 → success: true for every call.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(null); // fresh window — no prior consumption
+      });
+
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          service.consumePoints(
+            'concurrent-under-limit',
+            UserTier.FREE,
+            EndpointCategory.PUBLIC,
+            1,
+          ),
+        ),
+      );
+
+      results.forEach((r) => {
+        expect(r.success).toBe(true);
+        expect(r.isBlocked).toBe(false);
+      });
+    });
+
+    it('should reject requests whose incremented counter exceeds the limit', async () => {
+      // Simulate callers that read a counter already at 100 (the last allowed
+      // point was consumed). Each adds 1 → 101 > 100 → rejected.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(100);
+      });
+
+      const results = await Promise.all(
+        Array.from({ length: 5 }, () =>
+          service.consumePoints(
+            'concurrent-over-limit',
+            UserTier.FREE,
+            EndpointCategory.PUBLIC,
+            1,
+          ),
+        ),
+      );
+
+      results.forEach((r) => {
+        expect(r.success).toBe(false);
+        expect(r.remainingPoints).toBe(0);
+        // FREE+PUBLIC has no blockDuration
+        expect(r.isBlocked).toBe(false);
+      });
+    });
+
+    it('should block all concurrent requests when block key is set', async () => {
+      // A previous violation set the block key; all concurrent callers should
+      // be short-circuited before the counter is touched.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(true);
+        return Promise.resolve(0);
+      });
+      mockCacheManager.store.ttl.mockResolvedValue(30);
+
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          service.consumePoints(
+            'concurrent-blocked',
+            UserTier.FREE,
+            EndpointCategory.ADMIN, // ADMIN has blockDuration
+            1,
+          ),
+        ),
+      );
+
+      results.forEach((r) => {
+        expect(r.success).toBe(false);
+        expect(r.isBlocked).toBe(true);
+        expect(r.msBeforeNext).toBe(30 * 1000);
+      });
+
+      // Counter must NOT have been incremented — block short-circuits before that
+      expect(mockCacheManager.set).not.toHaveBeenCalled();
+    });
+
+    it('should allow requests exactly at the limit (boundary — not rejected)', async () => {
+      // consumed = 99 + 1 = 100; 100 > 100 is false → success: true, remaining: 0.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(99);
+      });
+
+      const result = await service.consumePoints(
+        'concurrent-at-limit',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(0);
+      expect(result.isBlocked).toBe(false);
+    });
+  });
+
+  // ── #1809: Cache hit / miss behavior ──────────────────────────────────────
+  describe('Cache Hit/Miss Behavior', () => {
+    it('should treat a cache miss (null) as zero prior consumption', async () => {
+      // null → typeof null !== 'number' → treated as 0 in incrementCounter
+      // 0 + 1 = 1 consumed; remaining = 100 - 1 = 99
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(null);
+      });
+
+      const result = await service.consumePoints(
+        'cache-miss-test',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(99);
+      // Counter key must be written with the new consumed total
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('cache-miss-test'),
+        1,           // 0 prior + 1 consumed
+        60 * 1000,   // duration * 1000 ms
+      );
+    });
+
+    it('should treat a cache miss (undefined) as zero prior consumption', async () => {
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(undefined);
+      });
+
+      const result = await service.consumePoints(
+        'cache-miss-undefined-test',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(99);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('cache-miss-undefined-test'),
+        1,
+        60 * 1000,
+      );
+    });
+
+    it('should use cached value on a cache hit and compute remaining correctly', async () => {
+      // Prior consumption: 40 points already consumed (cache hit).
+      // 40 + 1 = 41; remaining = 100 - 41 = 59.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(40);
+      });
+
+      const result = await service.consumePoints(
+        'cache-hit-test',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(59);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('cache-hit-test'),
+        41,          // 40 prior + 1 consumed
+        60 * 1000,
+      );
+    });
+
+    it('should consume multiple points correctly on a cache hit', async () => {
+      // Prior: 30 consumed. Request costs 5 points. 30 + 5 = 35; remaining = 65.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(30);
+      });
+
+      const result = await service.consumePoints(
+        'cache-hit-multi-points',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        5,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.remainingPoints).toBe(65);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('cache-hit-multi-points'),
+        35,
+        60 * 1000,
+      );
+    });
+
+    it('should reject on a cache hit when adding points exceeds the limit', async () => {
+      // Prior: 98 consumed. Request costs 3 points. 98 + 3 = 101 > 100 → rejected.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        return Promise.resolve(98);
+      });
+
+      const result = await service.consumePoints(
+        'cache-hit-over-limit',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        3,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.remainingPoints).toBe(0);
+      expect(result.isBlocked).toBe(false); // FREE+PUBLIC has no blockDuration
+    });
+
+    it('should record a violation when a cache hit causes a limit breach', async () => {
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        if (key.includes('violations')) return Promise.resolve([]);
+        return Promise.resolve(100);
+      });
+
+      await service.consumePoints(
+        'cache-hit-violation',
+        UserTier.FREE,
+        EndpointCategory.PUBLIC,
+        1,
+      );
+
+      // Violation entry written to cache
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('violations:cache-hit-violation'),
+        expect.arrayContaining([
+          expect.objectContaining({ category: EndpointCategory.PUBLIC }),
+        ]),
+        3600 * 1000,
+      );
+    });
+
+    it('should trigger a block on a cache hit for categories with blockDuration', async () => {
+      // ADMIN category for FREE tier has points: 0 and blockDuration: 86400.
+      // consumed = 0 + 1 = 1 > 0 → rejected; blockDuration set → isBlocked: true.
+      mockCacheManager.get.mockImplementation((key: string) => {
+        if (key.includes('block')) return Promise.resolve(false);
+        if (key.includes('violations')) return Promise.resolve([]);
+        return Promise.resolve(0);
+      });
+
+      const result = await service.consumePoints(
+        'cache-hit-block-trigger',
+        UserTier.FREE,
+        EndpointCategory.ADMIN,
+        1,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.isBlocked).toBe(true);
+      // Block key must be written with blockDuration (86400 s)
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.stringContaining('block:admin:cache-hit-block-trigger'),
+        true,
+        86400 * 1000,
+      );
     });
   });
 });

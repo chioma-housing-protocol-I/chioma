@@ -4,6 +4,7 @@ import { PaymentService } from './payment.service';
 import { RefundService } from './refund.service';
 import { ScheduleService } from './schedule.service';
 import { PaymentWebhookService } from './payment-webhook.service';
+import { FxRateService } from './fx-rate.service';
 import {
   PaymentController,
   AgreementPaymentController,
@@ -24,10 +25,17 @@ import { AdminRefundsService } from './admin-refunds.service';
 import { FraudModule } from '../fraud/fraud.module';
 import { AuditModule } from '../audit/audit.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, PaymentMethod, PaymentSchedule, User]),
+    TypeOrmModule.forFeature([
+      Payment,
+      PaymentMethod,
+      PaymentSchedule,
+      User,
+      SupportedCurrency,
+    ]),
     NotificationsModule,
     UsersModule,
     StellarModule,
@@ -50,7 +58,8 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     PaymentWebhookService,
     PaymentGatewayService,
     AdminRefundsService,
+    FxRateService,
   ],
-  exports: [PaymentService, PaymentGatewayService],
+  exports: [PaymentService, PaymentGatewayService, FxRateService],
 })
 export class PaymentModule {}

@@ -32,3 +32,25 @@ pub enum ContractError {
     /// Caller is within the cooldown period for this function
     CooldownNotMet = 9,
 }
+
+/// Pins every `ContractError` discriminant so off-chain code that maps
+/// error codes to messages cannot silently misreport after a variant is
+/// added or reordered (#1686). If this test fails to compile or assert, a
+/// discriminant changed and every off-chain consumer needs to be checked.
+#[cfg(test)]
+mod pin_tests {
+    use super::ContractError;
+
+    #[test]
+    fn error_codes_are_pinned() {
+        assert_eq!(ContractError::AlreadyInitialized as u32, 1);
+        assert_eq!(ContractError::ProfileAlreadyExists as u32, 2);
+        assert_eq!(ContractError::ProfileNotFound as u32, 3);
+        assert_eq!(ContractError::InvalidHashLength as u32, 4);
+        assert_eq!(ContractError::AdminNotConfigured as u32, 5);
+        assert_eq!(ContractError::UnauthorizedAdmin as u32, 6);
+        assert_eq!(ContractError::AccessDenied as u32, 7);
+        assert_eq!(ContractError::RateLimitExceeded as u32, 8);
+        assert_eq!(ContractError::CooldownNotMet as u32, 9);
+    }
+}

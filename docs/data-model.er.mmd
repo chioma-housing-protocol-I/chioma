@@ -1,0 +1,73 @@
+erDiagram
+  Arbiter }o--|| User : ManyToOne
+  AuditLog }o--|| User : ManyToOne
+  Dispute }o--|| RentAgreement : ManyToOne
+  Dispute }o--|| User : ManyToOne
+  DisputeComment }o--|| Dispute : ManyToOne
+  DisputeComment }o--|| User : ManyToOne
+  DisputeEvidence }o--|| Dispute : ManyToOne
+  DisputeEvidence }o--|| User : ManyToOne
+  DisputeVote }o--|| Arbiter : ManyToOne
+  DisputeVote }o--|| Dispute : ManyToOne
+  EscrowCondition }o--|| StellarEscrow : ManyToOne
+  EscrowSignature }o--|| StellarEscrow : ManyToOne
+  Message }o--|| ChatRoom : ManyToOne
+  Message }o--|| Participant : ManyToOne
+  MfaDevice }o--|| User : ManyToOne
+  NFTTransfer }o--|| RentObligationNft : ManyToOne
+  Notification }o--|| User : ManyToOne
+  Participant }o--|| ChatRoom : ManyToOne
+  Payment }o--|| PaymentMethod : ManyToOne
+  Payment }o--|| RentAgreement : ManyToOne
+  Payment }o--|| User : ManyToOne
+  PaymentMethod }o--|| User : ManyToOne
+  PaymentSchedule }o--|| PaymentMethod : ManyToOne
+  PaymentSchedule }o--|| User : ManyToOne
+  ProfileMetadata }o--|| User : ManyToOne
+  Property }o--|| User : ManyToOne
+  PropertyAmenity }o--|| Property : ManyToOne
+  PropertyAvailability }o--|| Property : ManyToOne
+  PropertyImage }o--|| Property : ManyToOne
+  PropertyTourEngagement }o--|| Property : ManyToOne
+  Referral }o--|| User : ManyToOne
+  RentObligationNft }o--|| RentAgreement : ManyToOne
+  RentPayment }o--|| RentAgreement : ManyToOne
+  RentalUnit }o--|| Property : ManyToOne
+  Role }o--o{ Permission : ManyToMany
+  StellarAccount }o--|| User : ManyToOne
+  StellarEscrow ||--|| StellarAccount : OneToOne
+  StellarEscrow }o--|| StellarAccount : ManyToOne
+  StellarTransaction }o--|| StellarAccount : ManyToOne
+  TemplateClause }o--|| AgreementTemplate : ManyToOne
+  UserNotificationPreference ||--|| User : OneToOne
+  WebhookDelivery }o--|| WebhookEndpoint : ManyToOne
+  AgentTransaction
+  AnchorTransaction
+  ApiKey
+  ApiKeyRotationHistory
+  AuthMetric
+  DisputeEvent
+  Feedback
+  FileMetadata
+  FraudAlertEntity
+  GuestReview
+  HostReview
+  IndexedTransaction
+  Kyc
+  MaintenanceRequest
+  PropertyHistory
+  PropertyInquiry
+  PropertyListingDraft
+  PropertyRegistry
+  RentReminder
+  Review
+  SecurityEvent
+  StellarPayment
+  SubletBooking
+  SubletRequest
+  SupportedCurrency
+  TenantScreeningConsent
+  TenantScreeningReport
+  TenantScreeningRequest
+  ThreatEvent
+  UserPreferences

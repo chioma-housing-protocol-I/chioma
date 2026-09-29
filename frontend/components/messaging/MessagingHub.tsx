@@ -24,6 +24,7 @@ export function MessagingHub() {
     isConnected,
     isLoadingRooms,
     isLoadingMessages,
+    readSyncFailedRoomIds,
     selectRoom,
     sendMessage,
     retryMessage,
@@ -61,6 +62,7 @@ export function MessagingHub() {
             activeRoom={activeRoom}
             isLoading={isLoadingRooms}
             onSelectRoom={handleSelectRoom}
+            readSyncFailedRoomIds={readSyncFailedRoomIds}
           />
         </div>
 
@@ -129,11 +131,14 @@ export function MessagingHub() {
                 onRetry={retryMessage}
               />
 
-              <MessageInput
-                onSend={sendMessage}
-                onTyping={sendTyping}
-                disabled={!isConnected}
-              />
+              {/*
+                Composing is no longer gated on isConnected (#1557): a
+                message sent while offline is queued via the offline
+                sync infrastructure and dispatched automatically once the
+                socket reconnects, so blocking input here would prevent
+                exactly the workflow this issue adds.
+              */}
+              <MessageInput onSend={sendMessage} onTyping={sendTyping} />
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center bg-neutral-50 p-8">

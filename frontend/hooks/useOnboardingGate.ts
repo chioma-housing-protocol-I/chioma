@@ -1,34 +1,23 @@
 'use client';
 
 import { useAuth } from '@/store/authStore';
+import { hasSkippedEmailOnboarding } from '@/lib/onboarding/email-onboarding';
 
 /** Route that collects the missing email for wallet-only accounts. */
 export const COMPLETE_PROFILE_ROUTE = '/complete-profile';
 
-/**
- * sessionStorage key backing "Skip for now". Deliberately session-scoped: the
- * prompt should come back on the next visit rather than being dismissed for
- * good, since we still need an email for receipts and account recovery.
- */
-const SKIP_KEY = 'chioma_onboarding_email_skipped';
-
-export function skipEmailOnboarding(): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem(SKIP_KEY, '1');
-}
-
-export function clearEmailOnboardingSkip(): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(SKIP_KEY);
-}
-
-function hasSkipped(): boolean {
-  if (typeof window === 'undefined') return false;
-  return sessionStorage.getItem(SKIP_KEY) === '1';
-}
+export {
+  clearEmailOnboardingSkip,
+  skipEmailOnboarding,
+} from '@/lib/onboarding/email-onboarding';
 
 /**
  * Single source of truth for "this account still owes us an email".
+ *
+ * Uses the server-minted `emailCollectedAt` timestamp (present on the JWT
+ * payload and stored in the auth store) as the authoritative signal.  Falling
+ * back to the `email` string preserves backward compatibility with sessions
+ * established before the #1832 migration ran.
  *
  * Wallet-first sign-in mints a session with no email attached (see
  * stellar-auth.service). Those users get routed through complete-profile
@@ -37,9 +26,15 @@ function hasSkipped(): boolean {
 export function needsEmailOnboarding(
   user: {
     email?: string | null;
+    emailCollectedAt?: string | null;
   } | null,
 ): boolean {
   if (!user) return false;
+  // emailCollectedAt is the canonical server-side signal (issue #1832).
+  // Fall back to email presence for sessions predating the migration.
+  if ('emailCollectedAt' in user) {
+    return !user.emailCollectedAt;
+  }
   return !user.email;
 }
 
@@ -60,7 +55,7 @@ export function useOnboardingGate(): OnboardingGate {
 
   return {
     needsEmail,
-    shouldPrompt: needsEmail && !hasSkipped(),
+    shouldPrompt: needsEmail && !hasSkippedEmailOnboarding(),
     loading,
   };
 }

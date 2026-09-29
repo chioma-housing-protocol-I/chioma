@@ -63,14 +63,21 @@ describe('ReferralService', () => {
     sendPayment: jest.fn(),
   };
 
+  const PROTOCOL_WALLET =
+    'GPROTOCOLWALLETXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  const USDC_ISSUER =
+    'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
+  const defaultConfig: Record<string, unknown> = {
+    REFERRAL_REWARD_AMOUNT: 10,
+    REFERRAL_REWARD_ASSET: 'USDC',
+    PROTOCOL_WALLET_ADDRESS: PROTOCOL_WALLET,
+    ANCHOR_USDC_ASSET: `USDC:${USDC_ISSUER}`,
+  };
+  let configValues: Record<string, unknown>;
+
   const mockConfigService = {
-    get: jest.fn((key: string) => {
-      const config = {
-        REFERRAL_REWARD_AMOUNT: 10,
-        REFERRAL_REWARD_ASSET: 'USDC',
-      };
-      return config[key];
-    }),
+    get: jest.fn((key: string) => configValues[key]),
   };
 
   beforeEach(async () => {
@@ -116,7 +123,8 @@ describe('ReferralService', () => {
     _stellarService = module.get<StellarService>(StellarService);
     _configService = module.get<ConfigService>(ConfigService);
 
-    // Clear all mocks
+    // Reset config to defaults for each test, and clear all mocks.
+    configValues = { ...defaultConfig };
     jest.clearAllMocks();
   });
 
@@ -300,10 +308,13 @@ describe('ReferralService', () => {
         ...pendingReferral,
         status: ReferralStatus.REWARDED,
         rewardAmount: 10,
-        rewardTxHash: 'fake_tx_hash',
+        rewardTxHash: 'real_tx_hash_abc123',
         convertedAt: expect.any(Date),
       });
       mockUserRepository.findOne.mockResolvedValue(mockReferrer);
+      mockStellarService.sendPayment.mockResolvedValue({
+        transactionHash: 'real_tx_hash_abc123',
+      });
 
       await service.completeReferral('referred-id');
 
@@ -311,6 +322,7 @@ describe('ReferralService', () => {
         where: { referredId: 'referred-id', status: ReferralStatus.PENDING },
       });
       expect(mockReferralRepository.save).toHaveBeenCalledTimes(2); // Once in complete, once in distribute
+      expect(mockStellarService.sendPayment).toHaveBeenCalledTimes(1);
     });
 
     it('should not complete if no pending referral exists', async () => {
@@ -332,25 +344,43 @@ describe('ReferralService', () => {
   });
 
   describe('distributeReward', () => {
-    it('should distribute reward successfully', async () => {
+    it('should distribute reward successfully via a real Stellar payment', async () => {
       const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
       mockUserRepository.findOne.mockResolvedValue(mockReferrer);
+      mockStellarService.sendPayment.mockResolvedValue({
+        transactionHash: 'real_tx_hash_xyz789',
+      });
 
-      // Access private method through type assertion
       await (service as any).distributeReward(referral);
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: referral.referrerId },
       });
+      expect(mockStellarService.sendPayment).toHaveBeenCalledWith({
+        sourcePublicKey: PROTOCOL_WALLET,
+        destinationPublicKey: mockReferrer.walletAddress,
+        amount: '10.0000000',
+        asset: {
+          type: 'CREDIT_ALPHANUM4',
+          code: 'USDC',
+          issuer: USDC_ISSUER,
+        },
+      });
       expect(mockReferralRepository.save).toHaveBeenCalledWith({
         ...referral,
         status: ReferralStatus.REWARDED,
         rewardAmount: 10,
-        rewardTxHash: expect.stringContaining('fake_stellar_tx_hash_'),
+        rewardTxHash: 'real_tx_hash_xyz789',
       });
+      // Never the old fabricated-hash format.
+      expect(mockReferralRepository.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          rewardTxHash: expect.stringContaining('fake_stellar_tx_hash_'),
+        }),
+      );
     });
 
-    it('should handle referrer without wallet address', async () => {
+    it('should mark the referral REWARD_FAILED when the referrer has no wallet address, without calling sendPayment', async () => {
       const loggerErrorSpy = jest
         .spyOn(Logger.prototype, 'error')
         .mockImplementation();
@@ -363,31 +393,135 @@ describe('ReferralService', () => {
 
       await (service as any).distributeReward(referral);
 
+      expect(mockStellarService.sendPayment).not.toHaveBeenCalled();
+      expect(mockReferralRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ReferralStatus.REWARD_FAILED }),
+      );
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Referrer referrer-id has no wallet address',
+        expect.stringContaining('has no wallet address'),
       );
 
       loggerErrorSpy.mockRestore();
     });
 
-    it('should handle reward distribution errors', async () => {
+    it('should mark the referral REWARD_FAILED when PROTOCOL_WALLET_ADDRESS is not configured, without calling sendPayment', async () => {
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      configValues.PROTOCOL_WALLET_ADDRESS = undefined;
+      const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
+
+      await (service as any).distributeReward(referral);
+
+      expect(mockUserRepository.findOne).not.toHaveBeenCalled();
+      expect(mockStellarService.sendPayment).not.toHaveBeenCalled();
+      expect(mockReferralRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ReferralStatus.REWARD_FAILED }),
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PROTOCOL_WALLET_ADDRESS not configured'),
+      );
+
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('should mark the referral REWARD_FAILED when sendPayment throws (e.g. insufficient balance), and record no tx hash', async () => {
       const loggerErrorSpy = jest
         .spyOn(Logger.prototype, 'error')
         .mockImplementation();
 
       const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
       mockUserRepository.findOne.mockResolvedValue(mockReferrer);
-      mockReferralRepository.save.mockRejectedValue(
-        new Error('Database error'),
+      mockStellarService.sendPayment.mockRejectedValue(
+        new Error('Insufficient balance'),
       );
 
       await (service as any).distributeReward(referral);
 
+      expect(mockReferralRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ReferralStatus.REWARD_FAILED,
+        }),
+      );
+      const savedArg = mockReferralRepository.save.mock.calls[0][0];
+      expect(savedArg.rewardTxHash).not.toBeTruthy();
+      expect(savedArg.status).not.toBe(ReferralStatus.REWARDED);
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Failed to distribute reward: Database error',
+        expect.stringContaining('Insufficient balance'),
       );
 
       loggerErrorSpy.mockRestore();
+    });
+
+    it('should mark the referral REWARD_FAILED when the reward asset has no known issuer configured', async () => {
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      configValues.ANCHOR_USDC_ASSET = undefined;
+      const referral = { ...mockReferral, status: ReferralStatus.COMPLETED };
+      mockUserRepository.findOne.mockResolvedValue(mockReferrer);
+
+      await (service as any).distributeReward(referral);
+
+      expect(mockStellarService.sendPayment).not.toHaveBeenCalled();
+      expect(mockReferralRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ReferralStatus.REWARD_FAILED }),
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not configured with a known issuer'),
+      );
+
+      loggerErrorSpy.mockRestore();
+    });
+  });
+
+  describe('retryFailedReward', () => {
+    it('retries payout for a referral currently in REWARD_FAILED and marks it REWARDED on success', async () => {
+      const failedReferral = {
+        ...mockReferral,
+        status: ReferralStatus.REWARD_FAILED,
+      };
+      mockReferralRepository.findOne.mockResolvedValue(failedReferral);
+      mockUserRepository.findOne.mockResolvedValue(mockReferrer);
+      mockStellarService.sendPayment.mockResolvedValue({
+        transactionHash: 'retry_tx_hash_111',
+      });
+
+      await service.retryFailedReward('test-referral-id');
+
+      expect(mockReferralRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: 'test-referral-id',
+          status: ReferralStatus.REWARD_FAILED,
+        },
+      });
+      expect(mockStellarService.sendPayment).toHaveBeenCalledTimes(1);
+      expect(mockReferralRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ReferralStatus.REWARDED,
+          rewardTxHash: 'retry_tx_hash_111',
+        }),
+      );
+    });
+
+    it('does nothing when no REWARD_FAILED referral exists for the given id', async () => {
+      const loggerWarnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation();
+
+      mockReferralRepository.findOne.mockResolvedValue(null);
+
+      await service.retryFailedReward('missing-id');
+
+      expect(mockStellarService.sendPayment).not.toHaveBeenCalled();
+      expect(mockReferralRepository.save).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No REWARD_FAILED referral found'),
+      );
+
+      loggerWarnSpy.mockRestore();
     });
   });
 

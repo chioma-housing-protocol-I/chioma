@@ -1,12 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { DataSource } from 'typeorm';
 import { AgreementsService } from '../agreements.service';
 import {
   RentAgreement,
   AgreementStatus,
 } from '../../rent/entities/rent-contract.entity';
 import { Payment } from '../../rent/entities/payment.entity';
+import { StellarEscrow } from '../../stellar/entities/stellar-escrow.entity';
+import { TerminationReconciliation } from '../entities/termination-reconciliation.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ReviewPromptService } from '../../reviews/review-prompt.service';
 import { ChiomaContractService } from '../../stellar/services/chioma-contract.service';
@@ -46,6 +49,22 @@ describe('AgreementsService – Pagination', () => {
           useValue: mockAgreementRepo,
         },
         { provide: getRepositoryToken(Payment), useValue: mockPaymentRepo },
+        {
+          provide: getRepositoryToken(StellarEscrow),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(TerminationReconciliation),
+          useValue: { create: jest.fn(), save: jest.fn(), findOne: jest.fn() },
+        },
+        {
+          provide: DataSource,
+          useValue: {
+            transaction: jest.fn((fn) =>
+              fn({ save: jest.fn(), create: jest.fn() }),
+            ),
+          },
+        },
         { provide: AuditService, useValue: {} },
         { provide: ReviewPromptService, useValue: {} },
         { provide: ChiomaContractService, useValue: {} },

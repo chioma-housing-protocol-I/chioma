@@ -8,15 +8,26 @@ import { MatchingAiService } from './matching-ai.service';
 import { MatchingAiController } from './controllers/matching-ai.controller';
 import { UserPreferences } from './entities/user-preferences.entity';
 import { Property } from '../properties/entities/property.entity';
+import { Favorite } from '../favorites/entities/favorite.entity';
+import { SavedSearch } from '../search/entities/saved-search.entity';
+import { UserRecommendationService } from './user-recommendation.service';
 import { CacheService } from '../../common/cache/cache.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserPreferences, Property])],
+  imports: [
+    TypeOrmModule.forFeature([
+      UserPreferences,
+      Property,
+      Favorite,
+      SavedSearch,
+    ]),
+  ],
   controllers: [AiController, MatchingAiController],
   providers: [
     MlModelManagerService,
     FraudDetectionService,
     RecommendationEngineService,
+    UserRecommendationService,
     MatchingAiService,
     CacheService,
   ],

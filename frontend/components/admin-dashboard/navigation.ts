@@ -6,6 +6,7 @@ import {
   BarChart3,
   Blocks,
   Gavel,
+  MessageSquare,
   ShieldAlert,
   ShieldCheck,
   ShieldX,
@@ -70,6 +71,12 @@ const adminNavItems: AdminNavItem[] = [
     icon: Gavel,
     label: 'Disputes Dashboard',
     href: '/admin/disputes',
+    visibleFor: ['admin'],
+  },
+  {
+    icon: MessageSquare,
+    label: 'Feedback Inbox',
+    href: '/admin/feedback',
     visibleFor: ['admin'],
   },
   {

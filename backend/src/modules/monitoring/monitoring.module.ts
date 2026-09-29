@@ -1,3 +1,4 @@
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import {
   Module,
   MiddlewareConsumer,
@@ -8,6 +9,9 @@ import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MetricsService } from './metrics.service';
+import { PerformanceController } from './performance.controller';
+import { PerformanceAlertService } from './performance-alert.service';
+import { PerformanceAlert } from './entities/performance-alert.entity';
 import { MetricsMiddleware } from './metrics.middleware';
 import { PerformanceMiddleware } from './performance.middleware';
 import { MonitoringController } from './monitoring.controller';
@@ -25,6 +29,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 
 @Module({
+  imports: [TypeOrmModule.forFeature([PerformanceAlert])],
   imports: [
     HttpModule,
     ScheduleModule.forRoot(),
@@ -35,6 +40,7 @@ import { StorageModule } from '../storage/storage.module';
   controllers: [MonitoringController, PerformanceController],
   providers: [
     MetricsService,
+    PerformanceAlertService,
     AlertService,
     ErrorNotificationService,
     ErrorEscalationService,
@@ -46,6 +52,7 @@ import { StorageModule } from '../storage/storage.module';
     WebhookSignatureService,
     WebhookSignatureGuard,
   ],
+  exports: [MetricsService, StructuredLoggerService, PerformanceAlertService],
   exports: [
     MetricsService,
     StructuredLoggerService,

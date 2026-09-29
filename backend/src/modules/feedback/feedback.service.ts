@@ -1,9 +1,18 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-import { Feedback, FeedbackType } from './entities/feedback.entity';
+import {
+  Feedback,
+  FeedbackStatus,
+  FeedbackType,
+} from './entities/feedback.entity';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
+import { QueryFeedbackDto } from './dto/query-feedback.dto';
 
 const URL_PATTERN = /https?:\/\/\S+/gi;
 
@@ -46,6 +55,40 @@ export class FeedbackService {
     });
     const saved = await this.feedbackRepo.save(feedback);
     return { id: saved.id };
+  }
+
+  async findAllForAdmin(query: QueryFeedbackDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const where: { status?: FeedbackStatus; type?: FeedbackType } = {};
+    if (query.status) where.status = query.status;
+    if (query.type) where.type = query.type;
+
+    const [data, total] = await this.feedbackRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async findOneForAdmin(id: string): Promise<Feedback> {
+    const feedback = await this.feedbackRepo.findOne({ where: { id } });
+    if (!feedback) throw new NotFoundException('Feedback not found');
+    return feedback;
+  }
+
+  async updateStatus(
+    id: string,
+    status: FeedbackStatus,
+    adminId: string,
+  ): Promise<Feedback> {
+    const feedback = await this.findOneForAdmin(id);
+    feedback.status = status;
+    feedback.reviewedBy = adminId;
+    feedback.reviewedAt = new Date();
+    return this.feedbackRepo.save(feedback);
   }
 
   /**

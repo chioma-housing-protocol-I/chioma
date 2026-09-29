@@ -4,6 +4,49 @@
 
 Integration tests validate realistic workflows across multiple actors, state changes, and contract modules. They should prove the protocol flow works, not only that individual helpers compile.
 
+## Multi-Contract Harness
+
+Every workflow below is exercised *within a single contract's own test
+suite* (registering only that one contract in a fresh `Env`). Before #1687
+there was no harness that registered several of this workspace's 9
+contracts together in one `Env` and drove a scenario across them the way an
+off-chain caller (backend/frontend/indexer) actually would.
+
+`contracts/integration_tests` (run via `cargo test -p integration-tests`) is
+that harness. It path-depends on `property_registry`, `agent_registry`,
+`escrow`, `dispute_resolution`, `payment`, and `chioma` as libraries and
+registers real contracts, not mocks, in `tests/protocol_scenarios.rs`.
+
+A workspace-wide audit for #1685/#1687 found the 9 contracts almost never
+call each other on-chain -- `dispute_resolution::raise_dispute` calling
+`chioma`'s agreement lookup via `env.invoke_contract` is the *only*
+project-to-project call site in the whole codebase (every other contract's
+only external call is to a Soroban token contract). Registering the real
+`chioma` contract for that scenario, instead of the hand-written
+`MockChiomaContract` that `dispute_resolution`'s own test suite uses,
+surfaced two pre-existing bugs the mock had been silently working around:
+
+1. The invoke symbol is `"get_agr"` (`dispute_resolution/src/dispute.rs`),
+   but `chioma`'s actual exported function is `get_agreement` -- Soroban
+   resolves by exact name, so this call never reaches it in production.
+2. Even with the symbol fixed, `dispute_resolution`'s local `RentAgreement`
+   type doesn't structurally match `chioma`'s real one (different field
+   names/shapes), so decoding the real response would still fail.
+
+See the doc comment on
+`scenario_1_raise_dispute_against_real_chioma_agreement_is_currently_broken`
+in `contracts/integration_tests/tests/protocol_scenarios.rs` for the full
+writeup; that test intentionally documents this as still-broken rather than
+papering over it, and is written to fail loudly (with a message pointing
+back here) once someone fixes the underlying symbol/type mismatch, so it
+gets updated rather than silently passing for the wrong reason.
+
+The other two scenarios in that file (a property/agent/escrow lifecycle,
+and a property/recurring-payment/late-fee lifecycle) don't hit real
+cross-contract calls, since none exist for those contracts -- they instead
+confirm that registering multiple contracts together in one `Env` doesn't
+change any individual contract's behavior or leak state between them.
+
 ## Core Workflows
 
 | Workflow                    | Required assertions                                                                                       |

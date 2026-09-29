@@ -10,6 +10,11 @@ import {
 import { WebhookSignatureGuard } from './guards/webhook-signature.guard';
 import { WEBHOOK_SECRET_METADATA_KEY } from './decorators/webhook-secret.decorator';
 import { MetricsService } from '../monitoring/metrics.service';
+import { SecurityEventsService } from '../security/security-events.service';
+import {
+  SecurityEventSeverity,
+  SecurityEventType,
+} from '../security/entities/security-event.entity';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -435,6 +440,47 @@ describe('WebhookSignatureService', () => {
       );
     });
 
+    it('accepts a rotated secret supplied as a JSON array, newest first', () => {
+      const rotatedSecrets = JSON.stringify(['newer-secret', 'legacy-secret']);
+      const ts = buildTimestamp();
+      const sig = service.generateSignature(PAYLOAD, ts, 'legacy-secret');
+
+      expect(() =>
+        service.verifySignature(PAYLOAD, sig, ts, rotatedSecrets),
+      ).not.toThrow();
+    });
+
+    it('creates a security event when a signature is rejected', async () => {
+      const createEvent = jest.fn().mockResolvedValue({});
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WebhookSignatureService,
+          {
+            provide: SecurityEventsService,
+            useValue: { createEvent },
+          },
+        ],
+      }).compile();
+      const svc = module.get<WebhookSignatureService>(WebhookSignatureService);
+
+      expect(() =>
+        svc.verifySignature(PAYLOAD, '0'.repeat(64), buildTimestamp(), SECRET),
+      ).toThrow('Invalid webhook signature');
+
+      expect(createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+          severity: SecurityEventSeverity.HIGH,
+          success: false,
+          errorMessage: 'Rejected webhook with invalid signature',
+          details: expect.objectContaining({
+            reason: 'signature_mismatch',
+            event: 'webhook_signature_verification',
+          }),
+        }),
+      );
+    });
+
     it('does not throw when MetricsService is not provided (optional injection)', () => {
       const ts = buildTimestamp();
       const sig = service.generateSignature(PAYLOAD, ts, SECRET);
@@ -470,6 +516,9 @@ describe('WebhookSignatureGuard', () => {
   let signatureService: WebhookSignatureService;
   let reflector: jest.Mocked<Reflector>;
   let configService: jest.Mocked<ConfigService>;
+  const securityEventsService = {
+    createEvent: jest.fn().mockResolvedValue({}),
+  };
 
   const buildContext = (
     overrides: Partial<{
@@ -524,6 +573,7 @@ describe('WebhookSignatureGuard', () => {
         WebhookSignatureService,
         { provide: Reflector, useValue: reflector },
         { provide: ConfigService, useValue: configService },
+        { provide: SecurityEventsService, useValue: securityEventsService },
       ],
     }).compile();
 
@@ -535,7 +585,7 @@ describe('WebhookSignatureGuard', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('returns true for a valid signed request using rawBody', () => {
+  it('returns true for a valid signed request using rawBody', async () => {
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
     const ctx = buildContext({
@@ -543,40 +593,46 @@ describe('WebhookSignatureGuard', () => {
       timestamp: ts,
       rawBody: PAYLOAD,
     });
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
   });
 
-  it('returns true for a valid signed request using JSON.stringify(body)', () => {
+  it('returns true for a valid signed request using JSON.stringify(body)', async () => {
     const body = { event: 'payment.received' };
     const bodyStr = JSON.stringify(body);
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(bodyStr, ts, SECRET);
     const ctx = buildContext({ signature: sig, timestamp: ts, body });
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
   });
 
-  it('throws UnauthorizedException when signature header is absent', () => {
+  it('throws UnauthorizedException when signature header is absent', async () => {
     const ctx = buildContext({ timestamp: buildTimestamp(), rawBody: PAYLOAD });
-    expect(() => guard.canActivate(ctx)).toThrow('Missing webhook signature');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Missing webhook signature',
+    );
   });
 
-  it('throws UnauthorizedException when timestamp header is absent', () => {
+  it('throws UnauthorizedException when timestamp header is absent', async () => {
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
     const ctx = buildContext({ signature: sig, rawBody: PAYLOAD });
-    expect(() => guard.canActivate(ctx)).toThrow('Missing webhook signature');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Missing webhook signature',
+    );
   });
 
-  it('throws UnauthorizedException for an invalid signature', () => {
+  it('throws UnauthorizedException for an invalid signature', async () => {
     const ctx = buildContext({
       signature: '0'.repeat(64),
       timestamp: buildTimestamp(),
       rawBody: PAYLOAD,
     });
-    expect(() => guard.canActivate(ctx)).toThrow('Invalid webhook signature');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Invalid webhook signature',
+    );
   });
 
-  it('throws UnauthorizedException for a stale timestamp', () => {
+  it('throws UnauthorizedException for a stale timestamp', async () => {
     const staleTs = buildTimestamp(-6 * 60 * 1000);
     const sig = signatureService.generateSignature(PAYLOAD, staleTs, SECRET);
     const ctx = buildContext({
@@ -584,10 +640,12 @@ describe('WebhookSignatureGuard', () => {
       timestamp: staleTs,
       rawBody: PAYLOAD,
     });
-    expect(() => guard.canActivate(ctx)).toThrow('Webhook timestamp expired');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Webhook timestamp expired',
+    );
   });
 
-  it('throws InternalServerErrorException when config secret is missing', () => {
+  it('throws InternalServerErrorException when config secret is missing', async () => {
     configService.get.mockReturnValue(undefined);
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
@@ -596,12 +654,12 @@ describe('WebhookSignatureGuard', () => {
       timestamp: ts,
       rawBody: PAYLOAD,
     });
-    expect(() => guard.canActivate(ctx)).toThrow(
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
       'Webhook secret misconfigured',
     );
   });
 
-  it('uses the config key from the @WebhookSecret decorator', () => {
+  it('uses the config key from the @WebhookSecret decorator', async () => {
     reflector.getAllAndOverride.mockReturnValue('KYC_WEBHOOK_SECRET');
     configService.get.mockImplementation((key: string) =>
       key === 'KYC_WEBHOOK_SECRET' ? 'kyc-secret' : undefined,
@@ -613,11 +671,11 @@ describe('WebhookSignatureGuard', () => {
       timestamp: ts,
       rawBody: PAYLOAD,
     });
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(configService.get).toHaveBeenCalledWith('KYC_WEBHOOK_SECRET');
   });
 
-  it('falls back to WEBHOOK_SIGNATURE_SECRET when decorator key is not set', () => {
+  it('falls back to WEBHOOK_SIGNATURE_SECRET when decorator key is not set', async () => {
     reflector.getAllAndOverride.mockReturnValue(null);
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
@@ -626,11 +684,11 @@ describe('WebhookSignatureGuard', () => {
       timestamp: ts,
       rawBody: PAYLOAD,
     });
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(configService.get).toHaveBeenCalledWith('WEBHOOK_SIGNATURE_SECRET');
   });
 
-  it('prefers rawBody over JSON.stringify(body) for signature verification', () => {
+  it('prefers rawBody over JSON.stringify(body) for signature verification', async () => {
     const ts = buildTimestamp();
     // Sign the rawBody string
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
@@ -641,7 +699,57 @@ describe('WebhookSignatureGuard', () => {
       rawBody: PAYLOAD,
       body: { different: 'body' },
     });
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+  });
+
+  it('accepts the previous configured secret during key rotation', async () => {
+    const previousSecret = 'previous-rotation-secret';
+    configService.get.mockImplementation((key: string) =>
+      key === 'PAYMENT_WEBHOOK_SECRET_PREVIOUS' ? previousSecret : SECRET,
+    );
+    reflector.getAllAndOverride.mockReturnValue('PAYMENT_WEBHOOK_SECRET');
+    const ts = buildTimestamp();
+    const sig = signatureService.generateSignature(PAYLOAD, ts, previousSecret);
+    const ctx = buildContext({
+      signature: sig,
+      timestamp: ts,
+      rawBody: PAYLOAD,
+    });
+
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(configService.get).toHaveBeenCalledWith(
+      'PAYMENT_WEBHOOK_SECRET_PREVIOUS',
+    );
+  });
+
+  it('persists rejected signatures as high-severity security events', async () => {
+    const ctx = buildContext({
+      signature: '0'.repeat(64),
+      timestamp: buildTimestamp(),
+      rawBody: PAYLOAD,
+      ipAddress: '198.51.100.23',
+      userAgent: 'provider-client/2.0',
+      path: '/api/payments/webhooks/gateway',
+      method: 'POST',
+    });
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Invalid webhook signature',
+    );
+    expect(securityEventsService.createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'high',
+        success: false,
+        ipAddress: '198.51.100.23',
+        userAgent: 'provider-client/2.0',
+        details: expect.objectContaining({
+          category: 'webhook_signature_rejected',
+          endpoint: 'WEBHOOK_SIGNATURE_SECRET',
+          path: '/api/payments/webhooks/gateway',
+          method: 'POST',
+        }),
+      }),
+    );
   });
 
   it('WEBHOOK_SECRET_METADATA_KEY constant is defined', () => {
@@ -649,7 +757,7 @@ describe('WebhookSignatureGuard', () => {
     expect(typeof WEBHOOK_SECRET_METADATA_KEY).toBe('string');
   });
 
-  it('passes request context (IP, user agent, path, method, endpoint) to the service', () => {
+  it('passes request context (IP, user agent, path, method, endpoint)', async () => {
     const ts = buildTimestamp();
     const sig = signatureService.generateSignature(PAYLOAD, ts, SECRET);
     const verifySpy = jest.spyOn(signatureService, 'verifySignature');
@@ -664,7 +772,7 @@ describe('WebhookSignatureGuard', () => {
       method: 'POST',
     });
 
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
 
     const callArgs = verifySpy.mock.calls[0];
     expect(callArgs[5]).toMatchObject({
@@ -676,7 +784,7 @@ describe('WebhookSignatureGuard', () => {
     });
   });
 
-  it('passes the decorator config key as the endpoint context', () => {
+  it('passes the decorator config key as the endpoint context', async () => {
     reflector.getAllAndOverride.mockReturnValue('KYC_WEBHOOK_SECRET');
     configService.get.mockImplementation((key: string) =>
       key === 'KYC_WEBHOOK_SECRET' ? 'kyc-secret' : undefined,
@@ -691,7 +799,7 @@ describe('WebhookSignatureGuard', () => {
       rawBody: PAYLOAD,
     });
 
-    expect(guard.canActivate(ctx)).toBe(true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(verifySpy.mock.calls[0][5]).toMatchObject({
       endpoint: 'KYC_WEBHOOK_SECRET',
     });

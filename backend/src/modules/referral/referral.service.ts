@@ -4,6 +4,7 @@ import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Referral, ReferralStatus } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
 import { StellarService } from '../stellar/services/stellar.service';
+import { AssetType } from '../stellar/entities/stellar-transaction.entity';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { SystemError } from '../../common/errors/domain-errors';
@@ -171,10 +172,97 @@ export class ReferralService {
 
     this.logger.log(`Referral completed for user ${referredUserId}`);
 
-    // Trigger reward distribution
+    // Trigger reward distribution. distributeReward never throws past this
+    // point — on any failure (misconfiguration, missing wallet, or a real
+    // Stellar payment error) it marks the referral REWARD_FAILED and
+    // returns, so completeReferral does not need its own try/catch here.
+    // See distributeReward's doc comment for why this is swallow-after-mark
+    // rather than re-throw.
     await this.distributeReward(referral);
   }
 
+  /**
+   * Parses this codebase's established `CODE:ISSUER` asset config format
+   * (e.g. `ANCHOR_USDC_ASSET=USDC:GA5Z...` in `.env.example`) into a
+   * `{ type, code, issuer }` triple suitable for `CreatePaymentDto.asset`.
+   * Stellar asset codes of 1-4 characters use `CREDIT_ALPHANUM4`; 5-12
+   * characters use `CREDIT_ALPHANUM12`.
+   *
+   * Returns `null` if the configured string is missing or malformed, so
+   * callers can fail the payout clearly rather than sending a malformed
+   * asset to `sendPayment`.
+   */
+  private parseAssetConfig(
+    assetConfig: string | undefined,
+  ): { type: AssetType; code: string; issuer: string } | null {
+    if (!assetConfig) {
+      return null;
+    }
+    const [code, issuer] = assetConfig.split(':');
+    if (!code || !issuer) {
+      return null;
+    }
+    return {
+      type:
+        code.length <= 4
+          ? AssetType.CREDIT_ALPHANUM4
+          : AssetType.CREDIT_ALPHANUM12,
+      code,
+      issuer,
+    };
+  }
+
+  /**
+   * Resolves the reward asset for `sendPayment`'s `CreatePaymentDto.asset`.
+   *
+   * - `XLM` (native) needs no issuer and is omitted from the DTO (`sendPayment`
+   *   defaults to native XLM when `asset` is undefined).
+   * - `USDC` is resolved from the existing `ANCHOR_USDC_ASSET` config value
+   *   (`CODE:ISSUER`, the same convention already declared in
+   *   `.env.example` / `env.validation.ts` for anchor USDC), reusing that
+   *   issuer rather than inventing a new one.
+   * - Any other configured `rewardAsset` is currently unsupported: this
+   *   codebase has no other known-issuer convention to resolve it from, so
+   *   distribution is refused rather than guessing at a financial config
+   *   value.
+   */
+  private resolveRewardAsset(
+    rewardAsset: string,
+  ): { type: AssetType; code: string; issuer: string } | null | undefined {
+    if (rewardAsset === 'XLM') {
+      return undefined; // native, no asset object needed
+    }
+    if (rewardAsset === 'USDC') {
+      const usdcConfig = this.configService.get<string>('ANCHOR_USDC_ASSET');
+      return this.parseAssetConfig(usdcConfig);
+    }
+    return null; // unsupported asset — no known issuer convention
+  }
+
+  /**
+   * Pays out the reward for a COMPLETED referral via a real on-chain
+   * Stellar payment, and always leaves the referral in a definitive
+   * status:
+   *
+   * - Success: REWARDED, with the real `transactionHash` from
+   *   `sendPayment`'s resolved `StellarTransaction`.
+   * - Any failure (payout source not configured, referrer has no wallet,
+   *   unsupported/misconfigured reward asset, or `sendPayment` itself
+   *   throws — insufficient balance, unregistered source account, network
+   *   error, etc.): REWARD_FAILED, with no tx hash written.
+   *
+   * Design choice — swallow after marking failed, don't re-throw:
+   * `completeReferral` calls this fire-and-forget (`await`ed, but with no
+   * try/catch of its own) as a side effect of completing a referral: a
+   * failed payout must never unwind the already-committed COMPLETED status
+   * change or bubble an error back to whatever triggered completion (e.g.
+   * an onboarding/KYC flow). Marking REWARD_FAILED on the referral row is
+   * the durable record of the failure — the same "log and stop, don't
+   * crash the caller" shape this codebase already uses for a background
+   * side effect in `RentReconciliationService.runReconciliation` (skips
+   * cleanly rather than throwing when `PROTOCOL_WALLET_ADDRESS` is unset).
+   * A REWARD_FAILED referral is retryable via {@link retryFailedReward}.
+   */
   private async distributeReward(referral: Referral): Promise<void> {
     const rewardAmount = this.configService.get<number>(
       'REFERRAL_REWARD_AMOUNT',
@@ -185,43 +273,91 @@ export class ReferralService {
       'USDC',
     );
 
-    // In a real scenario, we would use StellarService to send the reward
-    // This is a placeholder for the Stellar integration
-    try {
-      this.logger.log(
-        `Distributing reward of ${rewardAmount} ${rewardAsset} to referrer ${referral.referrerId}`,
+    this.logger.log(
+      `Distributing reward of ${rewardAmount} ${rewardAsset} to referrer ${referral.referrerId}`,
+    );
+
+    const markFailed = async (reason: string): Promise<void> => {
+      this.logger.error(
+        `Reward distribution failed for referral ${referral.id}: ${reason}`,
       );
+      referral.status = ReferralStatus.REWARD_FAILED;
+      await this.referralRepository.save(referral);
+    };
 
-      const referrer = await this.userRepository.findOne({
-        where: { id: referral.referrerId },
+    const protocolWallet =
+      this.configService.get<string>('PROTOCOL_WALLET_ADDRESS') ?? '';
+    if (!protocolWallet) {
+      await markFailed(
+        'PROTOCOL_WALLET_ADDRESS not configured — cannot pay referral rewards',
+      );
+      return;
+    }
+
+    const referrer = await this.userRepository.findOne({
+      where: { id: referral.referrerId },
+    });
+    if (!referrer || !referrer.walletAddress) {
+      await markFailed(`Referrer ${referral.referrerId} has no wallet address`);
+      return;
+    }
+
+    const asset = this.resolveRewardAsset(rewardAsset);
+    if (asset === null) {
+      await markFailed(
+        `Reward asset "${rewardAsset}" is not configured with a known issuer`,
+      );
+      return;
+    }
+
+    try {
+      const transaction = await this.stellarService.sendPayment({
+        sourcePublicKey: protocolWallet,
+        destinationPublicKey: referrer.walletAddress,
+        amount: rewardAmount.toFixed(7),
+        asset: asset
+          ? { type: asset.type, code: asset.code, issuer: asset.issuer }
+          : undefined,
       });
-      if (!referrer || !referrer.walletAddress) {
-        this.logger.error(
-          `Referrer ${referral.referrerId} has no wallet address`,
-        );
-        return;
-      }
-
-      // Placeholder for Stellar distribution
-      // const txHash = await this.stellarService.sendPayment(
-      //   referrer.walletAddress,
-      //   rewardAsset,
-      //   rewardAmount.toString()
-      // );
-
-      // Simulate a tx hash for now
-      const txHash =
-        'fake_stellar_tx_hash_' + Math.random().toString(36).substring(7);
 
       referral.status = ReferralStatus.REWARDED;
       referral.rewardAmount = rewardAmount;
-      referral.rewardTxHash = txHash;
+      referral.rewardTxHash = transaction.transactionHash;
       await this.referralRepository.save(referral);
 
-      this.logger.log(`Reward distributed successfully. Tx Hash: ${txHash}`);
+      this.logger.log(
+        `Reward distributed successfully. Tx Hash: ${transaction.transactionHash}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to distribute reward: ${error.message}`);
+      await markFailed(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  /**
+   * Retries reward payout for a referral currently stuck in
+   * REWARD_FAILED. Scoping note: this codebase has a BullMQ `blockchain`
+   * queue convention (`BULL_QUEUE_BLOCKCHAIN_ATTEMPTS`/
+   * `BULL_QUEUE_BLOCKCHAIN_BACKOFF_DELAY` in `env.validation.ts`,
+   * `BlockchainQueueProcessor` in `queues/processors/blockchain.processor.ts`)
+   * that would be a natural home for automatic retries, but wiring reward
+   * payout through it is a larger change — a new job type, a processor
+   * case, and new coupling between `QueuesModule` and `ReferralModule`
+   * (which today only depends on `StellarModule`) — than this fix is
+   * scoped to. This method is deliberately left as a plain callable entry
+   * point an admin action or a future cron/queue job can invoke; no
+   * automatic trigger is wired up in this change.
+   */
+  async retryFailedReward(referralId: string): Promise<void> {
+    const referral = await this.referralRepository.findOne({
+      where: { id: referralId, status: ReferralStatus.REWARD_FAILED },
+    });
+
+    if (!referral) {
+      this.logger.warn(`No REWARD_FAILED referral found for id ${referralId}`);
+      return;
+    }
+
+    await this.distributeReward(referral);
   }
 
   async getReferralStats(userId: string) {

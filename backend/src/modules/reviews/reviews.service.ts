@@ -9,6 +9,7 @@ import { HostReview } from './entities/host-review.entity';
 import { PostGuestReviewDto } from './dto/post-guest-review.dto';
 import { PostHostReviewDto } from './dto/post-host-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { RespondReviewDto } from './dto/respond-review.dto';
 import { PaginationUtils } from '../../common/utils';
 import {
   AgreementStatus,
@@ -443,5 +444,32 @@ export class ReviewsService {
     }
 
     throw new ReviewNotFoundError(id);
+  }
+
+  /**
+   * Create or edit the reviewee's public response to a review. Only the
+   * reviewed party (revieweeId) may respond, so edits are implicitly limited
+   * to the original responder.
+   */
+  async respondToReview(
+    id: string,
+    dto: RespondReviewDto,
+    userId: string,
+  ): Promise<Review> {
+    if (containsProhibitedLanguage(dto.response)) {
+      throw new ValidationError('Response contains prohibited language.');
+    }
+    const review = await this.reviewRepository.findOne({ where: { id } });
+    if (!review) {
+      throw new ReviewNotFoundError(id);
+    }
+    if (!userId || review.revieweeId !== userId) {
+      throw new AuthorizationError(
+        'Only the reviewed party can respond to this review',
+      );
+    }
+    review.response = dto.response.trim();
+    review.respondedAt = new Date();
+    return this.reviewRepository.save(review);
   }
 }

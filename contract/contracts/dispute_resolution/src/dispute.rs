@@ -66,6 +66,70 @@ pub fn set_timeout_config(
     Ok(())
 }
 
+/// Mirrors `chioma::types::AgreementStatus` field-for-field (Soroban decodes
+/// `#[contracttype]` enums/structs by name, not position, so this must match
+/// the real contract exactly, including variants `raise_dispute` itself
+/// never checks for, or decoding a `ChiomaRentAgreement` returned by the
+/// real `chioma` contract will fail). See `ChiomaRentAgreement` below for
+/// why this type exists at all instead of reusing a shared crate.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ChiomaAgreementStatus {
+    Draft,
+    Pending,
+    PendingApproval,
+    Active,
+    Completed,
+    Cancelled,
+    Terminated,
+    Disputed,
+}
+
+/// Mirrors `chioma::types::RentAgreement` field-for-field.
+///
+/// `dispute_resolution` has no crate dependency on `chioma` (Soroban
+/// contracts are independently deployed/versioned, not linked), so the
+/// cross-contract call in `raise_dispute` below can only decode the real
+/// `chioma::get_agreement` response by declaring a local type whose field
+/// names line up exactly with chioma's, since the SDK's `#[contracttype]`
+/// XDR encoding is a name-keyed map. Before this fix, this type used
+/// `landlord`/`tenant` field names and lacked `admin`/`user`, `witness_id`,
+/// `metadata_uri`, and `attributes`, which meant it could never actually
+/// decode a real `chioma::RentAgreement` (see #1559) even once the
+/// `get_agr` -> `get_agreement` symbol name below is fixed.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChiomaRentAgreement {
+    pub agreement_id: String,
+    pub admin: Address,
+    pub user: Address,
+    pub agent: Option<Address>,
+    pub monthly_rent: i128,
+    pub security_deposit: i128,
+    pub start_date: u64,
+    pub end_date: u64,
+    pub agent_commission_rate: u32,
+    pub status: ChiomaAgreementStatus,
+    pub total_rent_paid: i128,
+    pub payment_count: u32,
+    pub signed_at: Option<u64>,
+    pub witness_id: Option<Address>,
+    pub payment_token: Address,
+    pub next_payment_due: u64,
+    pub metadata_uri: String,
+    pub attributes: soroban_sdk::Vec<ChiomaAttribute>,
+}
+
+/// Mirrors `chioma::types::Attribute` field-for-field; only needed so
+/// `ChiomaRentAgreement.attributes` above can decode, its contents are
+/// never read here.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChiomaAttribute {
+    pub trait_type: String,
+    pub value: String,
+}
+
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AgreementStatus {
@@ -186,22 +250,45 @@ pub fn raise_dispute(
         return Err(DisputeError::DisputeAlreadyExists);
     }
 
-    // Cross-contract call to get agreement from chioma contract
-    let agreement: Option<RentAgreement> = env.invoke_contract(
-        &state.chioma_contract,
-        &soroban_sdk::symbol_short!("get_agr"),
-        soroban_sdk::vec![env, agreement_id.clone().into()],
-    );
-
-    let agreement = agreement.ok_or(DisputeError::AgreementNotFound)?;
+    // Cross-contract call to get agreement data from the owning `chioma`
+    // contract (#1559): `payment`/`escrow` each used to keep their own
+    // parallel copy of agreement data instead of treating `chioma` as the
+    // single source of truth, and this call itself used to invoke the
+    // wrong symbol (`get_agr`, a `symbol_short!`-truncated name that never
+    // matches chioma's real `get_agreement` export) and decode into a
+    // locally-shaped `RentAgreement` whose fields (`landlord`/`tenant`)
+    // never matched chioma's real `admin`/`user` shape -- so this call
+    // could never actually succeed against a real `chioma` contract. Fixed
+    // by calling the real exported name (`Symbol::new`, since
+    // "get_agreement" is over `symbol_short!`'s 9-character limit) and
+    // decoding into `ChiomaRentAgreement`, which mirrors chioma's real
+    // `RentAgreement` field-for-field.
+    //
+    // `try_invoke_contract` is used instead of `invoke_contract` so a
+    // failure mode where the configured `chioma_contract` address is
+    // unavailable, not actually a `chioma` instance, or otherwise reverts
+    // is handled explicitly as `AgreementLookupFailed` rather than letting
+    // the whole `raise_dispute` invocation panic and abort with an opaque
+    // host trap.
+    let agreement: ChiomaRentAgreement = match env
+        .try_invoke_contract::<Option<ChiomaRentAgreement>, soroban_sdk::Error>(
+            &state.chioma_contract,
+            &soroban_sdk::Symbol::new(env, "get_agreement"),
+            soroban_sdk::vec![env, agreement_id.clone().into()],
+        ) {
+        Ok(Ok(Some(agreement))) => agreement,
+        Ok(Ok(None)) => return Err(DisputeError::AgreementNotFound),
+        Ok(Err(_)) | Err(_) => return Err(DisputeError::AgreementLookupFailed),
+    };
 
     // Validate agreement is in Active status
-    if agreement.status != AgreementStatus::Active {
+    if agreement.status != ChiomaAgreementStatus::Active {
         return Err(DisputeError::InvalidAgreementState);
     }
 
-    // Validate raiser is either tenant or landlord
-    if raiser != agreement.tenant && raiser != agreement.landlord {
+    // Validate raiser is either the tenant (`user`) or landlord (`admin`)
+    // party on the real chioma agreement.
+    if raiser != agreement.user && raiser != agreement.admin {
         return Err(DisputeError::Unauthorized);
     }
 

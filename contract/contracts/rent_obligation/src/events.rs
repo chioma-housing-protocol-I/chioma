@@ -2,14 +2,14 @@ use soroban_sdk::{contractevent, Address, Env, String};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized"]
-#[contractevent(topics = ["initialized"])]
+#[contractevent(topics = ["v1", "initialized"])]
 pub struct ContractInitialized {
     pub initialized_at: u64,
 }
 
 /// Event emitted when a rent obligation NFT is minted
 /// Topics: ["minted", landlord: Address]
-#[contractevent(topics = ["minted"])]
+#[contractevent(topics = ["v1", "minted"])]
 pub struct ObligationMinted {
     #[topic]
     pub landlord: Address,
@@ -19,7 +19,7 @@ pub struct ObligationMinted {
 
 /// Event emitted when a rent obligation NFT is transferred
 /// Topics: ["transferred", from: Address, to: Address]
-#[contractevent(topics = ["transferred"])]
+#[contractevent(topics = ["v1", "transferred"])]
 pub struct ObligationTransferred {
     #[topic]
     pub from: Address,
@@ -30,7 +30,7 @@ pub struct ObligationTransferred {
 
 /// Event emitted when a rent obligation NFT is burned
 /// Topics: ["burned", owner: Address]
-#[contractevent(topics = ["burned"])]
+#[contractevent(topics = ["v1", "burned"])]
 pub struct ObligationBurned {
     #[topic]
     pub owner: Address,
@@ -40,7 +40,7 @@ pub struct ObligationBurned {
 
 /// Event emitted when the system admin is initialized
 /// Topics: ["admin_initialized", admin: Address]
-#[contractevent(topics = ["admin_initialized"])]
+#[contractevent(topics = ["v1", "admin_initialized"])]
 pub struct AdminInitialized {
     #[topic]
     pub admin: Address,
@@ -49,7 +49,7 @@ pub struct AdminInitialized {
 
 /// Event emitted when the system admin is updated
 /// Topics: ["admin_updated", old_admin: Address, new_admin: Address]
-#[contractevent(topics = ["admin_updated"])]
+#[contractevent(topics = ["v1", "admin_updated"])]
 pub struct AdminUpdated {
     #[topic]
     pub old_admin: Address,
@@ -60,7 +60,7 @@ pub struct AdminUpdated {
 
 /// Event emitted when an admin reassigns an obligation's owner
 /// Topics: ["admin_reassigned", agreement_id: String]
-#[contractevent(topics = ["admin_reassigned"])]
+#[contractevent(topics = ["v1", "admin_reassigned"])]
 pub struct ObligationAdminReassigned {
     #[topic]
     pub agreement_id: String,
@@ -71,7 +71,7 @@ pub struct ObligationAdminReassigned {
 
 /// Event emitted when a contract upgrade is proposed
 /// Topics: ["upgrade_proposed", proposal_id: String]
-#[contractevent(topics = ["upgrade_proposed"])]
+#[contractevent(topics = ["v1", "upgrade_proposed"])]
 pub struct UpgradeProposed {
     #[topic]
     pub proposal_id: String,
@@ -82,7 +82,7 @@ pub struct UpgradeProposed {
 
 /// Event emitted when a contract upgrade proposal is approved
 /// Topics: ["upgrade_approved", proposal_id: String]
-#[contractevent(topics = ["upgrade_approved"])]
+#[contractevent(topics = ["v1", "upgrade_approved"])]
 pub struct UpgradeApproved {
     #[topic]
     pub proposal_id: String,
@@ -92,7 +92,7 @@ pub struct UpgradeApproved {
 
 /// Event emitted when a contract upgrade is executed
 /// Topics: ["upgrade_executed", proposal_id: String]
-#[contractevent(topics = ["upgrade_executed"])]
+#[contractevent(topics = ["v1", "upgrade_executed"])]
 pub struct UpgradeExecuted {
     #[topic]
     pub proposal_id: String,

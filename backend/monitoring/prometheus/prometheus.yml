@@ -10,6 +10,7 @@ alerting:
 
 rule_files:
   - "alerts.yml"
+  - "slo-rules.yml"
 
 scrape_configs:
   - job_name: 'chioma-backend'

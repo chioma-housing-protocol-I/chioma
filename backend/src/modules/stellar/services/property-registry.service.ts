@@ -21,6 +21,10 @@ import {
 } from '../dto/property-registry.dto';
 import { EncryptionService } from './encryption.service';
 import { StellarConfig } from '../config/stellar.config';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
 
 @Injectable()
 export class PropertyRegistryService {
@@ -105,24 +109,12 @@ export class PropertyRegistryService {
       tx.sign(keypair);
 
       const sendResponse = await this.sorobanRpc.sendTransaction(tx);
-      if (sendResponse.status === 'ERROR') {
-        throw new Error(
-          `Submit failed: ${JSON.stringify(sendResponse.errorResult)}`,
-        );
-      }
-
-      let txStatus;
-      for (let i = 0; i < 15; i++) {
-        txStatus = await this.sorobanRpc.getTransaction(sendResponse.hash);
-        if (txStatus.status !== 'NOT_FOUND') break;
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-
-      if (txStatus?.status !== 'SUCCESS') {
-        throw new Error(`Transaction failed on-chain: ${txStatus?.status}`);
-      }
-
-      return sendResponse.hash;
+      assertSorobanSubmissionAccepted(sendResponse);
+      return await waitForSorobanTransactionSuccess(
+        this.sorobanRpc,
+        sendResponse.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(`Contract invocation failed: ${functionName}`, error);
       throw new InternalServerErrorException(

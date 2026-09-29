@@ -26,6 +26,7 @@ export type QueryDomain =
   | 'search'
   | 'documents'
   | 'stellarAccounts'
+  | 'sublets'
   | 'default';
 
 export interface CacheTtl {
@@ -63,6 +64,7 @@ export const queryCacheTtl: Record<QueryDomain, CacheTtl> = {
   search: { staleTime: 20_000, gcTime: 5 * MINUTE },
   documents: { staleTime: 60_000, gcTime: 10 * MINUTE },
   stellarAccounts: { staleTime: 30_000, gcTime: 5 * MINUTE },
+  sublets: { staleTime: 30_000, gcTime: 5 * MINUTE },
 };
 
 /**
@@ -99,6 +101,7 @@ export function resolveCacheTtl(queryKey: readonly unknown[]): CacheTtl {
     search: 'search',
     documents: 'documents',
     stellaraccounts: 'stellarAccounts',
+    sublets: 'sublets',
   };
 
   const domain = aliases[normalized] ?? aliases[root];

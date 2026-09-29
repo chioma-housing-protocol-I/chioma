@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Property } from '../../properties/entities/property.entity';
+import { FavoriteCollection } from './favorite-collection.entity';
 
 @Entity('favorites')
 @Unique('unique_user_property', ['userId', 'propertyId'])
@@ -25,8 +26,16 @@ export class Favorite {
   @Column({ type: 'uuid' })
   propertyId: string;
 
+  /** Null means the favorite lives in the user's "Uncategorized" collection. */
+  @Column({ type: 'uuid', nullable: true })
+  collectionId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  @ManyToOne(() => FavoriteCollection, { onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'collection_id' })
+  collection: FavoriteCollection | null;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE', eager: false })
   @JoinColumn({ name: 'user_id' })

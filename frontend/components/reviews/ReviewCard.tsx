@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
-import { User, ShieldCheck } from 'lucide-react';
+import { User, ShieldCheck, MessageSquare } from 'lucide-react';
 import { StarRatingInput } from './StarRatingInput';
 
 export interface Review {
@@ -9,6 +10,9 @@ export interface Review {
   rating: number;
   comment: string;
   createdAt: string | Date;
+  /** Public response from the reviewed host/landlord. */
+  response?: string | null;
+  respondedAt?: string | Date | null;
   author: {
     id: string;
     name: string;
@@ -20,9 +24,27 @@ export interface Review {
 
 interface ReviewCardProps {
   review: Review;
+  /** True when the current user is the reviewed party and may respond. */
+  canRespond?: boolean;
+  onRespond?: (reviewId: string, response: string) => Promise<void>;
 }
 
-export function ReviewCard({ review }: ReviewCardProps) {
+export function ReviewCard({ review, canRespond, onRespond }: ReviewCardProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(review.response ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const submitResponse = async () => {
+    if (!onRespond || !draft.trim()) return;
+    setSaving(true);
+    try {
+      await onRespond(review.id, draft.trim());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dateStr =
     typeof review.createdAt === 'string'
       ? review.createdAt
@@ -85,6 +107,61 @@ export function ReviewCard({ review }: ReviewCardProps) {
       <p className="text-blue-200/60 leading-relaxed text-sm font-medium">
         {review.comment}
       </p>
+
+      {review.response && !editing && (
+        <div className="mt-4 ml-4 pl-4 border-l-2 border-blue-500/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">
+            Response from host
+          </p>
+          <p className="text-blue-200/60 leading-relaxed text-sm">
+            {review.response}
+          </p>
+        </div>
+      )}
+
+      {canRespond && onRespond && !editing && (
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(review.response ?? '');
+            setEditing(true);
+          }}
+          className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300"
+        >
+          <MessageSquare className="w-4 h-4" />
+          {review.response ? 'Edit response' : 'Respond'}
+        </button>
+      )}
+
+      {editing && (
+        <div className="mt-4 space-y-2">
+          <textarea
+            aria-label="Your response"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            className="w-full rounded-lg bg-white/5 border border-white/10 p-3 text-sm text-white"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="px-3 py-1 text-xs text-blue-200/60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitResponse}
+              disabled={saving || !draft.trim()}
+              className="px-3 py-1 text-xs font-semibold rounded-md bg-blue-600 text-white disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save response'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

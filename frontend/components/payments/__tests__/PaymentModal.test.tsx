@@ -189,4 +189,107 @@ describe('PaymentModal', () => {
       'Payment card added successfully',
     );
   });
+
+  describe('simulated API failure (#1551)', () => {
+    it('shows an error toast and keeps the modal open when the payment submission API call fails', async () => {
+      const onSubmit = vi.fn().mockRejectedValue(new Error('Card declined'));
+      const onClose = vi.fn();
+      render(
+        <PaymentModal
+          isOpen={true}
+          onClose={onClose}
+          agreementId="agreement-1"
+          amount={500}
+          onSubmit={onSubmit}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Pay Now'));
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith('Card declined');
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a generic error message when the payment submission API rejects without an Error', async () => {
+      const onSubmit = vi.fn().mockRejectedValue('gateway timeout');
+      render(
+        <PaymentModal
+          isOpen={true}
+          onClose={vi.fn()}
+          amount={500}
+          onSubmit={onSubmit}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Pay Now'));
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith('Payment failed');
+      });
+    });
+
+    it('re-enables Pay Now after a failed submission so the user can retry', async () => {
+      const onSubmit = vi.fn().mockRejectedValueOnce(new Error('transient'));
+      render(
+        <PaymentModal
+          isOpen={true}
+          onClose={vi.fn()}
+          amount={500}
+          onSubmit={onSubmit}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Pay Now'));
+
+      await waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+      expect(screen.getByText('Pay Now').closest('button')).not.toBeDisabled();
+    });
+
+    it('shows an error toast when the create-payment-method API call fails', async () => {
+      mockUsePaymentMethods.mockReturnValue({ data: [], isLoading: false });
+      mockCreateMutateAsync.mockRejectedValue(new Error('Server error'));
+
+      render(<PaymentModal isOpen={true} onClose={vi.fn()} amount={500} />);
+
+      fireEvent.click(screen.getByText('Add Payment Method'));
+      fireEvent.change(screen.getByPlaceholderText('Card Number'), {
+        target: { value: '4111111111111234' },
+      });
+      fireEvent.change(screen.getByPlaceholderText('MM/YY'), {
+        target: { value: '12/30' },
+      });
+      fireEvent.click(screen.getByText('Save Method'));
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith(
+          'Failed to save credit card',
+        );
+      });
+    });
+
+    it('shows an error toast when the delete-payment-method API call fails', async () => {
+      mockDeleteMutateAsync.mockRejectedValue(new Error('Server error'));
+
+      render(<PaymentModal isOpen={true} onClose={vi.fn()} amount={500} />);
+
+      const removeButton = screen.getByTitle('Remove payment method');
+      fireEvent.click(removeButton);
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith(
+          'Failed to delete payment method',
+        );
+      });
+    });
+  });
+
+  it('requires a payment method to be selected before Pay Now is enabled (#1551)', () => {
+    mockUsePaymentMethods.mockReturnValue({ data: [], isLoading: false });
+
+    render(<PaymentModal isOpen={true} onClose={vi.fn()} amount={500} />);
+
+    expect(screen.getByText('Pay Now').closest('button')).toBeDisabled();
+  });
 });

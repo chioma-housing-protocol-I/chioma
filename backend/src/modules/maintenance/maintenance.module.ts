@@ -9,6 +9,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { PropertiesModule } from '../properties/properties.module';
 import { UsersModule } from '../users/users.module';
+import { PaymentModule } from '../payments/payment.module';
+import { Vendor } from './entities/vendor.entity';
 import { AutoRecoveryService } from './auto-recovery.service';
 import { HealthRecoveryService } from './health-recovery.service';
 import { MaintenanceSlaService } from './maintenance-sla.service';
@@ -17,12 +19,13 @@ import { HealthModule } from '../../health/health.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MaintenanceRequest]),
+    TypeOrmModule.forFeature([MaintenanceRequest, Vendor]),
     StorageModule,
     NotificationsModule,
     ReviewsModule,
     PropertiesModule,
     UsersModule,
+    PaymentModule,
     TerminusModule,
     HealthModule,
     ScheduleModule.forRoot(),

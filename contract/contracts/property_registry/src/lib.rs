@@ -25,6 +25,9 @@ mod tests_errors;
 #[cfg(test)]
 mod tests_events;
 
+#[cfg(test)]
+mod tests_property;
+
 pub use errors::PropertyError;
 pub use property::{
     get_property, get_property_count, has_property, register_property, transfer_property,

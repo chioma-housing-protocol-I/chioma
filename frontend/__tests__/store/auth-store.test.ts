@@ -34,6 +34,7 @@ const mockUser = {
   id: 'u-1',
   email: 'alice@chioma.local',
   emailVerified: true,
+  emailCollectedAt: '2024-01-01T00:00:00.000Z',
   firstName: 'Alice',
   lastName: 'Smith',
   role: 'user' as const,

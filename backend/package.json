@@ -11,7 +11,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "pnpm exec eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "pnpm exec eslint \"{src,apps,libs,test,scripts}/**/*.ts\" --fix",
     "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage --forceExit",
@@ -52,6 +52,7 @@
     "migration:dry-run": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts run --dry-run",
     "migration:list": "ts-node -r tsconfig-paths/register src/database/migration-runner.ts show",
     "migration:schema-check": "npm run typeorm migration:generate -- -d src/database/data-source.ts --check src/migrations/CIDriftCheck",
+    "migration:check-timestamps": "ts-node -r tsconfig-paths/register scripts/check-migration-timestamps.ts",
     "db:index-review": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts",
     "db:index-review:all": "ts-node -r tsconfig-paths/register scripts/db-index-review.ts --all",
     "db:verify-payment-status-index": "ts-node -r tsconfig-paths/register scripts/verify-payment-status-index.ts",
@@ -77,7 +78,9 @@
     "seed:landlord:prod": "NODE_ENV=production ts-node src/commands/index.ts landlord --force",
     "seed:all": "pnpm run seed:admin && pnpm run seed:agent && pnpm run seed:tenant && pnpm run seed:landlord",
     "seed:all:prod": "NODE_ENV=production pnpm run seed:admin:prod && pnpm run seed:agent:prod && pnpm run seed:tenant:prod && pnpm run seed:landlord:prod",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "env:check": "node scripts/check-env-example.mjs",
+    "docs:er": "node scripts/generate-er-diagram.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1014.0",

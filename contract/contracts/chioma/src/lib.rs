@@ -61,6 +61,9 @@ mod tests_lease_negotiation;
 #[cfg(test)]
 mod tests_property;
 
+#[cfg(test)]
+mod tests_gas_benchmarks;
+
 pub use agreement::{
     accept_extension, activate_extension, approve_agreement, cancel_agreement, cancel_extension,
     create_agreement, create_agreement_with_token, get_agreement, get_agreement_count,
@@ -1266,6 +1269,21 @@ impl Contract {
         action_id: String,
     ) -> Result<(), RentalError> {
         timelock::cancel_action(&env, caller, action_id)
+    }
+
+    /// Accept a queued admin transfer (second step of the two-step rotation).
+    ///
+    /// The current admin proposes a rotation via `queue_timelock_action` with
+    /// `action_type: UpdateAdmin` and `target` set to the proposed new admin.
+    /// Once the 7-day delay has elapsed, the proposed new admin (not anyone
+    /// else) calls this to actually take over as admin. The current admin can
+    /// cancel the proposal any time before this via `cancel_timelock_action`.
+    pub fn accept_admin_transfer(
+        env: Env,
+        caller: Address,
+        action_id: String,
+    ) -> Result<(), RentalError> {
+        timelock::accept_admin_transfer(&env, caller, action_id)
     }
 
     /// Retrieve a timelock action by ID.

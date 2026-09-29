@@ -15,21 +15,26 @@ export {
 } from './use-payments';
 
 export {
-  useNotificationsQuery,
-  useUnreadCount,
-  useMarkNotificationRead,
-  useMarkAllNotificationsRead,
-  useDeleteNotification,
-} from './use-notifications';
-
-export {
   useFavorites,
   useFavoriteStatus,
   useFavoriteCount,
   useAddFavorite,
   useRemoveFavorite,
   useToggleFavorite,
+  useFavoriteCollections,
+  useCreateFavoriteCollection,
+  useRenameFavoriteCollection,
+  useDeleteFavoriteCollection,
+  useMoveFavorite,
+  UNCATEGORIZED_COLLECTION_ID,
 } from './use-favorites';
+export type { FavoriteCollection } from './use-favorites';
+export { useKycStatus } from './use-kyc-status';
+export type { KycStatusResponse, KycStatusValue } from './use-kyc-status';
+export { useKycSubmit } from './use-kyc-submit';
+export type { KycSubmitPayload } from './use-kyc-submit';
+export { useMyRecommendations } from './use-recommendations';
+export type { Recommendation } from './use-recommendations';
 
 export {
   useTransactions,
@@ -114,6 +119,23 @@ export { useLandlordPropertyAnalytics } from './use-property-analytics';
 export { useFeesSummary } from './use-fees-summary';
 
 export { useReferrals } from './use-referrals';
+
+export {
+  useSubletRequests,
+  useSubletBookings,
+  useSubletEarnings,
+  useCreateSubletRequest,
+  useApproveSubletRequest,
+  useDenySubletRequest,
+} from './use-sublets';
+export type {
+  SubletRequest,
+  SubletRequestStatus,
+  SubletBooking,
+  SubletEarningsSummary,
+  SubletRequestFilters,
+  CreateSubletRequestPayload,
+} from './use-sublets';
 
 export { useOptimisticUpdate } from './use-optimistic-update';
 export type {

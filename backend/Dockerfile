@@ -3,8 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm at the exact version pinned by package.json's "packageManager"
+# field. Installing via `npm install -g pnpm` (whatever "latest" resolves to)
+# leaves pnpm's own version-manager to notice the mismatch and fetch that
+# pinned version's native binary — which @pnpm/exe doesn't publish for
+# linux-x64-musl (this base image), so the build fails outright. Installing
+# the pinned version directly here means npm (pure JS, works on any libc)
+# does the install and there's no version to switch to.
+RUN npm install -g pnpm@10.28.2
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -24,8 +30,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm at the exact version pinned by package.json's "packageManager"
+# field — see the matching comment in the builder stage above.
+RUN npm install -g pnpm@10.28.2
 
 # Copy package files from builder
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

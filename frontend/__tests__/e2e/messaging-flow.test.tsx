@@ -162,7 +162,7 @@ describe('[E2E] Messaging / chat flow', () => {
       }); // messages
 
     render(<MessagingHub />);
-    await waitFor(() => screen.queryByText('Bob Smith'));
+    await screen.findByText('Bob Smith');
     fireEvent.click(screen.getByText('Bob Smith'));
 
     await waitFor(() => {
@@ -176,7 +176,7 @@ describe('[E2E] Messaging / chat flow', () => {
       .mockResolvedValueOnce({ data: [] }); // messages
 
     render(<MessagingHub />);
-    await waitFor(() => screen.queryByText('Bob Smith'));
+    await screen.findByText('Bob Smith');
     fireEvent.click(screen.getByText('Bob Smith'));
     await waitFor(() => {
       expect(mockPatch).toHaveBeenCalledWith('/messaging/rooms/room-1/read');
@@ -190,7 +190,7 @@ describe('[E2E] Messaging / chat flow', () => {
 
     render(<MessagingHub />);
     act(() => simulateConnect());
-    await waitFor(() => screen.queryByText('Bob Smith'));
+    await screen.findByText('Bob Smith');
     fireEvent.click(screen.getByText('Bob Smith'));
 
     await waitFor(() => screen.getByRole('textbox'));
@@ -215,7 +215,7 @@ describe('[E2E] Messaging / chat flow', () => {
 
     render(<MessagingHub />);
     act(() => simulateConnect());
-    await waitFor(() => screen.queryByText('Bob Smith'));
+    await screen.findByText('Bob Smith');
     fireEvent.click(screen.getByText('Bob Smith'));
 
     await waitFor(() => screen.getByRole('textbox'));

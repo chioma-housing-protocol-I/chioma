@@ -87,6 +87,15 @@ Closes #
 - [ ] Bundle size impact assessed
 - [ ] Caching considered
 
+### Smart Contracts (Soroban / Rust only)
+
+- [ ] Authorization checks () enforced on all state-mutating invocations
+- [ ] Upgradeability & storage layout backward compatibility verified (no schema drift or type collisions)
+- [ ] Storage footprint and TTL bump strategies accounted for (instance, temporary, persistent)
+- [ ] Contract events conform to stable schemas with documented topics and data payloads
+- [ ] Error enums use explicit numeric codes and match interface expectations
+- [ ] Hermetic tests verify unauthorized invocations, invariant boundaries, and edge cases
+
 ### Breaking Changes
 
 - [ ] No breaking changes to APIs

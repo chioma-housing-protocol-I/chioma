@@ -174,7 +174,12 @@ export function MessageList({
                         isMine
                           ? 'bg-blue-600 text-white'
                           : 'bg-neutral-100 text-neutral-900'
-                      } ${message.status === 'pending' ? 'opacity-60' : ''} ${
+                      } ${
+                        message.status === 'pending' ||
+                        message.status === 'queued'
+                          ? 'opacity-60'
+                          : ''
+                      } ${
                         message.status === 'failed' ? 'ring-1 ring-red-400' : ''
                       } ${
                         isMine
@@ -205,7 +210,8 @@ export function MessageList({
                         } ${
                           isMine &&
                           (message.status === 'pending' ||
-                            message.status === 'failed')
+                            message.status === 'failed' ||
+                            message.status === 'queued')
                             ? 'opacity-100'
                             : 'opacity-0 group-hover:opacity-100'
                         }`}
@@ -213,16 +219,23 @@ export function MessageList({
                         <span className="text-[10px] text-neutral-400">
                           {message.status === 'pending'
                             ? 'Sending…'
-                            : message.status === 'failed'
-                              ? 'Not delivered'
-                              : formatMessageTime(message.createdAt)}
+                            : message.status === 'queued'
+                              ? 'Queued — will send when online'
+                              : message.status === 'failed'
+                                ? 'Not delivered'
+                                : formatMessageTime(message.createdAt)}
                         </span>
                         {isMine &&
-                          (message.status === 'pending' ? (
+                          (message.status === 'pending' ||
+                          message.status === 'queued' ? (
                             <Clock
                               size={11}
                               className="text-neutral-400 animate-pulse"
-                              aria-label="Sending"
+                              aria-label={
+                                message.status === 'queued'
+                                  ? 'Queued'
+                                  : 'Sending'
+                              }
                             />
                           ) : message.status === 'failed' ? (
                             <button

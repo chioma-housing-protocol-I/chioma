@@ -58,6 +58,7 @@ export class ProfileContractService {
     return await this.sorobanClient.submitTransaction(
       transaction,
       serverKeypair,
+      'profile.initProfiles',
     );
   }
 
@@ -93,6 +94,7 @@ export class ProfileContractService {
     return await this.sorobanClient.submitTransaction(
       transaction,
       serverKeypair,
+      'profile.createProfile',
     );
   }
 
@@ -134,6 +136,7 @@ export class ProfileContractService {
     return await this.sorobanClient.submitTransaction(
       transaction,
       serverKeypair,
+      'profile.updateProfile',
     );
   }
 
@@ -201,6 +204,7 @@ export class ProfileContractService {
     return await this.sorobanClient.submitTransaction(
       transaction,
       serverKeypair,
+      'profile.verifyProfile',
     );
   }
 

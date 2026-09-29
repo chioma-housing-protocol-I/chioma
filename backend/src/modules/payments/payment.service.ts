@@ -51,6 +51,8 @@ import {
 import { TransactionStatus } from '../stellar/entities/stellar-transaction.entity';
 import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { FxRateService } from './fx-rate.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class PaymentService {
@@ -68,6 +70,8 @@ export class PaymentService {
     private readonly lockService: LockService,
     private readonly idempotencyService: IdempotencyService,
     private readonly fraudHooksService: FraudHooksService,
+    private readonly fxRateService: FxRateService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Locked({
@@ -139,9 +143,16 @@ export class PaymentService {
     const transactionFee = dto.amount * 0.02;
     const netAmount = dto.amount - transactionFee;
 
-    // Note: In production, fetch actual user email from UsersService.findById(userId)
-    // For now, using userId as fallback since UsersService has unrelated type issues
-    const userEmail = `user_${userId}@chioma.local`;
+    const payingUser = await this.usersService.getUserById(userId);
+    if (!payingUser.email) {
+      this.logger.warn(
+        `Payment blocked for user ${userId}: no verified email on file, so gateway charge receipts cannot be sent.`,
+      );
+      throw new BadRequestException(
+        'A verified email address is required before making a payment',
+      );
+    }
+    const userEmail = payingUser.email;
 
     const decryptedMetadata = decryptMetadata(paymentMethod.encryptedMetadata);
 
@@ -380,6 +391,49 @@ export class PaymentService {
   ): Promise<PaymentMethod> {
     ensureUserId(userId);
 
+    let lastFour = dto.lastFour;
+    let expiryDate = dto.expiryDate;
+    let sensitiveMetadata = dto.sensitiveMetadata;
+
+    if (dto.gatewayReference) {
+      // Never trust client-supplied lastFour/expiryDate/token for a
+      // tokenized method — re-verify the reference against the real gateway
+      // and only persist what the gateway itself confirms.
+      const userEmail = `user_${userId}@chioma.local`;
+      const tokenizeResult = await this.paymentGateway.tokenizePaymentMethod({
+        gatewayReference: dto.gatewayReference,
+        userEmail,
+      });
+
+      if (!tokenizeResult.success || !tokenizeResult.token) {
+        throw new BadRequestException(
+          tokenizeResult.error ||
+            'Payment method could not be verified with the payment gateway',
+        );
+      }
+
+      lastFour = tokenizeResult.last4 ?? lastFour;
+      expiryDate =
+        tokenizeResult.expiryMonth && tokenizeResult.expiryYear
+          ? `${tokenizeResult.expiryYear}-${String(tokenizeResult.expiryMonth).padStart(2, '0')}-01`
+          : expiryDate;
+
+      // The gateway-confirmed token is sensitive and must never land in the
+      // plain `metadata` jsonb column; merge it into sensitiveMetadata so it
+      // goes through the same encryptMetadata() path as other secrets. The
+      // field name (authorizationCode for Paystack, token for Flutterwave)
+      // must match what chargePaystack/chargeFlutterwave read at charge time.
+      const tokenField =
+        this.gatewayTokenFieldName() === 'authorizationCode'
+          ? { authorizationCode: tokenizeResult.token }
+          : { token: tokenizeResult.token };
+
+      sensitiveMetadata = {
+        ...(sensitiveMetadata ?? {}),
+        ...tokenField,
+      };
+    }
+
     if (dto.isDefault) {
       await this.paymentMethodRepository.update(
         { userId, isDefault: true },
@@ -387,21 +441,34 @@ export class PaymentService {
       );
     }
 
-    const encryptedMetadata = dto.sensitiveMetadata
-      ? encryptMetadata(dto.sensitiveMetadata)
+    const encryptedMetadata = sensitiveMetadata
+      ? encryptMetadata(sensitiveMetadata)
       : null;
 
     const paymentMethod = this.paymentMethodRepository.create({
       userId,
       paymentType: dto.paymentType,
-      lastFour: dto.lastFour,
-      expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
+      lastFour,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
       isDefault: dto.isDefault ?? false,
       metadata: dto.metadata ?? null,
       encryptedMetadata,
     });
 
     return this.paymentMethodRepository.save(paymentMethod);
+  }
+
+  /**
+   * The field name chargePaystack/chargeFlutterwave read from stored
+   * (encrypted) metadata to charge a saved method: `authorizationCode` for
+   * Paystack, `token` for Flutterwave (see payment-gateway.service.ts).
+   * createPaymentMethod must write under the same key it will later be read
+   * from, keyed off the same PAYMENT_GATEWAY env var the gateway service
+   * itself dispatches on.
+   */
+  private gatewayTokenFieldName(): 'authorizationCode' | 'token' {
+    const gateway = (process.env.PAYMENT_GATEWAY || 'mock').toLowerCase();
+    return gateway === 'flutterwave' ? 'token' : 'authorizationCode';
   }
 
   async updatePaymentMethod(
@@ -489,13 +556,38 @@ export class PaymentService {
   ): Promise<Payment> {
     ensureUserId(userId);
 
+    // FX conversion (#1543): when the caller supplies a fiat amount/currency
+    // instead of an already-converted XLM amount, resolve the settlement
+    // amount here — before any on-chain call — so a rate-lookup failure
+    // blocks settlement outright rather than surfacing after funds moved.
+    // `dto.amount` remains the on-chain XLM amount in every other case,
+    // matching this endpoint's pre-existing contract exactly.
+    let onChainAmount = dto.amount;
+    let fxMetadata: Partial<PaymentMetadata> = {};
+    if (dto.fiatCurrency && dto.fiatAmount) {
+      const { convertedAmount, rateResult } = await this.fxRateService.convert(
+        Number(dto.fiatAmount),
+        dto.fiatCurrency,
+        'XLM',
+      );
+      onChainAmount = convertedAmount.toString();
+      fxMetadata = {
+        fxFromCurrency: rateResult.fromCurrency,
+        fxToCurrency: rateResult.toCurrency,
+        fxRate: rateResult.rate,
+        fxRateSource: rateResult.source,
+        fxRateResolvedAt: rateResult.resolvedAt.toISOString(),
+        fxOriginalAmount: Number(dto.fiatAmount),
+      };
+    }
+
     let transactionHash: string;
     try {
       const callerKeypair = StellarSdk.Keypair.fromSecret(dto.userSecret);
       transactionHash = await this.paymentProcessingService.processRentPayment(
         dto.userAddress,
         dto.agreementId,
-        dto.amount,
+        onChainAmount,
         callerKeypair,
       );
     } catch (error) {
@@ -504,9 +596,9 @@ export class PaymentService {
       const failedPayment = this.paymentRepository.create({
         userId,
         agreementId: dto.agreementId,
-        amount: Number(dto.amount),
+        amount: Number(onChainAmount),
         transactionFee: 0,
-        netAmount: Number(dto.amount),
+        netAmount: Number(onChainAmount),
         currency: 'XLM',
         status: PaymentStatus.FAILED,
         processedAt: new Date(),
@@ -515,6 +607,7 @@ export class PaymentService {
           flow: 'rent',
           userAddress: dto.userAddress,
           error: error instanceof Error ? error.message : 'Payment failed',
+          ...fxMetadata,
         } as PaymentMetadata,
       });
       await this.paymentRepository.save(failedPayment);
@@ -525,9 +618,9 @@ export class PaymentService {
       const payment = this.paymentRepository.create({
         userId,
         agreementId: dto.agreementId,
-        amount: Number(dto.amount),
+        amount: Number(onChainAmount),
         transactionFee: 0,
-        netAmount: Number(dto.amount),
+        netAmount: Number(onChainAmount),
         currency: 'XLM',
         status: PaymentStatus.COMPLETED,
         referenceNumber: transactionHash,
@@ -538,6 +631,7 @@ export class PaymentService {
           transactionHash,
           userAddress: dto.userAddress,
           reconciledAt: new Date().toISOString(),
+          ...fxMetadata,
         } as PaymentMetadata,
       });
 
@@ -551,7 +645,7 @@ export class PaymentService {
       await this.notificationsService.notify(
         userId,
         'Stellar rent payment processed',
-        `Your rent payment of ${dto.amount} XLM was submitted successfully.`,
+        `Your rent payment of ${onChainAmount} XLM was submitted successfully.`,
         'PAYMENT_RECEIVED',
       );
       return saved;

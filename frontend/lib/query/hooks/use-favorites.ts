@@ -10,6 +10,16 @@ export interface FavoriteItem {
   id?: string;
   propertyId: string;
   property?: Property;
+  collectionId?: string | null;
+  createdAt?: string;
+}
+
+export const UNCATEGORIZED_COLLECTION_ID = 'uncategorized';
+
+export interface FavoriteCollection {
+  id: string;
+  name: string;
+  favoriteCount: number;
   createdAt?: string;
 }
 
@@ -46,14 +56,18 @@ function isNotFound(error: unknown): boolean {
   );
 }
 
-export function useFavorites() {
+export function useFavorites(collectionId?: string) {
   const isEnabled = useFavoritesEnabled();
 
   return useQuery({
-    queryKey: queryKeys.favorites.list(),
+    queryKey: queryKeys.favorites.list(collectionId),
     queryFn: async () => {
       try {
-        const { data } = await apiClient.get<FavoritesResponse>('/favorites');
+        const { data } = await apiClient.get<FavoritesResponse>(
+          collectionId
+            ? `/favorites?collectionId=${encodeURIComponent(collectionId)}&limit=100`
+            : '/favorites',
+        );
         return normalizeFavorites(data);
       } catch (error) {
         if (isNotFound(error)) return [];
@@ -225,4 +239,89 @@ export function useToggleFavorite(propertyId: string | number) {
         : addFavorite.mutateAsync(id);
     },
   };
+}
+
+export function useFavoriteCollections() {
+  const isEnabled = useFavoritesEnabled();
+
+  return useQuery({
+    queryKey: queryKeys.favorites.collections(),
+    queryFn: async () => {
+      try {
+        const { data } = await apiClient.get<FavoriteCollection[]>(
+          '/favorites/collections',
+        );
+        return data;
+      } catch (error) {
+        if (isNotFound(error)) return [];
+        throw error;
+      }
+    },
+    enabled: isEnabled,
+    staleTime: 30_000,
+  });
+}
+
+function useInvalidateFavorites() {
+  const queryClient = useQueryClient();
+  return () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
+}
+
+export function useCreateFavoriteCollection() {
+  const invalidate = useInvalidateFavorites();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await apiClient.post<FavoriteCollection>(
+        '/favorites/collections',
+        { name },
+      );
+      return data;
+    },
+    onSettled: invalidate,
+  });
+}
+
+export function useRenameFavoriteCollection() {
+  const invalidate = useInvalidateFavorites();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data } = await apiClient.patch<FavoriteCollection>(
+        `/favorites/collections/${id}`,
+        { name },
+      );
+      return data;
+    },
+    onSettled: invalidate,
+  });
+}
+
+export function useDeleteFavoriteCollection() {
+  const invalidate = useInvalidateFavorites();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/favorites/collections/${id}`);
+    },
+    onSettled: invalidate,
+  });
+}
+
+export function useMoveFavorite() {
+  const invalidate = useInvalidateFavorites();
+  return useMutation({
+    mutationFn: async ({
+      propertyId,
+      collectionId,
+    }: {
+      propertyId: string;
+      collectionId: string | null;
+    }) => {
+      const { data } = await apiClient.patch<FavoriteItem>(
+        `/favorites/${propertyId}/collection`,
+        { collectionId },
+      );
+      return data;
+    },
+    onSettled: invalidate,
+  });
 }

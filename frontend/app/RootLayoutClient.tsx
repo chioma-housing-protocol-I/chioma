@@ -18,6 +18,7 @@ import { WebVitalsReporter } from '@/components/web-vitals';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
 import { ConnectionStatusBanner } from '@/components/connection-status/ConnectionStatusBanner';
 import { HtmlAttributesSync } from '@/components/i18n';
+import NetworkIndicator from '@/components/shared/NetworkIndicator';
 
 export function RootLayoutClient({
   children,
@@ -37,6 +38,7 @@ export function RootLayoutClient({
             <WebVitalsReporter />
             <PwaController />
             <OrientationHandler />
+            <NetworkIndicator />
             <NetworkStatusBanner />
             <ConnectionStatusBanner />
             <RateLimitNotifier />

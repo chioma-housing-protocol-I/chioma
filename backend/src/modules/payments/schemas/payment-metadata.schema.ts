@@ -21,6 +21,15 @@ export const paymentMetadataSchema = z
     retryAttempts: z.number().optional(),
     webhookEventType: z.string().optional(),
     error: z.string().optional(),
+    // FX conversion snapshot (#1543) — recorded whenever a payment settles
+    // on-chain at a converted amount, so historical payments stay auditable
+    // even as the live rate moves after settlement.
+    fxFromCurrency: z.string().optional(),
+    fxToCurrency: z.string().optional(),
+    fxRate: z.number().optional(),
+    fxRateSource: z.enum(['anchor', 'external', 'mock']).optional(),
+    fxRateResolvedAt: z.string().optional(),
+    fxOriginalAmount: z.number().optional(),
   })
   .passthrough();
 

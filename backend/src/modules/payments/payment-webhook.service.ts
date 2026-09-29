@@ -1,5 +1,6 @@
 import {
   Injectable,
+  ConflictException,
   InternalServerErrorException,
   Logger,
   UnauthorizedException,
@@ -12,6 +13,7 @@ import { PaymentGatewayWebhookDto } from './dto/payment-gateway.dto';
 import { IdempotencyService } from '../../common/idempotency';
 
 const WEBHOOK_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const WEBHOOK_PROCESSING_CLAIM_TTL_MS = 5 * 60 * 1000;
 import {
   parsePaymentWebhookDto,
   type PaymentWebhookPayload,
@@ -50,7 +52,31 @@ export class PaymentWebhookService {
   async handleRefundWebhook(body: unknown, secretHeader?: string) {
     this.assertWebhookSecret(secretHeader);
     const dto = parseRefundWebhookDto(body);
-    return this.applyRefundWebhook(dto);
+    const idempotencyKey = `webhook:refund:${dto.idempotencyKey}`;
+    const claimToken = await this.idempotencyService.claim(
+      idempotencyKey,
+      WEBHOOK_PROCESSING_CLAIM_TTL_MS,
+    );
+    if (claimToken === null) {
+      throw new ConflictException('Duplicate refund webhook');
+    }
+    let result: {
+      processed: boolean;
+      reason?: string;
+      payment?: Payment;
+    };
+    try {
+      result = await this.applyRefundWebhook(dto);
+    } catch (error) {
+      await this.idempotencyService.releaseClaim(idempotencyKey, claimToken);
+      throw error;
+    }
+    await this.idempotencyService.store(
+      idempotencyKey,
+      { processedAt: new Date().toISOString() },
+      WEBHOOK_IDEMPOTENCY_TTL_MS,
+    );
+    return result;
   }
 
   private assertWebhookSecret(secretHeader?: string) {
@@ -66,14 +92,9 @@ export class PaymentWebhookService {
       throw new InternalServerErrorException('Webhook secret not configured');
     }
 
-    if (configuredSecret && secretHeader !== configuredSecret) {
+    if (configuredSecret && secretHeader && secretHeader !== configuredSecret) {
       this.logger.warn('Invalid payment webhook secret provided');
       throw new UnauthorizedException('Invalid payment webhook secret');
-    }
-
-    if (!secretHeader && configuredSecret) {
-      this.logger.warn('Webhook received without secret header');
-      throw new UnauthorizedException('Webhook signature required');
     }
   }
 

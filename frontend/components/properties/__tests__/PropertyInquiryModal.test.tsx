@@ -98,9 +98,64 @@ describe('PropertyInquiryModal', () => {
     fireEvent.click(screen.getByText('Send Inquiry'));
 
     await waitFor(() => {
-      expect(screen.getByText('Name is required')).toBeInTheDocument();
+      expect(screen.getAllByText('Name is required').length).toBeGreaterThan(0);
     });
-    expect(screen.getByText('Email is required')).toBeInTheDocument();
+    expect(screen.getAllByText('Email is required').length).toBeGreaterThan(0);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows a format error for an invalid email address', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      React.createElement(PropertyInquiryModal, {
+        isOpen: true,
+        onClose: vi.fn(),
+        propertyId: 'prop-1',
+        propertyTitle: 'Sunset Villa',
+        onSubmit,
+      }),
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('name@email.com'), {
+      target: { value: 'not-an-email' },
+    });
+
+    fireEvent.click(screen.getByText('Send Inquiry'));
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('Enter a valid email address').length,
+      ).toBeGreaterThan(0);
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows a validation error when the message is cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      React.createElement(PropertyInquiryModal, {
+        isOpen: true,
+        onClose: vi.fn(),
+        propertyId: 'prop-1',
+        propertyTitle: 'Sunset Villa',
+        onSubmit,
+      }),
+    );
+
+    const messageField = screen.getByDisplayValue(
+      'Hello, I am interested in Sunset Villa. Please share next steps.',
+    );
+    fireEvent.change(messageField, { target: { value: '' } });
+
+    fireEvent.click(screen.getByText('Send Inquiry'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Message is required').length).toBeGreaterThan(
+        0,
+      );
+    });
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

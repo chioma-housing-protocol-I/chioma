@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
@@ -9,6 +14,11 @@ import {
   WebhookVerificationContext,
 } from '../webhook-signature.service';
 import { WEBHOOK_SECRET_METADATA_KEY } from '../decorators/webhook-secret.decorator';
+import { SecurityEventsService } from '../../security/security-events.service';
+import {
+  SecurityEventSeverity,
+  SecurityEventType,
+} from '../../security/entities/security-event.entity';
 
 type RequestWithRawBody = Request & { rawBody?: string };
 
@@ -26,13 +36,16 @@ function extractClientIp(request: Request): string | undefined {
 
 @Injectable()
 export class WebhookSignatureGuard implements CanActivate {
+  private readonly logger = new Logger(WebhookSignatureGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly configService: ConfigService,
     private readonly webhookSignatureService: WebhookSignatureService,
+    private readonly securityEventsService: SecurityEventsService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithRawBody>();
     const secretConfigKey =
       this.reflector.getAllAndOverride<string>(WEBHOOK_SECRET_METADATA_KEY, [
@@ -44,6 +57,9 @@ export class WebhookSignatureGuard implements CanActivate {
     const timestamp = request.header(WEBHOOK_TIMESTAMP_HEADER);
     const payload = request.rawBody ?? JSON.stringify(request.body ?? {});
     const secret = this.configService.get<string>(secretConfigKey);
+    const previousSecret = this.configService.get<string>(
+      `${secretConfigKey}_PREVIOUS`,
+    );
 
     const verificationContext: WebhookVerificationContext = {
       ipAddress: extractClientIp(request),
@@ -53,14 +69,42 @@ export class WebhookSignatureGuard implements CanActivate {
       endpoint: secretConfigKey,
     };
 
-    this.webhookSignatureService.verifySignature(
-      payload,
-      signature,
-      timestamp,
-      secret,
-      undefined,
-      verificationContext,
-    );
+    try {
+      this.webhookSignatureService.verifySignature(
+        payload,
+        signature,
+        timestamp,
+        [secret, previousSecret],
+        undefined,
+        verificationContext,
+      );
+    } catch (error) {
+      try {
+        await this.securityEventsService.createEvent({
+          eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+          severity: SecurityEventSeverity.HIGH,
+          ipAddress: verificationContext.ipAddress,
+          userAgent: verificationContext.userAgent,
+          success: false,
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : 'Webhook verification failed',
+          details: {
+            category: 'webhook_signature_rejected',
+            endpoint: secretConfigKey,
+            path: verificationContext.path,
+            method: verificationContext.method,
+          },
+        });
+      } catch (recordError) {
+        this.logger.error(
+          'Failed to persist rejected webhook signature security event',
+          recordError instanceof Error ? recordError.stack : undefined,
+        );
+      }
+      throw error;
+    }
 
     return true;
   }

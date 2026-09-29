@@ -11,6 +11,8 @@ import { z } from 'zod';
 export const refundWebhookSchema = z
   .object({
     eventType: z.string().min(1, 'eventType is required'),
+    idempotencyKey: z.string().uuid('idempotencyKey must be a UUID'),
+    timestamp: z.string().datetime('timestamp must be an ISO-8601 date-time'),
     paymentId: z.string().min(1).optional(),
     referenceNumber: z.string().min(1).optional(),
     refundId: z.string().min(1).optional(),
@@ -20,6 +22,14 @@ export const refundWebhookSchema = z
     reason: z.string().optional(),
     error: z.string().optional(),
   })
+  .refine(
+    (data) =>
+      Math.abs(Date.now() - Date.parse(data.timestamp)) <= 5 * 60 * 1000,
+    {
+      message: 'timestamp must be within 5 minutes of the current time',
+      path: ['timestamp'],
+    },
+  )
   .refine((data) => Boolean(data.paymentId || data.referenceNumber), {
     message: 'Either paymentId or referenceNumber is required',
     path: ['paymentId'],
@@ -52,6 +62,12 @@ export function parseRefundWebhookDto(value: unknown): RefundWebhookPayload {
 export class RefundWebhookDto {
   @ApiProperty({ example: 'refund.completed' })
   eventType: string;
+
+  @ApiProperty({ example: '0f7b87dd-c76d-4f24-a4d6-8c0dc5ad5a6d' })
+  idempotencyKey: string;
+
+  @ApiProperty({ example: '2026-09-25T06:30:00.000Z' })
+  timestamp: string;
 
   @ApiPropertyOptional({ example: 'pay_abc123' })
   paymentId?: string;

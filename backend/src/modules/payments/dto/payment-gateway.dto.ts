@@ -40,6 +40,27 @@ export class ProcessStellarRentGatewayDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Fiat currency the rent was quoted in (e.g. NGN, USD). When set ' +
+      'together with fiatAmount, `amount` (XLM) is resolved via the FX ' +
+      'rate service and the rate used is snapshotted on the payment record ' +
+      '(#1543). Omit both to submit an already-converted XLM amount ' +
+      'directly, matching the pre-existing behavior.',
+  })
+  @IsOptional()
+  @IsString()
+  fiatCurrency?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Fiat amount the rent was quoted in. Required alongside fiatCurrency; ' +
+      'ignored if fiatCurrency is not set.',
+  })
+  @IsOptional()
+  @IsNumberString()
+  fiatAmount?: string;
 }
 
 export class CreateEscrowGatewayDto {

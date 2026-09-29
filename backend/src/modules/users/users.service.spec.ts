@@ -403,6 +403,63 @@ describe('UsersService', () => {
     });
   });
 
+  describe('exportUserData', () => {
+    beforeEach(() => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    });
+
+    it('returns the full user record minus the password', async () => {
+      const result = await service.exportUserData('1');
+
+      expect(result).not.toHaveProperty('password');
+      expect(result).toMatchObject({
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        kycStatus: mockUser.kycStatus,
+      });
+    });
+
+    it('writes a DATA_EXPORT audit entry attributed to the requesting user by default', async () => {
+      await service.exportUserData('1');
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.DATA_EXPORT,
+          entityType: 'User',
+          entityId: '1',
+          performedBy: '1',
+          metadata: expect.objectContaining({ type: 'GDPR_EXPORT' }),
+        }),
+      );
+    });
+
+    it('attributes the audit entry to the acting admin when requested on a user\'s behalf', async () => {
+      await service.exportUserData('1', 'admin-1');
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.DATA_EXPORT,
+          entityId: '1',
+          performedBy: 'admin-1',
+          metadata: expect.objectContaining({
+            type: 'GDPR_EXPORT',
+            requestedByAdmin: true,
+          }),
+        }),
+      );
+    });
+
+    it('throws when the user does not exist', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.exportUserData('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('gdprDeleteAccount', () => {
     beforeEach(() => {
       mockUserRepository.findOne.mockResolvedValue({ ...mockUser });

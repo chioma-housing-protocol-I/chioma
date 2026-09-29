@@ -29,6 +29,24 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+// ReviewForm (rendered by ReviewList for new reviews) unconditionally calls
+// useRouter/useAuth now that it also handles edit mode (#1556); create-mode
+// usage here never triggers the edit-mode code paths that actually use
+// them, but the hooks still need a context/mock to render at all.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock('@/lib/query/hooks/use-tenant-reviews', () => ({
+  useTenantReview: () => ({ data: undefined, isLoading: false }),
+  useUpdateReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteReview: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock('@/store/authStore', () => ({
+  useAuth: () => ({ walletAddress: '0xABC123' }),
+}));
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const mockStats: RatingStats = {

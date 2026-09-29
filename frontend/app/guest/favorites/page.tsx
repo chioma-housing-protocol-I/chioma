@@ -1,14 +1,172 @@
 'use client';
 
-import { Heart } from 'lucide-react';
+import { useState } from 'react';
+import { FolderPlus, Heart, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useFavorites, useRemoveFavorite } from '@/lib/query/hooks';
+import {
+  UNCATEGORIZED_COLLECTION_ID,
+  useCreateFavoriteCollection,
+  useDeleteFavoriteCollection,
+  useFavoriteCollections,
+  useFavorites,
+  useMoveFavorite,
+  useRemoveFavorite,
+  useRenameFavoriteCollection,
+} from '@/lib/query/hooks';
+
+const ALL = 'all';
+
+function CollectionsBar({
+  active,
+  onSelect,
+}: {
+  active: string;
+  onSelect: (id: string) => void;
+}) {
+  const { data: collections = [] } = useFavoriteCollections();
+  const createCollection = useCreateFavoriteCollection();
+  const renameCollection = useRenameFavoriteCollection();
+  const deleteCollection = useDeleteFavoriteCollection();
+  const [newName, setNewName] = useState('');
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+
+  const total = collections.reduce((sum, c) => sum + c.favoriteCount, 0);
+  const activeCollection = collections.find((c) => c.id === active);
+  const isCustom =
+    activeCollection && activeCollection.id !== UNCATEGORIZED_COLLECTION_ID;
+
+  const tab = (id: string, label: string, count?: number) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => onSelect(id)}
+      className={`rounded-full border px-4 py-1.5 text-sm transition ${
+        active === id
+          ? 'border-blue-400 bg-blue-500/20 text-white'
+          : 'border-white/10 text-blue-200/70 hover:border-white/20'
+      }`}
+    >
+      {label}
+      {count !== undefined ? ` (${count})` : ''}
+    </button>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {tab(ALL, 'All', total)}
+        {collections.map((c) => tab(c.id, c.name, c.favoriteCount))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = newName.trim();
+            if (!name) return;
+            createCollection.mutate(name, { onSuccess: () => setNewName('') });
+          }}
+        >
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="New collection"
+            maxLength={100}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder:text-blue-200/30"
+          />
+          <button
+            type="submit"
+            disabled={createCollection.isPending}
+            className="flex items-center gap-1 rounded-xl border border-white/10 px-3 py-1.5 text-sm text-blue-200 hover:bg-white/10 disabled:opacity-50"
+          >
+            <FolderPlus size={14} /> Create
+          </button>
+        </form>
+
+        {isCustom && !editing ? (
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                setEditing({
+                  id: activeCollection.id,
+                  name: activeCollection.name,
+                })
+              }
+              className="flex items-center gap-1 rounded-xl border border-white/10 px-3 py-1.5 text-sm text-blue-200 hover:bg-white/10"
+            >
+              <Pencil size={14} /> Rename
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                deleteCollection.mutate(activeCollection.id, {
+                  onSuccess: () => onSelect(ALL),
+                })
+              }
+              className="flex items-center gap-1 rounded-xl border border-red-400/20 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          </>
+        ) : null}
+
+        {editing ? (
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = editing.name.trim();
+              if (!name) return;
+              renameCollection.mutate(
+                { id: editing.id, name },
+                { onSuccess: () => setEditing(null) },
+              );
+            }}
+          >
+            <input
+              autoFocus
+              value={editing.name}
+              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+              maxLength={100}
+              aria-label="Collection name"
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-3 py-1.5 text-sm text-white"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-xl px-3 py-1.5 text-sm text-blue-200/70"
+            >
+              Cancel
+            </button>
+          </form>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export default function GuestFavoritesPage() {
   const router = useRouter();
-  const { data: favorites = [], isLoading, isError } = useFavorites();
+  const [activeCollection, setActiveCollection] = useState<string>(ALL);
+  const {
+    data: favorites = [],
+    isLoading,
+    isError,
+  } = useFavorites(activeCollection === ALL ? undefined : activeCollection);
+  const { data: collections = [] } = useFavoriteCollections();
   const removeFavorite = useRemoveFavorite();
+  const moveFavorite = useMoveFavorite();
 
   if (isLoading) {
     return (
@@ -35,6 +193,10 @@ export default function GuestFavoritesPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Favorites</h1>
+      <CollectionsBar
+        active={activeCollection}
+        onSelect={setActiveCollection}
+      />
       {favorites.length === 0 ? (
         <EmptyState
           icon={Heart}
@@ -91,6 +253,34 @@ export default function GuestFavoritesPage() {
                     them.
                   </p>
                 )}
+
+                {collections.length > 0 ? (
+                  <label className="mt-4 flex items-center gap-2 text-xs text-blue-200/60">
+                    Collection
+                    <select
+                      value={
+                        favorite.collectionId ?? UNCATEGORIZED_COLLECTION_ID
+                      }
+                      onChange={(e) =>
+                        moveFavorite.mutate({
+                          propertyId,
+                          collectionId:
+                            e.target.value === UNCATEGORIZED_COLLECTION_ID
+                              ? null
+                              : e.target.value,
+                        })
+                      }
+                      disabled={moveFavorite.isPending}
+                      className="flex-1 rounded-lg border border-white/10 bg-slate-900 px-2 py-1 text-sm text-white"
+                    >
+                      {collections.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </article>
             );
           })}

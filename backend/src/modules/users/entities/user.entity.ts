@@ -113,6 +113,13 @@ export class User {
   @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified: boolean;
 
+  @Column({
+    name: 'email_collected_at',
+    nullable: true,
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+  })
+  emailCollectedAt: Date | null;
+
   // ✅ Moved inside the class
   @Column({
     name: 'kyc_status',
@@ -238,6 +245,14 @@ export class User {
   @Exclude()
   @Column({ name: 'refresh_token', nullable: true, type: 'varchar' })
   refreshToken: string | null;
+
+  @Column({
+    name: 'email_collected_at',
+    type: 'timestamp',
+    nullable: true,
+    default: null,
+  })
+  emailCollectedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
