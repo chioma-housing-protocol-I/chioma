@@ -15,12 +15,14 @@ interface ApiKeyDetailsProps {
   apiKey: ApiKey;
   onRevoke: (id: string) => void;
   onRotate: (id: string) => void;
+  isLoading?: boolean;
 }
 
 export function ApiKeyDetails({
   apiKey,
   onRevoke,
   onRotate,
+  isLoading = false,
 }: ApiKeyDetailsProps) {
   const copyPrefix = () => {
     navigator.clipboard.writeText(apiKey.keyPrefix);
@@ -141,14 +143,16 @@ export function ApiKeyDetails({
         <div className="pt-4 border-t border-white/10 flex gap-3">
           <button
             onClick={() => onRotate(apiKey.id)}
-            className="flex-1 px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            disabled={isLoading}
+            className="flex-1 px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-500/30 text-blue-300 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
           >
             <RotateCw size={15} />
             Rotate Key
           </button>
           <button
             onClick={() => onRevoke(apiKey.id)}
-            className="flex-1 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            disabled={isLoading}
+            className="flex-1 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-60 disabled:cursor-not-allowed border border-rose-500/30 text-rose-400 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
           >
             <Trash2 size={15} />
             Revoke Key

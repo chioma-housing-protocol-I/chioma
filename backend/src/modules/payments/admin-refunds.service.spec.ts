@@ -93,30 +93,36 @@ describe('AdminRefundsService', () => {
       const mockQb = {
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([payment]),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[payment], 1]),
       };
       paymentRepository.createQueryBuilder.mockReturnValue(mockQb);
       userRepository.findBy.mockResolvedValue([user]);
 
       const result = await service.listRefunds();
 
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('pay-1');
-      expect(result[0].requesterEmail).toBe('tenant@chioma.local');
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.data[0].id).toBe('pay-1');
+      expect(result.data[0].requesterEmail).toBe('tenant@chioma.local');
     });
 
     it('returns empty array when no refunds exist', async () => {
       const mockQb = {
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
       };
       paymentRepository.createQueryBuilder.mockReturnValue(mockQb);
       userRepository.findBy.mockResolvedValue([]);
 
       const result = await service.listRefunds();
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
     });
 
     it('handles missing user gracefully', async () => {
@@ -125,15 +131,17 @@ describe('AdminRefundsService', () => {
       const mockQb = {
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([payment]),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[payment], 1]),
       };
       paymentRepository.createQueryBuilder.mockReturnValue(mockQb);
       userRepository.findBy.mockResolvedValue([]);
 
       const result = await service.listRefunds();
 
-      expect(result[0].requesterName).toBe('Unknown User');
-      expect(result[0].requesterEmail).toBe('unknown@chioma.local');
+      expect(result.data[0].requesterName).toBe('Unknown User');
+      expect(result.data[0].requesterEmail).toBe('unknown@chioma.local');
     });
 
     it('maps refundStatus to correct AdminRefundStatus', async () => {
@@ -174,13 +182,15 @@ describe('AdminRefundsService', () => {
         const mockQb = {
           where: jest.fn().mockReturnThis(),
           orderBy: jest.fn().mockReturnThis(),
-          getMany: jest.fn().mockResolvedValue([payment]),
+          skip: jest.fn().mockReturnThis(),
+          take: jest.fn().mockReturnThis(),
+          getManyAndCount: jest.fn().mockResolvedValue([[payment], 1]),
         };
         paymentRepository.createQueryBuilder.mockReturnValue(mockQb);
         userRepository.findBy.mockResolvedValue([]);
 
         const result = await service.listRefunds();
-        expect(result[0].status).toBe(expected);
+        expect(result.data[0].status).toBe(expected);
       }
     });
   });

@@ -15,10 +15,7 @@ export type TransactionType =
   | 'agent_commission'
   | 'refund';
 export type TransactionStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'failed'
-  | 'cancelled';
+  'pending' | 'confirmed' | 'failed' | 'cancelled';
 
 export interface IndexedTransaction {
   id: UUID;

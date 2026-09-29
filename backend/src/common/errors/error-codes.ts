@@ -33,6 +33,7 @@ export enum ErrorCode {
   REVIEW_NOT_FOUND = 'RES_3007',
   NOTIFICATION_NOT_FOUND = 'RES_3008',
   MAINTENANCE_NOT_FOUND = 'RES_3009',
+  BOOKING_NOT_FOUND = 'RES_3010',
 
   // Business Logic (4xxx)
   BUSINESS_RULE_VIOLATION = 'BUS_4001',
@@ -79,6 +80,9 @@ export enum ErrorCode {
   DATA_INTEGRITY_ERROR = 'DATA_9003',
   DATABASE_ERROR = 'DATA_9004',
   CACHE_ERROR = 'DATA_9005',
+  DECRYPTION_INVALID_KEY = 'DATA_9006',
+  DECRYPTION_CORRUPTED_DATA = 'DATA_9007',
+  DECRYPTION_TAMPERED = 'DATA_9008',
 
   // Concurrency & Locking (10xxx)
   LOCK_NOT_ACQUIRED = 'LOCK_10001',
@@ -142,6 +146,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.REVIEW_NOT_FOUND]: 'Review not found',
   [ErrorCode.NOTIFICATION_NOT_FOUND]: 'Notification not found',
   [ErrorCode.MAINTENANCE_NOT_FOUND]: 'Maintenance request not found',
+  [ErrorCode.BOOKING_NOT_FOUND]: 'Booking not found',
 
   // Business Logic
   [ErrorCode.BUSINESS_RULE_VIOLATION]: 'This operation violates business rules',
@@ -193,6 +198,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.DATA_INTEGRITY_ERROR]: 'Data integrity check failed',
   [ErrorCode.DATABASE_ERROR]: 'Database operation failed',
   [ErrorCode.CACHE_ERROR]: 'Cache operation failed',
+  [ErrorCode.DECRYPTION_INVALID_KEY]: 'Decryption failed: key mismatch or misconfiguration',
+  [ErrorCode.DECRYPTION_CORRUPTED_DATA]: 'Decryption failed: ciphertext is malformed or truncated',
+  [ErrorCode.DECRYPTION_TAMPERED]: 'Decryption failed: data integrity check indicates tampering',
 
   // Concurrency & Locking
   [ErrorCode.LOCK_NOT_ACQUIRED]: 'Could not acquire lock. Please try again',

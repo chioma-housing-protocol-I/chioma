@@ -83,8 +83,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/10 z-40 transition-transform duration-300 lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 start-0 bottom-0 w-64 bg-slate-900/50 backdrop-blur-xl border-e border-white/10 z-40 transition-transform duration-300 lg:translate-x-0 ${
+          isSidebarOpen
+            ? 'translate-x-0'
+            : 'ltr:-translate-x-full rtl:translate-x-full'
         }`}
       >
         <div className="h-20 flex items-center px-6 border-b border-white/10">
@@ -145,7 +147,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="lg:ml-64">
+      <div className="lg:ms-64">
         {/* Top Navigation Bar */}
         <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg">
           <div className="h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between">
@@ -169,13 +171,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               {/* Search Bar */}
               <div className="hidden md:flex relative w-64 lg:w-80 group">
                 <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
+                  className="absolute start-4 top-1/2 -translate-y-1/2 text-blue-300/40 group-focus-within:text-blue-400 transition-colors"
                   size={18}
                 />
                 <input
                   type="text"
                   placeholder="Search properties, tenants..."
-                  className="w-full pl-12 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-blue-300/30 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
+                  className="w-full ps-12 pe-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-blue-300/30 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
                 />
               </div>
 

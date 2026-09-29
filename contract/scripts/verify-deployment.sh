@@ -77,6 +77,7 @@ verify_exists "Escrow" "${ESCROW_CONTRACT_ID:-}" || FAILED=$((FAILED + 1))
 verify_exists "Payment" "${PAYMENT_CONTRACT_ID:-}" || FAILED=$((FAILED + 1))
 verify_exists "Dispute Resolution" "${DISPUTE_RESOLUTION_CONTRACT_ID:-}" || FAILED=$((FAILED + 1))
 verify_exists "Chioma" "${CHIOMA_CONTRACT_ID:-}" || FAILED=$((FAILED + 1))
+verify_exists "Upgrade Registry" "${UPGRADE_REGISTRY_CONTRACT_ID:-}" || FAILED=$((FAILED + 1))
 
 echo ""
 header "Read-only smoke tests"
@@ -87,10 +88,25 @@ test_view "Rent Obligation" "${RENT_OBLIGATION_CONTRACT_ID:-}" get_obligation_co
 test_view "Escrow" "${ESCROW_CONTRACT_ID:-}" get_admin
 test_view "Dispute Resolution" "${DISPUTE_RESOLUTION_CONTRACT_ID:-}" get_arbiter_count
 test_view "Chioma" "${CHIOMA_CONTRACT_ID:-}" get_state
+test_view "Upgrade Registry" "${UPGRADE_REGISTRY_CONTRACT_ID:-}" get_protocol_status
+
+echo ""
+header "Protocol status (upgrade registry)"
+if [[ -n "${UPGRADE_REGISTRY_CONTRACT_ID:-}" ]]; then
+  stellar contract invoke \
+    --id "${UPGRADE_REGISTRY_CONTRACT_ID}" \
+    --source-account "$DEPLOYER_KEY" \
+    --network "$NETWORK" \
+    --send no \
+    -- get_protocol_status 2>/dev/null && pass "Upgrade Registry: protocol status ok" \
+    || warn "Upgrade Registry: get_protocol_status failed (may not be initialized yet)"
+else
+  warn "UPGRADE_REGISTRY_CONTRACT_ID not set — skipping protocol status check"
+fi
 
 echo ""
 header "Local WASM sizes"
-for contract in user_profile property_registry agent_registry rent_obligation escrow payment dispute_resolution chioma; do
+for contract in user_profile property_registry agent_registry rent_obligation escrow payment dispute_resolution chioma upgrade_registry; do
   if [[ -f "$WASM_DIR/${contract}.wasm" ]]; then
     echo "  $contract: $(du -h "$WASM_DIR/${contract}.wasm" | cut -f1)"
   fi

@@ -15,6 +15,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 interface ActivityTimelineProps {
   userId: string;
@@ -47,6 +48,7 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
 export function ActivityTimeline({ userId }: ActivityTimelineProps) {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<ActivityType | ''>('');
+  const dateFnsLocale = useDateFnsLocale();
 
   const { data, isLoading, isError } = useUserActivities(userId, {
     page,
@@ -124,7 +126,9 @@ export function ActivityTimeline({ userId }: ActivityTimelineProps) {
 
                 {/* Mobile time display - only visible on small screens above the card */}
                 <div className="md:hidden text-xs text-slate-500 mb-1 pl-2">
-                  {format(new Date(activity.createdAt), 'MMM d, yyyy h:mm a')}
+                  {format(new Date(activity.createdAt), 'MMM d, yyyy h:mm a', {
+                    locale: dateFnsLocale,
+                  })}
                 </div>
 
                 <div className="flex-1 bg-slate-800/20 hover:bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition-colors rounded-2xl p-4 md:ml-[3.5rem]">
@@ -159,12 +163,14 @@ export function ActivityTimeline({ userId }: ActivityTimelineProps) {
                       <span className="text-sm font-medium text-slate-400">
                         {formatDistanceToNow(new Date(activity.createdAt), {
                           addSuffix: true,
+                          locale: dateFnsLocale,
                         })}
                       </span>
                       <span className="text-xs text-slate-500 mt-1">
                         {format(
                           new Date(activity.createdAt),
                           'MMM d, yyyy h:mm a',
+                          { locale: dateFnsLocale },
                         )}
                       </span>
                     </div>

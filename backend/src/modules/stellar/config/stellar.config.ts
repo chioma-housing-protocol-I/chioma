@@ -13,8 +13,7 @@ export interface StellarConfig {
 
 export default registerAs('stellar', (): StellarConfig => {
   const network = (process.env.STELLAR_NETWORK || 'testnet') as
-    | 'testnet'
-    | 'mainnet';
+    'testnet' | 'mainnet';
 
   const isTestnet = network === 'testnet';
 

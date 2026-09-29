@@ -144,7 +144,7 @@ Templates are intended to be copied into new files and filled in.
 
 ### README template
 
-````markdown
+`````markdown
 # <Project/Module Name>
 
 ## Overview
@@ -183,7 +183,9 @@ Common failure modes and fixes.
 
 Links to deeper docs.
 ````
-````
+`````
+
+`````
 
 ### ADR (Architecture Decision Record) template
 
@@ -236,7 +238,7 @@ Body:
 ```json
 {}
 ```
-````
+`````
 
 ## Response
 

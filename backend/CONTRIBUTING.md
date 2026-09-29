@@ -1,5 +1,7 @@
 # Backend Contributing Guide
 
+> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
+
 This document provides comprehensive guidelines for contributing to the Chioma backend. It covers project architecture, development standards, testing requirements, and CI/CD pipeline expectations.
 
 ## Table of Contents
@@ -1228,14 +1230,14 @@ See [Performance Tuning Guidelines](./docs/PERFORMANCE_TUNING_GUIDELINES.md) for
 
 ### Common Issues
 
-**Port 3000 already in use**
+**Port 5000 already in use**
 
 ```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
+# Kill process on port 5000
+lsof -ti:5000 | xargs kill -9
 
 # Or use different port
-PORT=3001 pnpm run start:dev
+PORT=5001 pnpm run start:dev
 ```
 
 **Database connection errors**

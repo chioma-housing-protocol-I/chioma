@@ -1,4 +1,4 @@
-.PHONY: help install clean lint format format-check typecheck test test-unit test-cov test-e2e build security-lint security-test all ci pre-commit
+.PHONY: help install clean lint format format-check typecheck test test-unit test-cov test-e2e test-mutation test-mutation-fast build security-lint security-test all ci pre-commit
 
 # Default target
 .DEFAULT_GOAL := help
@@ -73,6 +73,11 @@ test: ## Run all unit tests
 
 test-unit: test ## Alias for test
 
+test-contract: ## Run contract tests (Pact)
+	@echo "$(BLUE)Running contract tests...$(NC)"
+	pnpm run test:contract
+	@echo "$(GREEN)✓ Contract tests passed$(NC)"
+
 test-cov: ## Run tests with coverage report
 	@echo "$(BLUE)Running tests with coverage...$(NC)"
 	pnpm run test:cov --ci --forceExit
@@ -85,6 +90,16 @@ test-e2e: ## Run end-to-end tests (requires PostgreSQL)
 	@echo "$(YELLOW)You can start services with: docker-compose up -d$(NC)"
 	pnpm run test:e2e --forceExit
 	@echo "$(GREEN)✓ E2E tests passed$(NC)"
+
+test-mutation: ## Run mutation tests (Stryker)
+	@echo "$(BLUE)Running mutation tests...$(NC)"
+	pnpm run test:mutation
+	@echo "$(GREEN)✓ Mutation tests complete$(NC)"
+
+test-mutation-fast: ## Run mutation tests on a subset of files (common utils)
+	@echo "$(BLUE)Running fast mutation tests...$(NC)"
+	pnpm run test:mutation:fast
+	@echo "$(GREEN)✓ Fast mutation tests complete$(NC)"
 
 test-chaos: ## Run chaos engineering resilience tests (requires PostgreSQL)
 	@echo "$(BLUE)Running chaos engineering tests...$(NC)"
@@ -129,16 +144,16 @@ security-test: ## Run security smoke tests
 
 ##@ CI/CD Pipeline Validation
 
-pre-commit: format-check lint typecheck test ## Run pre-commit checks (format, lint, typecheck, test)
+pre-commit: format-check lint typecheck test test-contract ## Run pre-commit checks (format, lint, typecheck, test)
 	@echo "$(GREEN)✓ All pre-commit checks passed$(NC)"
 
-ci: install format-check lint typecheck test-cov build ## Run full CI pipeline (matches backend-ci-cd.yml)
+ci: install format-check lint typecheck test-contract test-cov build ## Run full CI pipeline (matches backend-ci-cd.yml)
 	@echo "$(GREEN)✓ Full CI pipeline passed$(NC)"
 
 security-ci: install security-lint security-test build ## Run security CI pipeline (matches backend-security-ci-cd.yml)
 	@echo "$(GREEN)✓ Security CI pipeline passed$(NC)"
 
-test-ci: install test-unit test-cov ## Run continuous testing baseline (matches backend-tests.yml)
+test-ci: install test-unit test-contract test-cov ## Run test pipeline (matches backend-tests.yml unit tests)
 	@echo "$(GREEN)✓ Test CI pipeline passed$(NC)"
 
 all: ci security-ci ## Run all CI/CD pipelines

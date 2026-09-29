@@ -121,7 +121,12 @@ describe('AuthController', () => {
       delete expected.refreshToken;
       delete expected.mfaRequired; // controller strips mfaRequired from the login response body
       expect(result).toEqual(expected);
-      expect(service.login).toHaveBeenCalledWith(loginDto);
+      // The controller forwards request context alongside the DTO so the
+      // service can record the originating IP / user agent on the login.
+      expect(service.login).toHaveBeenCalledWith(loginDto, {
+        ipAddress: expect.any(String),
+        userAgent: undefined,
+      });
     });
   });
 

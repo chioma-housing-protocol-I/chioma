@@ -4,15 +4,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
+  CheckSquare,
   Clock3,
   Eye,
   Gavel,
   MessageSquareMore,
   RefreshCw,
+  Square,
+  XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/store/authStore';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
+import { BulkConfirmDialog } from '@/components/admin/BulkConfirmDialog';
 import {
   useAdminDisputes,
   useUpdateAdminDisputeStatus,
@@ -29,6 +34,8 @@ const STATUS_OPTIONS: Array<AdminDisputeStatus | 'ALL'> = [
   'WITHDRAWN',
 ];
 
+type BulkAction = 'resolve' | 'reject';
+
 export default function AdminDisputesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -36,6 +43,9 @@ export default function AdminDisputesPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<AdminDisputeStatus | 'ALL'>('ALL');
   const [selected, setSelected] = useState<AdminDisputeRecord | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'admin') {
@@ -64,12 +74,30 @@ export default function AdminDisputesPage() {
     );
   }, [disputes]);
 
+  const allSelected =
+    disputes.length > 0 && disputes.every((d) => selectedIds.has(d.id));
+
+  const toggleAll = () => {
+    setSelectedIds(
+      allSelected ? new Set() : new Set(disputes.map((d) => d.id)),
+    );
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleQuickAction = async (
     disputeId: string,
     nextStatus: AdminDisputeStatus,
   ) => {
     try {
-      const result = await updateStatus.mutateAsync({
+      await updateStatus.mutateAsync({
         disputeId,
         status: nextStatus,
         resolution:
@@ -77,14 +105,55 @@ export default function AdminDisputesPage() {
             ? 'Resolved from admin dashboard.'
             : undefined,
       });
-
-      toast.success(
-        result.localOnly
-          ? `Updated locally to ${formatLabel(nextStatus)}`
-          : `Moved to ${formatLabel(nextStatus)}`,
-      );
-    } catch {
+      toast.success(`Moved to ${formatLabel(nextStatus)}`);
+    } catch (error) {
+      console.error(`Failed to update dispute ${disputeId}:`, error);
       toast.error('Could not update dispute status');
+    }
+  };
+
+  // Bulk actions (#1558): resolve or reject every selected dispute. Uses
+  // Promise.allSettled, matching BulkUserOperations.tsx's convention — this
+  // only produces an accurate failure count now that
+  // useUpdateAdminDisputeStatus actually throws on a failed request instead
+  // of swallowing it.
+  const runBulkAction = async (action: BulkAction) => {
+    const ids = Array.from(selectedIds);
+    const nextStatus: AdminDisputeStatus =
+      action === 'resolve' ? 'RESOLVED' : 'REJECTED';
+
+    setBulkLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          updateStatus.mutateAsync({
+            disputeId: id,
+            status: nextStatus,
+            resolution:
+              action === 'resolve'
+                ? 'Resolved from admin dashboard (bulk action).'
+                : undefined,
+          }),
+        ),
+      );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = ids.length - failed;
+
+      if (failed === 0) {
+        toast.success(
+          `${action === 'resolve' ? 'Resolved' : 'Rejected'} ${ids.length} dispute${ids.length !== 1 ? 's' : ''}`,
+        );
+      } else if (succeeded === 0) {
+        toast.error(
+          `Failed to ${action} ${failed} dispute${failed !== 1 ? 's' : ''}`,
+        );
+      } else {
+        toast.error(`${succeeded} succeeded, ${failed} failed to ${action}`);
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setBulkLoading(false);
+      setConfirmAction(null);
     }
   };
 
@@ -97,6 +166,8 @@ export default function AdminDisputesPage() {
   }
 
   if (user?.role !== 'admin') return null;
+
+  const selectedCount = selectedIds.size;
 
   return (
     <section className="space-y-6">
@@ -163,20 +234,82 @@ export default function AdminDisputesPage() {
         </select>
       </div>
 
+      {/* Bulk action bar (#1558) */}
+      <BulkActionBar
+        selectedCount={selectedCount}
+        itemLabel="dispute"
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            key: 'resolve',
+            label: 'Resolve',
+            icon: <CheckCircle2 size={14} />,
+            tone: 'success',
+            onClick: () => setConfirmAction('resolve'),
+          },
+          {
+            key: 'reject',
+            label: 'Reject',
+            icon: <XCircle size={14} />,
+            tone: 'danger',
+            onClick: () => setConfirmAction('reject'),
+          },
+        ]}
+      />
+
       {/* Table */}
-      <div className="rounded-2xl border border-white/10">
+      <div className="rounded-2xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">
+          <thead className="bg-white/5 text-blue-300/40">
+            <tr>
+              <th className="p-3 text-left">
+                <button
+                  onClick={toggleAll}
+                  className="text-blue-300/40 hover:text-blue-400 transition-colors"
+                  title={allSelected ? 'Deselect all' : 'Select all'}
+                >
+                  {allSelected ? (
+                    <CheckSquare size={18} className="text-blue-400" />
+                  ) : (
+                    <Square size={18} />
+                  )}
+                </button>
+              </th>
+              <th className="p-3 text-left font-bold uppercase tracking-widest text-[10px]">
+                Dispute
+              </th>
+              <th className="p-3 text-left font-bold uppercase tracking-widest text-[10px]">
+                Status
+              </th>
+              <th className="p-3 text-left font-bold uppercase tracking-widest text-[10px]">
+                Actions
+              </th>
+            </tr>
+          </thead>
           <tbody>
             {disputes.map((d) => (
-              <tr key={d.id}>
+              <tr
+                key={d.id}
+                className={selectedIds.has(d.id) ? 'bg-blue-500/5' : ''}
+              >
+                <td className="p-3">
+                  <button
+                    onClick={() => toggleOne(d.id)}
+                    className="text-blue-300/40 hover:text-blue-400 transition-colors"
+                  >
+                    {selectedIds.has(d.id) ? (
+                      <CheckSquare size={18} className="text-blue-400" />
+                    ) : (
+                      <Square size={18} />
+                    )}
+                  </button>
+                </td>
                 <td className="p-3 text-white">{d.disputeId}</td>
                 <td className="p-3">{formatLabel(d.status)}</td>
-                <td className="p-3">
+                <td className="p-3 flex items-center gap-3">
                   <button onClick={() => setSelected(d)}>
                     <Eye />
                   </button>
-                </td>
-                <td className="p-3">
                   <button onClick={() => handleQuickAction(d.id, 'RESOLVED')}>
                     Resolve
                   </button>
@@ -193,6 +326,28 @@ export default function AdminDisputesPage() {
           <h2 className="text-white">{selected.disputeId}</h2>
           <p>{selected.description}</p>
         </div>
+      )}
+
+      {/* Bulk confirmation dialogs (#1558) */}
+      {confirmAction === 'resolve' && (
+        <BulkConfirmDialog
+          title={`Resolve ${selectedCount} dispute${selectedCount !== 1 ? 's' : ''}?`}
+          message="Each selected dispute will be marked resolved and logged to the audit trail."
+          onConfirm={() => runBulkAction('resolve')}
+          onCancel={() => setConfirmAction(null)}
+          isLoading={bulkLoading}
+          variant="warning"
+        />
+      )}
+      {confirmAction === 'reject' && (
+        <BulkConfirmDialog
+          title={`Reject ${selectedCount} dispute${selectedCount !== 1 ? 's' : ''}?`}
+          message="Each selected dispute will be marked rejected and logged to the audit trail. This cannot be undone from this view."
+          onConfirm={() => runBulkAction('reject')}
+          onCancel={() => setConfirmAction(null)}
+          isLoading={bulkLoading}
+          variant="danger"
+        />
       )}
     </section>
   );

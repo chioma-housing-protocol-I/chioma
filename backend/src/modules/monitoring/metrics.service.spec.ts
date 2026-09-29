@@ -75,8 +75,8 @@ describe('MetricsService', () => {
   });
 
   describe('Database metrics', () => {
-    it('setDatabaseConnections does not throw', () => {
-      expect(() => service.setDatabaseConnections(10)).not.toThrow();
+    it('setDatabasePoolUsage does not throw', () => {
+      expect(() => service.setDatabasePoolUsage(5, 3, 10, 1)).not.toThrow();
     });
 
     it('recordDatabaseQuery does not throw', () => {
@@ -97,6 +97,54 @@ describe('MetricsService', () => {
       expect(() =>
         service.recordDispute('security_deposit', 'open'),
       ).not.toThrow();
+    });
+  });
+
+  describe('Queue metrics', () => {
+    it('exposes per-queue gauges on the metrics endpoint output', async () => {
+      service.setQueueMetrics('email', {
+        depth: 12,
+        oldestJobAgeSeconds: 480,
+        active: 2,
+        failed: 3,
+        paused: false,
+        stalled: true,
+      });
+
+      const output = await service.getMetrics();
+
+      expect(output).toContain('queue_depth{queue="email"} 12');
+      expect(output).toContain(
+        'queue_oldest_job_age_seconds{queue="email"} 480',
+      );
+      expect(output).toContain('queue_active_jobs{queue="email"} 2');
+      expect(output).toContain('queue_failed_jobs{queue="email"} 3');
+      expect(output).toContain('queue_paused{queue="email"} 0');
+      expect(output).toContain('queue_stalled{queue="email"} 1');
+    });
+
+    it('clears the stalled gauge on recovery', async () => {
+      service.setQueueMetrics('email', {
+        depth: 12,
+        oldestJobAgeSeconds: 480,
+        active: 0,
+        failed: 0,
+        paused: false,
+        stalled: true,
+      });
+      service.setQueueMetrics('email', {
+        depth: 0,
+        oldestJobAgeSeconds: 0,
+        active: 0,
+        failed: 0,
+        paused: false,
+        stalled: false,
+      });
+
+      const output = await service.getMetrics();
+
+      expect(output).toContain('queue_stalled{queue="email"} 0');
+      expect(output).toContain('queue_depth{queue="email"} 0');
     });
   });
 });

@@ -6,10 +6,10 @@ Automated verification for PostgreSQL backups used in production readiness (#994
 
 `backend/scripts/verify-backup.sh`
 
-| Mode | Command | Requires PostgreSQL |
-| ---- | ------- | ------------------- |
-| Metadata only | `BACKUP_VERIFY_METADATA_ONLY=true make verify-backup` | No |
-| Full restore drill | `make verify-backup` | Yes |
+| Mode               | Command                                               | Requires PostgreSQL |
+| ------------------ | ----------------------------------------------------- | ------------------- |
+| Metadata only      | `BACKUP_VERIFY_METADATA_ONLY=true make verify-backup` | No                  |
+| Full restore drill | `make verify-backup`                                  | Yes                 |
 
 ### Metadata-only checks
 
@@ -26,14 +26,14 @@ Automated verification for PostgreSQL backups used in production readiness (#994
 
 ## Environment variables
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `BACKUP_DIR` | `/var/backups/chioma` | Directory containing backup files |
-| `BACKUP_VERIFY_METADATA_ONLY` | `false` | Skip restore when `true` |
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_USERNAME` | `postgres` | PostgreSQL user |
-| `DB_PASSWORD` | — | PostgreSQL password |
+| Variable                      | Default               | Description                       |
+| ----------------------------- | --------------------- | --------------------------------- |
+| `BACKUP_DIR`                  | `/var/backups/chioma` | Directory containing backup files |
+| `BACKUP_VERIFY_METADATA_ONLY` | `false`               | Skip restore when `true`          |
+| `DB_HOST`                     | `localhost`           | PostgreSQL host                   |
+| `DB_PORT`                     | `5432`                | PostgreSQL port                   |
+| `DB_USERNAME`                 | `postgres`            | PostgreSQL user                   |
+| `DB_PASSWORD`                 | —                     | PostgreSQL password               |
 
 ## Scheduling
 

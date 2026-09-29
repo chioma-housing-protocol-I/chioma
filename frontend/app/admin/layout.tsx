@@ -9,7 +9,6 @@ import AdminSidebar from '@/components/admin-dashboard/Sidebar';
 import AdminTopbar from '@/components/admin-dashboard/Topbar';
 import { getAdminPageTitle } from '@/components/admin-dashboard/navigation';
 
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
 import { useAuth } from '@/store/authStore';
 
@@ -36,17 +35,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     pageTitle = 'Dispute Detail';
   }
 
-  // Role-based access - FORCED TO TRUE FOR DEVELOPMENT
-  const canAccessAdmin = true;
-  /* 
   const canAccessAdmin = ['admin', 'support', 'auditor'].includes(
     user?.role ?? '',
   );
-  */
 
   return (
     // <ProtectedRoute>
-    <div className="flex h-screen overflow-x-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+    <div className="flex h-dvh overflow-x-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white transition-orientation">
       <AdminSidebar />
 
       <div className="flex flex-1 flex-col">
@@ -58,7 +53,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           fallbackTitle="Admin panel failed"
           fallbackDescription="This admin panel encountered an error. Retry to continue."
         >
-          <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 overflow-auto p-4 sm:p-6"
+          >
             {loading ? (
               <div className="flex items-center justify-center min-h-[40vh] text-blue-200/80">
                 <div className="flex flex-col items-center space-y-4">

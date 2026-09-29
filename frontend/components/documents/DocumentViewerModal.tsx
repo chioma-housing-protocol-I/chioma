@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Download, Printer, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { Document } from './types';
 import { DocumentPreview } from './DocumentPreview';
 
@@ -17,6 +18,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   onClose,
   onDownload,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (!document) return null;
 
   const handleDownload = () => {
@@ -54,7 +56,9 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               <span>{(document.size / (1024 * 1024)).toFixed(2)} MB</span>
               <span>•</span>
               <span>
-                {format(new Date(document.uploadedAt), 'MMM d, yyyy h:mm a')}
+                {format(new Date(document.uploadedAt), 'MMM d, yyyy h:mm a', {
+                  locale: dateFnsLocale,
+                })}
               </span>
               {document.uploadedByName && (
                 <>

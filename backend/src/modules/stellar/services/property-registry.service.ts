@@ -13,6 +13,7 @@ import {
   PropertyHistory,
 } from '../entities/property-registry.entity';
 import { StellarAccount } from '../entities/stellar-account.entity';
+import { PaginationUtils } from '../../../common/utils';
 import {
   RegisterPropertyDto,
   TransferPropertyDto,
@@ -20,6 +21,10 @@ import {
 } from '../dto/property-registry.dto';
 import { EncryptionService } from './encryption.service';
 import { StellarConfig } from '../config/stellar.config';
+import {
+  assertSorobanSubmissionAccepted,
+  waitForSorobanTransactionSuccess,
+} from './soroban-transaction-poller';
 
 @Injectable()
 export class PropertyRegistryService {
@@ -40,9 +45,9 @@ export class PropertyRegistryService {
   ) {
     const config = this.configService.get<StellarConfig>('stellar')!;
 
-    // FIX 1: Cast config to 'any' to bypass strict interface checking for rpcUrl
     const rpcUrl =
-      (config as any).rpcUrl || 'https://soroban-testnet.stellar.org';
+      this.configService.get<string>('SOROBAN_RPC_URL') ||
+      'https://soroban-testnet.stellar.org';
     this.sorobanRpc = new StellarSdk.SorobanRpc.Server(rpcUrl);
     this.networkPassphrase = config.networkPassphrase;
 
@@ -85,14 +90,9 @@ export class PropertyRegistryService {
 
       const accountInfo = await this.sorobanRpc.getAccount(sourcePublicKey);
 
-      // FIX 2: Cast to 'any' and safely grab the sequence number regardless of SDK version
-      const sequence =
-        (accountInfo as any).sequence ||
-        (accountInfo as any).sequenceNumber?.() ||
-        '0';
       const sourceAccount = new StellarSdk.Account(
         sourcePublicKey,
-        sequence.toString(),
+        accountInfo.sequenceNumber(),
       );
 
       const operation = this.contract.call(functionName, ...args);
@@ -109,24 +109,12 @@ export class PropertyRegistryService {
       tx.sign(keypair);
 
       const sendResponse = await this.sorobanRpc.sendTransaction(tx);
-      if (sendResponse.status === 'ERROR') {
-        throw new Error(
-          `Submit failed: ${JSON.stringify(sendResponse.errorResult)}`,
-        );
-      }
-
-      let txStatus;
-      for (let i = 0; i < 15; i++) {
-        txStatus = await this.sorobanRpc.getTransaction(sendResponse.hash);
-        if (txStatus.status !== 'NOT_FOUND') break;
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-
-      if (txStatus?.status !== 'SUCCESS') {
-        throw new Error(`Transaction failed on-chain: ${txStatus?.status}`);
-      }
-
-      return sendResponse.hash;
+      assertSorobanSubmissionAccepted(sendResponse);
+      return await waitForSorobanTransactionSuccess(
+        this.sorobanRpc,
+        sendResponse.hash,
+        this.configService,
+      );
     } catch (error) {
       this.logger.error(`Contract invocation failed: ${functionName}`, error);
       throw new InternalServerErrorException(
@@ -216,10 +204,14 @@ export class PropertyRegistryService {
     return this.propertyRegistryRepo.count();
   }
 
-  async getPropertyHistory(propertyId: string): Promise<PropertyHistory[]> {
-    return this.propertyHistoryRepo.find({
+  async getPropertyHistory(propertyId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.propertyHistoryRepo.findAndCount({
       where: { propertyId },
       order: { transferredAt: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 }

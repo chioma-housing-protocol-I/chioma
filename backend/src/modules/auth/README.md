@@ -116,12 +116,12 @@ const isValid = await bcrypt.compare(password, hash);
 
 ### Account Lockout
 
-Prevents brute force attacks by locking accounts after failed login attempts.
+Prevents brute force attacks by locking accounts after repeated failed login attempts.
 
 ```typescript
 Configuration:
-- Max failed attempts: 5
-- Lockout duration: 15 minutes
+- Max failed attempts allowed: 5 (lockout triggers on the 6th attempt)
+- Lockout duration: 30 minutes
 - Automatic unlock: After timeout expires
 - Failed attempts reset: On successful login
 ```

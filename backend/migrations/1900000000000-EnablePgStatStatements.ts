@@ -5,7 +5,9 @@ export class EnablePgStatStatements1900000000000 implements MigrationInterface {
     // Enable pg_stat_statements extension if it exists
     // Note: This usually requires pg_stat_statements to be in shared_preload_libraries
     // which is a server-level setting. However, creating the extension is still necessary.
-    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS pg_stat_statements`);
+    await queryRunner.query(
+      `CREATE EXTENSION IF NOT EXISTS pg_stat_statements`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

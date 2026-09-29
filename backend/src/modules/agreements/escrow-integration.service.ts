@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import {
@@ -7,6 +11,7 @@ import {
 } from '../stellar/entities/stellar-escrow.entity';
 import { EscrowContractService } from '../stellar/services/escrow-contract.service';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
+import { ValidationUtils } from '../../common/utils/validation/validation.utils';
 
 @Injectable()
 export class EscrowIntegrationService {
@@ -166,8 +171,25 @@ export class EscrowIntegrationService {
     }
   }
 
+  /**
+   * Resolves the arbiter address escrow is created with. An escrow with no
+   * valid arbiter has no functioning on-chain dispute-resolution path, so
+   * this throws rather than silently falling back to an empty string — a
+   * misconfigured or missing DEFAULT_ARBITER_ADDRESS must block escrow
+   * creation, not create an unarbitrated escrow.
+   *
+   * Startup config validation (env.validation.ts) also requires this var
+   * when deployed; this check additionally covers `NODE_ENV=test`/local
+   * development, where startup validation does not enforce it.
+   */
   private getDefaultArbiter(): string {
     // In production, this would be determined by business logic
-    return process.env.DEFAULT_ARBITER_ADDRESS || '';
+    const address = process.env.DEFAULT_ARBITER_ADDRESS || '';
+    if (!ValidationUtils.validateWalletAddress(address)) {
+      throw new InternalServerErrorException(
+        'DEFAULT_ARBITER_ADDRESS is missing or invalid; escrow cannot be created without a valid arbiter address',
+      );
+    }
+    return address;
   }
 }

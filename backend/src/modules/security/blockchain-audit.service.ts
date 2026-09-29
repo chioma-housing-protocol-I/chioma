@@ -13,6 +13,13 @@ export interface AnchorRecord {
   network: string;
 }
 
+export class StellarTransactionHashMissingError extends Error {
+  constructor() {
+    super('Stellar transaction hash missing');
+    this.name = 'StellarTransactionHashMissingError';
+  }
+}
+
 /**
  * Blockchain Audit Anchoring Service
  *
@@ -185,7 +192,15 @@ export class BlockchainAuditService {
 
     tx.sign(keypair);
     const result = await server.submitTransaction(tx);
-    return result.hash as string;
+    return this.validateTransactionHash(result.hash);
+  }
+
+  private validateTransactionHash(hash: unknown): string {
+    if (typeof hash !== 'string' || hash.trim().length === 0) {
+      throw new StellarTransactionHashMissingError();
+    }
+
+    return hash;
   }
 
   // ─── DB helpers ──────────────────────────────────────────────────────────

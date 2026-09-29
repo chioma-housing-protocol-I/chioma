@@ -3,6 +3,7 @@ import { Download, Trash2, Share2, Edit2 } from 'lucide-react';
 import { FileMetadata } from '../../lib/api/storage';
 import { FileIcon } from './FileIcon';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '../../lib/utils/date-fns-locale';
 
 interface Props {
   files: FileMetadata[];
@@ -21,6 +22,7 @@ export const FileGrid: React.FC<Props> = ({
   onShare,
   onSelect,
 }) => {
+  const dateFnsLocale = useDateFnsLocale();
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -76,6 +78,7 @@ export const FileGrid: React.FC<Props> = ({
               <span>
                 {formatDistanceToNow(new Date(file.updatedAt), {
                   addSuffix: true,
+                  locale: dateFnsLocale,
                 })}
               </span>
             </div>

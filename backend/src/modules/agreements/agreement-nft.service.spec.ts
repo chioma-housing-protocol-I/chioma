@@ -29,6 +29,8 @@ describe('AgreementNftService', () => {
             mintObligation: jest.fn(),
             transferObligation: jest.fn(),
             getObligationOwner: jest.fn(),
+            burnObligation: jest.fn(),
+            adminReassignObligation: jest.fn(),
           },
         },
       ],
@@ -120,6 +122,116 @@ describe('AgreementNftService', () => {
 
       expect(result.currentOwner).toBe(toAddress);
       expect(result.transferCount).toBe(1);
+    });
+  });
+
+  describe('burnNftForAgreement', () => {
+    it('burns the NFT and marks it burned', async () => {
+      const agreementId = 'agreement-123';
+      const existingNft = {
+        id: 'nft-id',
+        agreementId,
+        tokenId: 'token-123',
+        currentOwner: 'GOWNER',
+        status: 'active',
+        isActive: true,
+      } as unknown as RentObligationNft;
+
+      jest.spyOn(nftRepository, 'findOne').mockResolvedValue(existingNft);
+      jest.spyOn(nftContractService, 'burnObligation').mockResolvedValue({
+        txHash: 'burn-tx-hash',
+      });
+      jest
+        .spyOn(nftRepository, 'save')
+        .mockImplementation((n) => Promise.resolve(n as RentObligationNft));
+
+      const result = await service.burnNftForAgreement(
+        agreementId,
+        'AgreementTerminated',
+      );
+
+      expect(nftContractService.burnObligation).toHaveBeenCalledWith({
+        tokenId: 'token-123',
+        reason: 'AgreementTerminated',
+        ownerAddress: 'GOWNER',
+      });
+      expect(result.status).toBe('burned');
+      expect(result.isActive).toBe(false);
+      expect(result.burnTxHash).toBe('burn-tx-hash');
+    });
+
+    it('is a no-op when the NFT is already burned', async () => {
+      const agreementId = 'agreement-123';
+      const existingNft = {
+        id: 'nft-id',
+        agreementId,
+        tokenId: 'token-123',
+        currentOwner: 'GOWNER',
+        status: 'burned',
+        isActive: false,
+      } as unknown as RentObligationNft;
+
+      jest.spyOn(nftRepository, 'findOne').mockResolvedValue(existingNft);
+
+      const result = await service.burnNftForAgreement(
+        agreementId,
+        'AgreementTerminated',
+      );
+
+      expect(nftContractService.burnObligation).not.toHaveBeenCalled();
+      expect(result.status).toBe('burned');
+    });
+
+    it('throws when NFT is not found', async () => {
+      jest.spyOn(nftRepository, 'findOne').mockResolvedValue(null);
+
+      await expect(
+        service.burnNftForAgreement('missing-agreement', 'AgreementTerminated'),
+      ).rejects.toThrow('NFT not found for agreement missing-agreement');
+    });
+  });
+
+  describe('adminReassignNft', () => {
+    it('reassigns the obligation to a new owner', async () => {
+      const agreementId = 'agreement-123';
+      const newOwnerAddress = 'GNEWOWNER';
+      const adminAddress = 'GADMIN';
+      const existingNft = {
+        id: 'nft-id',
+        agreementId,
+        currentOwner: 'GOLDOWNER',
+        transferCount: 0,
+      } as unknown as RentObligationNft;
+
+      jest.spyOn(nftRepository, 'findOne').mockResolvedValue(existingNft);
+      jest
+        .spyOn(nftContractService, 'adminReassignObligation')
+        .mockResolvedValue({ txHash: 'reassign-tx-hash' });
+      jest
+        .spyOn(nftRepository, 'save')
+        .mockImplementation((n) => Promise.resolve(n as RentObligationNft));
+
+      const result = await service.adminReassignNft(
+        agreementId,
+        newOwnerAddress,
+        adminAddress,
+      );
+
+      expect(nftContractService.adminReassignObligation).toHaveBeenCalledWith({
+        agreementId,
+        newOwnerAddress,
+        adminAddress,
+      });
+      expect(result.currentOwner).toBe(newOwnerAddress);
+      expect(result.transferCount).toBe(1);
+    });
+
+    it('throws when NFT is not found', async () => {
+      jest.spyOn(nftRepository, 'findOne').mockResolvedValue(null);
+
+      await expect(
+        service.adminReassignNft('missing-agreement', 'GNEW', 'GADMIN'),
+      ).rejects.toThrow('NFT not found for agreement missing-agreement');
     });
   });
 });

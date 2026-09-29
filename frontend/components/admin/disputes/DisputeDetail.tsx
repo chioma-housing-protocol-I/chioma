@@ -17,6 +17,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import type { AdminDisputeDetail } from '@/lib/admin-dispute-detail';
 import {
   statusLabel,
@@ -81,6 +83,7 @@ export function DisputeDetail({
 }: DisputeDetailProps) {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const canResolve = useMemo(() => {
     return dispute.status === 'OPEN' || dispute.status === 'UNDER_REVIEW';
@@ -169,7 +172,7 @@ export function DisputeDetail({
                   Requested amount
                 </p>
                 <p className="text-lg font-bold text-white">
-                  {dispute.requestedAmount.toLocaleString()} {dispute.currency}
+                  {formatCurrency(dispute.requestedAmount, dispute.currency)}
                 </p>
               </div>
             )}
@@ -177,12 +180,16 @@ export function DisputeDetail({
               <div className="flex items-center gap-2 text-slate-400">
                 <Clock size={16} className="shrink-0" />
                 Opened{' '}
-                {format(new Date(dispute.createdAt), 'MMM d, yyyy · HH:mm')}
+                {format(new Date(dispute.createdAt), 'MMM d, yyyy · HH:mm', {
+                  locale: dateFnsLocale,
+                })}
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <Clock size={16} className="shrink-0" />
                 Updated{' '}
-                {format(new Date(dispute.updatedAt), 'MMM d, yyyy · HH:mm')}
+                {format(new Date(dispute.updatedAt), 'MMM d, yyyy · HH:mm', {
+                  locale: dateFnsLocale,
+                })}
               </div>
               {dispute.assignedToName && (
                 <div className="flex items-center gap-2 text-slate-400">
@@ -280,7 +287,9 @@ export function DisputeDetail({
                       </p>
                       <p className="text-xs text-slate-500">
                         {ev.uploadedByName} ·{' '}
-                        {format(new Date(ev.uploadedAt), 'MMM d, yyyy HH:mm')}
+                        {format(new Date(ev.uploadedAt), 'MMM d, yyyy HH:mm', {
+                          locale: dateFnsLocale,
+                        })}
                       </p>
                       <a
                         href={ev.url}
@@ -318,7 +327,9 @@ export function DisputeDetail({
                     )}
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
                       <span>
-                        {format(new Date(ev.createdAt), 'MMM d, yyyy · HH:mm')}
+                        {format(new Date(ev.createdAt), 'MMM d, yyyy · HH:mm', {
+                          locale: dateFnsLocale,
+                        })}
                       </span>
                       {ev.actorName && (
                         <span>
@@ -348,7 +359,9 @@ export function DisputeDetail({
                     <div className="flex flex-wrap items-center gap-2 justify-between">
                       <DecisionBadge decision={r.decision} />
                       <span className="text-xs text-slate-500">
-                        {format(new Date(r.decidedAt), 'MMM d, yyyy HH:mm')}
+                        {format(new Date(r.decidedAt), 'MMM d, yyyy HH:mm', {
+                          locale: dateFnsLocale,
+                        })}
                       </span>
                     </div>
                     <p className="text-slate-300 text-sm whitespace-pre-wrap">

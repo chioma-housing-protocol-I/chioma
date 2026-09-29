@@ -119,6 +119,26 @@ export class NotificationNotFoundError extends ResourceNotFoundError {
   }
 }
 
+export class DisputeNotFoundError extends ResourceNotFoundError {
+  constructor(disputeId?: string) {
+    super(
+      ErrorCode.DISPUTE_NOT_FOUND,
+      disputeId ? `Dispute with ID ${disputeId} not found` : undefined,
+      disputeId ? { disputeId } : undefined,
+    );
+  }
+}
+
+export class BookingNotFoundError extends ResourceNotFoundError {
+  constructor(bookingId?: string) {
+    super(
+      ErrorCode.BOOKING_NOT_FOUND,
+      bookingId ? `Booking with ID ${bookingId} not found` : undefined,
+      bookingId ? { bookingId } : undefined,
+    );
+  }
+}
+
 /**
  * Business Logic Errors
  */

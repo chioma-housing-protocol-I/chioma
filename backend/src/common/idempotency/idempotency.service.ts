@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { REDIS_CLIENT } from '../lock/redis-client.token';
 import { IdempotencyKeyMissingError } from './idempotency.errors';
 
@@ -55,6 +56,55 @@ export class IdempotencyService {
       return null;
     }
     return JSON.parse(value as string);
+  }
+
+  async claim(key: string, ttlMs: number): Promise<string | null> {
+    this.validateKey(key);
+    const namespacedKey = `idempotency:${key}`;
+    const token = randomUUID();
+
+    if (!this.redis) {
+      const existing = this.localStore.get(namespacedKey);
+      if (existing && existing.expiresAt > Date.now()) {
+        return null;
+      }
+      if (existing) this.localStore.delete(namespacedKey);
+      this.localStore.set(namespacedKey, {
+        value: JSON.stringify({ claimToken: token }),
+        expiresAt: Date.now() + ttlMs,
+      });
+      return token;
+    }
+
+    const result = await this.redis.set(
+      namespacedKey,
+      JSON.stringify({ claimToken: token }),
+      'PX',
+      ttlMs,
+      'NX',
+    );
+    return result === 'OK' ? token : null;
+  }
+
+  async releaseClaim(key: string, token: string): Promise<void> {
+    this.validateKey(key);
+    const namespacedKey = `idempotency:${key}`;
+    const claimValue = JSON.stringify({ claimToken: token });
+
+    if (!this.redis) {
+      const existing = this.localStore.get(namespacedKey);
+      if (existing?.value === claimValue) {
+        this.localStore.delete(namespacedKey);
+      }
+      return;
+    }
+
+    await this.redis.eval(
+      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+      1,
+      namespacedKey,
+      claimValue,
+    );
   }
 
   async process<T>(

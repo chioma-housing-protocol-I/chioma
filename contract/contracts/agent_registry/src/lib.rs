@@ -5,12 +5,19 @@ use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 mod agent;
 mod errors;
 mod events;
+mod rate_limit;
 mod storage;
 mod types;
 mod upgrade;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tests_rate_limit;
+
+#[cfg(test)]
+mod tests_property;
 
 pub use agent::{
     complete_transaction, get_agent_count, get_agent_info, rate_agent, register_agent,

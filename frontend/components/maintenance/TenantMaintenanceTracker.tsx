@@ -17,12 +17,12 @@ import {
   PRIORITY_LABELS,
   PRIORITY_STYLES,
 } from '@/components/maintenance/config';
-import type {
-  MaintenanceRequest,
-  IssueCategory,
-  PriorityLevel,
-} from '@/components/maintenance/types';
+import type { MaintenanceRequest } from '@/components/maintenance/types';
 import MaintenanceRequestForm from '@/components/maintenance/MaintenanceRequestForm';
+import {
+  fetchMaintenanceRequests,
+  submitMaintenanceRequest,
+} from '@/components/maintenance/api';
 
 const mockRequests: MaintenanceRequest[] = [
   {
@@ -95,9 +95,13 @@ export default function TenantMaintenanceTracker({
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await new Promise((r) => setTimeout(r, 400));
-      setRequests(seedRequests);
-      setLoading(false);
+      try {
+        setRequests(await fetchMaintenanceRequests());
+      } catch {
+        setRequests(seedRequests);
+      } finally {
+        setLoading(false);
+      }
     };
     void load();
   }, [user?.id]);
@@ -111,20 +115,12 @@ export default function TenantMaintenanceTracker({
   }): Promise<boolean> => {
     setIsSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 800));
-      const newReq: MaintenanceRequest = {
-        id: String(Date.now()),
-        propertyId: input.propertyId,
-        propertyName: 'Sunset View Apartments - Unit 4B',
-        category: input.category as IssueCategory,
-        description: input.description,
-        priority: input.priority as PriorityLevel,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        media: [],
-      };
-      setRequests((prev) => [newReq, ...prev]);
+      const created = await submitMaintenanceRequest({
+        ...input,
+        category: input.category as MaintenanceRequest['category'],
+        priority: input.priority as MaintenanceRequest['priority'],
+      });
+      setRequests((prev) => [created, ...prev]);
       setShowForm(false);
       return true;
     } catch {
@@ -226,10 +222,6 @@ export default function TenantMaintenanceTracker({
             </button>
           </div>
           <MaintenanceRequestForm
-            properties={[
-              { id: 'prop-1', name: 'Sunset View Apartments - Unit 4B' },
-              { id: 'prop-2', name: 'Pine Tree Townhouse' },
-            ]}
             isSubmitting={isSubmitting}
             onSubmit={handleSubmit}
           />
@@ -238,8 +230,9 @@ export default function TenantMaintenanceTracker({
 
       {/* Filter */}
       <div className="flex items-center gap-2">
-        <Filter size={14} className="text-blue-300/40" />
+        <Filter size={14} className="text-blue-300/40" aria-hidden="true" />
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) =>
             setStatusFilter(

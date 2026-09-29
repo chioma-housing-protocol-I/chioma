@@ -4,18 +4,9 @@ import { UUID, ISO8601DateTime, StellarPublicKey } from './common.types';
 import { Address } from './user.types';
 
 export type PropertyType =
-  | 'apartment'
-  | 'house'
-  | 'condo'
-  | 'townhouse'
-  | 'studio'
-  | 'commercial';
+  'apartment' | 'house' | 'condo' | 'townhouse' | 'studio' | 'commercial';
 export type PropertyStatus =
-  | 'draft'
-  | 'active'
-  | 'rented'
-  | 'maintenance'
-  | 'inactive';
+  'draft' | 'active' | 'rented' | 'maintenance' | 'inactive';
 export type FurnishingStatus = 'furnished' | 'semi_furnished' | 'unfurnished';
 export type ParkingType = 'none' | 'street' | 'garage' | 'covered' | 'open';
 

@@ -11,7 +11,12 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { PropertyWizardService } from './property-wizard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -29,12 +34,14 @@ import axios from 'axios';
 export class PropertyWizardController {
   constructor(private readonly wizardService: PropertyWizardService) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post('start')
   @ApiOperation({ summary: 'Start a new property listing wizard' })
   async start(@CurrentUser() user: User) {
     return await this.wizardService.start(user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/draft')
   @ApiOperation({ summary: 'Get draft content' })
   async findOne(
@@ -44,6 +51,7 @@ export class PropertyWizardController {
     return await this.wizardService.findDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch(':id/step')
   @ApiOperation({ summary: 'Save progress and validate step' })
   async updateStep(
@@ -59,6 +67,7 @@ export class PropertyWizardController {
     );
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
   @Delete(':id/draft')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a draft' })
@@ -69,6 +78,7 @@ export class PropertyWizardController {
     await this.wizardService.removeDraft(id, user.id);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post(':id/publish')
   @ApiOperation({ summary: 'Publish draft' })
   async publish(
@@ -79,6 +89,7 @@ export class PropertyWizardController {
   }
 
   // AI Helpers
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/ai/pricing-suggestion')
   @ApiOperation({ summary: 'AI pricing suggestion' })
   async getPricingSuggestion(
@@ -99,6 +110,7 @@ export class PropertyWizardController {
     }
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/ai/description-suggestion')
   @ApiOperation({ summary: 'AI description suggestion' })
   async getDescriptionSuggestion(
@@ -131,6 +143,7 @@ export class PropertyWizardController {
     }
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/ai/completeness-score')
   @ApiOperation({ summary: 'AI completeness score' })
   async getCompletenessScore(

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   LandlordNotification,
   LandlordNotificationType,
@@ -68,6 +69,7 @@ export default function NotificationItem({
   isBusy = false,
 }: NotificationItemProps) {
   const { icon: Icon, badge, iconWrap } = typeStyles[notification.type];
+  const dateFnsLocale = useDateFnsLocale();
 
   return (
     <article
@@ -121,7 +123,9 @@ export default function NotificationItem({
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
-            {format(new Date(notification.createdAt), 'MMM d, yyyy h:mm a')}
+            {format(new Date(notification.createdAt), 'MMM d, yyyy h:mm a', {
+              locale: dateFnsLocale,
+            })}
           </p>
         </div>
       </button>

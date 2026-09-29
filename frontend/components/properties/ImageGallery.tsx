@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { shimmerBlurDataURL } from '@/lib/utils/image-placeholder';
 
 interface ImageGalleryProps {
   images: string[];
@@ -41,7 +42,10 @@ export default function ImageGallery({
           src={images[activeIndex]}
           alt={`${title} - view ${activeIndex + 1}`}
           fill
+          sizes="(min-width: 1024px) 66vw, 100vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          placeholder="blur"
+          blurDataURL={shimmerBlurDataURL}
           priority
         />
 
@@ -83,7 +87,10 @@ export default function ImageGallery({
                 src={img}
                 alt={`Thumbnail ${idx + 1}`}
                 fill
+                sizes="144px"
                 className="object-cover"
+                placeholder="blur"
+                blurDataURL={shimmerBlurDataURL}
               />
             </div>
           ))}

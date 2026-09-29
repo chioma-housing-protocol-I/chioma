@@ -17,16 +17,20 @@ Sentry.init({
 });
 
 import * as express from 'express';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './common/services/logger.service';
 import { registerGracefulShutdown } from './config/graceful-shutdown';
+import { OpenApiDocumentRegistryService } from './common/validation/openapi-document-registry.service';
+import { EnvironmentVariables } from './config/environment-variables';
+import { EncryptionService } from './modules/stellar/services/encryption.service';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -35,6 +39,25 @@ let isShuttingDown = false;
 let activeConnections = 0;
 
 async function bootstrap() {
+  // ── Pre-DI encryption key check ────────────────────────────────────────────
+  // Validate the raw environment variable before NestJS boots so operators
+  // see a clear fatal message at the very top of the log rather than a
+  // cryptic DI error buried further down.
+  const rawEncryptionKey = process.env.STELLAR_ENCRYPTION_KEY ?? '';
+  const { valid: envKeyValid, reason: envKeyReason } =
+    EncryptionService.validateKeyString(rawEncryptionKey);
+
+  if (!envKeyValid) {
+    bootstrapLogger.fatal(
+      `[STARTUP] Encryption key validation failed: ${envKeyReason}. ` +
+        'Application will not start. ' +
+        'Set STELLAR_ENCRYPTION_KEY to a strong random secret of at least 32 characters.',
+    );
+    process.exit(1);
+  }
+
+  bootstrapLogger.log('[STARTUP] Encryption key pre-check passed.');
+
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
@@ -43,20 +66,22 @@ async function bootstrap() {
   const loggerService = app.get(LoggerService);
   app.useLogger(loggerService);
 
-  const configService = app.get(ConfigService);
+  const configService: ConfigService<EnvironmentVariables, true> =
+    app.get(ConfigService);
 
   // Parse CORS origins from environment variable
   const corsOrigins = configService
-    .get<string>('CORS_ORIGINS')
+    .get('CORS_ORIGINS', { infer: true })
     ?.split(',')
     .map((origin) => origin.trim()) || [
-    configService.get<string>('FRONTEND_URL') || 'http://localhost:3001',
+    configService.get('FRONTEND_URL', { infer: true }) ||
+      'http://localhost:3000',
   ];
 
   app.enableCors({
     origin: corsOrigins,
     credentials:
-      configService.get<string>('CORS_CREDENTIALS') === 'true' || true,
+      configService.get('CORS_CREDENTIALS', { infer: true }) === 'true' || true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -83,14 +108,16 @@ async function bootstrap() {
       'security.txt',
       '.well-known',
       'developer-portal',
+      'metrics',
     ],
   });
 
   // Configure request size limits
   const jsonLimit =
-    configService.get<string>('REQUEST_SIZE_LIMIT_JSON') || '1mb';
+    configService.get('REQUEST_SIZE_LIMIT_JSON', { infer: true }) || '1mb';
   const urlencodedLimit =
-    configService.get<string>('REQUEST_SIZE_LIMIT_URLENCODED') || '1mb';
+    configService.get('REQUEST_SIZE_LIMIT_URLENCODED', { infer: true }) ||
+    '1mb';
   const rawBodySaver = (
     req: express.Request & { rawBody?: string },
     _res: express.Response,
@@ -106,11 +133,11 @@ async function bootstrap() {
   if (process.env.RESPONSE_TIME_ENABLED !== 'false') {
     app.use(
       (
-        req: express.Request,
+        req: express.Request & { _startTime?: number },
         _res: express.Response,
         next: express.NextFunction,
       ) => {
-        (req as any)._startTime = Date.now();
+        req._startTime = Date.now();
         next();
       },
     );
@@ -131,10 +158,12 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new RateLimitInterceptor(),
+    new DeprecationInterceptor(app.get(Reflector)),
   );
 
   // Enhanced ValidationPipe configuration
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const isProduction =
+    configService.get('NODE_ENV', { infer: true }) === 'production';
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -162,7 +191,8 @@ async function bootstrap() {
     .setContact('Chioma', 'https://chioma.app', 'support@chioma.app')
     .setLicense('Open Source', 'https://github.com/chioma/chioma')
     .addServer(
-      configService.get<string>('API_BASE_URL') || 'http://localhost:5000',
+      configService.get('API_BASE_URL', { infer: true }) ||
+        'http://localhost:5000',
       'Default',
     )
     .addBearerAuth(
@@ -200,6 +230,11 @@ async function bootstrap() {
       `${controllerKey}_${methodKey}`,
   });
 
+  // Make the generated schema available to ResponseSchemaValidationInterceptor
+  // so handlers annotated with @ValidateResponseSchema can be checked against
+  // it at runtime (see common/interceptors/response-schema-validation.interceptor.ts).
+  app.get(OpenApiDocumentRegistryService).setDocument(document);
+
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
@@ -211,6 +246,23 @@ async function bootstrap() {
   });
 
   registerGracefulShutdown(app, { logger: bootstrapLogger });
+
+  // ── Post-DI encryption round-trip check ────────────────────────────────────
+  // onModuleInit already throws for an invalid key, but this explicit check
+  // runs after all modules are initialised and confirms the fully-wired
+  // service can encrypt and decrypt successfully before accepting traffic.
+  try {
+    const encryptionService = app.get(EncryptionService);
+    encryptionService.testRoundTrip();
+    bootstrapLogger.log('[STARTUP] EncryptionService round-trip check passed.');
+  } catch (err) {
+    bootstrapLogger.fatal(
+      `[STARTUP] EncryptionService round-trip check failed: ${(err as Error).message}. ` +
+        'Application will not start.',
+    );
+    await app.close();
+    process.exit(1);
+  }
 
   const port = process.env.PORT ?? 5000;
   const server = await app.listen(port);

@@ -21,11 +21,11 @@ Soroban provides three storage tiers, each with different characteristics and co
 
 ### Storage Tiers
 
-| Tier | Method | Persistence | Cost | Use Case |
-|---|---|---|---|---|
-| **Instance** | `env.storage().instance()` | Contract lifetime | Lowest | Config, counters, admin |
-| **Persistent** | `env.storage().persistent()` | Requires TTL extension | Medium | Agreements, user data |
-| **Temporary** | `env.storage().temporary()` | Auto-expires | Lowest | Rate limits, caches |
+| Tier           | Method                       | Persistence            | Cost   | Use Case                |
+| -------------- | ---------------------------- | ---------------------- | ------ | ----------------------- |
+| **Instance**   | `env.storage().instance()`   | Contract lifetime      | Lowest | Config, counters, admin |
+| **Persistent** | `env.storage().persistent()` | Requires TTL extension | Medium | Agreements, user data   |
+| **Temporary**  | `env.storage().temporary()`  | Auto-expires           | Lowest | Rate limits, caches     |
 
 ### Enum-Based Key Pattern
 
@@ -58,6 +58,7 @@ pub enum DataKey {
 ```
 
 **Why this works:**
+
 - Compile-time type safety — no string key typos
 - Self-documenting — key purpose is clear from the enum variant
 - Composite keys enable O(1) lookups without iterating lists
@@ -243,13 +244,13 @@ fn register_property(env: Env, landlord: Address, property_id: String) {
 
 ### Topic Selection Guidelines
 
-| Field Type | Use `#[topic]`? | Reason |
-|---|---|---|
-| User addresses | Yes | Filter events by user |
-| Entity IDs | Yes | Filter events by entity |
-| Amounts | No | Rarely used for filtering |
-| Timestamps | No | Use ledger-based filtering |
-| Reason strings | No | Not suitable for filtering |
+| Field Type     | Use `#[topic]`? | Reason                     |
+| -------------- | --------------- | -------------------------- |
+| User addresses | Yes             | Filter events by user      |
+| Entity IDs     | Yes             | Filter events by entity    |
+| Amounts        | No              | Rarely used for filtering  |
+| Timestamps     | No              | Use ledger-based filtering |
+| Reason strings | No              | Not suitable for filtering |
 
 ### Raw Event Pattern
 
@@ -492,6 +493,7 @@ pub enum EscrowError {
 ```
 
 **Best practices:**
+
 - Group errors by category using code ranges
 - Use unique codes across the entire contract
 - Derive `Copy, Clone, Debug, Eq, PartialEq` for testing
@@ -702,6 +704,7 @@ pub fn pay_rent(
 ```
 
 **Why CEI matters:**
+
 - If the token transfer calls back into our contract, state is already updated
 - Prevents double-spend and reentrancy exploits
 - Follows Solidity/Soroban security best practices

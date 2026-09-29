@@ -7,7 +7,7 @@ const mockNotifications: Notification[] = [
   {
     id: 'notif-1',
     title: 'Payment Received',
-    message: 'You received a payment of $500',
+    body: 'You received a payment of $500',
     type: 'payment',
     read: false,
     createdAt: '2024-01-01T00:00:00Z',
@@ -15,7 +15,7 @@ const mockNotifications: Notification[] = [
   {
     id: 'notif-2',
     title: 'New Message',
-    message: 'You have a new message from Jane',
+    body: 'You have a new message from Jane',
     type: 'message',
     read: true,
     createdAt: '2024-01-02T00:00:00Z',
@@ -23,7 +23,7 @@ const mockNotifications: Notification[] = [
   {
     id: 'notif-3',
     title: 'Maintenance Alert',
-    message: 'Scheduled maintenance tomorrow',
+    body: 'Scheduled maintenance tomorrow',
     type: 'maintenance',
     read: false,
     createdAt: '2024-01-03T00:00:00Z',

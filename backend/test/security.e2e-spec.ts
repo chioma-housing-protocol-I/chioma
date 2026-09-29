@@ -17,7 +17,7 @@ describe('Security and CORS (e2e)', () => {
 
     // Setup CORS as in main.ts
     app.enableCors({
-      origin: ['http://localhost:3001'],
+      origin: ['http://localhost:5000'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: [
@@ -68,10 +68,10 @@ describe('Security and CORS (e2e)', () => {
     it('should allow preflight requests from permitted origins', () => {
       return request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:5000')
         .set('Access-Control-Request-Method', 'POST')
         .expect(204)
-        .expect('Access-Control-Allow-Origin', 'http://localhost:3001')
+        .expect('Access-Control-Allow-Origin', 'http://localhost:5000')
         .expect(
           'Access-Control-Allow-Methods',
           'GET,POST,PUT,DELETE,PATCH,OPTIONS',
@@ -83,15 +83,15 @@ describe('Security and CORS (e2e)', () => {
     it('should allow actual requests from permitted origins', () => {
       return request(app.getHttpServer())
         .get('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:5000')
         .expect(200)
-        .expect('Access-Control-Allow-Origin', 'http://localhost:3001');
+        .expect('Access-Control-Allow-Origin', 'http://localhost:5000');
     });
 
     it('should expose configured headers', () => {
       return request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:5000')
         .set('Access-Control-Request-Method', 'GET')
         .expect(204)
         .expect(
@@ -103,7 +103,7 @@ describe('Security and CORS (e2e)', () => {
     it('should allow specific request headers', () => {
       return request(app.getHttpServer())
         .options('/')
-        .set('Origin', 'http://localhost:3001')
+        .set('Origin', 'http://localhost:5000')
         .set('Access-Control-Request-Method', 'POST')
         .set(
           'Access-Control-Request-Headers',

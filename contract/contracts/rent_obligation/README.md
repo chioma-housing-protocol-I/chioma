@@ -25,10 +25,13 @@ This contract enables landlords to tokenize their rental income streams as NFTs.
 ## Contract Methods
 
 ### `initialize()`
+
 Initialize the contract. Must be called before any other operations.
 
 ### `mint_obligation(agreement_id: String, landlord: Address)`
+
 Mint a new tokenized rent obligation NFT.
+
 - **Parameters**:
   - `agreement_id`: Unique identifier for the rent agreement
   - `landlord`: Address that will receive the NFT
@@ -38,7 +41,9 @@ Mint a new tokenized rent obligation NFT.
   - `ObligationAlreadyExists`: Token already minted for this agreement
 
 ### `transfer_obligation(from: Address, to: Address, agreement_id: String)`
+
 Transfer ownership of a tokenized rent obligation.
+
 - **Parameters**:
   - `from`: Current owner address
   - `to`: New owner address
@@ -50,20 +55,27 @@ Transfer ownership of a tokenized rent obligation.
   - `Unauthorized`: Caller is not the current owner
 
 ### `get_obligation_owner(agreement_id: String) -> Option<Address>`
+
 Query the current owner of a tokenized rent obligation.
+
 - **Returns**: Owner address or None if obligation doesn't exist
 
 ### `get_obligation(agreement_id: String) -> Option<RentObligation>`
+
 Get full obligation data including mint timestamp.
 
 ### `has_obligation(agreement_id: String) -> bool`
+
 Check if an obligation exists for a given agreement.
 
 ### `get_obligation_count() -> u32`
+
 Get total count of minted obligations.
 
 ### `burn_nft(token_id: String, reason: String)`
+
 Burn a rent obligation NFT.
+
 - **Parameters**:
   - `token_id`: Agreement identifier
   - `reason`: One of `LeaseCompleted`, `AgreementTerminated`, `DisputeResolved`, `UserRequested`
@@ -80,28 +92,37 @@ Burn a rent obligation NFT.
   - `InvalidBurnReason`
 
 ### `can_burn(token_id: String) -> Result<bool, ObligationError>`
+
 Check whether an NFT is burnable under current rules.
 
 ### `get_burn_record(token_id: String) -> Result<BurnRecord, ObligationError>`
+
 Get immutable burn audit record for a burned NFT.
 
 ### `get_burned_nfts(owner: Address) -> Result<Vec<String>, ObligationError>`
+
 Get owner burn history (token IDs).
 
 ## Events
 
 ### ObligationMinted
+
 Emitted when a new obligation NFT is minted.
+
 - Topics: `["minted", landlord: Address]`
 - Data: `agreement_id`, `minted_at`
 
 ### ObligationTransferred
+
 Emitted when an obligation is transferred.
+
 - Topics: `["transferred", from: Address, to: Address]`
 - Data: `agreement_id`
 
 ### NFTBurned
+
 Emitted when an obligation NFT is burned.
+
 - Topics: `["burned", owner: Address]`
 - Data: `token_id`, `reason`
 

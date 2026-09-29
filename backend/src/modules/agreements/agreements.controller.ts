@@ -21,6 +21,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AgreementsService } from './agreements.service';
@@ -30,11 +31,16 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { RenewAgreementDto } from './dto/renew-agreement.dto';
+import { SignAgreementDto } from './dto/sign-agreement.dto';
 import { QueryAgreementFeesDto } from './dto/query-agreement-fees.dto';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { RentAgreement } from '../rent/entities/rent-contract.entity';
+import { Payment } from '../rent/entities/payment.entity';
 
 @ApiTags('Rent Agreements')
 @ApiBearerAuth('JWT-auth')
@@ -44,6 +50,8 @@ import { AuditAction, AuditLevel } from '../audit/entities/audit-log.entity';
 export class AgreementsController {
   constructor(private readonly agreementsService: AgreementsService) {}
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Create' })
   @Post()
   @AuditLog({
     action: AuditAction.CREATE,
@@ -56,11 +64,16 @@ export class AgreementsController {
     return await this.agreementsService.create(createAgreementDto);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Find all' })
   @Get()
+  @ApiPaginatedResponse(RentAgreement)
   async findAll(@Query() query: QueryAgreementsDto) {
     return await this.agreementsService.findAll(query);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Download agreement' })
   @Get(':id/download')
   @Header('Content-Type', 'application/pdf')
   async downloadAgreement(@Param('id') id: string, @Res() res: Response) {
@@ -72,6 +85,7 @@ export class AgreementsController {
     res.end(buffer);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
   @Get(':id/fees')
   @ApiOperation({
     summary: 'Lease fee snapshot',
@@ -91,11 +105,15 @@ export class AgreementsController {
     return await this.agreementsService.getFees(id, query.daysPastDue);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Find one' })
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return await this.agreementsService.findOne(id);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiOperation({ summary: 'Update' })
   @Put(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -111,6 +129,7 @@ export class AgreementsController {
     return await this.agreementsService.update(id, updateAgreementDto);
   }
 
+  @ApiResponse({ status: 200, description: 'Updated' })
   @Patch(':id')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -130,6 +149,8 @@ export class AgreementsController {
     return await this.agreementsService.update(id, updateAgreementDto);
   }
 
+  @ApiResponse({ status: 200, description: 'Deleted' })
+  @ApiOperation({ summary: 'Terminate' })
   @Delete(':id')
   @AuditLog({
     action: AuditAction.DELETE,
@@ -144,6 +165,26 @@ export class AgreementsController {
     return await this.agreementsService.terminate(id, terminateDto);
   }
 
+  @ApiResponse({ status: 200, description: 'Signed' })
+  @ApiOperation({
+    summary: 'Sign agreement',
+    description:
+      'Transitions the agreement to SIGNED. Pass idempotencyKey to safely retry on client timeout or network drop — ' +
+      'the original result is returned for the same agreement+key instead of re-running side effects, for 7 days.',
+  })
+  @Post(':id/sign')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  @HttpCode(HttpStatus.OK)
+  async sign(@Param('id') id: string, @Body() dto: SignAgreementDto) {
+    return await this.agreementsService.sign(id, dto);
+  }
+
+  @ApiResponse({ status: 201, description: 'Created' })
   @Post(':id/renew')
   @AuditLog({
     action: AuditAction.UPDATE,
@@ -161,6 +202,8 @@ export class AgreementsController {
     return await this.agreementsService.renew(id, body);
   }
 
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiOperation({ summary: 'Record payment' })
   @Post(':id/pay')
   @AuditLog({
     action: AuditAction.PAYMENT_INITIATED,
@@ -176,8 +219,14 @@ export class AgreementsController {
     return await this.agreementsService.recordPayment(id, recordPaymentDto);
   }
 
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({ summary: 'Get payments' })
   @Get(':id/payments')
-  async getPayments(@Param('id') id: string) {
-    return await this.agreementsService.getPayments(id);
+  @ApiPaginatedResponse(Payment)
+  async getPayments(
+    @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return await this.agreementsService.getPayments(id, query);
   }
 }

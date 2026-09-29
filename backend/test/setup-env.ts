@@ -38,7 +38,7 @@ process.env.STELLAR_NETWORK = 'testnet';
 process.env.STELLAR_HORIZON_URL = 'https://horizon-testnet.stellar.org';
 
 // Other required configs
-process.env.FRONTEND_URL = 'http://localhost:3001';
+process.env.FRONTEND_URL = 'http://localhost:5000';
 process.env.SECURITY_ENCRYPTION_KEY =
   'c50c9fe2f3272ae5f275dc9b875712ee41cf931475b615fe6aa8588b8332d062';
 process.env.PAYMENT_METADATA_SECRET = 'test-payment-secret';
@@ -49,6 +49,17 @@ if (!process.env.ENCRYPTION_KEY_BASE64) {
     '0123456789abcdef0123456789abcdef',
   ).toString('base64');
 }
+
+// OAuth2 provider configuration for integration tests
+process.env.OAUTH2_PROVIDER_URL =
+  process.env.OAUTH2_PROVIDER_URL ?? 'https://mock-oauth.test';
+process.env.OAUTH2_CLIENT_ID =
+  process.env.OAUTH2_CLIENT_ID ?? 'chioma-test-client';
+process.env.OAUTH2_CLIENT_SECRET =
+  process.env.OAUTH2_CLIENT_SECRET ?? 'chioma-test-secret';
+process.env.OAUTH2_REDIRECT_URI =
+  process.env.OAUTH2_REDIRECT_URI ??
+  'http://localhost:5000/auth/oauth/callback';
 
 // Use PostgreSQL for E2E tests
 // The GitHub Actions workflow provides a PostgreSQL service

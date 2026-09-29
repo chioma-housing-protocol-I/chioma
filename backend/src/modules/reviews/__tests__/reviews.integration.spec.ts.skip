@@ -1,0 +1,682 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { DataSource } from 'typeorm';
+import { ReviewsService } from '../reviews.service';
+import { Review, ReviewContext } from '../review.entity';
+import { GuestReview } from '../entities/guest-review.entity';
+import { HostReview } from '../entities/host-review.entity';
+import {
+  AgreementStatus,
+  RentAgreement,
+} from '../../rent/entities/rent-contract.entity';
+import { Payment } from '../../rent/entities/payment.entity';
+import { RentObligationNft } from '../../agreements/entities/rent-obligation-nft.entity';
+import { NFTTransfer } from '../../agreements/entities/nft-transfer.entity';
+import { PostGuestReviewDto } from '../dto/post-guest-review.dto';
+import { PostHostReviewDto } from '../dto/post-host-review.dto';
+import {
+  AuthorizationError,
+  BusinessRuleViolationError,
+  ReviewNotFoundError,
+  ValidationError,
+  AgreementNotFoundError,
+} from '../../../common/errors/domain-errors';
+
+/**
+ * Integration tests for the review and rating system.
+ *
+ * Covers review creation, rating aggregation, moderation, responses,
+ * deletion, and reporting flows against a real in-memory SQLite database.
+ */
+describe('ReviewsService - Integration Tests', () => {
+  let module: TestingModule;
+  let service: ReviewsService;
+  let dataSource: DataSource;
+
+  let hostId: string;
+  let guestId: string;
+  let otherUserId: string;
+  let propertyId: string;
+  let expiredBookingId: string;
+  let activeBookingId: string;
+
+  beforeAll(async () => {
+    module = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: false,
+          ignoreEnvFile: true,
+        }),
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [Review, GuestReview, HostReview, RentAgreement, Payment, RentObligationNft, NFTTransfer],
+          synchronize: true,
+          dropSchema: true,
+        }),
+        TypeOrmModule.forFeature([
+          Review,
+          GuestReview,
+          HostReview,
+          RentAgreement,
+          Payment,
+          RentObligationNft,
+          NFTTransfer,
+        ]),
+      ],
+      providers: [ReviewsService],
+    }).compile();
+
+    service = module.get<ReviewsService>(ReviewsService);
+    dataSource = module.get<DataSource>(DataSource);
+
+    await setupTestData();
+  }, 30000);
+
+  afterAll(async () => {
+    if (dataSource?.isInitialized) {
+      await dataSource.destroy();
+    }
+    if (module) {
+      await module.close();
+    }
+  });
+
+  afterEach(async () => {
+    if (!dataSource?.isInitialized) {
+      return;
+    }
+    await dataSource.getRepository(Review).delete({});
+    await dataSource.getRepository(GuestReview).delete({});
+    await dataSource.getRepository(HostReview).delete({});
+  });
+
+  async function setupTestData() {
+    hostId = 'host-user-id';
+    guestId = 'guest-user-id';
+    otherUserId = 'other-user-id';
+    propertyId = 'property-123';
+
+    const agreementRepo = dataSource.getRepository(RentAgreement);
+
+    const expiredBooking = await agreementRepo.save({
+      agreementNumber: 'AGR-EXP-001',
+      adminId: hostId,
+      userId: guestId,
+      propertyId,
+      monthlyRent: 1500,
+      securityDeposit: 3000,
+      status: AgreementStatus.EXPIRED,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-12-31'),
+    } as RentAgreement);
+    expiredBookingId = expiredBooking.id;
+
+    const activeBooking = await agreementRepo.save({
+      agreementNumber: 'AGR-ACT-001',
+      adminId: hostId,
+      userId: guestId,
+      propertyId,
+      monthlyRent: 1500,
+      securityDeposit: 3000,
+      status: AgreementStatus.ACTIVE,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    } as RentAgreement);
+    activeBookingId = activeBooking.id;
+  }
+
+  async function createSecondExpiredBooking(): Promise<string> {
+    const agreement = await dataSource.getRepository(RentAgreement).save({
+      agreementNumber: `AGR-EXP-${Date.now()}`,
+      adminId: hostId,
+      userId: guestId,
+      propertyId,
+      monthlyRent: 1200,
+      securityDeposit: 2400,
+      status: AgreementStatus.EXPIRED,
+      startDate: new Date('2023-01-01'),
+      endDate: new Date('2023-12-31'),
+    } as RentAgreement);
+    return agreement.id;
+  }
+
+  describe('Integration: Review creation and validation', () => {
+    it('creates a generic review with valid data', async () => {
+      const review = await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 5,
+        comment: 'Excellent landlord',
+        propertyId,
+      });
+
+      expect(review.id).toBeDefined();
+      expect(review.reviewerId).toBe(guestId);
+      expect(review.revieweeId).toBe(hostId);
+      expect(review.rating).toBe(5);
+      expect(review.reported).toBe(false);
+    });
+
+    it('rejects reviews containing prohibited language', async () => {
+      await expect(
+        service.create({
+          reviewerId: guestId,
+          revieweeId: hostId,
+          context: ReviewContext.MAINTENANCE,
+          rating: 1,
+          comment: 'This is a scam',
+        }),
+      ).rejects.toThrow('Review contains prohibited language.');
+    });
+
+    it('retrieves reviews for a user as reviewer or reviewee', async () => {
+      await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 4,
+      });
+      await service.create({
+        reviewerId: hostId,
+        revieweeId: guestId,
+        context: ReviewContext.LEASE,
+        rating: 5,
+      });
+
+      const hostReviews = await service.getUserReviews(hostId);
+      expect(hostReviews).toHaveLength(2);
+    });
+
+    it('retrieves reviews scoped to a property', async () => {
+      await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 3,
+        propertyId,
+      });
+      await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 5,
+        propertyId: 'other-property',
+      });
+
+      const propertyReviews = await service.getPropertyReviews(propertyId);
+      expect(propertyReviews).toHaveLength(1);
+      expect(propertyReviews[0].rating).toBe(3);
+    });
+  });
+
+  describe('Integration: Rating calculation', () => {
+    it('calculates average rating for a user', async () => {
+      await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 4,
+      });
+      await service.create({
+        reviewerId: otherUserId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 2,
+      });
+
+      const average = await service.getAverageRatingForUser(hostId);
+      expect(average).toBe(3);
+    });
+
+    it('returns zero average when a user has no reviews', async () => {
+      const average = await service.getAverageRatingForUser('no-reviews-user');
+      expect(average).toBe(0);
+    });
+
+    it('calculates average rating for a property', async () => {
+      await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 5,
+        propertyId,
+      });
+      await service.create({
+        reviewerId: otherUserId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 3,
+        propertyId,
+      });
+
+      const average = await service.getAverageRatingForProperty(propertyId);
+      expect(average).toBe(4);
+    });
+
+    it('aggregates host and guest reputation consistently', async () => {
+      const guestReviewDto: PostGuestReviewDto = {
+        bookingId: expiredBookingId,
+        cleanliness: 5,
+        communication: 4,
+        respectForRules: 3,
+        comment: 'Good guest overall',
+        wouldHostAgain: true,
+      };
+      await service.postGuestReview(guestReviewDto, hostId);
+
+      const secondBookingId = await createSecondExpiredBooking();
+      const hostReviewDto: PostHostReviewDto = {
+        bookingId: secondBookingId,
+        accuracy: 5,
+        cleanliness: 5,
+        checkIn: 4,
+        communication: 4,
+        location: 5,
+        value: 4,
+        comment: 'Great host experience',
+      };
+      await service.postHostReview(hostReviewDto, guestId);
+
+      const hostReputation = await service.getReputation(hostId);
+      expect(hostReputation.asHost.reviewCount).toBe(1);
+      expect(hostReputation.asHost.averageRating).toBe(4);
+      expect(hostReputation.asHost.wouldHostAgainPercentage).toBe(100);
+
+      const guestReputation = await service.getReputation(guestId);
+      expect(guestReputation.asGuest.reviewCount).toBe(1);
+      expect(guestReputation.asGuest.averageRating).toBe(4.5);
+    });
+  });
+
+  describe('Integration: Guest and host review flow', () => {
+    it('allows a host to review a guest after booking completion', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: expiredBookingId,
+        cleanliness: 5,
+        communication: 5,
+        respectForRules: 4,
+        comment: 'Would host again',
+        wouldHostAgain: true,
+      };
+
+      const review = await service.postGuestReview(dto, hostId);
+
+      expect(review.bookingId).toBe(expiredBookingId);
+      expect(review.guestId).toBe(guestId);
+      expect(review.hostId).toBe(hostId);
+    });
+
+    it('allows a guest to review a host after booking completion', async () => {
+      const dto: PostHostReviewDto = {
+        bookingId: expiredBookingId,
+        accuracy: 4,
+        cleanliness: 5,
+        checkIn: 5,
+        communication: 4,
+        location: 5,
+        value: 4,
+        comment: 'Nice place',
+      };
+
+      const review = await service.postHostReview(dto, guestId);
+
+      expect(review.bookingId).toBe(expiredBookingId);
+      expect(review.guestId).toBe(guestId);
+      expect(review.hostId).toBe(hostId);
+    });
+
+    it('rejects reviews for active bookings', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: activeBookingId,
+        cleanliness: 5,
+        communication: 5,
+        respectForRules: 5,
+        comment: 'Too early',
+        wouldHostAgain: true,
+      };
+
+      await expect(service.postGuestReview(dto, hostId)).rejects.toThrow(
+        BusinessRuleViolationError,
+      );
+    });
+
+    it('rejects duplicate guest reviews for the same booking', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: expiredBookingId,
+        cleanliness: 5,
+        communication: 5,
+        respectForRules: 5,
+        comment: 'First review',
+        wouldHostAgain: true,
+      };
+
+      await service.postGuestReview(dto, hostId);
+
+      await expect(service.postGuestReview(dto, hostId)).rejects.toThrow(
+        BusinessRuleViolationError,
+      );
+    });
+
+    it('rejects unauthorized guest review submissions', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: expiredBookingId,
+        cleanliness: 5,
+        communication: 5,
+        respectForRules: 5,
+        comment: 'Unauthorized attempt',
+        wouldHostAgain: false,
+      };
+
+      await expect(service.postGuestReview(dto, otherUserId)).rejects.toThrow(
+        AuthorizationError,
+      );
+    });
+
+    it('rejects unauthorized host review submissions', async () => {
+      const dto: PostHostReviewDto = {
+        bookingId: expiredBookingId,
+        accuracy: 5,
+        cleanliness: 5,
+        checkIn: 5,
+        communication: 5,
+        location: 5,
+        value: 5,
+        comment: 'Unauthorized host review',
+      };
+
+      await expect(service.postHostReview(dto, otherUserId)).rejects.toThrow(
+        AuthorizationError,
+      );
+    });
+
+    it('rejects duplicate host reviews for the same booking', async () => {
+      const dto: PostHostReviewDto = {
+        bookingId: expiredBookingId,
+        accuracy: 5,
+        cleanliness: 5,
+        checkIn: 5,
+        communication: 5,
+        location: 5,
+        value: 5,
+        comment: 'First host review',
+      };
+
+      await service.postHostReview(dto, guestId);
+
+      await expect(service.postHostReview(dto, guestId)).rejects.toThrow(
+        BusinessRuleViolationError,
+      );
+    });
+
+    it('paginates guest and host review listings', async () => {
+      const bookingOne = expiredBookingId;
+      const bookingTwo = await createSecondExpiredBooking();
+
+      await service.postGuestReview(
+        {
+          bookingId: bookingOne,
+          cleanliness: 5,
+          communication: 5,
+          respectForRules: 5,
+          comment: 'Guest review one',
+          wouldHostAgain: true,
+        },
+        hostId,
+      );
+      await service.postGuestReview(
+        {
+          bookingId: bookingTwo,
+          cleanliness: 4,
+          communication: 4,
+          respectForRules: 4,
+          comment: 'Guest review two',
+          wouldHostAgain: false,
+        },
+        hostId,
+      );
+
+      const guestReviews = await service.getGuestReviews(guestId, 1, 1);
+      expect(guestReviews.total).toBe(2);
+      expect(guestReviews.items).toHaveLength(1);
+      expect(guestReviews.page).toBe(1);
+      expect(guestReviews.limit).toBe(1);
+
+      const hostReviews = await service.getHostReviews(hostId, 1, 10);
+      expect(hostReviews.total).toBe(2);
+      expect(hostReviews.items).toHaveLength(2);
+    });
+    it('rejects reviews for missing bookings', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: 'missing-booking-id',
+        cleanliness: 5,
+        communication: 5,
+        respectForRules: 5,
+        comment: 'Missing booking',
+        wouldHostAgain: true,
+      };
+
+      await expect(service.postGuestReview(dto, hostId)).rejects.toThrow(
+        AgreementNotFoundError,
+      );
+    });
+  });
+
+  describe('Integration: Review moderation', () => {
+    it('blocks prohibited language in guest reviews', async () => {
+      const dto: PostGuestReviewDto = {
+        bookingId: expiredBookingId,
+        cleanliness: 1,
+        communication: 1,
+        respectForRules: 1,
+        comment: 'This guest is spam',
+        wouldHostAgain: false,
+      };
+
+      await expect(service.postGuestReview(dto, hostId)).rejects.toThrow(
+        ValidationError,
+      );
+    });
+
+    it('blocks prohibited language in host reviews', async () => {
+      const dto: PostHostReviewDto = {
+        bookingId: expiredBookingId,
+        accuracy: 1,
+        cleanliness: 1,
+        checkIn: 1,
+        communication: 1,
+        location: 1,
+        value: 1,
+        comment: 'Fraudulent listing',
+      };
+
+      await expect(service.postHostReview(dto, guestId)).rejects.toThrow(
+        ValidationError,
+      );
+    });
+
+    it('flags a review for moderation via report', async () => {
+      const review = await service.create({
+        reviewerId: guestId,
+        revieweeId: hostId,
+        context: ReviewContext.LEASE,
+        rating: 1,
+        comment: 'Needs moderation review',
+      });
+
+      await service.reportReview(review.id);
+
+      const reported = await dataSource
+        .getRepository(Review)
+        .findOne({ where: { id: review.id } });
+      expect(reported?.reported).toBe(true);
+    });
+  });
+
+  describe('Integration: Response to reviews', () => {
+    it('allows the author to update a guest review', async () => {
+      const created = await service.postGuestReview(
+        {
+          bookingId: expiredBookingId,
+          cleanliness: 3,
+          communication: 3,
+          respectForRules: 3,
+          comment: 'Initial guest review',
+          wouldHostAgain: false,
+        },
+        hostId,
+      );
+
+      const updated = await service.updateReview(
+        created.id,
+        { comment: 'Updated guest review', cleanliness: 5 },
+        hostId,
+      );
+
+      expect(updated.comment).toBe('Updated guest review');
+      expect((updated as GuestReview).cleanliness).toBe(5);
+    });
+
+    it('allows the author to update a host review', async () => {
+      const created = await service.postHostReview(
+        {
+          bookingId: expiredBookingId,
+          accuracy: 3,
+          cleanliness: 3,
+          checkIn: 3,
+          communication: 3,
+          location: 3,
+          value: 3,
+          comment: 'Initial host review',
+        },
+        guestId,
+      );
+
+      const updated = await service.updateReview(
+        created.id,
+        { comment: 'Updated host review', cleanliness: 5 },
+        guestId,
+      );
+
+      expect(updated.comment).toBe('Updated host review');
+      expect((updated as GuestReview).cleanliness).toBe(5);
+    });
+
+    it('rejects review updates from unauthorized users', async () => {
+      const created = await service.postGuestReview(
+        {
+          bookingId: expiredBookingId,
+          cleanliness: 4,
+          communication: 4,
+          respectForRules: 4,
+          comment: 'Protected guest review',
+          wouldHostAgain: true,
+        },
+        hostId,
+      );
+
+      await expect(
+        service.updateReview(
+          created.id,
+          { comment: 'Malicious update' },
+          otherUserId,
+        ),
+      ).rejects.toThrow(AuthorizationError);
+    });
+  });
+
+  describe('Integration: Review deletion and appeals', () => {
+    it('allows the author to delete a guest review', async () => {
+      const created = await service.postGuestReview(
+        {
+          bookingId: expiredBookingId,
+          cleanliness: 4,
+          communication: 4,
+          respectForRules: 4,
+          comment: 'Delete me',
+          wouldHostAgain: true,
+        },
+        hostId,
+      );
+
+      const result = await service.deleteReview(created.id, hostId);
+      expect(result.deleted).toBe(true);
+
+      const remaining = await dataSource
+        .getRepository(GuestReview)
+        .findOne({ where: { id: created.id } });
+      expect(remaining).toBeNull();
+    });
+
+    it('allows the author to delete a host review', async () => {
+      const created = await service.postHostReview(
+        {
+          bookingId: expiredBookingId,
+          accuracy: 4,
+          cleanliness: 4,
+          checkIn: 4,
+          communication: 4,
+          location: 4,
+          value: 4,
+          comment: 'Delete host review',
+        },
+        guestId,
+      );
+
+      const result = await service.deleteReview(created.id, guestId);
+      expect(result.deleted).toBe(true);
+    });
+
+    it('rejects deletion by unauthorized users', async () => {
+      const created = await service.postHostReview(
+        {
+          bookingId: expiredBookingId,
+          accuracy: 4,
+          cleanliness: 4,
+          checkIn: 4,
+          communication: 4,
+          location: 4,
+          value: 4,
+          comment: 'Protected host review',
+        },
+        guestId,
+      );
+
+      await expect(
+        service.deleteReview(created.id, otherUserId),
+      ).rejects.toThrow(AuthorizationError);
+    });
+
+    it('throws when deleting a non-existent review', async () => {
+      await expect(
+        service.deleteReview('missing-review-id', hostId),
+      ).rejects.toThrow(ReviewNotFoundError);
+    });
+
+    it('keeps reputation consistent after review deletion', async () => {
+      const created = await service.postGuestReview(
+        {
+          bookingId: expiredBookingId,
+          cleanliness: 5,
+          communication: 5,
+          respectForRules: 5,
+          comment: 'Temporary review',
+          wouldHostAgain: true,
+        },
+        hostId,
+      );
+
+      const before = await service.getReputation(hostId);
+      expect(before.asHost.reviewCount).toBe(1);
+
+      await service.deleteReview(created.id, hostId);
+
+      const after = await service.getReputation(hostId);
+      expect(after.asHost.reviewCount).toBe(0);
+      expect(after.asHost.averageRating).toBe(0);
+      expect(after.asHost.wouldHostAgainPercentage).toBe(0);
+    });
+  });
+});

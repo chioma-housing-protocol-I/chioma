@@ -325,27 +325,46 @@ describe('CSRF Protection Validation Tests', () => {
   });
 
   describe('CSRF error handling', () => {
-    it('should provide clear error messages for token mismatch', () => {
+    it('should provide clear error messages for token mismatch', async () => {
       const next = jest.fn();
 
       const req = {
         method: 'POST',
         path: '/api/protected',
         headers: {
-          'x-csrf-token': 'wrong-token',
+          'x-xsrf-token': 'wrong-token',
         },
         cookies: {
-          'csrf-token': 'correct-token',
+          'XSRF-TOKEN': 'correct-token',
         },
       } as any;
 
-      try {
-        middleware.use(req, {} as any, next);
-      } catch (error: any) {
-        expect(error.message).toContain('CSRF');
-      }
+      const invocation = Promise.resolve().then(() =>
+        middleware.use(req, {} as any, next),
+      );
 
+      await expect(invocation).rejects.toThrow('CSRF token mismatch');
       expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should continue for matching CSRF tokens', () => {
+      const next = jest.fn();
+      const token = createValidToken('test-secret-key');
+
+      const req = {
+        method: 'POST',
+        path: '/api/protected',
+        headers: {
+          'x-xsrf-token': token,
+        },
+        cookies: {
+          'XSRF-TOKEN': token,
+        },
+      } as any;
+
+      middleware.use(req, {} as any, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
     });
 
     it('should log CSRF validation failures', () => {

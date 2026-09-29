@@ -75,7 +75,7 @@ export async function clearRepositories(
     if (repo) {
       try {
         await repo.delete({});
-      } catch (e) {
+      } catch (_e) {
         // Skip if delete fails (e.g., repo not initialized)
       }
     }

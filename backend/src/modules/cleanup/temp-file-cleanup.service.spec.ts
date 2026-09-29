@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TempFileCleanupService } from './temp-file-cleanup.service';
 import * as fs from 'fs';
-import * as path from 'path';
 
 jest.mock('fs', () => {
   return {

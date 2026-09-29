@@ -8,6 +8,7 @@ import {
   AnchorTransactionStatus,
 } from '../../transactions/entities/anchor-transaction.entity';
 import { SupportedCurrency } from '../../transactions/entities/supported-currency.entity';
+import { CertificatePinningService } from '../../../common/security/certificate-pinning.service';
 import { PaymentMethodType } from '../dto/deposit-request.dto';
 
 describe('AnchorService', () => {
@@ -52,6 +53,13 @@ describe('AnchorService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: CertificatePinningService,
+          useValue: {
+            getHttpsAgentForUrl: jest.fn(() => undefined),
+            getHttpsAgent: jest.fn(() => undefined),
+          },
         },
       ],
     }).compile();

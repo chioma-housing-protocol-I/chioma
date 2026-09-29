@@ -12,7 +12,6 @@ import {
   User,
   Phone,
   Mail,
-  MapPin,
   AlertTriangle,
   Wrench,
   Image,
@@ -39,6 +38,7 @@ import {
   MaintenancePriority,
 } from '@/lib/query/hooks/use-landlord-maintenance';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { useAuthStore } from '@/store/authStore';
 
 interface MaintenanceDetailProps {
@@ -51,6 +51,7 @@ export function MaintenanceDetail({
   className = '',
 }: MaintenanceDetailProps) {
   const { user } = useAuthStore();
+  const dateFnsLocale = useDateFnsLocale();
   const [newComment, setNewComment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<MaintenanceStatus | ''>(
     '',
@@ -215,6 +216,7 @@ export function MaintenanceDetail({
                     Created{' '}
                     {formatDistanceToNow(new Date(request.createdAt), {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>
@@ -232,7 +234,11 @@ export function MaintenanceDetail({
                   <Clock size={16} className="text-amber-600" />
                   <span className="text-sm font-medium text-amber-700">
                     Deadline:{' '}
-                    {format(new Date(request.deadline), 'MMM d, yyyy • h:mm a')}
+                    {format(
+                      new Date(request.deadline),
+                      'MMM d, yyyy • h:mm a',
+                      { locale: dateFnsLocale },
+                    )}
                   </span>
                 </div>
               </div>
@@ -479,6 +485,7 @@ export function MaintenanceDetail({
                       <div className="text-xs text-neutral-500">
                         {formatDistanceToNow(new Date(photo.uploadedAt), {
                           addSuffix: true,
+                          locale: dateFnsLocale,
                         })}
                       </div>
                     </div>
@@ -541,6 +548,7 @@ export function MaintenanceDetail({
                     <span className="text-xs text-neutral-500">
                       {formatDistanceToNow(new Date(comment.createdAt), {
                         addSuffix: true,
+                        locale: dateFnsLocale,
                       })}
                     </span>
                   </div>

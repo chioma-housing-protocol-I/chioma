@@ -23,7 +23,7 @@ export default function ErrorMonitoringProvider() {
         typeof event.reason === 'object' &&
         event.reason !== null &&
         'code' in event.reason &&
-        (event.reason as any).code === -4
+        (event.reason as { code?: unknown }).code === -4
       ) {
         event.preventDefault();
         return;

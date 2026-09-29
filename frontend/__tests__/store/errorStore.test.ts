@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useErrorStore } from '@/store/errorStore';
-import type { GlobalError } from '@/store/errorStore';
 
 describe('errorStore', () => {
   beforeEach(() => {

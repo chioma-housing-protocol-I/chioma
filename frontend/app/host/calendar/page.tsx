@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import {
@@ -13,10 +13,18 @@ import {
   isToday,
 } from 'date-fns';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { CalendarDayModal } from '@/components/host/CalendarDayModal';
+import {
+  useAvailability,
+  useUpdateAvailabilityDay,
+  type AvailabilityDay,
+} from '@/lib/query/hooks/use-availability';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 export default function HostCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const { data: properties = [], isLoading: loadingProps } = useQuery({
     queryKey: ['host-listings'],
@@ -32,6 +40,28 @@ export default function HostCalendarPage() {
     end: endOfMonth(currentMonth),
   });
   const startPadding = getDay(startOfMonth(currentMonth));
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+  const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+  const { data: availability = [], isLoading: loadingAvailability } =
+    useAvailability(selectedProperty, startDate, endDate);
+  const updateDay = useUpdateAvailabilityDay(selectedProperty);
+
+  const availabilityByDate = useMemo(
+    () => new Map(availability.map((d) => [d.date, d])),
+    [availability],
+  );
+
+  const selectedDay: AvailabilityDay | null = selectedDate
+    ? (availabilityByDate.get(selectedDate) ?? {
+        date: selectedDate,
+        available: true,
+        customPrice: null,
+        notes: null,
+        blockedByBookingId: null,
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -47,7 +77,12 @@ export default function HostCalendarPage() {
             Select property
           </p>
           {loadingProps ? (
-            <LoadingSpinner />
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-11 rounded-xl bg-white/5 border border-white/10 animate-pulse"
+              />
+            ))
           ) : properties.length === 0 ? (
             <p className="text-sm text-blue-300/40">No listings found</p>
           ) : (
@@ -91,7 +126,7 @@ export default function HostCalendarPage() {
                 <ChevronLeft size={20} />
               </button>
               <h2 className="text-lg font-semibold">
-                {format(currentMonth, 'MMMM yyyy')}
+                {format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
               </h2>
               <button
                 onClick={() =>
@@ -125,6 +160,35 @@ export default function HostCalendarPage() {
               {Array.from({ length: startPadding }).map((_, i) => (
                 <div key={`pad-${i}`} />
               ))}
+              {days.map((day) => {
+                const dateKey = format(day, 'yyyy-MM-dd');
+                const info = availabilityByDate.get(dateKey);
+                const blocked = info ? !info.available : false;
+                return (
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    data-testid={`calendar-day-${dateKey}`}
+                    disabled={!selectedProperty}
+                    onClick={() => setSelectedDate(dateKey)}
+                    aria-label={`${format(day, 'MMMM d')}${blocked ? ', blocked' : ''}`}
+                    className={`aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                      blocked
+                        ? 'bg-red-500/20 text-red-300 line-through'
+                        : isToday(day)
+                          ? 'bg-blue-500/30 text-blue-300 font-bold ring-1 ring-blue-500/50'
+                          : 'text-blue-200/70'
+                    } ${!isSameMonth(day, currentMonth) ? 'opacity-30' : ''}`}
+                  >
+                    <span>{format(day, 'd')}</span>
+                    {info?.customPrice != null && (
+                      <span className="text-[10px] text-emerald-300/80 no-underline">
+                        ${Number(info.customPrice).toFixed(0)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
               {days.map((day) => (
                 <button
                   key={day.toISOString()}
@@ -134,10 +198,16 @@ export default function HostCalendarPage() {
                       : 'text-blue-200/70'
                   } ${!isSameMonth(day, currentMonth) ? 'opacity-30' : ''}`}
                 >
-                  {format(day, 'd')}
+                  {format(day, 'd', { locale: dateFnsLocale })}
                 </button>
               ))}
             </div>
+
+            {selectedProperty && loadingAvailability && (
+              <div className="mt-4 flex justify-center">
+                <LoadingSpinner />
+              </div>
+            )}
 
             {!selectedProperty && (
               <p className="text-center text-blue-300/40 text-sm mt-6">
@@ -147,6 +217,27 @@ export default function HostCalendarPage() {
           </div>
         </div>
       </div>
+
+      {selectedDay && (
+        <CalendarDayModal
+          day={selectedDay}
+          isSaving={updateDay.isPending}
+          error={updateDay.error ? (updateDay.error as Error).message : null}
+          onClose={() => {
+            setSelectedDate(null);
+            updateDay.reset();
+          }}
+          onBlock={() =>
+            updateDay.mutate({ type: 'block', date: selectedDay.date })
+          }
+          onUnblock={() =>
+            updateDay.mutate({ type: 'unblock', date: selectedDay.date })
+          }
+          onSetPrice={(price) =>
+            updateDay.mutate({ type: 'price', date: selectedDay.date, price })
+          }
+        />
+      )}
     </div>
   );
 }

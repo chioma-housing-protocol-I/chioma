@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import {
   formatAnchorAmount,
@@ -8,6 +9,8 @@ import {
   getAnchorTransactionExplorerUrl,
   getAnchorVerificationState,
 } from '@/lib/anchor-transactions';
+import { SortableHeader } from '@/components/admin/SortableHeader';
+import type { AnchorTransactionSortField } from '@/lib/query/hooks/use-anchor-transactions';
 import type { AnchorTransaction, PaginatedResponse } from '@/types';
 
 interface AnchorTransactionListProps {
@@ -17,6 +20,9 @@ interface AnchorTransactionListProps {
   page: number;
   onSelect: (id: string) => void;
   onPageChange: (page: number) => void;
+  sortBy?: AnchorTransactionSortField;
+  sortOrder?: 'ASC' | 'DESC';
+  onSort?: (key: AnchorTransactionSortField) => void;
 }
 
 const TYPE_STYLES = {
@@ -46,7 +52,11 @@ export function AnchorTransactionList({
   page,
   onSelect,
   onPageChange,
+  sortBy,
+  sortOrder,
+  onSort,
 }: AnchorTransactionListProps) {
+  const dateFnsLocale = useDateFnsLocale();
   const rows = transactions?.data ?? [];
   const totalPages = Math.max(transactions?.totalPages ?? 1, 1);
 
@@ -81,12 +91,52 @@ export function AnchorTransactionList({
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-white/10 bg-slate-950/35 text-[11px] uppercase tracking-[0.25em] text-blue-100/45">
             <tr>
-              <th className="px-6 py-4">Type</th>
-              <th className="px-6 py-4">Amount</th>
+              {onSort ? (
+                <SortableHeader
+                  label="Type"
+                  sortKey="type"
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              ) : (
+                <th className="px-6 py-4">Type</th>
+              )}
+              {onSort ? (
+                <SortableHeader
+                  label="Amount"
+                  sortKey="amount"
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              ) : (
+                <th className="px-6 py-4">Amount</th>
+              )}
               <th className="px-6 py-4">Wallet</th>
               <th className="px-6 py-4">Anchor proof</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Created</th>
+              {onSort ? (
+                <SortableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              ) : (
+                <th className="px-6 py-4">Status</th>
+              )}
+              {onSort ? (
+                <SortableHeader
+                  label="Created"
+                  sortKey="createdAt"
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              ) : (
+                <th className="px-6 py-4">Created</th>
+              )}
               <th className="px-6 py-4 text-right">Network</th>
             </tr>
           </thead>
@@ -153,6 +203,7 @@ export function AnchorTransactionList({
                     {format(
                       new Date(transaction.createdAt),
                       'MMM d, yyyy HH:mm',
+                      { locale: dateFnsLocale },
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">

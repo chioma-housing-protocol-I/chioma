@@ -1,9 +1,9 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { AgreementStatus } from '../../rent/entities/rent-contract.entity';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
-export class QueryAgreementsDto {
+export class QueryAgreementsDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Filter by agreement status',
     enum: AgreementStatus,
@@ -44,32 +44,6 @@ export class QueryAgreementsDto {
   @IsOptional()
   @IsString()
   propertyId?: string;
-
-  // Pagination
-  @ApiPropertyOptional({
-    description: 'Page number for pagination',
-    example: 1,
-    minimum: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
-    description: 'Number of items per page',
-    example: 10,
-    minimum: 1,
-    maximum: 100,
-    default: 10,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  limit?: number = 10;
 
   // Sorting
   @ApiPropertyOptional({

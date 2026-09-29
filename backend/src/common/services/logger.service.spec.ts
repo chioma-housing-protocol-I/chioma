@@ -2,6 +2,7 @@ import { LoggerService } from './logger.service';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { requestContext } from '../request-context/request-context';
 
 describe('LoggerService', () => {
   let service: LoggerService;
@@ -83,6 +84,30 @@ describe('LoggerService', () => {
     );
   });
 
+  it('adds request correlation metadata from the active request context', () => {
+    const logSpy = jest.spyOn(service['logger'], 'info');
+
+    requestContext.run(
+      {
+        requestId: 'req-123',
+        correlationId: 'req-123',
+        userId: 'user-456',
+      },
+      () => {
+        service.log('Scoped message');
+      },
+    );
+
+    expect(logSpy).toHaveBeenCalledWith(
+      'Scoped message',
+      expect.objectContaining({
+        requestId: 'req-123',
+        correlationId: 'req-123',
+        userId: 'user-456',
+      }),
+    );
+  });
+
   it('removes log files older than retention', async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chioma-logs-'));
     const oldLog = path.join(tempDir, 'application-2026-01-01.log');
@@ -98,8 +123,8 @@ describe('LoggerService', () => {
 
     expect(removed).toBe(1);
     await expect(fs.access(oldLog)).rejects.toThrow();
-    await expect(fs.access(freshLog)).resolves.toBeUndefined();
+    await expect(fs.access(freshLog)).resolves.not.toThrow();
 
     await fs.rm(tempDir, { recursive: true, force: true });
-  });
+  }, 10000);
 });

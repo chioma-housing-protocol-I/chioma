@@ -26,11 +26,13 @@ The `slow` field is `true` when `duration_ms > 1000` (see `SLOW_REQUEST_THRESHOL
 ## Loki (LogQL)
 
 ### All slow requests in the last hour
+
 ```logql
 {app="chioma-backend"} | json | event="http_request" | slow=`true`
 ```
 
 ### p95 latency per route (last 5 min)
+
 ```logql
 quantile_over_time(0.95,
   {app="chioma-backend"}
@@ -41,6 +43,7 @@ quantile_over_time(0.95,
 ```
 
 ### Request rate by status class (per minute)
+
 ```logql
 sum by (route, method) (
   rate(
@@ -53,6 +56,7 @@ sum by (route, method) (
 ```
 
 ### Top 10 slowest routes by average duration
+
 ```logql
 topk(10,
   avg_over_time(
@@ -69,16 +73,19 @@ topk(10,
 ## Elasticsearch / OpenSearch (Lucene)
 
 ### Slow requests
+
 ```
 event:"http_request" AND slow:true
 ```
 
 ### Slow requests on a specific route
+
 ```
 event:"http_request" AND route:"/api/payments" AND slow:true
 ```
 
 ### Aggregation — avg duration per route (Kibana Lens / TSVB)
+
 - Field: `duration_ms`
 - Split by: `route.keyword`
 - Metric: Average
@@ -88,6 +95,7 @@ event:"http_request" AND route:"/api/payments" AND slow:true
 ## CloudWatch Insights
 
 ### Slow requests
+
 ```sql
 fields @timestamp, route, method, status, duration_ms
 | filter event = "http_request" and slow = 1
@@ -96,6 +104,7 @@ fields @timestamp, route, method, status, duration_ms
 ```
 
 ### p95 latency per route (last 1 hour)
+
 ```sql
 fields route, duration_ms
 | filter event = "http_request"
@@ -104,6 +113,7 @@ fields route, duration_ms
 ```
 
 ### Error rate by route
+
 ```sql
 fields route, status
 | filter event = "http_request" and status >= 400

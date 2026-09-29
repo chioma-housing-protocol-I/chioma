@@ -14,6 +14,7 @@ import {
   AccountType,
 } from '../../blockchain/profile/profile.service';
 import { IpfsService, ProfileIpfsData } from './services/ipfs.service';
+import { CacheService } from '../../common/cache/cache.service';
 import { CreateProfileDto, AccountTypeDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
@@ -23,6 +24,25 @@ import {
   DataIntegrityResponseDto,
 } from './dto/profile-response.dto';
 import { User } from '../users/entities/user.entity';
+
+/** Cache key prefix for public profile lookups by wallet address. */
+export const CACHE_PREFIX_PROFILE_BY_WALLET = 'profile:byWallet';
+/** TTL for cached public profile reads (2 minutes). */
+export const TTL_PROFILE_MS = 120_000;
+
+/** Exact cache key for a wallet's public profile read. */
+export function profileCacheKey(walletAddress: string): string {
+  return `${CACHE_PREFIX_PROFILE_BY_WALLET}:${walletAddress}`;
+}
+
+/**
+ * Dependency tag every cache key derived from this wallet's profile is
+ * registered under, so a single write invalidates all of them regardless
+ * of how many distinct keys/views exist for the same underlying data.
+ */
+export function profileCacheDependencyTag(walletAddress: string): string {
+  return `profile:${walletAddress}`;
+}
 
 @Injectable()
 export class ProfileService {
@@ -36,6 +56,7 @@ export class ProfileService {
     private sorobanClient: SorobanClientService,
     private profileContract: ProfileContractService,
     private ipfsService: IpfsService,
+    private cacheService: CacheService,
   ) {}
 
   async createProfile(
@@ -106,6 +127,9 @@ export class ProfileService {
     });
 
     await this.profileMetadataRepository.save(profileMetadata);
+    await this.cacheService.invalidateDependencies([
+      profileCacheDependencyTag(user.walletAddress),
+    ]);
 
     this.logger.log(
       `Profile created for user ${userId} with tx: ${transactionHash}`,
@@ -211,6 +235,9 @@ export class ProfileService {
     profileMetadata.lastSyncedAt = new Date();
 
     await this.profileMetadataRepository.save(profileMetadata);
+    await this.cacheService.invalidateDependencies([
+      profileCacheDependencyTag(user.walletAddress),
+    ]);
 
     return {
       message: 'Profile updated successfully',
@@ -240,6 +267,17 @@ export class ProfileService {
       throw new BadRequestException('Invalid Stellar wallet address');
     }
 
+    return this.cacheService.getOrSet(
+      profileCacheKey(walletAddress),
+      () => this.loadProfileByWallet(walletAddress),
+      TTL_PROFILE_MS,
+      { dependencies: [profileCacheDependencyTag(walletAddress)] },
+    );
+  }
+
+  private async loadProfileByWallet(
+    walletAddress: string,
+  ): Promise<ProfileResponseDto> {
     const onChainProfile = await this.profileContract.getProfile(walletAddress);
     const offChainProfile = await this.profileMetadataRepository.findOne({
       where: { walletAddress },

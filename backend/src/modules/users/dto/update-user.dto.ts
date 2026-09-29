@@ -1,13 +1,18 @@
 import { PartialType } from '@nestjs/mapped-types';
+import { Transform } from 'class-transformer';
 import {
   IsString,
   IsEmail,
   IsOptional,
+  IsPhoneNumber,
+  IsIn,
   MinLength,
   Matches,
   IsBoolean,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ValidationUtils } from '../../../common/utils/validation/validation.utils';
+import { SUPPORTED_LANGUAGES } from '../../i18n/i18n.service';
 import { CreateUserDto } from './create-user.dto';
 
 export class UpdateUserProfileDto {
@@ -21,9 +26,18 @@ export class UpdateUserProfileDto {
   @IsString()
   lastName?: string;
 
-  @ApiPropertyOptional({ example: '+1234567890', description: 'Phone number' })
+  @ApiPropertyOptional({
+    example: '+2348012345678',
+    description: 'Phone number',
+  })
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => ValidationUtils.normalizePhoneNumber(value))
+  @Matches(/^\+?\d+$/, {
+    message: 'phoneNumber must contain only digits (optionally prefixed by +)',
+  })
+  @IsPhoneNumber('NG', {
+    message: 'phoneNumber must be a valid phone number (e.g. +2348012345678)',
+  })
   phoneNumber?: string;
 
   @ApiPropertyOptional({
@@ -34,9 +48,16 @@ export class UpdateUserProfileDto {
   @IsString()
   avatarUrl?: string;
 
-  @ApiPropertyOptional({ example: 'en', description: 'Preferred language' })
+  @ApiPropertyOptional({
+    example: 'en',
+    description: 'Preferred language',
+    enum: SUPPORTED_LANGUAGES,
+  })
   @IsOptional()
   @IsString()
+  @IsIn(SUPPORTED_LANGUAGES, {
+    message: `preferredLanguage must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`,
+  })
   preferredLanguage?: string;
 
   @ApiPropertyOptional({ example: 'UTC', description: 'Timezone' })

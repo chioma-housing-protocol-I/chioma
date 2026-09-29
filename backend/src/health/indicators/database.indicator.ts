@@ -71,4 +71,26 @@ export class DatabaseHealthIndicator extends HealthIndicator {
       return false;
     }
   }
+
+  /**
+   * Force a fresh connection: tears down an initialized (but unresponsive)
+   * DataSource and re-initializes it. Used by HealthRecoveryService to
+   * auto-reconnect when the pool goes stale.
+   */
+  async reconnect(): Promise<boolean> {
+    try {
+      if (this.dataSource.isInitialized) {
+        await this.dataSource.destroy();
+      }
+
+      await this.dataSource.initialize();
+      await this.dataSource.query('SELECT 1');
+
+      this.logger.log('Database connection re-established');
+      return true;
+    } catch (error) {
+      this.logger.error('Database reconnect attempt failed', error);
+      return false;
+    }
+  }
 }

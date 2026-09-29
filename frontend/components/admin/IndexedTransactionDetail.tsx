@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { ExternalLink, RefreshCw, X } from 'lucide-react';
 import { getIndexedTransactionExplorerUrl } from '@/lib/indexed-transactions';
 import type { IndexedTransaction } from '@/types';
@@ -21,6 +22,8 @@ export function IndexedTransactionDetail({
   onClose,
   onRefresh,
 }: IndexedTransactionDetailProps) {
+  const dateFnsLocale = useDateFnsLocale();
+
   if (!isOpen) {
     return null;
   }
@@ -114,7 +117,9 @@ export function IndexedTransactionDetail({
                   label="Indexed at"
                   value={
                     transaction.indexedAt
-                      ? format(new Date(transaction.indexedAt), 'PPP p')
+                      ? format(new Date(transaction.indexedAt), 'PPP p', {
+                          locale: dateFnsLocale,
+                        })
                       : 'Awaiting index'
                   }
                 />
@@ -128,7 +133,11 @@ export function IndexedTransactionDetail({
                 />
                 <DetailItem
                   label="Ledger close time"
-                  value={format(new Date(transaction.ledgerCloseTime), 'PPP p')}
+                  value={format(
+                    new Date(transaction.ledgerCloseTime),
+                    'PPP p',
+                    { locale: dateFnsLocale },
+                  )}
                 />
                 <DetailItem
                   label="Retry count"

@@ -17,12 +17,14 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { PropertyQueryBuilder } from './property-query-builder';
+import { PaginationUtils } from '../../common/utils';
 import { CacheService } from '../../common/cache/cache.service';
 import {
   CACHE_PREFIX_PROPERTIES_LIST,
   TTL_PUBLIC_PROPERTY_LIST_MS,
 } from '../../common/cache/cache.constants';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../search/saved-search.service';
 import {
   PropertyNotFoundError,
   AuthorizationError,
@@ -45,6 +47,7 @@ export class PropertiesService {
     private readonly propertyListingDraftRepository: Repository<PropertyListingDraft>,
     private readonly cacheService: CacheService,
     private readonly fraudHooksService: FraudHooksService,
+    private readonly savedSearchService: SavedSearchService,
   ) {}
 
   private generateCacheKey(query: QueryPropertyDto): string {
@@ -108,14 +111,7 @@ export class PropertiesService {
     return this.findOne(savedProperty.id);
   }
 
-  async findAll(query: QueryPropertyDto): Promise<{
-    data: Property[];
-    meta: {
-      total: number;
-      page: number;
-      limit: number;
-    };
-  }> {
+  async findAll(query: QueryPropertyDto) {
     const isPublicListing =
       query.status === ListingStatus.PUBLISHED && !query.ownerId;
 
@@ -131,17 +127,10 @@ export class PropertiesService {
     return this.fetchListingsPage(query);
   }
 
-  private async fetchListingsPage(query: QueryPropertyDto): Promise<{
-    data: Property[];
-    meta: {
-      total: number;
-      page: number;
-      limit: number;
-    };
-  }> {
+  private async fetchListingsPage(query: QueryPropertyDto) {
     const {
       page = 1,
-      limit = 10,
+      limit = 20,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       ...filters
@@ -161,14 +150,7 @@ export class PropertiesService {
       .applyPagination(page, limit)
       .execute();
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-      },
-    };
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   async findOne(id: string): Promise<Property> {
@@ -292,7 +274,8 @@ export class PropertiesService {
   async remove(id: string, user: User): Promise<void> {
     const property = await this.findOne(id);
     this.verifyOwnership(property, user);
-    await this.propertyRepository.remove(property);
+    property.status = ListingStatus.ARCHIVED;
+    await this.propertyRepository.softRemove(property);
     await this.cacheService.invalidatePropertyDomainCaches(id);
   }
 
@@ -320,10 +303,14 @@ export class PropertiesService {
       );
     }
 
+    // Perform fraud check before allowing listing to be published
+    await this.fraudHooksService.checkListingBeforePublishing(id);
+
     property.status = ListingStatus.PUBLISHED;
     const saved = await this.propertyRepository.save(property);
     await this.cacheService.invalidatePropertyDomainCaches(id);
     void this.fraudHooksService.onListingPublished(saved.id);
+    void this.savedSearchService.notifyMatchingSearches(saved);
     return saved;
   }
 

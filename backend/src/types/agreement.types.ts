@@ -21,10 +21,7 @@ export type TerminationReason =
   | 'eviction'
   | 'mutual_agreement';
 export type PaymentFrequency =
-  | 'monthly'
-  | 'quarterly'
-  | 'semi_annual'
-  | 'annual';
+  'monthly' | 'quarterly' | 'semi_annual' | 'annual';
 
 export interface RentAgreement {
   id: UUID;

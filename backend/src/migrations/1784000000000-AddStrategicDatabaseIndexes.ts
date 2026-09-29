@@ -53,7 +53,7 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
 
     // ========== payments ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_payments_agreement_id" ON "payments" ("agreementId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_payments_agreement_id" ON "payments" ("agreement_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_payments_status" ON "payments" ("status")`,
@@ -62,13 +62,13 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       `CREATE INDEX IF NOT EXISTS "IDX_payments_currency" ON "payments" ("currency")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_payments_reference_number" ON "payments" ("referenceNumber")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_payments_reference_number" ON "payments" ("reference_number")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_payments_created_at" ON "payments" ("created_at")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_payments_user_status" ON "payments" ("userId", "status")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_payments_user_status" ON "payments" ("user_id", "status")`,
     );
 
     // ========== payment_schedules ==========
@@ -83,7 +83,7 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
 
     // ========== property_amenities ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_property_amenities_property_id" ON "property_amenities" ("propertyId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_property_amenities_property_id" ON "property_amenities" ("property_id")`,
     );
 
     // ========== rental_units ==========
@@ -91,29 +91,23 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       `CREATE INDEX IF NOT EXISTS "IDX_rental_units_property_id" ON "rental_units" ("property_id")`,
     );
 
-    // ========== rent_agreements (entity name: rent_contracts -> rent_agreements) ==========
+    // ========== rent_agreements ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_agreements_tenant_id" ON "rent_agreements" ("tenant_id")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_rent_agreements_user_id" ON "rent_agreements" ("user_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_agreements_landlord_id" ON "rent_agreements" ("landlord_id")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_rent_agreements_admin_id" ON "rent_agreements" ("admin_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_rent_agreements_created_at" ON "rent_agreements" ("created_at")`,
     );
 
-    // ========== rent_payments ==========
+    // ========== rent_payments (legacy table: agreement_id + status only) ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_payments_contract_id" ON "rent_payments" ("contract_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_payments_tenant_id" ON "rent_payments" ("tenant_id")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_rent_payments_agreement_id" ON "rent_payments" ("agreement_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_rent_payments_status" ON "rent_payments" ("status")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_payments_due_date" ON "rent_payments" ("due_date")`,
     );
 
     // ========== maintenance_requests ==========
@@ -135,10 +129,10 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
 
     // ========== message ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_messages_sender_id" ON "message" ("senderId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_messages_sender_id" ON "message" ("sender_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_messages_receiver_id" ON "message" ("receiverId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_messages_receiver_id" ON "message" ("receiver_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_messages_timestamp" ON "message" ("timestamp")`,
@@ -146,7 +140,7 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
 
     // ========== participant ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_participant_user_id" ON "participant" ("userId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_participant_user_id" ON "participant" ("user_id")`,
     );
 
     // ========== chat_room ==========
@@ -192,12 +186,12 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       `CREATE INDEX IF NOT EXISTS "IDX_kyc_status" ON "kyc" ("status")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_kyc_user_id" ON "kyc" ("userId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_kyc_user_id" ON "kyc" ("user_id")`,
     );
 
     // ========== feedback ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_feedback_user_id" ON "feedback" ("userId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_feedback_user_id" ON "feedback" ("user_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_feedback_created_at" ON "feedback" ("created_at")`,
@@ -208,40 +202,47 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       `CREATE INDEX IF NOT EXISTS "IDX_api_keys_user_id" ON "api_keys" ("user_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_api_keys_is_active" ON "api_keys" ("is_active")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_api_keys_status" ON "api_keys" ("status")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_api_keys_expires_at" ON "api_keys" ("expires_at")`,
     );
 
     // ========== stellar_transactions ==========
+    // No agreement linkage column on this table (source_account/destination_account
+    // only) — index status instead, which is what queries actually filter on.
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_stellar_tx_agreement_id" ON "stellar_transactions" ("agreement_id")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_stellar_tx_status" ON "stellar_transactions" ("status")`,
     );
 
     // ========== stellar_escrows ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_stellar_escrows_agreement_id" ON "stellar_escrows" ("agreement_id")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_stellar_escrows_agreement_id" ON "stellar_escrows" ("rent_agreement_id")`,
     );
 
     // ========== rent_obligation_nfts ==========
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_obligation_nfts_agreement_id" ON "rent_obligation_nfts" ("agreementId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_rent_obligation_nfts_agreement_id" ON "rent_obligation_nfts" ("agreement_id")`,
     );
     await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_rent_obligation_nfts_owner" ON "rent_obligation_nfts" ("ownerId")`,
+      `CREATE INDEX IF NOT EXISTS "IDX_rent_obligation_nfts_current_owner" ON "rent_obligation_nfts" ("current_owner")`,
     );
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_rent_obligation_nfts_status" ON "rent_obligation_nfts" ("status")`,
     );
 
     // ========== nft_transfers ==========
-    await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_nft_transfers_nft_id" ON "nft_transfers" ("nftId")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_nft_transfers_from_to" ON "nft_transfers" ("fromAddress", "toAddress")`,
-    );
+    // Table has no creation migration yet (entity-only); guard so this
+    // migration stays runnable until that table is created.
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.nft_transfers') IS NOT NULL THEN
+          CREATE INDEX IF NOT EXISTS "IDX_nft_transfers_token_id" ON "nft_transfers" ("token_id");
+          CREATE INDEX IF NOT EXISTS "IDX_nft_transfers_from_to" ON "nft_transfers" ("from_address", "to_address");
+        END IF;
+      END $$;
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -269,13 +270,11 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       'IDX_property_images_property_id',
       'IDX_property_amenities_property_id',
       'IDX_rental_units_property_id',
-      'IDX_rent_agreements_tenant_id',
-      'IDX_rent_agreements_landlord_id',
+      'IDX_rent_agreements_user_id',
+      'IDX_rent_agreements_admin_id',
       'IDX_rent_agreements_created_at',
-      'IDX_rent_payments_contract_id',
-      'IDX_rent_payments_tenant_id',
+      'IDX_rent_payments_agreement_id',
       'IDX_rent_payments_status',
-      'IDX_rent_payments_due_date',
       'IDX_maintenance_requests_property_id',
       'IDX_maintenance_requests_tenant_id',
       'IDX_maintenance_requests_landlord_id',
@@ -300,19 +299,27 @@ export class AddStrategicDatabaseIndexes1784000000000 implements MigrationInterf
       'IDX_feedback_user_id',
       'IDX_feedback_created_at',
       'IDX_api_keys_user_id',
-      'IDX_api_keys_is_active',
+      'IDX_api_keys_status',
       'IDX_api_keys_expires_at',
-      'IDX_stellar_tx_agreement_id',
+      'IDX_stellar_tx_status',
       'IDX_stellar_escrows_agreement_id',
       'IDX_rent_obligation_nfts_agreement_id',
-      'IDX_rent_obligation_nfts_owner',
+      'IDX_rent_obligation_nfts_current_owner',
       'IDX_rent_obligation_nfts_status',
-      'IDX_nft_transfers_nft_id',
-      'IDX_nft_transfers_from_to',
     ];
 
     for (const index of indexes) {
       await queryRunner.query(`DROP INDEX IF EXISTS "${index}"`);
     }
+
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.nft_transfers') IS NOT NULL THEN
+          DROP INDEX IF EXISTS "IDX_nft_transfers_token_id";
+          DROP INDEX IF EXISTS "IDX_nft_transfers_from_to";
+        END IF;
+      END $$;
+    `);
   }
 }

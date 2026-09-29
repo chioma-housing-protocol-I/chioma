@@ -2,18 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '../keys';
+import { storageApi } from '@/lib/api/storage';
 
 export type DocumentStatus = 'ACTIVE' | 'ARCHIVED' | 'EXPIRED';
 export type DocumentType =
-  | 'LEASE'
-  | 'INSPECTION'
-  | 'RECEIPT'
-  | 'CONTRACT'
-  | 'OTHER';
+  'LEASE' | 'INSPECTION' | 'RECEIPT' | 'CONTRACT' | 'OTHER';
 
 export interface DocumentFilters {
   status?: DocumentStatus | 'ALL';
   type?: DocumentType | 'ALL';
+  category?: string;
   propertyId?: string;
   search?: string;
   sort?: 'uploadedAt' | 'name' | 'type';
@@ -26,6 +25,7 @@ export interface DocumentRecord {
   name: string;
   type: DocumentType;
   status: DocumentStatus;
+  category: string;
   propertyName: string;
   propertyId: string;
   tenantName?: string;
@@ -38,177 +38,95 @@ export interface DocumentRecord {
   description?: string;
 }
 
-const LANDLORD_DOCUMENTS_QUERY_KEY = ['landlord-documents'] as const;
+interface ApiDocumentResponse {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  category: string;
+  fileKey: string;
+  fileSize: number;
+  fileType: string;
+  propertyId: string | null;
+  tenantId: string | null;
+  ownerId: string;
+  description: string | null;
+  sharedWith: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const mockDocuments: DocumentRecord[] = [
-  {
-    id: 'doc-001',
-    name: 'Lease Agreement - Unit 4B',
-    type: 'LEASE',
-    status: 'ACTIVE',
-    propertyName: 'Sunset Apartments, Unit 4B',
-    propertyId: 'prop-001',
-    tenantName: 'Chioma Okafor',
-    tenantId: 'tenant-001',
-    fileSize: 2458000,
-    fileType: 'application/pdf',
-    url: '/documents/lease-unit-4b.pdf',
-    uploadedAt: '2026-01-15T10:00:00.000Z',
-    expiresAt: '2027-01-15T10:00:00.000Z',
-    description: 'Annual lease agreement for Unit 4B',
-  },
-  {
-    id: 'doc-002',
-    name: 'Move-in Inspection Report',
-    type: 'INSPECTION',
-    status: 'ACTIVE',
-    propertyName: 'Sunset Apartments, Unit 4B',
-    propertyId: 'prop-001',
-    tenantName: 'Chioma Okafor',
-    tenantId: 'tenant-001',
-    fileSize: 1850000,
-    fileType: 'application/pdf',
-    url: '/documents/inspection-unit-4b.pdf',
-    uploadedAt: '2026-01-15T11:00:00.000Z',
-    description: 'Property condition report at move-in',
-  },
-  {
-    id: 'doc-003',
-    name: 'Rent Receipt - March 2026',
-    type: 'RECEIPT',
-    status: 'ACTIVE',
-    propertyName: 'Sunset Apartments, Unit 4B',
-    propertyId: 'prop-001',
-    tenantName: 'Chioma Okafor',
-    tenantId: 'tenant-001',
-    fileSize: 450000,
-    fileType: 'application/pdf',
-    url: '/documents/receipt-march-2026.pdf',
-    uploadedAt: '2026-03-01T09:00:00.000Z',
-    description: 'Rent payment receipt for March 2026',
-  },
-  {
-    id: 'doc-004',
-    name: 'Lease Agreement - Unit 2A',
-    type: 'LEASE',
-    status: 'ACTIVE',
-    propertyName: 'Sunset Apartments, Unit 2A',
-    propertyId: 'prop-001',
-    tenantName: 'Adebayo Mensah',
-    tenantId: 'tenant-002',
-    fileSize: 2380000,
-    fileType: 'application/pdf',
-    url: '/documents/lease-unit-2a.pdf',
-    uploadedAt: '2026-02-01T10:00:00.000Z',
-    expiresAt: '2027-02-01T10:00:00.000Z',
-    description: 'Annual lease agreement for Unit 2A',
-  },
-  {
-    id: 'doc-005',
-    name: 'Property Insurance Certificate',
-    type: 'CONTRACT',
-    status: 'ACTIVE',
-    propertyName: 'Sunset Apartments',
-    propertyId: 'prop-001',
-    fileSize: 1200000,
-    fileType: 'application/pdf',
-    url: '/documents/insurance-sunset.pdf',
-    uploadedAt: '2026-01-01T10:00:00.000Z',
-    expiresAt: '2027-01-01T10:00:00.000Z',
-    description: 'Property insurance certificate',
-  },
-  {
-    id: 'doc-006',
-    name: 'Lease Agreement - Unit 7C',
-    type: 'LEASE',
-    status: 'ARCHIVED',
-    propertyName: 'Lagos Heights, Unit 7C',
-    propertyId: 'prop-002',
-    tenantName: 'Ngozi Eze',
-    tenantId: 'tenant-003',
-    fileSize: 2420000,
-    fileType: 'application/pdf',
-    url: '/documents/lease-unit-7c.pdf',
-    uploadedAt: '2025-06-01T10:00:00.000Z',
-    description: 'Previous lease agreement for Unit 7C',
-  },
-];
-
-function matchesFilter(doc: DocumentRecord, filters: DocumentFilters): boolean {
-  if (
-    filters.status &&
-    filters.status !== 'ALL' &&
-    doc.status !== filters.status
-  ) {
-    return false;
-  }
-  if (filters.type && filters.type !== 'ALL' && doc.type !== filters.type) {
-    return false;
-  }
-  if (filters.propertyId && doc.propertyId !== filters.propertyId) {
-    return false;
-  }
-  const normalizedSearch = filters.search?.trim().toLowerCase() || '';
-  if (normalizedSearch) {
-    const searchable = [
-      doc.name,
-      doc.propertyName,
-      doc.tenantName || '',
-      doc.description || '',
-    ]
-      .join(' ')
-      .toLowerCase();
-    if (!searchable.includes(normalizedSearch)) return false;
-  }
-  return true;
+function mapApiDoc(doc: ApiDocumentResponse): DocumentRecord {
+  return {
+    id: doc.id,
+    name: doc.name,
+    type: (doc.type as DocumentType) || 'OTHER',
+    status: (doc.status as DocumentStatus) || 'ACTIVE',
+    category: doc.category || 'other',
+    propertyName: '',
+    propertyId: doc.propertyId || '',
+    tenantName: undefined,
+    tenantId: doc.tenantId || undefined,
+    fileSize: doc.fileSize,
+    fileType: doc.fileType,
+    url: `${process.env.NEXT_PUBLIC_API_URL || '/api'}/documents/${doc.id}/download?key=${encodeURIComponent(doc.fileKey)}`,
+    uploadedAt: doc.createdAt,
+    description: doc.description || undefined,
+  };
 }
 
 export function useLandlordDocuments(filters: DocumentFilters = {}) {
   return useQuery({
-    queryKey: [...LANDLORD_DOCUMENTS_QUERY_KEY, filters],
+    queryKey: queryKeys.documents.list(filters),
     queryFn: async () => {
-      try {
-        const params = new URLSearchParams({
-          role: 'landlord',
-          ...(filters.status &&
-            filters.status !== 'ALL' && { status: filters.status }),
-          ...(filters.type && filters.type !== 'ALL' && { type: filters.type }),
-          ...(filters.propertyId && { propertyId: filters.propertyId }),
-          ...(filters.search && { search: filters.search }),
-          limit: (filters.limit || 20).toString(),
-          page: (filters.page || 0).toString(),
-        });
-        const responseData = await apiClient.get<{
-          data?: DocumentRecord[] | { documents?: DocumentRecord[] };
-        }>(`/documents?${params}`);
-        const apiData = responseData.data;
-        // Normalize API response to DocumentRecord
-        const documents: DocumentRecord[] = (
-          (apiData?.data as DocumentRecord[] | undefined) ||
-          (apiData as { documents?: DocumentRecord[] })?.documents ||
-          []
-        ).map((d: DocumentRecord) => ({
-          id: String(d.id),
-          name: d.name || '',
-          type: (d.type as DocumentType) || 'OTHER',
-          status: (d.status as DocumentStatus) || 'ACTIVE',
-          propertyName: d.propertyName || 'Rental Property',
-          propertyId: String(d.propertyId || ''),
-          tenantName: d.tenantName,
-          tenantId: d.tenantId ? String(d.tenantId) : undefined,
-          fileSize: d.fileSize || 0,
-          fileType: d.fileType || 'application/octet-stream',
-          url: d.url || '',
-          uploadedAt: d.uploadedAt || new Date().toISOString(),
-          expiresAt: d.expiresAt,
-          description: d.description,
-        }));
-        return documents.length > 0 ? documents : mockDocuments;
-      } catch {
-        return mockDocuments;
-      }
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== 'ALL')
+        params.append('status', filters.status);
+      if (filters.type && filters.type !== 'ALL')
+        params.append('type', filters.type);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.propertyId) params.append('propertyId', filters.propertyId);
+      if (filters.search) params.append('search', filters.search);
+      params.append('limit', String(filters.limit || 20));
+      params.append('page', String(filters.page || 0));
+
+      const response = await apiClient.get<{
+        data: ApiDocumentResponse[];
+        total: number;
+      }>(`/documents?${params}`);
+
+      const data = response.data;
+      const apiDocs = Array.isArray(data) ? data : data?.data || [];
+      return (apiDocs as ApiDocumentResponse[]).map(mapApiDoc);
     },
-    select: (documents) => documents.filter((d) => matchesFilter(d, filters)),
+  });
+}
+
+export function useSharedDocuments() {
+  return useQuery({
+    queryKey: queryKeys.documents.shared(),
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        data: ApiDocumentResponse[];
+        total: number;
+      }>('/documents?role=shared');
+      const data = response.data;
+      const apiDocs = Array.isArray(data) ? data : data?.data || [];
+      return (apiDocs as ApiDocumentResponse[]).map(mapApiDoc);
+    },
+  });
+}
+
+export function useDocument(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.documents.detail(id ?? ''),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiDocumentResponse>(
+        `/documents/${id}`,
+      );
+      return mapApiDoc(response.data);
+    },
+    enabled: Boolean(id),
   });
 }
 
@@ -222,19 +140,26 @@ export function useUploadDocument() {
       file: File;
       metadata: Partial<DocumentRecord>;
     }) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      Object.entries(metadata).forEach(([key, value]) => {
-        if (value !== undefined) {
-          formData.append(key, String(value));
-        }
-      });
-      await apiClient.post('/documents/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const { url: uploadUrl, key } = await storageApi.getUploadUrl(
+        file.name,
+        file.size,
+        file.type,
+      );
+      await storageApi.uploadToS3(uploadUrl, file);
+      await apiClient.post('/documents', {
+        name: metadata.name || file.name,
+        type: metadata.type || 'OTHER',
+        category: metadata.category || 'other',
+        fileKey: key,
+        fileSize: file.size,
+        fileType: file.type,
+        propertyId: metadata.propertyId || undefined,
+        tenantId: metadata.tenantId || undefined,
+        description: metadata.description || undefined,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LANDLORD_DOCUMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
     },
   });
 }
@@ -246,7 +171,7 @@ export function useDeleteDocument() {
       await apiClient.delete(`/documents/${documentId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LANDLORD_DOCUMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
     },
   });
 }
@@ -258,7 +183,7 @@ export function useArchiveDocument() {
       await apiClient.patch(`/documents/${documentId}`, { status: 'ARCHIVED' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LANDLORD_DOCUMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
     },
   });
 }
@@ -276,7 +201,27 @@ export function useShareDocument() {
       await apiClient.post(`/documents/${documentId}/share`, { tenantId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LANDLORD_DOCUMENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+    },
+  });
+}
+
+export function useUpdateDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      documentId,
+      ...data
+    }: {
+      documentId: string;
+      name?: string;
+      status?: DocumentStatus;
+      description?: string;
+    }) => {
+      await apiClient.patch(`/documents/${documentId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
     },
   });
 }

@@ -148,6 +148,19 @@ export class RefundEscrowDto {
   @IsOptional()
   @IsString()
   reason?: string;
+
+  /**
+   * Amount to refund, as a decimal string with up to 7 decimal places.
+   * Omit for a full refund of the remaining escrow balance. When provided
+   * and less than the remaining balance, the escrow performs a partial
+   * refund: funds move back to the source account, the escrow stays ACTIVE,
+   * and the cumulative refunded-to-date balance is updated.
+   */
+  @IsOptional()
+  @Matches(/^(?!0+(\.0+)?$)\d+(\.\d{1,7})?$/, {
+    message: 'amount must be a positive decimal with at most 7 decimal places',
+  })
+  amount?: string;
 }
 
 export class EscrowResponseDto {

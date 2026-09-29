@@ -65,7 +65,7 @@ The API will be available at `http://localhost:5000/api` and Swagger UI at `http
 | Document                                                        | Summary                                                   |
 | --------------------------------------------------------------- | --------------------------------------------------------- |
 | [API Overview](./api/api-documentation.md)                      | Base URL, auth, all endpoint groups                       |
-| [Usage Guide](./api/USAGE_GUIDE.md)                             | Step-by-step integration walkthrough with curl examples |
+| [Usage Guide](./api/USAGE_GUIDE.md)                             | Step-by-step integration walkthrough with curl examples   |
 | [API Standards](./api/API-STANDARDS.md)                         | Annotation conventions, request/response formats          |
 | [Documentation Standards](./DOCUMENTATION-STANDARDS.md)         | README, code comments, API docs, architecture standards   |
 | [Authentication Guide](./api/AUTHENTICATION.md)                 | JWT flow, SEP-0010, refresh tokens                        |
@@ -84,13 +84,13 @@ The API will be available at `http://localhost:5000/api` and Swagger UI at `http
 
 ## Architecture
 
-| Document                                                                   | Summary                                       |
-| -------------------------------------------------------------------------- | --------------------------------------------- |
-| [Dependency Graph](./architecture/DEPENDENCY_GRAPH.md)                     | Module dependency overview                    |
-| [Architecture Documentation](./architecture/ARCHITECTURE_DOCUMENTATION.md) | System architecture, layers, integrations     |
-| [Architecture Decisions](./architecture/ARCHITECTURE_DECISIONS.md)         | Key decisions, rationale, trade-offs          |
-| [Scalability & Performance](./architecture/scalability-and-performance.md) | Horizontal scaling, caching layers, DB tuning |
-| [Performance Tuning Guidelines](./PERFORMANCE_TUNING_GUIDELINES.md)       | Operational tuning for latency, DB, cache, queues |
+| Document                                                                   | Summary                                           |
+| -------------------------------------------------------------------------- | ------------------------------------------------- |
+| [Dependency Graph](./architecture/DEPENDENCY_GRAPH.md)                     | Module dependency overview                        |
+| [Architecture Documentation](./architecture/ARCHITECTURE_DOCUMENTATION.md) | System architecture, layers, integrations         |
+| [Architecture Decisions](./architecture/ARCHITECTURE_DECISIONS.md)         | Key decisions, rationale, trade-offs              |
+| [Scalability & Performance](./architecture/scalability-and-performance.md) | Horizontal scaling, caching layers, DB tuning     |
+| [Performance Tuning Guidelines](./PERFORMANCE_TUNING_GUIDELINES.md)        | Operational tuning for latency, DB, cache, queues |
 
 **Key design decisions:**
 
@@ -170,15 +170,15 @@ Chioma supports dual authentication: **JWT (email/password)** and **Stellar SEP-
 
 ## Deployment
 
-| Document                                                         | Summary                                                                 |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [Deployment Guide](./deployment/DEPLOYMENT.md)                   | Full runbook for dev/staging/prod deployments, monitoring, and rollback |
-| [Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)     | Pre-deploy and post-deploy safety checklist                             |
-| [Production Setup](./deployment/PRODUCTION_SETUP.md)             | Environment config, secrets, health checks                              |
-| [Monitoring & Alerting](./deployment/MONITORING_AND_ALERTING.md) | Metrics collection, alert configuration, dashboards, alert response     |
-| [Error Notification & Escalation](./deployment/ERROR_NOTIFICATION_AND_ESCALATION.md) | Alert webhooks, email/Slack delivery, escalation tiers |
-| [Backup & Recovery](./deployment/BACKUP_AND_RECOVERY.md)         | Backup strategies, verification, recovery procedures, testing           |
-| [Release Management](./deployment/RELEASE_MANAGEMENT.md)         | Release planning, versioning, release notes, deployment, rollback       |
+| Document                                                                             | Summary                                                                 |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [Deployment Guide](./deployment/DEPLOYMENT.md)                                       | Full runbook for dev/staging/prod deployments, monitoring, and rollback |
+| [Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)                         | Pre-deploy and post-deploy safety checklist                             |
+| [Production Setup](./deployment/PRODUCTION_SETUP.md)                                 | Environment config, secrets, health checks                              |
+| [Monitoring & Alerting](./deployment/MONITORING_AND_ALERTING.md)                     | Metrics collection, alert configuration, dashboards, alert response     |
+| [Error Notification & Escalation](./deployment/ERROR_NOTIFICATION_AND_ESCALATION.md) | Alert webhooks, email/Slack delivery, escalation tiers                  |
+| [Backup & Recovery](./deployment/BACKUP_AND_RECOVERY.md)                             | Backup strategies, verification, recovery procedures, testing           |
+| [Release Management](./deployment/RELEASE_MANAGEMENT.md)                             | Release planning, versioning, release notes, deployment, rollback       |
 
 Docker Compose files:
 
@@ -258,30 +258,30 @@ Automated dependency updates are configured via Dependabot in `.github/dependabo
 
 ## Configuration
 
-| Document                                                          | Summary                                                     |
-| ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| [Configuration Management](./CONFIGURATION_MANAGEMENT.md)         | Environment setup, validation, secrets, deployment          |
-| [Configuration Options](./CONFIGURATION_OPTIONS.md)               | Complete reference of all environment variables             |
+| Document                                                  | Summary                                            |
+| --------------------------------------------------------- | -------------------------------------------------- |
+| [Configuration Management](./CONFIGURATION_MANAGEMENT.md) | Environment setup, validation, secrets, deployment |
+| [Configuration Options](./CONFIGURATION_OPTIONS.md)       | Complete reference of all environment variables    |
 
 ---
 
 ## Troubleshooting
 
-| Document                                            | Summary                                                             |
-| --------------------------------------------------- | ------------------------------------------------------------------- |
-| [Troubleshooting Guide](./TROUBLESHOOTING.md)       | Common issues by area, error codes, resolution steps                |
-| [Error Handling](./ERROR_HANDLING.md)               | Exception filters, custom errors, frontend classification           |
-| [Caching Troubleshooting](./caching/troubleshooting.md) | Cache-specific issues                                         |
+| Document                                                | Summary                                                   |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| [Troubleshooting Guide](./TROUBLESHOOTING.md)           | Common issues by area, error codes, resolution steps      |
+| [Error Handling](./ERROR_HANDLING.md)                   | Exception filters, custom errors, frontend classification |
+| [Caching Troubleshooting](./caching/troubleshooting.md) | Cache-specific issues                                     |
 
 ---
 
 ## Incident Response
 
-| Document                                                               | Summary                                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [Incident Response Procedures](./INCIDENT_RESPONSE.md)                 | Classification, detection, escalation, communication, runbooks, PIR |
-| [Disaster Recovery Plan](./deployment/DISASTER_RECOVERY_PLAN.md)       | Full platform outage and DR scenarios                               |
-| [Disaster Recovery Procedures](./deployment/runbooks/DISASTER_RECOVERY_PROCEDURES.md) | Step-by-step recovery runbooks                          |
+| Document                                                                              | Summary                                                             |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Incident Response Procedures](./INCIDENT_RESPONSE.md)                                | Classification, detection, escalation, communication, runbooks, PIR |
+| [Disaster Recovery Plan](./deployment/DISASTER_RECOVERY_PLAN.md)                      | Full platform outage and DR scenarios                               |
+| [Disaster Recovery Procedures](./deployment/runbooks/DISASTER_RECOVERY_PROCEDURES.md) | Step-by-step recovery runbooks                                      |
 
 ---
 

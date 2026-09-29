@@ -7,6 +7,7 @@ import {
   ReminderType,
 } from './entities/rent-reminder.entity';
 import { EmailService } from '../notifications/email.service';
+import { PaginationUtils } from '../../common/utils';
 
 /** The day-offsets at which reminders are created relative to the due date. */
 const REMINDER_OFFSETS = [7, 3, 1, 0, -1];
@@ -158,11 +159,15 @@ export class RentReminderService {
    * @param agreementId - The agreement identifier
    * @returns An array of RentReminder entities ordered by due date ascending
    */
-  async getReminders(agreementId: string): Promise<RentReminder[]> {
-    return this.reminderRepository.find({
+  async getReminders(agreementId: string, page = 1, limit = 20) {
+    PaginationUtils.validatePagination(page, limit);
+    const [data, total] = await this.reminderRepository.findAndCount({
       where: { agreementId },
       order: { dueDate: 'ASC', daysBefore: 'DESC' },
+      skip: PaginationUtils.calculateOffset(page, limit),
+      take: limit,
     });
+    return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
 
   /**

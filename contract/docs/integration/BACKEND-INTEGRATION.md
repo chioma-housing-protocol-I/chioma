@@ -2,7 +2,7 @@
 
 **Status:** Completed  
 **Category:** Documentation  
-**Type:** Integration Guide  
+**Type:** Integration Guide
 
 ## Overview
 
@@ -45,15 +45,12 @@ export class StellarContractService {
     method: string,
     args: any[],
     sourceKeypair: Keypair,
-    fee?: number
+    fee?: number,
   ): Promise<TransactionResult> {
     // Implementation
   }
 
-  async readContractData(
-    contractId: string,
-    key: string
-  ): Promise<any> {
+  async readContractData(contractId: string, key: string): Promise<any> {
     // Implementation
   }
 }
@@ -65,15 +62,10 @@ export class StellarContractService {
 // Invoke payment contract
 const result = await this.contractService.invokeContract(
   contractIds.payment,
-  'process_payment',
-  [
-    agreement_id,
-    amount,
-    source_address,
-    destination_address
-  ],
+  "process_payment",
+  [agreement_id, amount, source_address, destination_address],
   sourcKeypair,
-  BASE_FEE
+  BASE_FEE,
 );
 ```
 
@@ -117,7 +109,7 @@ export class PaymentService {
   async processPayment(
     agreementId: string,
     amount: u128,
-    tenantKeypair: Keypair
+    tenantKeypair: Keypair,
   ): Promise<PaymentResult> {
     // Validate agreement exists and is active
     const agreement = await this.agreementRepository.findById(agreementId);
@@ -126,7 +118,7 @@ export class PaymentService {
     // Build and sign transaction
     const txBuilder = new TransactionBuilder(account, {
       fee: BASE_FEE,
-      networkPassphrase: Networks.TESTNET
+      networkPassphrase: Networks.TESTNET,
     });
 
     // Invoke payment contract
@@ -135,8 +127,8 @@ export class PaymentService {
         agreementId,
         amount,
         agreement.tenant,
-        agreement.landlord
-      )
+        agreement.landlord,
+      ),
     });
 
     const tx = txBuilder.addOperation(contractOp).setTimeout(180).build();
@@ -149,7 +141,7 @@ export class PaymentService {
   async recordPayment(
     agreementId: string,
     transactionHash: string,
-    amount: string
+    amount: string,
   ): Promise<void> {
     // Store payment record in database
     await this.paymentRepository.create({
@@ -157,7 +149,7 @@ export class PaymentService {
       transaction_hash: transactionHash,
       amount: new Decimal(amount),
       status: PaymentStatus.CONFIRMED,
-      confirmed_at: new Date()
+      confirmed_at: new Date(),
     });
   }
 }
@@ -264,8 +256,8 @@ export class ContractEventListener {
         payment.id,
         payment.amount,
         payment.source,
-        payment.destination
-      )
+        payment.destination,
+      ),
     );
   }
 }
@@ -518,32 +510,28 @@ async processPaymentIdempotent(
 ### 10.1 Integration Tests
 
 ```typescript
-describe('PaymentService', () => {
-  it('should process payment successfully', async () => {
+describe("PaymentService", () => {
+  it("should process payment successfully", async () => {
     const agreement = await createTestAgreement();
     const tenant = await createTestUser();
 
     const result = await paymentService.processPayment(
       agreement.id,
       amount,
-      tenant.keypair
+      tenant.keypair,
     );
 
-    expect(result.status).toBe('confirmed');
+    expect(result.status).toBe("confirmed");
     expect(result.amount).toBe(amount.toString());
   });
 
-  it('should fail with insufficient balance', async () => {
+  it("should fail with insufficient balance", async () => {
     const agreement = await createTestAgreement();
     const tenant = createUserWithoutFunds();
 
     await expect(
-      paymentService.processPayment(
-        agreement.id,
-        amount,
-        tenant.keypair
-      )
-    ).rejects.toThrow('Insufficient balance');
+      paymentService.processPayment(agreement.id, amount, tenant.keypair),
+    ).rejects.toThrow("Insufficient balance");
   });
 });
 ```
@@ -551,23 +539,23 @@ describe('PaymentService', () => {
 ### 10.2 Contract Testing
 
 ```typescript
-describe('Payment Contract', () => {
-  it('should accept valid payments', async () => {
+describe("Payment Contract", () => {
+  it("should accept valid payments", async () => {
     const tx = await invokePaymentContract({
-      method: 'process_payment',
-      args: [agreementId, amount, tenant, landlord]
+      method: "process_payment",
+      args: [agreementId, amount, tenant, landlord],
     });
 
-    expect(tx.status).toBe('success');
+    expect(tx.status).toBe("success");
   });
 
-  it('should reject overpayments', async () => {
+  it("should reject overpayments", async () => {
     const tx = await invokePaymentContract({
-      method: 'process_payment',
-      args: [agreementId, tooLargeAmount, tenant, landlord]
+      method: "process_payment",
+      args: [agreementId, tooLargeAmount, tenant, landlord],
     });
 
-    expect(tx.status).toBe('failure');
+    expect(tx.status).toBe("failure");
   });
 });
 ```

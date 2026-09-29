@@ -12,10 +12,10 @@ export { StellarAccountViewer } from './StellarAccountViewer';
 export type { StellarAccountViewerProps } from './StellarAccountViewer';
 export { TransactionSigningModal } from './TransactionSigningModal';
 export type { TransactionSigningModalProps } from './TransactionSigningModal';
-export { PaymentFlowWizard } from './PaymentFlowWizard';
+export { PaymentFlowWizard } from '@/components/payments/PaymentFlowWizard';
 export type {
   PaymentFlowWizardProps,
   PaymentFlowStep,
-} from './PaymentFlowWizard';
+} from '@/components/payments/PaymentFlowWizard';
 export { TransactionHistoryList } from './TransactionHistoryList';
 export type { TransactionHistoryListProps } from './TransactionHistoryList';

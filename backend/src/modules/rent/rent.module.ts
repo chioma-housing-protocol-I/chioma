@@ -8,6 +8,7 @@ import { RentService } from './rent.service';
 import { RentReminderService } from './rent-reminder.service';
 import { RentController } from './rent.controller';
 import { RentReconciliationService } from './rent-reconciliation.service';
+import { RentAgreementService } from './services/rent-agreement.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StellarModule } from '../stellar/stellar.module';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
@@ -26,8 +27,8 @@ import { Dispute } from '../disputes/entities/dispute.entity';
     NotificationsModule,
     StellarModule,
   ],
-  providers: [RentService, RentReminderService, RentReconciliationService],
+  providers: [RentService, RentReminderService, RentReconciliationService, RentAgreementService],
   controllers: [RentController],
-  exports: [RentService, RentReminderService, RentReconciliationService],
+  exports: [RentService, RentReminderService, RentReconciliationService, RentAgreementService],
 })
 export class RentModule {}

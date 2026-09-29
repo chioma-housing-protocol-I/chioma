@@ -11,19 +11,21 @@ cp .env.example .env   # configure database, JWT, Stellar contracts
 pnpm run start:dev
 ```
 
-The API listens on `http://localhost:5000` by default (`PORT` env).
+The API listens on `http://localhost:5000` by default (`PORT` env). See
+[CONFIG.md](CONFIG.md) for a full reference of every environment variable,
+which are required per environment, and how they depend on each other.
 
 ## API documentation
 
-| Resource | Description |
-|----------|-------------|
-| [Interactive Swagger UI](http://localhost:5000/api/docs) | Try endpoints in the browser (when the server is running) |
-| [OpenAPI JSON](http://localhost:5000/api/docs-json) | Machine-readable OpenAPI 3.0 spec |
-| [Developer portal](http://localhost:5000/developer-portal) | API key onboarding and links |
-| [docs hub](./docs/README.md) | Full documentation index |
-| [API overview](./docs/api/api-documentation.md) | Endpoint reference |
-| [Usage guide](./docs/api/USAGE_GUIDE.md) | Step-by-step integration guide |
-| [Auth API reference](./src/modules/auth/AUTH_API_DOCUMENTATION.md) | Authentication endpoints |
+| Resource                                                           | Description                                               |
+| ------------------------------------------------------------------ | --------------------------------------------------------- |
+| [Interactive Swagger UI](http://localhost:5000/api/docs)           | Try endpoints in the browser (when the server is running) |
+| [OpenAPI JSON](http://localhost:5000/api/docs-json)                | Machine-readable OpenAPI 3.0 spec                         |
+| [Developer portal](http://localhost:5000/developer-portal)         | API key onboarding and links                              |
+| [docs hub](./docs/README.md)                                       | Full documentation index                                  |
+| [API overview](./docs/api/api-documentation.md)                    | Endpoint reference                                        |
+| [Usage guide](./docs/api/USAGE_GUIDE.md)                           | Step-by-step integration guide                            |
+| [Auth API reference](./src/modules/auth/AUTH_API_DOCUMENTATION.md) | Authentication endpoints                                  |
 
 Generate a static OpenAPI file:
 
@@ -39,6 +41,7 @@ make ci           # Full CI pipeline (format, lint, typecheck, test, build)
 make pre-commit   # Lighter check before committing
 make test         # Unit tests
 make test-cov     # Tests with coverage
+make test-mutation # Mutation testing (Stryker)
 make build        # Production build
 make security-ci  # Security lint + smoke tests
 ```
@@ -66,11 +69,11 @@ Every HTTP request is instrumented by `ResponseTimeInterceptor` (global `APP_INT
 
 ## Health checks
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Liveness (database + Stellar status) |
+| Endpoint               | Description                             |
+| ---------------------- | --------------------------------------- |
+| `GET /health`          | Liveness (database + Stellar status)    |
 | `GET /health/detailed` | Extended metrics (memory, node version) |
-| `GET /api` | Simple system status |
+| `GET /api`             | Simple system status                    |
 
 ## CI/CD
 

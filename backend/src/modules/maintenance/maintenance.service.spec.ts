@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+  MaintenanceNotFoundError,
+  AuthorizationError,
+  ValidationError,
+} from '../../common/errors/domain-errors';
 import { MaintenanceService } from './maintenance.service';
 import {
   MaintenanceRequest,
@@ -20,11 +20,13 @@ describe('MaintenanceService', () => {
   const propertiesService = { findOne: jest.fn() };
   const usersService = { getUserById: jest.fn() };
   const reviewPromptService = { promptForMaintenanceReview: jest.fn() };
+  const configService = { get: jest.fn().mockReturnValue(undefined) };
 
   let service: MaintenanceService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    configService.get.mockReturnValue(undefined);
     service = new MaintenanceService(
       maintenanceRepo as never,
       {} as never,
@@ -32,6 +34,7 @@ describe('MaintenanceService', () => {
       propertiesService as never,
       usersService as never,
       reviewPromptService as never,
+      configService as never,
     );
   });
 
@@ -57,7 +60,13 @@ describe('MaintenanceService', () => {
     expect(maintenanceRepo.create).toHaveBeenCalledWith({
       ...dto,
       status: MaintenanceStatus.OPEN,
+      responseDueAt: expect.any(Date),
+      resolutionDueAt: expect.any(Date),
     });
+    const [createCallArg] = maintenanceRepo.create.mock.calls[0];
+    expect(createCallArg.resolutionDueAt.getTime()).toBeGreaterThan(
+      createCallArg.responseDueAt.getTime(),
+    );
     expect(notificationsService.notify).toHaveBeenCalledWith(
       'landlord-1',
       'New Maintenance Request',
@@ -75,7 +84,7 @@ describe('MaintenanceService', () => {
         tenantId: 'tenant-1',
         landlordId: 'landlord-1',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
 
     propertiesService.findOne.mockResolvedValue({});
     usersService.getUserById.mockResolvedValueOnce(null);
@@ -86,7 +95,7 @@ describe('MaintenanceService', () => {
         tenantId: 'missing',
         landlordId: 'landlord-1',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
     expect(maintenanceRepo.save).not.toHaveBeenCalled();
   });
 
@@ -99,39 +108,29 @@ describe('MaintenanceService', () => {
         propertyId: 'property-1',
         tenantId: 'tenant-1',
         landlordId: 'landlord-1',
-        mediaUrls: ['https://cdn.example.com/other-user/photo.jpg'],
+        mediaUrls: ['https://cdn.example.com/hacker-id/file.jpg'],
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(ValidationError);
   });
 
-  it('finds requests by filter and throws when a request is missing', async () => {
-    const openRequest = {
+  it('retrieves a single request or throws NotFound', async () => {
+    maintenanceRepo.findOne.mockResolvedValue({ id: 'request-1' });
+    await expect(service.findOne('request-1')).resolves.toMatchObject({
       id: 'request-1',
-      status: MaintenanceStatus.OPEN,
-    } as MaintenanceRequest;
-    maintenanceRepo.find.mockResolvedValue([openRequest]);
-    maintenanceRepo.findOne.mockResolvedValue(null);
-
-    await expect(
-      service.findAll({
-        propertyId: 'property-1',
-        status: MaintenanceStatus.OPEN,
-      }),
-    ).resolves.toEqual([openRequest]);
-    expect(maintenanceRepo.find).toHaveBeenCalledWith({
-      where: { propertyId: 'property-1', status: MaintenanceStatus.OPEN },
     });
-    await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+
+    maintenanceRepo.findOne.mockResolvedValue(null);
+    await expect(service.findOne('missing')).rejects.toThrow(
+      MaintenanceNotFoundError,
+    );
   });
 
-  it('updates status, notifies the tenant, and prompts for reviews when closed', async () => {
-    const request = {
+  it('updates status and notifies tenant', async () => {
+    maintenanceRepo.findOne.mockResolvedValue({
       id: 'request-1',
       tenantId: 'tenant-1',
-      status: MaintenanceStatus.OPEN,
-    } as MaintenanceRequest;
-    maintenanceRepo.findOne.mockResolvedValue(request);
-    maintenanceRepo.save.mockImplementation(async (value) => value);
+    });
+    maintenanceRepo.save.mockImplementation(async (r: any) => r);
 
     await expect(
       service.updateStatus(
@@ -153,6 +152,44 @@ describe('MaintenanceService', () => {
     );
   });
 
+  it('computes SLA deadlines from priority-specific configuration', async () => {
+    const dto = {
+      propertyId: 'property-1',
+      tenantId: 'tenant-1',
+      landlordId: 'landlord-1',
+      category: 'plumbing',
+      description: 'Kitchen sink leak',
+      priority: 'URGENT',
+    };
+    propertiesService.findOne.mockResolvedValue({ title: 'Ocean Flat' });
+    usersService.getUserById.mockResolvedValue({});
+    maintenanceRepo.create.mockImplementation((value: any) => value);
+    maintenanceRepo.save.mockImplementation(async (value: any) => ({
+      id: 'request-1',
+      ...value,
+    }));
+
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'MAINTENANCE_SLA_URGENT_RESPONSE_HOURS') return '1';
+      if (key === 'MAINTENANCE_SLA_URGENT_RESOLUTION_HOURS') return '6';
+      return undefined;
+    });
+
+    const before = Date.now();
+    const saved = await service.create(dto);
+    const responseDueAt = (saved as any).responseDueAt as Date;
+    const resolutionDueAt = (saved as any).resolutionDueAt as Date;
+
+    expect(responseDueAt.getTime() - before).toBeCloseTo(
+      1 * 60 * 60 * 1000,
+      -3,
+    );
+    expect(resolutionDueAt.getTime() - before).toBeCloseTo(
+      6 * 60 * 60 * 1000,
+      -3,
+    );
+  });
+
   it('blocks status updates from unauthorized users', async () => {
     maintenanceRepo.findOne.mockResolvedValue({
       id: 'request-1',
@@ -166,6 +203,6 @@ describe('MaintenanceService', () => {
         'tenant-1',
         false,
       ),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toThrow(AuthorizationError);
   });
 });

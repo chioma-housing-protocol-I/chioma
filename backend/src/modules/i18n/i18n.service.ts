@@ -3,8 +3,11 @@ import { en } from './data/en';
 import { fr } from './data/fr';
 import { es } from './data/es';
 import { ar } from './data/ar';
+import { FormatUtils } from '../../common/utils';
 
-export type SupportedLanguage = 'en' | 'fr' | 'es' | 'ar';
+export const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'ar'] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 type TranslationTree = Record<string, unknown>;
 
@@ -23,19 +26,38 @@ export class I18nService {
     return Object.keys(this.translations) as SupportedLanguage[];
   }
 
-  resolveLanguage(candidate?: string): SupportedLanguage {
+  /**
+   * Resolves the effective language for a request/operation.
+   *
+   * `candidate` is the per-request signal (a `?lang=` query param or
+   * `Accept-Language`/`x-language` header). When it is absent or
+   * unsupported, `fallback` — typically the user's stored
+   * {@link User.preferredLanguage} preference — is tried next, so outbound
+   * emails and API responses can honour a durable choice without the client
+   * passing `lang` on every request. If neither yields a supported locale,
+   * the service default (`en`) is used.
+   */
+  resolveLanguage(candidate?: string, fallback?: string): SupportedLanguage {
+    return (
+      this.normalizeLanguage(candidate) ??
+      this.normalizeLanguage(fallback) ??
+      this.defaultLanguage
+    );
+  }
+
+  private normalizeLanguage(
+    candidate?: string | null,
+  ): SupportedLanguage | undefined {
     if (!candidate) {
-      return this.defaultLanguage;
+      return undefined;
     }
 
     const normalized = candidate
       .toLowerCase()
       .split('-')[0] as SupportedLanguage;
-    if (this.getSupportedLanguages().includes(normalized)) {
-      return normalized;
-    }
-
-    return this.defaultLanguage;
+    return this.getSupportedLanguages().includes(normalized)
+      ? normalized
+      : undefined;
   }
 
   t(
@@ -76,6 +98,56 @@ export class I18nService {
     const percent = total === 0 ? 100 : Math.round((translated / total) * 100);
 
     return { total, translated, percent };
+  }
+
+  /**
+   * Format a date according to the specified locale
+   */
+  formatDate(
+    date: Date | string | number,
+    language?: string,
+    options?: Intl.DateTimeFormatOptions,
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatDate(date, lang, options);
+  }
+
+  /**
+   * Format a number according to the specified locale
+   */
+  formatNumber(
+    num: number | string,
+    language?: string,
+    options?: Intl.NumberFormatOptions,
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatNumber(num, lang, options);
+  }
+
+  /**
+   * Format a currency amount according to the specified locale
+   */
+  formatCurrency(
+    amount: number | string,
+    currency: string,
+    language?: string,
+    options?: Intl.NumberFormatOptions,
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatCurrency(amount, currency, lang, options);
+  }
+
+  /**
+   * Format a crypto/Stellar amount (7 decimal places)
+   */
+  formatCrypto(
+    amount: number | string,
+    symbol?: string,
+    language?: string,
+    options?: Intl.NumberFormatOptions,
+  ): string {
+    const lang = this.resolveLanguage(language);
+    return FormatUtils.formatCrypto(amount, lang, symbol, options);
   }
 
   private getNested(tree: TranslationTree, path: string): string | undefined {

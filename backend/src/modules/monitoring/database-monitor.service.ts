@@ -14,6 +14,23 @@ export interface DatabasePoolMetrics {
   maxConnections: number;
   waitingClients: number;
   connectionUsagePercent: number;
+  applicationPool: DatabaseApplicationPoolMetrics | null;
+}
+
+/**
+ * Stats read directly off the node-postgres Pool that TypeORM's
+ * PostgresDriver creates for this app (sized via DB_POOL_MAX/DB_POOL_MIN).
+ * Distinct from the pg_stat_activity based fields above, which count every
+ * connection to the database from any client. `waiting > 0` here means
+ * requests are queued because this app's own pool has run out of
+ * connections - the direct signal of pool exhaustion.
+ */
+export interface DatabaseApplicationPoolMetrics {
+  total: number;
+  idle: number;
+  waiting: number;
+  max: number;
+  utilizationPercent: number;
 }
 
 export interface DatabaseQueryMetrics {
@@ -93,7 +110,19 @@ export class DatabaseMonitorService {
       const waiting = rows[0]?.waiting ?? 0;
       const maxConnections = maxResult[0]?.max_conn ?? 100;
 
-      this.metricsService.setDatabaseConnections(active);
+      const applicationPool = this.getApplicationPoolMetrics();
+      if (applicationPool) {
+        this.metricsService.setDatabasePoolUsage(
+          applicationPool.total - applicationPool.idle,
+          applicationPool.idle,
+          applicationPool.max,
+          applicationPool.waiting,
+        );
+      } else {
+        this.logger.warn(
+          'Application connection pool stats unavailable; database_pool_* metrics not updated',
+        );
+      }
 
       return {
         totalConnections: total,
@@ -105,6 +134,7 @@ export class DatabaseMonitorService {
           maxConnections > 0
             ? parseFloat(((active / maxConnections) * 100).toFixed(1))
             : 0,
+        applicationPool,
       };
     } catch (error) {
       this.logger.error(
@@ -113,6 +143,47 @@ export class DatabaseMonitorService {
       );
       return null;
     }
+  }
+
+  /**
+   * Reads live stats directly off the node-postgres Pool that TypeORM's
+   * PostgresDriver holds as `driver.master`. This is the actual connection
+   * pool the app manages (see DB_POOL_MAX/DB_POOL_MIN in database-config.ts),
+   * which is what "exhausts" when traffic outpaces `DB_POOL_MAX` - long
+   * before Postgres' own `max_connections` is anywhere near its limit.
+   */
+  private getApplicationPoolMetrics(): DatabaseApplicationPoolMetrics | null {
+    const pool = (
+      this.dataSource.driver as unknown as {
+        master?: {
+          totalCount?: number;
+          idleCount?: number;
+          waitingCount?: number;
+          options?: { max?: number };
+        };
+      }
+    ).master;
+
+    if (
+      !pool ||
+      typeof pool.totalCount !== 'number' ||
+      typeof pool.idleCount !== 'number' ||
+      typeof pool.waitingCount !== 'number'
+    ) {
+      return null;
+    }
+
+    const max = pool.options?.max ?? 0;
+    const active = pool.totalCount - pool.idleCount;
+
+    return {
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount,
+      max,
+      utilizationPercent:
+        max > 0 ? parseFloat(((active / max) * 100).toFixed(1)) : 0,
+    };
   }
 
   /**
@@ -259,9 +330,6 @@ export class DatabaseMonitorService {
       // Check pool metrics
       if (snapshot.pool) {
         const usage = snapshot.pool.connectionUsagePercent;
-        this.metricsService.setDatabaseConnections(
-          snapshot.pool.activeConnections,
-        );
 
         if (usage >= this.POOL_CRITICAL_PERCENT * 100) {
           alerts.push({
@@ -293,6 +361,65 @@ export class DatabaseMonitorService {
             startsAt: new Date().toISOString(),
             generatorURL: '',
           });
+        }
+
+        // Check the application's own connection pool (DB_POOL_MAX), which
+        // exhausts independently of - and usually well before - Postgres'
+        // server-wide max_connections checked above.
+        const appPool = snapshot.pool.applicationPool;
+        if (appPool) {
+          if (appPool.waiting > 0) {
+            alerts.push({
+              status: 'firing',
+              labels: {
+                alertname: 'database_application_pool_exhausted',
+                severity: 'critical',
+                service: 'chioma-backend',
+              },
+              annotations: {
+                summary: `Application connection pool exhausted: ${appPool.waiting} request(s) queued waiting for a connection`,
+                description: `Total: ${appPool.total}, Idle: ${appPool.idle}, Max: ${appPool.max}, Utilization: ${appPool.utilizationPercent}%`,
+              },
+              startsAt: new Date().toISOString(),
+              generatorURL: '',
+            });
+          } else if (
+            appPool.utilizationPercent >=
+            this.POOL_CRITICAL_PERCENT * 100
+          ) {
+            alerts.push({
+              status: 'firing',
+              labels: {
+                alertname: 'database_application_pool_critical',
+                severity: 'critical',
+                service: 'chioma-backend',
+              },
+              annotations: {
+                summary: `Application connection pool near exhaustion: ${appPool.utilizationPercent}% used`,
+                description: `Total: ${appPool.total}, Idle: ${appPool.idle}, Max: ${appPool.max}`,
+              },
+              startsAt: new Date().toISOString(),
+              generatorURL: '',
+            });
+          } else if (
+            appPool.utilizationPercent >=
+            this.POOL_WARNING_PERCENT * 100
+          ) {
+            alerts.push({
+              status: 'firing',
+              labels: {
+                alertname: 'database_application_pool_warning',
+                severity: 'warning',
+                service: 'chioma-backend',
+              },
+              annotations: {
+                summary: `Application connection pool usage elevated: ${appPool.utilizationPercent}%`,
+                description: `Total: ${appPool.total}, Max: ${appPool.max}`,
+              },
+              startsAt: new Date().toISOString(),
+              generatorURL: '',
+            });
+          }
         }
       }
 

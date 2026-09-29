@@ -1,5 +1,7 @@
 # Frontend Contributing Guide
 
+> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
+
 This document provides comprehensive guidelines for contributing to the Chioma frontend. It covers project architecture, design system, component development, testing requirements, and CI/CD pipeline expectations.
 
 ## Table of Contents

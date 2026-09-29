@@ -1,6 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import {
   BellRing,
   CheckCircle2,
@@ -46,6 +47,7 @@ export function ActivityFeed({
   items,
   title = 'Activity Feed',
 }: ActivityFeedProps) {
+  const dateFnsLocale = useDateFnsLocale();
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur-sm">
       <div className="flex items-center justify-between gap-3">
@@ -80,6 +82,7 @@ export function ActivityFeed({
                   <span className="text-xs text-blue-100/40">
                     {formatDistanceToNow(new Date(item.createdAt), {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>

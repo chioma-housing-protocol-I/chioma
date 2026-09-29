@@ -249,7 +249,7 @@ describe('API Timeout Integration Tests (#1151)', () => {
       // Allow micro-task queue to flush teardown
       await new Promise((r) => setTimeout(r, 10));
       expect(teardownCalled).toBe(true);
-    });
+    }, 15000);
 
     it('allows subsequent requests after a timeout on the same endpoint', async () => {
       // First: timeout

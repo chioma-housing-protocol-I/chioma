@@ -25,4 +25,8 @@ export const ar = {
     suspiciousActivity: 'تم اكتشاف نشاط مشبوه',
     accountLocked: 'تم قفل الحساب مؤقتاً بسبب محاولات فاشلة',
   },
+  notifications: {
+    emailTitle: 'إشعار',
+    viewDetails: 'عرض التفاصيل',
+  },
 } as const;

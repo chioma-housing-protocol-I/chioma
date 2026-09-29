@@ -1,3 +1,14 @@
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Job, Queue } from 'bull';
+import { DeadLetterJob } from '../entities/dead-letter-job.entity';
+import {
+  DeadLetterJobStatus,
+  DLQ_BASE_BACKOFF_MS,
+  DLQ_ID_KEY,
+  DLQ_MAX_RECOVERY_ATTEMPTS,
+} from '../dead-letter.types';
 import {
   Injectable,
   Logger,
@@ -20,10 +31,116 @@ import {
   DeadLetterQueueStats,
 } from '../dead-letter.types';
 import { JobData } from './queue-management.service';
+import { ErrorNotificationService } from '../../monitoring/error-notification.service';
+import { AlertPayload, EscalationTier } from '../../monitoring/alert.types';
 
 @Injectable()
 export class DeadLetterQueueService {
   private readonly logger = new Logger(DeadLetterQueueService.name);
+  private readonly queues = new Map<string, Queue>();
+
+  constructor(
+    @InjectRepository(DeadLetterJob)
+    private readonly repo: Repository<DeadLetterJob>,
+  ) {}
+
+  registerQueue(queue: Queue): void {
+    this.queues.set(queue.name, queue);
+  }
+
+  /**
+   * Persist a job that exhausted its retries. If the job is itself a DLQ
+   * recovery, update the existing record instead of creating a new one.
+   */
+  async archiveJob(job: Job, error: Error | string): Promise<DeadLetterJob> {
+    const message = typeof error === 'string' ? error : error?.message;
+    const { [DLQ_ID_KEY]: dlqId, ...payload } = job.data ?? {};
+
+    if (dlqId) {
+      const existing = await this.repo.findOne({ where: { id: dlqId } });
+      if (existing) {
+        existing.error = message;
+        existing.stacktrace = job.stacktrace?.join('\n') ?? null;
+        existing.attemptCount += job.attemptsMade ?? 1;
+        existing.status =
+          existing.recoveryAttempts >= DLQ_MAX_RECOVERY_ATTEMPTS
+            ? DeadLetterJobStatus.PERMANENTLY_FAILED
+            : DeadLetterJobStatus.PENDING;
+        return this.repo.save(existing);
+      }
+    }
+
+    const record = this.repo.create({
+      queueName: job.queue?.name,
+      jobName: job.name,
+      originalJobId: job.id?.toString(),
+      payload,
+      options: job.opts as Record<string, any>,
+      error: message,
+      stacktrace: job.stacktrace?.join('\n') ?? null,
+      attemptCount: job.attemptsMade ?? 1,
+      status: DeadLetterJobStatus.PENDING,
+    });
+    const saved = await this.repo.save(record);
+    this.logger.warn(
+      `Archived failed job ${job.id} from "${record.queueName}" as ${saved.id}`,
+    );
+    return saved;
+  }
+
+  calculateBackoff(recoveryAttempt: number): number {
+    return DLQ_BASE_BACKOFF_MS * Math.pow(2, recoveryAttempt);
+  }
+
+  /** Re-enqueue an archived job onto its source queue after a backoff. */
+  async attemptRecovery(id: string): Promise<DeadLetterJob> {
+    const record = await this.repo.findOne({ where: { id } });
+    if (!record) throw new NotFoundException(`DLQ job ${id} not found`);
+
+    if (
+      record.status === DeadLetterJobStatus.RESOLVED ||
+      record.status === DeadLetterJobStatus.PERMANENTLY_FAILED
+    ) {
+      return record;
+    }
+
+    if (record.recoveryAttempts >= DLQ_MAX_RECOVERY_ATTEMPTS) {
+      record.status = DeadLetterJobStatus.PERMANENTLY_FAILED;
+      return this.repo.save(record);
+    }
+
+    const queue = this.queues.get(record.queueName);
+    if (!queue) throw new Error(`Unknown source queue: ${record.queueName}`);
+
+    const delay = this.calculateBackoff(record.recoveryAttempts);
+    await queue.add(
+      record.jobName,
+      { ...record.payload, [DLQ_ID_KEY]: record.id },
+      { attempts: 1, delay },
+    );
+
+    record.recoveryAttempts += 1;
+    record.status = DeadLetterJobStatus.RETRYING;
+    this.logger.log(
+      `Re-enqueued DLQ job ${id} on "${record.queueName}" with ${delay}ms delay`,
+    );
+    return this.repo.save(record);
+  }
+
+  async markResolved(job: Job): Promise<void> {
+    const dlqId = job.data?.[DLQ_ID_KEY];
+    if (!dlqId) return;
+    await this.repo.update(dlqId, {
+      status: DeadLetterJobStatus.RESOLVED,
+      resolvedAt: new Date(),
+    });
+  }
+
+  findAll(status?: DeadLetterJobStatus): Promise<DeadLetterJob[]> {
+    return this.repo.find({
+      where: status ? { status } : {},
+      order: { createdAt: 'DESC' },
+    });
 
   constructor(
     @InjectQueue(DEAD_LETTER_QUEUE_NAME)
@@ -32,7 +149,11 @@ export class DeadLetterQueueService {
     @InjectQueue('documents') private readonly documentsQueue: Queue,
     @InjectQueue('blockchain') private readonly blockchainQueue: Queue,
     @InjectQueue('data-sync') private readonly dataSyncQueue: Queue,
+    @InjectQueue('analytics') private readonly analyticsQueue: Queue,
+    @InjectQueue('video-processing')
+    private readonly videoProcessingQueue: Queue,
     private readonly configService: ConfigService,
+    private readonly errorNotificationService: ErrorNotificationService,
   ) {}
 
   isEnabled(): boolean {
@@ -85,6 +206,45 @@ export class DeadLetterQueueService {
     this.logger.error(
       `Job ${job.id} moved to dead letter queue from ${sourceQueue}: ${error.message}`,
     );
+
+    await this.alertRetryExhaustion(sourceQueue, payload);
+  }
+
+  /**
+   * Notifies on-call once a job has exhausted all retry attempts and been
+   * moved to the dead-letter queue. This is the alert path for otherwise
+   * silent fire-and-forget failures (e.g. emails, notifications).
+   */
+  private async alertRetryExhaustion(
+    sourceQueue: WorkerQueueName,
+    payload: DeadLetterJobPayload,
+  ): Promise<void> {
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'AsyncJobRetryExhausted',
+        queue: sourceQueue,
+        severity: sourceQueue === 'email' ? 'high' : 'warning',
+      },
+      annotations: {
+        summary: `${sourceQueue} job ${String(payload.originalJobId)} exhausted all retries`,
+        description: `Job failed after ${payload.attemptsMade}/${payload.maxAttempts} attempts on the "${sourceQueue}" queue and was moved to the dead-letter queue. Reason: ${payload.failedReason}`,
+      },
+      startsAt: payload.failedAt,
+      generatorURL: `dead-letter-queue/${sourceQueue}`,
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.ONCALL,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        `Failed to send retry-exhaustion alert for ${sourceQueue} job ${String(payload.originalJobId)}`,
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
   }
 
   shouldMoveToDeadLetter(job: Job): boolean {
@@ -186,6 +346,61 @@ export class DeadLetterQueueService {
     await this.purgeExpiredJobs();
   }
 
+  /**
+   * Dead-letter queue backlog monitoring: alerts when the number of
+   * unprocessed dead-letter jobs exceeds a configurable threshold,
+   * signalling that something upstream is failing systematically rather
+   * than transiently.
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async monitorDeadLetterBacklog(): Promise<void> {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    const threshold = Number(
+      this.configService.get<string>('DEAD_LETTER_QUEUE_ALERT_THRESHOLD') ??
+        '20',
+    );
+    const stats = await this.getDeadLetterStats();
+    const backlog = stats.waitingCount + stats.failedCount;
+
+    if (backlog <= threshold) {
+      return;
+    }
+
+    this.logger.warn(
+      `Dead letter queue backlog (${backlog}) exceeds threshold (${threshold})`,
+    );
+
+    const alert: AlertPayload = {
+      status: 'firing',
+      labels: {
+        alertname: 'DeadLetterQueueBacklogHigh',
+        severity: 'warning',
+      },
+      annotations: {
+        summary: `Dead letter queue backlog is ${backlog} (threshold ${threshold})`,
+        description:
+          'A growing dead-letter queue backlog indicates jobs are failing systematically rather than transiently. Review /api/v1/queues/dead-letter/jobs.',
+      },
+      startsAt: new Date().toISOString(),
+      generatorURL: 'dead-letter-queue/backlog',
+    };
+
+    try {
+      await this.errorNotificationService.notifyAlert(
+        alert,
+        EscalationTier.TEAM,
+      );
+    } catch (notifyError) {
+      this.logger.error(
+        'Failed to send dead-letter backlog alert',
+        notifyError instanceof Error ? notifyError.stack : String(notifyError),
+      );
+    }
+  }
+
   private toSummary(job: Job<DeadLetterJobPayload>): DeadLetterJobSummary {
     return {
       id: job.id,
@@ -209,6 +424,10 @@ export class DeadLetterQueueService {
         return this.blockchainQueue;
       case 'data-sync':
         return this.dataSyncQueue;
+      case 'analytics':
+        return this.analyticsQueue;
+      case 'video-processing':
+        return this.videoProcessingQueue;
       default: {
         const _exhaustive: never = queueName;
         throw new BadRequestException(`Unknown queue: ${String(_exhaustive)}`);

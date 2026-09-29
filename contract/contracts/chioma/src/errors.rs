@@ -231,3 +231,75 @@ pub fn get_error_logs(env: &Env, limit: u32) -> Result<Vec<ErrorContext>, Rental
 
     Ok(logs)
 }
+
+/// Pins every `RentalError` discriminant so off-chain code that maps error
+/// codes to messages cannot silently misreport after a variant is added or
+/// reordered (#1686). If this test fails to compile or assert, a
+/// discriminant changed and every off-chain consumer needs to be checked.
+///
+/// Note: `#[contracterror]` caps this enum at 50 variants (already reached
+/// here) — a new error must reuse an existing variant rather than add one.
+#[cfg(test)]
+mod pin_tests {
+    use super::RentalError;
+
+    #[test]
+    fn error_codes_are_pinned() {
+        assert_eq!(RentalError::AlreadyInitialized as u32, 1);
+        assert_eq!(RentalError::InvalidAdmin as u32, 2);
+        assert_eq!(RentalError::InvalidConfig as u32, 3);
+        assert_eq!(RentalError::AgreementAlreadyExists as u32, 4);
+        assert_eq!(RentalError::InvalidAmount as u32, 5);
+        assert_eq!(RentalError::InvalidDate as u32, 6);
+        assert_eq!(RentalError::InvalidCommissionRate as u32, 7);
+        assert_eq!(RentalError::AgreementNotActive as u32, 10);
+        assert_eq!(RentalError::AgreementNotFound as u32, 13);
+        assert_eq!(RentalError::NotTenant as u32, 14);
+        assert_eq!(RentalError::Unauthorized as u32, 18);
+        assert_eq!(RentalError::InvalidState as u32, 15);
+        assert_eq!(RentalError::Expired as u32, 16);
+        assert_eq!(RentalError::ContractPaused as u32, 17);
+        assert_eq!(RentalError::TokenNotSupported as u32, 19);
+        assert_eq!(RentalError::RateNotFound as u32, 20);
+        assert_eq!(RentalError::ConversionError as u32, 21);
+        assert_eq!(RentalError::InsufficientPayment as u32, 22);
+        assert_eq!(RentalError::AlreadyPaused as u32, 23);
+        assert_eq!(RentalError::NotPaused as u32, 24);
+        assert_eq!(RentalError::InterestConfigNotFound as u32, 25);
+        assert_eq!(RentalError::InterestAlreadyInitialized as u32, 26);
+        assert_eq!(RentalError::NoPrincipal as u32, 27);
+
+        assert_eq!(RentalError::PaymentInsufficientFunds as u32, 201);
+        assert_eq!(RentalError::PaymentAlreadyProcessed as u32, 202);
+        assert_eq!(RentalError::PaymentFailed as u32, 203);
+        assert_eq!(RentalError::PaymentInvalidAmount as u32, 204);
+
+        assert_eq!(RentalError::TimelockNotFound as u32, 301);
+        assert_eq!(RentalError::TimelockAlreadyExecuted as u32, 302);
+        assert_eq!(RentalError::TimelockAlreadyCancelled as u32, 303);
+        assert_eq!(RentalError::TimelockEtaNotReached as u32, 304);
+
+        assert_eq!(RentalError::EscrowNotFound as u32, 401);
+        assert_eq!(RentalError::EscrowAlreadyReleased as u32, 402);
+        assert_eq!(RentalError::EscrowInsufficientFunds as u32, 403);
+        assert_eq!(RentalError::EscrowTimeoutNotReached as u32, 404);
+
+        assert_eq!(RentalError::InsufficientPermissions as u32, 501);
+        assert_eq!(RentalError::AdminOnly as u32, 502);
+        assert_eq!(RentalError::InvalidTransition as u32, 601);
+        assert_eq!(RentalError::InvalidInput as u32, 701);
+        assert_eq!(RentalError::InvalidAddress as u32, 702);
+
+        assert_eq!(RentalError::RateLimitExceeded as u32, 801);
+        assert_eq!(RentalError::CooldownNotMet as u32, 802);
+        assert_eq!(RentalError::InternalError as u32, 901);
+        assert_eq!(RentalError::TimelockDelayTooShort as u32, 902);
+
+        assert_eq!(RentalError::MultiSigNotInitialized as u32, 1100);
+        assert_eq!(RentalError::ProposalNotFound as u32, 1101);
+        assert_eq!(RentalError::ProposalAlreadyExecuted as u32, 1102);
+        assert_eq!(RentalError::ProposalExpired as u32, 1103);
+        assert_eq!(RentalError::InsufficientApprovals as u32, 1104);
+        assert_eq!(RentalError::AlreadyApproved as u32, 1105);
+    }
+}

@@ -2,6 +2,7 @@
 
 import { Check, X, MapPin, Bed, Bath, Ruler, Info } from 'lucide-react';
 import Image from 'next/image';
+import { formatNumber } from '@/lib/utils/format';
 
 interface Property {
   id: number;
@@ -136,7 +137,7 @@ export default function PropertyComparison({
                   key={p.id}
                   className="px-8 py-6 text-white font-bold text-lg"
                 >
-                  {p.sqft.toLocaleString()}
+                  {formatNumber(p.sqft)}
                 </td>
               ))}
             </ComparisonRow>

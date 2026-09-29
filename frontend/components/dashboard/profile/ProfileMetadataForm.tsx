@@ -2,6 +2,8 @@
 
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 export type ProfileMetadataFormValues = {
   key: string;
@@ -37,7 +39,7 @@ export function ProfileMetadataForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<ProfileMetadataFormValues>({
     defaultValues: field
       ? {
@@ -79,6 +81,8 @@ export function ProfileMetadataForm({
         </button>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -87,13 +91,17 @@ export function ProfileMetadataForm({
             </label>
             <input
               {...register('label', { required: 'Label is required' })}
+              {...fieldA11yProps('label', errors.label)}
               type="text"
               placeholder="e.g., Bio"
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
               disabled={isLoading || !!field}
             />
             {errors.label && (
-              <p className="text-sm text-rose-400 mt-1">
+              <p
+                id={fieldErrorId('label')}
+                className="text-sm text-rose-400 mt-1"
+              >
                 {errors.label.message}
               </p>
             )}
@@ -105,13 +113,19 @@ export function ProfileMetadataForm({
             </label>
             <input
               {...register('key', { required: 'Key is required' })}
+              {...fieldA11yProps('key', errors.key)}
               type="text"
               placeholder="e.g., bio"
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all font-mono text-sm"
               disabled={isLoading || !!field}
             />
             {errors.key && (
-              <p className="text-sm text-rose-400 mt-1">{errors.key.message}</p>
+              <p
+                id={fieldErrorId('key')}
+                className="text-sm text-rose-400 mt-1"
+              >
+                {errors.key.message}
+              </p>
             )}
           </div>
         </div>

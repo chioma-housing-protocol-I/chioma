@@ -1,987 +1,566 @@
-# Contract Upgrades
+# Coordinated Upgrade & Admin Rotation Guide
 
-This document provides comprehensive guidance on upgrading Soroban smart contracts, including upgrade strategies, procedures, migration, rollback, testing, and best practices.
-
----
-
-## 1. Upgrade Strategy
-
-### 1.1 Upgrade Approaches
-
-#### 1.1.1 Proxy Pattern (Recommended)
-
-**Description:** Use a proxy contract that delegates to implementation contract
-
-**Advantages:**
-
-- Preserves contract address
-- Seamless upgrades for users
-- Maintains state across upgrades
-- No migration needed
-
-**Disadvantages:**
-
-- Slightly higher gas costs
-- Additional complexity
-- Proxy contract must be immutable
-
-**Implementation:**
-
-```rust
-// Proxy contract
-pub fn upgrade(env: &Env, new_impl: Address) -> Result<(), ContractError> {
-    // Only admin can upgrade
-    let admin = env.storage().persistent().get::<_, Address>(&Symbol::new(env, "admin"))?;
-    env.invoker().require_auth(&admin);
-
-    // Store new implementation address
-    env.storage().persistent().set(&Symbol::new(env, "impl"), &new_impl);
-
-    Ok(())
-}
-
-// Delegate calls to implementation
-pub fn some_function(env: &Env, param: String) -> Result<String, ContractError> {
-    let impl_addr = env.storage().persistent().get::<_, Address>(&Symbol::new(env, "impl"))?;
-
-    // Delegate to implementation
-    env.invoke_contract(&impl_addr, &Symbol::new(env, "some_function"), &(param,))
-}
-```
-
-#### 1.1.2 Contract Replacement
-
-**Description:** Deploy new contract and migrate state
-
-**Advantages:**
-
-- Clean slate for new implementation
-- No proxy overhead
-- Simpler contract code
-
-**Disadvantages:**
-
-- New contract address
-- Requires state migration
-- Users must update references
-- Potential downtime
-
-**Use Cases:**
-
-- Major version changes
-- Complete rewrite
-- Significant architecture changes
-
-#### 1.1.3 Feature Flags
-
-**Description:** Use feature flags to enable/disable functionality
-
-**Advantages:**
-
-- No contract upgrade needed
-- Gradual rollout capability
-- Easy rollback
-
-**Disadvantages:**
-
-- Adds code complexity
-- Requires flag management
-- Not suitable for major changes
-
-**Implementation:**
-
-```rust
-pub fn set_feature_flag(env: &Env, feature: String, enabled: bool) -> Result<(), ContractError> {
-    let admin = get_admin(env)?;
-    env.invoker().require_auth(&admin);
-
-    let key = Symbol::new(env, &format!("feature:{}", feature));
-    env.storage().persistent().set(&key, &enabled);
-
-    Ok(())
-}
-
-pub fn is_feature_enabled(env: &Env, feature: &str) -> bool {
-    let key = Symbol::new(env, &format!("feature:{}", feature));
-    env.storage().persistent().get::<_, bool>(&key).unwrap_or(false)
-}
-```
-
-### 1.2 Upgrade Decision Matrix
-
-| Scenario                 | Approach             | Reason                                   |
-| ------------------------ | -------------------- | ---------------------------------------- |
-| Bug fix                  | Proxy                | Preserve address, minimal disruption     |
-| New feature              | Feature flag         | Gradual rollout, easy rollback           |
-| Breaking API change      | Contract replacement | Clean slate, clear migration path        |
-| Performance optimization | Proxy                | Transparent to users                     |
-| Major rewrite            | Contract replacement | Significant changes warrant new contract |
-| Security patch           | Proxy                | Urgent fix, preserve address             |
+This document replaces per-contract upgrade guidance and describes the
+**single, authoritative process** for upgrading and rotating admin keys across
+all eight Chioma protocol contracts.
 
 ---
 
-## 2. Upgrade Procedures
+## Table of Contents
 
-### 2.1 Pre-Upgrade Checklist
+1. [Architecture overview](#1-architecture-overview)
+2. [Upgrade Registry contract](#2-upgrade-registry-contract)
+3. [Upgrading a contract](#3-upgrading-a-contract)
+4. [Admin key rotation](#4-admin-key-rotation)
+5. [Protocol status dashboard](#5-protocol-status-dashboard)
+6. [Per-contract quirks](#6-per-contract-quirks)
+7. [Acceptance checklist](#7-acceptance-checklist)
+8. [Rollback](#8-rollback)
+9. [Incident response — compromised key](#9-incident-response--compromised-key)
 
-Complete before any upgrade:
+---
 
-- [ ] Code review completed
-- [ ] All tests passing (unit, integration, E2E)
-- [ ] Security audit completed
-- [ ] Performance benchmarks met
-- [ ] Migration plan documented
-- [ ] Rollback plan documented
-- [ ] State migration tested
-- [ ] Staging deployment successful
-- [ ] Smoke tests passed on staging
-- [ ] Upgrade runbook prepared
-- [ ] Communication plan ready
-- [ ] Monitoring dashboards prepared
+## 1. Architecture overview
 
-### 2.2 Proxy Pattern Upgrade
+The protocol consists of eight Soroban contracts:
 
-**Step 1: Deploy New Implementation**
+| Contract             | Env var                          | Admin storage                           | Upgrade module     |
+| -------------------- | -------------------------------- | --------------------------------------- | ------------------ |
+| `user_profile`       | `USER_PROFILE_CONTRACT_ID`       | `DataKey::Admin`                        | `upgrade.rs`       |
+| `property_registry`  | `PROPERTY_REGISTRY_CONTRACT_ID`  | `DataKey::State.admin`                  | `upgrade.rs`       |
+| `agent_registry`     | `AGENT_REGISTRY_CONTRACT_ID`     | `DataKey::State.admin`                  | `upgrade.rs`       |
+| `rent_obligation`    | `RENT_OBLIGATION_CONTRACT_ID`    | none                                    | `upgrade.rs`       |
+| `escrow`             | `ESCROW_CONTRACT_ID`             | `DataKey::SystemAdmin`                  | `upgrade.rs`       |
+| `payment`            | `PAYMENT_CONTRACT_ID`            | fee collector only                      | `upgrade.rs`       |
+| `dispute_resolution` | `DISPUTE_RESOLUTION_CONTRACT_ID` | `DataKey::State.admin`                  | `upgrade.rs`       |
+| `chioma`             | `CHIOMA_CONTRACT_ID`             | `DataKey::State.admin` + MultiSigConfig | inline in `lib.rs` |
 
-```bash
-#!/bin/bash
-# deploy-new-impl.sh
+A ninth contract, **`upgrade_registry`**, is the coordination layer:
 
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-ADMIN_KEY="${2}"
-
-echo "Deploying new implementation contract to ${NETWORK}"
-
-# Build contract
-cargo build --release --target wasm32-unknown-unknown
-
-# Get WASM hash
-WASM_HASH=$(soroban contract install \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  target/wasm32-unknown-unknown/release/chioma_contract.wasm)
-
-echo "New implementation WASM hash: ${WASM_HASH}"
-
-# Store for next step
-echo ${WASM_HASH} > .wasm_hash_${NETWORK}
+```
+contract/contracts/upgrade_registry/
+├── src/lib.rs        — on-chain registry contract
+├── src/types.rs      — ContractRecord, AdminRotationProposal, ProtocolContractStatus
+├── src/storage.rs    — DataKey enum + helpers
+├── src/errors.rs     — RegistryError
+└── src/events.rs     — on-chain events
 ```
 
-**Step 2: Invoke Upgrade**
+The `upgrade_registry` contract is **not** a proxy; it does not sit in the call
+path of normal protocol transactions. It is purely an administrative bookkeeping
+contract that records the current admin address and deployed version of every
+other contract, and gates coordinated admin rotation proposals behind M-of-N
+approval.
+
+---
+
+## 2. Upgrade Registry contract
+
+### 2.1 Deployment
+
+Deploy once per environment (testnet / mainnet) alongside the other eight contracts.
 
 ```bash
-#!/bin/bash
-# invoke-upgrade.sh
+# Build
+stellar contract build
 
-set -euo pipefail
+# Deploy
+REGISTRY_ID=$(stellar contract deploy \
+  --wasm target/wasm32v1-none/release/upgrade_registry.wasm \
+  --source-account testnet-deployer \
+  --network testnet)
 
-NETWORK="${1:-testnet}"
-PROXY_ADDRESS="${2}"
-ADMIN_KEY="${3}"
-WASM_HASH="${4}"
+echo "UPGRADE_REGISTRY_CONTRACT_ID=${REGISTRY_ID}" >> .env.testnet
 
-echo "Upgrading proxy contract ${PROXY_ADDRESS}"
-
-# Invoke upgrade function
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id ${PROXY_ADDRESS} \
-  -- upgrade \
-  --new_impl ${WASM_HASH}
-
-echo "Upgrade completed"
+# Initialize (1-of-1 for testnet; use 2-of-3 for mainnet)
+ADMIN=$(stellar keys public-key testnet-deployer)
+stellar contract invoke \
+  --id "$REGISTRY_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send yes \
+  -- initialize \
+  --primary_admin "$ADMIN" \
+  --admins "[\"$ADMIN\"]" \
+  --required_approvals 1
 ```
 
-**Step 3: Verify Upgrade**
+For mainnet use a multi-sig setup:
 
 ```bash
-#!/bin/bash
-# verify-upgrade.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-PROXY_ADDRESS="${2}"
-
-echo "Verifying upgrade of ${PROXY_ADDRESS}"
-
-# Check implementation address
-IMPL_ADDRESS=$(soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${PROXY_ADDRESS} \
-  -- get_implementation)
-
-echo "Current implementation: ${IMPL_ADDRESS}"
-
-# Test basic functionality
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${PROXY_ADDRESS} \
-  -- health_check
-
-echo "Upgrade verification passed"
+stellar contract invoke \
+  --id "$REGISTRY_ID" \
+  --source-account mainnet-deployer \
+  --network mainnet \
+  --send yes \
+  -- initialize \
+  --primary_admin "$ADMIN_1" \
+  --admins "[\"$ADMIN_1\",\"$ADMIN_2\",\"$ADMIN_3\"]" \
+  --required_approvals 2
 ```
 
-### 2.3 Contract Replacement Upgrade
+### 2.2 Register all 8 contracts
 
-**Step 1: Deploy New Contract**
-
-```bash
-#!/bin/bash
-# deploy-new-contract.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-ADMIN_KEY="${2}"
-
-echo "Deploying new contract to ${NETWORK}"
-
-# Build contract
-cargo build --release --target wasm32-unknown-unknown
-
-# Deploy contract
-NEW_CONTRACT=$(soroban contract deploy \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --wasm target/wasm32-unknown-unknown/release/chioma_contract.wasm)
-
-echo "New contract address: ${NEW_CONTRACT}"
-
-# Store for next step
-echo ${NEW_CONTRACT} > .new_contract_${NETWORK}
-```
-
-**Step 2: Migrate State**
+Run immediately after deploying and initializing all protocol contracts (the
+`deploy-testnet.sh` script will do this automatically once updated).
 
 ```bash
-#!/bin/bash
-# migrate-state.sh
+source .env.testnet
+ADMIN=$(stellar keys public-key testnet-deployer)
 
-set -euo pipefail
+for contract_name \
+  in user_profile property_registry agent_registry rent_obligation \
+     escrow payment dispute_resolution chioma; do
 
-NETWORK="${1:-testnet}"
-OLD_CONTRACT="${2}"
-NEW_CONTRACT="${3}"
-ADMIN_KEY="${4}"
+  var="${contract_name^^}_CONTRACT_ID"
+  contract_id="${!var}"
 
-echo "Migrating state from ${OLD_CONTRACT} to ${NEW_CONTRACT}"
-
-# Export state from old contract
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${OLD_CONTRACT} \
-  -- export_state > state_export.json
-
-# Import state to new contract
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id ${NEW_CONTRACT} \
-  -- import_state \
-  --state "$(cat state_export.json)"
-
-echo "State migration completed"
-```
-
-**Step 3: Update References**
-
-```bash
-#!/bin/bash
-# update-references.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-OLD_CONTRACT="${2}"
-NEW_CONTRACT="${3}"
-ADMIN_KEY="${4}"
-
-echo "Updating contract references"
-
-# Update in registry
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id registry \
-  -- update_contract_address \
-  --old_address ${OLD_CONTRACT} \
-  --new_address ${NEW_CONTRACT}
-
-# Update in dependent contracts
-for contract in escrow payment disputes; do
-  soroban contract invoke \
-    --network ${NETWORK} \
-    --source ${ADMIN_KEY} \
-    --id ${contract} \
-    -- update_dependency \
-    --dependency_name "main_contract" \
-    --new_address ${NEW_CONTRACT}
+  stellar contract invoke \
+    --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+    --source-account testnet-deployer \
+    --network testnet \
+    --send yes \
+    -- register_contract \
+    --caller "$ADMIN" \
+    --name "$contract_name" \
+    --contract_id "$contract_id" \
+    --admin "$ADMIN" \
+    --version "1.0.0" \
+    --notes "initial deployment"
 done
+```
 
-echo "References updated"
+### 2.3 Read the protocol status
+
+```bash
+stellar contract invoke \
+  --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send no \
+  -- get_protocol_status
+```
+
+Returns a `Vec<ProtocolContractStatus>` — one entry per registered contract —
+containing `name`, `contract_id`, `admin`, `version`, and `last_updated`.
+
+---
+
+## 3. Upgrading a contract
+
+Use the `coordinated-upgrade.sh` script for **all** upgrades. Do not invoke
+per-contract upgrade functions directly without going through this script,
+because direct invocations bypass the registry bookkeeping step.
+
+### 3.1 Quick reference
+
+```bash
+# From contract/
+./scripts/coordinated-upgrade.sh \
+  <contract_name> \
+  <path/to/new.wasm> \
+  <new_version_string> \
+  [--delay 86400] \
+  [--notes "Bug fix: ..."] \
+  [--dry-run]
+```
+
+Examples:
+
+```bash
+# Upgrade escrow, dry-run first
+./scripts/coordinated-upgrade.sh escrow \
+  target/wasm32v1-none/release/escrow.wasm 1.2.1 \
+  --notes "Fix partial-release overflow" \
+  --dry-run
+
+# Upgrade chioma with a 48-hour timelock
+./scripts/coordinated-upgrade.sh chioma \
+  target/wasm32v1-none/release/chioma.wasm 2.0.0 \
+  --delay 172800 \
+  --notes "v2: add multi-token support"
+```
+
+### 3.2 What the script does
+
+```
+Step 0 — Print get_protocol_status table, ask for confirmation
+Step 1 — stellar contract install → WASM hash
+Step 2 — propose_upgrade / propose_contract_upgrade on the target contract
+Step 3 — (pauses) Print approval command for co-signers; wait for ENTER
+Step 4 — (optional) execute_upgrade / execute_contract_upgrade
+Step 5 — update_version in Upgrade Registry
+Step 6 — verify-deployment.sh smoke test
+```
+
+### 3.3 Multi-contract upgrades (protocol version bump)
+
+When multiple contracts must be upgraded together (e.g. a breaking API change
+between `chioma` and `dispute_resolution`):
+
+1. Run `coordinated-upgrade.sh` for each contract with `--delay 86400`
+   so all timelocks expire at roughly the same time.
+2. Wait for all timelocks to pass.
+3. Execute all upgrades in dependency order (see `deploy-testnet.sh`
+   `INIT_CONTRACTS` array for the correct order).
+4. Run `./scripts/verify-deployment.sh` to confirm all contracts are healthy.
+5. The registry will reflect the new versions after each `update_version` call.
+
+### 3.4 Chioma vs peripheral contracts
+
+`chioma` uses a richer upgrade path:
+
+|                    | `chioma`                                       | Other 7 contracts          |
+| ------------------ | ---------------------------------------------- | -------------------------- |
+| Propose fn         | `propose_contract_upgrade`                     | `propose_upgrade`          |
+| Approve fn         | `approve_contract_upgrade`                     | `approve_upgrade`          |
+| Execute fn         | `execute_contract_upgrade`                     | `execute_upgrade`          |
+| Multi-sig enforced | ✅ (`required_signatures` from MultiSigConfig) | ⚠ threshold hardcoded to 1 |
+| Version history    | ✅ stored on-chain                             | ❌ only in registry        |
+| Cancelled flag     | ✅                                             | ❌                         |
+
+The `coordinated-upgrade.sh` script handles this distinction automatically.
+
+---
+
+## 4. Admin key rotation
+
+### 4.1 When to rotate
+
+- Suspected or confirmed compromise of any admin key.
+- Planned key rotation per your security policy (e.g. quarterly).
+- Team member offboarding.
+
+### 4.2 Using the rotate-admin.sh script
+
+```bash
+# Rotate all 8 contracts
+./scripts/rotate-admin.sh <NEW_ADMIN_ADDRESS> \
+  --notes "Q3 rotation — see incident ticket #123"
+
+# Rotate a subset
+./scripts/rotate-admin.sh <NEW_ADMIN_ADDRESS> \
+  --contracts "escrow,payment,chioma"
+
+# Dry-run
+./scripts/rotate-admin.sh <NEW_ADMIN_ADDRESS> --dry-run
+```
+
+### 4.3 What the script does
+
+```
+Step 1 — propose_rotation in Upgrade Registry (M-of-N governance gate)
+          Pauses for co-signer approvals if required_approvals > 1
+Step 2 — Call set_admin / set_platform_fee_collector per contract
+          (see §6 for per-contract notes)
+Step 3 — update_admin in Upgrade Registry for each succeeded contract
+Step 4 — execute_rotation to close the proposal in the registry
+```
+
+### 4.4 Per-contract admin rotation commands
+
+Because admin management is inconsistent across the 8 contracts, the table
+below shows the exact call required for each:
+
+| Contract             | Admin rotation call                                      | Notes                                  |
+| -------------------- | -------------------------------------------------------- | -------------------------------------- |
+| `user_profile`       | add `set_admin(caller, new_admin)` function              | No direct setter exists yet — see §6.1 |
+| `property_registry`  | add `set_admin(caller, new_admin)` function              | §6.1                                   |
+| `agent_registry`     | add `set_admin(caller, new_admin)` function              | §6.1                                   |
+| `dispute_resolution` | add `set_admin(caller, new_admin)` function              | §6.1                                   |
+| `escrow`             | `set_admin(caller, new_admin)`                           | Must be added — §6.2                   |
+| `payment`            | `set_platform_fee_collector(collector)`                  | Already exposed                        |
+| `rent_obligation`    | N/A                                                      | No admin stored                        |
+| `chioma`             | `propose_action(AddAdmin, new_admin)` + `execute_action` | Multi-sig governed                     |
+
+#### Manual rotation for `chioma` (multi-sig)
+
+```bash
+source .env.testnet
+ADMIN=$(stellar keys public-key testnet-deployer)
+
+# 1. Propose adding new admin
+stellar contract invoke \
+  --id "$CHIOMA_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send yes \
+  -- propose_action \
+  --proposer "$ADMIN" \
+  --action_type "AddAdmin" \
+  --target "$NEW_ADMIN" \
+  --data ""
+
+# 2. Co-signers approve (one per required signature)
+# stellar contract invoke ... -- approve_action --approver <addr> --proposal_id <id>
+
+# 3. Execute
+stellar contract invoke \
+  --id "$CHIOMA_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send yes \
+  -- execute_action \
+  --executor "$ADMIN" \
+  --proposal_id <PROPOSAL_ID>
+
+# 4. Optionally remove old admin
+# (repeat propose_action / execute_action with action_type = "RemoveAdmin")
+
+# 5. Update registry
+stellar contract invoke \
+  --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send yes \
+  -- update_admin \
+  --caller "$ADMIN" \
+  --name "chioma" \
+  --new_admin "$NEW_ADMIN"
+```
+
+### 4.5 Propagation checklist
+
+After running `rotate-admin.sh`, verify:
+
+- [ ] `get_protocol_status` shows the new admin for every rotated contract
+- [ ] The old admin key can no longer call admin-gated functions (test with `--dry-run` / `--send no`)
+- [ ] `verify-deployment.sh` passes
+- [ ] The rotation proposal in the registry shows `executed: true`
+
+---
+
+## 5. Protocol status dashboard
+
+The single-call dashboard query:
+
+```bash
+stellar contract invoke \
+  --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send no \
+  -- get_protocol_status
+```
+
+Returns for each registered contract:
+
+```json
+[
+  {
+    "name": "chioma",
+    "contract_id": "C...",
+    "admin": "G...",
+    "version": "2.0.0",
+    "last_updated": 1234567890
+  },
+  ...
+]
+```
+
+Run this before every upgrade or rotation to confirm the current state is as
+expected and check for admin drift between contracts.
+
+### 5.1 Cross-checking admin consistency
+
+All contracts that share an admin should show the same `admin` value.
+If they diverge, investigate before proceeding with any upgrade.
+
+```bash
+stellar contract invoke \
+  --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send no \
+  -- get_protocol_status \
+  | python3 -c "
+import sys, json
+records = json.load(sys.stdin)
+admins = {r['admin'] for r in records if r['name'] != 'rent_obligation'}
+if len(admins) > 1:
+    print('WARNING: admin mismatch detected')
+    for r in records:
+        print(f'  {r[\"name\"]}: {r[\"admin\"]}')
+else:
+    print('OK: all contracts share the same admin')
+"
 ```
 
 ---
 
-## 3. Migration Procedures
+## 6. Per-contract quirks
 
-### 3.1 State Migration
+### 6.1 Missing set_admin functions
 
-**Export State:**
+`user_profile`, `property_registry`, `agent_registry`, and `dispute_resolution`
+store their admin in `ContractState` but do not currently expose a `set_admin`
+function in their public ABI. Until one is added, admin rotation for these
+contracts must be done by deploying a new version that accepts the new admin
+address during initialization — which means a full replacement upgrade, not
+an in-place WASM swap.
 
-```rust
-pub fn export_state(env: &Env) -> Result<Vec<StateEntry>, ContractError> {
-    let mut state = Vec::new();
-
-    // Export all persistent storage
-    let storage = env.storage().persistent();
-
-    // Export users
-    let users_key = Symbol::new(env, "users");
-    if let Ok(users) = storage.get::<_, Map<Address, UserData>>(&users_key) {
-        for (addr, data) in users.iter() {
-            state.push(StateEntry {
-                key: "user".to_string(),
-                address: addr,
-                data: serialize_user_data(&data),
-            });
-        }
-    }
-
-    // Export agreements
-    let agreements_key = Symbol::new(env, "agreements");
-    if let Ok(agreements) = storage.get::<_, Map<String, AgreementData>>(&agreements_key) {
-        for (id, data) in agreements.iter() {
-            state.push(StateEntry {
-                key: "agreement".to_string(),
-                id: id,
-                data: serialize_agreement_data(&data),
-            });
-        }
-    }
-
-    Ok(state)
-}
-```
-
-**Import State:**
+**Recommended fix**: Add the following to each contract's `lib.rs`:
 
 ```rust
-pub fn import_state(env: &Env, state: Vec<StateEntry>) -> Result<(), ContractError> {
-    let storage = env.storage().persistent();
-
-    for entry in state {
-        match entry.key.as_str() {
-            "user" => {
-                let user_data = deserialize_user_data(&entry.data)?;
-                let users_key = Symbol::new(env, "users");
-                let mut users = storage.get::<_, Map<Address, UserData>>(&users_key)
-                    .unwrap_or_else(|_| Map::new(env));
-                users.set(entry.address, user_data);
-                storage.set(&users_key, &users);
-            },
-            "agreement" => {
-                let agreement_data = deserialize_agreement_data(&entry.data)?;
-                let agreements_key = Symbol::new(env, "agreements");
-                let mut agreements = storage.get::<_, Map<String, AgreementData>>(&agreements_key)
-                    .unwrap_or_else(|_| Map::new(env));
-                agreements.set(entry.id, agreement_data);
-                storage.set(&agreements_key, &agreements);
-            },
-            _ => return Err(ContractError::InvalidStateEntry),
-        }
+/// Rotate the contract admin (current admin only).
+pub fn set_admin(env: Env, caller: Address, new_admin: Address) -> Result<(), /* Error */> {
+    caller.require_auth();
+    let mut state = /* get state */;
+    if caller != state.admin {
+        return Err(/* Unauthorized */);
     }
-
+    state.admin = new_admin;
+    env.storage().instance().set(&DataKey::State, &state);
+    env.storage().instance().extend_ttl(500_000, 500_000);
     Ok(())
 }
 ```
 
-### 3.2 Data Transformation
+Track this as a follow-up issue.
 
-**Transform During Migration:**
+### 6.2 Escrow has no set_admin
 
-```rust
-pub fn migrate_v1_to_v2(env: &Env) -> Result<(), ContractError> {
-    let storage = env.storage().persistent();
+`escrow` stores admin at `DataKey::SystemAdmin` but exposes no setter.
+Add a `set_admin(caller, new_admin)` function guarded by the current system admin.
 
-    // Get old data structure
-    let old_users_key = Symbol::new(env, "users_v1");
-    let old_users = storage.get::<_, Map<Address, OldUserData>>(&old_users_key)?;
+### 6.3 rent_obligation has no admin concept
 
-    // Transform to new structure
-    let mut new_users = Map::new(env);
-    for (addr, old_data) in old_users.iter() {
-        let new_data = UserData {
-            address: addr,
-            name: old_data.name,
-            email: old_data.email,
-            // New fields with defaults
-            kyc_status: KycStatus::Pending,
-            reputation_score: 0,
-            created_at: env.ledger().timestamp(),
-        };
-        new_users.set(addr, new_data);
-    }
+`rent_obligation` is initialized with no arguments and stores no admin.
+No admin rotation applies. Upgrades still go through the normal
+`propose_upgrade` / `execute_upgrade` flow but with any authorized caller.
 
-    // Store new data
-    let new_users_key = Symbol::new(env, "users");
-    storage.set(&new_users_key, &new_users);
+### 6.4 payment has no admin concept beyond fee collector
 
-    // Remove old data
-    storage.remove(&old_users_key);
+`payment` uses `set_platform_fee_collector` as its admin-equivalent operation.
+Admin rotation for `payment` = calling `set_platform_fee_collector` with the
+new address.
 
-    Ok(())
-}
+### 6.5 required_signatures hardcoded to 1 in peripheral contracts
+
+Six of the seven peripheral `upgrade.rs` files set `required_signatures: 1`
+unconditionally. This means propose + execute by a single admin is enough,
+regardless of how many admins exist. This is intentional for simplicity but
+means there is no multi-sig check on these upgrades. If you need multi-sig
+enforcement, either:
+
+- Gate the upgrade via a `chioma` multi-sig proposal that calls
+  `execute_upgrade` on the target as a cross-contract call, or
+- Amend the peripheral `upgrade.rs` to read `required_signatures` from a
+  stored config (follow the `chioma` pattern).
+
+### 6.6 Actual WASM update not called
+
+The current `execute_upgrade` implementations record state but do not call
+`env.deployer().update_current_contract_wasm(wasm_hash)`. This means the
+proposal workflow is correctly gated but the actual bytecode swap is a
+**separate** step that must be done via `stellar contract upgrade`:
+
+```bash
+stellar contract upgrade \
+  --id "$CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --wasm-hash "$WASM_HASH"
 ```
 
-### 3.3 Incremental Migration
-
-**For Large Datasets:**
-
-```rust
-pub fn migrate_batch(
-    env: &Env,
-    batch_size: u32,
-    offset: u32,
-) -> Result<MigrationStatus, ContractError> {
-    let storage = env.storage().persistent();
-
-    // Get migration state
-    let migration_key = Symbol::new(env, "migration_state");
-    let mut migration = storage.get::<_, MigrationState>(&migration_key)
-        .unwrap_or_else(|_| MigrationState::new());
-
-    // Process batch
-    let old_users_key = Symbol::new(env, "users_v1");
-    let old_users = storage.get::<_, Map<Address, OldUserData>>(&old_users_key)?;
-
-    let mut processed = 0;
-    for (addr, old_data) in old_users.iter().skip(offset as usize).take(batch_size as usize) {
-        let new_data = transform_user_data(old_data);
-
-        let new_users_key = Symbol::new(env, "users");
-        let mut new_users = storage.get::<_, Map<Address, UserData>>(&new_users_key)
-            .unwrap_or_else(|_| Map::new(env));
-        new_users.set(addr, new_data);
-        storage.set(&new_users_key, &new_users);
-
-        processed += 1;
-    }
-
-    // Update migration state
-    migration.processed += processed;
-    migration.last_offset = offset + batch_size;
-
-    let status = if migration.processed >= migration.total {
-        MigrationStatus::Complete
-    } else {
-        MigrationStatus::InProgress
-    };
-
-    storage.set(&migration_key, &migration);
-
-    Ok(status)
-}
-```
+The `coordinated-upgrade.sh` script documents where to insert this call
+(between Steps 3 and 4) once the contracts expose a native upgrade primitive.
 
 ---
 
-## 4. Rollback Procedures
+## 7. Acceptance checklist
 
-### 4.1 Proxy Pattern Rollback
+### Before upgrading
 
-**Immediate Rollback:**
+- [ ] `get_protocol_status` printed and reviewed — no unexpected admin or version drift
+- [ ] New WASM compiled from a tagged commit
+- [ ] All tests passing locally (`cargo test`)
+- [ ] Security review completed for the diff
+- [ ] Upgrade tested on a local sandbox with `stellar contract simulate`
+- [ ] Rollback plan documented (previous WASM hash saved)
+- [ ] Communication plan ready for any user-facing impact
 
-```bash
-#!/bin/bash
-# rollback-proxy.sh
+### After upgrading
 
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-PROXY_ADDRESS="${2}"
-ADMIN_KEY="${3}"
-PREVIOUS_IMPL="${4}"
-
-echo "Rolling back proxy to previous implementation"
-
-# Invoke rollback
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id ${PROXY_ADDRESS} \
-  -- upgrade \
-  --new_impl ${PREVIOUS_IMPL}
-
-echo "Rollback completed"
-
-# Verify
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${PROXY_ADDRESS} \
-  -- health_check
-```
-
-### 4.2 Contract Replacement Rollback
-
-**Restore Previous Contract:**
-
-```bash
-#!/bin/bash
-# rollback-contract.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-OLD_CONTRACT="${2}"
-NEW_CONTRACT="${3}"
-ADMIN_KEY="${4}"
-
-echo "Rolling back to previous contract"
-
-# Update references back to old contract
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id registry \
-  -- update_contract_address \
-  --old_address ${NEW_CONTRACT} \
-  --new_address ${OLD_CONTRACT}
-
-# Update dependent contracts
-for contract in escrow payment disputes; do
-  soroban contract invoke \
-    --network ${NETWORK} \
-    --source ${ADMIN_KEY} \
-    --id ${contract} \
-    -- update_dependency \
-    --dependency_name "main_contract" \
-    --new_address ${OLD_CONTRACT}
-done
-
-echo "Rollback completed"
-```
-
-### 4.3 State Rollback
-
-**Restore Previous State:**
-
-```bash
-#!/bin/bash
-# rollback-state.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-CONTRACT="${2}"
-ADMIN_KEY="${3}"
-BACKUP_FILE="${4}"
-
-echo "Restoring state from backup"
-
-# Import state from backup
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id ${CONTRACT} \
-  -- import_state \
-  --state "$(cat ${BACKUP_FILE})"
-
-echo "State restored"
-```
+- [ ] `verify-deployment.sh` passes (all 8 contracts respond)
+- [ ] `get_protocol_status` shows expected new version
+- [ ] Admin for upgraded contract unchanged (or correctly rotated)
+- [ ] Protocol smoke tests pass end-to-end
+- [ ] Version recorded in the registry via `update_version`
+- [ ] Upgrade proposal shows `executed: true`
 
 ---
 
-## 5. Testing Procedures
+## 8. Rollback
 
-### 5.1 Unit Tests
+### 8.1 WASM rollback
 
-**Test Upgrade Function:**
-
-```rust
-#[test]
-fn test_upgrade() {
-    let env = Env::default();
-    let contract_id = env.register_contract(None, Contract);
-
-    let admin = Address::random(&env);
-    let new_impl = Address::random(&env);
-
-    // Set admin
-    env.storage().persistent().set(&Symbol::new(&env, "admin"), &admin);
-
-    // Invoke upgrade
-    let result: Result<(), ContractError> = env.invoke_contract(
-        &contract_id,
-        &Symbol::new(&env, "upgrade"),
-        &(new_impl.clone(),),
-    );
-
-    assert!(result.is_ok());
-
-    // Verify implementation updated
-    let impl_addr: Address = env.storage().persistent()
-        .get(&Symbol::new(&env, "impl"))
-        .unwrap();
-    assert_eq!(impl_addr, new_impl);
-}
-```
-
-**Test State Migration:**
-
-```rust
-#[test]
-fn test_state_migration() {
-    let env = Env::default();
-    let contract_id = env.register_contract(None, Contract);
-
-    // Create test data
-    let user = UserData {
-        address: Address::random(&env),
-        name: "Test User".to_string(),
-        email: "test@example.com".to_string(),
-    };
-
-    // Export state
-    let state: Vec<StateEntry> = env.invoke_contract(
-        &contract_id,
-        &Symbol::new(&env, "export_state"),
-        &(),
-    ).unwrap();
-
-    assert!(!state.is_empty());
-
-    // Import state
-    let result: Result<(), ContractError> = env.invoke_contract(
-        &contract_id,
-        &Symbol::new(&env, "import_state"),
-        &(state,),
-    );
-
-    assert!(result.is_ok());
-}
-```
-
-### 5.2 Integration Tests
-
-**Test Upgrade with Dependent Contracts:**
-
-```rust
-#[test]
-fn test_upgrade_with_dependencies() {
-    let env = Env::default();
-
-    // Deploy contracts
-    let main_contract = env.register_contract(None, MainContract);
-    let escrow_contract = env.register_contract(None, EscrowContract);
-
-    // Set dependency
-    env.invoke_contract(
-        &escrow_contract,
-        &Symbol::new(&env, "set_main_contract"),
-        &(main_contract.clone(),),
-    ).unwrap();
-
-    // Upgrade main contract
-    let new_impl = Address::random(&env);
-    env.invoke_contract(
-        &main_contract,
-        &Symbol::new(&env, "upgrade"),
-        &(new_impl,),
-    ).unwrap();
-
-    // Verify escrow still works
-    let result: Result<(), ContractError> = env.invoke_contract(
-        &escrow_contract,
-        &Symbol::new(&env, "health_check"),
-        &(),
-    );
-
-    assert!(result.is_ok());
-}
-```
-
-### 5.3 Staging Deployment
-
-**Deploy to Staging Network:**
+Keep the previous WASM hash in your upgrade notes. To roll back:
 
 ```bash
-#!/bin/bash
-# deploy-staging.sh
+# Re-upload the old WASM (or reuse its hash if still on-chain)
+OLD_HASH="<previous wasm hash>"
 
-set -euo pipefail
+stellar contract upgrade \
+  --id "$CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --wasm-hash "$OLD_HASH"
 
-NETWORK="testnet"
-ADMIN_KEY="${1}"
-
-echo "Deploying to staging (${NETWORK})"
-
-# Build contract
-cargo build --release --target wasm32-unknown-unknown
-
-# Deploy new implementation
-NEW_IMPL=$(soroban contract install \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  target/wasm32-unknown-unknown/release/chioma_contract.wasm)
-
-echo "New implementation: ${NEW_IMPL}"
-
-# Upgrade proxy
-soroban contract invoke \
-  --network ${NETWORK} \
-  --source ${ADMIN_KEY} \
-  --id ${STAGING_PROXY} \
-  -- upgrade \
-  --new_impl ${NEW_IMPL}
-
-# Run smoke tests
-./scripts/smoke-tests.sh ${NETWORK}
-
-echo "Staging deployment completed"
+# Update the registry to reflect the rollback
+stellar contract invoke \
+  --id "$UPGRADE_REGISTRY_CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  --send yes \
+  -- update_version \
+  --caller "$ADMIN" \
+  --name "$CONTRACT_NAME" \
+  --new_version "<previous_version>" \
+  --notes "Rollback from <new_version> due to <reason>"
 ```
 
----
+### 8.2 State rollback
 
-## 6. Verification
-
-### 6.1 Post-Upgrade Verification
-
-**Checklist:**
-
-- [ ] Contract responds to health check
-- [ ] All functions callable
-- [ ] State preserved correctly
-- [ ] No data loss
-- [ ] Performance acceptable
-- [ ] Error handling working
-- [ ] Events emitted correctly
-- [ ] Dependent contracts working
-
-**Verification Script:**
-
-```bash
-#!/bin/bash
-# verify-upgrade.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-CONTRACT="${2}"
-
-echo "Verifying upgrade of ${CONTRACT}"
-
-# Health check
-echo "Checking health..."
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${CONTRACT} \
-  -- health_check || exit 1
-
-# Test read function
-echo "Testing read function..."
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${CONTRACT} \
-  -- get_version || exit 1
-
-# Test write function
-echo "Testing write function..."
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${CONTRACT} \
-  -- test_write || exit 1
-
-# Check state
-echo "Verifying state..."
-soroban contract invoke \
-  --network ${NETWORK} \
-  --id ${CONTRACT} \
-  -- verify_state || exit 1
-
-echo "Verification passed"
-```
-
-### 6.2 Monitoring
-
-**Monitor After Upgrade:**
-
-```bash
-#!/bin/bash
-# monitor-upgrade.sh
-
-set -euo pipefail
-
-NETWORK="${1:-testnet}"
-CONTRACT="${2}"
-DURATION="${3:-3600}" # 1 hour
-
-echo "Monitoring contract for ${DURATION} seconds"
-
-START_TIME=$(date +%s)
-END_TIME=$((START_TIME + DURATION))
-
-while [ $(date +%s) -lt ${END_TIME} ]; do
-    # Check health
-    if ! soroban contract invoke \
-        --network ${NETWORK} \
-        --id ${CONTRACT} \
-        -- health_check > /dev/null 2>&1; then
-        echo "ERROR: Health check failed"
-        exit 1
-    fi
-
-    # Check metrics
-    echo "$(date): Contract healthy"
-
-    sleep 60
-done
-
-echo "Monitoring completed successfully"
-```
+State is stored on-chain and cannot be rolled back by reverting the WASM. If
+a bad upgrade corrupts state, a migration contract or a replacement deployment
+with state export/import is required (see the Soroban state migration patterns
+in the original UPGRADES.md for reference code).
 
 ---
 
-## 7. Best Practices
+## 9. Incident response — compromised key
 
-### 7.1 Upgrade Best Practices
+If an admin key is suspected compromised:
 
-1. **Always test on testnet first**
-   - Deploy to testnet
-   - Run full test suite
-   - Verify state migration
-   - Test rollback procedure
+1. **Pause** — Call `chioma.pause()` immediately to halt user-facing operations.
+   For other contracts that support it, pause them too.
 
-2. **Use proxy pattern for most upgrades**
-   - Preserves contract address
-   - Seamless for users
-   - Easier rollback
+2. **Assess** — Run `get_protocol_status` to see which contracts the compromised
+   key is admin on. Check on-chain events for any unauthorized transactions.
 
-3. **Document all changes**
-   - What changed
-   - Why it changed
-   - Migration steps
-   - Rollback procedure
+3. **Rotate** — Run `rotate-admin.sh <NEW_SAFE_ADDRESS>`. For multi-sig
+   contracts where the compromised key is one of multiple admins, the remaining
+   admins can propose and execute a `RemoveAdmin` action.
 
-4. **Communicate with users**
-   - Announce upgrade in advance
-   - Explain impact
-   - Provide migration guide if needed
-   - Be available for support
+4. **Verify** — Run `get_protocol_status` and confirm the compromised address
+   is no longer the admin on any contract.
 
-5. **Have rollback plan**
-   - Test rollback on testnet
-   - Document rollback steps
-   - Keep previous implementation available
-   - Be ready to execute quickly
+5. **Audit** — Review all on-chain transactions since the suspected compromise
+   timestamp. Check upgrade proposals and admin action proposals for any that
+   were executed by the compromised key.
 
-6. **Monitor after upgrade**
-   - Watch metrics closely
-   - Check for errors
-   - Verify performance
-   - Monitor for 24 hours minimum
+6. **Unpause** — Once the rotation is verified, call `chioma.unpause()`.
 
-### 7.2 State Migration Best Practices
-
-1. **Backup state before migration**
-   - Export state before upgrade
-   - Store backup securely
-   - Verify backup integrity
-
-2. **Test migration thoroughly**
-   - Test on testnet first
-   - Verify all data migrated
-   - Check data integrity
-   - Test dependent contracts
-
-3. **Use incremental migration for large datasets**
-   - Process in batches
-   - Monitor progress
-   - Allow rollback during migration
-   - Minimize downtime
-
-4. **Validate migrated data**
-   - Verify record counts
-   - Spot-check data values
-   - Test business logic
-   - Compare with original
-
-### 7.3 Rollback Best Practices
-
-1. **Keep previous implementation available**
-   - Don't delete old WASM
-   - Store implementation addresses
-   - Document rollback procedure
-
-2. **Test rollback procedure**
-   - Practice on testnet
-   - Time the rollback
-   - Verify state after rollback
-   - Document any issues
-
-3. **Have clear rollback criteria**
-   - Define what triggers rollback
-   - Set error thresholds
-   - Establish decision process
-   - Communicate criteria to team
-
-4. **Execute rollback quickly**
-   - Have procedure ready
-   - Minimize decision time
-   - Execute without hesitation
-   - Communicate immediately
+7. **Document** — Record the incident, timeline, and remediation steps.
 
 ---
 
-## 8. Upgrade Checklist
+## References
 
-### 8.1 Pre-Upgrade
-
-- [ ] Code review completed
-- [ ] All tests passing
-- [ ] Security audit completed
-- [ ] Performance benchmarks met
-- [ ] Migration plan documented
-- [ ] Rollback plan documented
-- [ ] State backup created
-- [ ] Staging deployment successful
-- [ ] Smoke tests passed
-- [ ] Monitoring dashboards prepared
-- [ ] Communication plan ready
-- [ ] Team trained on procedure
-
-### 8.2 During Upgrade
-
-- [ ] Execute upgrade procedure
-- [ ] Verify upgrade successful
-- [ ] Monitor contract health
-- [ ] Check dependent contracts
-- [ ] Verify state integrity
-- [ ] Test all functions
-- [ ] Monitor error rates
-- [ ] Check performance metrics
-
-### 8.3 Post-Upgrade
-
-- [ ] Verify all functionality
-- [ ] Check state integrity
-- [ ] Monitor for 24 hours
-- [ ] Analyze metrics
-- [ ] Gather user feedback
-- [ ] Document lessons learned
-- [ ] Update documentation
-- [ ] Archive upgrade artifacts
-
----
-
-## 9. References
-
-- [Soroban Documentation](https://soroban.stellar.org/)
-- [Stellar Smart Contracts](https://developers.stellar.org/docs/smart-contracts)
-- [Contract Deployment Guide](../getting-started/DEPLOYMENT.md)
-- [Testing Guide](../testing/TESTING.md)
-- [Security Best Practices](../security/SECURITY.md)
+- [Soroban CLI reference](https://developers.stellar.org/docs/tools/developer-tools/cli/stellar-cli)
+- [deploy-testnet.sh](../../../scripts/deploy-testnet.sh)
+- [coordinated-upgrade.sh](../../../scripts/coordinated-upgrade.sh)
+- [rotate-admin.sh](../../../scripts/rotate-admin.sh)
+- [verify-deployment.sh](../../../scripts/verify-deployment.sh)
+- [upgrade_registry contract](../../../contracts/upgrade_registry/src/lib.rs)

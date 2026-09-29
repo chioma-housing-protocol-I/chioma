@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
+vi.mock('next/image', () => ({
+  default: ({
+    src,
+    alt,
+    ...props
+  }: {
+    src: string;
+    alt: string;
+    [key: string]: unknown;
+  }) => React.createElement('img', { src, alt, ...props }),
+}));
+
 vi.mock('@/contexts/ModalContext', () => ({
   useModal: vi.fn(() => ({
     openModal: vi.fn(),
@@ -9,6 +21,18 @@ vi.mock('@/contexts/ModalContext', () => ({
     modalState: { type: null, isOpen: false },
   })),
 }));
+
+vi.mock('@/lib/query/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
+  return {
+    ...actual,
+    useFavoriteStatus: vi.fn(() => ({ data: undefined })),
+    useToggleFavorite: vi.fn(() => ({
+      isPending: false,
+      toggleFavorite: vi.fn(),
+    })),
+  };
+});
 
 import PropertyCard from '../PropertyCard';
 

@@ -28,13 +28,13 @@ The **Property Registry** contract provides an on-chain property verification la
 
 ### Key Features
 
-| Feature | Description |
-|---|---|
+| Feature                   | Description                                                       |
+| ------------------------- | ----------------------------------------------------------------- |
 | **Property Registration** | Landlords register properties with unique IDs and metadata hashes |
-| **Admin Verification** | Admin-only verification of registered properties |
-| **Property Queries** | Query property details, existence, and total count |
-| **Event Emission** | All state changes emit events for off-chain indexing |
-| **Access Control** | Role-based authorization (admin, landlord) |
+| **Admin Verification**    | Admin-only verification of registered properties                  |
+| **Property Queries**      | Query property details, existence, and total count                |
+| **Event Emission**        | All state changes emit events for off-chain indexing              |
+| **Access Control**        | Role-based authorization (admin, landlord)                        |
 
 ### Architecture
 
@@ -68,14 +68,15 @@ pub fn initialize(env: Env, admin: Address) -> Result<(), PropertyError>
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `admin` | `Address` | Admin address for contract management |
+| Parameter | Type      | Description                           |
+| --------- | --------- | ------------------------------------- |
+| `env`     | `Env`     | Soroban environment                   |
+| `admin`   | `Address` | Admin address for contract management |
 
 **Returns:** `Result<(), PropertyError>`
 
 **Errors:**
+
 - `AlreadyInitialized` (1) — Contract is already initialized
 
 **Example:**
@@ -95,9 +96,9 @@ pub fn get_state(env: Env) -> Option<ContractState>
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter | Type  | Description         |
+| --------- | ----- | ------------------- |
+| `env`     | `Env` | Soroban environment |
 
 **Returns:** `Option<ContractState>` — `None` if contract is not initialized
 
@@ -127,16 +128,17 @@ pub fn register_property(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `landlord` | `Address` | Landlord's Stellar address (requires auth) |
-| `property_id` | `String` | Unique property identifier |
-| `metadata_hash` | `String` | Hash of off-chain property metadata |
+| Parameter       | Type      | Description                                |
+| --------------- | --------- | ------------------------------------------ |
+| `env`           | `Env`     | Soroban environment                        |
+| `landlord`      | `Address` | Landlord's Stellar address (requires auth) |
+| `property_id`   | `String`  | Unique property identifier                 |
+| `metadata_hash` | `String`  | Hash of off-chain property metadata        |
 
 **Returns:** `Result<(), PropertyError>`
 
 **Errors:**
+
 - `NotInitialized` (2) — Contract not initialized
 - `InvalidPropertyId` (7) — Empty property ID
 - `InvalidMetadata` (8) — Empty metadata hash
@@ -169,15 +171,16 @@ pub fn verify_property(
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
-| `admin` | `Address` | Admin address (requires auth) |
-| `property_id` | `String` | Property ID to verify |
+| Parameter     | Type      | Description                   |
+| ------------- | --------- | ----------------------------- |
+| `env`         | `Env`     | Soroban environment           |
+| `admin`       | `Address` | Admin address (requires auth) |
+| `property_id` | `String`  | Property ID to verify         |
 
 **Returns:** `Result<(), PropertyError>`
 
 **Errors:**
+
 - `NotInitialized` (2) — Contract not initialized
 - `Unauthorized` (5) — Caller is not the admin
 - `PropertyNotFound` (4) — Property does not exist
@@ -208,9 +211,9 @@ pub fn get_property(env: Env, property_id: String) -> Option<PropertyDetails>
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter     | Type     | Description            |
+| ------------- | -------- | ---------------------- |
+| `env`         | `Env`    | Soroban environment    |
 | `property_id` | `String` | Property ID to look up |
 
 **Returns:** `Option<PropertyDetails>` — `None` if property does not exist
@@ -234,9 +237,9 @@ pub fn has_property(env: Env, property_id: String) -> bool
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter     | Type     | Description          |
+| ------------- | -------- | -------------------- |
+| `env`         | `Env`    | Soroban environment  |
 | `property_id` | `String` | Property ID to check |
 
 **Returns:** `bool` — `true` if property exists
@@ -258,9 +261,9 @@ pub fn get_property_count(env: Env) -> u32
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `env` | `Env` | Soroban environment |
+| Parameter | Type  | Description         |
+| --------- | ----- | ------------------- |
+| `env`     | `Env` | Soroban environment |
 
 **Returns:** `u32` — Total property count
 
@@ -295,12 +298,12 @@ pub enum DataKey {
 
 ### Storage Layout
 
-| Key | Storage Type | Value Type | Description |
-|---|---|---|---|
-| `DataKey::State` | Persistent | `ContractState` | Admin address and contract state |
-| `DataKey::Initialized` | Persistent | `bool` | Whether contract has been initialized |
-| `DataKey::Property(id)` | Persistent | `PropertyDetails` | Property details keyed by property ID |
-| `DataKey::PropertyCount` | Persistent | `u32` | Running count of registered properties |
+| Key                      | Storage Type | Value Type        | Description                            |
+| ------------------------ | ------------ | ----------------- | -------------------------------------- |
+| `DataKey::State`         | Persistent   | `ContractState`   | Admin address and contract state       |
+| `DataKey::Initialized`   | Persistent   | `bool`            | Whether contract has been initialized  |
+| `DataKey::Property(id)`  | Persistent   | `PropertyDetails` | Property details keyed by property ID  |
+| `DataKey::PropertyCount` | Persistent   | `u32`             | Running count of registered properties |
 
 ### Data Structures
 
@@ -392,11 +395,13 @@ pub struct PropertyVerified {
 // Off-chain event listener example (JavaScript/Stellar SDK)
 const events = await server.getEvents({
   startLedger: ledgerNumber,
-  filters: [{
-    type: "contract",
-    contractIds: [propertyRegistryContractId],
-    topics: [["property_registered"]]
-  }]
+  filters: [
+    {
+      type: "contract",
+      contractIds: [propertyRegistryContractId],
+      topics: [["property_registered"]],
+    },
+  ],
 });
 
 for (const event of events.events) {
@@ -408,16 +413,16 @@ for (const event of events.events) {
 
 ## Error Codes
 
-| Code | Name | Description |
-|---|---|---|
-| 1 | `AlreadyInitialized` | Contract has already been initialized |
-| 2 | `NotInitialized` | Contract has not been initialized yet |
-| 3 | `PropertyAlreadyExists` | Property with this ID is already registered |
-| 4 | `PropertyNotFound` | No property found with the given ID |
-| 5 | `Unauthorized` | Caller is not authorized for this action |
-| 6 | `AlreadyVerified` | Property has already been verified |
-| 7 | `InvalidPropertyId` | Property ID is empty or invalid |
-| 8 | `InvalidMetadata` | Metadata hash is empty or invalid |
+| Code | Name                    | Description                                 |
+| ---- | ----------------------- | ------------------------------------------- |
+| 1    | `AlreadyInitialized`    | Contract has already been initialized       |
+| 2    | `NotInitialized`        | Contract has not been initialized yet       |
+| 3    | `PropertyAlreadyExists` | Property with this ID is already registered |
+| 4    | `PropertyNotFound`      | No property found with the given ID         |
+| 5    | `Unauthorized`          | Caller is not authorized for this action    |
+| 6    | `AlreadyVerified`       | Property has already been verified          |
+| 7    | `InvalidPropertyId`     | Property ID is empty or invalid             |
+| 8    | `InvalidMetadata`       | Metadata hash is empty or invalid           |
 
 ### Error Handling Example
 

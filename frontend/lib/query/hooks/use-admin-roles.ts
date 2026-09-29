@@ -19,9 +19,7 @@ export function useAdminRoles() {
   return useQuery({
     queryKey: queryKeys.roles.list(),
     queryFn: async () => {
-      const { data } = await apiClient.get<Role[]>(
-        '/api/v1/security/rbac/roles',
-      );
+      const { data } = await apiClient.get<Role[]>('/security/rbac/roles');
       return data;
     },
   });
@@ -32,7 +30,7 @@ export function useAdminPermissions() {
     queryKey: queryKeys.roles.permissions(),
     queryFn: async () => {
       const { data } = await apiClient.get<Permission[]>(
-        '/api/v1/security/rbac/permissions',
+        '/security/rbac/permissions',
       );
       return data;
     },
@@ -61,7 +59,7 @@ export function useUpdateRolePermissions() {
       roleId,
       permissionIds,
     }: UpdateRolePermissionsPayload) => {
-      await apiClient.patch(`/api/v1/security/rbac/roles/${roleId}`, {
+      await apiClient.patch(`/security/rbac/roles/${roleId}`, {
         permissionIds,
       });
     },
@@ -77,7 +75,7 @@ export function useCreateRole() {
   return useMutation({
     mutationFn: async (data: { name: string; description?: string | null }) => {
       const { data: role } = await apiClient.post<Role>(
-        '/api/v1/security/rbac/roles',
+        '/security/rbac/roles',
         data,
       );
       return role;
@@ -102,7 +100,7 @@ export function useUpdateRole() {
       description?: string | null;
     }) => {
       const { data: role } = await apiClient.patch<Role>(
-        `/api/v1/security/rbac/roles/${id}`,
+        `/security/rbac/roles/${id}`,
         { name, description },
       );
       return role;
@@ -118,7 +116,7 @@ export function useDeleteRole() {
 
   return useMutation({
     mutationFn: async (roleId: string) => {
-      await apiClient.delete(`/api/v1/security/rbac/roles/${roleId}`);
+      await apiClient.delete(`/security/rbac/roles/${roleId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
@@ -137,7 +135,7 @@ export function useCreatePermission() {
       description?: string | null;
     }) => {
       const { data: permission } = await apiClient.post<Permission>(
-        '/api/v1/security/rbac/permissions',
+        '/security/rbac/permissions',
         data,
       );
       return permission;
@@ -168,7 +166,7 @@ export function useUpdatePermission() {
       description?: string | null;
     }) => {
       const { data: permission } = await apiClient.patch<Permission>(
-        `/api/v1/security/rbac/permissions/${id}`,
+        `/security/rbac/permissions/${id}`,
         { name, action, resource, description },
       );
       return permission;
@@ -186,9 +184,7 @@ export function useDeletePermission() {
 
   return useMutation({
     mutationFn: async (permissionId: string) => {
-      await apiClient.delete(
-        `/api/v1/security/rbac/permissions/${permissionId}`,
-      );
+      await apiClient.delete(`/security/rbac/permissions/${permissionId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

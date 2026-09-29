@@ -7,23 +7,18 @@ import {
   UpdateDateColumn,
   Index,
   VersionColumn,
+  BeforeInsert,
+  BeforeUpdate,
+  AfterLoad,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { PaymentMethod } from './payment-method.entity';
+import {
+  parsePaymentMetadata,
+  type PaymentMetadata,
+} from '../schemas/payment-metadata.schema';
 
-export type PaymentMetadata = {
-  chargeId?: string;
-  refundId?: string;
-  gateway?: string;
-  flow?: string;
-  transactionHash?: string;
-  escrowId?: number;
-  escrowStatus?: string;
-  reconciledAt?: string;
-  retryAttempts?: number;
-  webhookEventType?: string;
-  error?: string;
-} & Record<string, unknown>;
+export type { PaymentMetadata } from '../schemas/payment-metadata.schema';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -36,6 +31,7 @@ export enum PaymentStatus {
 @Entity('payments')
 @Index('idx_payments_user_id', ['userId'])
 @Index('idx_payments_processed_at', ['processedAt'])
+@Index('IDX_payments_user_status_created_at', ['userId', 'status', 'createdAt'])
 @Index('uq_payments_user_id_idempotency_key', ['userId', 'idempotencyKey'], {
   unique: true,
 })
@@ -51,6 +47,9 @@ export class Payment {
 
   @Column({ nullable: true, type: 'varchar' })
   agreementId: string | null; // Reference to agreement (no FK constraint)
+
+  @Column({ nullable: true, type: 'varchar' })
+  bookingId: string | null; // Reference to booking (no FK constraint)
 
   @Column('decimal', { name: 'amount', precision: 12, scale: 2 })
   amount: number;
@@ -126,7 +125,7 @@ export class Payment {
   refundReason: string;
 
   @Column({
-    type: process.env.DB_TYPE === 'sqlite' ? 'text' : 'jsonb',
+    type: process.env.DB_TYPE === 'sqlite' ? 'simple-json' : 'jsonb',
     nullable: true,
   })
   metadata: PaymentMetadata | null;
@@ -145,4 +144,11 @@ export class Payment {
    *  stale version throw an OptimisticLockVersionMismatchError. */
   @VersionColumn({ default: 1 })
   version: number;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  @AfterLoad()
+  validateMetadata(): void {
+    this.metadata = parsePaymentMetadata(this.metadata);
+  }
 }

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
 import { AppDataSource } from '../src/database/data-source';
 import {
   createEncryptionServiceFromEnv,
@@ -19,8 +20,10 @@ interface CliOptions {
   batchSize: number;
 }
 
+const logger = new Logger('KycDataMigration');
+
 function logProgress(message: string): void {
-  console.log(`[kyc-migration] ${message}`);
+  logger.log(message);
 }
 
 function parseCliOptions(argv: string[]): CliOptions {
@@ -362,7 +365,7 @@ async function main(): Promise<void> {
 
 if (require.main === module) {
   void main().catch((error) => {
-    console.error('[kyc-migration] Failed:', error);
+    logger.error('Failed to run KYC migration', error instanceof Error ? error.stack : String(error));
     process.exit(1);
   });
 }

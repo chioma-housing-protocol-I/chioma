@@ -6,6 +6,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum ScanStatus {
+  PENDING = 'pending',
+  CLEAN = 'clean',
+  QUARANTINED = 'quarantined',
+}
+
 @Entity('file_metadata')
 export class FileMetadata {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +31,13 @@ export class FileMetadata {
 
   @Column()
   ownerId: string;
+
+  @Column({
+    type: 'enum',
+    enum: ScanStatus,
+    default: ScanStatus.PENDING,
+  })
+  scanStatus: ScanStatus;
 
   @CreateDateColumn()
   createdAt: Date;

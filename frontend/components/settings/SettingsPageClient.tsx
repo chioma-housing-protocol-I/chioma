@@ -11,6 +11,8 @@ import { SettingsCard } from './SettingsCard';
 import { PreferenceSwitch } from './PreferenceSwitch';
 import { ThemeSelector } from './ThemeSelector';
 import { MfaSetupPayload, ThemePreference, UserPreferences } from './types';
+import { fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 interface SettingsPageClientProps {
   embedded?: boolean;
@@ -65,6 +67,8 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'fr', label: 'French' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'ar', label: 'Arabic' },
 ];
 
 const CURRENCY_OPTIONS = [
@@ -175,13 +179,14 @@ export function SettingsPageClient({
   const [mfaVerificationCode, setMfaVerificationCode] = useState('');
   const [showMfaDisableFlow, setShowMfaDisableFlow] = useState(false);
   const [mfaDisableCode, setMfaDisableCode] = useState('');
+  const [backupCodesSaved, setBackupCodesSaved] = useState(false);
 
   const {
     register,
     reset,
     watch,
     handleSubmit,
-    formState: { errors, isSubmitting: isUpdatingPassword },
+    formState: { errors, isSubmitting: isUpdatingPassword, submitCount },
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     mode: 'onBlur',
@@ -337,6 +342,27 @@ export function SettingsPageClient({
     });
   };
 
+  const handleLanguageChange = (language: string) => {
+    // Keep the in-app preferences blob in sync (existing behavior)...
+    updatePreference({
+      ...preferences,
+      language,
+    });
+
+    // ...and persist the durable User.preferredLanguage column, which the
+    // backend uses as the i18n fallback for API responses and notification
+    // emails when a request carries no explicit language.
+    if (!accessToken) return;
+    void fetch('/api/users/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ preferredLanguage: language }),
+    }).catch(() => undefined);
+  };
+
   const handlePasswordChange = handleSubmit(async (values) => {
     setErrorMessage(null);
     setStatusMessage(null);
@@ -372,6 +398,7 @@ export function SettingsPageClient({
     setIsMfaBusy(true);
     setStatusMessage(null);
     setErrorMessage(null);
+    setBackupCodesSaved(false);
 
     try {
       const response = await fetch('/api/auth/mfa/enable', {
@@ -396,6 +423,36 @@ export function SettingsPageClient({
       setErrorMessage('MFA setup is unavailable right now.');
     } finally {
       setIsMfaBusy(false);
+    }
+  };
+
+  const handleDownloadBackupCodes = () => {
+    if (!mfaSetup?.backupCodes) return;
+
+    const content = mfaSetup.backupCodes.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chioma-mfa-backup-codes.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setBackupCodesSaved(true);
+    setStatusMessage('Backup codes downloaded.');
+  };
+
+  const handleCopyBackupCodes = async () => {
+    if (!mfaSetup?.backupCodes) return;
+    try {
+      await navigator.clipboard.writeText(mfaSetup.backupCodes.join('\n'));
+      setBackupCodesSaved(true);
+      setStatusMessage('Backup codes copied to clipboard.');
+    } catch {
+      setErrorMessage('Failed to copy backup codes to clipboard.');
     }
   };
 
@@ -632,12 +689,7 @@ export function SettingsPageClient({
                 id="language"
                 value={preferences.language}
                 disabled={isSavingPreferences}
-                onChange={(event) =>
-                  updatePreference({
-                    ...preferences,
-                    language: event.target.value,
-                  })
-                }
+                onChange={(event) => handleLanguageChange(event.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
               >
                 {LANGUAGE_OPTIONS.map((option) => (
@@ -685,6 +737,8 @@ export function SettingsPageClient({
             className="space-y-4"
             noValidate
           >
+            <FormErrorSummary errors={errors} submitCount={submitCount} />
+
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <label
@@ -697,11 +751,20 @@ export function SettingsPageClient({
                   id="currentPassword"
                   type="password"
                   autoComplete="current-password"
+                  aria-invalid={errors.currentPassword ? true : undefined}
+                  aria-describedby={
+                    errors.currentPassword
+                      ? fieldErrorId('currentPassword')
+                      : undefined
+                  }
                   {...register('currentPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.currentPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('currentPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.currentPassword.message}
                   </p>
                 )}
@@ -717,11 +780,18 @@ export function SettingsPageClient({
                   id="newPassword"
                   type="password"
                   autoComplete="new-password"
+                  aria-invalid={errors.newPassword ? true : undefined}
+                  aria-describedby={
+                    errors.newPassword ? fieldErrorId('newPassword') : undefined
+                  }
                   {...register('newPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.newPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('newPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.newPassword.message}
                   </p>
                 )}
@@ -737,11 +807,20 @@ export function SettingsPageClient({
                   id="confirmPassword"
                   type="password"
                   autoComplete="new-password"
+                  aria-invalid={errors.confirmPassword ? true : undefined}
+                  aria-describedby={
+                    errors.confirmPassword
+                      ? fieldErrorId('confirmPassword')
+                      : undefined
+                  }
                   {...register('confirmPassword')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder:text-white/20"
                 />
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">
+                  <p
+                    id={fieldErrorId('confirmPassword')}
+                    className="mt-1 text-xs text-red-400"
+                  >
                     {errors.confirmPassword.message}
                   </p>
                 )}
@@ -820,12 +899,53 @@ export function SettingsPageClient({
                     {mfaSetup.secret}
                   </span>
                 </p>
-                <p className="mt-2 text-xs text-blue-200/70">
-                  Backup codes:{' '}
-                  <span className="font-mono text-white">
-                    {mfaSetup.backupCodes.join(', ')}
-                  </span>
-                </p>
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <h4 className="text-sm font-semibold text-white mb-2">
+                    Backup codes
+                  </h4>
+                  <p className="text-xs text-blue-200/60 mb-3">
+                    Save these backup codes in a secure place. You can use them
+                    to access your account if you lose your authenticator
+                    device.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {mfaSetup.backupCodes.map((code) => (
+                      <div
+                        key={code}
+                        className="bg-black/20 rounded-lg p-2 text-center font-mono text-sm text-white border border-white/5"
+                      >
+                        {code}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={handleCopyBackupCodes}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium transition-colors border border-white/10"
+                    >
+                      Copy to clipboard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadBackupCodes}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium transition-colors border border-white/10"
+                    >
+                      Download .txt
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={backupCodesSaved}
+                      onChange={(e) => setBackupCodesSaved(e.target.checked)}
+                      className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-sm text-blue-200/70 select-none">
+                      I have safely saved my backup codes
+                    </span>
+                  </label>
+                </div>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                   <input
                     value={mfaVerificationCode}
@@ -839,7 +959,11 @@ export function SettingsPageClient({
                   />
                   <button
                     type="button"
-                    disabled={!mfaVerificationCode.trim() || isMfaBusy}
+                    disabled={
+                      !mfaVerificationCode.trim() ||
+                      isMfaBusy ||
+                      !backupCodesSaved
+                    }
                     onClick={() => void confirmMfaSetup()}
                     className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:from-blue-600 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >

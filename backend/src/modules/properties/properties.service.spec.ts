@@ -21,6 +21,7 @@ import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
+import { SavedSearchService } from '../search/saved-search.service';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -36,6 +37,7 @@ describe('PropertiesService', () => {
     role: UserRole.ADMIN,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -47,6 +49,7 @@ describe('PropertiesService', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     kycStatus: KycStatus.PENDING,
     loginCount: 0,
     preferredLanguage: 'en',
@@ -138,6 +141,7 @@ describe('PropertiesService', () => {
     aiOccupancyPrediction: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   };
 
   const mockPropertyRepository = {
@@ -145,6 +149,7 @@ describe('PropertiesService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    softRemove: jest.fn(),
     increment: jest.fn(),
     update: jest.fn(),
     createQueryBuilder: jest.fn(),
@@ -186,6 +191,11 @@ describe('PropertiesService', () => {
 
   const mockFraudHooksService = {
     onListingPublished: jest.fn().mockResolvedValue(undefined),
+    checkListingBeforePublishing: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockSavedSearchService = {
+    notifyMatchingSearches: jest.fn().mockResolvedValue(0),
   };
 
   beforeEach(async () => {
@@ -226,6 +236,10 @@ describe('PropertiesService', () => {
         {
           provide: FraudHooksService,
           useValue: mockFraudHooksService,
+        },
+        {
+          provide: SavedSearchService,
+          useValue: mockSavedSearchService,
         },
       ],
     }).compile();
@@ -587,13 +601,15 @@ describe('PropertiesService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a property by owner', async () => {
+    it('should archive a property by owner', async () => {
       mockPropertyRepository.findOne.mockResolvedValue(mockProperty);
-      mockPropertyRepository.remove.mockResolvedValue(mockProperty);
+      mockPropertyRepository.softRemove.mockResolvedValue(mockProperty);
 
       await service.remove('property-id', mockOwner);
 
-      expect(mockPropertyRepository.remove).toHaveBeenCalledWith(mockProperty);
+      expect(mockPropertyRepository.softRemove).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ListingStatus.ARCHIVED }),
+      );
     });
 
     it('should throw ForbiddenException for non-owner', async () => {
@@ -622,6 +638,9 @@ describe('PropertiesService', () => {
       expect(mockFraudHooksService.onListingPublished).toHaveBeenCalledWith(
         'property-id',
       );
+      expect(
+        mockSavedSearchService.notifyMatchingSearches,
+      ).toHaveBeenCalledWith(publishedProperty);
     });
 
     it('should throw BadRequestException if already published', async () => {
@@ -718,9 +737,9 @@ describe('PropertiesService', () => {
       const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.meta.total).toBe(1);
-      expect(result.meta.page).toBe(1);
-      expect(result.meta.limit).toBe(10);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
 
     it('should apply filters correctly', async () => {

@@ -2,12 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import toast from 'react-hot-toast';
 
 export type MaintenanceStatus =
-  | 'OPEN'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type MaintenancePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export interface MaintenanceFilters {
@@ -258,7 +256,39 @@ export function useUpdateMaintenanceStatus() {
     }) => {
       await apiClient.patch(`/maintenance/${requestId}`, { status });
     },
+    onMutate: async ({ requestId, status }) => {
+      await queryClient.cancelQueries({
+        queryKey: LANDLORD_MAINTENANCE_QUERY_KEY,
+      });
+      const snapshots = queryClient
+        .getQueriesData<MaintenanceRecord[]>({
+          queryKey: LANDLORD_MAINTENANCE_QUERY_KEY,
+        })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<MaintenanceRecord[]>(
+        { queryKey: LANDLORD_MAINTENANCE_QUERY_KEY },
+        (old) =>
+          old?.map((r) =>
+            r.id === requestId
+              ? { ...r, status, updatedAt: new Date().toISOString() }
+              : r,
+          ),
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
     onSuccess: () => {
+      toast.success('Maintenance status updated');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: LANDLORD_MAINTENANCE_QUERY_KEY,
       });

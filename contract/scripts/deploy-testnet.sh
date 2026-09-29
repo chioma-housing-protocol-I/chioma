@@ -73,9 +73,10 @@ CONTRACTS=(
   payment
   dispute_resolution
   chioma
+  upgrade_registry
 )
 
-# Init order: chioma before dispute_resolution
+# Init order: chioma before dispute_resolution; upgrade_registry last
 INIT_CONTRACTS=(
   user_profile
   property_registry
@@ -85,6 +86,7 @@ INIT_CONTRACTS=(
   payment
   chioma
   dispute_resolution
+  upgrade_registry
 )
 
 env_var_for() {
@@ -217,6 +219,38 @@ initialize_contract() {
         --admin "$admin" \
         --min_votes_required "$MIN_DISPUTE_VOTES" \
         --chioma_contract "$CHIOMA_CONTRACT_ID"
+      ;;
+    upgrade_registry)
+      # Initialize the shared upgrade registry with the deployer as the sole
+      # registry admin (1-of-1).  For mainnet, replace with a multi-sig setup.
+      invoke_write "$contract_id" initialize \
+        --primary_admin "$admin" \
+        --admins "[\"${admin}\"]" \
+        --required_approvals 1
+
+      # Register all 8 protocol contracts in the registry so get_protocol_status
+      # returns a complete picture from day one.
+      # shellcheck disable=SC1090
+      source "$ENV_FILE"
+      log "Registering protocol contracts in upgrade_registry..."
+      for reg_contract in user_profile property_registry agent_registry \
+                          rent_obligation escrow payment dispute_resolution chioma; do
+        reg_var="$(env_var_for "$reg_contract")"
+        reg_id="${!reg_var:-}"
+        if [[ -z "$reg_id" ]]; then
+          warn "Cannot register $reg_contract: $reg_var not set"
+          continue
+        fi
+        invoke_write "$contract_id" register_contract \
+          --caller "$admin" \
+          --name "$reg_contract" \
+          --contract_id "$reg_id" \
+          --admin "$admin" \
+          --version "1.0.0" \
+          --notes "initial deployment"
+        log "  Registered $reg_contract ($reg_id)"
+        sleep 1
+      done
       ;;
     *)
       warn "No initializer for $contract"

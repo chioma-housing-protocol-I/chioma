@@ -19,7 +19,6 @@ export function UserManagementModal({
   isOpen,
   onClose,
   arbiterAddress,
-  currentUserId,
   onUserSelected,
   isLoading = false,
 }: UserManagementModalProps) {
@@ -55,7 +54,7 @@ export function UserManagementModal({
       setSearch('');
       setSelectedUserId(null);
       onClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to link arbiter to user');
       setSelectedUserId(null);
     } finally {

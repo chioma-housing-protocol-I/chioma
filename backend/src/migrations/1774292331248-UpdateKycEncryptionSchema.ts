@@ -247,10 +247,10 @@ export class UpdateKycEncryptionSchema1774292331248 implements MigrationInterfac
       `CREATE TABLE "maintenance_requests" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "property_id" character varying NOT NULL, "tenant_id" character varying NOT NULL, "landlord_id" character varying NOT NULL, "category" character varying NOT NULL, "description" text NOT NULL, "priority" character varying NOT NULL DEFAULT 'MEDIUM', "status" "public"."maintenance_requests_status_enum" NOT NULL DEFAULT 'OPEN', "media_urls" text, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_c1521eb67c471accae8c531f9fe" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "arbiters" ("id" SERIAL NOT NULL, "stellar_address" character varying NOT NULL, "user_id" integer, "active" boolean NOT NULL DEFAULT true, "blockchain_added_at" bigint, "transaction_hash" character varying, "total_votes" integer NOT NULL DEFAULT '0', "total_disputes_resolved" integer NOT NULL DEFAULT '0', "metadata" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_c3a4db9ab3e3cf2685439193f52" UNIQUE ("stellar_address"), CONSTRAINT "PK_9e4a6de1ff7b02688c18647c56a" PRIMARY KEY ("id"))`,
+      `CREATE TABLE IF NOT EXISTS "arbiters" ("id" SERIAL NOT NULL, "stellar_address" character varying NOT NULL, "user_id" integer, "active" boolean NOT NULL DEFAULT true, "blockchain_added_at" bigint, "transaction_hash" character varying, "total_votes" integer NOT NULL DEFAULT '0', "total_disputes_resolved" integer NOT NULL DEFAULT '0', "metadata" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_c3a4db9ab3e3cf2685439193f52" UNIQUE ("stellar_address"), CONSTRAINT "PK_9e4a6de1ff7b02688c18647c56a" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "dispute_votes" ("id" SERIAL NOT NULL, "dispute_id" integer NOT NULL, "arbiter_id" integer NOT NULL, "favor_landlord" boolean NOT NULL, "blockchain_voted_at" bigint, "transaction_hash" character varying, "comment" text, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_f6ace6c9738c3181b1baa9978b2" PRIMARY KEY ("id"))`,
+      `CREATE TABLE IF NOT EXISTS "dispute_votes" ("id" SERIAL NOT NULL, "dispute_id" integer NOT NULL, "arbiter_id" integer NOT NULL, "favor_landlord" boolean NOT NULL, "blockchain_voted_at" bigint, "transaction_hash" character varying, "comment" text, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_f6ace6c9738c3181b1baa9978b2" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE TYPE "public"."mfa_devices_type_enum" AS ENUM('totp', 'backup_code')`,
@@ -1707,8 +1707,8 @@ export class UpdateKycEncryptionSchema1774292331248 implements MigrationInterfac
     await queryRunner.query(`DROP TABLE "mfa_devices"`);
     await queryRunner.query(`DROP TYPE "public"."mfa_devices_status_enum"`);
     await queryRunner.query(`DROP TYPE "public"."mfa_devices_type_enum"`);
-    await queryRunner.query(`DROP TABLE "dispute_votes"`);
-    await queryRunner.query(`DROP TABLE "arbiters"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "dispute_votes"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "arbiters"`);
     await queryRunner.query(`DROP TABLE "maintenance_requests"`);
     await queryRunner.query(
       `DROP TYPE "public"."maintenance_requests_status_enum"`,

@@ -50,22 +50,37 @@ Capture:
 
 ## 4. Baseline table
 
-Use the built-in gas estimates as the minimum baseline until more detailed measured values are recorded:
+`contracts/chioma/src/tests_gas_benchmarks.rs` measures real CPU-instruction
+counts per entry point via `Env::cost_estimate()` and fails CI if an
+operation exceeds its baseline by more than 10%. These are the committed
+baselines (instructions, measured on the Soroban test host):
 
-| Operation                   | Planning baseline |
-| --------------------------- | ----------------: |
-| `create_agreement`          |            32,000 |
-| `make_payment_with_token`   |            59,000 |
-| `release_escrow_with_token` |            41,000 |
-| `resolve_dispute`           |            46,000 |
-| `propose_extension`         |            31,000 |
+| Operation                   | Baseline (instructions) |
+| ---------------------------- | -----------------------: |
+| `create_agreement_with_token` |                  217,921 |
+| `make_payment_with_token`     |                  362,387 |
+| `release_escrow_with_token`   |                  349,901 |
+| `propose_extension`           |                  243,078 |
+
+`resolve_dispute` is not benchmarked here: dispute handling is routed
+through the separate `dispute_resolution` contract, not this one.
+
+Update a baseline only as part of a reviewed PR that intentionally changes
+the corresponding code path — bump the constant in
+`tests_gas_benchmarks.rs` and this table together, with the measured delta
+noted in the PR description.
 
 ## 5. Comparison workflow
 
-1. Run the current benchmark.
-2. Compare against the planning baseline or prior measured benchmark.
-3. Investigate any increase greater than 10%.
-4. Record whether the increase is acceptable, temporary, or a regression.
+1. Run `cargo test -p chioma tests_gas_benchmarks -- --nocapture` (CI runs
+   this on every PR as part of the standard test suite).
+2. Compare the printed `instructions=` value against the baseline table
+   above.
+3. A regression beyond 10% fails the test automatically; investigate before
+   merging.
+4. For increases under 10%, or intentional baseline moves, update the
+   baseline constant and this table together, and record the reasoning in
+   the PR description.
 
 ## 6. Reporting format
 

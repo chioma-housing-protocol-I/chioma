@@ -27,7 +27,7 @@ export class CsrfMiddleware implements NestMiddleware {
 
   constructor(private configService: ConfigService) {
     this.enabled =
-      this.configService.get<string>('SECURITY_CSRF_ENABLED') === 'true';
+      this.configService.get<string>('SECURITY_CSRF_ENABLED') !== 'false';
     const secret =
       this.configService.get<string>('SECURITY_SESSION_SECRET') ||
       this.configService.get<string>('JWT_SECRET');
@@ -52,12 +52,15 @@ export class CsrfMiddleware implements NestMiddleware {
       return next();
     }
 
-    // Skip CSRF for health checks and public endpoints
+    // Skip CSRF for health checks, public endpoints, and webhook routes
+    // (webhooks authenticate via HMAC signature, not browser cookies)
     const path = req.path;
     if (
       path.startsWith('/health') ||
       path.startsWith('/api/docs') ||
-      path.startsWith('/security.txt')
+      path.startsWith('/security.txt') ||
+      path.includes('/webhooks/gateway') ||
+      path.includes('/anchor/webhook')
     ) {
       return next();
     }

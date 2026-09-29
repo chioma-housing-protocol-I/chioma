@@ -1,11 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn().mockResolvedValue(Buffer.from('mock file contents')),
+}));
+import {} from '@nestjs/common';
 import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+  AuthorizationError,
+  BusinessRuleViolationError,
+  AgreementNotFoundError,
+  DisputeNotFoundError,
+} from '../../../common/errors';
 import { DisputesService } from '../disputes.service';
 import {
   Dispute,
@@ -22,11 +28,17 @@ import { User, UserRole } from '../../users/entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { LockService } from '../../../common/lock';
 import { IdempotencyService } from '../../../common/idempotency';
+import { MalwareScanService } from '../../storage/malware-scan.service';
+import { QueueManagementService } from '../../queues/services/queue-management.service';
 import { ResolveDisputeDto } from '../dto/resolve-dispute.dto';
 import { AddCommentDto } from '../dto/add-comment.dto';
+import { Payment as GeneralPayment } from '../../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../../rent/entities/payment.entity';
 
 describe('DisputesService — resolution, evidence, comments, agreements', () => {
   let service: DisputesService;
+  let malwareScan: { scan: jest.Mock };
+  let auditService: { log: jest.Mock };
 
   const adminUser: User = {
     id: 'admin-1',
@@ -57,8 +69,8 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   const openDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute',
@@ -83,6 +95,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     createQueryBuilder: jest.fn(),
     update: jest.fn(),
   };
@@ -145,6 +158,14 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
           useValue: mockAgreementRepository,
         },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
+        {
+          provide: getRepositoryToken(GeneralPayment),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(RentPayment),
+          useValue: { findOne: jest.fn() },
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditService, useValue: { log: jest.fn() } },
         {
@@ -165,10 +186,20 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
             ),
           },
         },
+        {
+          provide: MalwareScanService,
+          useValue: { scan: jest.fn().mockResolvedValue({ clean: true }) },
+        },
+        {
+          provide: QueueManagementService,
+          useValue: { addVideoProcessingJob: jest.fn() },
+        },
       ],
     }).compile();
 
     service = module.get<DisputesService>(DisputesService);
+    malwareScan = module.get(MalwareScanService);
+    auditService = module.get(AuditService);
     jest.clearAllMocks();
     // Reset shared query runner mocks
     mockQueryRunner.manager.findOne.mockReset();
@@ -197,7 +228,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('throws BadRequestException when dispute is OPEN (not UNDER_REVIEW)', async () => {
@@ -206,7 +237,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
 
     it('throws BadRequestException when dispute is already RESOLVED', async () => {
@@ -215,7 +246,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.resolveDispute('dispute-uuid-1', resolveDto, 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(BusinessRuleViolationError);
     });
 
     it('resolves an UNDER_REVIEW dispute and returns updated record', async () => {
@@ -303,7 +334,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue(mockEvidence);
       mockEvidenceRepository.save.mockResolvedValue(mockEvidence);
@@ -317,6 +350,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       expect(result).toEqual(mockEvidence);
       expect(mockEvidenceRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          uploadedBy: 'user-1',
           fileName: 'evidence.pdf',
           fileType: 'application/pdf',
         }),
@@ -329,7 +363,9 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       jest
         .spyOn(service as any, 'checkDisputePermission')
         .mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      jest
+        .spyOn(service as any, 'validateFile')
+        .mockReturnValue('application/pdf');
 
       mockEvidenceRepository.create.mockReturnValue({
         ...mockEvidence,
@@ -352,6 +388,40 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       );
 
       expect(result.description).toBe('Invoice copy');
+    });
+
+    it('quarantines and audit-logs evidence that fails the malware scan, and rejects it', async () => {
+      jest.spyOn(service, 'findByDisputeId').mockResolvedValue(openDispute);
+      jest
+        .spyOn(service as any, 'checkDisputePermission')
+        .mockResolvedValue(undefined);
+      jest.spyOn(service as any, 'validateFile').mockReturnValue(undefined);
+      malwareScan.scan.mockResolvedValueOnce({
+        clean: false,
+        reason: 'eicar_test_signature',
+      });
+      mockEvidenceRepository.create.mockImplementation((value) => value);
+      mockEvidenceRepository.save.mockImplementation(async (value) => ({
+        ...value,
+        id: 11,
+      }));
+
+      await expect(
+        service.addEvidence('dispute-uuid-1', mockFile, 'user-1'),
+      ).rejects.toThrow(AuthorizationError);
+
+      expect(mockEvidenceRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ scanStatus: 'quarantined' }),
+      );
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'DisputeEvidence',
+          performedBy: 'user-1',
+          metadata: expect.objectContaining({
+            reason: 'eicar_test_signature',
+          }),
+        }),
+      );
     });
   });
 
@@ -389,6 +459,12 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
       );
 
       expect(result).toEqual(mockComment);
+      expect(mockCommentRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          content: 'I have a question',
+        }),
+      );
       expect(mockCommentRepository.save).toHaveBeenCalled();
     });
 
@@ -424,7 +500,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.addComment('dispute-uuid-1', internalCommentDto, 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -433,19 +509,19 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('getAgreementDisputes', () => {
     it('returns disputes for a valid agreement without userId', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].status).toBe(DisputeStatus.OPEN);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].status).toBe(DisputeStatus.OPEN);
     });
 
     it('throws NotFoundException when agreement does not exist', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getAgreementDisputes('999')).rejects.toThrow(
-        NotFoundException,
+        AgreementNotFoundError,
       );
     });
 
@@ -455,19 +531,19 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
         ...regularUser,
         id: 'landlord-1',
       });
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1', 'landlord-1');
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it('allows the tenant (userId) to view disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(regularUser); // id = 'user-1'
-      mockDisputeRepository.find.mockResolvedValue([openDispute]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[openDispute], 1]);
 
       const result = await service.getAgreementDisputes('1', 'user-1');
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it('throws ForbiddenException when user is not a party to the agreement', async () => {
@@ -480,27 +556,27 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
 
       await expect(
         service.getAgreementDisputes('1', 'stranger'),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(AuthorizationError);
     });
 
     it('allows admin to view any agreement disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
       mockUserRepository.findOne.mockResolvedValue(adminUser);
-      mockDisputeRepository.find.mockResolvedValue([
-        openDispute,
-        underReviewDispute,
+      mockDisputeRepository.findAndCount.mockResolvedValue([
+        [openDispute, underReviewDispute],
+        2,
       ]);
 
       const result = await service.getAgreementDisputes('1', 'admin-1');
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
 
     it('returns empty array when agreement has no disputes', async () => {
       mockAgreementRepository.findOne.mockResolvedValue(mockAgreement);
-      mockDisputeRepository.find.mockResolvedValue([]);
+      mockDisputeRepository.findAndCount.mockResolvedValue([[], 0]);
 
       const result = await service.getAgreementDisputes('1');
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 
@@ -509,7 +585,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
   describe('findOne — additional edge cases', () => {
     it('throws NotFoundException for a non-existent numeric ID', async () => {
       mockDisputeRepository.findOne.mockResolvedValue(null);
-      await expect(service.findOne(9999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(9999)).rejects.toThrow(DisputeNotFoundError);
     });
   });
 
@@ -519,7 +595,7 @@ describe('DisputesService — resolution, evidence, comments, agreements', () =>
     it('throws NotFoundException for a non-existent UUID', async () => {
       mockDisputeRepository.findOne.mockResolvedValue(null);
       await expect(service.findByDisputeId('no-such-uuid')).rejects.toThrow(
-        NotFoundException,
+        DisputeNotFoundError,
       );
     });
   });

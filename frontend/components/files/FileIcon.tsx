@@ -45,7 +45,7 @@ export const FileIcon: React.FC<Props> = ({
     fileType.includes('word') ||
     fileType.includes('officedocument.wordprocessingml')
   )
-    return <FileText size={size} className={className || 'text-blue-600'} />;
+    return <FileText size={size} className={className || 'text-blue-800'} />;
 
   if (fileType.includes('presentation') || fileType.includes('powerpoint'))
     return (

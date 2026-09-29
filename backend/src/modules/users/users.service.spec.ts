@@ -6,12 +6,29 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import * as bcrypt from 'bcryptjs';
-import { UsersService } from './users.service';
+import { DataSource } from 'typeorm';
+import { UsersService, ANONYMIZED_USER_ID } from './users.service';
 import { User, UserRole, AuthMethod } from './entities/user.entity';
 import { UserNotificationPreference } from './entities/user-notification-preference.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/entities/audit-log.entity';
+import { LockService } from '../../common/lock';
+import { EncryptionService } from '../../common/services/encryption.service';
+import { Review } from '../reviews/review.entity';
+import { GuestReview } from '../reviews/entities/guest-review.entity';
+import { HostReview } from '../reviews/entities/host-review.entity';
+import { Message } from '../messaging/entities/message.entity';
+import { Participant } from '../messaging/entities/participant.entity';
+import { Payment } from '../payments/entities/payment.entity';
+import { PaymentSchedule } from '../payments/entities/payment-schedule.entity';
+import { PaymentMethod } from '../payments/entities/payment-method.entity';
+import { Kyc } from '../kyc/kyc.entity';
+import { PropertyInquiry } from '../inquiries/entities/property-inquiry.entity';
+import { SecurityEvent } from '../security/entities/security-event.entity';
+import { ApiKey } from '../developer/entities/api-key.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -28,6 +45,7 @@ describe('UsersService', () => {
     role: UserRole.USER,
     emailVerified: true,
     verificationToken: null,
+    verificationTokenExpires: null,
     resetToken: null,
     resetTokenExpires: null,
     failedLoginAttempts: 0,
@@ -51,21 +69,44 @@ describe('UsersService', () => {
 
   const mockUserRepository = {
     findOne: jest.fn(),
+    find: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
     softDelete: jest.fn(),
     delete: jest.fn(),
     restore: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockAuditService = {
     log: jest.fn().mockResolvedValue(undefined),
+    logInTransaction: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockTransactionManager = {
+    save: jest.fn().mockResolvedValue(undefined),
+    softDelete: jest.fn().mockResolvedValue(undefined),
+    update: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockDataSource = {
+    transaction: jest.fn(
+      async (fn: (manager: typeof mockTransactionManager) => Promise<void>) =>
+        fn(mockTransactionManager),
+    ),
   };
 
   const mockNotificationPreferenceRepository = {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+  };
+
+  const mockLockService = {
+    withLock: jest.fn(
+      async (_key: string, _ttlMs: number, fn: () => Promise<unknown>) => fn(),
+    ),
   };
 
   beforeEach(async () => {
@@ -80,7 +121,28 @@ describe('UsersService', () => {
           provide: getRepositoryToken(UserNotificationPreference),
           useValue: mockNotificationPreferenceRepository,
         },
+        { provide: getRepositoryToken(Review), useValue: {} },
+        { provide: getRepositoryToken(GuestReview), useValue: {} },
+        { provide: getRepositoryToken(HostReview), useValue: {} },
+        { provide: getRepositoryToken(Message), useValue: {} },
+        { provide: getRepositoryToken(Participant), useValue: {} },
+        { provide: getRepositoryToken(Payment), useValue: {} },
+        { provide: getRepositoryToken(PaymentSchedule), useValue: {} },
+        { provide: getRepositoryToken(PaymentMethod), useValue: {} },
+        { provide: getRepositoryToken(Kyc), useValue: {} },
+        { provide: getRepositoryToken(PropertyInquiry), useValue: {} },
+        { provide: getRepositoryToken(SecurityEvent), useValue: {} },
+        { provide: getRepositoryToken(ApiKey), useValue: {} },
         { provide: AuditService, useValue: mockAuditService },
+        {
+          provide: EncryptionService,
+          useValue: {
+            encrypt: jest.fn(async (value: string) => value),
+            decrypt: jest.fn(async (value: string) => value),
+          },
+        },
+        { provide: LockService, useValue: mockLockService },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -114,12 +176,37 @@ describe('UsersService', () => {
     });
   });
 
+  describe('findAdminIds', () => {
+    it('returns the ids of admin and super-admin users', async () => {
+      mockUserRepository.find.mockResolvedValue([
+        { id: 'admin-1' },
+        { id: 'admin-2' },
+      ]);
+
+      const result = await service.findAdminIds();
+
+      expect(result).toEqual(['admin-1', 'admin-2']);
+      expect(mockUserRepository.find).toHaveBeenCalledWith({
+        where: [{ role: UserRole.ADMIN }, { role: UserRole.SUPER_ADMIN }],
+        select: ['id'],
+      });
+    });
+
+    it('returns an empty array when there are no admins', async () => {
+      mockUserRepository.find.mockResolvedValue([]);
+
+      await expect(service.findAdminIds()).resolves.toEqual([]);
+    });
+  });
+
   describe('updateProfile', () => {
     it('should update user profile successfully', async () => {
+      const canonicalPhone = '+2348012345678';
       const updateDto = {
         firstName: 'Updated',
         lastName: 'Name',
-        phoneNumber: '+1234567890',
+        // The DTO guarantees the canonical E.164 value reaches the service.
+        phoneNumber: canonicalPhone,
       };
 
       const updatedUser = { ...mockUser, ...updateDto };
@@ -131,7 +218,32 @@ describe('UsersService', () => {
 
       expect(result.firstName).toBe('Updated');
       expect(result.lastName).toBe('Name');
-      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(result.phoneNumber).toBe(canonicalPhone);
+      // Storage, hash and encryption all operate on the canonical value.
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phoneNumber: canonicalPhone,
+          phoneNumberHash: createHash('sha256')
+            .update(canonicalPhone)
+            .digest('hex'),
+        }),
+      );
+    });
+
+    it('persists the preferredLanguage locale preference', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+      mockUserRepository.save.mockImplementation((u: unknown) =>
+        Promise.resolve(u),
+      );
+
+      const result = await service.updateProfile('1', {
+        preferredLanguage: 'fr',
+      });
+
+      expect(result.preferredLanguage).toBe('fr');
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ preferredLanguage: 'fr' }),
+      );
     });
 
     it('should throw NotFoundException if user not found', async () => {
@@ -160,6 +272,28 @@ describe('UsersService', () => {
 
       expect(result).toHaveProperty('message');
       expect(mockUserRepository.update).toHaveBeenCalled();
+    });
+
+    it('should serialize concurrent requests through a per-user lock', async () => {
+      const changeEmailDto = {
+        newEmail: 'newemail@example.com',
+        currentPassword: 'correctPassword',
+      };
+
+      mockUserRepository.findOne
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(null);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      mockUserRepository.update.mockResolvedValue({});
+
+      await service.changeEmail('1', changeEmailDto);
+
+      expect(mockLockService.withLock).toHaveBeenCalledWith(
+        'user:change-email:1',
+        expect.any(Number),
+        expect.any(Function),
+        undefined,
+      );
     });
 
     it('should throw UnauthorizedException with wrong password', async () => {
@@ -269,6 +403,309 @@ describe('UsersService', () => {
     });
   });
 
+  describe('exportUserData', () => {
+    beforeEach(() => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    });
+
+    it('returns the full user record minus the password', async () => {
+      const result = await service.exportUserData('1');
+
+      expect(result).not.toHaveProperty('password');
+      expect(result).toMatchObject({
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        kycStatus: mockUser.kycStatus,
+      });
+    });
+
+    it('writes a DATA_EXPORT audit entry attributed to the requesting user by default', async () => {
+      await service.exportUserData('1');
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.DATA_EXPORT,
+          entityType: 'User',
+          entityId: '1',
+          performedBy: '1',
+          metadata: expect.objectContaining({ type: 'GDPR_EXPORT' }),
+        }),
+      );
+    });
+
+    it('attributes the audit entry to the acting admin when requested on a user\'s behalf', async () => {
+      await service.exportUserData('1', 'admin-1');
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.DATA_EXPORT,
+          entityId: '1',
+          performedBy: 'admin-1',
+          metadata: expect.objectContaining({
+            type: 'GDPR_EXPORT',
+            requestedByAdmin: true,
+          }),
+        }),
+      );
+    });
+
+    it('throws when the user does not exist', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.exportUserData('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('gdprDeleteAccount', () => {
+    beforeEach(() => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+    });
+
+    it('returns the success message', async () => {
+      const result = await service.gdprDeleteAccount('1');
+      expect(result).toEqual({
+        message: 'Account deleted and data anonymized (GDPR)',
+      });
+    });
+
+    it('runs every erasure step inside a single transaction', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    // ── User row ──────────────────────────────────────────────────────────
+    it('anonymizes PII fields and soft-deletes the User row', async () => {
+      await service.gdprDeleteAccount('1');
+
+      expect(mockTransactionManager.save).toHaveBeenCalledWith(
+        User,
+        expect.objectContaining({
+          isActive: false,
+          refreshToken: null,
+          firstName: null,
+          lastName: null,
+          phoneNumber: null,
+        }),
+      );
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
+    });
+
+    // ── Reviews ───────────────────────────────────────────────────────────
+    it('soft-deletes reviews authored by the user', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(Review, {
+        reviewerId: '1',
+      });
+    });
+
+    it('anonymizes reviews where the user is the reviewee', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Review,
+        { revieweeId: '1' },
+        { reviewerId: ANONYMIZED_USER_ID, comment: null },
+      );
+    });
+
+    // ── GuestReviews ──────────────────────────────────────────────────────
+    it('soft-deletes GuestReviews authored by the user as guest', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(
+        GuestReview,
+        { guestId: '1' },
+      );
+    });
+
+    it('anonymizes GuestReviews where the user is the host', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        GuestReview,
+        { hostId: '1' },
+        { guestId: ANONYMIZED_USER_ID, comment: '' },
+      );
+    });
+
+    // ── HostReviews ───────────────────────────────────────────────────────
+    it('soft-deletes HostReviews authored by the user as host', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(
+        HostReview,
+        { hostId: '1' },
+      );
+    });
+
+    it('anonymizes HostReviews where the user is the guest', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        HostReview,
+        { guestId: '1' },
+        { hostId: ANONYMIZED_USER_ID, comment: '' },
+      );
+    });
+
+    // ── Messages & Participants ───────────────────────────────────────────
+    it('anonymizes message senderId and receiverId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Message,
+        { senderId: Number('1') },
+        { senderId: 0 },
+      );
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Message,
+        { receiverId: Number('1') },
+        { receiverId: 0 },
+      );
+    });
+
+    it('anonymizes participant userId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Participant,
+        { userId: Number('1') },
+        { userId: 0 },
+      );
+    });
+
+    // ── PropertyInquiries ─────────────────────────────────────────────────
+    it('anonymizes inquiry PII and fromUserId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        PropertyInquiry,
+        { fromUserId: '1' },
+        {
+          fromUserId: ANONYMIZED_USER_ID,
+          senderName: null,
+          senderEmail: null,
+          senderPhone: null,
+        },
+      );
+    });
+
+    it('anonymizes inquiry toUserId', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        PropertyInquiry,
+        { toUserId: '1' },
+        { toUserId: ANONYMIZED_USER_ID },
+      );
+    });
+
+    // ── Payments ──────────────────────────────────────────────────────────
+    it('nullifies userId on payments (financial record retained)', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Payment,
+        { userId: '1' },
+        { userId: null },
+      );
+    });
+
+    // ── PaymentSchedules & PaymentMethods ─────────────────────────────────
+    it('hard-deletes payment schedules', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(
+        PaymentSchedule,
+        { userId: '1' },
+      );
+    });
+
+    it('hard-deletes payment methods', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(
+        PaymentMethod,
+        { userId: '1' },
+      );
+    });
+
+    // ── KYC ───────────────────────────────────────────────────────────────
+    it('wipes KYC raw document data while retaining the decision record', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        Kyc,
+        { userId: '1' },
+        expect.objectContaining({
+          encryptedKycData: null,
+          documentPurgedAt: expect.any(Date),
+        }),
+      );
+    });
+
+    // ── SecurityEvents ────────────────────────────────────────────────────
+    it('nullifies userId on security events (log retained)', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.update).toHaveBeenCalledWith(
+        SecurityEvent,
+        { userId: '1' },
+        { userId: null },
+      );
+    });
+
+    // ── ApiKeys ───────────────────────────────────────────────────────────
+    it('hard-deletes API keys', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockTransactionManager.delete).toHaveBeenCalledWith(ApiKey, {
+        userId: '1',
+      });
+    });
+
+    // ── Audit entry ───────────────────────────────────────────────────────
+    it('writes a USER_ERASURE_REQUESTED audit entry with disposition metadata', async () => {
+      await service.gdprDeleteAccount('1');
+      expect(mockAuditService.logInTransaction).toHaveBeenCalledWith(
+        mockTransactionManager,
+        expect.objectContaining({
+          action: AuditAction.USER_ERASURE_REQUESTED,
+          entityType: 'User',
+          entityId: '1',
+          performedBy: '1',
+          metadata: expect.objectContaining({
+            type: 'GDPR_ERASURE',
+            dispositions: expect.objectContaining({
+              payments: expect.stringContaining('retained'),
+              auditLogs: expect.stringContaining('retained'),
+            }),
+          }),
+        }),
+      );
+    });
+
+    // ── Atomicity ─────────────────────────────────────────────────────────
+    it('does not proceed past the first failing step', async () => {
+      mockTransactionManager.save.mockRejectedValueOnce(
+        new Error('db unavailable'),
+      );
+
+      await expect(service.gdprDeleteAccount('1')).rejects.toThrow(
+        'db unavailable',
+      );
+
+      expect(mockTransactionManager.softDelete).not.toHaveBeenCalled();
+      expect(mockAuditService.logInTransaction).not.toHaveBeenCalled();
+
+      mockTransactionManager.save.mockResolvedValue(undefined);
+    });
+
+    it('propagates audit-write failures so the transaction rolls back', async () => {
+      mockAuditService.logInTransaction.mockRejectedValueOnce(
+        new Error('audit insert failed'),
+      );
+
+      await expect(service.gdprDeleteAccount('1')).rejects.toThrow(
+        'audit insert failed',
+      );
+
+      // All data steps ran before the audit write, so softDelete was called
+      expect(mockTransactionManager.softDelete).toHaveBeenCalledWith(User, '1');
+
+      mockAuditService.logInTransaction.mockResolvedValue(undefined);
+    });
+  });
+
   describe('getUserActivity', () => {
     it('should return user activity', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
@@ -279,6 +716,173 @@ describe('UsersService', () => {
       expect(result).toHaveProperty('accountCreated');
       expect(result).toHaveProperty('emailVerified');
       expect(result).toHaveProperty('isActive');
+    });
+  });
+
+  describe('findAllForAdmin', () => {
+    it('returns a paginated, mapped list of users', async () => {
+      const listUser: User = {
+        ...mockUser,
+        firstName: 'Test',
+        lastName: 'User',
+      };
+      const mockQb = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[listUser], 1]),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQb);
+
+      const result = await service.findAllForAdmin({ page: 1, limit: 10 });
+
+      expect(result.total).toBe(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        id: listUser.id,
+        email: listUser.email,
+        name: 'Test User',
+        isVerified: true,
+      });
+    });
+
+    it('applies role, isVerified, and search filters', async () => {
+      const mockQb = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQb);
+
+      await service.findAllForAdmin({
+        page: 1,
+        limit: 10,
+        role: UserRole.ADMIN,
+        isVerified: true,
+        search: 'test',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith('user.role = :role', {
+        role: UserRole.ADMIN,
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'user.emailVerified = :isVerified',
+        { isVerified: true },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('ILIKE'),
+        { search: '%test%' },
+      );
+    });
+  });
+
+  describe('adminDeactivateAccount', () => {
+    it('suspends the user and writes an audit log', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminDeactivateAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.update).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({ isActive: false }),
+      );
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_SUSPENDED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminDeactivateAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('adminVerifyAccount', () => {
+    it('marks the user verified and writes an audit log', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminVerifyAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        emailVerified: true,
+      });
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_VERIFIED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminVerifyAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('adminRestoreAccount', () => {
+    it('restores a soft-deleted user and reactivates them', async () => {
+      const deletedUser = {
+        ...mockUser,
+        deletedAt: new Date(),
+        isActive: false,
+      };
+      mockUserRepository.findOne.mockResolvedValue(deletedUser);
+      mockUserRepository.restore.mockResolvedValue({});
+      mockUserRepository.update.mockResolvedValue({});
+
+      const result = await service.adminRestoreAccount('1', 'admin-1');
+
+      expect(result).toHaveProperty('message');
+      expect(mockUserRepository.restore).toHaveBeenCalledWith('1');
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        isActive: true,
+      });
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.USER_RESTORED,
+          entityId: '1',
+          performedBy: 'admin-1',
+        }),
+      );
+    });
+
+    it('reactivates a suspended (not soft-deleted) user without calling restore', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.update.mockResolvedValue({});
+
+      await service.adminRestoreAccount('1', 'admin-1');
+
+      expect(mockUserRepository.restore).not.toHaveBeenCalled();
+      expect(mockUserRepository.update).toHaveBeenCalledWith('1', {
+        isActive: true,
+      });
+    });
+
+    it('throws NotFoundException if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.adminRestoreAccount('999', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

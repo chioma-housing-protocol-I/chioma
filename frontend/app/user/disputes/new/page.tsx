@@ -18,16 +18,16 @@ import { useAuthStore } from '@/store/authStore';
 import { Uploader } from '@/components/ui/Uploader';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { apiClient } from '@/lib/api-client';
-import { storageApi } from '@/lib/api/storage';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
 import type { DisputeType } from '@/lib/dashboard-data';
+import { createDispute } from '@/lib/disputes/api';
 
 export default function NewDisputePage() {
   const router = useRouter();
   const { user, isAuthenticated, loading } = useAuthStore();
-  const { data: agreements = [], isLoading: agreementsLoading } =
+  const { data: agreementsResult, isLoading: agreementsLoading } =
     useUserAgreements();
+  const agreements = agreementsResult?.data ?? [];
   const [formData, setFormData] = useState({
     agreementId: '',
     disputeType: '' as DisputeType | '',
@@ -59,20 +59,6 @@ export default function NewDisputePage() {
     );
   }
 
-  const uploadEvidence = async (): Promise<string[]> => {
-    const urls: string[] = [];
-    for (const file of evidenceFiles) {
-      const { url, key } = await storageApi.getUploadUrl(
-        file.name,
-        file.size,
-        file.type,
-      );
-      await storageApi.uploadToS3(url, file);
-      urls.push(key);
-    }
-    return urls;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -86,17 +72,14 @@ export default function NewDisputePage() {
 
     setSubmitting(true);
     try {
-      const evidenceUrls =
-        evidenceFiles.length > 0 ? await uploadEvidence() : undefined;
-
-      await apiClient.post('/disputes', {
+      await createDispute({
         agreementId: formData.agreementId,
         disputeType: formData.disputeType,
         description: formData.description,
         requestedAmount: formData.requestedAmount
           ? Number(formData.requestedAmount)
           : undefined,
-        evidenceUrls,
+        evidenceFiles,
       });
 
       toast.success('Dispute filed successfully');

@@ -36,7 +36,9 @@ describe('PropertyListingHeader', () => {
 
     const selects = screen.getAllByRole('combobox');
     const desktopSelect = selects[1];
-    const options = Array.from(desktopSelect.options).map((o) => o.value);
+    const options = Array.from(
+      (desktopSelect as HTMLSelectElement).options,
+    ).map((o) => o.value);
 
     expect(options).toContain('Recommended');
     expect(options).toContain('Price: Low to High');

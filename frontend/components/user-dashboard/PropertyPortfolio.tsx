@@ -2,8 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Download, Filter, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { Download, Filter } from 'lucide-react';
 import type { PropertyPortfolioProps } from './types';
 
 const PropertyPortfolio = ({

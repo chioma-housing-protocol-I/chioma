@@ -1,11 +1,57 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import {
+  QueryAnalysisService,
+  NPlusOneReport,
+} from '../../common/query-logger/query-analysis.service';
+
+export interface IndexSizeRow {
+  tablename: string;
+  indexname: string;
+  index_size: string;
+  index_size_bytes: string;
+}
+
+export interface TableSizeRow {
+  table_name: string;
+  total_size: string;
+  table_size: string;
+  external_size: string;
+  total_size_bytes: string;
+}
+
+export interface UnusedIndexRow {
+  schemaname: string;
+  tablename: string;
+  indexname: string;
+  idx_scan: number;
+  index_size: string;
+  index_size_bytes: string;
+}
+
+type QuerySeverity = NPlusOneReport['severity'];
+const VALID_SEVERITIES: readonly QuerySeverity[] = [
+  'low',
+  'medium',
+  'high',
+  'critical',
+];
+
+function isQuerySeverity(value?: string): value is QuerySeverity {
+  return (
+    value !== undefined &&
+    (VALID_SEVERITIES as readonly string[]).includes(value)
+  );
+}
 
 @Injectable()
 export class DatabasePerformanceService {
   private readonly logger = new Logger(DatabasePerformanceService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly queryAnalysis: QueryAnalysisService,
+  ) {}
 
   async getIndexUsage() {
     return this.dataSource.query(`
@@ -22,7 +68,7 @@ export class DatabasePerformanceService {
     `);
   }
 
-  async getIndexSizes() {
+  async getIndexSizes(): Promise<IndexSizeRow[]> {
     return this.dataSource.query(`
       SELECT
           tablename,
@@ -35,7 +81,7 @@ export class DatabasePerformanceService {
     `);
   }
 
-  async getTableSizes() {
+  async getTableSizes(): Promise<TableSizeRow[]> {
     return this.dataSource.query(`
       SELECT
           relname as table_name,
@@ -105,7 +151,10 @@ export class DatabasePerformanceService {
     );
   }
 
-  async getUnusedIndexes(minScans = 10, minSizeBytes = 10 * 1024 * 1024) {
+  async getUnusedIndexes(
+    minScans = 10,
+    minSizeBytes = 10 * 1024 * 1024,
+  ): Promise<UnusedIndexRow[]> {
     return this.dataSource.query(
       `
       SELECT
@@ -150,27 +199,29 @@ export class DatabasePerformanceService {
     return {
       generatedAt: new Date().toISOString(),
       summary: {
-        totalIndexes: indexUsage.length as number,
-        totalIndexSize: (indexSizes as any[]).reduce(
-          (sum: number, idx: any) => sum + Number(idx.index_size_bytes || 0),
+        totalIndexes: indexUsage.length,
+        totalIndexSize: indexSizes.reduce(
+          (sum: number, idx) => sum + Number(idx.index_size_bytes || 0),
           0,
         ),
-        unusedIndexes: unused.length as number,
+        unusedIndexes: unused.length,
       },
       indexUsage,
       indexSizes,
       tableSizes,
       unusedIndexes: unused,
       recommendations: this.generateIndexRecommendations(
-        tableSizes as any[],
-        unused as any[],
+        tableSizes,
+        indexSizes,
+        unused,
       ),
     };
   }
 
   private generateIndexRecommendations(
-    tableSizes: Array<{ tablename: string; index_ratio: number }>,
-    unused: any[],
+    tableSizes: TableSizeRow[],
+    indexSizes: IndexSizeRow[],
+    unused: UnusedIndexRow[],
   ): string[] {
     const recs: string[] = [];
 
@@ -180,7 +231,21 @@ export class DatabasePerformanceService {
       );
     }
 
-    const highRatio = tableSizes.filter((t) => t.index_ratio > 150);
+    const indexBytesByTable = new Map<string, number>();
+    for (const idx of indexSizes) {
+      const bytes = Number(idx.index_size_bytes || 0);
+      indexBytesByTable.set(
+        idx.tablename,
+        (indexBytesByTable.get(idx.tablename) || 0) + bytes,
+      );
+    }
+
+    const highRatio = tableSizes.filter((t) => {
+      const tableBytes = Number(t.total_size_bytes || 0);
+      if (tableBytes === 0) return false;
+      const indexBytes = indexBytesByTable.get(t.table_name) || 0;
+      return (indexBytes / tableBytes) * 100 > 150;
+    });
     if (highRatio.length > 0) {
       recs.push(
         `${highRatio.length} table(s) have index-to-table size ratio > 150%. Review whether all indexes are necessary.`,
@@ -214,5 +279,44 @@ export class DatabasePerformanceService {
       settings,
       unusedIndexes: unused,
     };
+  }
+
+  async getQueryAnalysis() {
+    return this.queryAnalysis.getQueryAnalysisReport();
+  }
+
+  async getNPlusOneDetection(severity?: string) {
+    const reports = this.queryAnalysis.getNPlusOneReports(
+      isQuerySeverity(severity) ? severity : undefined,
+    );
+
+    return {
+      generatedAt: new Date().toISOString(),
+      totalDetected: reports.length,
+      reports,
+      summary: {
+        critical: reports.filter((r) => r.severity === 'critical').length,
+        high: reports.filter((r) => r.severity === 'high').length,
+        medium: reports.filter((r) => r.severity === 'medium').length,
+        low: reports.filter((r) => r.severity === 'low').length,
+      },
+    };
+  }
+
+  async getQueryPatterns(search?: string) {
+    return this.queryAnalysis.getQueryPatterns(search);
+  }
+
+  async getQueryHistory(limit = 100, minDuration?: number) {
+    return this.queryAnalysis.getQueryHistory(limit, minDuration);
+  }
+
+  async getQueryStats() {
+    return this.queryAnalysis.getQueryStats();
+  }
+
+  async resetQueryAnalysis() {
+    this.queryAnalysis.resetAnalysis();
+    return { message: 'Query analysis data reset successfully' };
   }
 }

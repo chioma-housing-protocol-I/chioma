@@ -20,12 +20,14 @@ export interface ListingPerformance {
   contracts: number;
 }
 
+import type { ElementType, ReactNode } from 'react';
+
 export interface KPISummary {
   label: string;
   value: string;
   change: string;
   positive: boolean;
-  icon: any;
+  icon: ElementType | ReactNode;
   iconBg: string;
   iconColor: string;
 }
@@ -78,7 +80,9 @@ export const MOCK_RATING_STATS: RatingStats = {
   },
 };
 
-export function buildRatingStats(reviews: any[]): RatingStats {
+export function buildRatingStats(
+  reviews: Array<{ rating: number }>,
+): RatingStats {
   const total = reviews.length;
   const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 

@@ -12,6 +12,11 @@ export function OfflineIndicator() {
   const { isOnline, queueSize, hasConflicts } = useOfflineStatus();
   const { sync, isSyncing, lastSyncResult } = useSync();
   const [showDetails, setShowDetails] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Auto-sync when coming back online
   useEffect(() => {
@@ -19,6 +24,16 @@ export function OfflineIndicator() {
       sync();
     }
   }, [isOnline, queueSize, sync]);
+
+  // Visibility depends on navigator.onLine and the IndexedDB-backed sync
+  // queue, neither of which exists during SSR. Rendering nothing until after
+  // mount keeps the server output and the first client render identical —
+  // otherwise this element appears/disappears mid-hydration and shifts every
+  // sibling in the root layout, surfacing as a mismatch in whichever
+  // component happens to follow it.
+  if (!isMounted) {
+    return null;
+  }
 
   if (isOnline && queueSize === 0 && !hasConflicts) {
     return null;

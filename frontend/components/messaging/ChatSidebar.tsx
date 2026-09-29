@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, MessageSquare } from 'lucide-react';
+import { Search, MessageSquare, AlertCircle } from 'lucide-react';
 import type { ChatRoom } from './types';
 import { UserAvatar } from './UserAvatar';
 import { useAuthStore } from '@/store/authStore';
@@ -11,6 +11,12 @@ interface ChatSidebarProps {
   activeRoom: ChatRoom | null;
   isLoading: boolean;
   onSelectRoom: (room: ChatRoom) => void;
+  /**
+   * Room IDs whose read-receipt sync to the server most recently failed
+   * (#1557). Shown as a small indicator next to the unread badge, since the
+   * local unread count may no longer match what the server believes.
+   */
+  readSyncFailedRoomIds?: Set<string>;
 }
 
 function formatTime(dateStr: string): string {
@@ -39,6 +45,7 @@ export function ChatSidebar({
   activeRoom,
   isLoading,
   onSelectRoom,
+  readSyncFailedRoomIds,
 }: ChatSidebarProps) {
   const { user } = useAuthStore();
   const [query, setQuery] = React.useState('');
@@ -113,6 +120,7 @@ export function ChatSidebar({
             const isActive = activeRoom?.id === room.id;
             const lastMsg = room.lastMessage;
             const hasUnread = (room.unreadCount ?? 0) > 0;
+            const readSyncFailed = readSyncFailedRoomIds?.has(room.id) ?? false;
 
             return (
               <button
@@ -141,7 +149,7 @@ export function ChatSidebar({
                   <div className="flex items-center justify-between mb-0.5">
                     <span
                       className={`text-sm font-semibold truncate ${
-                        isActive ? 'text-blue-700' : 'text-neutral-900'
+                        isActive ? 'text-blue-900' : 'text-neutral-900'
                       }`}
                     >
                       {other
@@ -164,18 +172,27 @@ export function ChatSidebar({
                     >
                       {lastMsg?.content ?? 'No messages yet'}
                     </p>
-                    {hasUnread && (
-                      <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center px-1">
-                        {room.unreadCount}
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1 shrink-0">
+                      {readSyncFailed && (
+                        <AlertCircle
+                          size={13}
+                          className="text-amber-500"
+                          aria-label="Couldn't sync read status"
+                        />
+                      )}
+                      {hasUnread && (
+                        <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                          {room.unreadCount}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {other && (
                     <span
                       className={`inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${
                         other.role === 'admin'
-                          ? 'bg-red-50 text-red-600'
-                          : 'bg-blue-50 text-blue-600'
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-blue-50 text-blue-800'
                       }`}
                     >
                       {other.role}

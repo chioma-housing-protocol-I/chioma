@@ -10,6 +10,8 @@ import { HealthService, EnhancedHealthResult } from './health.service';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
 import { StellarHealthIndicator } from './indicators/stellar.indicator';
 import { MemoryHealthIndicator } from './indicators/memory.indicator';
+import { RedisHealthIndicator } from './indicators/redis.indicator';
+import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.indicator';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -48,6 +50,18 @@ describe('HealthController', () => {
         },
         {
           provide: MemoryHealthIndicator,
+          useValue: {
+            isHealthy: jest.fn(),
+          },
+        },
+        {
+          provide: RedisHealthIndicator,
+          useValue: {
+            isHealthy: jest.fn(),
+          },
+        },
+        {
+          provide: ElasticsearchHealthIndicator,
           useValue: {
             isHealthy: jest.fn(),
           },

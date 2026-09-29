@@ -2,7 +2,7 @@
  * Tests for ErrorContainer component logic
  * Validates rendering conditions and error display behaviour
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useErrorStore } from '@/store/errorStore';
 import type { GlobalError } from '@/store/errorStore';
 

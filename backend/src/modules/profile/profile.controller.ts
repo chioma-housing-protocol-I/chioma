@@ -30,6 +30,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { ValidateResponseSchema } from '../../common/decorators/validate-response-schema.decorator';
 
 @ApiTags('Profile')
 @Controller('profile')
@@ -109,6 +110,7 @@ export class ProfileController {
     description: 'Bad request - wallet not connected',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ValidateResponseSchema(ProfileResponseDto)
   async getProfile(@CurrentUser() user: User): Promise<ProfileResponseDto> {
     return this.profileService.getProfile(user.id);
   }
@@ -133,6 +135,7 @@ export class ProfileController {
     status: 400,
     description: 'Invalid wallet address format',
   })
+  @ValidateResponseSchema(ProfileResponseDto)
   async getProfileByWallet(
     @Param('address') address: string,
   ): Promise<ProfileResponseDto> {

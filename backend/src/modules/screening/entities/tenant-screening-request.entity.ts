@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
@@ -53,6 +54,9 @@ export class TenantScreeningRequest {
   @Column({ name: 'provider_reference', type: 'varchar', nullable: true })
   providerReference?: string | null;
 
+  @Column({ name: 'renewed_from_id', type: 'uuid', nullable: true })
+  renewedFromId?: string | null;
+
   @Column({ name: 'encrypted_applicant_data', type: 'text' })
   encryptedApplicantData: string;
 
@@ -82,4 +86,7 @@ export class TenantScreeningRequest {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt: Date | null;
 }

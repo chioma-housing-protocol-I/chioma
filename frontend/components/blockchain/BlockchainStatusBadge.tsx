@@ -11,12 +11,7 @@ import {
 import { getConfiguredNetwork } from '@/lib/stellar-network';
 
 export type BlockchainStatusVariant =
-  | 'network'
-  | 'connected'
-  | 'disconnected'
-  | 'pending'
-  | 'success'
-  | 'error';
+  'network' | 'connected' | 'disconnected' | 'pending' | 'success' | 'error';
 
 const VARIANT_STYLES: Record<BlockchainStatusVariant, string> = {
   network: 'bg-slate-800/80 text-slate-200 border-slate-600/50',

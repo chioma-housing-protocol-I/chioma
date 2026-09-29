@@ -56,7 +56,7 @@ export default function Sidebar() {
     // Desktop: full width (unchanged) on lg and up
     // Tablet (md): collapsed icon-only sidebar
     // Mobile (sm): hidden (mobile drawer is handled by Topbar)
-    <aside className="hidden md:flex md:flex-col md:w-20 lg:w-56 h-screen backdrop-blur-xl bg-slate-900/50 border-r border-white/10">
+    <aside className="hidden md:flex md:flex-col md:w-20 lg:w-56 h-dvh backdrop-blur-xl bg-slate-900/50 border-e border-white/10 transition-orientation">
       <Logo
         size="lg"
         href="/"
@@ -85,7 +85,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="hidden lg:block p-4 border-t border-white/10">
-        <button className="group flex items-center gap-3 rounded-xl px-4 py-2.5 hover:bg-white/10 transition-colors cursor-pointer w-full text-left">
+        <button className="group flex items-center gap-3 rounded-xl px-4 py-2.5 hover:bg-white/10 transition-colors cursor-pointer w-full text-start">
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/20">
             <Image
               src="/avatar.png"
@@ -104,7 +104,7 @@ export default function Sidebar() {
             <span className="text-xs text-blue-300/60">Premium Landlord</span>
           </div>
 
-          <FaArrowRightFromBracket className="h-5 w-5 text-blue-300/40 group-hover:text-blue-300 transition-colors ml-auto" />
+          <FaArrowRightFromBracket className="h-5 w-5 text-blue-300/40 group-hover:text-blue-300 transition-colors ms-auto" />
         </button>
       </div>
     </aside>

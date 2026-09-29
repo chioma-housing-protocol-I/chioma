@@ -4,6 +4,8 @@ import React from 'react';
 import { Shield, Wallet } from 'lucide-react';
 import type { Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 
 interface SecurityDepositsSectionProps {
   activeDeposits: Transaction[];
@@ -28,6 +30,8 @@ export function getActiveDeposits(transactions: Transaction[]): Transaction[] {
 export default function SecurityDepositsSection({
   activeDeposits,
 }: SecurityDepositsSectionProps) {
+  const dateFnsLocale = useDateFnsLocale();
+
   if (activeDeposits.length === 0) {
     return null;
   }
@@ -44,8 +48,8 @@ export default function SecurityDepositsSection({
         {activeDeposits.map((d) => {
           const amountDisplay =
             d.amountUsd != null && d.currency !== 'USD'
-              ? `$${d.amountUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${d.amount} ${d.currency})`
-              : `${d.currency} ${d.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+              ? `${formatCurrency(d.amountUsd, 'USD')} (${d.amount} ${d.currency})`
+              : formatCurrency(d.amount, d.currency);
           return (
             <div
               key={d.id}
@@ -60,7 +64,10 @@ export default function SecurityDepositsSection({
                     {d.propertyName}
                   </p>
                   <p className="text-xs text-blue-300/40 font-bold uppercase tracking-widest mt-1">
-                    Received {format(new Date(d.date), 'MMM d, yyyy')}
+                    Received{' '}
+                    {format(new Date(d.date), 'MMM d, yyyy', {
+                      locale: dateFnsLocale,
+                    })}
                   </p>
                 </div>
               </div>

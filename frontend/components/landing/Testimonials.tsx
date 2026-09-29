@@ -2,93 +2,77 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
 
 const testimonials = [
   {
     name: 'Sarah Johnson',
-    role: 'Property Manager',
+    role: 'Property manager, 40+ units',
     content:
       'Chioma has transformed how we manage our rental portfolio. Instant payments and automated commissions save us hours every week.',
-    rating: 5,
   },
   {
     name: 'Michael Chen',
-    role: 'User',
+    role: 'Tenant',
     content:
       'The transparency and speed of transactions is incredible. No more waiting weeks for settlements.',
-    rating: 5,
   },
   {
     name: 'Emily Rodriguez',
-    role: 'User',
+    role: 'Tenant',
     content:
       'Finding and securing my apartment was seamless. The smart contract lease gave me peace of mind.',
-    rating: 5,
   },
 ];
 
 export default function Testimonials() {
   return (
-    <section className="relative py-32 bg-white/5 backdrop-blur-sm">
+    <section className="relative py-28 bg-ink-800/60 border-y border-cream/8">
       <div className="container mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="max-w-2xl mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Trusted by Thousands
-          </h2>
-          <p className="text-xl text-blue-200/80 max-w-2xl mx-auto">
-            See what our users have to say about their experience
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass-400 mb-4">
+            From our users
           </p>
+          <h2 className="font-display text-4xl md:text-5xl text-cream leading-tight">
+            People stopped chasing money.
+            <br />
+            Here&apos;s what they say.
+          </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl">
           {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
+            <motion.figure
+              key={testimonial.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8"
+              className="flex flex-col bg-ink-900 border border-cream/8 rounded-2xl p-8"
             >
-              {/* Rating */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-5 h-5 fill-yellow-400 text-yellow-400"
-                  />
-                ))}
-              </div>
-
-              {/* Content */}
-              <p className="text-blue-100/90 mb-6 leading-relaxed">
-                &ldquo;{testimonial.content}&rdquo;
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">
-                    {testimonial.name.charAt(0)}
-                  </span>
+              <span
+                className="font-display text-5xl text-brass-500/50 leading-none mb-4 select-none"
+                aria-hidden
+              >
+                &ldquo;
+              </span>
+              <blockquote className="text-cream/90 leading-relaxed flex-1">
+                {testimonial.content}
+              </blockquote>
+              <figcaption className="mt-8 pt-6 border-t border-cream/8">
+                <div className="font-semibold text-cream">
+                  {testimonial.name}
                 </div>
-                <div>
-                  <div className="font-semibold text-white">
-                    {testimonial.name}
-                  </div>
-                  <div className="text-sm text-blue-200/70">
-                    {testimonial.role}
-                  </div>
+                <div className="text-sm text-cream-dim mt-0.5">
+                  {testimonial.role}
                 </div>
-              </div>
-            </motion.div>
+              </figcaption>
+            </motion.figure>
           ))}
         </div>
       </div>

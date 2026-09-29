@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { CornerDownRight, Heart, MessageSquare, Send } from 'lucide-react';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 export interface CommentThreadItem {
   id: string;
@@ -118,6 +119,7 @@ function CommentCard({
   const [replyDraft, setReplyDraft] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const dateFnsLocale = useDateFnsLocale();
 
   const handleReply = async () => {
     if (!onSubmitComment || !replyDraft.trim()) {
@@ -152,6 +154,7 @@ function CommentCard({
             <p className="mt-1 text-xs text-blue-100/40">
               {formatDistanceToNow(new Date(comment.createdAt), {
                 addSuffix: true,
+                locale: dateFnsLocale,
               })}
             </p>
           </div>

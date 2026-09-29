@@ -17,7 +17,7 @@ export default function AdminSidebar() {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
   return (
-    <aside className="hidden h-screen border-r border-white/10 bg-slate-900/50 backdrop-blur-xl md:flex md:w-20 md:flex-col lg:w-56">
+    <aside className="hidden h-dvh border-e border-white/10 bg-slate-900/50 backdrop-blur-xl md:flex md:w-20 md:flex-col lg:w-56 transition-orientation">
       <Logo
         size="lg"
         href="/"
@@ -35,7 +35,7 @@ export default function AdminSidebar() {
               href={item.href}
               className={`flex cursor-pointer items-center gap-3 px-6 py-3 transition-all duration-200 md:flex-col md:py-4 lg:flex-row lg:items-center lg:px-6 ${
                 isActive
-                  ? 'bg-white/10 text-white shadow-lg lg:border-l-4 lg:border-blue-500'
+                  ? 'bg-white/10 text-white shadow-lg lg:border-s-4 lg:border-blue-500'
                   : 'text-blue-200/60 hover:bg-white/5 hover:text-white'
               }`}
             >
@@ -53,7 +53,7 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="hidden border-t border-white/10 p-4 lg:block">
-        <button className="group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left transition-colors hover:bg-white/10">
+        <button className="group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-start transition-colors hover:bg-white/10">
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/20">
             <Image
               src={user?.avatar || '/avatar.png'}
@@ -78,7 +78,7 @@ export default function AdminSidebar() {
             </span>
           </div>
 
-          <FaArrowRightFromBracket className="ml-auto h-5 w-5 text-blue-300/40 transition-colors group-hover:text-blue-300" />
+          <FaArrowRightFromBracket className="ms-auto h-5 w-5 text-blue-300/40 transition-colors group-hover:text-blue-300" />
         </button>
       </div>
     </aside>

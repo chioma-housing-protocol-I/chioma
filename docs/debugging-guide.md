@@ -24,42 +24,42 @@ A practical, step-by-step debugging reference for Chioma developers covering too
 
 ### Backend (NestJS)
 
-| Tool | Purpose | Install |
-|---|---|---|
-| Node.js Inspector | Built-in V8 debugger | Ships with Node |
-| VS Code Debugger | IDE-integrated step debugging | Built into VS Code |
-| `ndb` | Improved Node.js debugger | `npm i -g ndb` |
-| Sentry | Production error tracking | Configured via `SENTRY_DSN` |
-| Winston | Structured application logging | Already integrated |
-| Prometheus | Metrics collection | Enabled via `METRICS_ENABLED=true` |
+| Tool              | Purpose                        | Install                            |
+| ----------------- | ------------------------------ | ---------------------------------- |
+| Node.js Inspector | Built-in V8 debugger           | Ships with Node                    |
+| VS Code Debugger  | IDE-integrated step debugging  | Built into VS Code                 |
+| `ndb`             | Improved Node.js debugger      | `npm i -g ndb`                     |
+| Sentry            | Production error tracking      | Configured via `SENTRY_DSN`        |
+| Winston           | Structured application logging | Already integrated                 |
+| Prometheus        | Metrics collection             | Enabled via `METRICS_ENABLED=true` |
 
 ### Frontend (Next.js)
 
-| Tool | Purpose |
-|---|---|
-| Chrome DevTools | DOM, network, JS debugging |
-| React DevTools | Component tree and state inspection |
-| Next.js Error Overlay | Development-mode error display |
-| TanStack Query DevTools | Server state inspection |
-| Zustand DevTools | Global state inspection |
+| Tool                    | Purpose                             |
+| ----------------------- | ----------------------------------- |
+| Chrome DevTools         | DOM, network, JS debugging          |
+| React DevTools          | Component tree and state inspection |
+| Next.js Error Overlay   | Development-mode error display      |
+| TanStack Query DevTools | Server state inspection             |
+| Zustand DevTools        | Global state inspection             |
 
 ### Smart Contracts (Soroban/Rust)
 
-| Tool | Purpose |
-|---|---|
-| `cargo test` | Unit test contracts locally |
-| Stellar Laboratory | Manual transaction inspection |
-| Soroban CLI | Deploy and invoke contracts |
+| Tool                 | Purpose                        |
+| -------------------- | ------------------------------ |
+| `cargo test`         | Unit test contracts locally    |
+| Stellar Laboratory   | Manual transaction inspection  |
+| Soroban CLI          | Deploy and invoke contracts    |
 | `stellar-cli` events | Watch on-chain contract events |
 
 ### Database
 
-| Tool | Purpose |
-|---|---|
-| `psql` | Interactive PostgreSQL shell |
+| Tool              | Purpose                       |
+| ----------------- | ----------------------------- |
+| `psql`            | Interactive PostgreSQL shell  |
 | `EXPLAIN ANALYZE` | Query execution plan analysis |
-| pgAdmin | GUI for PostgreSQL |
-| TypeORM logging | ORM-level query logging |
+| pgAdmin           | GUI for PostgreSQL            |
+| TypeORM logging   | ORM-level query logging       |
 
 ---
 
@@ -119,9 +119,9 @@ In `backend/src/database/data-source.ts` or `app.module.ts`:
 ```typescript
 TypeOrmModule.forRoot({
   // ...
-  logging: process.env.NODE_ENV !== 'production',
-  logger: 'advanced-console',
-})
+  logging: process.env.NODE_ENV !== "production",
+  logger: "advanced-console",
+});
 ```
 
 Or per-request via environment variable:
@@ -149,21 +149,28 @@ DEBUG=* npm run dev
 Chioma uses Winston for structured logs. Add contextual logging using the injected logger:
 
 ```typescript
-import { Logger } from '@nestjs/common';
+import { Logger } from "@nestjs/common";
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
   async processPayment(dto: CreatePaymentDto): Promise<Payment> {
-    this.logger.debug(`Processing payment`, { userId: dto.userId, amount: dto.amount });
+    this.logger.debug(`Processing payment`, {
+      userId: dto.userId,
+      amount: dto.amount,
+    });
 
     try {
       const result = await this.stellarService.sendPayment(dto);
       this.logger.log(`Payment successful`, { transactionId: result.id });
       return result;
     } catch (error) {
-      this.logger.error(`Payment failed`, { error: error.message, stack: error.stack, dto });
+      this.logger.error(`Payment failed`, {
+        error: error.message,
+        stack: error.stack,
+        dto,
+      });
       throw error;
     }
   }
@@ -218,8 +225,8 @@ async function riskyOperation() {
 
 ```typescript
 // Inspect a built transaction before submitting
-const txEnvelope = transaction.toEnvelope().toXDR('base64');
-console.log('Transaction XDR:', txEnvelope);
+const txEnvelope = transaction.toEnvelope().toXDR("base64");
+console.log("Transaction XDR:", txEnvelope);
 // Paste into https://laboratory.stellar.org/#txsigner to inspect
 ```
 
@@ -233,12 +240,12 @@ console.log('Transaction XDR:', txEnvelope);
 
 **Cause / Fix:**
 
-| Cause | Fix |
-|---|---|
-| Token expired | Refresh using `POST /api/v1/auth/refresh` with your refresh token |
-| Wrong `JWT_SECRET` in env | Ensure `JWT_SECRET` matches between token issuer and verifier |
-| Clock skew | Sync system clock; tokens are time-sensitive |
-| Missing `Authorization` header | Header must be `Authorization: Bearer <token>` |
+| Cause                          | Fix                                                               |
+| ------------------------------ | ----------------------------------------------------------------- |
+| Token expired                  | Refresh using `POST /api/v1/auth/refresh` with your refresh token |
+| Wrong `JWT_SECRET` in env      | Ensure `JWT_SECRET` matches between token issuer and verifier     |
+| Clock skew                     | Sync system clock; tokens are time-sensitive                      |
+| Missing `Authorization` header | Header must be `Authorization: Bearer <token>`                    |
 
 ---
 
@@ -366,7 +373,7 @@ services:
     command: node --inspect=0.0.0.0:9229 dist/main.js
     ports:
       - "3000:3000"
-      - "9229:9229"   # Expose debugger
+      - "9229:9229" # Expose debugger
     environment:
       - NODE_ENV=development
 ```
@@ -430,6 +437,7 @@ LIMIT 20;
 ```
 
 Look for:
+
 - `Seq Scan` on large tables → missing index
 - High `actual rows` vs `estimated rows` → stale statistics → run `ANALYZE`
 - Nested loops on large sets → consider a hash join via index
@@ -456,17 +464,17 @@ SELECT pg_terminate_backend(<pid>);
 ```typescript
 // Temporarily enable logging for a specific repository call
 const payments = await this.paymentRepo
-  .createQueryBuilder('payment')
-  .leftJoinAndSelect('payment.user', 'user')
-  .where('payment.status = :status', { status: 'pending' })
+  .createQueryBuilder("payment")
+  .leftJoinAndSelect("payment.user", "user")
+  .where("payment.status = :status", { status: "pending" })
   .getMany();
 
 // Log the generated SQL
 const [query, params] = this.paymentRepo
-  .createQueryBuilder('payment')
-  .where('payment.status = :status', { status: 'pending' })
+  .createQueryBuilder("payment")
+  .where("payment.status = :status", { status: "pending" })
   .getQueryAndParameters();
-console.log('SQL:', query, 'Params:', params);
+console.log("SQL:", query, "Params:", params);
 ```
 
 ---
@@ -479,12 +487,12 @@ Prometheus metrics are exposed at `GET /metrics` when `METRICS_ENABLED=true`.
 
 Key metrics to watch:
 
-| Metric | Alert Threshold |
-|---|---|
-| `http_request_duration_seconds` (p95) | > 500ms |
-| `nodejs_heap_used_bytes` | > 80% of heap limit |
-| `process_cpu_seconds_total` (rate) | > 80% |
-| `pg_stat_activity_count` | > connection pool size |
+| Metric                                | Alert Threshold        |
+| ------------------------------------- | ---------------------- |
+| `http_request_duration_seconds` (p95) | > 500ms                |
+| `nodejs_heap_used_bytes`              | > 80% of heap limit    |
+| `process_cpu_seconds_total` (rate)    | > 80%                  |
+| `pg_stat_activity_count`              | > connection pool size |
 
 ### 7.2 Profile Node.js CPU Usage
 
@@ -523,6 +531,7 @@ curl http://localhost:3000/health/detailed | jq '.memory'
 ```
 
 Common causes in NestJS:
+
 - Event listeners not removed from `EventEmitter`
 - Global caches without TTL
 - Circular references in entities
@@ -657,12 +666,14 @@ stellar contract invoke \
 Use this checklist when investigating any bug report:
 
 ### Initial Triage
+
 - [ ] Reproduce the issue locally
 - [ ] Identify the affected layer (frontend, API, DB, blockchain)
 - [ ] Check recent git commits for related changes (`git log --oneline -20`)
 - [ ] Confirm environment variables are correct (`.env` vs `.env.example`)
 
 ### Backend Bugs
+
 - [ ] Check application logs for error messages and stack traces
 - [ ] Enable TypeORM query logging if a database issue is suspected
 - [ ] Verify the request reaches the controller (add log at handler entry)
@@ -670,24 +681,28 @@ Use this checklist when investigating any bug report:
 - [ ] Review rate-limit settings if requests are being rejected
 
 ### Frontend Bugs
+
 - [ ] Inspect browser console for errors
 - [ ] Check Network tab for failed API calls (status codes, response bodies)
 - [ ] Inspect React component state with React DevTools
 - [ ] Verify TanStack Query cache state for stale data issues
 
 ### Stellar / Blockchain Bugs
+
 - [ ] Check the transaction XDR in Stellar Laboratory
 - [ ] Verify account is funded (minimum XLM balance)
 - [ ] Confirm the correct network is set (`STELLAR_NETWORK=testnet|mainnet`)
 - [ ] Review contract event logs for state transitions
 
 ### Performance Issues
+
 - [ ] Check Prometheus metrics for elevated p95 latency
 - [ ] Run `EXPLAIN ANALYZE` on suspected slow queries
 - [ ] Review heap usage in `/health/detailed`
 - [ ] Profile with Clinic.js if CPU is spiking
 
 ### Resolution
+
 - [ ] Write a test that reproduces the bug
 - [ ] Apply the fix
 - [ ] Verify the test passes

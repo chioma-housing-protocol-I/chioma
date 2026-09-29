@@ -8,6 +8,7 @@ import * as DailyRotateFile from 'winston-daily-rotate-file';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { requestContext } from '../request-context/request-context';
 
 type AnyRecord = Record<string, any>;
 
@@ -285,7 +286,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.info(message, { context: finalContext, ...meta });
+    this.logger.info(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -302,9 +303,12 @@ export class LoggerService implements NestLoggerService {
     const contextStr = typeof ctx === 'string' ? ctx : String(ctx);
 
     if (typeof traceOrMeta === 'string') {
-      this.logger.error(message, { context: contextStr, stack: traceOrMeta });
+      this.logger.error(
+        message,
+        this.buildLogPayload(contextStr, { stack: traceOrMeta }),
+      );
     } else {
-      this.logger.error(message, { context: contextStr, ...traceOrMeta });
+      this.logger.error(message, this.buildLogPayload(contextStr, traceOrMeta));
     }
   }
 
@@ -322,7 +326,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.warn(message, { context: finalContext, ...meta });
+    this.logger.warn(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -339,7 +343,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.debug(message, { context: finalContext, ...meta });
+    this.logger.debug(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -356,7 +360,7 @@ export class LoggerService implements NestLoggerService {
     const contextStr = ctx || this.context;
     const finalContext =
       typeof contextStr === 'string' ? contextStr : String(contextStr);
-    this.logger.verbose(message, { context: finalContext, ...meta });
+    this.logger.verbose(message, this.buildLogPayload(finalContext, meta));
   }
 
   /**
@@ -370,6 +374,21 @@ export class LoggerService implements NestLoggerService {
       return { meta: {}, ctx: metaOrContext };
     }
     return { meta: metaOrContext || {}, ctx: context };
+  }
+
+  private buildLogPayload(
+    context: string,
+    meta: Record<string, any> = {},
+  ): Record<string, any> {
+    const ctx = requestContext.get();
+
+    return {
+      context,
+      ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
+      ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
+      ...(ctx?.userId ? { userId: ctx.userId } : {}),
+      ...meta,
+    };
   }
 
   /**

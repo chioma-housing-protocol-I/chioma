@@ -26,6 +26,7 @@ export {
   MaintenanceNotFoundError,
   ReviewNotFoundError,
   NotificationNotFoundError,
+  DisputeNotFoundError,
 
   // Business Logic
   BusinessRuleViolationError,

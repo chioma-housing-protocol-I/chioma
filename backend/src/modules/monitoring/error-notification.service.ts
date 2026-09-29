@@ -9,6 +9,10 @@ import {
   EscalationTier,
   HealthDegradationPayload,
 } from './alert.types';
+import {
+  isActionableSeverity as isActionableSeverityRule,
+  resolveAlertSeverity,
+} from './alert-rules';
 
 @Injectable()
 export class ErrorNotificationService {
@@ -220,19 +224,11 @@ export class ErrorNotificationService {
   }
 
   private resolveSeverity(raw?: string): AlertSeverity {
-    const normalized = (raw ?? AlertSeverity.INFO).toLowerCase();
-    if (Object.values(AlertSeverity).includes(normalized as AlertSeverity)) {
-      return normalized as AlertSeverity;
-    }
-    return AlertSeverity.INFO;
+    return resolveAlertSeverity(raw);
   }
 
   isActionableSeverity(severity: AlertSeverity): boolean {
-    return [
-      AlertSeverity.CRITICAL,
-      AlertSeverity.HIGH,
-      AlertSeverity.WARNING,
-    ].includes(severity);
+    return isActionableSeverityRule(severity);
   }
 
   shouldNotifySlack(severity: AlertSeverity, tier: EscalationTier): boolean {

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DisputesController } from './disputes.controller';
+import { AdminDisputesController } from './admin-disputes.controller';
 import { DisputesService } from './disputes.service';
 import { DisputeBlockchainService } from './dispute-blockchain.service';
 import { Dispute } from './entities/dispute.entity';
@@ -8,10 +9,18 @@ import { DisputeEvidence } from './entities/dispute-evidence.entity';
 import { DisputeComment } from './entities/dispute-comment.entity';
 import { Arbiter } from './entities/arbiter.entity';
 import { DisputeVote } from './entities/dispute-vote.entity';
+import { SettlementOffer } from './entities/settlement-offer.entity';
+import { SettlementOfferService } from './settlement-offer.service';
+import { SettlementOfferController } from './settlement-offer.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { RentAgreement } from '../rent/entities/rent-contract.entity';
 import { User } from '../users/entities/user.entity';
+import { Payment as GeneralPayment } from '../payments/entities/payment.entity';
+import { Payment as RentPayment } from '../rent/entities/payment.entity';
 import { AuditModule } from '../audit/audit.module';
 import { StellarModule } from '../stellar/stellar.module';
+import { StorageModule } from '../storage/storage.module';
+import { QueuesModule } from '../queues/queues.module';
 
 @Module({
   imports: [
@@ -21,14 +30,28 @@ import { StellarModule } from '../stellar/stellar.module';
       DisputeComment,
       Arbiter,
       DisputeVote,
+      SettlementOffer,
       RentAgreement,
       User,
+      GeneralPayment,
+      RentPayment,
     ]),
     AuditModule,
     StellarModule,
+    StorageModule,
+    QueuesModule,
+    NotificationsModule,
   ],
-  controllers: [DisputesController],
-  providers: [DisputesService, DisputeBlockchainService],
+  controllers: [
+    DisputesController,
+    AdminDisputesController,
+    SettlementOfferController,
+  ],
+  providers: [
+    DisputesService,
+    DisputeBlockchainService,
+    SettlementOfferService,
+  ],
   exports: [DisputesService, DisputeBlockchainService],
 })
 export class DisputesModule {}

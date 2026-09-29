@@ -13,6 +13,7 @@ describe('FraudAlertsService', () => {
     create: jest.fn((v) => ({ id: 'alert-1', ...v })),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
   };
 
@@ -63,29 +64,34 @@ describe('FraudAlertsService', () => {
   });
 
   it('lists alerts with optional status filter', async () => {
-    mockRepo.find.mockResolvedValueOnce([
-      {
-        id: 'a1',
-        subjectType: 'user',
-        subjectId: 'u1',
-        score: 60,
-        decision: 'review',
-        reasons: ['x'],
-        modelVersion: 'v1',
-        features: null,
-        status: 'open',
-        resolvedAt: null,
-        createdAt: created,
-        updatedAt: created,
-      },
+    mockRepo.findAndCount.mockResolvedValueOnce([
+      [
+        {
+          id: 'a1',
+          subjectType: 'user',
+          subjectId: 'u1',
+          score: 60,
+          decision: 'review',
+          reasons: ['x'],
+          modelVersion: 'v1',
+          features: null,
+          status: 'open',
+          resolvedAt: null,
+          createdAt: created,
+          updatedAt: created,
+        },
+      ],
+      1,
     ]);
-    const rows = await service.listAlerts('open');
-    expect(mockRepo.find).toHaveBeenCalledWith({
+    const result = await service.listAlerts('open');
+    expect(mockRepo.findAndCount).toHaveBeenCalledWith({
       where: { status: 'open' },
       order: { createdAt: 'DESC' },
+      skip: 0,
+      take: 20,
     });
-    expect(rows).toHaveLength(1);
-    expect(rows[0].createdAt).toBe(created.toISOString());
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].createdAt).toBe(created.toISOString());
   });
 
   it('resolveAlert throws when missing', async () => {

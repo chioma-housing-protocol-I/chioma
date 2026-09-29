@@ -18,7 +18,9 @@ export function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className={`flex h-screen bg-slate-950 ${className}`}>
+    <div
+      className={`flex h-dvh bg-slate-950 ${className} transition-orientation`}
+    >
       {/* Sidebar */}
       {sidebar || (
         <Sidebar

@@ -1,8 +1,8 @@
-use crate::dispute::{AgreementStatus, RentAgreement};
+use crate::dispute::{ChiomaAgreementStatus, ChiomaRentAgreement};
 use crate::{
     DisputeError, DisputeOutcome, DisputeResolutionContract, DisputeResolutionContractClient,
 };
-use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, Map, String};
+use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, String, Vec};
 
 fn create_contract(env: &Env) -> DisputeResolutionContractClient<'_> {
     let contract_id = env.register(DisputeResolutionContract, ());
@@ -10,16 +10,21 @@ fn create_contract(env: &Env) -> DisputeResolutionContractClient<'_> {
 }
 
 /// Minimal Chioma stand-in used to validate `dispute_resolution::raise_dispute`'s
-/// cross-contract agreement fetch (`symbol_short!("get_agr")`).
+/// cross-contract agreement fetch. Exposes the same exported name
+/// (`get_agreement`) and the same field-for-field `RentAgreement` shape as
+/// the real `chioma` contract, so a passing test here is actually evidence
+/// `raise_dispute` can talk to a real `chioma` instance (see #1559) -- unlike
+/// the previous version of this mock, which exposed `get_agr` and a
+/// `landlord`/`tenant`-shaped type that could never match the real contract.
 ///
 /// Storage layout:
-/// - instance key: `agreement_id` -> `RentAgreement`
+/// - instance key: `agreement_id` -> `ChiomaRentAgreement`
 #[contract]
 pub struct MockChiomaContract;
 
 #[contractimpl]
 impl MockChiomaContract {
-    pub fn get_agr(env: Env, agreement_id: String) -> Option<RentAgreement> {
+    pub fn get_agreement(env: Env, agreement_id: String) -> Option<ChiomaRentAgreement> {
         env.storage().instance().get(&agreement_id)
     }
 }
@@ -28,7 +33,7 @@ fn deploy_mock_chioma(env: &Env) -> Address {
     env.register(MockChiomaContract, ())
 }
 
-fn put_agreement(env: &Env, chioma: &Address, agreement: &RentAgreement) {
+fn put_agreement(env: &Env, chioma: &Address, agreement: &ChiomaRentAgreement) {
     env.as_contract(chioma, || {
         env.storage()
             .instance()
@@ -41,13 +46,13 @@ fn sample_agreement(
     agreement_id: &String,
     landlord: &Address,
     tenant: &Address,
-    status: AgreementStatus,
-) -> RentAgreement {
+    status: ChiomaAgreementStatus,
+) -> ChiomaRentAgreement {
     let token = Address::generate(env);
-    RentAgreement {
+    ChiomaRentAgreement {
         agreement_id: agreement_id.clone(),
-        landlord: landlord.clone(),
-        tenant: tenant.clone(),
+        admin: landlord.clone(),
+        user: tenant.clone(),
         agent: None,
         monthly_rent: 1_000,
         security_deposit: 2_000,
@@ -58,9 +63,11 @@ fn sample_agreement(
         total_rent_paid: 0,
         payment_count: 0,
         signed_at: None,
+        witness_id: None,
         payment_token: token,
         next_payment_due: 0,
-        payment_history: Map::new(env),
+        metadata_uri: String::from_str(env, ""),
+        attributes: Vec::new(env),
     }
 }
 
@@ -82,7 +89,7 @@ fn raise_dispute_success_cross_contract_tenant() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -116,7 +123,7 @@ fn raise_dispute_success_cross_contract_landlord() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -144,7 +151,7 @@ fn raise_dispute_fails_invalid_details_hash() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -191,7 +198,7 @@ fn raise_dispute_fails_invalid_agreement_state() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Draft,
+        ChiomaAgreementStatus::Draft,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -221,7 +228,7 @@ fn raise_dispute_fails_unauthorized_raiser() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -249,7 +256,7 @@ fn raise_dispute_fails_when_dispute_already_exists() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -282,7 +289,7 @@ fn vote_on_dispute_happy_path_after_raise_dispute() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -322,7 +329,7 @@ fn resolve_dispute_favor_landlord_after_raise_dispute() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 
@@ -371,7 +378,7 @@ fn resolve_dispute_insufficient_votes_after_raise_dispute() {
         &agreement_id,
         &landlord,
         &tenant,
-        AgreementStatus::Active,
+        ChiomaAgreementStatus::Active,
     );
     put_agreement(&env, &chioma, &agreement);
 

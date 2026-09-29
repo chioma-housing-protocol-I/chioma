@@ -5,12 +5,12 @@ Use this guide when working on production-readiness GitHub issues (for example #
 
 ## Issue mapping
 
-| Issue | Focus | Implementation |
-| ----- | ----- | -------------- |
-| #957 | Startup safety | `src/config/env.validation.ts` — fails fast on missing/weak config in staging/production |
-| #988 | Graceful shutdown | `src/config/graceful-shutdown.ts` — SIGTERM/SIGINT for Kubernetes rollouts |
-| #994 | Backup verification | `scripts/verify-backup.sh` + `make verify-backup` |
-| #991 | This runbook | Pre-deploy checklist, CI commands, staging/production verification |
+| Issue | Focus               | Implementation                                                                           |
+| ----- | ------------------- | ---------------------------------------------------------------------------------------- |
+| #957  | Startup safety      | `src/config/env.validation.ts` — fails fast on missing/weak config in staging/production |
+| #988  | Graceful shutdown   | `src/config/graceful-shutdown.ts` — SIGTERM/SIGINT for Kubernetes rollouts               |
+| #994  | Backup verification | `scripts/verify-backup.sh` + `make verify-backup`                                        |
+| #991  | This runbook        | Pre-deploy checklist, CI commands, staging/production verification                       |
 
 ## Pre-PR checklist (contributors)
 

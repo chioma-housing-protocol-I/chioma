@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import { RefreshCw } from 'lucide-react';
 import {
   formatAnchorAmount,
@@ -20,6 +21,8 @@ export function AnchorTransactionDetail({
   isLoading,
   onRefresh,
 }: AnchorTransactionDetailProps) {
+  const dateFnsLocale = useDateFnsLocale();
+
   if (!transaction && isLoading) {
     return (
       <aside className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
@@ -90,11 +93,15 @@ export function AnchorTransactionDetail({
         />
         <DetailItem
           label="Created"
-          value={format(new Date(transaction.createdAt), 'PPP p')}
+          value={format(new Date(transaction.createdAt), 'PPP p', {
+            locale: dateFnsLocale,
+          })}
         />
         <DetailItem
           label="Updated"
-          value={format(new Date(transaction.updatedAt), 'PPP p')}
+          value={format(new Date(transaction.updatedAt), 'PPP p', {
+            locale: dateFnsLocale,
+          })}
         />
       </div>
 

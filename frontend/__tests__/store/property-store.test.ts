@@ -11,6 +11,7 @@ function resetStore() {
     selectedPropertyId: null,
     viewMode: 'grid',
     searchQuery: '',
+    pagination: { page: 1, limit: 20 },
   });
 }
 
@@ -29,6 +30,7 @@ describe('propertyStore', () => {
     expect(state.selectedPropertyId).toBeNull();
     expect(state.viewMode).toBe('grid');
     expect(state.searchQuery).toBe('');
+    expect(state.pagination).toEqual({ page: 1, limit: 20 });
   });
 
   it('setFilters merges partial filter updates', () => {
@@ -89,5 +91,52 @@ describe('propertyStore', () => {
   it('setSearchQuery updates the query string', () => {
     usePropertyStore.getState().setSearchQuery('Victoria Island');
     expect(usePropertyStore.getState().searchQuery).toBe('Victoria Island');
+  });
+
+  it('setSearchQuery resets page to 1', () => {
+    usePropertyStore.getState().setPage(3);
+    usePropertyStore.getState().setSearchQuery('new search');
+    expect(usePropertyStore.getState().pagination.page).toBe(1);
+  });
+
+  it('setPage updates page number', () => {
+    usePropertyStore.getState().setPage(5);
+    expect(usePropertyStore.getState().pagination.page).toBe(5);
+  });
+
+  it('setPage does not go below 1', () => {
+    usePropertyStore.getState().setPage(0);
+    expect(usePropertyStore.getState().pagination.page).toBe(1);
+  });
+
+  it('setLimit updates limit within bounds', () => {
+    usePropertyStore.getState().setLimit(50);
+    expect(usePropertyStore.getState().pagination.limit).toBe(50);
+  });
+
+  it('setLimit caps at 100', () => {
+    usePropertyStore.getState().setLimit(200);
+    expect(usePropertyStore.getState().pagination.limit).toBe(100);
+  });
+
+  it('setLimit minimum is 1', () => {
+    usePropertyStore.getState().setLimit(0);
+    expect(usePropertyStore.getState().pagination.limit).toBe(1);
+  });
+
+  it('setFilters resets page to 1', () => {
+    usePropertyStore.getState().setPage(3);
+    usePropertyStore.getState().setFilters({ city: 'Abuja' });
+    expect(usePropertyStore.getState().pagination.page).toBe(1);
+  });
+
+  it('resetFilters clears pagination', () => {
+    usePropertyStore.getState().setPage(3);
+    usePropertyStore.getState().setLimit(50);
+    usePropertyStore.getState().resetFilters();
+    expect(usePropertyStore.getState().pagination).toEqual({
+      page: 1,
+      limit: 20,
+    });
   });
 });

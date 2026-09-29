@@ -8,6 +8,7 @@ import {
   TrackedAlert,
 } from './alert.types';
 import { ErrorNotificationService } from './error-notification.service';
+import { resolveAlertSeverity } from './alert-rules';
 
 @Injectable()
 export class ErrorEscalationService {
@@ -111,11 +112,7 @@ export class ErrorEscalationService {
   }
 
   private resolveSeverity(raw?: string): AlertSeverity {
-    const normalized = (raw ?? AlertSeverity.INFO).toLowerCase();
-    if (Object.values(AlertSeverity).includes(normalized as AlertSeverity)) {
-      return normalized as AlertSeverity;
-    }
-    return AlertSeverity.INFO;
+    return resolveAlertSeverity(raw);
   }
 
   private getEscalationMinutes(key: string, fallback: number): number {

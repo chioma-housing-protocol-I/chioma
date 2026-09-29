@@ -14,6 +14,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
+import { formatCurrency } from '@/lib/utils/format';
 import type {
   AdminRefundRequestDetail,
   AdminRefundStatus,
@@ -55,6 +57,7 @@ export function RefundRequestDetail({
 }: RefundRequestDetailProps) {
   const [notes, setNotes] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const dateFnsLocale = useDateFnsLocale();
 
   const canDecide = refund.status === 'PENDING' && onSubmitDecision;
 
@@ -117,19 +120,22 @@ export function RefundRequestDetail({
               Amount
             </div>
             <p className="text-3xl font-bold text-white">
-              {refund.amount.toLocaleString()}{' '}
-              <span className="text-lg text-slate-400">{refund.currency}</span>
+              {formatCurrency(refund.amount, refund.currency)}
             </p>
             <div className="pt-4 border-t border-slate-800 space-y-2 text-sm text-slate-400">
               <div className="flex items-center gap-2">
                 <Clock size={16} />
                 Requested{' '}
-                {format(new Date(refund.requestedAt), 'MMM d, yyyy HH:mm')}
+                {format(new Date(refund.requestedAt), 'MMM d, yyyy HH:mm', {
+                  locale: dateFnsLocale,
+                })}
               </div>
               <div className="flex items-center gap-2">
                 <Clock size={16} />
                 Updated{' '}
-                {format(new Date(refund.updatedAt), 'MMM d, yyyy HH:mm')}
+                {format(new Date(refund.updatedAt), 'MMM d, yyyy HH:mm', {
+                  locale: dateFnsLocale,
+                })}
               </div>
             </div>
           </div>
@@ -199,7 +205,9 @@ export function RefundRequestDetail({
                           {HISTORY_ACTION_LABEL[h.action] ?? h.action}
                         </span>
                         <span className="text-xs text-slate-500">
-                          {format(new Date(h.createdAt), 'MMM d, yyyy HH:mm')}
+                          {format(new Date(h.createdAt), 'MMM d, yyyy HH:mm', {
+                            locale: dateFnsLocale,
+                          })}
                         </span>
                       </div>
                       <p className="text-slate-300 text-sm">{h.message}</p>

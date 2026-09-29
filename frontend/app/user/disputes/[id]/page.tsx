@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import { DisputeDetail } from '@/components/user/DisputeDetail';
 import { useParams } from 'next/navigation';
 

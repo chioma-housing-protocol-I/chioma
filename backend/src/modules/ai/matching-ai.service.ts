@@ -116,7 +116,7 @@ export class MatchingAiService {
         const prefs = await this.preferencesRepo.findOne({ where: { userId } });
 
         const properties = await this.propertyRepo.find({
-          where: { status: ListingStatus.PUBLISHED as any },
+          where: { status: ListingStatus.PUBLISHED },
           relations: ['amenities'],
           take: 500, // cap for scoring pass
         });
@@ -217,7 +217,7 @@ export class MatchingAiService {
         if (!source) return [];
 
         const candidates = await this.propertyRepo.find({
-          where: { status: ListingStatus.PUBLISHED as any, city: source.city },
+          where: { status: ListingStatus.PUBLISHED, city: source.city },
           relations: ['amenities'],
           take: 200,
         });

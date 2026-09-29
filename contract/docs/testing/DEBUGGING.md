@@ -17,14 +17,14 @@ cargo test
 
 ## Common Failures
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `Unauthorized` | Missing auth mock or wrong actor | Use the correct actor and avoid `mock_all_auths` in auth-specific tests |
-| Missing storage value | Test did not initialize contract or used a different key | Check setup helper and `DataKey` variant |
-| Timeout test fails | Ledger timestamp/block was not advanced correctly | Set ledger info before action and advance across the boundary |
-| Event assertion fails | Topic order or payload shape changed | Compare emitted event with frontend/indexer contract |
-| Clippy failure | New warning introduced by tests or helpers | Fix warning; contract CI uses `-D warnings` |
-| WASM build failure | Host-only dependency or feature leaked into contract code | Gate host-only code with `#[cfg(test)]` or move it to tests |
+| Symptom               | Likely cause                                              | Fix                                                                     |
+| --------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `Unauthorized`        | Missing auth mock or wrong actor                          | Use the correct actor and avoid `mock_all_auths` in auth-specific tests |
+| Missing storage value | Test did not initialize contract or used a different key  | Check setup helper and `DataKey` variant                                |
+| Timeout test fails    | Ledger timestamp/block was not advanced correctly         | Set ledger info before action and advance across the boundary           |
+| Event assertion fails | Topic order or payload shape changed                      | Compare emitted event with frontend/indexer contract                    |
+| Clippy failure        | New warning introduced by tests or helpers                | Fix warning; contract CI uses `-D warnings`                             |
+| WASM build failure    | Host-only dependency or feature leaked into contract code | Gate host-only code with `#[cfg(test)]` or move it to tests             |
 
 ## Useful Commands
 

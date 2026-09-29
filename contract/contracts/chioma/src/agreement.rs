@@ -723,6 +723,7 @@ pub fn reject_extension(
     }
 
     extension.status = ExtensionStatus::Rejected;
+    let reason_for_event = reason.clone();
     extension.last_reason = Some(reason);
 
     env.storage().persistent().set(
@@ -730,7 +731,7 @@ pub fn reject_extension(
         &extension,
     );
 
-    events::extension_rejected(env, extension_id);
+    events::extension_rejected(env, extension_id, reason_for_event);
 
     Ok(())
 }
@@ -812,6 +813,7 @@ pub fn cancel_extension(
     }
 
     extension.status = ExtensionStatus::Cancelled;
+    let reason_for_event = reason.clone();
     extension.last_reason = Some(reason);
 
     env.storage().persistent().set(
@@ -819,7 +821,7 @@ pub fn cancel_extension(
         &extension,
     );
 
-    events::extension_cancelled(env, extension_id);
+    events::extension_cancelled(env, extension_id, reason_for_event);
 
     Ok(())
 }

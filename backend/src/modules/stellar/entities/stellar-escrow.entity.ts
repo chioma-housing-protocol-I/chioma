@@ -76,7 +76,21 @@ export class StellarEscrow {
   @Column({ type: 'decimal', precision: 20, scale: 7 })
   amount: string;
 
-  @Column({ name: 'asset_type', length: 16 })
+  /**
+   * Cumulative amount refunded to the source account so far. Partial
+   * refunds accumulate here; the invariant refundedAmount <= amount is
+   * enforced in StellarService.refundEscrow().
+   */
+  @Column({
+    name: 'refunded_amount',
+    type: 'decimal',
+    precision: 20,
+    scale: 7,
+    default: 0,
+  })
+  refundedAmount: string;
+
+  @Column({ name: 'asset_type', type: 'varchar', length: 16 })
   assetType: AssetType;
 
   @Column({ name: 'asset_code', type: 'varchar', length: 12, nullable: true })

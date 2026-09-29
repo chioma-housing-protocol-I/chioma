@@ -1,11 +1,14 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, MapPin } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
 
 interface StayProperty {
   id: string;
@@ -42,9 +45,10 @@ async function fetchStays(filters: Filters): Promise<StayProperty[]> {
 }
 
 export default function StaysPage() {
+  const searchParams = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
-    location: '',
+    location: searchParams.get('city') ?? '',
     checkIn: '',
     checkOut: '',
     guests: 1,
@@ -164,8 +168,10 @@ export default function StaysPage() {
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <PropertyCardSkeleton key={i} />
+            ))}
           </div>
         ) : properties.length === 0 ? (
           <div className="text-center py-20 text-blue-300/60">
@@ -192,7 +198,12 @@ export default function StaysPage() {
 
 function StayCard({ property }: { property: StayProperty }) {
   return (
-    <Link href={`/stays/${property.id}`} className="block group">
+    <PrefetchLink
+      href={`/stays/${property.id}`}
+      prefetchKind="property"
+      prefetchId={property.id}
+      className="block group"
+    >
       <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 hover:shadow-2xl transition-all duration-300">
         <div className="aspect-video bg-slate-700 relative overflow-hidden">
           {property.image ? (
@@ -234,6 +245,6 @@ function StayCard({ property }: { property: StayProperty }) {
           </div>
         </div>
       </div>
-    </Link>
+    </PrefetchLink>
   );
 }

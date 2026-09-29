@@ -10,14 +10,17 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
-  ReceiptText,
-  AlertTriangle,
 } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
-import { MicroCharts } from '@/components/dashboard/MicroCharts';
+import {
+  LazyAnalyticsPreviewChart,
+  LazyMicroCharts,
+} from '@/components/charts/lazy';
 import { TenantOnboardingBanner } from '@/components/user/TenantOnboardingBanner';
+import { WalletEmailBanner } from '@/components/user/WalletEmailBanner';
 import { useAuth } from '@/store/authStore';
+import { useRoleRedirect } from '@/hooks/useRoleRedirect';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
+import { usePayments } from '@/lib/query/hooks/use-payments';
 import { useModal } from '@/contexts/ModalContext';
 import { apiClient } from '@/lib/api-client';
 import type { AgreementSigningData } from '@/components/modals/types';
@@ -44,15 +47,6 @@ const mockAgreements = [
     dueDate: 'Sep 1, 2023',
     status: 'Completed',
   },
-];
-
-const analyticsPreviewData = [
-  { month: 'Jan', views: 120 },
-  { month: 'Feb', views: 180 },
-  { month: 'Mar', views: 240 },
-  { month: 'Apr', views: 200 },
-  { month: 'May', views: 320 },
-  { month: 'Jun', views: 410 },
 ];
 
 const DASHBOARD_IMAGE_FALLBACK =
@@ -89,13 +83,74 @@ const dashboardDisputes = [
 ];
 
 export default function UserDashboardOverview() {
-  // AUTH DISABLED - useRoleRedirect commented out for development
-  // useRoleRedirect(['user']);
+  useRoleRedirect(['user', 'agent', 'admin']);
 
   const { openModal } = useModal();
   const router = useRouter();
   const { loading } = useAuth();
-  const { data: apiAgreements = [] } = useUserAgreements();
+  const { data: agreementsResult } = useUserAgreements();
+  const apiAgreements = agreementsResult?.data ?? [];
+  const { data: paymentsData } = usePayments({ limit: 50 });
+  const apiPayments = paymentsData?.data ?? [];
+
+  const activeAgreement =
+    apiAgreements.find((a) => a.status === 'active') ?? null;
+
+  const leaseStart = activeAgreement?.startDate
+    ? new Date(activeAgreement.startDate)
+    : null;
+  const leaseEnd = activeAgreement?.endDate
+    ? new Date(activeAgreement.endDate)
+    : null;
+  const leaseMonthsTotal =
+    leaseStart && leaseEnd
+      ? Math.round(
+          (leaseEnd.getTime() - leaseStart.getTime()) /
+            (1000 * 60 * 60 * 24 * 30.44),
+        )
+      : 12;
+  const leaseMonthsElapsed = leaseStart
+    ? Math.max(
+        0,
+        Math.round(
+          (Date.now() - leaseStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
+        ),
+      )
+    : 5;
+  const leaseMonthsRemaining = Math.max(
+    0,
+    leaseMonthsTotal - leaseMonthsElapsed,
+  );
+  const leaseProgressPct =
+    leaseMonthsTotal > 0
+      ? Math.min(100, Math.round((leaseMonthsElapsed / leaseMonthsTotal) * 100))
+      : 60;
+  const currentYear = new Date().getFullYear();
+  const totalPaidThisYear = apiPayments
+    .filter((p) => {
+      const year = p.createdAt ? new Date(p.createdAt).getFullYear() : 0;
+      return year === currentYear && p.status?.toLowerCase() === 'completed';
+    })
+    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const rentPaidDisplay =
+    totalPaidThisYear > 0 ? `$${totalPaidThisYear.toLocaleString()}` : '$8,400';
+
+  const nextPaymentAmount = activeAgreement?.monthlyRent
+    ? `${activeAgreement.monthlyRent.toLocaleString()}`
+    : mockAgreements[0].amount;
+  const nextPaymentProperty =
+    activeAgreement?.displayTitle ?? mockAgreements[0].property;
+
+  const previewPayments =
+    apiPayments.length > 0
+      ? apiPayments.slice(0, 2).map((p) => ({
+          id: p.id,
+          property: p.agreement?.property?.title ?? 'Rental payment',
+          amount: `$${(p.amount ?? 0).toLocaleString()}`,
+          date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+          previewImage: DASHBOARD_IMAGE_FALLBACK,
+        }))
+      : dashboardPayments;
 
   const agreements =
     apiAgreements.length > 0
@@ -161,6 +216,7 @@ export default function UserDashboardOverview() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
+      <WalletEmailBanner />
       <TenantOnboardingBanner />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -192,12 +248,12 @@ export default function UserDashboardOverview() {
             </p>
             <div className="flex items-baseline gap-2 mt-1">
               <h3 className="text-3xl font-bold tracking-tight text-white">
-                $1,200
+                {nextPaymentAmount}
               </h3>
               <span className="text-sm text-blue-300/40">/mo</span>
             </div>
             <p className="text-sm text-blue-200/60 mt-2 truncate">
-              Sunset Apartments, Unit 4B
+              {nextPaymentProperty}
             </p>
           </div>
         </div>
@@ -217,16 +273,16 @@ export default function UserDashboardOverview() {
               Active Lease
             </p>
             <h3 className="text-xl font-bold tracking-tight text-white mt-1">
-              12 Months
+              {leaseMonthsTotal} Months
             </h3>
             <div className="mt-3 w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all duration-1000"
-                style={{ width: '60%' }}
+                style={{ width: `${leaseProgressPct}%` }}
               />
             </div>
             <p className="text-xs text-blue-300/40 mt-3 font-medium uppercase tracking-wider">
-              7 months remaining
+              {leaseMonthsRemaining} months remaining
             </p>
           </div>
         </div>
@@ -242,14 +298,14 @@ export default function UserDashboardOverview() {
             </span>
           </div>
           <div className="mt-4 flex flex-col pt-1">
-            <MicroCharts />
+            <LazyMicroCharts />
             <div className="flex items-baseline justify-between mt-4">
               <div>
                 <p className="text-sm font-medium text-blue-200/60 uppercase tracking-wider">
                   Rent Paid This Year
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight text-white mt-1">
-                  $8,400
+                  {rentPaidDisplay}
                 </h3>
               </div>
             </div>
@@ -285,56 +341,7 @@ export default function UserDashboardOverview() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Chart */}
           <div className="md:col-span-2 h-40">
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart
-                data={analyticsPreviewData}
-                margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-              >
-                <defs>
-                  <linearGradient
-                    id="analyticsGrad"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{
-                    fill: 'rgba(147, 197, 253, 0.4)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '8px 12px',
-                  }}
-                  itemStyle={{ color: '#fff', fontSize: '12px' }}
-                  labelStyle={{
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontSize: '10px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="views"
-                  stroke="#60a5fa"
-                  strokeWidth={2.5}
-                  fill="url(#analyticsGrad)"
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <LazyAnalyticsPreviewChart />
           </div>
 
           {/* Stats */}
@@ -351,7 +358,10 @@ export default function UserDashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <Link
+              href="/user/inquiries"
+              className="block bg-white/5 rounded-2xl p-4 border border-white/5 transition-colors hover:bg-white/10"
+            >
               <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-widest">
                 Inquiries
               </p>
@@ -362,7 +372,7 @@ export default function UserDashboardOverview() {
                   +8%
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
@@ -382,7 +392,7 @@ export default function UserDashboardOverview() {
             </Link>
           </div>
           <div className="space-y-3">
-            {dashboardPayments.map((payment) => (
+            {previewPayments.map((payment) => (
               <div
                 key={payment.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"

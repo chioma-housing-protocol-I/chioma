@@ -11,6 +11,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { AuditLog } from '@/types';
 
 interface ModalProps {
@@ -19,6 +20,7 @@ interface ModalProps {
 }
 
 export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
+  const dateFnsLocale = useDateFnsLocale();
   if (!log) return null;
 
   return (
@@ -54,7 +56,9 @@ export const AuditLogDetailModal: React.FC<ModalProps> = ({ log, onClose }) => {
                 <Clock size={12} /> Timestamp
               </label>
               <p className="text-sm text-white font-medium">
-                {format(new Date(log.performedAt), 'PPPP p')}
+                {format(new Date(log.performedAt), 'PPPP p', {
+                  locale: dateFnsLocale,
+                })}
               </p>
             </div>
             <div className="space-y-1">

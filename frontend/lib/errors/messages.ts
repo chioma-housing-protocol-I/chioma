@@ -22,6 +22,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     message: 'Something interrupted the request to the server.',
     guidance: 'Retry now or refresh the page.',
   },
+  REQUEST_CANCELLED: {
+    title: 'Request cancelled',
+    message: 'The request was cancelled.',
+    guidance: 'Try again if needed.',
+  },
   AUTH_REQUIRED: {
     title: 'Sign-in required',
     message: 'Your account is not authenticated for this action.',
@@ -42,6 +47,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     message: 'Some fields contain invalid or missing information.',
     guidance: 'Review highlighted fields and submit again.',
   },
+  VALIDATION_RESPONSE_MISMATCH: {
+    title: 'Unexpected response format',
+    message: 'The server returned data in an unexpected format.',
+    guidance: 'Try again. If this persists, contact support.',
+  },
   BUSINESS_RULE_VIOLATION: {
     title: 'Action unavailable',
     message: 'This action conflicts with current business rules.',
@@ -51,6 +61,11 @@ const ERROR_MESSAGES: Record<ErrorCode, MessageTemplate> = {
     title: 'Unexpected system error',
     message: 'Something unexpected happened in the application.',
     guidance: 'Retry now. If this continues, contact support.',
+  },
+  NETWORK_RATE_LIMIT: {
+    title: 'Too many requests',
+    message: 'You have made too many requests in a short time.',
+    guidance: 'Please wait a moment before trying again.',
   },
   UNKNOWN_ERROR: {
     title: 'Something went wrong',

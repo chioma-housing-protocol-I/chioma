@@ -16,13 +16,16 @@ import { RentalUnit } from './entities/rental-unit.entity';
 import { PropertyListingDraft } from './entities/property-listing-draft.entity';
 import { PropertyAvailability } from './entities/property-availability.entity';
 import { AvailabilityService } from './availability.service';
+import { ICalService } from './services/ical.service';
 import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
+import { SearchModule } from '../search/search.module';
 
 @Module({
   imports: [
     ScheduleModule,
     FraudModule,
+    SearchModule,
     TypeOrmModule.forFeature([
       Property,
       PropertyImage,
@@ -45,6 +48,7 @@ import { FraudModule } from '../fraud/fraud.module';
     CacheService,
     PropertyModesService,
     AvailabilityService,
+    ICalService,
   ],
   exports: [
     PropertiesService,

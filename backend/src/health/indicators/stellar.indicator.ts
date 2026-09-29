@@ -7,16 +7,19 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, timeout } from 'rxjs';
+import { MetricsService } from '../../modules/monitoring/metrics.service';
 
 @Injectable()
 export class StellarHealthIndicator extends HealthIndicator {
   private readonly logger = new Logger(StellarHealthIndicator.name);
   private readonly stellarHorizonUrl: string;
   private readonly timeoutMs = 5000;
+  private consecutiveFailures = 0;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly metricsService: MetricsService,
   ) {
     super();
     // Default to testnet, can be configured via environment variables
@@ -42,11 +45,20 @@ export class StellarHealthIndicator extends HealthIndicator {
       );
 
       const responseTime = Date.now() - startTime;
+      const network = this.getStellarNetwork(currentUrl);
+
+      this.consecutiveFailures = 0;
+      this.metricsService.recordBlockchainConnectivityCheck(
+        network,
+        true,
+        responseTime,
+        this.consecutiveFailures,
+      );
 
       const result = this.getStatus(key, true, {
         status: 'up',
         responseTime,
-        network: this.getStellarNetwork(currentUrl),
+        network,
         horizonVersion: response.data?.horizon_version || 'unknown',
         coreVersion: response.data?.core_version || 'unknown',
         url: currentUrl,
@@ -63,13 +75,23 @@ export class StellarHealthIndicator extends HealthIndicator {
         'STELLAR_HORIZON_URL',
         this.stellarHorizonUrl,
       );
+      const network = this.getStellarNetwork(currentUrl);
+
+      this.consecutiveFailures += 1;
+      this.metricsService.recordBlockchainConnectivityCheck(
+        network,
+        false,
+        responseTime,
+        this.consecutiveFailures,
+      );
 
       const result = this.getStatus(key, false, {
         status: 'down',
         responseTime,
         error: error.message,
         url: currentUrl,
-        network: this.getStellarNetwork(currentUrl),
+        network,
+        consecutiveFailures: this.consecutiveFailures,
       });
 
       throw new HealthCheckError('Stellar check failed', result);

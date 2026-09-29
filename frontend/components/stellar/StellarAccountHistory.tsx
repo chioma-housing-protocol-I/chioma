@@ -4,6 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
+import { formatDate, formatCrypto } from '@/lib/utils/format';
 
 interface Transaction {
   id: number;
@@ -81,7 +82,7 @@ export function StellarAccountHistory({
                 {tx.transactionHash.slice(0, 16)}…
               </p>
               <p className="text-[10px] text-slate-500">
-                {new Date(tx.createdAt).toLocaleDateString()}
+                {formatDate(tx.createdAt)}
               </p>
             </div>
             <div className="text-right shrink-0">
@@ -91,7 +92,10 @@ export function StellarAccountHistory({
                 }`}
               >
                 {isIncoming ? '+' : '-'}
-                {parseFloat(tx.amount).toFixed(2)} {tx.assetCode ?? 'XLM'}
+                {formatCrypto(tx.amount, tx.assetCode ?? 'XLM', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-full ${

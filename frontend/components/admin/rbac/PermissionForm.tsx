@@ -3,6 +3,8 @@
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import type { Permission } from '@/types';
+import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
+import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
 
 type PermissionFormValues = {
   name: string;
@@ -40,7 +42,7 @@ export function PermissionForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm({
     defaultValues: permission
       ? {
@@ -72,6 +74,8 @@ export function PermissionForm({
         </button>
       </div>
 
+      <FormErrorSummary errors={errors} submitCount={submitCount} />
+
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -80,6 +84,7 @@ export function PermissionForm({
             </label>
             <select
               {...register('resource', { required: 'Resource is required' })}
+              {...fieldA11yProps('resource', errors.resource)}
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
               disabled={isLoading}
             >
@@ -91,7 +96,10 @@ export function PermissionForm({
               ))}
             </select>
             {errors.resource && (
-              <p className="text-sm text-rose-400 mt-1">
+              <p
+                id={fieldErrorId('resource')}
+                className="text-sm text-rose-400 mt-1"
+              >
                 {errors.resource.message}
               </p>
             )}
@@ -103,6 +111,7 @@ export function PermissionForm({
             </label>
             <select
               {...register('action', { required: 'Action is required' })}
+              {...fieldA11yProps('action', errors.action)}
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
               disabled={isLoading}
             >
@@ -114,7 +123,10 @@ export function PermissionForm({
               ))}
             </select>
             {errors.action && (
-              <p className="text-sm text-rose-400 mt-1">
+              <p
+                id={fieldErrorId('action')}
+                className="text-sm text-rose-400 mt-1"
+              >
                 {errors.action.message}
               </p>
             )}
@@ -127,13 +139,16 @@ export function PermissionForm({
           </label>
           <input
             {...register('name', { required: 'Permission code is required' })}
+            {...fieldA11yProps('name', errors.name)}
             type="text"
             placeholder="e.g., user:create:admin"
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all font-mono"
             disabled={isLoading}
           />
           {errors.name && (
-            <p className="text-sm text-rose-400 mt-1">{errors.name.message}</p>
+            <p id={fieldErrorId('name')} className="text-sm text-rose-400 mt-1">
+              {errors.name.message}
+            </p>
           )}
           <p className="text-xs text-blue-200/60 mt-2">
             Unique identifier for this permission. Use lowercase and hyphens.

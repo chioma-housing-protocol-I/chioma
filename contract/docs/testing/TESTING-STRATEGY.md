@@ -6,12 +6,12 @@ Chioma contracts protect housing payments, escrow decisions, property records, a
 
 ## Test Pyramid
 
-| Layer | Goal | Required for |
-|---|---|---|
-| Unit tests | Validate contract functions, storage helpers, events, and errors in isolation | Every new public method and every bug fix |
-| Integration tests | Validate multi-step flows across actors and contract state | Escrow, disputes, payments, pause controls, and admin workflows |
-| Regression tests | Lock behavior after a production bug or security finding | Every fixed defect |
-| Build checks | Prove contracts compile for host tests and WASM release target | Every PR touching `contract/` |
+| Layer             | Goal                                                                          | Required for                                                    |
+| ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Unit tests        | Validate contract functions, storage helpers, events, and errors in isolation | Every new public method and every bug fix                       |
+| Integration tests | Validate multi-step flows across actors and contract state                    | Escrow, disputes, payments, pause controls, and admin workflows |
+| Regression tests  | Lock behavior after a production bug or security finding                      | Every fixed defect                                              |
+| Build checks      | Prove contracts compile for host tests and WASM release target                | Every PR touching `contract/`                                   |
 
 ## Minimum Coverage Expectations
 

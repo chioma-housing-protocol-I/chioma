@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeyGuard, API_KEY_HEADER } from './api-key.guard';
 import { DeveloperService } from '../developer.service';
@@ -116,6 +120,86 @@ describe('ApiKeyGuard', () => {
         id: 'user-id-456',
         apiKeyId: 'key-id-123',
       });
+    });
+  });
+
+  describe('scope enforcement', () => {
+    // First getAllAndOverride call resolves IS_PUBLIC_KEY, second resolves
+    // the required scopes for the handler/class.
+    function mockPublicAndScopes(requiredScopes: string[] | undefined) {
+      reflector.getAllAndOverride
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(requiredScopes);
+    }
+
+    it('should reject a key missing a required scope with 403', async () => {
+      mockPublicAndScopes(['properties:write']);
+      const context = createMockExecutionContext({
+        'x-api-key': 'chioma_sk_validkey123',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id-123',
+        userId: 'user-id-456',
+        permissions: ['properties:read'],
+      } as ApiKey);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+      const request = context.switchToHttp().getRequest();
+      expect(request.user).toBeUndefined();
+    });
+
+    it('should reject a key with no scopes on a scoped endpoint', async () => {
+      mockPublicAndScopes(['analytics:read']);
+      const context = createMockExecutionContext({
+        'x-api-key': 'chioma_sk_validkey123',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id-123',
+        userId: 'user-id-456',
+        permissions: [],
+      } as unknown as ApiKey);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should allow a key holding every required scope', async () => {
+      mockPublicAndScopes(['properties:read', 'properties:write']);
+      const context = createMockExecutionContext({
+        'x-api-key': 'chioma_sk_validkey123',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id-123',
+        userId: 'user-id-456',
+        permissions: ['properties:read', 'properties:write', 'bookings:read'],
+      } as ApiKey);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      const request = context.switchToHttp().getRequest();
+      expect(request.apiKeyScopes).toEqual([
+        'properties:read',
+        'properties:write',
+        'bookings:read',
+      ]);
+    });
+
+    it('should not enforce scopes on endpoints without a scope requirement', async () => {
+      mockPublicAndScopes(undefined);
+      const context = createMockExecutionContext({
+        'x-api-key': 'chioma_sk_validkey123',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id-123',
+        userId: 'user-id-456',
+        permissions: [],
+      } as unknown as ApiKey);
+
+      await expect(guard.canActivate(context)).resolves.toBe(true);
     });
   });
 });

@@ -47,9 +47,15 @@ export class LoggerMiddleware implements NestMiddleware {
 
     const start = process.hrtime();
     const correlationId =
-      (req.headers['x-request-id'] as string | undefined) || randomUUID();
+      (req as Request & { correlationId?: string; requestId?: string })
+        .correlationId ||
+      (req as Request & { correlationId?: string; requestId?: string })
+        .requestId ||
+      (req.headers['x-request-id'] as string | undefined) ||
+      randomUUID();
 
     (req as Request & { correlationId?: string }).correlationId = correlationId;
+    (req as Request & { requestId?: string }).requestId = correlationId;
     res.setHeader('x-request-id', correlationId);
 
     const method = req.method;

@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# playwright visual regression (baseline snapshots under
+# __tests__/visual/**/__screenshots__ or *-snapshots/ ARE committed)
+/playwright-report/
+/test-results/
+/blob-report/
+
 # next.js
 /.next/
 /out/
@@ -44,3 +50,4 @@ dash.svg
 image.png
 
 # Storybook build output
+storybook-static

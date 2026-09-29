@@ -1,4 +1,5 @@
 use crate::errors::ContractError;
+use crate::events;
 use crate::storage::DataKey;
 use soroban_sdk::{Address, Bytes, Env, String, Vec};
 
@@ -49,13 +50,14 @@ pub fn propose_upgrade(
     let mut approvals = Vec::new(env);
     approvals.push_back(proposer.clone());
 
+    let eta = env.ledger().timestamp() + delay_seconds;
     let proposal = UpgradeProposal {
         id: proposal_id.clone(),
-        proposer,
+        proposer: proposer.clone(),
         wasm_hash,
         approvals,
         required_signatures: 1,
-        eta: env.ledger().timestamp() + delay_seconds,
+        eta,
         executed: false,
         notes,
         created_at: env.ledger().timestamp(),
@@ -69,6 +71,8 @@ pub fn propose_upgrade(
         500000,
         500000,
     );
+
+    events::upgrade_proposed(env, proposal_id, proposer, eta);
 
     Ok(())
 }
@@ -101,10 +105,13 @@ pub fn approve_upgrade(
         return Err(ContractError::AccessDenied);
     }
 
-    proposal.approvals.push_back(approver);
+    proposal.approvals.push_back(approver.clone());
+    let approval_count = proposal.approvals.len();
     env.storage()
         .persistent()
         .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+    events::upgrade_approved(env, proposal_id, approver, approval_count);
 
     Ok(())
 }
@@ -145,6 +152,8 @@ pub fn execute_upgrade(
     env.storage()
         .persistent()
         .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+    events::upgrade_executed(env, proposal_id, executor);
 
     Ok(())
 }

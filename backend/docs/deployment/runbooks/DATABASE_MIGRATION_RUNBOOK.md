@@ -55,6 +55,54 @@ Naming rules:
 - Use descriptive names that explain the change (e.g., `AddPerformanceIndexes`, `CreateAuditLogsTable`).
 - Keep the generated timestamp prefix — do not rename it.
 
+### Migrations Live in TWO Directories — Check Both Before Picking a Timestamp
+
+Migration files are split across two directories, both loaded by `src/database/data-source.ts` and merged into a **single, timestamp-ordered chain**:
+
+- `backend/src/migrations/*.ts`
+- `backend/migrations/*.ts` (repo-root-relative, one level up from `backend/src`)
+
+`data-source.ts` globs both directories and TypeORM sorts the combined result by the
+numeric timestamp prefix, exactly as if they were one folder. Neither directory has
+priority — a migration in `backend/migrations/` can run before or after one in
+`backend/src/migrations/` purely based on its timestamp.
+
+This split is intentional (not something to "fix" by moving files into one directory),
+but it has a sharp edge: **if you only look inside one of the two directories when
+picking a new migration's timestamp, you can accidentally reuse a timestamp that's
+already taken in the other directory.** TypeORM does not reject duplicate timestamps
+at generation time — the collision is silent until something depends on strict
+ordering or migration-name bookkeeping breaks in a hard-to-debug way. This is exactly
+how issue #1544 happened: 8 groups of colliding timestamps (20 files) had accumulated
+across the two directories because contributors were checking only the directory they
+were adding to.
+
+**Before creating a new migration, find the highest existing timestamp across BOTH
+directories, not just the one you're adding to:**
+
+```bash
+cd backend
+(ls src/migrations/*.ts; ls migrations/*.ts) | sed -E 's#.*/([0-9]+)-.*#\1#' | sort -n | tail -1
+```
+
+Pick a new timestamp higher than that value. If you generate the migration via
+`pnpm run migration:generate` (which only knows about its target directory), still
+run the check above afterward and rename the generated file plus its class name /
+`name` field if it collides with a file in the other directory.
+
+**Or, faster and less error-prone, run the collision checker script** after
+generating any new migration (and ideally in CI / as a pre-commit hook):
+
+```bash
+pnpm run migration:check-timestamps
+```
+
+This runs `backend/scripts/check-migration-timestamps.ts`, which scans both
+`backend/src/migrations/` and `backend/migrations/` together, fails (non-zero exit)
+on any duplicate timestamp prefix across the two directories, and also verifies
+that every migration class name's embedded timestamp suffix matches its filename
+prefix. It requires no database connection, so it's safe to run anywhere, anytime.
+
 ### Migration Template
 
 ```typescript
@@ -197,6 +245,32 @@ pnpm run migration:show
 | `pnpm run migration:revert:safe`     | Roll back with verification                     | Yes                 |
 | `pnpm run migration:verify-rollback` | Test that rollback works for pending migrations | No (staging only)   |
 | `pnpm run migration:generate`        | Generate migration from entity changes          | N/A                 |
+
+---
+
+## History: Removed Orphaned Raw-SQL Migration System
+
+Prior to April 2026, `backend/src/database/migrations/` held four raw `.sql` files
+(`001_initial_schema.sql`, `002_update_schema.sql`,
+`003_add_user_and_payment_fields.sql`, `003_referral_and_metrics.sql`) that were
+**not** wired into the TypeORM migration runner described in this document — they
+were disconnected scratch schema that `migration:run` / `migration:show` never saw.
+This created two apparently-competing "migration systems" in the same backend
+(tracked as issue #1618, and again as #1544).
+
+Those `.sql` files were deleted. Their substantive, still-relevant schema (the
+`referrals` table, `referral_status` enum, `users.referral_code` /
+`users.referred_by_id` columns, and the `auth_metrics` table) had already been ported
+into the real TypeORM chain by `src/migrations/1900100000000-AlignSchemaWithEntities.ts`.
+Two tables the `.sql` files also defined, `operation_records` and `indexer_state`,
+were **not** ported forward — they were verified to be dead/unreferenced scratch
+schema (no entity, service, or repository in the codebase references either table),
+so they were intentionally left out rather than resurrected.
+
+If you're wondering whether `backend/src/database/migrations/` should contain `.sql`
+files: no. The only migration systems in this backend are the two TypeORM directories
+described above (`backend/src/migrations/` and `backend/migrations/`), both driven by
+`src/database/data-source.ts` and the commands in this runbook.
 
 ---
 

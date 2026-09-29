@@ -13,10 +13,10 @@ In this guide, you will create a simple **Housing Registry** contract from scrat
 
 A `HousingRegistry` contract with two functions:
 
-| Function            | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `register_property` | Records a property with an ID and description     |
-| `get_property`      | Retrieves a property's description by its ID      |
+| Function            | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `register_property` | Records a property with an ID and description |
+| `get_property`      | Retrieves a property's description by its ID  |
 
 This is intentionally simple — the goal is to learn the **structure and workflow**, not to build a production contract.
 
@@ -72,13 +72,13 @@ soroban-sdk = { workspace = true, features = ["testutils"] }
 
 Let's break down the key fields:
 
-| Field                 | Purpose                                                                                       |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| **`name`**            | The crate name — used in `cargo build -p hello_housing`                                       |
-| **`crate-type`**      | `"cdylib"` produces a `.wasm` binary; `"lib"` allows importing in tests and other crates      |
-| **`doctest = false`** | Disables doc-tests, which are not supported in `no_std` environments                          |
-| **`soroban-sdk`**     | The core SDK — `workspace = true` inherits the version (v23) from the root `Cargo.toml`       |
-| **`testutils`**       | Test utilities (mock auth, generated addresses, etc.) — only included in `dev-dependencies`   |
+| Field                 | Purpose                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| **`name`**            | The crate name — used in `cargo build -p hello_housing`                                     |
+| **`crate-type`**      | `"cdylib"` produces a `.wasm` binary; `"lib"` allows importing in tests and other crates    |
+| **`doctest = false`** | Disables doc-tests, which are not supported in `no_std` environments                        |
+| **`soroban-sdk`**     | The core SDK — `workspace = true` inherits the version (v23) from the root `Cargo.toml`     |
+| **`testutils`**       | Test utilities (mock auth, generated addresses, etc.) — only included in `dev-dependencies` |
 
 ### `src/lib.rs` — The Contract Entry Point
 
@@ -449,11 +449,11 @@ You should see a JSON response containing your registered property data. 🎉
 
 ### Deployment Troubleshooting
 
-| Error | Cause | Fix |
-| ----- | ----- | --- |
-| `Account not found` | Identity not funded | Run the Friendbot command from [Step 7b](#7b-fund-the-account-via-friendbot) |
-| `Transaction simulation failed` | WASM too large or invalid | Rebuild with `--release` and verify the `.wasm` file exists |
-| `Error: identity not found` | Typo in identity name | Run `stellar keys ls` to check available identities |
+| Error                           | Cause                     | Fix                                                                          |
+| ------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
+| `Account not found`             | Identity not funded       | Run the Friendbot command from [Step 7b](#7b-fund-the-account-via-friendbot) |
+| `Transaction simulation failed` | WASM too large or invalid | Rebuild with `--release` and verify the `.wasm` file exists                  |
+| `Error: identity not found`     | Typo in identity name     | Run `stellar keys ls` to check available identities                          |
 
 ---
 
@@ -477,13 +477,13 @@ contracts/property_registry/
 
 **Key differences** from your `hello_housing` contract:
 
-| Aspect               | `hello_housing` (tutorial)   | `property_registry` (production)  |
-| -------------------- | ---------------------------- | --------------------------------- |
-| **Error handling**   | Returns `Symbol`             | Returns `Result<(), PropertyError>` with a `#[contracterror]` enum |
-| **Authorization**    | None                         | `require_auth()` on sensitive operations |
-| **Events**           | None                         | Emits events for monitoring       |
-| **Module structure** | Single `lib.rs`              | Split across multiple modules     |
-| **Admin control**    | None                         | Admin initialization + verification |
+| Aspect               | `hello_housing` (tutorial) | `property_registry` (production)                                   |
+| -------------------- | -------------------------- | ------------------------------------------------------------------ |
+| **Error handling**   | Returns `Symbol`           | Returns `Result<(), PropertyError>` with a `#[contracterror]` enum |
+| **Authorization**    | None                       | `require_auth()` on sensitive operations                           |
+| **Events**           | None                       | Emits events for monitoring                                        |
+| **Module structure** | Single `lib.rs`            | Split across multiple modules                                      |
+| **Admin control**    | None                       | Admin initialization + verification                                |
 
 As you contribute to Chioma, you'll follow the production patterns. But the fundamentals — `#[contract]`, `#[contractimpl]`, storage, and types — are exactly what you've learned here.
 
@@ -493,19 +493,19 @@ As you contribute to Chioma, you'll follow the production patterns. But the fund
 
 > **Note:** In the table below, `<name>` is a placeholder — replace it with your actual crate name (e.g., `hello_housing`).
 
-| Task                          | Command                                                          |
-| ----------------------------- | ---------------------------------------------------------------- |
-| Initialize a new contract     | `stellar contract init contracts/<name>`                         |
-| Build all contracts (WASM)    | `cargo build --target wasm32-unknown-unknown --release`          |
-| Build a specific contract     | `cargo build -p <name> --target wasm32-unknown-unknown --release`|
-| Build with Soroban CLI        | `stellar contract build`                                         |
-| Format code                   | `cargo fmt --all`                                                |
-| Lint code                     | `cargo clippy --all-targets --all-features -- -D warnings`       |
-| Run all tests                 | `cargo test`                                                     |
-| Run tests for one contract    | `cargo test -p <name>`                                           |
-| Create a deployer identity    | `stellar keys generate --global <your-name> --network testnet`   |
-| Fund via Friendbot             | `curl "https://friendbot.stellar.org/?addr=$(stellar keys address <your-name>)"` |
-| Deploy to Testnet             | `stellar contract deploy --wasm <path>.wasm --source <your-name> --network testnet` |
+| Task                       | Command                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| Initialize a new contract  | `stellar contract init contracts/<name>`                                            |
+| Build all contracts (WASM) | `cargo build --target wasm32-unknown-unknown --release`                             |
+| Build a specific contract  | `cargo build -p <name> --target wasm32-unknown-unknown --release`                   |
+| Build with Soroban CLI     | `stellar contract build`                                                            |
+| Format code                | `cargo fmt --all`                                                                   |
+| Lint code                  | `cargo clippy --all-targets --all-features -- -D warnings`                          |
+| Run all tests              | `cargo test`                                                                        |
+| Run tests for one contract | `cargo test -p <name>`                                                              |
+| Create a deployer identity | `stellar keys generate --global <your-name> --network testnet`                      |
+| Fund via Friendbot         | `curl "https://friendbot.stellar.org/?addr=$(stellar keys address <your-name>)"`    |
+| Deploy to Testnet          | `stellar contract deploy --wasm <path>.wasm --source <your-name> --network testnet` |
 
 ---
 
@@ -517,4 +517,4 @@ Your first contract is built! Continue to the next guide:
 
 ---
 
-*Last updated: April 2026 · Chioma Housing Protocol · [CONTRIBUTING.md](../../CONTRIBUTING.md)*
+_Last updated: April 2026 · Chioma Housing Protocol · [CONTRIBUTING.md](../../CONTRIBUTING.md)_

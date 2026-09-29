@@ -14,6 +14,7 @@ import { Payment } from '../rent/entities/payment.entity';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 import { RentObligationNft } from './entities/rent-obligation-nft.entity';
 import { NFTTransfer } from './entities/nft-transfer.entity';
+import { TerminationReconciliation } from './entities/termination-reconciliation.entity';
 
 import { AuditModule } from '../audit/audit.module';
 import { ReviewsModule } from '../reviews/reviews.module';
@@ -33,6 +34,7 @@ import { AgreementCronService } from './cron/agreement-cron.service';
       StellarEscrow,
       RentObligationNft,
       NFTTransfer,
+      TerminationReconciliation,
     ]),
     AuditModule,
     ReviewsModule,

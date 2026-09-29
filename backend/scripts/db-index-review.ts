@@ -71,7 +71,9 @@ async function reviewIndexes(showAll = false): Promise<void> {
 
     if (showAll) {
       console.log('All Indexes (sorted by scan count):\n');
-      const sortedByScan = [...indexes].sort((a, b) => b.index_scans - a.index_scans);
+      const sortedByScan = [...indexes].sort(
+        (a, b) => b.index_scans - a.index_scans,
+      );
       for (const idx of sortedByScan) {
         console.log(
           `  ${idx.tablename}.${idx.indexname}: ${idx.index_scans} scans, ${idx.index_size}, ${idx.tuples_read} read`,
@@ -85,7 +87,10 @@ async function reviewIndexes(showAll = false): Promise<void> {
     const unused: UnusedIndex[] = [];
 
     for (const idx of indexes) {
-      if (idx.index_scans <= WARN_NO_SCANS && idx.index_size_bytes > WARN_SIZE_BYTES) {
+      if (
+        idx.index_scans <= WARN_NO_SCANS &&
+        idx.index_size_bytes > WARN_SIZE_BYTES
+      ) {
         unused.push({
           tablename: idx.tablename,
           indexname: idx.indexname,
@@ -192,7 +197,9 @@ async function reviewIndexes(showAll = false): Promise<void> {
     if (unused.length > 0) {
       console.log('  Unused indexes to consider dropping:');
       for (const ui of unused) {
-        console.log(`    DROP INDEX IF EXISTS "${ui.indexname}";  -- ${ui.index_size}, 0 scans`);
+        console.log(
+          `    DROP INDEX IF EXISTS "${ui.indexname}";  -- ${ui.index_size}, 0 scans`,
+        );
       }
       console.log('');
     }
@@ -201,20 +208,29 @@ async function reviewIndexes(showAll = false): Promise<void> {
     if (highRatioTables.length > 0) {
       console.log('  Tables with high index-to-table ratio:');
       for (const t of highRatioTables) {
-        console.log(`    ${t.tablename}: ${t.index_ratio}% (table=${t.table_size}, indexes=${t.indexes_size})`);
+        console.log(
+          `    ${t.tablename}: ${t.index_ratio}% (table=${t.table_size}, indexes=${t.indexes_size})`,
+        );
       }
       console.log('');
     }
 
     console.log('  Best Practices:');
     console.log('  1. Index columns used in WHERE, JOIN, ORDER BY clauses');
-    console.log('  2. Use composite indexes for query patterns with multiple conditions');
-    console.log('  3. Avoid over-indexing on frequently updated tables (write overhead)');
-    console.log('  4. Monitor pg_stat_statements for sequential scans on large tables');
+    console.log(
+      '  2. Use composite indexes for query patterns with multiple conditions',
+    );
+    console.log(
+      '  3. Avoid over-indexing on frequently updated tables (write overhead)',
+    );
+    console.log(
+      '  4. Monitor pg_stat_statements for sequential scans on large tables',
+    );
     console.log('  5. Consider partial indexes for common filtered queries');
-    console.log('  6. Use covering indexes (INCLUDE columns) for index-only scans');
+    console.log(
+      '  6. Use covering indexes (INCLUDE columns) for index-only scans',
+    );
     console.log('');
-
   } catch (error) {
     console.error('Index review failed:', error);
     process.exit(1);
@@ -226,9 +242,11 @@ async function reviewIndexes(showAll = false): Promise<void> {
 const args = process.argv.slice(2);
 const showAll = args.includes('--all') || args.includes('-a');
 
-reviewIndexes(showAll).then(() => {
-  console.log('Index review complete.');
-}).catch((err) => {
-  console.error('Index review failed:', err);
-  process.exit(1);
-});
+reviewIndexes(showAll)
+  .then(() => {
+    console.log('Index review complete.');
+  })
+  .catch((err) => {
+    console.error('Index review failed:', err);
+    process.exit(1);
+  });

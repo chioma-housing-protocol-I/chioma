@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import {
@@ -8,12 +8,32 @@ import {
   RateLimitConfig,
 } from '../types/rate-limit.types';
 import { RATE_LIMIT_CONFIG } from '../config/rate-limit.config';
+import { REDIS_CLIENT } from '../../../common/lock/redis-client.token';
+
+/**
+ * Atomically increments the counter at KEYS[1] by ARGV[1] and, only on the
+ * FIRST increment in the window, sets its expiry to ARGV[2] seconds. A
+ * single round trip means concurrent requests across any number of
+ * replicas serialize through Redis itself rather than racing on a
+ * read-then-write pair, which is what let the effective limit be
+ * multiplied by the replica count under the old cacheManager get/set path.
+ */
+const INCR_AND_EXPIRE_SCRIPT = `
+local current = redis.call("INCRBY", KEYS[1], ARGV[1])
+if tonumber(current) == tonumber(ARGV[1]) then
+  redis.call("EXPIRE", KEYS[1], ARGV[2])
+end
+return current
+`;
 
 @Injectable()
 export class RateLimitService {
   private readonly logger = new Logger(RateLimitService.name);
 
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   async consumePoints(
     identifier: string,
@@ -24,10 +44,24 @@ export class RateLimitService {
     const config = this.getConfig(tier, category);
     const key = this.buildKey(identifier, category);
     const blockKey = this.buildBlockKey(identifier, category);
+    const userBlockKey = this.buildUserBlockKey(identifier);
 
     try {
+      const whitelisted = await this.cacheManager.get<boolean>(
+        `rate_limit:whitelist:${identifier}`,
+      );
+      if (whitelisted === true) {
+        return {
+          success: true,
+          remainingPoints: config.points,
+          msBeforeNext: 0,
+          isBlocked: false,
+        };
+      }
+
       const isBlocked = await this.cacheManager.get<boolean>(blockKey);
-      if (isBlocked) {
+      const isUserBlocked = await this.cacheManager.get<boolean>(userBlockKey);
+      if (isBlocked || isUserBlocked) {
         const ttl = await this.getTTL(blockKey);
         return {
           success: false,
@@ -37,15 +71,21 @@ export class RateLimitService {
         };
       }
 
-      const current = await this.cacheManager.get<number>(key);
-      // Ensure current is a valid number, treat non-numeric values as 0
-      const currentValue = typeof current === 'number' ? current : 0;
-      const consumed = currentValue + points;
+      const consumed = await this.incrementCounter(
+        key,
+        points,
+        config.duration,
+      );
 
       if (consumed > config.points) {
         if (config.blockDuration) {
           await this.cacheManager.set(
             blockKey,
+            true,
+            config.blockDuration * 1000,
+          );
+          await this.cacheManager.set(
+            userBlockKey,
             true,
             config.blockDuration * 1000,
           );
@@ -61,8 +101,6 @@ export class RateLimitService {
         };
       }
 
-      await this.cacheManager.set(key, consumed, config.duration * 1000);
-
       return {
         success: true,
         remainingPoints: config.points - consumed,
@@ -71,6 +109,10 @@ export class RateLimitService {
       };
     } catch (error) {
       this.logger.error(`Rate limit error for ${identifier}: ${error.message}`);
+      // Documented safe degradation: if the shared store is unreachable,
+      // fail OPEN (allow the request) rather than locking users out or
+      // throwing — an unavailable rate limiter must never become an
+      // outage. See docs/rate-limiting-store-failure-behaviour.md.
       return {
         success: true,
         remainingPoints: config.points,
@@ -80,6 +122,44 @@ export class RateLimitService {
     }
   }
 
+  /**
+   * Atomically increments the shared counter and returns the new total.
+   *
+   * When a real Redis client is available (the common case in any
+   * deployment with more than one replica), this is a single INCRBY+EXPIRE
+   * Lua script — one round trip, no read-then-write race, so the counter
+   * is correct regardless of how many replicas call it concurrently.
+   *
+   * When no Redis client is configured (e.g. `NODE_ENV=test`, or a
+   * deliberately single-instance deployment relying on the in-process
+   * cache-manager store), this falls back to the previous get-then-set
+   * behaviour. That fallback is NOT safe across replicas — it is only
+   * correct for a single instance — which is the documented limitation of
+   * running without Redis.
+   */
+  private async incrementCounter(
+    key: string,
+    points: number,
+    durationSeconds: number,
+  ): Promise<number> {
+    if (this.redis) {
+      const result = await this.redis.eval(
+        INCR_AND_EXPIRE_SCRIPT,
+        1,
+        key,
+        points,
+        durationSeconds,
+      );
+      return Number(result);
+    }
+
+    const current = await this.cacheManager.get<number>(key);
+    const currentValue = typeof current === 'number' ? current : 0;
+    const consumed = currentValue + points;
+    await this.cacheManager.set(key, consumed, durationSeconds * 1000);
+    return consumed;
+  }
+
   async resetLimit(
     identifier: string,
     category: EndpointCategory,
@@ -87,8 +167,13 @@ export class RateLimitService {
     try {
       const key = this.buildKey(identifier, category);
       const blockKey = this.buildBlockKey(identifier, category);
+      const userBlockKey = this.buildUserBlockKey(identifier);
+      if (typeof this.redis?.del === 'function') {
+        await this.redis.del(key);
+      }
       await this.cacheManager.del(key);
       await this.cacheManager.del(blockKey);
+      await this.cacheManager.del(userBlockKey);
     } catch (error) {
       this.logger.error(
         `Failed to reset limit for ${identifier}: ${error.message}`,
@@ -104,6 +189,14 @@ export class RateLimitService {
   ): Promise<number> {
     const config = this.getConfig(tier, category);
     const key = this.buildKey(identifier, category);
+    if (typeof this.redis?.get === 'function') {
+      const current = await this.redis.get(key);
+      const consumed = current == null || current === '' ? 0 : Number(current);
+      return Math.max(
+        config.points - (Number.isFinite(consumed) ? consumed : 0),
+        0,
+      );
+    }
     const current = await this.cacheManager.get<number>(key);
     return config.points - (current || 0);
   }
@@ -166,6 +259,10 @@ export class RateLimitService {
     return `rate_limit:block:${category}:${identifier}`;
   }
 
+  private buildUserBlockKey(identifier: string): string {
+    return `rate_limit:block:user:${identifier}`;
+  }
+
   private async recordViolation(
     identifier: string,
     category: EndpointCategory,
@@ -181,7 +278,9 @@ export class RateLimitService {
 
   private async getTTL(key: string): Promise<number> {
     try {
-      const store = this.cacheManager.stores as any;
+      const store = this.cacheManager.stores as {
+        ttl?: (key: string) => Promise<number>;
+      };
       if (store.ttl) {
         return await store.ttl(key);
       }

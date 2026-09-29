@@ -166,7 +166,7 @@ const publicPolicy: CachePolicy = {
   lastModified: true,
 };
 
-const privatePolicy: CachePolicy = {
+void {
   directives: ['private', 'no-cache'],
   etag: true,
   lastModified: false,

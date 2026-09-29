@@ -267,6 +267,10 @@ interface JwtPayload {
 }
 ```
 
+### Token Type Validation
+
+Every place that decodes a JWT (`JwtStrategy`, `RefreshTokenStrategy`, `AuthService.refreshToken()`) must confirm the `type` claim matches what that flow expects, so an access token can't be replayed as a refresh token or vice versa. This check is centralized in `ValidationUtils.validateTokenType(payload, expectedType)` (`src/common/utils/validation.utils.ts`), which returns `true`/`false`; each call site still throws its own context-appropriate error (`UnauthorizedException`, passport `Error`, or `AuthenticationError`) when the check fails.
+
 The `JwtStrategy` validates that `type === "access"` and that the user exists and is active before attaching the user to the request.
 
 ---

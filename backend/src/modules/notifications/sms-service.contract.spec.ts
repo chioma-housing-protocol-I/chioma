@@ -211,7 +211,7 @@ describe('SmsService - Contract Tests', () => {
       expect(result.results.length).toBe(recipients.length);
 
       // Contract: Each result must be a valid SmsResponse
-      result.results.forEach((smsResult, index) => {
+      result.results.forEach((smsResult, _index) => {
         expect(smsResult).toHaveProperty('success');
         const resultKeys = ['success', 'messageId', 'error', 'deliveryStatus'];
         Object.keys(smsResult).forEach((key) => {

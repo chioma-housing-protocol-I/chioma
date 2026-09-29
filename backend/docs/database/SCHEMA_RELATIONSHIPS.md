@@ -458,5 +458,5 @@ See [DATABASE_DOCUMENTATION_GUIDE.md](./DATABASE_DOCUMENTATION_GUIDE.md) for the
 - [Database Documentation Guide](./DATABASE_DOCUMENTATION_GUIDE.md)
 - [Performance Indexes](./PERFORMANCE_INDEXES.md)
 - [Data Source Configuration](../src/database/data-source.ts)
-- [SQL Migration Files](../src/database/migrations/)
+- [Migration Files](../src/migrations/)
 - [Entity Files](../src/modules/)

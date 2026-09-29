@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Users, CheckCircle, XCircle } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useRouter } from 'next/navigation';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -24,6 +27,7 @@ interface Booking {
 }
 
 export default function HostBookingsPage() {
+  const router = useRouter();
   const [status, setStatus] = useState('all');
   const queryClient = useQueryClient();
 
@@ -48,11 +52,35 @@ export default function HostBookingsPage() {
       });
       if (!res.ok) throw new Error('Failed');
     },
+    onMutate: async ({ id, action }) => {
+      const nextStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
+      await queryClient.cancelQueries({ queryKey: ['host-bookings'] });
+      const snapshots = queryClient
+        .getQueriesData<Booking[]>({ queryKey: ['host-bookings'] })
+        .map(([key, data]) => [key, data] as const);
+
+      queryClient.setQueriesData<Booking[]>(
+        { queryKey: ['host-bookings'] },
+        (old) =>
+          old?.map((b) => (b.id === id ? { ...b, status: nextStatus } : b)),
+      );
+
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      toast.error('Something went wrong');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['host-bookings'] });
       toast.success('Booking updated');
     },
-    onError: () => toast.error('Something went wrong'),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['host-bookings'] });
+    },
   });
 
   return (
@@ -77,13 +105,20 @@ export default function HostBookingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          No bookings found
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="No bookings found"
+          description="Bookings from guests will show up here once your listings start getting reservations."
+          actionLabel="Manage listings"
+          onAction={() => router.push('/host/listings')}
+          variant="dark"
+        />
       ) : (
         <div className="space-y-4">
           {bookings.map((b: Booking) => (
@@ -114,22 +149,24 @@ export default function HostBookingsPage() {
               </div>
               {b.status === 'pending' && (
                 <div className="flex gap-3">
-                  <button
+                  <LoadingButton
+                    loading={updateStatus.isPending}
                     onClick={() =>
                       updateStatus.mutate({ id: b.id, action: 'confirm' })
                     }
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl text-sm hover:bg-emerald-500/30 transition-colors"
+                    className="flex-1 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl text-sm hover:bg-emerald-500/30 transition-colors"
                   >
                     <CheckCircle size={16} /> Confirm
-                  </button>
-                  <button
+                  </LoadingButton>
+                  <LoadingButton
+                    loading={updateStatus.isPending}
                     onClick={() =>
                       updateStatus.mutate({ id: b.id, action: 'cancel' })
                     }
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-sm hover:bg-red-500/30 transition-colors"
+                    className="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-sm hover:bg-red-500/30 transition-colors"
                   >
                     <XCircle size={16} /> Decline
-                  </button>
+                  </LoadingButton>
                 </div>
               )}
             </div>

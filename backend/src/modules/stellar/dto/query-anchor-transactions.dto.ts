@@ -14,6 +14,13 @@ import {
   AnchorTransactionType,
 } from '../../transactions/entities/anchor-transaction.entity';
 
+export enum AnchorTransactionSortField {
+  CREATED_AT = 'createdAt',
+  AMOUNT = 'amount',
+  STATUS = 'status',
+  TYPE = 'type',
+}
+
 export class QueryAnchorTransactionsDto {
   @ApiPropertyOptional({
     enum: AnchorTransactionType,
@@ -78,4 +85,22 @@ export class QueryAnchorTransactionsDto {
   @Min(1)
   @Max(100)
   limit?: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Field to sort by',
+    enum: AnchorTransactionSortField,
+    default: AnchorTransactionSortField.CREATED_AT,
+  })
+  @IsOptional()
+  @IsEnum(AnchorTransactionSortField)
+  sortBy?: AnchorTransactionSortField = AnchorTransactionSortField.CREATED_AT;
+
+  @ApiPropertyOptional({
+    description: 'Sort direction',
+    enum: ['ASC', 'DESC'],
+    default: 'DESC',
+  })
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

@@ -20,6 +20,7 @@ import {
 import { getStellarExpertAccountUrl } from '@/lib/stellar-network';
 import { StellarAccountBalance } from './StellarAccountBalance';
 import { StellarAccountHistory } from './StellarAccountHistory';
+import { formatDate, formatCrypto } from '@/lib/utils/format';
 
 type Tab = 'overview' | 'history' | 'signers' | 'trustlines';
 
@@ -166,11 +167,11 @@ export function StellarAccountDetail({
               {[
                 {
                   label: 'Created',
-                  value: new Date(account.createdAt).toLocaleDateString(),
+                  value: formatDate(account.createdAt),
                 },
                 {
                   label: 'Last Updated',
-                  value: new Date(account.updatedAt).toLocaleDateString(),
+                  value: formatDate(account.updatedAt),
                 },
                 { label: 'Sequence Number', value: account.sequenceNumber },
                 {
@@ -248,7 +249,7 @@ export function StellarAccountDetail({
                         {b.asset_code}
                       </span>
                       <span className="text-xs text-slate-400">
-                        {parseFloat(b.balance).toFixed(2)}
+                        {formatCrypto(b.balance)}
                       </span>
                     </div>
                     <p className="font-mono text-[10px] text-slate-500 truncate mt-0.5">

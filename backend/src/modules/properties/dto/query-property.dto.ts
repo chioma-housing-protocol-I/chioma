@@ -12,6 +12,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PropertyType, ListingStatus } from '../entities/property.entity';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 /** Trims a string and strips ASCII / unicode control characters. */
 function sanitizeString(value: unknown): unknown {
@@ -21,7 +22,7 @@ function sanitizeString(value: unknown): unknown {
   return value.trim().replace(/\p{Cc}/gu, '');
 }
 
-export class QueryPropertyDto {
+export class QueryPropertyDto extends PaginationQueryDto {
   // Filters
   @ApiPropertyOptional({
     description: 'Filter by property type',
@@ -242,33 +243,6 @@ export class QueryPropertyDto {
   @IsString()
   @MaxLength(200)
   search?: string;
-
-  // Pagination
-  @ApiPropertyOptional({
-    description: 'Page number for pagination',
-    example: 1,
-    minimum: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
-    description: 'Number of items per page',
-    example: 10,
-    minimum: 1,
-    maximum: 100,
-    default: 10,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  limit?: number = 10;
 
   // Sorting
   @ApiPropertyOptional({

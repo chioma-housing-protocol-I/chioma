@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { RecentActivityProps } from './types';
 
 const RecentActivity = ({
@@ -12,6 +13,7 @@ const RecentActivity = ({
   className = '',
 }: RecentActivityProps) => {
   const displayItems = items.slice(0, maxItems);
+  const dateFnsLocale = useDateFnsLocale();
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -66,6 +68,7 @@ const RecentActivity = ({
                   <span className="text-[10px] font-medium text-blue-300/40 shrink-0 ml-2 uppercase tracking-wider">
                     {formatDistanceToNow(new Date(activity.timestamp), {
                       addSuffix: true,
+                      locale: dateFnsLocale,
                     })}
                   </span>
                 </div>

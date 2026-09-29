@@ -108,11 +108,13 @@ export class RateLimitGuard implements CanActivate {
           ? Math.ceil((abuseResult.blockUntil.getTime() - Date.now()) / 1000)
           : 3600;
 
+        // Set Retry-After header
+        request.res?.setHeader('Retry-After', retryAfter);
+
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
             message: 'Too many requests - abuse detected',
-            retryAfter,
             violations: abuseResult.violations,
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -136,11 +138,14 @@ export class RateLimitGuard implements CanActivate {
         );
 
         const retryAfter = Math.ceil(result.msBeforeNext / 1000);
+
+        // Set Retry-After header
+        request.res?.setHeader('Retry-After', retryAfter);
+
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
             message: 'Too many requests',
-            retryAfter,
             remainingPoints: result.remainingPoints,
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -163,13 +168,18 @@ export class RateLimitGuard implements CanActivate {
   }
 
   private getIdentifier(request: RequestWithUser): string {
+    // Authenticated users are always identified by their user ID.
+    // This prevents bypass via IP spoofing / X-Forwarded-For manipulation.
     if (request.user?.id) {
       return `user:${request.user.id}`;
     }
-    return `ip:${this.getClientIp(request)}`;
+    // Unauthenticated: use the socket-level IP only (ignore forwarded headers
+    // for rate-limit keying to prevent header injection attacks).
+    return `ip:${request.socket?.remoteAddress ?? request.ip ?? 'unknown'}`;
   }
 
   private getClientIp(request: Request): string {
+    // For logging/analytics only — not used as the rate-limit key.
     const forwarded = request.headers['x-forwarded-for'];
     if (typeof forwarded === 'string') {
       return forwarded.split(',')[0].trim();

@@ -19,8 +19,8 @@ describe('DisputesController', () => {
   const mockDispute: Dispute = {
     id: 1,
     disputeId: 'dispute-uuid-1',
-    agreementId: 1,
-    initiatedBy: 1,
+    agreementId: '1',
+    initiatedBy: 'user-1',
     disputeType: DisputeType.RENT_PAYMENT,
     requestedAmount: 500,
     description: 'Test dispute description',
@@ -102,8 +102,11 @@ describe('DisputesController', () => {
   describe('findAll', () => {
     it('should return paginated disputes', async () => {
       const mockResult = {
-        disputes: [mockDispute],
+        data: [mockDispute],
         total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
       };
 
       jest.spyOn(service, 'findAll').mockResolvedValue(mockResult);
@@ -148,7 +151,7 @@ describe('DisputesController', () => {
         id: 1,
         content: 'Test comment',
         disputeId: 1,
-        userId: 1,
+        userId: 'user-1',
         isInternal: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -204,18 +207,27 @@ describe('DisputesController', () => {
 
   describe('getAgreementDisputes', () => {
     it('should return disputes for an agreement', async () => {
-      jest
-        .spyOn(service, 'getAgreementDisputes')
-        .mockResolvedValue([mockDispute]);
+      const mockResult = {
+        data: [mockDispute],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
+      jest.spyOn(service, 'getAgreementDisputes').mockResolvedValue(mockResult);
 
-      const result = await controller.getAgreementDisputes('1', {
-        user: mockUser,
-      });
+      const result = await controller.getAgreementDisputes(
+        '1',
+        { user: mockUser },
+        { page: 1, limit: 20 },
+      );
 
-      expect(result).toEqual([mockDispute]);
+      expect(result).toEqual(mockResult);
       expect(service.getAgreementDisputes).toHaveBeenCalledWith(
         '1',
         mockUser.id,
+        1,
+        20,
       );
     });
   });

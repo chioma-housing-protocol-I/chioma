@@ -4,7 +4,10 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load environment variables
-const envPath = path.resolve(process.cwd(), process.env.NODE_ENV === 'test' ? '.env.test' : '.env.development');
+const envPath = path.resolve(
+  process.cwd(),
+  process.env.NODE_ENV === 'test' ? '.env.test' : '.env.development',
+);
 dotenv.config({ path: envPath });
 
 async function runPerformanceReport() {
@@ -42,12 +45,16 @@ async function runPerformanceReport() {
         LIMIT 10;
       `);
       if (slowQueries.length === 0) {
-        console.log('No slow queries recorded or pg_stat_statements just reset.');
+        console.log(
+          'No slow queries recorded or pg_stat_statements just reset.',
+        );
       } else {
         console.table(slowQueries);
       }
     } catch (e) {
-      console.log('pg_stat_statements not available. Run migration 1900000000000 to enable it.');
+      console.log(
+        'pg_stat_statements not available. Run migration 1900000000000 to enable it.',
+      );
       console.log(`Error: ${e.message}\n`);
     }
 
@@ -66,9 +73,9 @@ async function runPerformanceReport() {
       LIMIT 10;
     `);
     if (unusedIndexes.length === 0) {
-        console.log('No unused indexes found.');
+      console.log('No unused indexes found.');
     } else {
-        console.table(unusedIndexes);
+      console.table(unusedIndexes);
     }
 
     // 3. Largest Tables
@@ -95,7 +102,6 @@ async function runPerformanceReport() {
       FROM pg_statio_user_tables;
     `);
     console.table(cacheHitRatio);
-
   } catch (error) {
     console.error('Failed to generate report:', error);
   } finally {

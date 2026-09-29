@@ -18,6 +18,9 @@ This backend now exposes a payments orchestration layer that bridges the generic
 - Stellar rent payments require the caller to provide a valid tenant secret for transaction signing.
 - Stellar escrow creation assumes the source and destination Stellar accounts are already registered in Chioma.
 - If `PAYMENT_WEBHOOK_SECRET` is configured, webhook callers must provide it in `x-chioma-payment-secret`.
+- Every inbound payment webhook must include a valid HMAC-SHA256 signature in `X-Webhook-Signature` and a Unix-milliseconds timestamp in `X-Webhook-Timestamp`.
+- Secret rotation is supported by supplying a JSON array of active keys in newest-first order, e.g. `["new-secret","old-secret"]`.
+- Webhook signature failures are logged as suspicious activity and should be monitored for replay, tampering, or credential compromise.
 - Escrow-backed payments are stored as `pending` until reconciliation observes `RELEASED` or `REFUNDED`.
 
 ## Reconciliation model

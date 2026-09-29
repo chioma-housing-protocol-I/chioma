@@ -8,6 +8,7 @@
  * - Fallback execution ({@link FallbackOptions})
  * - Graceful degradation ({@link DegradationLevel}, {@link FeaturePriority})
  * - Incident tracking ({@link IncidentSeverity}, {@link IncidentStatus})
+ * - Timeout enforcement ({@link TimeoutOptions}, {@link TimeoutMetrics})
  */
 
 // ── Bulkhead ────────────────────────────────────────────────────────────────
@@ -38,6 +39,36 @@ export interface BulkheadMetrics {
   totalExecuted: number;
   /** Calls rejected because the compartment was saturated. */
   totalRejected: number;
+}
+
+// ── Timeout ───────────────────────────────────────────────────────────────
+
+/** Default per-call deadline used when no explicit `timeoutMs` is provided. */
+export const DEFAULT_TIMEOUT_MS = 10_000;
+
+/** Configuration for a single timeout-protected call site. */
+export interface TimeoutOptions {
+  /**
+   * Maximum milliseconds to wait for the wrapped function to settle.
+   * Defaults to {@link DEFAULT_TIMEOUT_MS} when omitted.
+   */
+  timeoutMs?: number;
+  /** Human-readable label used in log messages and metrics. */
+  context?: string;
+  /** Invoked immediately before the deadline fires (useful for cleanup/logging). */
+  onTimeout?: (context: string, timeoutMs: number) => void;
+}
+
+/** Aggregate view of a named timeout call site. */
+export interface TimeoutMetrics {
+  /** The label that was passed as `options.context`. */
+  context: string;
+  /** Total invocations (both successful and timed-out). */
+  totalCalls: number;
+  /** Invocations that exceeded the deadline. */
+  totalTimeouts: number;
+  /** Last deadline that was enforced (ms), or `undefined` if never called. */
+  lastTimeoutMs: number | undefined;
 }
 
 // ── Fallback ──────────────────────────────────────────────────────────────

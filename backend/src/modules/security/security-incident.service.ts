@@ -8,6 +8,7 @@ import {
   ThreatType,
 } from './entities/threat-event.entity';
 import { SecurityEvent } from './entities/security-event.entity';
+import { PaginationUtils } from '../../common/utils';
 
 export enum IncidentSeverity {
   P1 = 'P1', // Critical – immediate response
@@ -106,8 +107,8 @@ export class SecurityIncidentService {
   /**
    * Get open incidents ordered by severity.
    */
-  getOpenIncidents(): SecurityIncident[] {
-    return Array.from(this.incidents.values())
+  getOpenIncidents(page: number = 1, limit: number = 20) {
+    const sorted = Array.from(this.incidents.values())
       .filter((i) => i.status !== 'resolved')
       .sort((a, b) => {
         const order = {
@@ -118,6 +119,7 @@ export class SecurityIncidentService {
         };
         return order[a.severity] - order[b.severity];
       });
+    return PaginationUtils.paginateArray(sorted, page, limit);
   }
 
   /**

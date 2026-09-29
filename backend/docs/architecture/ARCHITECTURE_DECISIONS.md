@@ -37,11 +37,11 @@ The Chioma platform manages rental agreements, payments, escrow, property listin
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Microservices (per domain) | Premature complexity for the team size; added overhead for distributed transactions, service discovery, and inter-service communication |
-| Serverless functions (AWS Lambda) | Cold starts, state management complexity, and poor fit for long-lived blockchain operations |
-| Monolithic (no module boundaries) | Risk of uncontrolled coupling; no enforcement of domain separation |
+| Alternative                       | Reason Against                                                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Microservices (per domain)        | Premature complexity for the team size; added overhead for distributed transactions, service discovery, and inter-service communication |
+| Serverless functions (AWS Lambda) | Cold starts, state management complexity, and poor fit for long-lived blockchain operations                                             |
+| Monolithic (no module boundaries) | Risk of uncontrolled coupling; no enforcement of domain separation                                                                      |
 
 ### Trade-offs
 
@@ -76,11 +76,11 @@ The team needed a structured, opinionated framework for building maintainable se
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
+| Alternative    | Reason Against                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
 | Express (bare) | No built-in module system, dependency injection, or guard/middleware framework — leads to ad-hoc organisation |
-| Fastify | Faster runtime, but smaller ecosystem; fewer community resources for NestJS-style decorators and providers |
-| LoopBack | Heavy ORM coupling and code generation; less flexibility for Stellar/blockchain integrations |
+| Fastify        | Faster runtime, but smaller ecosystem; fewer community resources for NestJS-style decorators and providers    |
+| LoopBack       | Heavy ORM coupling and code generation; less flexibility for Stellar/blockchain integrations                  |
 
 ### Trade-offs
 
@@ -111,12 +111,12 @@ The application requires ACID compliance for financial transactions (payments, e
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| MongoDB | No native ACID across documents (pre-v4.0); weaker geospatial indexing; no JOINs for relational queries |
-| Prisma | Cleaner API but less control over raw queries; migration tooling was less mature at decision time; additional build step |
-| Knex.js | Query builder only — no entity mapping, no lazy loading, no repository pattern |
-| Raw SQL (pg driver) | Maximum control but no schema validation, no migration tooling, no entity mapping |
+| Alternative         | Reason Against                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| MongoDB             | No native ACID across documents (pre-v4.0); weaker geospatial indexing; no JOINs for relational queries                  |
+| Prisma              | Cleaner API but less control over raw queries; migration tooling was less mature at decision time; additional build step |
+| Knex.js             | Query builder only — no entity mapping, no lazy loading, no repository pattern                                           |
+| Raw SQL (pg driver) | Maximum control but no schema validation, no migration tooling, no entity mapping                                        |
 
 ### Trade-offs
 
@@ -148,11 +148,11 @@ Chioma targets both traditional web users (email/password) and blockchain-native
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Email/password only | Excludes Stellar wallet users from native blockchain features |
-| Stellar SEP-0010 only | Excludes traditional web users who may not have a Stellar wallet |
-| OAuth 2.0 / OpenID Connect | Additional complexity; no built-in Stellar integration |
+| Alternative                | Reason Against                                                   |
+| -------------------------- | ---------------------------------------------------------------- |
+| Email/password only        | Excludes Stellar wallet users from native blockchain features    |
+| Stellar SEP-0010 only      | Excludes traditional web users who may not have a Stellar wallet |
+| OAuth 2.0 / OpenID Connect | Additional complexity; no built-in Stellar integration           |
 
 ### Trade-offs
 
@@ -184,11 +184,11 @@ Several operations should not block the HTTP response: sending emails, submittin
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| In-process `setTimeout` / `setImmediate` | No persistence; lost on crash; no retry mechanism; no monitoring |
-| AWS SQS / RabbitMQ | Additional infrastructure dependency; not already in the stack; paid service |
-| Bull (with ioredis) | Redis was already required for caching; mature queue semantics with built-in retry, backoff, and job monitoring |
+| Alternative                              | Reason Against                                                                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| In-process `setTimeout` / `setImmediate` | No persistence; lost on crash; no retry mechanism; no monitoring                                                |
+| AWS SQS / RabbitMQ                       | Additional infrastructure dependency; not already in the stack; paid service                                    |
+| Bull (with ioredis)                      | Redis was already required for caching; mature queue semantics with built-in retry, backoff, and job monitoring |
 
 ### Trade-offs
 
@@ -220,10 +220,10 @@ Read-heavy endpoints (property listings, user profiles, static reference data) b
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| In-memory cache (Node.js Map) | Not shared across instances; lost on restart; no eviction policy |
-| Memcached | Simpler but no built-in data structures; less ecosystem support |
+| Alternative                          | Reason Against                                                     |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| In-memory cache (Node.js Map)        | Not shared across instances; lost on restart; no eviction policy   |
+| Memcached                            | Simpler but no built-in data structures; less ecosystem support    |
 | CDN caching (Cloudflare, CloudFront) | Only effective for cacheable GET responses; no server-side control |
 
 ### Trade-offs
@@ -257,11 +257,11 @@ Three teams (backend, frontend, smart contracts) collaborate on a single product
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
+| Alternative                               | Reason Against                                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Multi-repo (separate repos per component) | Coordinating cross-cutting changes requires multiple PRs; version drift between API and frontend; harder onboarding |
-| Monorepo with Lerna | Additional tooling; less active maintenance |
-| Monorepo with pnpm workspaces | Native workspace support; fast installs; strict dependency isolation |
+| Monorepo with Lerna                       | Additional tooling; less active maintenance                                                                         |
+| Monorepo with pnpm workspaces             | Native workspace support; fast installs; strict dependency isolation                                                |
 
 ### Trade-offs
 
@@ -292,11 +292,11 @@ The public API will evolve over time. Breaking changes must be communicated and 
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
+| Alternative                             | Reason Against                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------- |
 | Header-based versioning (Accept header) | More RESTful but invisible in URLs — harder to debug, cache, and document |
-| Query parameter versioning (`?v=1`) | Easy to forget; no clear cache key separation |
-| No versioning | Impossible to evolve the API without breaking existing clients |
+| Query parameter versioning (`?v=1`)     | Easy to forget; no clear cache key separation                             |
+| No versioning                           | Impossible to evolve the API without breaking existing clients            |
 
 ### Trade-offs
 
@@ -328,11 +328,11 @@ Regulatory compliance (GDPR, CCPA, FCRA) requires protection of personally ident
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
+| Alternative                     | Reason Against                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------- |
 | PostgreSQL `pgcrypto` extension | Ties encryption to the database; harder to rotate keys; no application-level access control |
-| Transit encryption only (TLS) | No protection for data at rest; no protection from database-level breach |
-| HSM / cloud KMS (AWS KMS) | Additional cost and latency; dependency on cloud provider; more complex key rotation |
+| Transit encryption only (TLS)   | No protection for data at rest; no protection from database-level breach                    |
+| HSM / cloud KMS (AWS KMS)       | Additional cost and latency; dependency on cloud provider; more complex key rotation        |
 
 ### Trade-offs
 
@@ -364,11 +364,11 @@ The platform uses Stellar for escrow contracts, rent obligation NFTs, property r
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Third-party blockchain middleware (e.g., Alchemy, Infura for Stellar) | Additional cost; dependency on third-party availability; less control over transaction building |
-| Custom Stellar node | Operational overhead of running and maintaining a Stellar node; not justified for current transaction volume |
-| Soroban CLI for every operation | Not suitable for programmatic/automated operations; no TypeScript SDK |
+| Alternative                                                           | Reason Against                                                                                               |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Third-party blockchain middleware (e.g., Alchemy, Infura for Stellar) | Additional cost; dependency on third-party availability; less control over transaction building              |
+| Custom Stellar node                                                   | Operational overhead of running and maintaining a Stellar node; not justified for current transaction volume |
+| Soroban CLI for every operation                                       | Not suitable for programmatic/automated operations; no TypeScript SDK                                        |
 
 ### Trade-offs
 
@@ -400,11 +400,11 @@ API security and data integrity require strict validation of all incoming reques
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Manual validation in each controller method | Duplication; easy to miss edge cases; inconsistent error responses |
-| No validation | Security risk; data corruption from unexpected inputs |
-| Joi schemas per route | More explicit schema definitions but additional library dependency; decorator-based validation is more idiomatic in NestJS |
+| Alternative                                 | Reason Against                                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Manual validation in each controller method | Duplication; easy to miss edge cases; inconsistent error responses                                                         |
+| No validation                               | Security risk; data corruption from unexpected inputs                                                                      |
+| Joi schemas per route                       | More explicit schema definitions but additional library dependency; decorator-based validation is more idiomatic in NestJS |
 
 ### Trade-offs
 
@@ -436,11 +436,11 @@ Compliance requirements (GDPR, financial regulations) demand immutable audit tra
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Logging to file only | Hard to search, no relational queries, no real-time alerting |
-| Dedicated audit service (e.g., AWS CloudTrail) | External dependency; additional cost; limited to AWS operations |
-| Database trigger-based logging | Couples audit to schema; harder to evolve; no application context |
+| Alternative                                    | Reason Against                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| Logging to file only                           | Hard to search, no relational queries, no real-time alerting      |
+| Dedicated audit service (e.g., AWS CloudTrail) | External dependency; additional cost; limited to AWS operations   |
+| Database trigger-based logging                 | Couples audit to schema; harder to evolve; no application context |
 
 ### Trade-offs
 
@@ -472,11 +472,11 @@ Background jobs (email delivery, blockchain submissions, data sync) can be CPU-i
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| In-process job processing | Blocks the event loop; no independent scaling; harder to isolate failures |
-| Dedicated worker service (separate deployment) | More operational complexity; separate Docker image |
-| Th child processes (`child_process.fork`) | Manual lifecycle management; less integration with Bull's worker model |
+| Alternative                                    | Reason Against                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| In-process job processing                      | Blocks the event loop; no independent scaling; harder to isolate failures |
+| Dedicated worker service (separate deployment) | More operational complexity; separate Docker image                        |
+| Th child processes (`child_process.fork`)      | Manual lifecycle management; less integration with Bull's worker model    |
 
 ### Trade-offs
 
@@ -508,12 +508,12 @@ Production observability requires metrics collection, centralised logging, and a
 
 ### Alternatives Considered
 
-| Alternative | Reason Against |
-|---|---|
-| Datadog | Excellent product but higher cost for the team's budget |
-| New Relic | APM-focused; less flexible dashboarding than Grafana |
+| Alternative                                 | Reason Against                                                                                |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Datadog                                     | Excellent product but higher cost for the team's budget                                       |
+| New Relic                                   | APM-focused; less flexible dashboarding than Grafana                                          |
 | ELK stack (Elasticsearch, Logstash, Kibana) | Heavier resource footprint than Loki; more complex configuration; higher operational overhead |
-| CloudWatch (AWS) | Ties monitoring to AWS; limited dashboarding capabilities; higher cost at scale |
+| CloudWatch (AWS)                            | Ties monitoring to AWS; limited dashboarding capabilities; higher cost at scale               |
 
 ### Trade-offs
 

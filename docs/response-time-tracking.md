@@ -38,10 +38,10 @@ removed — the interceptor owns that responsibility.
 
 ## Dimensions
 
-| Dimension    | Notes                                              |
-|--------------|----------------------------------------------------|
-| route        | Router template, e.g. `GET /api/properties/:id`   |
-| method       | HTTP verb                                          |
+| Dimension    | Notes                                                |
+| ------------ | ---------------------------------------------------- |
+| route        | Router template, e.g. `GET /api/properties/:id`      |
+| method       | HTTP verb                                            |
 | status_class | `2xx` / `4xx` / `5xx` (grouped to limit cardinality) |
 
 ## Slow Request Threshold
@@ -64,6 +64,7 @@ curl -H "Authorization: Bearer <admin-jwt>" \
 ```
 
 Response shape:
+
 ```json
 {
   "generated_at": "2026-05-28T09:00:00Z",
@@ -117,12 +118,12 @@ The interceptor uses `req.route?.path ?? req.path` so parameterised routes like
 
 ## Configuration
 
-| Variable                        | Default | Description                              |
-|---------------------------------|---------|------------------------------------------|
-| `RESPONSE_TIME_ENABLED`         | `true`  | Kill switch — set `false` to disable     |
-| `RESPONSE_TIME_SLOW_THRESHOLD_MS` | `500` | Warn threshold in ms                     |
-| `RESPONSE_TIME_WINDOW_SECONDS`  | `60`    | Sliding window for analysis endpoint     |
-| `RESPONSE_TIME_BUFFER_SIZE`     | `1000`  | Max observations stored per route        |
+| Variable                          | Default | Description                          |
+| --------------------------------- | ------- | ------------------------------------ |
+| `RESPONSE_TIME_ENABLED`           | `true`  | Kill switch — set `false` to disable |
+| `RESPONSE_TIME_SLOW_THRESHOLD_MS` | `500`   | Warn threshold in ms                 |
+| `RESPONSE_TIME_WINDOW_SECONDS`    | `60`    | Sliding window for analysis endpoint |
+| `RESPONSE_TIME_BUFFER_SIZE`       | `1000`  | Max observations stored per route    |
 
 ## Running Locally
 

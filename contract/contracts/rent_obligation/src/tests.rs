@@ -654,3 +654,168 @@ fn test_get_burned_nfts_returns_multiple_records_for_owner() {
     assert_eq!(burned.get(0).unwrap(), agreement_one);
     assert_eq!(burned.get(1).unwrap(), agreement_two);
 }
+
+const FIXED_LEDGER_TIMESTAMP: u64 = 1_700_000_000;
+const FIRST_PAYMENT_DUE_AT: u64 = FIXED_LEDGER_TIMESTAMP + 2_592_000;
+const LATE_PAYMENT_SETTLEMENT_AT: u64 = FIRST_PAYMENT_DUE_AT + 86_400;
+
+fn set_ledger_timestamp(env: &Env, timestamp: u64) {
+    env.ledger().with_mut(|li| {
+        li.timestamp = timestamp;
+    });
+}
+
+fn initialized_contract_with_fixed_ledger(env: &Env) -> TokenizedRentObligationContractClient<'_> {
+    set_ledger_timestamp(env, FIXED_LEDGER_TIMESTAMP);
+    let client = create_contract(env);
+    client.initialize();
+    client
+}
+
+#[test]
+fn test_obligation_lifecycle_accrual_and_settlement_uses_deterministic_time() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = initialized_contract_with_fixed_ledger(&env);
+    let landlord = Address::generate(&env);
+    let financier = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_lifecycle_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+    let obligation = client.get_obligation(&agreement_id).unwrap();
+    assert_eq!(obligation.minted_at, FIXED_LEDGER_TIMESTAMP);
+    assert_eq!(obligation.owner, landlord.clone());
+    assert_eq!(client.get_obligation_count(), 1);
+
+    client.transfer_obligation(&landlord, &financier, &agreement_id);
+    assert_eq!(
+        client.get_obligation_owner(&agreement_id),
+        Some(financier.clone())
+    );
+
+    set_ledger_timestamp(&env, FIRST_PAYMENT_DUE_AT);
+    assert_eq!(client.try_can_burn(&agreement_id), Ok(Ok(true)));
+
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+
+    let settlement_record = client.get_burn_record(&agreement_id);
+    assert_eq!(settlement_record.token_id, agreement_id.clone());
+    assert_eq!(settlement_record.burned_by, financier.clone());
+    assert_eq!(settlement_record.burned_at, FIRST_PAYMENT_DUE_AT);
+    assert_eq!(
+        settlement_record.reason,
+        String::from_str(&env, "LeaseCompleted")
+    );
+    assert_eq!(client.get_obligation_owner(&agreement_id), None);
+    assert!(!client.has_obligation(&agreement_id));
+    assert_eq!(client.get_obligation_count(), 0);
+
+    let burned_nfts = client.get_burned_nfts(&financier);
+    assert_eq!(burned_nfts.len(), 1);
+    assert_eq!(burned_nfts.get(0).unwrap(), agreement_id);
+}
+
+#[test]
+fn test_partial_payment_keeps_obligation_active_until_full_settlement() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = initialized_contract_with_fixed_ledger(&env);
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_partial_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    set_ledger_timestamp(&env, FIXED_LEDGER_TIMESTAMP);
+    assert_eq!(
+        client.try_can_burn(&agreement_id),
+        Err(Ok(ObligationError::CannotBurnActiveObligation))
+    );
+    assert!(client.has_obligation(&agreement_id));
+    assert_eq!(
+        client.get_obligation_owner(&agreement_id),
+        Some(landlord.clone())
+    );
+
+    set_ledger_timestamp(&env, FIRST_PAYMENT_DUE_AT);
+    client.burn_nft(&agreement_id, &String::from_str(&env, "LeaseCompleted"));
+
+    let settlement_record = client.get_burn_record(&agreement_id);
+    assert_eq!(settlement_record.burned_by, landlord);
+    assert_eq!(settlement_record.burned_at, FIRST_PAYMENT_DUE_AT);
+    assert!(!client.has_obligation(&agreement_id));
+}
+
+#[test]
+fn test_late_payment_settlement_records_actual_late_timestamp() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = initialized_contract_with_fixed_ledger(&env);
+    let landlord = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_late_001");
+
+    client.mint_obligation(&agreement_id, &landlord);
+
+    set_ledger_timestamp(&env, LATE_PAYMENT_SETTLEMENT_AT);
+    assert_eq!(client.try_can_burn(&agreement_id), Ok(Ok(true)));
+
+    client.burn_nft(
+        &agreement_id,
+        &String::from_str(&env, "AgreementTerminated"),
+    );
+
+    let settlement_record = client.get_burn_record(&agreement_id);
+    assert_eq!(settlement_record.burned_by, landlord.clone());
+    assert_eq!(settlement_record.burned_at, LATE_PAYMENT_SETTLEMENT_AT);
+    assert_eq!(
+        settlement_record.reason,
+        String::from_str(&env, "AgreementTerminated")
+    );
+    assert_eq!(client.get_burned_nfts(&landlord).len(), 1);
+}
+
+#[test]
+fn test_error_paths_return_contract_errors_without_mutating_state() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = initialized_contract_with_fixed_ledger(&env);
+    let landlord = Address::generate(&env);
+    let unauthorized_owner = Address::generate(&env);
+    let buyer = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agreement_errors_001");
+    let missing_agreement_id = String::from_str(&env, "agreement_missing_001");
+
+    assert_eq!(
+        client.try_transfer_obligation(&landlord, &buyer, &missing_agreement_id),
+        Err(Ok(ObligationError::ObligationNotFound))
+    );
+
+    client.mint_obligation(&agreement_id, &landlord);
+    assert_eq!(client.get_obligation_count(), 1);
+
+    assert_eq!(
+        client.try_mint_obligation(&agreement_id, &landlord),
+        Err(Ok(ObligationError::ObligationAlreadyExists))
+    );
+    assert_eq!(client.get_obligation_count(), 1);
+
+    assert_eq!(
+        client.try_transfer_obligation(&unauthorized_owner, &buyer, &agreement_id),
+        Err(Ok(ObligationError::Unauthorized))
+    );
+    assert_eq!(
+        client.get_obligation_owner(&agreement_id),
+        Some(landlord.clone())
+    );
+
+    set_ledger_timestamp(&env, FIRST_PAYMENT_DUE_AT);
+    assert_eq!(
+        client.try_burn_nft(&agreement_id, &String::from_str(&env, "PartialPayment")),
+        Err(Ok(ObligationError::InvalidBurnReason))
+    );
+    assert!(client.has_obligation(&agreement_id));
+    assert_eq!(client.get_obligation_owner(&agreement_id), Some(landlord));
+}

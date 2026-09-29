@@ -3,9 +3,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Bed, Bath, Plus, Eye, Pencil, Building2 } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useRouter } from 'next/navigation';
+import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
+import { PrefetchLink } from '@/components/navigation/PrefetchLink';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
   const [error, setError] = useState(false);
@@ -33,6 +35,7 @@ function PropertyThumbnail({ src, alt }: { src?: string | null; alt: string }) {
 }
 
 export default function HostListingsPage() {
+  const router = useRouter();
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ['host-listings'],
     queryFn: async () => {
@@ -49,28 +52,29 @@ export default function HostListingsPage() {
           <h1 className="text-3xl font-bold">My Listings</h1>
           <p className="text-blue-300/60 mt-1">{listings.length} properties</p>
         </div>
-        <Link
+        <PrefetchLink
           href="/properties/new"
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all"
         >
           <Plus size={18} /> Add Listing
-        </Link>
+        </PrefetchLink>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <LoadingSpinner />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PropertyCardSkeleton key={i} />
+          ))}
         </div>
       ) : listings.length === 0 ? (
-        <div className="text-center py-20 text-blue-300/60">
-          <p className="text-xl mb-4">No listings yet</p>
-          <Link
-            href="/properties/new"
-            className="text-blue-400 hover:underline"
-          >
-            Create your first listing →
-          </Link>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="No listings yet"
+          description="Create your first listing to start accepting bookings from guests."
+          actionLabel="Create your first listing"
+          onAction={() => router.push('/properties/new')}
+          variant="dark"
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map(
@@ -124,18 +128,22 @@ export default function HostListingsPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <Link
+                    <PrefetchLink
                       href={`/properties/${p.id}`}
+                      prefetchKind="property"
+                      prefetchId={p.id}
                       className="flex-1 flex items-center justify-center gap-1 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors"
                     >
                       <Eye size={14} /> View
-                    </Link>
-                    <Link
+                    </PrefetchLink>
+                    <PrefetchLink
                       href={`/properties/${p.id}/edit`}
+                      prefetchKind="property"
+                      prefetchId={p.id}
                       className="flex-1 flex items-center justify-center gap-1 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors"
                     >
                       <Pencil size={14} /> Edit
-                    </Link>
+                    </PrefetchLink>
                   </div>
                 </div>
               </div>

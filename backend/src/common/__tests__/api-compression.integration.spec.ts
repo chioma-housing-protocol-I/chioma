@@ -5,10 +5,8 @@
  * compression threshold, and compression metrics.
  */
 
-import { createServer, IncomingMessage, ServerResponse } from 'http';
 import * as zlib from 'zlib';
 import { promisify } from 'util';
-import * as http from 'http';
 
 const gzipAsync = promisify(zlib.gzip);
 const brotliCompressAsync = promisify(zlib.brotliCompress);

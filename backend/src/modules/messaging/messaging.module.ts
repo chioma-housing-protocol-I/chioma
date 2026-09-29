@@ -7,10 +7,13 @@ import { WebSocketSessionService } from './websocket-session.service';
 import { Message } from './entities/message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Participant } from './entities/participant.entity';
+import { MessageRead } from './entities/message-read.entity';
 import { CacheService } from '../../common/cache/cache.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Message, ChatRoom, Participant])],
+  imports: [
+    TypeOrmModule.forFeature([Message, ChatRoom, Participant, MessageRead]),
+  ],
   controllers: [MessagingController],
   providers: [
     MessagingGateway,
