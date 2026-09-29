@@ -1,7 +1,6 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 > **Setting up locally?** Follow the root [Quickstart](../QUICKSTART.md) — it is the single documented path from clone to a running stack.
-> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
 
 ## Getting Started
 
@@ -28,7 +27,6 @@ The property listing flow is available at `/user/properties/add` with:
 
 ### Component Organization
 
-See the root [Quickstart](../QUICKSTART.md#5-frontend-nextjs--httplocalhost3001) for install, env, and run steps (the frontend runs on http://localhost:3001).
 Frontend components are organized by domain/feature rather than by type to make it easier to find related functionality:
 
 - `components/properties/`: All property-related components (cards, details, modals, wizards, maps)

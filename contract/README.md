@@ -1,7 +1,6 @@
 # Soroban Project
 
 > **Setting up locally?** Follow the root [Quickstart](../QUICKSTART.md) — it is the single documented path from clone to a running stack.
-> **New here?** Follow the [root Quickstart](../QUICKSTART.md) to go from a clean clone to a running full stack.
 
 ## Project Structure
 
