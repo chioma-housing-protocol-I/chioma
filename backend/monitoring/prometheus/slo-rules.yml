@@ -1,0 +1,315 @@
+# SLO recording rules and multi-window burn-rate alerts. See docs/slo.md.
+groups:
+  - name: chioma_slo_recording
+    rules:
+      - record: slo:error_ratio:rate5m
+        labels:
+          journey: platform
+        expr: |
+          sum(rate(http_requests_total{route=~".*",status_class="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~".*"}[5m])), 1e-9)
+      - record: slo:error_ratio:rate30m
+        labels:
+          journey: platform
+        expr: |
+          sum(rate(http_requests_total{route=~".*",status_class="5xx"}[30m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~".*"}[30m])), 1e-9)
+      - record: slo:error_ratio:rate1h
+        labels:
+          journey: platform
+        expr: |
+          sum(rate(http_requests_total{route=~".*",status_class="5xx"}[1h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~".*"}[1h])), 1e-9)
+      - record: slo:error_ratio:rate6h
+        labels:
+          journey: platform
+        expr: |
+          sum(rate(http_requests_total{route=~".*",status_class="5xx"}[6h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~".*"}[6h])), 1e-9)
+      - record: slo:error_ratio:rate3d
+        labels:
+          journey: platform
+        expr: |
+          sum(rate(http_requests_total{route=~".*",status_class="5xx"}[3d]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~".*"}[3d])), 1e-9)
+      - record: slo:error_ratio:rate5m
+        labels:
+          journey: search
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*",status_class="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*"}[5m])), 1e-9)
+      - record: slo:error_ratio:rate30m
+        labels:
+          journey: search
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*",status_class="5xx"}[30m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*"}[30m])), 1e-9)
+      - record: slo:error_ratio:rate1h
+        labels:
+          journey: search
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*",status_class="5xx"}[1h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*"}[1h])), 1e-9)
+      - record: slo:error_ratio:rate6h
+        labels:
+          journey: search
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*",status_class="5xx"}[6h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*"}[6h])), 1e-9)
+      - record: slo:error_ratio:rate3d
+        labels:
+          journey: search
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*",status_class="5xx"}[3d]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(search|properties).*"}[3d])), 1e-9)
+      - record: slo:error_ratio:rate5m
+        labels:
+          journey: booking
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*",status_class="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*"}[5m])), 1e-9)
+      - record: slo:error_ratio:rate30m
+        labels:
+          journey: booking
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*",status_class="5xx"}[30m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*"}[30m])), 1e-9)
+      - record: slo:error_ratio:rate1h
+        labels:
+          journey: booking
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*",status_class="5xx"}[1h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*"}[1h])), 1e-9)
+      - record: slo:error_ratio:rate6h
+        labels:
+          journey: booking
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*",status_class="5xx"}[6h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*"}[6h])), 1e-9)
+      - record: slo:error_ratio:rate3d
+        labels:
+          journey: booking
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*",status_class="5xx"}[3d]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(agreements|rent|sublet).*"}[3d])), 1e-9)
+      - record: slo:error_ratio:rate5m
+        labels:
+          journey: payment
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*",status_class="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*"}[5m])), 1e-9)
+      - record: slo:error_ratio:rate30m
+        labels:
+          journey: payment
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*",status_class="5xx"}[30m]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*"}[30m])), 1e-9)
+      - record: slo:error_ratio:rate1h
+        labels:
+          journey: payment
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*",status_class="5xx"}[1h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*"}[1h])), 1e-9)
+      - record: slo:error_ratio:rate6h
+        labels:
+          journey: payment
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*",status_class="5xx"}[6h]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*"}[6h])), 1e-9)
+      - record: slo:error_ratio:rate3d
+        labels:
+          journey: payment
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*",status_class="5xx"}[3d]))
+          /
+          clamp_min(sum(rate(http_requests_total{route=~"/api/(v[0-9]+/)?(payments|escrow|stellar|transactions).*"}[3d])), 1e-9)
+
+  - name: chioma_slo_burn_rate_alerts
+    rules:
+      - alert: SLOErrorBudgetBurnFast_platform
+        expr: |
+          slo:error_ratio:rate1h{journey="platform"} > 0.072
+          and
+          slo:error_ratio:rate5m{journey="platform"} > 0.072
+        for: 2m
+        labels:
+          severity: critical
+          component: slo
+          journey: platform
+        annotations:
+          summary: "platform SLO (99.5%) error budget burning at 14.4x"
+          description: "Error ratio over 1h and 5m exceeds 14.4x the platform error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnMedium_platform
+        expr: |
+          slo:error_ratio:rate6h{journey="platform"} > 0.03
+          and
+          slo:error_ratio:rate30m{journey="platform"} > 0.03
+        for: 15m
+        labels:
+          severity: critical
+          component: slo
+          journey: platform
+        annotations:
+          summary: "platform SLO (99.5%) error budget burning at 6x"
+          description: "Error ratio over 6h and 30m exceeds 6x the platform error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnSlow_platform
+        expr: |
+          slo:error_ratio:rate3d{journey="platform"} > 0.005
+          and
+          slo:error_ratio:rate6h{journey="platform"} > 0.005
+        for: 1h
+        labels:
+          severity: warning
+          component: slo
+          journey: platform
+        annotations:
+          summary: "platform SLO (99.5%) error budget burning at 1x"
+          description: "Error ratio over 3d and 6h exceeds 1x the platform error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnFast_search
+        expr: |
+          slo:error_ratio:rate1h{journey="search"} > 0.0144
+          and
+          slo:error_ratio:rate5m{journey="search"} > 0.0144
+        for: 2m
+        labels:
+          severity: critical
+          component: slo
+          journey: search
+        annotations:
+          summary: "search SLO (99.9%) error budget burning at 14.4x"
+          description: "Error ratio over 1h and 5m exceeds 14.4x the search error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnMedium_search
+        expr: |
+          slo:error_ratio:rate6h{journey="search"} > 0.006
+          and
+          slo:error_ratio:rate30m{journey="search"} > 0.006
+        for: 15m
+        labels:
+          severity: critical
+          component: slo
+          journey: search
+        annotations:
+          summary: "search SLO (99.9%) error budget burning at 6x"
+          description: "Error ratio over 6h and 30m exceeds 6x the search error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnSlow_search
+        expr: |
+          slo:error_ratio:rate3d{journey="search"} > 0.001
+          and
+          slo:error_ratio:rate6h{journey="search"} > 0.001
+        for: 1h
+        labels:
+          severity: warning
+          component: slo
+          journey: search
+        annotations:
+          summary: "search SLO (99.9%) error budget burning at 1x"
+          description: "Error ratio over 3d and 6h exceeds 1x the search error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnFast_booking
+        expr: |
+          slo:error_ratio:rate1h{journey="booking"} > 0.0144
+          and
+          slo:error_ratio:rate5m{journey="booking"} > 0.0144
+        for: 2m
+        labels:
+          severity: critical
+          component: slo
+          journey: booking
+        annotations:
+          summary: "booking SLO (99.9%) error budget burning at 14.4x"
+          description: "Error ratio over 1h and 5m exceeds 14.4x the booking error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnMedium_booking
+        expr: |
+          slo:error_ratio:rate6h{journey="booking"} > 0.006
+          and
+          slo:error_ratio:rate30m{journey="booking"} > 0.006
+        for: 15m
+        labels:
+          severity: critical
+          component: slo
+          journey: booking
+        annotations:
+          summary: "booking SLO (99.9%) error budget burning at 6x"
+          description: "Error ratio over 6h and 30m exceeds 6x the booking error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnSlow_booking
+        expr: |
+          slo:error_ratio:rate3d{journey="booking"} > 0.001
+          and
+          slo:error_ratio:rate6h{journey="booking"} > 0.001
+        for: 1h
+        labels:
+          severity: warning
+          component: slo
+          journey: booking
+        annotations:
+          summary: "booking SLO (99.9%) error budget burning at 1x"
+          description: "Error ratio over 3d and 6h exceeds 1x the booking error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnFast_payment
+        expr: |
+          slo:error_ratio:rate1h{journey="payment"} > 0.0072
+          and
+          slo:error_ratio:rate5m{journey="payment"} > 0.0072
+        for: 2m
+        labels:
+          severity: critical
+          component: slo
+          journey: payment
+        annotations:
+          summary: "payment SLO (99.95%) error budget burning at 14.4x"
+          description: "Error ratio over 1h and 5m exceeds 14.4x the payment error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnMedium_payment
+        expr: |
+          slo:error_ratio:rate6h{journey="payment"} > 0.003
+          and
+          slo:error_ratio:rate30m{journey="payment"} > 0.003
+        for: 15m
+        labels:
+          severity: critical
+          component: slo
+          journey: payment
+        annotations:
+          summary: "payment SLO (99.95%) error budget burning at 6x"
+          description: "Error ratio over 6h and 30m exceeds 6x the payment error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"
+      - alert: SLOErrorBudgetBurnSlow_payment
+        expr: |
+          slo:error_ratio:rate3d{journey="payment"} > 0.0005
+          and
+          slo:error_ratio:rate6h{journey="payment"} > 0.0005
+        for: 1h
+        labels:
+          severity: warning
+          component: slo
+          journey: payment
+        annotations:
+          summary: "payment SLO (99.95%) error budget burning at 1x"
+          description: "Error ratio over 3d and 6h exceeds 1x the payment error budget."
+          runbook_url: "https://github.com/chioma-housing-protocol-I/chioma/blob/main/docs/slo.md"

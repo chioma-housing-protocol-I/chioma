@@ -70,7 +70,9 @@
     "seed:landlord:prod": "NODE_ENV=production ts-node src/commands/index.ts landlord --force",
     "seed:all": "pnpm run seed:admin && pnpm run seed:agent && pnpm run seed:tenant && pnpm run seed:landlord",
     "seed:all:prod": "NODE_ENV=production pnpm run seed:admin:prod && pnpm run seed:agent:prod && pnpm run seed:tenant:prod && pnpm run seed:landlord:prod",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "env:check": "node scripts/check-env-example.mjs",
+    "docs:er": "node scripts/generate-er-diagram.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1014.0",
