@@ -1,5 +1,14 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { OAuth2Provider } from '../oauth2.types';
+
+/** Server-issued OAuth state: 32 random bytes, hex encoded. */
+const OAUTH_STATE_FORMAT = /^[a-f0-9]{64}$/;
 
 export class OAuth2CallbackDto {
   @IsEnum(OAuth2Provider)
@@ -11,6 +20,7 @@ export class OAuth2CallbackDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(OAUTH_STATE_FORMAT, { message: 'state has an invalid format' })
   state: string;
 
   @IsOptional()
@@ -37,6 +47,7 @@ export class OAuth2LinkDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(OAUTH_STATE_FORMAT, { message: 'state has an invalid format' })
   state: string;
 
   @IsOptional()

@@ -43,7 +43,7 @@ export const PASSWORD_RESET_TOKEN_EXPIRY_HOURS = envInt(
 /** OAuth2 `state` parameter validity window (CSRF protection for the OAuth flow). */
 export const OAUTH_STATE_EXPIRY_MINUTES = envInt(
   'OAUTH_STATE_EXPIRY_MINUTES',
-  10,
+  5,
 );
 
 /** Stellar wallet-auth signed-challenge validity window. */

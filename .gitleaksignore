@@ -1,0 +1,7 @@
+# Gitleaks baseline of known historical findings (issue #1455).
+#
+# Only add a fingerprint here AFTER the credential has been rotated/revoked,
+# since removing it from HEAD does not remove it from git history.
+# Format (one per line, as printed by `gitleaks git`):
+#   <commit>:<file>:<rule-id>:<line>
+# Add a comment above each entry with who rotated it and when.

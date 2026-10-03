@@ -1,4 +1,15 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# Block commits that add secrets (issue #1455). Skipped with a warning when
+# gitleaks isn't installed locally; CI scans the full history regardless.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --config .gitleaks.toml || {
+    echo "gitleaks: possible secret in staged changes. Remove it, or see docs/secrets-scanning.md." >&2
+    exit 1
+  }
+else
+  echo "gitleaks not installed; skipping local secrets scan (see docs/secrets-scanning.md)." >&2
+fi
+
 node node_modules/lint-staged/bin/lint-staged.js

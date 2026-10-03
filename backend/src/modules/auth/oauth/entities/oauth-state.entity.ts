@@ -8,7 +8,7 @@ import {
 import { OAuth2Provider } from '../oauth2.types';
 
 @Entity('oauth_states')
-@Index(['expiresAt'], { expireAfterSeconds: 0 }) // TTL index
+@Index(['expiresAt'])
 @Index(['userId', 'provider'])
 export class OAuthState {
   @PrimaryColumn({ type: 'varchar', length: 128 })
@@ -29,12 +29,12 @@ export class OAuthState {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // Prevent timing attacks by using constant-time comparison
+  // Lookup is by primary key; this only checks provider binding and expiry.
   isValid(provider: OAuth2Provider, now: Date = new Date()): boolean {
     if (this.provider !== provider) {
       return false;
     }
-    if (this.expiresAt < now) {
+    if (this.expiresAt.getTime() <= now.getTime()) {
       return false;
     }
     return true;

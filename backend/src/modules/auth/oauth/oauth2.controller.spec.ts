@@ -34,13 +34,13 @@ describe('OAuth2Controller', () => {
     controller = module.get<OAuth2Controller>(OAuth2Controller);
   });
 
-  it('initiates authorization', () => {
-    mockOAuth2Service.initiateAuthorization.mockReturnValue({
+  it('initiates authorization', async () => {
+    mockOAuth2Service.initiateAuthorization.mockResolvedValue({
       authorizationUrl: 'https://provider/authorize',
       state: 'state-1',
     });
 
-    const result = controller.initiateAuthorization({
+    const result = await controller.initiateAuthorization({
       provider: OAuth2Provider.GOOGLE,
     });
 

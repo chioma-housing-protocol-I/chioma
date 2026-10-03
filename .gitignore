@@ -40,6 +40,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.env.local
+.env.*.local
+!.env*.example
+
+# credentials / key material (issue #1455)
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+*.secret
+secrets.json
+gitleaks-report.*
+gitleaks.sarif
 
 # vercel
 .vercel

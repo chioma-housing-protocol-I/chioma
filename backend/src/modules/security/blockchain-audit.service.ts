@@ -13,10 +13,20 @@ export interface AnchorRecord {
   network: string;
 }
 
+/** Stellar transaction hashes are SHA-256 digests, hex encoded. */
+const STELLAR_TX_HASH_PATTERN = /^[a-f0-9]{64}$/i;
+
 export class StellarTransactionHashMissingError extends Error {
-  constructor() {
-    super('Stellar transaction hash missing');
+  constructor(message = 'Stellar transaction hash missing') {
+    super(message);
     this.name = 'StellarTransactionHashMissingError';
+  }
+}
+
+export class StellarTransactionHashInvalidError extends Error {
+  constructor() {
+    super('Stellar transaction hash is not a 64-character hex string');
+    this.name = 'StellarTransactionHashInvalidError';
   }
 }
 
@@ -191,16 +201,30 @@ export class BlockchainAuditService {
       .build();
 
     tx.sign(keypair);
-    const result = await server.submitTransaction(tx);
-    return this.validateTransactionHash(result.hash);
+    const result: unknown = await server.submitTransaction(tx);
+    return this.extractTransactionHash(result);
+  }
+
+  private extractTransactionHash(result: unknown): string {
+    if (typeof result !== 'object' || result === null) {
+      throw new StellarTransactionHashMissingError(
+        'Stellar submitTransaction returned no response',
+      );
+    }
+    return this.validateTransactionHash(
+      'hash' in result ? result.hash : undefined,
+    );
   }
 
   private validateTransactionHash(hash: unknown): string {
     if (typeof hash !== 'string' || hash.trim().length === 0) {
       throw new StellarTransactionHashMissingError();
     }
+    if (!STELLAR_TX_HASH_PATTERN.test(hash)) {
+      throw new StellarTransactionHashInvalidError();
+    }
 
-    return hash;
+    return hash.toLowerCase();
   }
 
   // ─── DB helpers ──────────────────────────────────────────────────────────
