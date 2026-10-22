@@ -27,6 +27,11 @@ export default [
       'react-hooks/preserve-manual-memoization': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': 'error',
+      // Not part of eslint-config-next's default jsx-a11y set (#2047):
+      // every form input needs a <label> or an accessible name via
+      // aria-label/aria-labelledby, so a screen-reader user always hears
+      // what a field is for.
+      'jsx-a11y/label-has-associated-control': 'error',
     },
   },
   {

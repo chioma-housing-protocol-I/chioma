@@ -82,7 +82,7 @@ export function ApiKeyForm({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
             Key Name *
           </label>
           <input
@@ -100,10 +100,11 @@ export function ApiKeyForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="description" className="block text-sm font-medium text-white mb-2">
             Description
           </label>
           <input
+            id="description"
             {...register('description')}
             placeholder="Optional description for this key"
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-blue-200/40 focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all"
@@ -150,10 +151,11 @@ export function ApiKeyForm({
         </fieldset>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="expiresAt" className="block text-sm font-medium text-white mb-2">
             Expiration Date
           </label>
           <input
+            id="expiresAt"
             {...register('expiresAt')}
             type="date"
             min={today}
