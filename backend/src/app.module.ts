@@ -47,7 +47,6 @@ import { CompressionService } from './common/middleware/compression.service';
 import { CompressionMiddleware } from './common/middleware/compression.middleware';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
-import { RateLimitHeadersMiddleware } from './modules/rate-limiting/middleware/rate-limit-headers.middleware';
 import { upstashStore } from './common/cache/upstash-cache.store';
 import { AppCacheModule } from './common/cache/cache.module';
 import { I18nModule } from './modules/i18n/i18n.module';
@@ -336,9 +335,6 @@ export class AppModule implements NestModule {
 
     // CSRF protection (applied to all routes except excluded ones)
     consumer.apply(CsrfMiddleware).forRoutes('*');
-
-    // Rate limit headers middleware (applied to all routes)
-    consumer.apply(RateLimitHeadersMiddleware).forRoutes('*');
 
     // Auth rate limiting (applied to specific auth routes)
     consumer

@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { RateLimitService } from '../services/rate-limit.service';
 import { AbuseDetectionService } from '../services/abuse-detection.service';
 import { RateLimitAnalyticsService } from '../services/rate-limit-analytics.service';
@@ -49,6 +49,7 @@ export class RateLimitGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const response = context.switchToHttp().getResponse<Response>();
     const startTime = Date.now();
 
     try {
@@ -128,7 +129,7 @@ export class RateLimitGuard implements CanActivate {
         points,
       );
 
-      this.setRateLimitHeaders(request, result, category);
+      this.setRateLimitHeaders(request, response, result, category);
 
       if (!result.success) {
         await this.analyticsService.recordRequest(
@@ -207,14 +208,31 @@ export class RateLimitGuard implements CanActivate {
 
   private setRateLimitHeaders(
     request: any,
+    response: Response,
     result: any,
     category: EndpointCategory,
   ): void {
-    request.rateLimitInfo = {
-      limit: result.remainingPoints + (result.success ? 1 : 0),
-      remaining: result.remainingPoints,
-      reset: new Date(Date.now() + result.msBeforeNext),
-      category,
-    };
+    const limit = result.remainingPoints + (result.success ? 1 : 0);
+    const remaining = result.remainingPoints;
+    const reset = new Date(Date.now() + result.msBeforeNext);
+
+    // Set directly on the response here, while the guard is still
+    // running: a guard executes before the response is sent, so
+    // res.setHeader actually takes effect. The previous approach stashed
+    // this on request.rateLimitInfo for RateLimitHeadersMiddleware to
+    // apply later on the response's 'finish' event (#2072) — but 'finish'
+    // fires only after the response has already been flushed to the
+    // client, so setHeader there is always a no-op; the headers were
+    // never actually sent on any request.
+    response.setHeader('X-RateLimit-Limit', limit);
+    response.setHeader('X-RateLimit-Remaining', remaining);
+    response.setHeader('X-RateLimit-Reset', reset.toISOString());
+    response.setHeader('X-RateLimit-Category', category);
+
+    // Kept for any other consumer that still reads request.rateLimitInfo
+    // directly (none currently in this codebase, but removing it outright
+    // risks silently breaking something that inspects it in an
+    // interceptor or test rather than reading the response headers).
+    request.rateLimitInfo = { limit, remaining, reset, category };
   }
 }

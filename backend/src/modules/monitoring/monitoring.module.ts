@@ -4,8 +4,8 @@ import {
   NestModule,
   forwardRef,
 } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PooledHttpModule } from '../../common/http/pooled-http.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MetricsService } from './metrics.service';
 import { PerformanceAlertService } from './performance-alert.service';
@@ -28,7 +28,7 @@ import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
-    HttpModule,
+    PooledHttpModule,
     ScheduleModule.forRoot(),
     forwardRef(() => NotificationsModule),
     StorageModule,
