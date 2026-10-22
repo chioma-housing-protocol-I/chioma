@@ -87,6 +87,33 @@ describe('AllExceptionsFilter', () => {
     );
   });
 
+  it('should handle ValidationPipe errors as 422 (#2062, array message)', () => {
+    // The global ValidationPipe (main.ts) is configured with
+    // errorHttpStatusCode: UNPROCESSABLE_ENTITY, so 422 with an array
+    // message is the actual shape ValidationPipe throws today.
+    const error = new HttpException(
+      {
+        message: ['error 1', 'error 2'],
+        error: 'Unprocessable Entity',
+        statusCode: 422,
+      },
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+
+    filter.catch(error, mockArgumentsHost as ArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        message: ['error 1', 'error 2'],
+        code: ErrorCode.VALIDATION_FAILED,
+      }),
+    );
+  });
+
   it('should handle unhandled errors as 500', () => {
     const error = new Error('Unexpected error');
 
