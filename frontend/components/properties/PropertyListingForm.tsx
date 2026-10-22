@@ -119,7 +119,7 @@ export default function PropertyListingForm() {
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="title" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Property Title
                   </label>
                   <input
@@ -138,7 +138,7 @@ export default function PropertyListingForm() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="description" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Description
                   </label>
                   <textarea
@@ -180,7 +180,7 @@ export default function PropertyListingForm() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="address" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Street Address
                   </label>
                   <input
@@ -199,7 +199,7 @@ export default function PropertyListingForm() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="city" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     City
                   </label>
                   <input
@@ -218,17 +218,18 @@ export default function PropertyListingForm() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="state" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     State / Province
                   </label>
                   <input
+                    id="state"
                     {...register('state')}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
                     placeholder="NY"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="price" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Monthly Rent ($)
                   </label>
                   <div className="relative">
@@ -250,10 +251,11 @@ export default function PropertyListingForm() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="type" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Property Type
                   </label>
                   <select
+                    id="type"
                     {...register('type')}
                     className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 transition-all outline-none appearance-none"
                   >
@@ -297,10 +299,11 @@ export default function PropertyListingForm() {
               </h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="beds" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Beds
                   </label>
                   <input
+                    id="beds"
                     type="number"
                     min={0}
                     {...register('beds', { valueAsNumber: true })}
@@ -308,10 +311,11 @@ export default function PropertyListingForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="baths" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Baths
                   </label>
                   <input
+                    id="baths"
                     type="number"
                     min={0}
                     {...register('baths', { valueAsNumber: true })}
@@ -319,10 +323,11 @@ export default function PropertyListingForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
+                  <label htmlFor="area" className="block text-sm font-medium text-blue-200/50 mb-1.5 pl-1">
                     Area (m²)
                   </label>
                   <input
+                    id="area"
                     type="number"
                     min={0}
                     {...register('area', { valueAsNumber: true })}

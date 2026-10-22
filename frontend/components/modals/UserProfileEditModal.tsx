@@ -165,7 +165,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+              <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
                 First Name *
               </label>
               <input
@@ -186,7 +186,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+              <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
                 Last Name *
               </label>
               <input
@@ -211,7 +211,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
         {/* Contact */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
+            <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <Mail size={16} />
               Email Address *
             </label>
@@ -233,7 +233,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
+            <label htmlFor="phone" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <Phone size={16} />
               Phone Number
             </label>
@@ -255,7 +255,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
+            <label htmlFor="location" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <MapPin size={16} />
               Location
             </label>
@@ -279,7 +279,7 @@ export const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
 
         {/* Bio */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="bio" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Bio
           </label>
           <textarea

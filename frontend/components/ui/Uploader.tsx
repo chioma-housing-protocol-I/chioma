@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useId, useState, useRef, ChangeEvent } from 'react';
 import {
   Upload,
   X,
@@ -30,6 +30,8 @@ export const Uploader = React.forwardRef<HTMLDivElement, UploaderProps>(
     },
     ref,
   ) => {
+    const generatedId = useId();
+    const inputId = `uploader-${generatedId}`;
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,9 +84,14 @@ export const Uploader = React.forwardRef<HTMLDivElement, UploaderProps>(
 
     return (
       <div ref={ref} className="space-y-4 w-full">
-        <label className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-          {label}
-        </label>
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="block text-sm font-semibold text-neutral-800 dark:text-neutral-200"
+          >
+            {label}
+          </label>
+        )}
 
         <div
           onDragOver={handleDragOver}
@@ -99,12 +106,14 @@ export const Uploader = React.forwardRef<HTMLDivElement, UploaderProps>(
             }`}
         >
           <input
+            id={inputId}
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
             accept={accept}
             multiple={multiple}
             className="hidden"
+            aria-label={label || description}
           />
 
           <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-brand-blue transition-colors">

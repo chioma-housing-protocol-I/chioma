@@ -59,7 +59,7 @@ export function RoleForm({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
             Role Name
           </label>
           <input
@@ -78,10 +78,11 @@ export function RoleForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="description" className="block text-sm font-medium text-white mb-2">
             Description
           </label>
           <textarea
+            id="description"
             {...register('description')}
             placeholder="Describe what this role does..."
             rows={4}
