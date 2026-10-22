@@ -154,9 +154,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         };
       }
 
-      // Handle validation errors from ValidationPipe
+      // Handle validation errors from ValidationPipe. The global
+      // ValidationPipe is configured with errorHttpStatusCode:
+      // UNPROCESSABLE_ENTITY (#2062, main.ts), so this must match 422
+      // as well as 400, the pre-#2062 status, otherwise every
+      // validation error from ValidationPipe falls through to the
+      // generic branch below and gets mislabeled with a code derived
+      // from 422's generic mapping (BUSINESS_RULE_VIOLATION) instead of
+      // VALIDATION_FAILED.
       if (
-        status === (HttpStatus.BAD_REQUEST as number) &&
+        (status === (HttpStatus.BAD_REQUEST as number) ||
+          status === (HttpStatus.UNPROCESSABLE_ENTITY as number)) &&
         typeof exceptionResponse === 'object'
       ) {
         const res = exceptionResponse as ValidationExceptionResponse;
