@@ -1,7 +1,7 @@
 use crate::errors::EscrowError;
 use crate::events;
 use crate::types::DataKey;
-use soroban_sdk::{Address, Bytes, Env, String, Vec};
+use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
 /// Contract upgrade proposal
 #[derive(Clone)]
@@ -9,7 +9,7 @@ use soroban_sdk::{Address, Bytes, Env, String, Vec};
 pub struct UpgradeProposal {
     pub id: String,
     pub proposer: Address,
-    pub wasm_hash: Bytes,
+    pub wasm_hash: BytesN<32>,
     pub approvals: Vec<Address>,
     pub required_signatures: u32,
     pub eta: u64,
@@ -23,7 +23,7 @@ pub fn propose_upgrade(
     env: &Env,
     proposer: Address,
     proposal_id: String,
-    wasm_hash: Bytes,
+    wasm_hash: BytesN<32>,
     notes: String,
     delay_seconds: u64,
 ) -> Result<(), EscrowError> {
@@ -122,6 +122,12 @@ pub fn execute_upgrade(
     env.storage()
         .persistent()
         .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+    // Actually swap this contract's executable code. Instance storage
+    // (escrows, admin, config) is preserved across the swap; only the code
+    // changes, which is the whole point of an upgrade (#2084).
+    env.deployer()
+        .update_current_contract_wasm(proposal.wasm_hash.clone());
 
     events::upgrade_executed(env, proposal_id, executor);
 

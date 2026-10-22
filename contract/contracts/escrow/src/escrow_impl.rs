@@ -8,6 +8,7 @@ use crate::errors::EscrowError;
 use crate::events;
 use crate::rate_limit;
 use crate::storage::EscrowStorage;
+use crate::timelock;
 use crate::types::{Escrow, EscrowStatus, ReleaseApproval, ReleaseRecord, TimeoutConfig};
 use crate::upgrade;
 
@@ -1078,7 +1079,7 @@ impl EscrowContract {
         env: Env,
         proposer: Address,
         proposal_id: String,
-        wasm_hash: soroban_sdk::Bytes,
+        wasm_hash: soroban_sdk::BytesN<32>,
         notes: String,
         delay_seconds: u64,
     ) -> Result<(), EscrowError> {
@@ -1109,5 +1110,50 @@ impl EscrowContract {
         proposal_id: String,
     ) -> Result<upgrade::UpgradeProposal, EscrowError> {
         upgrade::get_upgrade_proposal(&env, proposal_id)
+    }
+
+    // --- Timelock Functions (#2085) ---
+
+    /// Queue a sensitive operation behind a mandatory delay. Admin-only.
+    pub fn queue_timelock_action(
+        env: Env,
+        caller: Address,
+        action_id: String,
+        target: Address,
+        data: soroban_sdk::Bytes,
+        delay_seconds: u64,
+    ) -> Result<(), EscrowError> {
+        timelock::queue_action(&env, caller, action_id, target, data, delay_seconds)
+    }
+
+    /// Execute a queued action once its delay has elapsed.
+    pub fn execute_timelock_action(
+        env: Env,
+        caller: Address,
+        action_id: String,
+    ) -> Result<(), EscrowError> {
+        timelock::execute_action(&env, caller, action_id)
+    }
+
+    /// Cancel a queued action before it executes. Admin-only.
+    pub fn cancel_timelock_action(
+        env: Env,
+        caller: Address,
+        action_id: String,
+    ) -> Result<(), EscrowError> {
+        timelock::cancel_action(&env, caller, action_id)
+    }
+
+    /// Get a timelocked action by ID.
+    pub fn get_timelock_action(
+        env: Env,
+        action_id: String,
+    ) -> Result<timelock::TimelockAction, EscrowError> {
+        timelock::get_action(&env, action_id)
+    }
+
+    /// List currently pending (queued, not executed or cancelled) action IDs.
+    pub fn get_active_timelock_actions(env: Env) -> soroban_sdk::Vec<String> {
+        timelock::get_active_actions(&env)
     }
 }

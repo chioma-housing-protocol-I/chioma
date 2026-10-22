@@ -58,6 +58,14 @@ pub enum EscrowError {
     EmptyAgreementId = 25,
     /// Caller is not the configured dispute_resolution contract
     NotDisputeResolutionContract = 26,
+    /// Timelocked action was not found
+    TimelockActionNotFound = 27,
+    /// Timelocked action has already been executed
+    TimelockAlreadyExecuted = 28,
+    /// Timelocked action has already been cancelled
+    TimelockAlreadyCancelled = 29,
+    /// Timelocked action's minimum delay has not yet elapsed
+    TimelockEtaNotReached = 30,
 }
 
 /// Pins every `EscrowError` discriminant so off-chain code that maps error
@@ -96,5 +104,9 @@ mod pin_tests {
         assert_eq!(EscrowError::NotPaused as u32, 24);
         assert_eq!(EscrowError::EmptyAgreementId as u32, 25);
         assert_eq!(EscrowError::NotDisputeResolutionContract as u32, 26);
+        assert_eq!(EscrowError::TimelockActionNotFound as u32, 27);
+        assert_eq!(EscrowError::TimelockAlreadyExecuted as u32, 28);
+        assert_eq!(EscrowError::TimelockAlreadyCancelled as u32, 29);
+        assert_eq!(EscrowError::TimelockEtaNotReached as u32, 30);
     }
 }

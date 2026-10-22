@@ -174,4 +174,8 @@ pub enum DataKey {
     /// collected" has an on-chain, queryable answer instead of only being
     /// reconstructable by replaying every `RentReleased` event.
     TotalGovernanceFeesCollected,
+    /// Timelocked sensitive-operation action (#2085)
+    TimelockAction(String),
+    /// IDs of timelocked actions still pending (queued, not executed or cancelled)
+    ActiveTimelockActions,
 }
