@@ -79,6 +79,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
 import { CertificatePinningModule } from './common/security/certificate-pinning.module';
 import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 import { RbacModule } from './common/rbac/rbac.module';
+import { BatchModule } from './modules/batch/batch.module';
 
 const appLogger = new Logger('AppModule');
 
@@ -270,6 +271,7 @@ const appLogger = new Logger('AppModule');
     InquiriesModule,
     AnalyticsModule,
     DocumentsModule,
+    BatchModule,
     require('./modules/database-performance/database-performance.module')
       .DatabasePerformanceModule,
     TransactionModule,
