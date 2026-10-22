@@ -849,9 +849,25 @@ export class UsersService {
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findById(userId, true);
-    await this.userRepository.softRemove(user);
-    this.logger.log(`Account soft-deleted for user: ${user.email}`);
-    return { message: 'Account deleted' };
+    // `softRemove` is TypeORM's soft-delete method (sets deletedAt), the
+    // same operation `deleteAccount` already performs. Despite this
+    // method's name and its "Delete user account while preserving
+    // history (Admin only)" API docs implying a real erasure, calling
+    // softRemove here meant no path in this codebase ever actually
+    // removed a user's row, which matters for GDPR/CCPA "right to
+    // erasure" requests (#2064). `remove` is TypeORM's real delete.
+    //
+    // This can still fail with a foreign-key violation for a user with
+    // payment history (payment.entity.ts's User relation has no
+    // onDelete behavior configured), which is the correct outcome here:
+    // erasing a user with financial/audit history requires a deliberate
+    // anonymization strategy for those related rows, not a silent
+    // success that leaves orphaned-looking data. That strategy is a
+    // larger, separate piece of work; see this PR's data retention
+    // documentation for the disclosed scope.
+    await this.userRepository.remove(user);
+    this.logger.log(`Account hard-deleted for user: ${user.email}`);
+    return { message: 'Account permanently deleted' };
   }
 
   async getUserActivity(userId: string): Promise<{
