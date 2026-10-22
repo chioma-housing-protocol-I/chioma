@@ -208,7 +208,7 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
 
         {/* Reason */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="reason" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Reason for Refund *
           </label>
           <select
@@ -235,7 +235,7 @@ export const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
 
         {/* Details */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="details" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Additional Details *
           </label>
           <textarea

@@ -180,7 +180,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="description" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Description (optional)
           </label>
           <textarea

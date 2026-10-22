@@ -80,7 +80,7 @@ export function MfaDeviceForm({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
             Device Name
           </label>
           <input
@@ -98,10 +98,10 @@ export function MfaDeviceForm({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-white mb-3">
+        <fieldset>
+          <legend className="block text-sm font-medium text-white mb-3">
             Device Type
-          </label>
+          </legend>
           <div className="space-y-2">
             {DEVICE_TYPES.map((type) => (
               <label
@@ -130,7 +130,7 @@ export function MfaDeviceForm({
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {selectedType === 'totp' && (
           <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-4">

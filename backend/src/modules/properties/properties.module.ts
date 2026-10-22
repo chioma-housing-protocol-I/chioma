@@ -20,6 +20,7 @@ import { ICalService } from './services/ical.service';
 import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
 import { SearchModule } from '../search/search.module';
+import { PropertiesResolver } from './graphql/properties.resolver';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SearchModule } from '../search/search.module';
     PropertyModesService,
     AvailabilityService,
     ICalService,
+    PropertiesResolver,
   ],
   exports: [
     PropertiesService,
