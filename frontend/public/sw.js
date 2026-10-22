@@ -83,6 +83,18 @@ self.addEventListener('fetch', (event) => {
   if (
     ['style', 'script', 'image', 'font', 'worker'].includes(request.destination)
   ) {
+    // Next.js fingerprints build output under /_next/static/ with a
+    // content hash in the path, so a given URL's bytes never change;
+    // serving it cache-first (#2082) skips the network entirely once
+    // cached, instead of stale-while-revalidate's "serve cached, but
+    // still refetch every time" round trip for assets that can't have
+    // changed. Non-hashed static files (e.g. /favicon_32.png, fonts
+    // outside the build hash) keep stale-while-revalidate so an asset
+    // swapped in place without a new build still gets picked up.
+    if (url.pathname.startsWith('/_next/static/')) {
+      event.respondWith(cacheFirst(request));
+      return;
+    }
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
@@ -163,6 +175,22 @@ async function navigationFallback(request) {
 
     const offlinePage = await caches.match(OFFLINE_URL);
     return offlinePage || Response.error();
+  }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+    cache.put(request, response.clone());
+    return response;
+  } catch {
+    return Response.error();
   }
 }
 
