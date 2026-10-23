@@ -5,7 +5,12 @@ import { EmailService } from '../../notifications/email.service';
 import { requestContext } from '../../../common/request-context/request-context';
 
 export interface EmailJobData {
-  type: 'verification' | 'password-reset' | 'notification' | 'alert';
+  type:
+    | 'verification'
+    | 'password-reset'
+    | 'notification'
+    | 'alert'
+    | 'booking-confirmation';
   email: string;
   token?: string;
   subject?: string;
@@ -52,6 +57,7 @@ export class EmailQueueProcessor {
               break;
 
             case 'notification':
+            case 'booking-confirmation':
               await this.emailService.sendNotificationEmail(
                 job.data.email,
                 job.data.subject || 'Notification',
