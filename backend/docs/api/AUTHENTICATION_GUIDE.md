@@ -270,6 +270,67 @@ The refresh token is automatically sent via HTTP-only cookie. For non-browser cl
 
 ---
 
+## API Key Authentication (#2056)
+
+For server-to-server integrations that aren't acting on behalf of a
+logged-in user's browser session, use an API key instead of a JWT
+access token.
+
+### Create a key
+
+```bash
+curl -X POST https://api.chioma.com/api/v1/developer/api-keys \
+  -H "Authorization: Bearer <your-jwt-access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My integration",
+    "description": "Server-to-server sync job",
+    "permissions": ["properties:read", "bookings:read"]
+  }'
+```
+
+The response includes the key's plaintext value in the `key` field
+**exactly once** (a `chioma_sk_...`-prefixed string); store it
+immediately, it cannot be retrieved again. `permissions` must come from
+the canonical
+scope list in `backend/src/modules/developer/constants/api-scopes.ts`
+(`properties:read`, `properties:write`, `bookings:read`,
+`bookings:write`, `payments:read`, `analytics:read`). Keys expire after
+90 days by default.
+
+### Use the key
+
+Send it via **either** of two equivalent header forms:
+
+```bash
+# Dedicated header
+curl https://api.chioma.com/api/v1/developer/api-keys \
+  -H "x-api-key: <your-api-key>"
+
+# Or as a Bearer token on Authorization
+curl https://api.chioma.com/api/v1/developer/api-keys \
+  -H "Authorization: Bearer <your-api-key>"
+```
+
+Both are handled by the same `ApiKeyGuard`; it checks `x-api-key` first,
+then falls back to an `Authorization: Bearer <key>` header if present.
+This is safe to combine with JWT Bearer auth on a shared route: a JWT
+and an API key have distinct formats (a JWT is three dot-separated
+base64url segments; an API key has its own fixed prefix), so the guard
+never misreads one credential type as the other.
+
+### Current scope of API-key authentication
+
+`ApiKeyGuard` and the scope system above are implemented and covered by
+tests, but today no resource endpoint outside the `developer` module
+itself (properties, bookings, payments, etc.) actually applies the
+guard yet. Until those endpoints opt in, an API key only authenticates
+requests to the developer/API-key-management endpoints; day-to-day
+resource access still requires a JWT access token. This is a known gap
+in this codebase, not something this guide or #2056 closes.
+
+---
+
 ## Multi-Factor Authentication (MFA)
 
 ### Enable MFA

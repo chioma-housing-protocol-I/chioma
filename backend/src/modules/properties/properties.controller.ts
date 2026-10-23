@@ -10,6 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
@@ -40,6 +42,17 @@ import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-resp
 @ApiTags('Properties')
 @Controller('properties')
 @ApiStandardErrors()
+// Every response here can carry a loaded `owner` (User) relation
+// (findOne/findOnePublic load it via `relations: [..., 'owner']`).
+// Without this, class-transformer's @Exclude() decorators on
+// User (password, refreshToken, etc.) are never applied, so a public,
+// unauthenticated GET /properties/:id call returns the landlord's
+// bcrypt password hash in the response. Found while writing snapshot
+// tests for this endpoint (#2044); the same gap likely exists on other
+// controllers that load a User relation without this interceptor
+// (agreements, bookings before this was added elsewhere, payments) —
+// see this PR's description for the full disclosure.
+@UseInterceptors(ClassSerializerInterceptor)
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 

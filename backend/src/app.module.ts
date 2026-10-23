@@ -73,6 +73,7 @@ import { ResponseTimeInterceptor } from './common/interceptors/response-time.int
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
+import { FieldFilteringInterceptor } from './common/interceptors/field-filtering.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
@@ -314,6 +315,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: ReadReplicaInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: FieldFilteringInterceptor,
     },
   ],
 })
