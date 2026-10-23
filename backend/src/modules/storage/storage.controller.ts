@@ -62,6 +62,34 @@ export class StorageController {
     return { url, key };
   }
 
+  @Get('verify-integrity')
+  @ApiOperation({
+    summary: 'Verify file integrity',
+    description:
+      'Recomputes the SHA-256 checksum of the stored object and compares it against the checksum recorded at upload time, to detect silent corruption.',
+  })
+  @ApiQuery({
+    name: 'key',
+    description: 'Storage key returned from upload-url',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'verified is true/false when a checksum was recorded at upload time, or null for a legacy file with none recorded',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - key not owned by user',
+  })
+  async verifyIntegrity(
+    @Query('key') key: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.storageService.verifyIntegrity(key, req.user.id);
+  }
+
   @Get('download-url')
   @ApiOperation({
     summary: 'Get pre-signed download URL',
