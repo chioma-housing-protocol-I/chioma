@@ -70,10 +70,7 @@ export class RbacService {
     }
 
     // For admin and super_admin, allow access to all resources
-    if (
-      userRole === UserRole.ADMIN ||
-      userRole === UserRole.SUPER_ADMIN
-    ) {
+    if (userRole === UserRole.ADMIN || userRole === UserRole.SUPER_ADMIN) {
       return true;
     }
 
@@ -121,9 +118,7 @@ export class RbacService {
 
     // Admin can manage user and agent roles, but not admin or super_admin
     if (managerRole === UserRole.ADMIN) {
-      return (
-        targetRole === UserRole.USER || targetRole === UserRole.AGENT
-      );
+      return targetRole === UserRole.USER || targetRole === UserRole.AGENT;
     }
 
     // Other roles cannot manage roles
@@ -154,12 +149,8 @@ export class RbacService {
     const fromPermissions = this.getPermissionsForRole(fromRole);
     const toPermissions = this.getPermissionsForRole(toRole);
 
-    const added = toPermissions.filter(
-      (p) => !fromPermissions.includes(p),
-    );
-    const removed = fromPermissions.filter(
-      (p) => !toPermissions.includes(p),
-    );
+    const added = toPermissions.filter((p) => !fromPermissions.includes(p));
+    const removed = fromPermissions.filter((p) => !toPermissions.includes(p));
 
     return { added, removed };
   }

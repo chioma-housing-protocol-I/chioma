@@ -55,7 +55,9 @@ export class EncryptionHealthIndicator extends HealthIndicator {
       this.encryptionService.testRoundTrip();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'round-trip test threw unexpectedly';
+        err instanceof Error
+          ? err.message
+          : 'round-trip test threw unexpectedly';
 
       this.logger.error(`Encryption round-trip self-test failed: ${message}`);
 

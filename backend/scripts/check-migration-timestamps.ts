@@ -33,7 +33,8 @@ const MIGRATION_DIRS = [
 ];
 
 const FILENAME_RE = /^(\d+)-(.+)\.ts$/;
-const CLASS_RE = /export class ([A-Za-z0-9_]+?)(\d{13})\s+implements MigrationInterface/;
+const CLASS_RE =
+  /export class ([A-Za-z0-9_]+?)(\d{13})\s+implements MigrationInterface/;
 
 interface MigrationFileInfo {
   dir: string;
@@ -76,9 +77,7 @@ function checkDuplicateTimestamps(files: MigrationFileInfo[]): string[] {
     if (group.length > 1) {
       errors.push(
         `Duplicate timestamp "${timestamp}" used by ${group.length} files:\n` +
-          group
-            .map((g) => `    - ${join(g.dir, g.file)}`)
-            .join('\n'),
+          group.map((g) => `    - ${join(g.dir, g.file)}`).join('\n'),
       );
     }
   }
@@ -121,7 +120,9 @@ function main(): void {
   const files = collectMigrationFiles();
 
   if (files.length === 0) {
-    console.error('No migration files found in either migrations directory. Aborting.');
+    console.error(
+      'No migration files found in either migrations directory. Aborting.',
+    );
     process.exit(1);
   }
 
@@ -131,7 +132,9 @@ function main(): void {
   ];
 
   if (errors.length > 0) {
-    console.error(`Migration timestamp check FAILED (${files.length} files scanned):\n`);
+    console.error(
+      `Migration timestamp check FAILED (${files.length} files scanned):\n`,
+    );
     for (const err of errors) {
       console.error(`  - ${err}\n`);
     }

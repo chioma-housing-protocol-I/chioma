@@ -31,8 +31,12 @@ export class CreateOAuthStates1931100000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX "public"."IDX_oauth_states_user_provider"`);
-    await queryRunner.query(`DROP INDEX "public"."IDX_oauth_states_expires_at"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_oauth_states_user_provider"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_oauth_states_expires_at"`,
+    );
     await queryRunner.query(`DROP TABLE "oauth_states"`);
     await queryRunner.query(`DROP TYPE "public"."oauth_states_provider_enum"`);
     // Postgres cannot drop a single enum value; 'discord' is left on

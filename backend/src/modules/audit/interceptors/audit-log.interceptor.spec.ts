@@ -105,7 +105,9 @@ describe('AuditLogInterceptor authentication events', () => {
       request({ id: 'user-2' }),
     );
 
-    await lastValueFrom(intercept({ handle: () => of({ message: 'ok' }) } as any));
+    await lastValueFrom(
+      intercept({ handle: () => of({ message: 'ok' }) } as any),
+    );
 
     expect(auditService.log).toHaveBeenCalledWith(
       expect.objectContaining({

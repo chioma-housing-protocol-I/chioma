@@ -365,7 +365,10 @@ async function main(): Promise<void> {
 
 if (require.main === module) {
   void main().catch((error) => {
-    logger.error('Failed to run KYC migration', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to run KYC migration',
+      error instanceof Error ? error.stack : String(error),
+    );
     process.exit(1);
   });
 }

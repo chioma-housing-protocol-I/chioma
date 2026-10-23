@@ -117,7 +117,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 
   agent: [
     // All user permissions
-    ...ROLE_PERMISSIONS?.user || [],
+    ...(ROLE_PERMISSIONS?.user || []),
     Permission.PROPERTY_CREATE,
     Permission.PROPERTY_UPDATE,
     Permission.PROPERTY_PUBLISH,
@@ -132,7 +132,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 
   admin: [
     // All agent permissions
-    ...ROLE_PERMISSIONS?.agent || [],
+    ...(ROLE_PERMISSIONS?.agent || []),
     Permission.USER_DELETE,
     Permission.USER_MANAGE_ROLES,
     Permission.PROPERTY_DELETE,
@@ -166,7 +166,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 
   super_admin: [
     // All admin permissions
-    ...ROLE_PERMISSIONS?.admin || [],
+    ...(ROLE_PERMISSIONS?.admin || []),
     Permission.SYSTEM_CONFIG,
     Permission.SYSTEM_MANAGE_ROLES,
     Permission.SYSTEM_MANAGE_PERMISSIONS,

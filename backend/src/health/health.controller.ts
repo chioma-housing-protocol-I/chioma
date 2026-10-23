@@ -9,7 +9,6 @@ import { MemoryHealthIndicator } from './indicators/memory.indicator';
 import { RedisHealthIndicator } from './indicators/redis.indicator';
 import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.indicator';
 
-
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -21,7 +20,6 @@ export class HealthController {
     private memoryHealthIndicator: MemoryHealthIndicator,
     private redisHealthIndicator: RedisHealthIndicator,
     private elasticsearchHealthIndicator: ElasticsearchHealthIndicator,
-
   ) {}
 
   /**

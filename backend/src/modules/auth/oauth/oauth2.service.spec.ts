@@ -110,7 +110,9 @@ describe('OAuth2Service', () => {
 
   describe('completeAuthorization', () => {
     it('creates user and returns tokens on successful callback', async () => {
-      const { state } = await service.initiateAuthorization(OAuth2Provider.GOOGLE);
+      const { state } = await service.initiateAuthorization(
+        OAuth2Provider.GOOGLE,
+      );
 
       mockOAuth2Client.exchangeAuthorizationCode.mockResolvedValue({
         access_token: 'provider-access',

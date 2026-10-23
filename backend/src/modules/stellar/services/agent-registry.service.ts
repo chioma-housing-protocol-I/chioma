@@ -421,5 +421,4 @@ export class AgentRegistryService {
     });
     return PaginationUtils.buildPaginationResponse(data, total, page, limit);
   }
-
 }

@@ -530,7 +530,7 @@ describe('UsersService', () => {
       );
     });
 
-    it('attributes the audit entry to the acting admin when requested on a user\'s behalf', async () => {
+    it("attributes the audit entry to the acting admin when requested on a user's behalf", async () => {
       await service.exportUserData('1', 'admin-1');
 
       expect(mockAuditService.log).toHaveBeenCalledWith(
