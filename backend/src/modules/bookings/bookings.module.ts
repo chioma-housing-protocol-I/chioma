@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { Booking } from './entities/booking.entity';
@@ -16,6 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PaymentModule,
     StellarModule,
     NotificationsModule,
+    BullModule.registerQueue({ name: 'email' }),
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
