@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, In } from 'typeorm';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditService } from '../../audit/audit.service';
 import { AuditAction, AuditLevel } from '../../audit/entities/audit-log.entity';
@@ -40,24 +40,33 @@ export class ScreeningExpiryNotificationService {
       now.getTime() + notificationWindowDays * 24 * 60 * 60 * 1000,
     );
 
-    // Find reports that will expire within the notification window
+    // Find reports that will expire within the notification window. Note:
+    // TenantScreeningReport has no `screening` relation to eager-load (it
+    // only stores screeningId as a plain column), so the matching screening
+    // requests are fetched separately below.
     const expiringReports = await this.reportRepository.find({
       where: {
         accessExpiresAt: LessThan(expiryWindowStart),
       },
-      relations: ['screening'],
     });
 
     this.logger.log(
       `Found ${expiringReports.length} screening report(s) expiring within ${notificationWindowDays} days`,
     );
 
+    // Single batched lookup instead of one findOne per report (#2078).
+    const screeningIds = expiringReports.map((report) => report.screeningId);
+    const screenings = screeningIds.length
+      ? await this.screeningRepository.find({
+          where: { id: In(screeningIds) },
+        })
+      : [];
+    const screeningsById = new Map(screenings.map((s) => [s.id, s]));
+
     let notificationsSent = 0;
 
     for (const report of expiringReports) {
-      const screening = await this.screeningRepository.findOne({
-        where: { id: report.screeningId },
-      });
+      const screening = screeningsById.get(report.screeningId);
 
       if (!screening) {
         this.logger.warn(`Screening request not found for report ${report.id}`);

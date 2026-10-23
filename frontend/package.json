@@ -7,6 +7,7 @@
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
     "size:check": "node scripts/check-bundle-size.js",
+    "perf:budget": "lhci autorun",
     "start": "next start",
     "lint": "eslint .",
     "check": "pnpm run lint && pnpm run format:check && pnpm run build",
@@ -68,6 +69,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "2.1.4",
+    "@lhci/cli": "0.15.1",
     "@next/bundle-analyzer": "^16.2.11",
     "@playwright/test": "^1.62.1",
     "@storybook/react": "^10.5.10",

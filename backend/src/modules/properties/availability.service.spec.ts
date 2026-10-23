@@ -150,6 +150,86 @@ describe('AvailabilityService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
+  describe('blockDates', () => {
+    beforeEach(() => {
+      mockPropertyRepo.findOne.mockResolvedValue({
+        id: 'property-1',
+        ownerId: 'owner-1',
+      });
+    });
+
+    it('issues a single batched upsert for all dates instead of one per date (#2078)', async () => {
+      await service.blockDates(
+        'property-1',
+        { dates: ['2026-05-01', '2026-05-02', '2026-05-03'] },
+        'owner-1',
+      );
+
+      expect(mockAvailabilityRepo.upsert).toHaveBeenCalledTimes(1);
+      expect(mockAvailabilityRepo.upsert).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-01',
+            available: false,
+          }),
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-02',
+            available: false,
+          }),
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-03',
+            available: false,
+          }),
+        ],
+        ['propertyId', 'date'],
+      );
+    });
+  });
+
+  describe('unblockDates', () => {
+    beforeEach(() => {
+      mockPropertyRepo.findOne.mockResolvedValue({
+        id: 'property-1',
+        ownerId: 'owner-1',
+      });
+    });
+
+    it('issues a single batched upsert for all dates without a per-date findOne first (#2078)', async () => {
+      await service.unblockDates(
+        'property-1',
+        { dates: ['2026-05-01', '2026-05-02', '2026-05-03'] },
+        'owner-1',
+      );
+
+      expect(mockAvailabilityRepo.findOne).not.toHaveBeenCalled();
+      expect(mockAvailabilityRepo.save).not.toHaveBeenCalled();
+      expect(mockAvailabilityRepo.upsert).toHaveBeenCalledTimes(1);
+      expect(mockAvailabilityRepo.upsert).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-01',
+            available: true,
+          }),
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-02',
+            available: true,
+          }),
+          expect.objectContaining({
+            propertyId: 'property-1',
+            date: '2026-05-03',
+            available: true,
+          }),
+        ],
+        ['propertyId', 'date'],
+      );
+    });
+  });
+
   it('throws ForbiddenException when non-owner updates availability', async () => {
     mockPropertyRepo.findOne.mockResolvedValue({
       id: 'property-1',

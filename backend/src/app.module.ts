@@ -43,7 +43,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { SearchModule } from './modules/search/search.module';
 import { JobQueueService } from './common/services/job-queue.service';
-import { CompressionService } from './common/middleware/compression.service';
+import { CompressionModule } from './common/middleware/compression.module';
 import { CompressionMiddleware } from './common/middleware/compression.middleware';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
@@ -84,6 +84,7 @@ const appLogger = new Logger('AppModule');
 
 @Module({
   imports: [
+    CompressionModule,
     ...(process.env.NODE_ENV === 'test' ||
     process.env.OPENAPI_GENERATE === 'true'
       ? []
@@ -286,7 +287,6 @@ const appLogger = new Logger('AppModule');
   providers: [
     AppService,
     JobQueueService,
-    CompressionService,
     {
       provide: 'APP_PIPE',
       useClass: ValidationPipe,
