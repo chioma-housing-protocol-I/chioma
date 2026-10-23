@@ -25,7 +25,9 @@ export interface PasswordStrengthResult {
 /**
  * Calculate password strength based on various criteria
  */
-export function calculatePasswordStrength(password: string): PasswordStrengthResult {
+export function calculatePasswordStrength(
+  password: string,
+): PasswordStrengthResult {
   let score = 0;
   const suggestions: string[] = [];
 
@@ -57,9 +59,10 @@ export function calculatePasswordStrength(password: string): PasswordStrengthRes
 
   // Weakness checks
   const hasRepeatedChars = /(.)\1{2,}/.test(password);
-  const hasSequential = /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(
-    password,
-  );
+  const hasSequential =
+    /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(
+      password,
+    );
   const hasKeyboardPattern = /(?:qwerty|asdfgh|zxcvbn|qwertz)/i.test(password);
 
   if (hasRepeatedChars) {
@@ -87,7 +90,9 @@ export function calculatePasswordStrength(password: string): PasswordStrengthRes
     'monkey',
     'dragon',
   ];
-  if (commonPasswords.some((common) => password.toLowerCase().includes(common))) {
+  if (
+    commonPasswords.some((common) => password.toLowerCase().includes(common))
+  ) {
     score = 0;
     suggestions.unshift('This password is too common');
   }
@@ -181,9 +186,7 @@ export function PasswordStrengthMeter({
               key={bar}
               className={cn(
                 'h-1.5 flex-1 rounded-full transition-all duration-300',
-                bar <= filledBars
-                  ? getBarColor(strength.score)
-                  : 'bg-muted/30',
+                bar <= filledBars ? getBarColor(strength.score) : 'bg-muted/30',
               )}
             />
           ))}
@@ -194,10 +197,7 @@ export function PasswordStrengthMeter({
       {showRequirements && (
         <ul className="space-y-1.5">
           {requirements.map((req, index) => (
-            <li
-              key={index}
-              className="flex items-start gap-2 text-xs"
-            >
+            <li key={index} className="flex items-start gap-2 text-xs">
               <div
                 className={cn(
                   'mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-colors',
@@ -215,9 +215,7 @@ export function PasswordStrengthMeter({
               <span
                 className={cn(
                   'leading-tight',
-                  req.met
-                    ? 'text-foreground'
-                    : 'text-muted-foreground',
+                  req.met ? 'text-foreground' : 'text-muted-foreground',
                 )}
               >
                 {req.label}
@@ -298,7 +296,9 @@ export function PasswordStrengthIndicator({
           />
         ))}
       </div>
-      <span className={cn('text-xs font-medium whitespace-nowrap', strength.color)}>
+      <span
+        className={cn('text-xs font-medium whitespace-nowrap', strength.color)}
+      >
         {strength.label}
       </span>
     </div>

@@ -11,7 +11,11 @@ type RouteLoadingProps = {
  */
 export default function RouteLoading({ rows = 3 }: RouteLoadingProps) {
   return (
-    <div className="space-y-6 p-6 animate-pulse" role="status" aria-label="Loading">
+    <div
+      className="space-y-6 p-6 animate-pulse"
+      role="status"
+      aria-label="Loading"
+    >
       <div className="h-6 w-48 rounded bg-neutral-200" />
       <div className="space-y-3">
         {Array.from({ length: rows }).map((_, i) => (

@@ -23,7 +23,9 @@ const PersonalInfoStep = ({ formData, onChange }: any) => {
           <input
             type="text"
             value={formData.fullName || ''}
-            onChange={(e) => onChange({ ...formData, fullName: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...formData, fullName: e.target.value })
+            }
             placeholder="John Doe"
             className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -36,7 +38,9 @@ const PersonalInfoStep = ({ formData, onChange }: any) => {
           <input
             type="date"
             value={formData.dateOfBirth || ''}
-            onChange={(e) => onChange({ ...formData, dateOfBirth: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...formData, dateOfBirth: e.target.value })
+            }
             className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -89,7 +93,9 @@ const AccountDetailsStep = ({ formData, onChange }: any) => {
           <input
             type="text"
             value={formData.username || ''}
-            onChange={(e) => onChange({ ...formData, username: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...formData, username: e.target.value })
+            }
             placeholder="johndoe123"
             className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -102,7 +108,9 @@ const AccountDetailsStep = ({ formData, onChange }: any) => {
           <input
             type="password"
             value={formData.password || ''}
-            onChange={(e) => onChange({ ...formData, password: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...formData, password: e.target.value })
+            }
             placeholder="••••••••"
             className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -145,7 +153,9 @@ const PaymentStep = ({ formData, onChange }: any) => {
           <input
             type="text"
             value={formData.cardNumber || ''}
-            onChange={(e) => onChange({ ...formData, cardNumber: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...formData, cardNumber: e.target.value })
+            }
             placeholder="1234 5678 9012 3456"
             maxLength={19}
             className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -254,7 +264,9 @@ const ReviewStep = ({ formData }: any) => {
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-neutral-600 dark:text-neutral-400">Username:</dt>
+              <dt className="text-neutral-600 dark:text-neutral-400">
+                Username:
+              </dt>
               <dd className="text-neutral-900 dark:text-neutral-100 font-medium">
                 {formData.username || 'Not provided'}
               </dd>
@@ -317,11 +329,7 @@ export const MultiStepFormWizardExample: React.FC = () => {
       component: (
         <PersonalInfoStep formData={formData} onChange={setFormData} />
       ),
-      isValid: !!(
-        formData.fullName &&
-        formData.dateOfBirth &&
-        formData.phone
-      ),
+      isValid: !!(formData.fullName && formData.dateOfBirth && formData.phone),
     },
     {
       id: 'account-details',

@@ -52,8 +52,7 @@ export function Pagination({
   const baseId = useId();
   const [jumpValue, setJumpValue] = useState('');
 
-  const showPageSize =
-    pageSize !== undefined && onPageSizeChange !== undefined;
+  const showPageSize = pageSize !== undefined && onPageSizeChange !== undefined;
 
   if (totalPages <= 1 && !showPageSize) return null;
 
@@ -83,9 +82,7 @@ export function Pagination({
           <select
             id={`${baseId}-page-size`}
             value={pageSize}
-            onChange={(event) =>
-              onPageSizeChange?.(Number(event.target.value))
-            }
+            onChange={(event) => onPageSizeChange?.(Number(event.target.value))}
             className="rounded-lg border border-neutral-200 bg-white px-2 py-2 text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {sizeOptions.map((option) => (
@@ -113,10 +110,7 @@ export function Pagination({
 
           {pages.map((page, idx) =>
             page === '...' ? (
-              <span
-                key={`ellipsis-${idx}`}
-                className="px-1 text-neutral-500"
-              >
+              <span key={`ellipsis-${idx}`} className="px-1 text-neutral-500">
                 ...
               </span>
             ) : (
@@ -138,9 +132,7 @@ export function Pagination({
 
           <button
             type="button"
-            onClick={() =>
-              onPageChange(Math.min(totalPages, currentPage + 1))
-            }
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
             className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
           >

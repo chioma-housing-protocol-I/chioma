@@ -14,14 +14,17 @@ describe('needsEmailOnboarding', () => {
 
   it('returns false when emailCollectedAt is set (canonical server signal)', () => {
     expect(
-      needsEmailOnboarding({ email: null, emailCollectedAt: '2024-01-01T00:00:00Z' }),
+      needsEmailOnboarding({
+        email: null,
+        emailCollectedAt: '2024-01-01T00:00:00Z',
+      }),
     ).toBe(false);
   });
 
   it('returns true when emailCollectedAt is null', () => {
-    expect(
-      needsEmailOnboarding({ email: null, emailCollectedAt: null }),
-    ).toBe(true);
+    expect(needsEmailOnboarding({ email: null, emailCollectedAt: null })).toBe(
+      true,
+    );
   });
 
   it('returns true when emailCollectedAt is undefined (field present but unset)', () => {
@@ -56,12 +59,16 @@ describe('skipEmailOnboarding / clearEmailOnboardingSkip', () => {
   it('clears the skip flag', () => {
     skipEmailOnboarding();
     clearEmailOnboardingSkip();
-    expect(sessionStorage.getItem('chioma_onboarding_email_skipped')).toBeNull();
+    expect(
+      sessionStorage.getItem('chioma_onboarding_email_skipped'),
+    ).toBeNull();
   });
 
   it('clearEmailOnboardingSkip is a no-op when the flag was never set', () => {
     expect(() => clearEmailOnboardingSkip()).not.toThrow();
-    expect(sessionStorage.getItem('chioma_onboarding_email_skipped')).toBeNull();
+    expect(
+      sessionStorage.getItem('chioma_onboarding_email_skipped'),
+    ).toBeNull();
   });
 
   it('does not throw in SSR-like environment (window undefined)', () => {
