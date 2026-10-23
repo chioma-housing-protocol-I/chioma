@@ -79,12 +79,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     } else {
       this.logger.warn(
-        `${request.method} ${request.url} - ${status}: ${Array.isArray(body.message) ? body.message.join(', ') : body.message} [${requestId}]`,
+        `${request.method} ${request.url} - ${status}: ${Array.isArray(body.error.message) ? body.error.message.join(', ') : body.error.message} [${requestId}]`,
       );
-    }
-
-    if (body.retryAfter) {
-      response.setHeader('Retry-After', String(body.retryAfter));
     }
 
     response.status(status).json(body);
@@ -103,25 +99,32 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const path = request.url;
     const timestamp = new Date().toISOString();
 
-    const baseResponse: Partial<ErrorResponseDto> = {
-      timestamp,
-      requestId,
-      path,
-    };
+    const envelope = (
+      status: number,
+      code: ErrorCode | string,
+      message: string | string[],
+      details?: unknown,
+    ): ErrorResponseDto => ({
+      error: {
+        code: code as ErrorCode,
+        message,
+        ...(details !== undefined ? { details } : {}),
+        timestamp,
+        requestId,
+        path,
+      },
+    });
 
     // Handle our custom BaseAppError instances
     if (exception instanceof BaseAppError) {
-      const body: ErrorResponseDto = {
-        ...baseResponse,
-        statusCode: exception.statusCode,
-        message: exception.message,
-        error: this.getErrorName(exception.statusCode),
-        code: exception.code,
-      } as ErrorResponseDto;
-
       return {
         status: exception.statusCode,
-        body,
+        body: envelope(
+          exception.statusCode,
+          exception.code,
+          exception.message,
+          exception.context,
+        ),
         // Rate limit retry timing goes on the Retry-After header, not the
         // JSON body, to avoid leaking rate-limit timing info to attackers.
         retryAfter:
@@ -146,13 +149,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         return {
           status,
-          body: {
-            ...baseResponse,
-            statusCode: status,
-            message,
-            error: 'Too Many Requests',
-            code: ErrorCode.RATE_LIMIT_EXCEEDED,
-          } as ErrorResponseDto,
+          body: envelope(status, ErrorCode.RATE_LIMIT_EXCEEDED, message),
           retryAfter: 60,
         };
       }
@@ -166,44 +163,52 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (Array.isArray(res.message)) {
           return {
             status,
-            body: {
-              ...baseResponse,
-              statusCode: status,
-              message: res.message,
-              error: 'Bad Request',
-              code: ErrorCode.VALIDATION_FAILED,
-            } as ErrorResponseDto,
+            body: envelope(
+              status,
+              ErrorCode.VALIDATION_FAILED,
+              res.message,
+              // Individual field errors, surfaced alongside the combined
+              // message array so a client can map them to form fields.
+              res.message.map((issue) => ({ message: issue })),
+            ),
           };
         }
       }
 
-      const body =
-        typeof exceptionResponse === 'object'
-          ? ({
-              ...baseResponse,
-              ...(exceptionResponse as Record<string, unknown>),
-            } as ErrorResponseDto)
-          : ({
-              ...baseResponse,
-              statusCode: status,
-              message: exceptionResponse,
-              error: this.getErrorName(status),
-            } as ErrorResponseDto);
+      if (typeof exceptionResponse === 'object') {
+        const res = exceptionResponse as Record<string, unknown>;
+        const { message, code, error, statusCode, ...rest } = res;
+        const details = Object.keys(rest).length > 0 ? rest : undefined;
+        return {
+          status,
+          body: envelope(
+            status,
+            (code as ErrorCode) ?? this.codeForStatus(status),
+            (message as string | string[]) ?? this.getErrorName(status),
+            details,
+          ),
+        };
+      }
 
-      return { status, body };
+      return {
+        status,
+        body: envelope(
+          status,
+          this.codeForStatus(status),
+          (exceptionResponse as string) ?? this.getErrorName(status),
+        ),
+      };
     }
 
     // Handle TypeORM EntityNotFoundError
     if (exception instanceof EntityNotFoundError) {
       return {
         status: HttpStatus.NOT_FOUND,
-        body: {
-          ...baseResponse,
-          statusCode: HttpStatus.NOT_FOUND,
-          message: 'Resource not found',
-          error: 'Not Found',
-          code: ErrorCode.RESOURCE_NOT_FOUND,
-        } as ErrorResponseDto,
+        body: envelope(
+          HttpStatus.NOT_FOUND,
+          ErrorCode.RESOURCE_NOT_FOUND,
+          'Resource not found',
+        ),
       };
     }
 
@@ -214,13 +219,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     ) {
       return {
         status: HttpStatus.CONFLICT,
-        body: {
-          ...baseResponse,
-          statusCode: HttpStatus.CONFLICT,
-          message: 'Duplicate entry found',
-          error: 'Conflict',
-          code: ErrorCode.DUPLICATE_ENTRY,
-        } as ErrorResponseDto,
+        body: envelope(
+          HttpStatus.CONFLICT,
+          ErrorCode.DUPLICATE_ENTRY,
+          'Duplicate entry found',
+        ),
       };
     }
 
@@ -228,26 +231,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof QueryFailedError) {
       return {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
-        body: {
-          ...baseResponse,
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Database operation failed',
-          error: 'Internal Server Error',
-          code: ErrorCode.DATABASE_ERROR,
-        } as ErrorResponseDto,
+        body: envelope(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          ErrorCode.DATABASE_ERROR,
+          'Database operation failed',
+        ),
       };
     }
 
     // Return generic error response for unhandled exceptions
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,
-      body: {
-        ...baseResponse,
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'An unexpected error occurred',
-        error: 'Internal Server Error',
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
-      } as ErrorResponseDto,
+      body: envelope(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        'An unexpected error occurred',
+      ),
     };
   }
 
@@ -266,5 +265,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
 
     return errorNames[statusCode] || 'Error';
+  }
+
+  /** Falls back to a generic per-status code when an exception carries none of its own. */
+  private codeForStatus(statusCode: number): ErrorCode {
+    const codes: Record<number, ErrorCode> = {
+      400: ErrorCode.VALIDATION_FAILED,
+      401: ErrorCode.AUTH_UNAUTHORIZED,
+      403: ErrorCode.AUTH_FORBIDDEN,
+      404: ErrorCode.RESOURCE_NOT_FOUND,
+      409: ErrorCode.BUSINESS_RULE_VIOLATION,
+      429: ErrorCode.RATE_LIMIT_EXCEEDED,
+      500: ErrorCode.INTERNAL_SERVER_ERROR,
+      503: ErrorCode.SERVICE_UNAVAILABLE,
+    };
+
+    return codes[statusCode] ?? ErrorCode.UNKNOWN_ERROR;
   }
 }

@@ -42,10 +42,11 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.NOT_FOUND,
-        message: 'Not found',
-        code: ErrorCode.RESOURCE_NOT_FOUND,
-        requestId: 'test-request-id',
+        error: expect.objectContaining({
+          message: 'Not found',
+          code: ErrorCode.RESOURCE_NOT_FOUND,
+          requestId: 'test-request-id',
+        }),
       }),
     );
   });
@@ -58,9 +59,10 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Bad request',
-        requestId: 'test-request-id',
+        error: expect.objectContaining({
+          message: 'Bad request',
+          requestId: 'test-request-id',
+        }),
       }),
     );
   });
@@ -80,9 +82,10 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: ['error 1', 'error 2'],
-        code: ErrorCode.VALIDATION_FAILED,
+        error: expect.objectContaining({
+          message: ['error 1', 'error 2'],
+          code: ErrorCode.VALIDATION_FAILED,
+        }),
       }),
     );
   });
@@ -97,8 +100,9 @@ describe('AllExceptionsFilter', () => {
     );
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
+        error: expect.objectContaining({
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+        }),
       }),
     );
   });

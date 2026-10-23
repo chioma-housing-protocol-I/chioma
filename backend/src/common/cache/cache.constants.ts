@@ -21,3 +21,9 @@ export const TTL_SUGGEST_MS = 300_000;
 
 /** Default TTL for warmed property entries (1 hour) */
 export const TTL_PROPERTY_ENTRY_MS = 3_600_000;
+
+/** Cache key prefix for the generic URL-keyed HTTP response cache (#2081). */
+export const CACHE_PREFIX_HTTP_RESPONSE = 'http:response';
+
+/** Default TTL for the generic URL-keyed HTTP response cache (60 seconds). */
+export const TTL_HTTP_RESPONSE_MS = 60_000;

@@ -36,12 +36,18 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ListingStatus, Property } from './entities/property.entity';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { ReviewsService } from '../reviews/reviews.service';
+import { Review } from '../reviews/review.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Properties')
 @Controller('properties')
 @ApiStandardErrors()
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+    private readonly reviewsService: ReviewsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -162,6 +168,38 @@ export class PropertiesController {
   @ApiResponse({ status: 404, description: 'Property not found' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return await this.propertiesService.findOnePublic(id);
+  }
+
+  @Get(':id/reviews')
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Review listings tolerate brief replication lag',
+  })
+  @ApiOperation({
+    summary: 'Get reviews for a property',
+    description:
+      'Retrieve a paginated list of reviews for a specific property.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Property UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiPaginatedResponse(Review)
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async getPropertyReviews(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    // Validates the property exists (and is published) before listing its
+    // reviews, so an unpublished or deleted property's ID 404s instead of
+    // silently returning an empty page.
+    await this.propertiesService.findOnePublic(id);
+    return await this.reviewsService.getPropertyReviews(
+      id,
+      query.page,
+      query.limit,
+    );
   }
 
   @Patch(':id')
