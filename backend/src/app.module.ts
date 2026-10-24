@@ -28,6 +28,8 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BatchModule } from './modules/batch/batch.module';
+import { FavoritesNotificationsBatchModule } from './modules/favorites-notifications-batch/favorites-notifications-batch.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
 import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
@@ -79,7 +81,6 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
 import { CertificatePinningModule } from './common/security/certificate-pinning.module';
 import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 import { RbacModule } from './common/rbac/rbac.module';
-import { BatchModule } from './modules/batch/batch.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
@@ -265,6 +266,7 @@ const appLogger = new Logger('AppModule');
       : []),
     PaymentModule,
     NotificationsModule,
+    BatchModule,
     ProfileModule,
     SecurityModule,
     I18nModule,
@@ -285,7 +287,7 @@ const appLogger = new Logger('AppModule');
     InquiriesModule,
     AnalyticsModule,
     DocumentsModule,
-    BatchModule,
+    FavoritesNotificationsBatchModule,
     require('./modules/database-performance/database-performance.module')
       .DatabasePerformanceModule,
     TransactionModule,
