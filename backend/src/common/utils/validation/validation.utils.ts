@@ -42,29 +42,6 @@ export class ValidationUtils {
   }
 
   /**
-   * Validates if a value is a valid Date object or date string
-   */
-  static validateDate(date: any): boolean {
-    if (date instanceof Date) {
-      return !isNaN(date.getTime());
-    }
-    const parsedDate = new Date(date);
-    return !isNaN(parsedDate.getTime());
-  }
-
-  /**
-   * Validates a URL format
-   */
-  static validateUrl(url: string): boolean {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Validates a Stellar wallet address (G... format)
    */
   static validateWalletAddress(address: string): boolean {
