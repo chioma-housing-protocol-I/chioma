@@ -1,7 +1,7 @@
 'use client';
 
 import { X, CheckCircle2, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { NegotiationSidebar } from './NegotiationSidebar';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ import type {
   Contract,
 } from '@/types/contracts';
 import { MessageSquare } from 'lucide-react';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 export type LeaseStatus = 'ACTIVE' | 'PENDING' | 'EXPIRED';
 
@@ -131,16 +132,25 @@ export function LeaseDetailsModal({
   };
 
   const canSign = lease.status === 'PENDING' && currentUserRole === 'user';
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, true);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
           <div>

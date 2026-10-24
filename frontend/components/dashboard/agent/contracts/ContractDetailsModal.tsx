@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   X,
   Download,
@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast';
 import type { Contract } from '@/types/contracts';
 import { ContractTimeline } from './ContractTimeline';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface ContractDetailsModalProps {
   contract: Contract;
@@ -250,6 +251,8 @@ export function ContractDetailsModal({
   onClose,
 }: ContractDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'terms'>('details');
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, true);
 
   const handleCopyTxHash = async () => {
     if (!contract.stellarTxHash) return;
@@ -266,14 +269,21 @@ export function ContractDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-start justify-between p-8 border-b border-white/5 shrink-0">
           <div>
