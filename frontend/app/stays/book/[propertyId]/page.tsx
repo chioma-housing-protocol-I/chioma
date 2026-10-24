@@ -21,19 +21,22 @@ interface BookingData {
 
 const STEPS = ['Dates', 'Requests', 'Payment', 'Review'];
 
+const INITIAL_BOOKING_DATA: BookingData = {
+  checkIn: '',
+  checkOut: '',
+  guests: 1,
+  specialRequests: '',
+  paymentMethod: 'card',
+};
+
 export default function BookingPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const router = useRouter();
   const { data: property } = useProperty(propertyId);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bookingData, setBookingData] = useState<BookingData>({
-    checkIn: '',
-    checkOut: '',
-    guests: 1,
-    specialRequests: '',
-    paymentMethod: 'card',
-  });
+  const [bookingData, setBookingData] =
+    useState<BookingData>(INITIAL_BOOKING_DATA);
 
   const handleNext = (data: Partial<BookingData>) => {
     setBookingData((prev) => ({ ...prev, ...data }));
@@ -50,6 +53,11 @@ export default function BookingPage() {
       });
       if (!res.ok) throw new Error('Booking failed');
       toast.success('Booking confirmed!');
+      // Reset before navigating away so that if the browser's back/forward
+      // cache restores this page, it doesn't show the completed booking's
+      // stale step and form data.
+      setBookingData(INITIAL_BOOKING_DATA);
+      setStep(1);
       router.push('/guest/trips');
     } catch {
       toast.error('Something went wrong. Please try again.');
