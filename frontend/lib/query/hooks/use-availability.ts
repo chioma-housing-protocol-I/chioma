@@ -2,13 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-
-export interface AvailabilityDay {
-  date: string;
-  available: boolean;
-  customPrice: number | string | null;
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
 
 /**
@@ -34,23 +27,6 @@ export const availabilityKeys = {
   property: (propertyId: string) =>
     [...availabilityKeys.all, propertyId] as const,
 };
-
-export function useAvailability(
-  propertyId: string | null,
-  startDate: string,
-  endDate: string,
-) {
-  return useQuery({
-    queryKey: availabilityKeys.range(propertyId ?? '', startDate, endDate),
-    queryFn: async () => {
-      const { data } = await apiClient.get<AvailabilityDay[]>(
-        `/properties/${propertyId}/availability?startDate=${startDate}&endDate=${endDate}`,
-      );
-      return data;
-    },
-    enabled: !!propertyId,
-  });
-}
 
 type DayAction =
   | { type: 'block'; date: string }
@@ -82,6 +58,9 @@ export function useUpdateAvailabilityDay(propertyId: string | null) {
         });
       }
     },
+  });
+}
+
 /**
  * Fetch the availability (and per-night pricing) calendar for a property over
  * an inclusive date range. Used up front in the booking flow so guests see
