@@ -58,9 +58,14 @@ baselines (instructions, measured on the Soroban test host):
 | Operation                   | Baseline (instructions) |
 | ---------------------------- | -----------------------: |
 | `create_agreement_with_token` |                  217,921 |
-| `make_payment_with_token`     |                  362,387 |
+| `make_payment_with_token`     |                  415,724 |
 | `release_escrow_with_token`   |                  349,901 |
 | `propose_extension`           |                  243,078 |
+
+`make_payment_with_token`'s baseline was bumped from 362,387 to 415,724
+(#2088): the function now also updates two running instance-storage
+counters (`TotalTransactionCount`, `TotalTransactionVolume`) so aggregate
+contract metrics are queryable on-chain via `get_contract_metrics`.
 
 `resolve_dispute` is not benchmarked here: dispute handling is routed
 through the separate `dispute_resolution` contract, not this one.

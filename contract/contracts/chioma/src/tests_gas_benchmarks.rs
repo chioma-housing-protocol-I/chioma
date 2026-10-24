@@ -21,7 +21,11 @@ const REGRESSION_THRESHOLD_PERCENT: u64 = 10;
 /// file. Update these (and the table in `docs/performance/BENCHMARKING.md`)
 /// together whenever an intentional, reviewed change moves the numbers.
 const CREATE_AGREEMENT_WITH_TOKEN_BASELINE: u64 = 217_921;
-const MAKE_PAYMENT_WITH_TOKEN_BASELINE: u64 = 362_387;
+// Bumped for #2088: make_payment_with_token now also updates two running
+// instance-storage counters (TotalTransactionCount, TotalTransactionVolume)
+// so aggregate contract metrics are queryable on-chain. Measured delta:
+// 362,387 -> 415,724 (+14.7%).
+const MAKE_PAYMENT_WITH_TOKEN_BASELINE: u64 = 415_724;
 const RELEASE_ESCROW_WITH_TOKEN_BASELINE: u64 = 349_901;
 const PROPOSE_EXTENSION_BASELINE: u64 = 243_078;
 

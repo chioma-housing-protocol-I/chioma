@@ -46,4 +46,15 @@ pub enum DataKey {
     PausedFunction(Symbol),
     // Storage layout version, bumped by `migrate` after a WASM upgrade
     StorageVersion,
+    // Running contract-wide metrics (#2088), incremented on each
+    // make_payment_with_token call.
+    TotalTransactionCount,
+    TotalTransactionVolume,
+    // Manager role set (#2086): a manager can call pause() in addition to
+    // the single contract admin, but cannot unpause, cannot be granted or
+    // revoked by anyone other than admin, and has no other authority.
+    Manager(soroban_sdk::Address),
+    // Emergency withdrawal requests (#2087), keyed by the underlying
+    // multi-sig proposal's id.
+    EmergencyWithdrawal(String),
 }

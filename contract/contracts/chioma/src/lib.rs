@@ -11,12 +11,14 @@ use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, String, S
 
 mod agreement;
 mod deposit_interest;
+mod emergency;
 mod errors;
 mod events;
 mod gas_optimization;
 mod multi_sig;
 mod multi_token;
 mod rate_limit;
+mod rbac;
 mod royalties;
 mod storage;
 mod timelock;
@@ -56,6 +58,15 @@ mod tests_version_pause;
 mod tests_rbac;
 
 #[cfg(test)]
+mod tests_metrics;
+
+#[cfg(test)]
+mod tests_manager_rbac;
+
+#[cfg(test)]
+mod tests_emergency;
+
+#[cfg(test)]
 mod tests_lease_negotiation;
 
 #[cfg(test)]
@@ -85,12 +96,12 @@ pub use multi_token::{
 pub use storage::DataKey;
 pub use types::{
     ActionType, AdminProposal, AgreementExtension, AgreementInput, AgreementStatus, AgreementTerms,
-    AgreementWithToken, Attribute, CompoundingFrequency, Config, ContractState,
-    ContractUpgradeProposal, ContractVersion, DepositInterest, DepositInterestConfig, ErrorContext,
-    ExtensionHistory, ExtensionStatus, InterestAccrual, InterestRecipient, MultiSigConfig,
-    PauseState, PaymentSplit, RateLimitConfig, RateLimitReason, RentAgreement, RoyaltyConfig,
-    RoyaltyPayment, SupportedToken, TimelockAction, TimelockActionType, TokenExchangeRate,
-    UserCallCount, VersionStatus,
+    AgreementWithToken, Attribute, CompoundingFrequency, Config, ContractMetrics, ContractState,
+    ContractUpgradeProposal, ContractVersion, DepositInterest, DepositInterestConfig,
+    EmergencyWithdrawalRequest, ErrorContext, ExtensionHistory, ExtensionStatus, InterestAccrual,
+    InterestRecipient, MultiSigConfig, PauseState, PaymentSplit, RateLimitConfig, RateLimitReason,
+    RentAgreement, RoyaltyConfig, RoyaltyPayment, SupportedToken, TimelockAction,
+    TimelockActionType, TokenExchangeRate, UserCallCount, VersionStatus,
 };
 
 /// Storage layout version this WASM expects.
@@ -491,6 +502,45 @@ impl Contract {
             .unwrap_or(0)
     }
 
+    /// Get aggregate contract usage metrics (#2088): total value locked for
+    /// a given token, total transaction count and volume (across every
+    /// `make_payment_with_token` call, in each payment's base-token amount),
+    /// and the derived average transaction size.
+    ///
+    /// @param env The Soroban environment.
+    /// @param token The token to report `total_value_locked` for — the
+    ///   contract's current balance of that specific token, since this
+    ///   contract can hold more than one token across different agreements.
+    /// @return `ContractMetrics`.
+    /// @custom:security Read-only; no authorization required.
+    pub fn get_contract_metrics(env: Env, token: Address) -> ContractMetrics {
+        let total_value_locked =
+            soroban_sdk::token::Client::new(&env, &token).balance(&env.current_contract_address());
+
+        let total_transaction_count: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalTransactionCount)
+            .unwrap_or(0u64);
+        let total_transaction_volume: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalTransactionVolume)
+            .unwrap_or(0i128);
+        let average_transaction_size = if total_transaction_count > 0 {
+            total_transaction_volume / total_transaction_count as i128
+        } else {
+            0
+        };
+
+        ContractMetrics {
+            total_value_locked,
+            total_transaction_count,
+            total_transaction_volume,
+            average_transaction_size,
+        }
+    }
+
     /// Initialize the contract with an admin and configuration.
     ///
     /// @notice One-time setup: sets admin and config. Callable only once.
@@ -625,21 +675,24 @@ impl Contract {
     /// @notice Blocks every entry point guarded by `check_paused` until `unpause`
     ///         is called. Emits a `paused` event.
     /// @param env The Soroban environment.
+    /// @param caller The address pausing the contract.
     /// @param reason Human-readable reason recorded in the pause state and event.
     /// @return Ok(()) on success.
     /// @custom:error InvalidState If the contract has not been initialized.
     /// @custom:error AlreadyPaused If the contract is already paused.
-    /// @custom:security Admin only: requires `admin.require_auth()`.
-    pub fn pause(env: Env, reason: String) -> Result<(), RentalError> {
+    /// @custom:error InsufficientPermissions If `caller` is neither the admin nor a manager (#2086).
+    /// @custom:security Admin or manager: requires `caller.require_auth()` and
+    ///   admin/manager status, unlike `unpause` which remains admin-only.
+    pub fn pause(env: Env, caller: Address, reason: String) -> Result<(), RentalError> {
         let mut state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
 
-        state.admin.require_auth();
+        rbac::require_admin_or_manager(&env, &state, &caller)?;
 
         if Self::is_paused(env.clone()) {
             return Err(RentalError::AlreadyPaused);
         }
 
-        Self::set_pause_state(&env, state.admin.clone(), reason.clone());
+        Self::set_pause_state(&env, caller.clone(), reason.clone());
 
         if !state.config.paused {
             state.config.paused = true;
@@ -647,7 +700,7 @@ impl Contract {
             env.storage().instance().extend_ttl(500000, 500000);
         }
 
-        events::paused(&env, reason, state.admin);
+        events::paused(&env, reason, caller);
         Ok(())
     }
 
@@ -1616,6 +1669,95 @@ impl Contract {
     pub fn update_required_signatures(env: Env, new_required: u32) -> Result<(), RentalError> {
         // This should only be called through execute_action after approval
         multi_sig::update_required_signatures_internal(&env, new_required)
+    }
+
+    /// Grant manager status to `manager` (#2086). A manager may call
+    /// `pause`, but has no other authority: it cannot `unpause`, grant or
+    /// revoke other managers, or do anything requiring the contract admin.
+    ///
+    /// @custom:error InvalidState If the contract has not been initialized.
+    /// @custom:security Admin only: requires `state.admin.require_auth()`.
+    pub fn grant_manager(env: Env, manager: Address) -> Result<(), RentalError> {
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        rbac::grant_manager(&env, &state, manager)
+    }
+
+    /// Revoke manager status from `manager` (#2086). A no-op, not an error,
+    /// if the address was never a manager.
+    ///
+    /// @custom:error InvalidState If the contract has not been initialized.
+    /// @custom:security Admin only: requires `state.admin.require_auth()`.
+    pub fn revoke_manager(env: Env, manager: Address) -> Result<(), RentalError> {
+        let state = Self::get_state(env.clone()).ok_or(RentalError::InvalidState)?;
+        rbac::revoke_manager(&env, &state, manager)
+    }
+
+    /// Whether `address` currently holds manager status (#2086).
+    ///
+    /// @custom:security Read-only; no authorization required.
+    pub fn is_manager(env: Env, address: Address) -> bool {
+        rbac::is_manager(&env, &address)
+    }
+
+    /// Propose an emergency withdrawal of `amount` of `token` to
+    /// `recipient` (#2087). Admin only, requires the usual multi-sig
+    /// approval flow before `execute_emergency_withdrawal` can run.
+    ///
+    /// @custom:error InvalidAmount If `amount` is not positive.
+    /// @custom:error MultiSigNotInitialized If multi-sig has not been set up.
+    /// @custom:security Admin only: requires `proposer.require_auth()` and multi-sig admin status.
+    pub fn propose_emergency_withdrawal(
+        env: Env,
+        proposer: Address,
+        token: Address,
+        amount: i128,
+        recipient: Address,
+    ) -> Result<String, RentalError> {
+        emergency::propose_emergency_withdrawal(&env, proposer, token, amount, recipient)
+    }
+
+    /// Approve a pending emergency withdrawal proposal (#2087). Admin only.
+    ///
+    /// @custom:error ProposalNotFound If the proposal does not exist.
+    /// @custom:error ProposalAlreadyExecuted If already executed.
+    /// @custom:error ProposalExpired If the proposal has expired.
+    /// @custom:error AlreadyApproved If this admin already approved it.
+    /// @custom:security Admin only: requires `approver.require_auth()` and multi-sig admin status.
+    pub fn approve_emergency_withdrawal(
+        env: Env,
+        approver: Address,
+        proposal_id: String,
+    ) -> Result<(), RentalError> {
+        emergency::approve_emergency_withdrawal(&env, approver, proposal_id)
+    }
+
+    /// Execute an emergency withdrawal once it has enough approvals (#2087).
+    /// Transfers the proposed amount from the contract to the proposed
+    /// recipient. Admin only.
+    ///
+    /// @custom:error ProposalNotFound If the proposal (or its linked withdrawal request) does not exist.
+    /// @custom:error InvalidTransition If the proposal is not an emergency withdrawal.
+    /// @custom:error ProposalAlreadyExecuted If already executed.
+    /// @custom:error ProposalExpired If the proposal has expired.
+    /// @custom:error InsufficientApprovals If not enough admins have approved yet.
+    /// @custom:error EscrowInsufficientFunds If the contract does not hold enough of the token.
+    /// @custom:security Admin only: requires `executor.require_auth()` and multi-sig admin status.
+    pub fn execute_emergency_withdrawal(
+        env: Env,
+        executor: Address,
+        proposal_id: String,
+    ) -> Result<(), RentalError> {
+        emergency::execute_emergency_withdrawal(&env, executor, proposal_id)
+    }
+
+    /// Get an emergency withdrawal request by its proposal id (#2087).
+    ///
+    /// @custom:security Read-only; no authorization required.
+    pub fn get_emergency_withdrawal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<EmergencyWithdrawalRequest, RentalError> {
+        emergency::get_emergency_withdrawal(&env, proposal_id)
     }
 
     /// Get a proposal by ID

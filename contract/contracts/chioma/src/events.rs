@@ -313,6 +313,17 @@ pub struct ActionExecuted {
     pub action_type: crate::types::ActionType,
 }
 
+/// Event emitted when an emergency withdrawal is executed (#2087)
+/// Topics: ["emergency_withdrawal_executed", proposal_id: String]
+#[contractevent(topics = ["v1", "emergency_withdrawal_executed"])]
+pub struct EmergencyWithdrawalExecuted {
+    #[topic]
+    pub proposal_id: String,
+    pub token: Address,
+    pub amount: i128,
+    pub recipient: Address,
+}
+
 /// Event emitted when a multi-sig action is rejected
 /// Topics: ["action_rejected", proposal_id: String]
 #[contractevent(topics = ["v1", "action_rejected"])]
@@ -815,6 +826,22 @@ pub(crate) fn action_executed(
 
 pub(crate) fn action_rejected(env: &Env, proposal_id: String) {
     ActionRejected { proposal_id }.publish(env);
+}
+
+pub(crate) fn emergency_withdrawal_executed(
+    env: &Env,
+    proposal_id: String,
+    token: Address,
+    amount: i128,
+    recipient: Address,
+) {
+    EmergencyWithdrawalExecuted {
+        proposal_id,
+        token,
+        amount,
+        recipient,
+    }
+    .publish(env);
 }
 
 pub(crate) fn admin_added(env: &Env, admin: Address, total_admins: u32) {

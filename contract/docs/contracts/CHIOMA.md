@@ -12,6 +12,7 @@
 - [Integration Notes](#integration-notes)
 - [Security Considerations](#security-considerations)
 - [Testing](#testing)
+- [Constants Reference](./CHIOMA-CONSTANTS.md) — every fee, threshold, and timeout, with rationale
 
 ---
 
