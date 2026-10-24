@@ -534,7 +534,7 @@ export class PaymentService {
       throw new NotFoundException('Payment method not found');
     }
 
-    await this.paymentMethodRepository.remove(paymentMethod);
+    await this.paymentMethodRepository.softRemove(paymentMethod);
   }
 
   @Locked({
