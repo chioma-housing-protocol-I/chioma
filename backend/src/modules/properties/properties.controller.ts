@@ -36,6 +36,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ListingStatus, Property } from './entities/property.entity';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { CacheControl } from '../../common/decorators/cache-control.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -73,6 +74,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Browse listings tolerate brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -90,6 +92,7 @@ export class PropertiesController {
   @Get('my-properties')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @CacheControl.private(30)
   @ApiOperation({
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
@@ -145,6 +148,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Property detail view tolerates brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'Get a specific property',
     description:
