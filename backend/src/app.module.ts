@@ -28,6 +28,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BatchModule } from './modules/batch/batch.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
 import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
@@ -249,6 +250,7 @@ const appLogger = new Logger('AppModule');
       : []),
     PaymentModule,
     NotificationsModule,
+    BatchModule,
     ProfileModule,
     SecurityModule,
     I18nModule,
