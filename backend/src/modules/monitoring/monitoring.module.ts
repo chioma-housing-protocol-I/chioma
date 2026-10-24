@@ -13,7 +13,10 @@ import { PerformanceAlert } from './entities/performance-alert.entity';
 import { MetricsMiddleware } from './metrics.middleware';
 import { PerformanceMiddleware } from './performance.middleware';
 import { MonitoringController } from './monitoring.controller';
-import { PerformanceController } from './performance.controller';
+import {
+  PerformanceController,
+  PerformanceAlertsController,
+} from './performance.controller';
 import { AlertService } from './alert.service';
 import { ErrorNotificationService } from './error-notification.service';
 import { ErrorEscalationService } from './error-escalation.service';
@@ -34,7 +37,11 @@ import { StorageModule } from '../storage/storage.module';
     StorageModule,
     TypeOrmModule.forFeature([PerformanceAlert]),
   ],
-  controllers: [MonitoringController, PerformanceController],
+  controllers: [
+    MonitoringController,
+    PerformanceController,
+    PerformanceAlertsController,
+  ],
   providers: [
     MetricsService,
     PerformanceAlertService,
