@@ -327,10 +327,18 @@ describe('BookingsService', () => {
   describe('confirm / cancel', () => {
     const pendingBooking = {
       id: 'booking-1',
+      propertyId: 'property-1',
       status: BookingStatus.PENDING,
-      property: { ownerId: 'host-1' },
       guest: { id: 'guest-1' },
     } as Booking;
+
+    beforeEach(() => {
+      // confirm()/cancel() look up the property separately (by
+      // booking.propertyId) rather than through a joined relation, so
+      // ownership checks resolve against this rather than a nested
+      // booking.property field.
+      propertyRepository.findOne.mockResolvedValue(mockProperty);
+    });
 
     it('throws when the booking does not exist', async () => {
       bookingRepository.findOne.mockResolvedValue(null);
@@ -374,6 +382,35 @@ describe('BookingsService', () => {
       const result = await service.cancel('host-1', 'booking-1');
 
       expect(result.status).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('takes a pessimistic write lock on the booking row before checking its status (#2035)', async () => {
+      bookingRepository.findOne.mockResolvedValue({ ...pendingBooking });
+
+      await service.confirm('host-1', 'booking-1');
+
+      const bookingLockCall = mockQueryRunner.manager.findOne.mock.calls.find(
+        ([entity]: [unknown]) => entity === Booking,
+      );
+      expect(bookingLockCall?.[1]).toMatchObject({
+        lock: { mode: 'pessimistic_write' },
+      });
+    });
+
+    it('rejects confirming a booking that was already confirmed by a concurrent request (#2035)', async () => {
+      // Simulates the outcome a real pessimistic lock produces: the second
+      // of two concurrent confirm calls only gets to read the row after the
+      // first has already committed CONFIRMED, so it must see the updated
+      // status rather than the stale PENDING it read before the lock.
+      bookingRepository.findOne.mockResolvedValue({
+        ...pendingBooking,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      await expect(service.confirm('host-1', 'booking-1')).rejects.toThrow(
+        BusinessRuleViolationError,
+      );
+      expect(bookingRepository.save).not.toHaveBeenCalled();
     });
   });
 

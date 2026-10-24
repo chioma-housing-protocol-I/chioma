@@ -184,19 +184,33 @@ export class BookingsService {
   }
 
   async confirm(userId: string, bookingId: string): Promise<Booking> {
+    const supportsRowLocking = this.dataSource.options?.type !== 'sqlite';
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Take a pessimistic write lock on the booking's own row before
+      // checking its status. Without this, two concurrent confirm calls
+      // for the same booking (e.g. a double-submitted request, or two
+      // payment webhook deliveries) can both read status === PENDING
+      // before either commits, and both proceed to confirm and mark the
+      // payment completed — a double-confirm / double-settle race.
       const booking = await queryRunner.manager.findOne(Booking, {
         where: { id: bookingId },
-        relations: ['property', 'guest'],
+        relations: ['guest'],
+        ...(supportsRowLocking
+          ? { lock: { mode: 'pessimistic_write' as const } }
+          : {}),
       });
       if (!booking) {
         throw new BookingNotFoundError(bookingId);
       }
-      if (booking.property.ownerId !== userId) {
+
+      const property = await queryRunner.manager.findOne(Property, {
+        where: { id: booking.propertyId },
+      });
+      if (!property || property.ownerId !== userId) {
         throw new AuthorizationError(
           'Only the property owner can update this booking',
         );
@@ -232,19 +246,30 @@ export class BookingsService {
   }
 
   async cancel(userId: string, bookingId: string): Promise<Booking> {
+    const supportsRowLocking = this.dataSource.options?.type !== 'sqlite';
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // See confirm()'s equivalent lock for why: without it, a cancel
+      // racing a concurrent confirm (or two concurrent cancels) can both
+      // read status === PENDING before either commits.
       const booking = await queryRunner.manager.findOne(Booking, {
         where: { id: bookingId },
-        relations: ['property', 'guest'],
+        relations: ['guest'],
+        ...(supportsRowLocking
+          ? { lock: { mode: 'pessimistic_write' as const } }
+          : {}),
       });
       if (!booking) {
         throw new BookingNotFoundError(bookingId);
       }
-      if (booking.property.ownerId !== userId) {
+
+      const property = await queryRunner.manager.findOne(Property, {
+        where: { id: booking.propertyId },
+      });
+      if (!property || property.ownerId !== userId) {
         throw new AuthorizationError(
           'Only the property owner can update this booking',
         );
