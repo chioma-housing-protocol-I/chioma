@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { X } from 'lucide-react';
 import type { AvailabilityDay } from '@/lib/query/hooks/use-availability';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface CalendarDayModalProps {
   day: AvailabilityDay;
@@ -37,6 +38,12 @@ export function CalendarDayModal({
     price !== '' && !Number.isNaN(parsedPrice) && parsedPrice >= 0;
   const bookedBy = day.blockedByBookingId;
 
+  // This component is only mounted by its parent while the modal is open,
+  // so there is no separate isOpen prop to thread through — it's "open"
+  // for its whole mounted lifetime.
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, true);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -46,6 +53,7 @@ export function CalendarDayModal({
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-6 text-white"
         onClick={(e) => e.stopPropagation()}
       >
