@@ -1,11 +1,34 @@
-import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { PerformanceAlertService } from './performance-alert.service';
 import { AlertSeverity } from './entities/performance-alert.entity';
+import { PerformanceMonitorService } from './performance-monitor.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { PaginationUtils } from '../../common/utils';
 
 @ApiTags('Monitoring')
 @Controller('monitoring/performance')
-export class PerformanceController {
+export class PerformanceAlertsController {
   constructor(private readonly alertService: PerformanceAlertService) {}
 
   @Get('alerts')
@@ -32,29 +55,15 @@ export class PerformanceController {
     return {
       alerts,
       total: alerts.length,
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
-import { PerformanceMonitorService } from './performance-monitor.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/entities/user.entity';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
-import { PaginationUtils } from '../../common/utils';
+    };
+  }
+
+  @Patch('alerts/:id/resolve')
+  @ApiOperation({ summary: 'Mark a performance alert as resolved' })
+  resolveAlert(@Param('id') id: string) {
+    return this.alertService.resolve(id);
+  }
+}
 
 @ApiTags('Performance Monitoring')
 @Controller('api/performance')
@@ -365,10 +374,6 @@ export class PerformanceController {
     };
   }
 
-  @Patch('alerts/:id/resolve')
-  @ApiOperation({ summary: 'Mark a performance alert as resolved' })
-  resolveAlert(@Param('id') id: string) {
-    return this.alertService.resolve(id);
   @Get('percentiles')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({

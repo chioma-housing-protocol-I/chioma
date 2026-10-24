@@ -49,8 +49,12 @@ export class ResponseTimeInterceptor implements NestInterceptor {
     setImmediate(() => {
       const responseTime = Date.now() - startTime;
       // Use the matched route template to avoid cardinality explosion.
-      // Raw paths like /api/properties/42 must never reach the metrics store.
-      const endpoint: string = req.route?.path ?? req.path;
+      // Raw paths like /api/properties/42 must never reach the metrics
+      // store. Requests that never matched a route (404s, scanning/probe
+      // traffic) have no req.route at all, so every distinct unmatched
+      // path collapses into one bounded bucket instead of becoming a new,
+      // never-evicted key in PerformanceMonitorService's in-memory maps.
+      const endpoint: string = req.route?.path ?? 'unmatched';
       const method: string = req.method;
       const slow = responseTime > SLOW_REQUEST_THRESHOLD_MS;
 

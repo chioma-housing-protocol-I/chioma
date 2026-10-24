@@ -9,6 +9,7 @@ import { AlertService } from './alert.service';
 const mockMetrics = {
   recordHttpRequest: jest.fn(),
   recordHttpDuration: jest.fn(),
+  recordDatabaseQuery: jest.fn(),
 };
 const mockAlert = { handleAlert: jest.fn() };
 
@@ -180,6 +181,42 @@ describe('PerformanceMonitorService', () => {
 
     it('returns empty array when no data recorded', () => {
       expect(service.getAllEndpointPercentiles()).toHaveLength(0);
+    });
+  });
+
+  describe('tracked-key eviction (#2036 memory leak regression)', () => {
+    it('caps the number of distinct endpoint keys tracked by recordRequestMetrics', () => {
+      // One more than MAX_TRACKED_KEYS (500) distinct endpoints, as would
+      // happen if an unbounded raw request path were ever used as a key
+      // again (e.g. 404 scanning traffic).
+      for (let i = 0; i < 501; i++) {
+        service.recordRequestMetrics(makeMetric('GET', `/unmatched-${i}`, 10));
+      }
+
+      const stats = service.getSystemStats();
+      expect(stats.totalEndpoints).toBeLessThanOrEqual(500);
+    });
+
+    it('caps the number of distinct operation keys tracked by recordDatabaseQuery', () => {
+      for (let i = 0; i < 501; i++) {
+        service.recordDatabaseQuery(`operation-${i}`, 10);
+      }
+
+      const dbStats = service.getDatabaseStats();
+      expect(dbStats.operations.length).toBeLessThanOrEqual(500);
+    });
+
+    it('evicts the oldest key, not a recently-added one, once at capacity', () => {
+      for (let i = 0; i < 500; i++) {
+        service.recordRequestMetrics(makeMetric('GET', `/endpoint-${i}`, 10));
+      }
+      // One more pushes the Map over capacity, evicting /endpoint-0.
+      service.recordRequestMetrics(makeMetric('GET', '/endpoint-500', 10));
+
+      const stats = service.getEndpointStats('GET', '/endpoint-0');
+      const recent = service.getEndpointStats('GET', '/endpoint-500');
+      expect(stats).toBeNull();
+      expect(recent).not.toBeNull();
     });
   });
 });
