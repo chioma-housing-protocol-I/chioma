@@ -13,7 +13,6 @@ import {
   BookingNotFoundError,
 } from '../../common/errors/domain-errors';
 import { PaymentService } from '../payments/payment.service';
-import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
 import { StellarService } from '../stellar/services/stellar.service';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -30,8 +29,6 @@ export class BookingsService {
     private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
-    @InjectRepository(Payment)
-    private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(StellarEscrow)
     private readonly escrowRepository: Repository<StellarEscrow>,
     private readonly paymentService: PaymentService,
@@ -127,20 +124,20 @@ export class BookingsService {
 
       const savedBooking = await queryRunner.manager.save(booking);
 
-      // Create pending payment record for the booking
-      const payment = queryRunner.manager.create(Payment, {
-        userId: guestId,
-        bookingId: savedBooking.id,
-        amount: savedBooking.totalAmount,
-        transactionFee: 0,
-        netAmount: savedBooking.totalAmount,
-        currency: savedBooking.currency,
-        status: PaymentStatus.PENDING,
-        paymentMethod: dto.paymentMethod,
-        metadata: { flow: 'booking' },
-      });
-
-      await queryRunner.manager.save(payment);
+      // Create pending payment record for the booking (#2040: delegated to
+      // PaymentService so booking/rent/agreement flows share one
+      // implementation instead of each inlining their own).
+      await this.paymentService.createPendingPayment(
+        {
+          userId: guestId,
+          bookingId: savedBooking.id,
+          amount: savedBooking.totalAmount,
+          currency: savedBooking.currency,
+          paymentMethod: dto.paymentMethod,
+          metadata: { flow: 'booking' },
+        },
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
 
@@ -210,15 +207,13 @@ export class BookingsService {
       booking.status = BookingStatus.CONFIRMED;
       const savedBooking = await queryRunner.manager.save(booking);
 
-      // Update payment status to completed (simulate for now; in real flow this would be after payment gateway confirmation)
-      const payment = await queryRunner.manager.findOne(Payment, {
-        where: { bookingId: savedBooking.id },
-      });
-      if (payment) {
-        payment.status = PaymentStatus.COMPLETED;
-        payment.processedAt = new Date();
-        await queryRunner.manager.save(payment);
-      }
+      // Update payment status to completed (simulate for now; in real flow
+      // this would be after payment gateway confirmation). #2040: delegated
+      // to PaymentService.
+      await this.paymentService.completePaymentForBooking(
+        savedBooking.id,
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
       this.logger.log(`Booking ${bookingId} transitioned to confirmed`);
@@ -258,15 +253,12 @@ export class BookingsService {
       booking.status = BookingStatus.CANCELLED;
       const savedBooking = await queryRunner.manager.save(booking);
 
-      // Update payment status to refunded (simulate for now)
-      const payment = await queryRunner.manager.findOne(Payment, {
-        where: { bookingId: savedBooking.id },
-      });
-      if (payment && payment.status === PaymentStatus.COMPLETED) {
-        payment.status = PaymentStatus.REFUNDED;
-        payment.refundAmount = payment.amount;
-        await queryRunner.manager.save(payment);
-      }
+      // Update payment status to refunded (simulate for now). #2040:
+      // delegated to PaymentService.
+      await this.paymentService.refundPaymentForBooking(
+        savedBooking.id,
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
       this.logger.log(`Booking ${bookingId} transitioned to cancelled`);
@@ -348,14 +340,12 @@ export class BookingsService {
 
       const amountDelta = savedBooking.totalAmount - Number(previousAmount);
       if (amountDelta !== 0) {
-        const payment = await queryRunner.manager.findOne(Payment, {
-          where: { bookingId: savedBooking.id },
-        });
-        if (payment) {
-          payment.amount = savedBooking.totalAmount;
-          payment.netAmount = savedBooking.totalAmount - payment.transactionFee;
-          await queryRunner.manager.save(payment);
-        }
+        // #2040: delegated to PaymentService.
+        await this.paymentService.updatePaymentAmountForBooking(
+          savedBooking.id,
+          savedBooking.totalAmount,
+          queryRunner.manager,
+        );
       }
 
       await queryRunner.commitTransaction();
