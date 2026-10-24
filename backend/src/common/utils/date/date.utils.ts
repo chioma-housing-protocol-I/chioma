@@ -46,11 +46,4 @@ export class DateUtils {
     const diffTime = Math.abs(date2.getTime() - date1.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
-
-  /**
-   * Checks if a date falls within a specific range
-   */
-  static isDateInRange(date: Date, start: Date, end: Date): boolean {
-    return date >= start && date <= end;
-  }
 }
