@@ -1,4 +1,15 @@
 import { SelectQueryBuilder } from 'typeorm';
+import { PaginationUtils } from '../pagination/pagination.utils';
+
+/**
+ * PostgreSQL rejects an `OFFSET`/`LIMIT` value outside the 32-bit signed
+ * integer range with a driver error rather than an empty result set. A
+ * page number far beyond the dataset's actual size (whether from a client
+ * paging past the end of a result set or a malicious huge `page` value)
+ * can produce an offset past that range; this caps it so such requests
+ * degrade to an empty page instead of a 500.
+ */
+const MAX_SAFE_OFFSET = 2147483647;
 
 export class QueryBuilderUtils {
   private static readonly SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -63,7 +74,11 @@ export class QueryBuilderUtils {
     page: number = 1,
     limit: number = 10,
   ): SelectQueryBuilder<any> {
-    const skip = (page - 1) * limit;
+    PaginationUtils.validatePagination(page, limit);
+    const skip = Math.min(
+      PaginationUtils.calculateOffset(page, limit),
+      MAX_SAFE_OFFSET,
+    );
     query.skip(skip).take(limit);
     return query;
   }
