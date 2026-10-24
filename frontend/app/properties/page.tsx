@@ -18,6 +18,7 @@ import {
   type PropertyListParams,
 } from '@/lib/query/hooks/use-properties';
 import { toPropertyCardShape } from '@/lib/utils/property-adapter';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import type { Property } from '@/types';
 
 // The footer sits below an infinitely-scrolling grid and is never part of the
@@ -37,6 +38,7 @@ type ViewMode = 'split' | 'list' | 'map';
 export default function PropertyListing() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  useScrollRestoration();
   const [searchAsIMove, setSearchAsIMove] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [mapWidth, setMapWidth] = useState<number>(50);

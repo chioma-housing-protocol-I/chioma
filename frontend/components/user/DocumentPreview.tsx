@@ -194,6 +194,7 @@ export function DocumentPreview({
                   src={document.url}
                   alt={document.name}
                   className="w-full h-auto max-h-[500px] object-contain"
+                  loading="lazy"
                 />
               )}
             </div>

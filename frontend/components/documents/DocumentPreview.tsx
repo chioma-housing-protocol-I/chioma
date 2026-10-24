@@ -37,6 +37,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           src={url}
           alt={name}
           className="max-w-full max-h-[600px] object-contain"
+          loading="lazy"
         />
       </div>
     );
