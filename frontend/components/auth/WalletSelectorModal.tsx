@@ -102,6 +102,7 @@ export default function WalletSelectorModal({
                       src={wallet.icon}
                       alt=""
                       className="h-8 w-8 rounded-md"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="h-8 w-8 rounded-md bg-white/10 flex items-center justify-center text-blue-300">

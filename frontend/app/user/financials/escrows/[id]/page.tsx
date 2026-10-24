@@ -165,6 +165,7 @@ export default function EscrowDetailPage() {
             src={fallbackImage}
             alt={`${propertyName} escrow preview`}
             className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-slate-950/65" />

@@ -238,6 +238,7 @@ export default function PropertyCard({
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${property.manager}`}
                 alt={property.manager}
                 className="w-10 h-10 rounded-2xl shrink-0 shadow-lg border border-white/10 group-hover/manager:scale-110 transition-transform"
+                loading="lazy"
               />
               <div>
                 <p className="text-[10px] text-blue-200/30 font-black uppercase tracking-[0.2em]">

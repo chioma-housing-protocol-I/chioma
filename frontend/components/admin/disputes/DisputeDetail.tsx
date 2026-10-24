@@ -258,6 +258,7 @@ export function DisputeDetail({
                           src={ev.url}
                           alt=""
                           className="max-h-full max-w-full object-contain p-4"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="flex flex-col items-center gap-2 text-slate-500 p-6">

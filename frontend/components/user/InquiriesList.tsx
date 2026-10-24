@@ -83,6 +83,7 @@ function InquiryCard({ inquiry, direction, onOpen }: InquiryCardProps) {
               src={inquiry.property.coverImageUrl}
               alt={inquiry.property.title}
               className="h-full w-full object-cover"
+              loading="lazy"
             />
           ) : (
             <span className="flex h-full w-full items-center justify-center text-blue-300/40">
