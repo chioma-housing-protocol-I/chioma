@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, Download, Printer, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 import type { Document } from './types';
 import { DocumentPreview } from './DocumentPreview';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface DocumentViewerModalProps {
   document: Document | null;
@@ -19,6 +20,9 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   onDownload,
 }) => {
   const dateFnsLocale = useDateFnsLocale();
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, document !== null);
+
   if (!document) return null;
 
   const handleDownload = () => {
@@ -44,8 +48,15 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const canPreview = document.type === 'pdf' || document.type === 'image';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[95vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-5xl max-h-[95vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-white/5 flex items-center justify-between bg-neutral-50 dark:bg-white/5 shrink-0">
           <div className="flex-1 min-w-0 mr-4">

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Wallet as WalletIcon, ExternalLink } from 'lucide-react';
 import type { ISupportedWallet } from '@/lib/stellar-wallets-kit';
 import type { WalletError } from '@/hooks/useWallet';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface WalletSelectorModalProps {
   isOpen: boolean;
@@ -51,14 +52,20 @@ export default function WalletSelectorModal({
     };
   }, [isOpen, listWallets]);
 
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 max-w-md w-full border border-white/10 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >

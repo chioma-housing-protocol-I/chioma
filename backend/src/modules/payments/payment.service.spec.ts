@@ -41,6 +41,7 @@ const mockPaymentMethodRepository = () => ({
   save: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  softRemove: jest.fn(),
   createQueryBuilder: jest.fn(),
 });
 
@@ -800,6 +801,34 @@ describe('PaymentService', () => {
       expect(decrypted?.authorizationCode).toBeUndefined();
 
       delete process.env.PAYMENT_GATEWAY;
+    });
+  });
+
+  describe('removePaymentMethod', () => {
+    it('soft-removes the payment method instead of hard-deleting it', async () => {
+      const paymentMethod = {
+        id: 1,
+        userId: 'user_1',
+      } as PaymentMethod;
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(
+        paymentMethod,
+      );
+
+      await service.removePaymentMethod(1, 'user_1');
+
+      expect(paymentMethodRepository.softRemove).toHaveBeenCalledWith(
+        paymentMethod,
+      );
+      expect(paymentMethodRepository.remove).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the payment method is not owned by the user', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.removePaymentMethod(99, 'user_1')).rejects.toThrow(
+        'Payment method not found',
+      );
+      expect(paymentMethodRepository.softRemove).not.toHaveBeenCalled();
     });
   });
 

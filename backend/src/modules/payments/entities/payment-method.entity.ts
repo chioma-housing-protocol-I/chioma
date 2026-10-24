@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
   BeforeInsert,
   BeforeUpdate,
@@ -56,6 +57,9 @@ export class PaymentMethod {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt: Date | null;
 
   @BeforeInsert()
   @BeforeUpdate()
