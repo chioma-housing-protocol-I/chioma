@@ -551,4 +551,40 @@ describe('[E2E] Booking flow – Full wizard', () => {
     expect(body.checkIn).toBe(FUTURE_DATE);
     expect(body.checkOut).toBe(LATER_DATE);
   });
+
+  it('resets back to step 1 with a blank form after a successful booking, so a cached page does not show stale data (#2097)', async () => {
+    await runFullBookingFlow();
+    fireEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/guest/trips'));
+
+    // The component instance is still mounted (push is mocked, so there is
+    // no real navigation to unmount it) — if the browser's back/forward
+    // cache were to restore this exact instance, it should show a fresh
+    // step 1 rather than the just-submitted booking's data.
+    await waitFor(() =>
+      expect(screen.getByText(/when are you traveling/i)).toBeInTheDocument(),
+    );
+    const [checkIn, checkOut] = document.querySelectorAll(
+      'input[type="date"]',
+    ) as NodeListOf<HTMLInputElement>;
+    expect(checkIn.value).toBe('');
+    expect(checkOut.value).toBe('');
+  });
+
+  it('does not reset the form when the booking submission fails', async () => {
+    mockFetch.mockResolvedValue({ ok: false });
+
+    await runFullBookingFlow();
+    fireEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Something went wrong. Please try again.',
+      ),
+    );
+
+    expect(screen.getByText(/review your booking/i)).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
 });

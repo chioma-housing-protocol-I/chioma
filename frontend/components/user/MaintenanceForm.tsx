@@ -228,6 +228,7 @@ export function MaintenanceForm({
                         src={URL.createObjectURL(photo)}
                         alt={`Preview ${index + 1}`}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
                     <button

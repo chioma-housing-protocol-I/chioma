@@ -46,6 +46,7 @@ vi.mock('next/navigation', () => ({
     push: mockRouterPush,
   })),
   useSearchParams: vi.fn(() => stableSearchParams),
+  usePathname: vi.fn(() => '/properties'),
 }));
 vi.mock('next/dynamic', () => ({
   default: (_fn: () => Promise<unknown>, _opts?: unknown) => {

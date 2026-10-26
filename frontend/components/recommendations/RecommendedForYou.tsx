@@ -37,6 +37,7 @@ export function RecommendedForYou() {
                   src={item.imageUrl}
                   alt=""
                   className="mb-3 h-32 w-full rounded-xl object-cover"
+                  loading="lazy"
                 />
               ) : null}
               <p className="font-semibold text-white">{item.title}</p>

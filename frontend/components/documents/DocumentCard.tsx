@@ -90,6 +90,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
               src={previewSrc}
               alt={document.name}
               className="w-12 h-12 rounded-lg object-cover"
+              loading="lazy"
               onError={() => setThumbnailError(true)}
             />
           ) : (
