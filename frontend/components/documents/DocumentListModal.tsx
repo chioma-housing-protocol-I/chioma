@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   X,
   Search,
@@ -14,6 +14,7 @@ import type { Document, DocumentCategory } from './types';
 import { DocumentCard } from './DocumentCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface DocumentListModalProps {
   documents: Document[];
@@ -82,6 +83,9 @@ export const DocumentListModal: React.FC<DocumentListModalProps> = ({
 
     return filtered;
   }, [documents, searchQuery, selectedCategory, sortBy]);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -183,8 +187,15 @@ export const DocumentListModal: React.FC<DocumentListModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl max-h-[95vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-6xl max-h-[95vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/5 shrink-0">
           <div className="flex items-center justify-between mb-4">

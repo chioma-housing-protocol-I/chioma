@@ -21,7 +21,7 @@
     "test:contract": "jest --config ./test/jest-contract.json --forceExit",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "DB_TYPE=postgres jest --config ./test/jest-e2e.json --runInBand",
-    "ci": "pnpm run lint && npx prettier --check \"src/**/*.ts\" \"test/**/*.ts\" && pnpm exec tsc --noEmit && pnpm run check:api-docs && pnpm run test && pnpm run test:cov",
+    "ci": "pnpm run lint && npx prettier --check \"src/**/*.ts\" \"test/**/*.ts\" && pnpm exec tsc --noEmit && pnpm run check:api-docs && pnpm run docs:schema:check && pnpm run test && pnpm run test:cov",
     "ci:local": "./scripts/ci-local.sh",
     "check:api-docs": "ts-node -T -r tsconfig-paths/register scripts/check-api-docs.ts",
     "openapi:generate": "OPENAPI_GENERATE=true ts-node -T -r tsconfig-paths/register scripts/generate-openapi.ts",
@@ -81,7 +81,9 @@
     "seed:all:prod": "NODE_ENV=production pnpm run seed:admin:prod && pnpm run seed:agent:prod && pnpm run seed:tenant:prod && pnpm run seed:landlord:prod",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "env:check": "node scripts/check-env-example.mjs",
-    "docs:er": "node scripts/generate-er-diagram.mjs"
+    "docs:er": "node scripts/generate-er-diagram.mjs",
+    "docs:schema": "node scripts/generate-schema-docs.mjs",
+    "docs:schema:check": "node scripts/check-schema-docs.mjs"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
