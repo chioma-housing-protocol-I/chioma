@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
 import { useModal } from '@/contexts/ModalContext';
 import { shimmerBlurDataURL } from '@/lib/utils/image-placeholder';
@@ -31,7 +31,7 @@ interface PropertyCardProps {
   priority?: boolean;
 }
 
-export default function PropertyCard({
+function PropertyCard({
   property,
   variant = 'grid',
   priority = false,
@@ -45,40 +45,49 @@ export default function PropertyCard({
     useToggleFavorite(propertyId);
   const isFavorited = favoriteStatus?.isFavorited ?? false;
 
-  const handlePropertyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
+  // useCallback so this card's identity stays stable across re-renders of
+  // a list that re-renders often (e.g. app/properties/page.tsx tracks
+  // scroll position and map width in state); without it, every card in
+  // the list gets a brand-new onClick prop on every such re-render, which
+  // on its own doesn't break React.memo's bailout below but does mean any
+  // child that depended on referential equality downstream would miss it.
+  const handlePropertyClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
 
-    // Transform property data to PropertyDetailData format
-    const propertyDetail: PropertyDetailData = {
-      id: String(property.id),
-      title: property.title,
-      description:
-        property.description ||
-        `Beautiful ${property.category || 'property'} in ${property.location}`,
-      price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
-      address: property.location,
-      bedrooms: property.beds,
-      bathrooms: property.baths,
-      areaSqft: property.sqft,
-      landlordName: property.manager,
-      images: property.images || [property.image],
-      amenities: property.amenities || [],
-      verificationStatus: property.verified ? 'Verified' : undefined,
-      viewCount: 0,
-      favoriteCount: 0,
-    };
+      // Transform property data to PropertyDetailData format
+      const propertyDetail: PropertyDetailData = {
+        id: String(property.id),
+        title: property.title,
+        description:
+          property.description ||
+          `Beautiful ${property.category || 'property'} in ${property.location}`,
+        price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
+        address: property.location,
+        bedrooms: property.beds,
+        bathrooms: property.baths,
+        areaSqft: property.sqft,
+        landlordName: property.manager,
+        images: property.images || [property.image],
+        amenities: property.amenities || [],
+        verificationStatus: property.verified ? 'Verified' : undefined,
+        viewCount: 0,
+        favoriteCount: 0,
+      };
 
-    openModal('propertyDetail', {
-      property: propertyDetail,
-      onInquiryClick: (prop: PropertyDetailData) => {
-        openModal('propertyInquiry', {
-          propertyId: prop.id,
-          propertyTitle: prop.title,
-          landlordName: prop.landlordName,
-        });
-      },
-    });
-  };
+      openModal('propertyDetail', {
+        property: propertyDetail,
+        onInquiryClick: (prop: PropertyDetailData) => {
+          openModal('propertyInquiry', {
+            propertyId: prop.id,
+            propertyTitle: prop.title,
+            landlordName: prop.landlordName,
+          });
+        },
+      });
+    },
+    [property, openModal],
+  );
 
   return (
     <div
@@ -257,3 +266,34 @@ export default function PropertyCard({
     </div>
   );
 }
+
+// Callers (e.g. app/properties/page.tsx) build `property` via
+// `toPropertyCardShape(...)` inline in JSX, which allocates a new object
+// every render regardless of whether the underlying data changed, so a
+// plain React.memo (reference equality) would never bail out. Compares
+// by the fields PropertyCard actually renders instead, so a list
+// re-rendering because of unrelated state (scroll position, map width,
+// etc. in the properties page) doesn't re-render every card in it.
+function arePropsEqual(prev: PropertyCardProps, next: PropertyCardProps) {
+  if (prev.variant !== next.variant || prev.priority !== next.priority) {
+    return false;
+  }
+  const a = prev.property;
+  const b = next.property;
+  return (
+    a.id === b.id &&
+    a.price === b.price &&
+    a.title === b.title &&
+    a.location === b.location &&
+    a.category === b.category &&
+    a.beds === b.beds &&
+    a.baths === b.baths &&
+    a.sqft === b.sqft &&
+    a.manager === b.manager &&
+    a.image === b.image &&
+    a.verified === b.verified &&
+    a.description === b.description
+  );
+}
+
+export default memo(PropertyCard, arePropsEqual);
