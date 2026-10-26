@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { PaymentFiltersDto } from './dto/payment-filters.dto';
 import { Repository } from 'typeorm';
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
@@ -488,6 +494,118 @@ describe('PaymentService', () => {
         'PAYMENT_FAILED',
       );
     });
+
+    it('attempts a compensating refund and reports success when persisting the charged payment fails (#2043)', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_compensate_1',
+      });
+      mockPaymentGateway.processRefund.mockResolvedValue({ success: true });
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockRejectedValue(
+        new Error('DB connection lost'),
+      );
+
+      const dto: CreatePaymentRecordDto = {
+        agreementId: 'agreement_1',
+        amount: 100,
+        paymentMethodId: '1',
+      };
+
+      let caught: unknown;
+      try {
+        await service.recordPayment(dto, 'user_1');
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(InternalServerErrorException);
+      expect((caught as Error).message).toBe(
+        'Payment could not be recorded and has been automatically refunded. Please try again.',
+      );
+      expect(mockPaymentGateway.processRefund).toHaveBeenCalledWith(
+        'charge_compensate_1',
+        100,
+      );
+    });
+
+    it('reports the refund also failed when the compensating refund itself throws (#2043)', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_compensate_2',
+      });
+      mockPaymentGateway.processRefund.mockRejectedValue(
+        new Error('Gateway unreachable'),
+      );
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockRejectedValue(
+        new Error('DB connection lost'),
+      );
+
+      const dto: CreatePaymentRecordDto = {
+        agreementId: 'agreement_1',
+        amount: 100,
+        paymentMethodId: '1',
+      };
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        /automatic refund failed for charge charge_compensate_2/,
+      );
+    });
+
+    it('reports the refund failed when the gateway returns success: false for the compensating refund (#2043)', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        encryptedMetadata: null,
+      });
+      mockUsersService.getUserById.mockResolvedValue({
+        email: 'test@example.com',
+      });
+      mockPaymentGateway.chargePayment.mockResolvedValue({
+        success: true,
+        chargeId: 'charge_compensate_3',
+      });
+      mockPaymentGateway.processRefund.mockResolvedValue({ success: false });
+      (paymentRepository.create as jest.Mock).mockImplementation(
+        (data: Partial<Payment>) => data as Payment,
+      );
+      (paymentRepository.save as jest.Mock).mockRejectedValue(
+        new Error('DB connection lost'),
+      );
+
+      const dto: CreatePaymentRecordDto = {
+        agreementId: 'agreement_1',
+        amount: 100,
+        paymentMethodId: '1',
+      };
+
+      await expect(service.recordPayment(dto, 'user_1')).rejects.toThrow(
+        /automatic refund failed for charge charge_compensate_3/,
+      );
+    });
   });
 
   describe('concurrent recordPayment calls', () => {
@@ -605,6 +723,308 @@ describe('PaymentService', () => {
       expect(results).toHaveLength(3);
       expect(mockPaymentGateway.chargePayment).toHaveBeenCalledTimes(2);
       expect(concurrentPaymentRepository.save).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('generateReceipt (#2043)', () => {
+    it('throws NotFoundException when the payment does not exist', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.generateReceipt('missing_payment', 'user_1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('generates a base64 receipt with the payment method details when present', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_1',
+        amount: 150,
+        currency: 'NGN',
+        status: 'completed',
+        processedAt: new Date('2026-01-01T00:00:00.000Z'),
+        referenceNumber: 'REF123',
+        user: { id: 'user_1', email: 'test@example.com' },
+        paymentMethodRelation: {
+          paymentType: 'card',
+          lastFour: '4242',
+        },
+      });
+
+      const result = await service.generateReceipt('pay_1', 'user_1');
+
+      expect(result.contentType).toBe('text/plain');
+      expect(result.fileName).toBe('receipt-pay_1.txt');
+      expect(result.receipt.paymentMethod).toEqual({
+        type: 'card',
+        lastFour: '4242',
+      });
+
+      const decoded = Buffer.from(result.data, 'base64').toString('utf8');
+      expect(decoded).toContain('CHIOMA PAYMENT RECEIPT');
+      expect(decoded).toContain('Payment ID: pay_1');
+      expect(decoded).toContain('Reference: REF123');
+      expect(decoded).toContain('Payment Method: card (4242)');
+    });
+
+    it('omits payment method details and uses N/A fallbacks when absent', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'pay_2',
+        amount: 75,
+        currency: 'USD',
+        status: 'completed',
+        processedAt: null,
+        referenceNumber: null,
+        user: { id: 'user_1', email: 'test@example.com' },
+        paymentMethodRelation: null,
+      });
+
+      const result = await service.generateReceipt('pay_2', 'user_1');
+
+      expect(result.receipt.paymentMethod).toBeNull();
+
+      const decoded = Buffer.from(result.data, 'base64').toString('utf8');
+      expect(decoded).toContain('Reference: N/A');
+      expect(decoded).toContain('Processed At: N/A');
+      expect(decoded).toContain('Payment Method: N/A');
+    });
+  });
+
+  describe('listPayments (#2043)', () => {
+    function mockQueryBuilder(data: Payment[], total: number) {
+      const qb = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([data, total]),
+      };
+      (paymentRepository.createQueryBuilder as jest.Mock).mockReturnValue(qb);
+      return qb;
+    }
+
+    it('applies every provided filter and paginates the result', async () => {
+      const qb = mockQueryBuilder([{ id: 'pay_1' } as Payment], 1);
+
+      const filters: PaymentFiltersDto = {
+        agreementId: 'agreement_1',
+        status: 'completed',
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        paymentMethodId: '1',
+        page: 2,
+        limit: 10,
+      };
+
+      const result = await service.listPayments(filters, 'user_1');
+
+      expect(qb.andWhere).toHaveBeenCalledWith('payment.userId = :userId', {
+        userId: 'user_1',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'payment.agreementId = :agreementId',
+        { agreementId: 'agreement_1' },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith('payment.status = :status', {
+        status: 'completed',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'payment.createdAt >= :startDate',
+        { startDate: '2026-01-01' },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'payment.createdAt <= :endDate',
+        { endDate: '2026-01-31' },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'payment.paymentMethodId = :paymentMethodId',
+        { paymentMethodId: 1 },
+      );
+      expect(qb.skip).toHaveBeenCalledWith(10); // (page 2 - 1) * limit 10
+      expect(qb.take).toHaveBeenCalledWith(10);
+      expect(result.total).toBe(1);
+      expect(result.data).toEqual([{ id: 'pay_1' }]);
+    });
+
+    it('defaults page and limit when neither is provided', async () => {
+      const qb = mockQueryBuilder([], 0);
+
+      await service.listPayments({}, 'user_1');
+
+      expect(qb.skip).toHaveBeenCalledWith(0);
+    });
+
+    it('caps the limit at PAYMENT_LIST_MAX_LIMIT even when a larger one is requested', async () => {
+      const qb = mockQueryBuilder([], 0);
+
+      await service.listPayments({ limit: 10_000 }, 'user_1');
+
+      const takenLimit = qb.take.mock.calls[0][0];
+      expect(takenLimit).toBeLessThan(10_000);
+    });
+  });
+
+  describe('getPaymentById (#2043)', () => {
+    it('returns the payment when found and owned by the caller', async () => {
+      const payment = { id: 'pay_1', userId: 'user_1' } as Payment;
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(payment);
+
+      const result = await service.getPaymentById('pay_1', 'user_1');
+
+      expect(result).toBe(payment);
+      expect(paymentRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'pay_1', userId: 'user_1' },
+        relations: ['user', 'paymentMethodRelation'],
+      });
+    });
+
+    it('throws NotFoundException when the payment does not exist', async () => {
+      (paymentRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.getPaymentById('missing', 'user_1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('updatePaymentMethod (#2043)', () => {
+    it('throws NotFoundException when the payment method does not exist', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.updatePaymentMethod(1, {}, 'user_1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('unsets the previous default before setting the new default', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        lastFour: '1111',
+        isDefault: false,
+      });
+      (paymentMethodRepository.update as jest.Mock).mockResolvedValue({});
+      (paymentMethodRepository.save as jest.Mock).mockImplementation((data) =>
+        Promise.resolve(data),
+      );
+
+      await service.updatePaymentMethod(1, { isDefault: true }, 'user_1');
+
+      expect(paymentMethodRepository.update).toHaveBeenCalledWith(
+        { userId: 'user_1', isDefault: true },
+        { isDefault: false },
+      );
+    });
+
+    it('updates only the provided fields, leaving the rest unchanged', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+        lastFour: '1111',
+        expiryDate: new Date('2027-01-01'),
+        isDefault: false,
+        metadata: { note: 'original' },
+      });
+      (paymentMethodRepository.save as jest.Mock).mockImplementation((data) =>
+        Promise.resolve(data),
+      );
+
+      const result = await service.updatePaymentMethod(
+        1,
+        { lastFour: '9999' },
+        'user_1',
+      );
+
+      expect(result.lastFour).toBe('9999');
+      expect(result.isDefault).toBe(false);
+      expect(result.metadata).toEqual({ note: 'original' });
+      expect(paymentMethodRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('encrypts sensitiveMetadata when provided', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 1,
+        userId: 'user_1',
+      });
+      (paymentMethodRepository.save as jest.Mock).mockImplementation((data) =>
+        Promise.resolve(data),
+      );
+
+      const result = await service.updatePaymentMethod(
+        1,
+        { sensitiveMetadata: { token: 'raw-token' } },
+        'user_1',
+      );
+
+      expect(result.encryptedMetadata).toBeDefined();
+      expect(result.encryptedMetadata).not.toContain('raw-token');
+    });
+  });
+
+  describe('listPaymentMethods (#2043)', () => {
+    function mockMethodQueryBuilder(data: PaymentMethod[]) {
+      const qb = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(data),
+      };
+      (paymentMethodRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        qb,
+      );
+      return qb;
+    }
+
+    it('always filters by the caller userId', async () => {
+      const qb = mockMethodQueryBuilder([]);
+
+      await service.listPaymentMethods({}, 'user_1');
+
+      expect(qb.andWhere).toHaveBeenCalledWith('method.userId = :userId', {
+        userId: 'user_1',
+      });
+      expect(qb.andWhere).toHaveBeenCalledTimes(1);
+    });
+
+    it('additionally filters by isDefault when explicitly provided', async () => {
+      const qb = mockMethodQueryBuilder([]);
+
+      await service.listPaymentMethods({ isDefault: true }, 'user_1');
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'method.isDefault = :isDefault',
+        {
+          isDefault: true,
+        },
+      );
+    });
+
+    it('does not apply an isDefault filter when it is undefined', async () => {
+      const qb = mockMethodQueryBuilder([]);
+
+      await service.listPaymentMethods({}, 'user_1');
+
+      expect(qb.andWhere).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('removePaymentMethod (#2043)', () => {
+    it('removes the payment method when found and owned by the caller', async () => {
+      const method = { id: 1, userId: 'user_1' } as PaymentMethod;
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(method);
+      (paymentMethodRepository.remove as jest.Mock).mockResolvedValue(method);
+
+      await service.removePaymentMethod(1, 'user_1');
+
+      expect(paymentMethodRepository.remove).toHaveBeenCalledWith(method);
+    });
+
+    it('throws NotFoundException when the payment method does not exist', async () => {
+      (paymentMethodRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.removePaymentMethod(1, 'user_1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(paymentMethodRepository.remove).not.toHaveBeenCalled();
     });
   });
 
