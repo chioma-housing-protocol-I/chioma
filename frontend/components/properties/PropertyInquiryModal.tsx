@@ -172,7 +172,7 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
         <FormErrorSummary errors={errors} submitCount={submitCount} />
 
         <div>
-          <label className="mb-1 block text-sm font-semibold text-neutral-700">
+          <label htmlFor="name" className="mb-1 block text-sm font-semibold text-neutral-700">
             Name *
           </label>
           <input
@@ -188,7 +188,7 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
           )}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-neutral-700">
+          <label htmlFor="email" className="mb-1 block text-sm font-semibold text-neutral-700">
             Email *
           </label>
           <input
@@ -205,17 +205,18 @@ export const PropertyInquiryModal: React.FC<PropertyInquiryModalProps> = ({
           )}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-neutral-700">
+          <label htmlFor="phone" className="mb-1 block text-sm font-semibold text-neutral-700">
             Phone
           </label>
           <input
+            id="phone"
             {...register('phone')}
             className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
             placeholder="+1 555 123 4567"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-neutral-700">
+          <label htmlFor="message" className="mb-1 block text-sm font-semibold text-neutral-700">
             Message *
           </label>
           <textarea

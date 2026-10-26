@@ -86,7 +86,7 @@ export function ProfileMetadataForm({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="label" className="block text-sm font-medium text-white mb-2">
               Field Label
             </label>
             <input
@@ -108,7 +108,7 @@ export function ProfileMetadataForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="key" className="block text-sm font-medium text-white mb-2">
               Field Key
             </label>
             <input
@@ -131,10 +131,11 @@ export function ProfileMetadataForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="type" className="block text-sm font-medium text-white mb-2">
             Field Type
           </label>
           <select
+            id="type"
             {...register('type')}
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:bg-white/10 focus:border-blue-500 transition-all appearance-none"
             disabled={isLoading || !!field}
@@ -148,10 +149,11 @@ export function ProfileMetadataForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="value" className="block text-sm font-medium text-white mb-2">
             Value
           </label>
           <textarea
+            id="value"
             {...register('value')}
             placeholder="Enter field value"
             rows={3}
@@ -160,17 +162,15 @@ export function ProfileMetadataForm({
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <label className="flex items-center gap-3 text-sm text-white">
           <input
             {...register('isPublic')}
             type="checkbox"
             className="accent-teal-500"
             disabled={isLoading}
           />
-          <label className="text-sm text-white">
-            Make this field public (visible to other users)
-          </label>
-        </div>
+          Make this field public (visible to other users)
+        </label>
       </div>
 
       <div className="flex gap-3">

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Send, AlertCircle, Loader2 } from 'lucide-react';
 import { getFreighterPublicKey } from '@/lib/stellar-auth';
 import { useCreateWithdrawal } from '@/lib/query/hooks/use-anchor-transactions';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -25,6 +26,17 @@ export default function WithdrawModal({
   >('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const createWithdrawal = useCreateWithdrawal();
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  // Same guard as the backdrop-click handler below: a withdrawal in
+  // flight should not be interruptible by Escape either.
+  useModalKeyboardNavigation(
+    modalRef,
+    () => {
+      if (status !== 'processing') onClose();
+    },
+    isOpen,
+  );
 
   if (!isOpen) return null;
 
@@ -87,7 +99,11 @@ export default function WithdrawModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
@@ -95,7 +111,10 @@ export default function WithdrawModal({
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-xl font-bold text-white">Withdraw Funds</h2>

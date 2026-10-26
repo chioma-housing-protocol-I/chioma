@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   X,
   Shield,
@@ -13,6 +13,7 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { ThreatEvent, ThreatLevel, ThreatStatus } from '@/types/security';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface ThreatDetailModalProps {
   threat: ThreatEvent | null;
@@ -20,6 +21,9 @@ interface ThreatDetailModalProps {
 }
 
 export function ThreatDetailModal({ threat, onClose }: ThreatDetailModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, threat !== null);
+
   if (!threat) return null;
 
   const getLevelColor = (level: ThreatLevel) => {
@@ -38,8 +42,15 @@ export function ThreatDetailModal({ threat, onClose }: ThreatDetailModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-white/10 bg-[#0f172a] p-8 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-white/10 bg-[#0f172a] p-8 shadow-2xl"
+      >
         <button
           onClick={onClose}
           className="absolute right-6 top-6 rounded-full bg-white/5 p-2 text-blue-200/40 hover:bg-white/10 hover:text-white transition-all"

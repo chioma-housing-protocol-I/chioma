@@ -80,6 +80,9 @@ import { CertificatePinningModule } from './common/security/certificate-pinning.
 import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 import { RbacModule } from './common/rbac/rbac.module';
 import { BatchModule } from './modules/batch/batch.module';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { join } from 'path';
 
 const appLogger = new Logger('AppModule');
 
@@ -94,6 +97,17 @@ const appLogger = new Logger('AppModule');
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
       validate: validateEnvironment,
+    }),
+    // Parallel, read-only GraphQL surface (#2050): lets clients request
+    // only the fields they render instead of the full REST response
+    // shape, which the properties list/detail REST endpoints always
+    // eager-load (images, amenities, owner).
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
+      playground: process.env.NODE_ENV !== 'production',
+      introspection: process.env.NODE_ENV !== 'production',
     }),
     LoggerModule,
     LockModule,

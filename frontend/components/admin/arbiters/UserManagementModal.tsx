@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { X, Search, UserPlus, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminUsers } from '@/lib/query/hooks/use-admin-users';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 import type { User } from '@/types';
 
 interface UserManagementModalProps {
@@ -62,11 +63,21 @@ export function UserManagementModal({
     }
   };
 
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 rounded-2xl border border-white/10 p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="bg-slate-900 rounded-2xl border border-white/10 p-6 max-w-2xl w-full max-h-[80vh] flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
