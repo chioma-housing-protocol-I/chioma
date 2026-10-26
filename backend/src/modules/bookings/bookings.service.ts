@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { Repository, DataSource, In, LessThan, MoreThan, Not } from 'typeorm';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import { Property } from '../properties/entities/property.entity';
@@ -17,6 +19,7 @@ import { StellarService } from '../stellar/services/stellar.service';
 import { StellarEscrow } from '../stellar/entities/stellar-escrow.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaginationUtils } from '../../common/utils';
+import { EmailJobData } from '../queues/processors/email.processor';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -35,6 +38,7 @@ export class BookingsService {
     private readonly stellarService: StellarService,
     private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
+    @InjectQueue('email') private readonly emailQueue: Queue<EmailJobData>,
   ) {}
 
   async create(guestId: string, dto: CreateBookingDto): Promise<Booking> {
@@ -217,12 +221,56 @@ export class BookingsService {
 
       await queryRunner.commitTransaction();
       this.logger.log(`Booking ${bookingId} transitioned to confirmed`);
+
+      // Enqueued (not sent inline) so a transient SMTP failure never fails
+      // the confirmation itself: the email queue retries the job per its
+      // own attempts/backoff config, and a permanently failed send lands in
+      // the dead letter queue instead of being silently dropped (#2092).
+      await this.enqueueBookingConfirmationEmail(savedBooking);
+
       return savedBooking;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private async enqueueBookingConfirmationEmail(
+    booking: Booking,
+  ): Promise<void> {
+    if (!booking.guest?.email) {
+      this.logger.warn(
+        `Skipping booking confirmation email for ${booking.id}: guest has no email on file`,
+      );
+      return;
+    }
+
+    try {
+      await this.emailQueue.add(
+        {
+          type: 'booking-confirmation',
+          email: booking.guest.email,
+          subject: 'Your booking is confirmed',
+          template: 'booking-confirmation',
+          data: {
+            title: 'Booking confirmed',
+            message: `Your booking at ${booking.property?.title ?? 'the property'} from ${booking.checkInDate} to ${booking.checkOutDate} is confirmed.`,
+          },
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+        },
+      );
+    } catch (error) {
+      // Enqueue itself failing (e.g. Redis unreachable) should not fail the
+      // booking confirmation that already committed; log and move on.
+      this.logger.error(
+        `Failed to enqueue booking confirmation email for booking ${booking.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
