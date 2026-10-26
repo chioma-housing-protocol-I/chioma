@@ -195,7 +195,7 @@ export function MaintenanceForm({
 
           {/* Photo Upload */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700">
+            <label htmlFor="photo-upload" className="text-sm font-medium text-neutral-700">
               Photos (Optional)
             </label>
             <div className="border-2 border-dashed border-neutral-200 rounded-2xl p-6 text-center">
