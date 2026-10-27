@@ -41,6 +41,7 @@ import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-resp
 import { ReviewsService } from '../reviews/reviews.service';
 import { Review } from '../reviews/review.entity';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CacheControl } from '../../common/decorators/cache-control.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -92,6 +93,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Browse listings tolerate brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -109,6 +111,7 @@ export class PropertiesController {
   @Get('my-properties')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @CacheControl.private(30)
   @ApiOperation({
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
@@ -164,6 +167,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Property detail view tolerates brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'Get a specific property',
     description:

@@ -43,6 +43,7 @@ describe('PropertiesController', () => {
     refreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    emailCollectedAt: null,
     kycStatus: KycStatus.PENDING,
     loginCount: 0,
     preferredLanguage: 'en',
