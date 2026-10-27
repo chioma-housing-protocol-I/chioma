@@ -97,6 +97,7 @@ macro) now carry this version consistently, as the first topic element.
 | `RecurringPaymentResumed`    | `["recurring_payment_resumed"]`, `recurring_id`   | Recurring schedule resumed.                                    |
 | `RecurringPaymentCancelled`  | `["recurring_payment_cancelled"]`, `recurring_id` | Recurring schedule cancelled.                                  |
 | `RecurringPaymentFailed`     | `["recurring_payment_failed"]`, `recurring_id`    | Recurring run failed.                                          |
+| `PaymentProcessed`           | `["payment_processed"]`, `agreement_id`, `payer`  | Rent payment from `pay_rent` fully processed.                  |
 | `rent_paid` (direct publish) | `( "rent_paid", agreement_id )`                   | Internal payment split event emitted by `pay_rent_with_agent`. |
 
 ### `escrow`
@@ -134,6 +135,7 @@ macro) now carry this version consistently, as the first topic element.
 | Event                       | Topics                                           | Purpose                                           |
 | --------------------------- | ------------------------------------------------ | ------------------------------------------------- |
 | `ContractInitialized`       | `["initialized"]`, `admin`                       | Main protocol contract initialized with config.   |
+| `BookingCreated`            | `["booking_created"]`, `tenant`, `landlord`      | New booking (rental agreement) created.           |
 | `AgreementCreated`          | `["agreement_created"]`, `user`, `admin`         | Agreement drafted with economic terms.            |
 | `AgreementSigned`           | `["agreement_signed"]`, `user`, `admin`          | Agreement signature completed.                    |
 | `AgreementSubmitted`        | `["agreement_submitted"]`, `admin`, `user`       | Agreement submitted for counterpart signing.      |

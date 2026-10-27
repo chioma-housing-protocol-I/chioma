@@ -129,7 +129,15 @@ fn create_agreement_internal(
         .set(&DataKey::AgreementCount, &count);
     env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
 
-    // Emit event with topics for indexing
+    // Emit events with topics for indexing
+    events::booking_created(
+        env,
+        agreement_id.clone(),
+        agreement.user.clone(),
+        agreement.admin.clone(),
+        agreement.start_date,
+        agreement.end_date,
+    );
     events::agreement_created(
         env,
         agreement_id,
@@ -519,6 +527,28 @@ pub fn make_payment_with_token(
     env.storage()
         .persistent()
         .set(&DataKey::Agreement(agreement_id.clone()), &agreement);
+
+    // Running contract-wide metrics (#2088), mirroring the running-fee-total
+    // pattern used by the sibling `payment` contract's `TotalFeesCollected`.
+    let total_transaction_count: u64 = env
+        .storage()
+        .instance()
+        .get(&DataKey::TotalTransactionCount)
+        .unwrap_or(0u64)
+        + 1;
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalTransactionCount, &total_transaction_count);
+
+    let total_transaction_volume: i128 = env
+        .storage()
+        .instance()
+        .get(&DataKey::TotalTransactionVolume)
+        .unwrap_or(0i128)
+        + amount_in_base;
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalTransactionVolume, &total_transaction_volume);
 
     events::payment_made_with_token(env, agreement_id, token, amount);
 

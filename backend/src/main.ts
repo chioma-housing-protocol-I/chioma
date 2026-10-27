@@ -31,6 +31,7 @@ import { registerGracefulShutdown } from './config/graceful-shutdown';
 import { OpenApiDocumentRegistryService } from './common/validation/openapi-document-registry.service';
 import { EnvironmentVariables } from './config/environment-variables';
 import { EncryptionService } from './modules/stellar/services/encryption.service';
+import { getCorsConfig, validateCorsConfig } from './config/cors.config';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -69,37 +70,12 @@ async function bootstrap() {
   const configService: ConfigService<EnvironmentVariables, true> =
     app.get(ConfigService);
 
-  // Parse CORS origins from environment variable
-  const corsOrigins = configService
-    .get('CORS_ORIGINS', { infer: true })
-    ?.split(',')
-    .map((origin) => origin.trim()) || [
-    configService.get('FRONTEND_URL', { infer: true }) ||
-      'http://localhost:3000',
-  ];
+  // Validate CORS configuration
+  validateCorsConfig();
 
-  app.enableCors({
-    origin: corsOrigins,
-    credentials:
-      configService.get('CORS_CREDENTIALS', { infer: true }) === 'true' || true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Request-ID',
-      'X-XSRF-TOKEN',
-      'X-CSRF-Token',
-      'X-API-Key',
-      'X-Webhook-Signature',
-      'X-Webhook-Timestamp',
-    ],
-    exposedHeaders: [
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'X-RateLimit-Reset',
-    ],
-    maxAge: 86400, // 24 hours for preflight cache
-  });
+  // Apply CORS configuration
+  const corsConfig = getCorsConfig();
+  app.enableCors(corsConfig);
 
   app.setGlobalPrefix('api', {
     exclude: [

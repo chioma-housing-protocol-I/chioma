@@ -6,6 +6,7 @@ import { OAuth2ClientService } from './oauth2-client.service';
 import { AuthService } from '../auth.service';
 import { User } from '../../users/entities/user.entity';
 import { OAuthAccount } from './entities/oauth-account.entity';
+import { OAuthState } from './entities/oauth-state.entity';
 import { OAuth2Provider } from './oauth2.types';
 
 describe('OAuth2Service', () => {
@@ -54,8 +55,27 @@ describe('OAuth2Service', () => {
     save: jest.fn((link) => Promise.resolve(link)),
   };
 
+  const storedStates = new Map<string, OAuthState>();
+  const mockOAuthStateRepository = {
+    create: jest.fn((data: Partial<OAuthState>) =>
+      Object.assign(new OAuthState(), data),
+    ),
+    save: jest.fn(async (state: OAuthState) => {
+      storedStates.set(state.state, state);
+      return state;
+    }),
+    findOne: jest.fn(
+      async ({ where }: { where: { state: string } }) =>
+        storedStates.get(where.state) ?? null,
+    ),
+    delete: jest.fn(async ({ state }: { state: string }) => ({
+      affected: storedStates.delete(state) ? 1 : 0,
+    })),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    storedStates.clear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -67,6 +87,10 @@ describe('OAuth2Service', () => {
           provide: getRepositoryToken(OAuthAccount),
           useValue: mockOAuthAccountRepository,
         },
+        {
+          provide: getRepositoryToken(OAuthState),
+          useValue: mockOAuthStateRepository,
+        },
       ],
     }).compile();
 
@@ -74,10 +98,11 @@ describe('OAuth2Service', () => {
   });
 
   describe('initiateAuthorization', () => {
-    it('returns authorization URL and state', () => {
-      const result = service.initiateAuthorization(OAuth2Provider.GOOGLE);
+    it('returns authorization URL and state', async () => {
+      const result = await service.initiateAuthorization(OAuth2Provider.GOOGLE);
 
-      expect(result.state).toHaveLength(48);
+      expect(result.state).toMatch(/^[a-f0-9]{64}$/);
+      expect(storedStates.has(result.state)).toBe(true);
       expect(result.authorizationUrl).toContain(result.state);
       expect(mockOAuth2Client.buildAuthorizationUrl).toHaveBeenCalled();
     });
@@ -85,7 +110,7 @@ describe('OAuth2Service', () => {
 
   describe('completeAuthorization', () => {
     it('creates user and returns tokens on successful callback', async () => {
-      const { state } = service.initiateAuthorization(OAuth2Provider.GOOGLE);
+      const { state } = await service.initiateAuthorization(OAuth2Provider.GOOGLE);
 
       mockOAuth2Client.exchangeAuthorizationCode.mockResolvedValue({
         access_token: 'provider-access',
@@ -126,7 +151,7 @@ describe('OAuth2Service', () => {
 
   describe('linkAccount', () => {
     it('throws when provider account belongs to another user', async () => {
-      const { state } = service.initiateAccountLink(
+      const { state } = await service.initiateAccountLink(
         'user-1',
         OAuth2Provider.GITHUB,
       );

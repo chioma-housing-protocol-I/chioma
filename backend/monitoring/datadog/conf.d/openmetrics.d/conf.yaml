@@ -1,0 +1,23 @@
+# Datadog OpenMetrics check: scrapes the backend Prometheus endpoint so the
+# APM metrics (request duration, DB query time, cache hit rate, errors) land
+# in Datadog alongside the OTLP traces.
+init_config:
+
+instances:
+  - openmetrics_endpoint: http://host.docker.internal:3000/metrics
+    namespace: chioma
+    tags:
+      - service:chioma-backend
+    metrics:
+      - http_request_duration_ms
+      - http_requests_total
+      - http_errors_total
+      - db_query_duration_ms
+      - database_query_avg_time_ms
+      - database_cache_hit_ratio
+      - database_pool_.*
+      - cache_operations_total
+      - cache_hit_ratio
+      - blockchain_operation_duration_ms
+      - blockchain_failures_total
+      - queue_.*

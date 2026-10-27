@@ -312,6 +312,8 @@ impl PaymentContract {
 
     /// Process rent payment with 90/10 landlord/platform split
     /// Follows checks-effects-interactions pattern for reentrancy safety
+    ///
+    /// Emits `RentPaid`, `FeesAccrued` and `PaymentProcessed` events.
     pub fn pay_rent(
         env: Env,
         from: Address,
@@ -437,14 +439,26 @@ impl PaymentContract {
         events::rent_paid(
             &env,
             agreement_id.clone(),
-            from,
+            from.clone(),
             agreement.landlord.clone(),
             agreement.payment_token.clone(),
             payment_amount,
             landlord_amount,
             platform_amount,
         );
-        events::fees_accrued(&env, agreement_id, platform_amount, total_fees_collected);
+        events::fees_accrued(
+            &env,
+            agreement_id.clone(),
+            platform_amount,
+            total_fees_collected,
+        );
+        events::payment_processed(
+            &env,
+            agreement_id,
+            from,
+            payment_amount,
+            agreement.payment_history.len(),
+        );
 
         Ok(())
     }
@@ -476,6 +490,29 @@ impl PaymentContract {
             .ok_or(Error::PaymentNotFound)
     }
 
+    /// Create a recurring rent payment schedule for an agreement.
+    ///
+    /// Emits a `RecurringPaymentCreated` event.
+    ///
+    /// # Arguments
+    /// * `agreement_id` - The agreement the schedule pays rent for
+    /// * `amount` - Amount per payment (must equal the agreement's monthly rent)
+    /// * `frequency` - How often payments are due
+    /// * `start_date` - First due date (Unix timestamp)
+    /// * `end_date` - Last date payments are due (must be after `start_date`)
+    /// * `auto_renew` - Whether the schedule extends itself past `end_date`
+    ///
+    /// # Returns
+    /// * `String` - The ID of the new recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `AgreementNotFound` - If the agreement doesn't exist
+    /// * `InvalidPaymentAmount` - If `amount` is not positive or doesn't match rent
+    /// * `InvalidRecurringDates` - If `start_date >= end_date`
+    ///
+    /// # Security
+    /// Requires authorization from the agreement's tenant.
     pub fn create_recurring_payment(
         env: Env,
         agreement_id: String,
@@ -545,10 +582,43 @@ impl PaymentContract {
         Ok(recurring_id)
     }
 
+    /// Execute a single due recurring payment.
+    ///
+    /// Records the execution, advances the next due date and emits a
+    /// `RecurringPaymentExecuted` event.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    /// * `RecurringPaymentAlreadyCompleted` - If the schedule has completed
+    /// * `RecurringPaymentNotActive` - If the schedule is not active
+    /// * `PaymentNotDue` - If the next payment is not due yet
+    ///
+    /// # Security
+    /// Requires authorization from the payer.
     pub fn execute_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
         Self::execute_recurring_payment_internal(&env, &recurring_id, true)
     }
 
+    /// Pause an active recurring payment.
+    ///
+    /// Emits a `RecurringPaymentPaused` event.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    /// * `RecurringPaymentAlreadyCancelled` - If the schedule was cancelled
+    /// * `RecurringPaymentAlreadyCompleted` - If the schedule has completed
+    /// * `RecurringPaymentNotActive` - If the schedule is not active
+    ///
+    /// # Security
+    /// Requires authorization from the payer.
     pub fn pause_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
         admin::require_not_paused(&env)?;
 
@@ -585,6 +655,20 @@ impl PaymentContract {
         Ok(())
     }
 
+    /// Resume a paused recurring payment.
+    ///
+    /// Emits a `RecurringPaymentResumed` event.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    /// * `RecurringPaymentNotPaused` - If the schedule is not paused
+    ///
+    /// # Security
+    /// Requires authorization from the payer.
     pub fn resume_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
         admin::require_not_paused(&env)?;
 
@@ -613,6 +697,20 @@ impl PaymentContract {
         Ok(())
     }
 
+    /// Cancel a recurring payment permanently.
+    ///
+    /// Emits a `RecurringPaymentCancelled` event.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    /// * `RecurringPaymentAlreadyCancelled` - If the schedule is already cancelled
+    ///
+    /// # Security
+    /// Requires authorization from the payer.
     pub fn cancel_recurring_payment(env: Env, recurring_id: String) -> Result<(), Error> {
         admin::require_not_paused(&env)?;
 
@@ -641,6 +739,16 @@ impl PaymentContract {
         Ok(())
     }
 
+    /// Get a recurring payment schedule by ID.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_recurring_payment(
         env: Env,
         recurring_id: String,
@@ -651,6 +759,21 @@ impl PaymentContract {
             .ok_or(Error::RecurringPaymentNotFound)
     }
 
+    /// Get the execution history of a recurring payment.
+    ///
+    /// Only the most recent `MAX_PAYMENT_EXECUTIONS` entries are kept.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Returns
+    /// * `Vec<PaymentExecution>` - Execution records, oldest first
+    ///
+    /// # Errors
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_payment_executions(
         env: Env,
         recurring_id: String,
@@ -668,6 +791,20 @@ impl PaymentContract {
             .unwrap_or_else(|| Vec::new(&env)))
     }
 
+    /// Execute every recurring payment that is currently due.
+    ///
+    /// Payments that fail are marked `Failed`, added to the failed list and a
+    /// `RecurringPaymentFailed` event is emitted for each.
+    ///
+    /// # Returns
+    /// * `Vec<String>` - IDs of the payments executed successfully
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    ///
+    /// # Security
+    /// Permissionless keeper entry point: payer authorization is not required
+    /// because only schedules the payer already authorized are executed.
     pub fn process_due_payments(env: Env) -> Result<Vec<String>, Error> {
         // Checked up front (in addition to execute_recurring_payment_internal's
         // own check) so a paused contract rejects the whole batch cleanly
@@ -710,6 +847,13 @@ impl PaymentContract {
         Ok(processed)
     }
 
+    /// List the IDs of active recurring payments that are due now.
+    ///
+    /// # Returns
+    /// * `Vec<String>` - IDs of due recurring payments
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_due_payments(env: Env) -> Result<Vec<String>, Error> {
         let count: u32 = env
             .storage()
@@ -741,6 +885,21 @@ impl PaymentContract {
         Ok(due)
     }
 
+    /// Retry a recurring payment that previously failed.
+    ///
+    /// Sets the schedule back to `Active` and executes it immediately.
+    ///
+    /// # Arguments
+    /// * `recurring_id` - The ID of the recurring payment
+    ///
+    /// # Errors
+    /// * `ContractPaused` - If the contract is paused
+    /// * `RecurringPaymentNotFound` - If the schedule doesn't exist
+    /// * `RecurringPaymentNotFailed` - If the schedule is not in `Failed` state
+    /// * `RecurringPaymentExecutionFailed` - If the retry fails
+    ///
+    /// # Security
+    /// Requires authorization from the payer.
     pub fn retry_failed_payment(env: Env, recurring_id: String) -> Result<(), Error> {
         // Checked up front so a paused contract rejects cleanly rather than
         // flipping status to Active and then failing the execute step (#1689).
@@ -767,6 +926,13 @@ impl PaymentContract {
             .map_err(|_| Error::RecurringPaymentExecutionFailed)
     }
 
+    /// List the IDs of recurring payments currently marked as failed.
+    ///
+    /// # Returns
+    /// * `Vec<String>` - IDs of failed recurring payments
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_failed_payments(env: Env) -> Result<Vec<String>, Error> {
         Ok(env
             .storage()

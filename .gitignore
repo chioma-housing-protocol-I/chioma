@@ -40,6 +40,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.env.local
+.env.*.local
+!.env*.example
+
+# credentials / key material (issue #1455)
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+*.secret
+secrets.json
+gitleaks-report.*
+gitleaks.sarif
 
 # vercel
 .vercel
@@ -56,3 +71,24 @@ pr.md
 checks.md
 create-github-issues.sh
 /issues/frontend/storybook-static/
+
+# test and compiler outputs
+jest-output.log
+*.log
+tsc.log
+# terraform (issue #2019) — environment *.tfvars under infrastructure/environments are committed
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

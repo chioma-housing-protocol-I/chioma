@@ -12,10 +12,13 @@ import {
   LogOut,
   LayoutDashboard,
   ChevronDown,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { NAV_LINKS } from '@/constants/navigation';
 import { useAuth } from '@/store/authStore';
 import { useAuthDisplay } from '@/store/useAuthDisplay';
+import { useUIStore } from '@/store/ui-store';
 import toast from 'react-hot-toast';
 
 const WalletConnectButton = dynamic(
@@ -31,8 +34,11 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const themePreference = useUIStore((state) => state.theme);
+  const setTheme = useUIStore((state) => state.setTheme);
   const { walletAddress, user, logout } = useAuth();
   const {
     isAuthenticated,
@@ -70,6 +76,16 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(root.classList.contains('dark'));
+    });
+    setIsDarkMode(root.classList.contains('dark'));
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
@@ -83,6 +99,23 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   };
 
   const dashboardHref = displayRole === 'admin' ? '/admin' : '/user';
+
+  const renderThemeToggle = (className: string) => (
+    <button
+      type="button"
+      onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+      aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+      aria-pressed={isDarkMode}
+      className={className}
+    >
+      {isDarkMode ? (
+        <Sun size={16} aria-hidden="true" />
+      ) : (
+        <Moon size={16} aria-hidden="true" />
+      )}
+      <span>{isDarkMode ? 'Light mode' : 'Dark mode'}</span>
+    </button>
+  );
 
   return (
     <header
@@ -175,6 +208,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                         <LayoutDashboard size={15} />
                         Dashboard
                       </Link>
+                      {renderThemeToggle(
+                        'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-200 hover:bg-white/5 hover:text-white transition-colors',
+                      )}
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
@@ -189,6 +225,9 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
             </>
           ) : (
             <>
+              {renderThemeToggle(
+                'flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-200 hover:text-white transition-colors',
+              )}
               <Link
                 href="/login"
                 className="px-4 py-2 text-sm font-medium text-blue-200 hover:text-white transition-colors"
@@ -246,6 +285,10 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                 </Link>
               );
             })}
+
+            {renderThemeToggle(
+              'flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-white',
+            )}
 
             <div className="pt-4 flex flex-col space-y-3 border-t border-white/10">
               {isAuthenticated ? (

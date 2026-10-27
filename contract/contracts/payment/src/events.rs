@@ -114,6 +114,20 @@ pub struct RentPaid {
     pub paid_at: u64,
 }
 
+/// Event emitted once a rent payment has been fully processed (funds split
+/// and transferred, agreement updated)
+/// Topics: ["payment_processed", agreement_id: String, payer: Address]
+#[contractevent(topics = ["v1", "payment_processed"])]
+pub struct PaymentProcessed {
+    #[topic]
+    pub agreement_id: String,
+    #[topic]
+    pub payer: Address,
+    pub amount: i128,
+    pub payment_number: u32,
+    pub processed_at: u64,
+}
+
 /// Event emitted when platform fee collector is updated
 /// Topics: ["platform_fee_collector_updated", collector: Address]
 #[contractevent(topics = ["v1", "platform_fee_collector_updated"])]
@@ -331,6 +345,24 @@ pub(crate) fn rent_paid(
         landlord_amount,
         platform_amount,
         paid_at: env.ledger().timestamp(),
+    }
+    .publish(env);
+}
+
+/// Helper function to emit payment processed event
+pub(crate) fn payment_processed(
+    env: &Env,
+    agreement_id: String,
+    payer: Address,
+    amount: i128,
+    payment_number: u32,
+) {
+    PaymentProcessed {
+        agreement_id,
+        payer,
+        amount,
+        payment_number,
+        processed_at: env.ledger().timestamp(),
     }
     .publish(env);
 }

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { Button } from './button';
 
 const meta: Meta<typeof Button> = {
@@ -32,6 +33,9 @@ const meta: Meta<typeof Button> = {
       description: 'Button label content',
     },
   },
+  args: {
+    onClick: fn(),
+  },
 };
 
 export default meta;
@@ -41,6 +45,18 @@ export const Default: Story = {
   args: {
     children: 'Button',
     variant: 'default',
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: 'Button' });
+
+    await userEvent.click(button);
+    await expect(args.onClick).toHaveBeenCalledTimes(1);
+
+    // Keyboard activation also triggers onClick
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    await expect(args.onClick).toHaveBeenCalledTimes(2);
   },
 };
 
@@ -97,6 +113,14 @@ export const Disabled: Story = {
   args: {
     children: 'Disabled',
     disabled: true,
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: 'Disabled' });
+
+    await expect(button).toBeDisabled();
+    await userEvent.click(button, { pointerEventsCheck: 0 });
+    await expect(args.onClick).not.toHaveBeenCalled();
   },
 };
 

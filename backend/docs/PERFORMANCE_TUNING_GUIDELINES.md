@@ -184,6 +184,61 @@ Increase limits only after load testing proves capacity; prefer CDN/edge caching
 
 **Alerts:** configure per [MONITORING_AND_ALERTING.md](./deployment/MONITORING_AND_ALERTING.md) (`HighErrorRate`, `HighResponseTime`, `DatabaseConnectionPoolExhausted`).
 
+### Profiling this backend specifically (#2078)
+
+Before reaching for an external APM, this codebase already has three
+built-in, no-setup profiling signals:
+
+1. **Per-endpoint response time percentiles** — `PerformanceMonitorService`
+   (`src/modules/monitoring/performance-monitor.service.ts`) records p50/p95
+   per route and method in memory, surfaced at
+   `GET /api/performance/response-times`. A route consistently near the top
+   of this list is the cheapest first signal of a hot path; routes exceeding
+   `SLOW_REQUEST_THRESHOLD_MS` (env `RESPONSE_TIME_SLOW_THRESHOLD_MS`,
+   default 1000ms) are logged individually as "Slow request detected".
+2. **Database query/pool health** — `DatabaseMonitorService`
+   (`src/modules/monitoring/database-monitor.service.ts`), surfaced at
+   `GET /api/database/queries`, `GET /api/database/pool`, and
+   `GET /api/database/health`. A hot path backed by an N+1 query pattern
+   (a loop issuing one query per item instead of a single batched query)
+   shows up here as elevated query counts relative to request volume, not
+   as a single visibly-slow query.
+3. **Response compression effectiveness** — `GET /compression/stats`
+   (`MonitoringController.getCompressionStats`) reports
+   `bytesBeforeCompression`/`bytesAfterCompression` and a computed
+   `reductionPercent`, useful when a route is slow primarily due to payload
+   size rather than server-side compute.
+
+For CPU-level profiling of a specific slow code path (not just "which route
+is slow", but "which function inside it"), run the server under Node's
+built-in CPU profiler and inspect the result in Chrome DevTools:
+
+```bash
+node --cpu-prof --cpu-prof-dir=./profiles -r ts-node/register src/main.ts
+# exercise the slow endpoint, then stop the process (Ctrl+C) to flush the
+# .cpuprofile file, and open it via chrome://inspect -> Open dedicated
+# DevTools for Node, or the Performance panel's "Load profile" button.
+```
+
+**Worked example — the first three bottlenecks found and fixed this way:**
+a repeated grep for `for (const ... of ...)` loops containing an `await`ed
+repository call (the classic N+1 shape) found three real hot-path
+instances, all fixed by batching into a single query:
+
+- `AvailabilityService.blockDates`/`unblockDates`
+  (`src/modules/properties/availability.service.ts`): blocking or
+  unblocking a date range issued one `upsert`/`findOne`+`save` per date;
+  now issues a single batched `upsert` for the whole range.
+- `MfaService.disableMfa` (`src/modules/auth/services/mfa.service.ts`):
+  disabling MFA issued one `save` per active device; now a single batched
+  `save` over the array.
+- `ScreeningExpiryNotificationService.notifyExpiringReports`
+  (`src/modules/screening/services/screening-expiry-notification.service.ts`):
+  issued one `findOne` per expiring report to look up its screening
+  request (working around a `relations: ['screening']` option that
+  referenced a relation the entity doesn't actually have); now a single
+  batched lookup via `In(screeningIds)`.
+
 ---
 
 ## 9. Environment-specific recommendations

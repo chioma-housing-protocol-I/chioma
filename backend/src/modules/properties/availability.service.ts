@@ -80,12 +80,15 @@ export class AvailabilityService {
   ): Promise<void> {
     await this.verifyOwnership(propertyId, userId);
 
-    for (const date of dto.dates) {
-      await this.availabilityRepo.upsert(
-        { propertyId, date, available: false },
-        ['propertyId', 'date'],
-      );
-    }
+    // Single batched upsert instead of one round trip per date (#2078):
+    // blocking a long range (e.g. a season) previously issued N sequential
+    // queries, now issues one.
+    const rows = dto.dates.map((date) => ({
+      propertyId,
+      date,
+      available: false,
+    }));
+    await this.availabilityRepo.upsert(rows, ['propertyId', 'date']);
   }
 
   async unblockDates(
@@ -95,21 +98,16 @@ export class AvailabilityService {
   ): Promise<void> {
     await this.verifyOwnership(propertyId, userId);
 
-    for (const date of dto.dates) {
-      const existing = await this.availabilityRepo.findOne({
-        where: { propertyId, date },
-      });
-
-      if (existing) {
-        existing.available = true;
-        await this.availabilityRepo.save(existing);
-      } else {
-        await this.availabilityRepo.upsert(
-          { propertyId, date, available: true },
-          ['propertyId', 'date'],
-        );
-      }
-    }
+    // Batched upsert instead of a per-date findOne+save/upsert loop (#2078):
+    // unblocking preserves other columns (customPrice, notes) on rows that
+    // already exist, which is exactly what upsert's partial-row semantics
+    // already do, so a per-row read before writing was unnecessary.
+    const rows = dto.dates.map((date) => ({
+      propertyId,
+      date,
+      available: true,
+    }));
+    await this.availabilityRepo.upsert(rows, ['propertyId', 'date']);
   }
 
   async setPrice(

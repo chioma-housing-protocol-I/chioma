@@ -1,0 +1,207 @@
+name: Backend Performance Smoke Tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/smoke-test.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Target API base URL"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  smoke-test:
+    name: Run k6 smoke tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: chioma_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+      
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: pnpm install --frozen-lockfile
+      
+      - name: Create test environment file
+        working-directory: ./backend
+        run: |
+          cat > .env.test << EOF
+          NODE_ENV=test
+          PORT=5000
+          DB_TYPE=postgres
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USERNAME=test_user
+          DB_PASSWORD=test_password
+          DB_DATABASE=chioma_test
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          JWT_SECRET=test-jwt-secret-key-for-smoke-tests
+          JWT_EXPIRES_IN=1h
+          BCRYPT_ROUNDS=8
+          THROTTLE_TTL=60
+          THROTTLE_LIMIT=100
+          EOF
+      
+      - name: Run database migrations
+        working-directory: ./backend
+        run: pnpm run migration:run
+        env:
+          NODE_ENV: test
+      
+      - name: Start backend server
+        working-directory: ./backend
+        run: |
+          pnpm run start:prod &
+          echo $! > server.pid
+          # Wait for server to be ready (max 60 seconds)
+          timeout=60
+          while ! curl -f http://localhost:5000/health > /dev/null 2>&1; do
+            sleep 2
+            timeout=$((timeout - 2))
+            if [ $timeout -le 0 ]; then
+              echo "Server failed to start within 60 seconds"
+              exit 1
+            fi
+          done
+          echo "Server is ready"
+        env:
+          NODE_ENV: test
+      
+      - name: Run smoke tests
+        working-directory: ./backend
+        run: |
+          if [ -n "${{ inputs.base_url }}" ]; then
+            k6 run k6/smoke-test.js -e BASE_URL="${{ inputs.base_url }}"
+          else
+            k6 run k6/smoke-test.js -e BASE_URL="http://localhost:5000"
+          fi
+      
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: backend/smoke-test-summary.json
+          retention-days: 30
+      
+      - name: Stop backend server
+        if: always()
+        working-directory: ./backend
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'backend/smoke-test-summary.json';
+            
+            if (!fs.existsSync(summaryPath)) {
+              console.log('No summary file found');
+              return;
+            }
+            
+            const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            const overallSuccessRate = (1 - summary.overall.error_rate) * 100;
+            
+            const statusIcon = overallSuccessRate >= 95 ? '✅' : overallSuccessRate >= 90 ? '⚠️' : '❌';
+            
+            const comment = `## ${statusIcon} Performance Smoke Test Results
+            
+            **Test Duration:** ${summary.duration}
+            **Total Requests:** ${summary.overall.total_requests}
+            **Overall Success Rate:** ${overallSuccessRate.toFixed(2)}%
+            
+            ### Individual Test Results
+            
+            | Test | Success Rate | Avg Duration | P95 Duration |
+            |------|-------------|--------------|--------------|
+            | Health Check | ${((1 - summary.individual_tests.health_check.error_rate) * 100).toFixed(1)}% | ${summary.individual_tests.health_check.avg_duration.toFixed(0)}ms | ${summary.individual_tests.health_check.p95_duration.toFixed(0)}ms |
+            | Auth Flow | ${((1 - summary.individual_tests.auth_flow.error_rate) * 100).toFixed(1)}% | ${summary.individual_tests.auth_flow.avg_duration.toFixed(0)}ms | ${summary.individual_tests.auth_flow.p95_duration.toFixed(0)}ms |
+            | Property Listing | ${((1 - summary.individual_tests.property_listing.error_rate) * 100).toFixed(1)}% | ${summary.individual_tests.property_listing.avg_duration.toFixed(0)}ms | ${summary.individual_tests.property_listing.p95_duration.toFixed(0)}ms |
+            | Search | ${((1 - summary.individual_tests.search.error_rate) * 100).toFixed(1)}% | ${summary.individual_tests.search.avg_duration.toFixed(0)}ms | ${summary.individual_tests.search.p95_duration.toFixed(0)}ms |
+            | API Docs | ${((1 - summary.individual_tests.api_docs.error_rate) * 100).toFixed(1)}% | ${summary.individual_tests.api_docs.avg_duration.toFixed(0)}ms | ${summary.individual_tests.api_docs.p95_duration.toFixed(0)}ms |
+            
+            ### Performance Metrics
+            
+            - **Average Response Time:** ${summary.overall.avg_duration.toFixed(0)}ms
+            - **P95 Response Time:** ${summary.overall.p95_duration.toFixed(0)}ms
+            - **P99 Response Time:** ${summary.overall.p99_duration.toFixed(0)}ms
+            
+            ${overallSuccessRate < 95 ? '⚠️ **Warning:** Success rate is below 95% threshold' : ''}
+            ${summary.overall.p95_duration > 2000 ? '⚠️ **Warning:** P95 response time exceeds 2000ms' : ''}
+            `;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

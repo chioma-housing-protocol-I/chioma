@@ -3,6 +3,7 @@ import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewContext } from './review.entity';
+import { CacheService } from '../../common/cache/cache.service';
 
 describe('ReviewsController', () => {
   let controller: ReviewsController;
@@ -40,7 +41,17 @@ describe('ReviewsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReviewsController],
-      providers: [{ provide: ReviewsService, useValue: service }],
+      providers: [
+        { provide: ReviewsService, useValue: service },
+        {
+          provide: CacheService,
+          useValue: {
+            get: jest.fn().mockResolvedValue(null),
+            set: jest.fn().mockResolvedValue(undefined),
+            invalidateDependencies: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<ReviewsController>(ReviewsController);

@@ -16,6 +16,10 @@ on:
       - "frontend/**"
       - ".github/workflows/frontend-ci-cd.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   IS_PR: ${{ github.event_name == 'pull_request' }}
 

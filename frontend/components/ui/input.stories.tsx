@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { Input } from './input';
 
 const meta: Meta<typeof Input> = {
@@ -28,6 +29,18 @@ type Story = StoryObj<typeof Input>;
 export const Default: Story = {
   args: {
     placeholder: 'Enter text...',
+    onChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByPlaceholderText('Enter text...');
+
+    await userEvent.type(input, 'Lekki apartment');
+    await expect(input).toHaveValue('Lekki apartment');
+    await expect(args.onChange).toHaveBeenCalled();
+
+    await userEvent.clear(input);
+    await expect(input).toHaveValue('');
   },
 };
 
@@ -50,6 +63,14 @@ export const Disabled: Story = {
     placeholder: 'Disabled input',
     value: 'Cannot edit this',
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByPlaceholderText('Disabled input');
+
+    await expect(input).toBeDisabled();
+    await userEvent.type(input, 'new text', { pointerEventsCheck: 0 });
+    await expect(input).toHaveValue('Cannot edit this');
+  },
 };
 
 export const WithLabel: Story = {
@@ -61,6 +82,13 @@ export const WithLabel: Story = {
       <Input id="email" type="email" placeholder="you@example.com" />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Clicking the label focuses the associated input
+    await userEvent.click(canvas.getByText('Email'));
+    await expect(canvas.getByLabelText('Email')).toHaveFocus();
+  },
 };
 
 export const AllStates: Story = {

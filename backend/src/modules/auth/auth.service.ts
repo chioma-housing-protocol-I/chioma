@@ -40,6 +40,8 @@ import {
   SecurityEventType,
   SecurityEventSeverity,
 } from '../security/entities/security-event.entity';
+import { LoginActivityService } from './services/login-activity.service';
+import { LoginStatus, LoginMethod } from './entities/login-activity.entity';
 
 import {
   BCRYPT_SALT_ROUNDS,
@@ -76,6 +78,8 @@ export class AuthService {
     private readonly queueManagementService?: QueueManagementService,
     @Optional()
     private readonly securityEventsService?: SecurityEventsService,
+    @Optional()
+    private readonly loginActivityService?: LoginActivityService,
   ) {}
 
   @Logging({ service: 'AuthService' })
@@ -176,6 +180,16 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn(`Login attempt for non-existent user: ${email}`);
+
+      // Log failed login attempt for non-existent user
+      await this.logLoginActivity({
+        email: email.toLowerCase(),
+        loginMethod: LoginMethod.PASSWORD,
+        status: LoginStatus.FAILED,
+        context,
+        failureReason: 'User not found',
+      });
+
       throw new AuthenticationError(
         ErrorCode.AUTH_INVALID_CREDENTIALS,
         'Invalid email or password',
@@ -184,6 +198,17 @@ export class AuthService {
 
     if (!user.isActive) {
       this.logger.warn(`Login attempt for inactive account: ${email}`);
+
+      // Log failed login for inactive account
+      await this.logLoginActivity({
+        userId: user.id,
+        email: user.email,
+        loginMethod: LoginMethod.PASSWORD,
+        status: LoginStatus.FAILED,
+        context,
+        failureReason: 'Account disabled',
+      });
+
       throw new AuthenticationError(
         ErrorCode.AUTH_ACCOUNT_DISABLED,
         'Invalid email or password',
@@ -197,6 +222,17 @@ export class AuthService {
     if (!isPasswordValid) {
       await this.handleFailedLogin(user);
       this.logger.warn(`Failed login attempt for user: ${email}`);
+
+      // Log failed login due to invalid password
+      await this.logLoginActivity({
+        userId: user.id,
+        email: user.email,
+        loginMethod: LoginMethod.PASSWORD,
+        status: LoginStatus.FAILED,
+        context,
+        failureReason: 'Invalid password',
+      });
+
       throw new AuthenticationError(
         ErrorCode.AUTH_INVALID_CREDENTIALS,
         'Invalid email or password',
@@ -204,7 +240,7 @@ export class AuthService {
     }
 
     // Account takeover detection: flag anomalous logins before issuing tokens
-    await this.detectLoginAnomaly(user, context);
+    const anomalyFlags = await this.detectLoginAnomaly(user, context);
 
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
@@ -216,10 +252,32 @@ export class AuthService {
     const mfaCheck = await this.mfaService.checkMfaRequired(user.id);
 
     if (mfaCheck) {
+      // Log MFA required
+      await this.logLoginActivity({
+        userId: user.id,
+        email: user.email,
+        loginMethod: LoginMethod.PASSWORD,
+        status: LoginStatus.MFA_REQUIRED,
+        context,
+        isSuspicious: anomalyFlags.length > 0,
+        anomalyFlags: anomalyFlags.length > 0 ? anomalyFlags : undefined,
+      });
+
       return await this.mfaService.generateMfaToken(user, this);
     }
 
     this.logger.log(`User logged in successfully: ${user.id}`);
+
+    // Log successful login
+    await this.logLoginActivity({
+      userId: user.id,
+      email: user.email,
+      loginMethod: LoginMethod.PASSWORD,
+      status: LoginStatus.SUCCESS,
+      context,
+      isSuspicious: anomalyFlags.length > 0,
+      anomalyFlags: anomalyFlags.length > 0 ? anomalyFlags : undefined,
+    });
 
     const { accessToken, refreshToken } = this.generateTokens(
       user.id,
@@ -632,12 +690,13 @@ export class AuthService {
   /**
    * Detects account takeover signals: new IP, new user-agent, or unusual
    * login time. Logs a warning; does not block (MFA handles hard blocking).
+   * Returns array of anomaly flags for logging purposes.
    */
   private async detectLoginAnomaly(
     user: User,
     context?: { ipAddress?: string; userAgent?: string },
-  ): Promise<void> {
-    if (!context?.ipAddress && !context?.userAgent) return;
+  ): Promise<string[]> {
+    if (!context?.ipAddress && !context?.userAgent) return [];
 
     const knownKey = `login:known:${user.id}`;
     const known = await this.encryptedCache
@@ -675,6 +734,8 @@ export class AuthService {
         30 * 24 * 3600 * 1000,
       )
       .catch(() => null);
+
+    return anomalies;
   }
 
   /**
@@ -932,5 +993,44 @@ export class AuthService {
       .createHash('sha256')
       .update(value.trim().toLowerCase())
       .digest('hex');
+  }
+
+  /**
+   * Helper method to log login activities if the service is available
+   */
+  private async logLoginActivity(log: {
+    userId?: string;
+    email?: string | null;
+    loginMethod: LoginMethod;
+    status: LoginStatus;
+    context?: { ipAddress?: string; userAgent?: string };
+    failureReason?: string;
+    isSuspicious?: boolean;
+    anomalyFlags?: string[];
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    if (!this.loginActivityService) {
+      return;
+    }
+
+    try {
+      await this.loginActivityService.logActivity({
+        userId: log.userId,
+        email: log.email ?? undefined,
+        loginMethod: log.loginMethod,
+        status: log.status,
+        context: log.context,
+        failureReason: log.failureReason,
+        isSuspicious: log.isSuspicious,
+        anomalyFlags: log.anomalyFlags,
+        metadata: log.metadata,
+      });
+    } catch (error) {
+      // Never let logging failures break the authentication flow
+      this.logger.error(
+        'Failed to log login activity',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }

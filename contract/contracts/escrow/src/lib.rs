@@ -23,6 +23,7 @@ pub mod escrow_impl;
 pub mod events;
 pub mod rate_limit;
 pub mod storage;
+pub mod timelock;
 pub mod types;
 pub mod upgrade;
 
@@ -46,6 +47,12 @@ mod tests_dispute_resolution_integration;
 
 #[cfg(test)]
 mod tests_reentrancy;
+
+#[cfg(test)]
+mod tests_upgrade;
+
+#[cfg(test)]
+mod tests_timelock;
 
 // Re-export public APIs
 pub use access::AccessControl;

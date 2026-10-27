@@ -11,7 +11,9 @@ This folder contains reusable utility UI building blocks used across the fronten
 - `ToastProvider` + `notify`: shared toast configuration and helper methods.
 - `ConfirmDialog`: confirmation modal for destructive/important actions.
 - `Tooltip`: simple hover/focus tooltip helper.
-- `Pagination`: accessible page navigation with ellipsis handling.
+- `Pagination`: accessible page navigation with ellipsis handling, plus optional jump-to-page input (`showJumpToPage`) and items-per-page selector (`pageSize` + `onPageSizeChange`).
+- `Tabs`: accessible tab list (WAI-ARIA tabs pattern) with arrow-key, Home/End navigation, automatic or manual activation, and horizontal/vertical orientation.
+- `SearchableSelect`: searchable dropdown/combobox with keyboard navigation, virtualized option list for large datasets, and custom option/value rendering.
 - `CancelButton`: `Button` wrapper for cancelling in-flight requests.
 - `Uploader`: drag-and-drop / click-to-browse file picker with a selected-files list.
 - `VirtualList`: windowed renderer for long, single-column, fixed-row-height lists.

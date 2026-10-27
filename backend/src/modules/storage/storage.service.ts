@@ -5,6 +5,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { Retry } from '../../common/decorators/retry.decorator';
 import { PaginationUtils } from '../../common/utils';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -107,7 +108,11 @@ export class StorageService {
     contentType: string,
     ownerId: string,
     fileName: string,
-  ): Promise<{ url: string; variants?: Record<string, string> }> {
+  ): Promise<{
+    url: string;
+    variants?: Record<string, string>;
+    checksum: string;
+  }> {
     const allowedTypes = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOC_TYPES];
     if (!allowedTypes.includes(contentType)) {
       throw new BadRequestException('Invalid file type');
@@ -115,6 +120,10 @@ export class StorageService {
     if (buffer.length > MAX_SIZE) {
       throw new BadRequestException('File too large (max 50MB)');
     }
+
+    // Computed once, before any processing/variant generation, so it is a
+    // digest of exactly the bytes the client sent (#2091).
+    const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
 
     const scanResult = await this.malwareScan.scan(buffer, fileName);
     if (!scanResult.clean) {
@@ -124,6 +133,7 @@ export class StorageService {
         fileType: contentType,
         s3Key: key,
         ownerId,
+        checksum,
         scanStatus: ScanStatus.QUARANTINED,
       });
       this.logger.warn(
@@ -200,10 +210,11 @@ export class StorageService {
       fileType: contentType,
       s3Key: key,
       ownerId,
+      checksum,
       scanStatus: ScanStatus.CLEAN,
     });
 
-    return { url: this.getPublicUrl(key), variants };
+    return { url: this.getPublicUrl(key), variants, checksum };
   }
 
   async getDownloadUrl(
@@ -240,6 +251,48 @@ export class StorageService {
       ResponseContentDisposition: 'attachment',
     });
     return getSignedUrl(this.s3, command, { expiresIn });
+  }
+
+  /**
+   * Recomputes the SHA-256 of the object currently stored at `key` and
+   * compares it against the checksum recorded at upload time (#2091).
+   * Returns `verified: false` only when a checksum was actually recorded
+   * and does not match; a legacy file with no recorded checksum reports
+   * `verified: null` (nothing to compare against) rather than a false
+   * positive corruption signal.
+   */
+  async verifyIntegrity(
+    key: string,
+    ownerId: string,
+  ): Promise<{ verified: boolean | null; expectedChecksum: string | null }> {
+    const file = await this.fileMetadataRepo.findOne({
+      where: { s3Key: key, ownerId },
+    });
+    if (!file) {
+      throw new NotFoundException('File not found or access denied');
+    }
+
+    if (!file.checksum) {
+      return { verified: null, expectedChecksum: null };
+    }
+
+    const object = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    const bytes = await object.Body?.transformToByteArray();
+    if (!bytes) {
+      return { verified: false, expectedChecksum: file.checksum };
+    }
+
+    const actualChecksum = crypto
+      .createHash('sha256')
+      .update(Buffer.from(bytes))
+      .digest('hex');
+
+    return {
+      verified: actualChecksum === file.checksum,
+      expectedChecksum: file.checksum,
+    };
   }
 
   @Retry({

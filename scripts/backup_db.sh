@@ -4,8 +4,9 @@
 # Database Backup Script for Chioma (PostgreSQL)
 # ==============================================================================
 # This script creates a compressed backup of the chioma_db database running
-# inside the 'chioma_db' Docker container. It automatically manages retention
-# by deleting backups older than 7 days.
+# inside the 'chioma_db' Docker container. It automatically manages retention:
+# daily backups are kept for 30 days, and the backup taken on the 1st of each
+# month is copied to backups/monthly/ and kept for 1 year.
 #
 # CRON JOB SETUP:
 # To run this script automatically every day at 2:00 AM, add the following
@@ -20,12 +21,14 @@ set -e # Exit immediately if a command exits with a non-zero status
 CONTAINER_NAME="chioma_db"
 DB_USER="postgres_cax"
 DB_NAME="chioma_db"
-DAYS_TO_KEEP=7
+DAYS_TO_KEEP=30
+MONTHLY_DAYS_TO_KEEP=365
 
 # Paths
 # Resolve the directory where this script is located, then go up one level to the project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${PROJECT_ROOT}/backups"
+MONTHLY_DIR="${BACKUP_DIR}/monthly"
 
 # Timestamp for the backup file (YYYY-MM-DD_HHMMSS)
 TIMESTAMP=$(date +"%Y-%m-%d_%H%M%S")
@@ -40,6 +43,7 @@ if [ ! -d "$BACKUP_DIR" ]; then
     echo "Creating backup directory at $BACKUP_DIR"
     mkdir -p "$BACKUP_DIR"
 fi
+mkdir -p "$MONTHLY_DIR"
 
 # 2. Check if the Docker container is running
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -60,11 +64,19 @@ else
     exit 1
 fi
 
-# 4. Clean up old backups
+# 4. Keep the first backup of each month for the 1-year tier
+if [ "$(date +%d)" = "01" ]; then
+    cp "$BACKUP_FILE" "$MONTHLY_DIR/"
+    echo "Monthly backup stored in ${MONTHLY_DIR}"
+fi
+
+# 5. Clean up old backups
 echo "Cleaning up backups older than ${DAYS_TO_KEEP} days..."
 # Find files matching the backup pattern in the backup dir, older than X days, and delete them
 cleanup_count=$(find "$BACKUP_DIR" -maxdepth 1 -name "chioma_db_*.sql.gz" -type f -mtime +${DAYS_TO_KEEP} -delete -print | wc -l)
 echo "Deleted ${cleanup_count} old backup file(s)."
+monthly_cleanup_count=$(find "$MONTHLY_DIR" -maxdepth 1 -name "chioma_db_*.sql.gz" -type f -mtime +${MONTHLY_DAYS_TO_KEEP} -delete -print | wc -l)
+echo "Deleted ${monthly_cleanup_count} old monthly backup file(s)."
 
 echo "========================================"
 echo "Backup Process Completed Successfully."

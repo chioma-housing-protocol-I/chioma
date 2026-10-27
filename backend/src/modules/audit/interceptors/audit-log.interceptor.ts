@@ -123,8 +123,10 @@ export class AuditLogInterceptor implements NestInterceptor {
       request.params?.userId ||
       request.params?.entityId ||
       request.body?.id ||
+      result?.user?.id ||
       result?.id ||
       result?.paymentId ||
+      request.user?.id ||
       undefined
     );
   }

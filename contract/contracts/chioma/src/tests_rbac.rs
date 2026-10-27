@@ -382,5 +382,5 @@ fn test_pause_specific_auth_required() {
                 sub_invokes: &[],
             },
         }])
-        .pause(&reason);
+        .pause(&admin, &reason);
 }

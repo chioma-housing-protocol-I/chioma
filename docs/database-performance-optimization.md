@@ -79,6 +79,17 @@ CREATE INDEX "IDX_properties_search_vector"
 -- Strategy: prefer search_vector @@ plainto_tsquery over LIKE '%…%' so the
 -- planner can use the GIN index. Address ILIKE remains as a narrow fallback.
 
+-- Property search by location + price (issue #2023, target <100ms @ 10k rows)
+-- Proximity search emits a sargable lat/lng bounding box (GeoUtils.boundingBox)
+-- before the Haversine refinement, so this index serves the range seek.
+CREATE INDEX "IDX_properties_status_lat_lng_price"
+  ON properties (status, latitude, longitude, price)
+  WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND deleted_at IS NULL;
+-- Price-only browse / sortBy=price on published listings
+CREATE INDEX "IDX_properties_status_price"
+  ON properties (status, price)
+  WHERE deleted_at IS NULL;
+
 -- JSONB amenities filter
 CREATE INDEX idx_properties_amenities
   ON properties USING GIN (amenities);

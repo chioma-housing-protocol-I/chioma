@@ -13,6 +13,7 @@ import { ThemeSelector } from './ThemeSelector';
 import { MfaSetupPayload, ThemePreference, UserPreferences } from './types';
 import { fieldErrorId } from '@/lib/forms/a11y';
 import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
+import { useUIStore } from '@/store/ui-store';
 
 interface SettingsPageClientProps {
   embedded?: boolean;
@@ -78,6 +79,8 @@ const CURRENCY_OPTIONS = [
 
 function applyTheme(theme: ThemePreference) {
   if (typeof window === 'undefined') return;
+
+  useUIStore.getState().setTheme(theme);
 
   const resolvedTheme =
     theme === 'system'

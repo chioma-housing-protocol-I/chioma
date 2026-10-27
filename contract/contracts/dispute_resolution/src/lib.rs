@@ -164,6 +164,26 @@ impl DisputeResolutionContract {
         dispute::resolve_dispute(&env, agreement_id)
     }
 
+    /// Resolve a dispute once its voting timeout has passed.
+    ///
+    /// Anyone may call this after `dispute_timeout_days` have elapsed since the
+    /// dispute was raised. The outcome follows the current vote tally (ties favor
+    /// the tenant). Emits `DisputeTimeout` and `DisputeResolved` events.
+    ///
+    /// # Arguments
+    /// * `agreement_id` - The ID of the agreement in dispute
+    ///
+    /// # Returns
+    /// * `DisputeOutcome` - The outcome of the dispute
+    ///
+    /// # Errors
+    /// * `DisputeNotFound` - If the dispute doesn't exist
+    /// * `DisputeAlreadyResolved` - If the dispute has already been resolved
+    /// * `TimeoutNotReached` - If the timeout has not elapsed yet
+    ///
+    /// # Security
+    /// Permissionless by design so a dispute can never be left stuck; safety
+    /// comes from the on-chain timeout check.
     pub fn resolve_dispute_on_timeout(
         env: Env,
         agreement_id: String,
@@ -213,6 +233,21 @@ impl DisputeResolutionContract {
         dispute::get_vote(&env, agreement_id, arbiter)
     }
 
+    /// Set the escrow, dispute and payment timeout configuration.
+    ///
+    /// Emits a `TimeoutConfigUpdated` event.
+    ///
+    /// # Arguments
+    /// * `admin` - The admin address (must match the contract admin)
+    /// * `config` - New timeout values, in days (all must be non-zero)
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `Unauthorized` - If the caller is not the admin
+    /// * `InvalidTimeoutConfig` - If any timeout value is 0
+    ///
+    /// # Security
+    /// Admin only: requires `admin.require_auth()`.
     pub fn set_timeout_config(
         env: Env,
         admin: Address,
@@ -221,10 +256,41 @@ impl DisputeResolutionContract {
         dispute::set_timeout_config(&env, admin, config)
     }
 
+    /// Get the current timeout configuration.
+    ///
+    /// # Returns
+    /// * `TimeoutConfig` - The stored config, or defaults if none was set
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_timeout_config(env: Env) -> TimeoutConfig {
         dispute::get_timeout_config(&env)
     }
 
+    /// Appeal a resolved dispute.
+    ///
+    /// Must be filed within the appeal window after resolution, and only one appeal
+    /// is allowed per dispute. A panel of appeal arbiters is selected from the
+    /// registered arbiters. Emits an `AppealCreated` event.
+    ///
+    /// # Arguments
+    /// * `appellant` - The address filing the appeal
+    /// * `dispute_id` - The agreement ID of the resolved dispute
+    /// * `reason` - Reason for the appeal (must not be empty)
+    ///
+    /// # Returns
+    /// * `String` - The ID of the new appeal
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `InvalidDetailsHash` - If `reason` is empty
+    /// * `DisputeNotFound` - If the dispute doesn't exist
+    /// * `InvalidAgreementState` - If the dispute is not resolved yet
+    /// * `AppealWindowExpired` - If the appeal window has closed
+    /// * `AppealAlreadyExists` - If the dispute already has an appeal
+    ///
+    /// # Security
+    /// Requires `appellant.require_auth()`.
     pub fn create_appeal(
         env: Env,
         appellant: Address,
@@ -234,6 +300,24 @@ impl DisputeResolutionContract {
         dispute::create_appeal(&env, appellant, dispute_id, reason)
     }
 
+    /// Cast a vote on an appeal.
+    ///
+    /// Emits an `AppealVoted` event.
+    ///
+    /// # Arguments
+    /// * `arbiter` - The address of an arbiter on the appeal panel
+    /// * `appeal_id` - The ID of the appeal
+    /// * `vote` - The arbiter's decision
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `AppealNotFound` - If the appeal doesn't exist
+    /// * `AppealAlreadyResolved` - If the appeal is already closed
+    /// * `ArbiterNotEligibleForAppeal` - If the arbiter is not on the appeal panel
+    /// * `AppealAlreadyVoted` - If the arbiter has already voted
+    ///
+    /// # Security
+    /// Requires `arbiter.require_auth()`; only panel arbiters may vote, once each.
     pub fn vote_on_appeal(
         env: Env,
         arbiter: Address,
@@ -243,10 +327,41 @@ impl DisputeResolutionContract {
         dispute::vote_on_appeal(&env, arbiter, appeal_id, vote)
     }
 
+    /// Resolve an appeal once enough panel votes have been cast.
+    ///
+    /// The majority vote decides the outcome. Emits an `AppealResolved` event.
+    ///
+    /// # Arguments
+    /// * `appeal_id` - The ID of the appeal
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `AppealNotFound` - If the appeal doesn't exist
+    /// * `AppealAlreadyResolved` - If the appeal is already closed
+    /// * `InsufficientAppealVotes` - If the minimum number of votes hasn't been reached
+    ///
+    /// # Security
+    /// Permissionless; the outcome is fully determined by recorded votes.
     pub fn resolve_appeal(env: Env, appeal_id: String) -> Result<(), DisputeError> {
         dispute::resolve_appeal(&env, appeal_id)
     }
 
+    /// Cancel a pending or in-progress appeal.
+    ///
+    /// Emits an `AppealCancelled` event.
+    ///
+    /// # Arguments
+    /// * `appellant` - The address that filed the appeal
+    /// * `appeal_id` - The ID of the appeal
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If the contract hasn't been initialized
+    /// * `AppealNotFound` - If the appeal doesn't exist
+    /// * `Unauthorized` - If the caller is not the original appellant
+    /// * `AppealNotCancelable` - If the appeal is already closed
+    ///
+    /// # Security
+    /// Requires `appellant.require_auth()`; only the original appellant may cancel.
     pub fn cancel_appeal(
         env: Env,
         appellant: Address,
@@ -255,6 +370,16 @@ impl DisputeResolutionContract {
         dispute::cancel_appeal(&env, appellant, appeal_id)
     }
 
+    /// Get information about a specific appeal.
+    ///
+    /// # Arguments
+    /// * `appeal_id` - The ID of the appeal
+    ///
+    /// # Returns
+    /// * `Option<DisputeAppeal>` - The appeal if it exists
+    ///
+    /// # Security
+    /// Read-only; no authorization required.
     pub fn get_appeal(env: Env, appeal_id: String) -> Option<DisputeAppeal> {
         dispute::get_appeal(&env, appeal_id)
     }

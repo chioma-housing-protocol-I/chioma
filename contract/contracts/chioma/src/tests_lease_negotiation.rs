@@ -459,7 +459,7 @@ fn get_extension_history_not_found_before_any_proposal() {
 #[test]
 fn propose_extension_while_paused_returns_contract_paused() {
     let env = Env::default();
-    let (client, _) = setup_initialized_client(&env);
+    let (client, admin) = setup_initialized_client(&env);
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
     let agreement_id_str = "LEASE_EXT_PAUSED";
@@ -473,7 +473,7 @@ fn propose_extension_while_paused_returns_contract_paused() {
         &landlord,
     );
 
-    client.pause(&String::from_str(&env, "maintenance"));
+    client.pause(&admin, &String::from_str(&env, "maintenance"));
 
     let res = client.try_propose_extension(&landlord, &agreement_id, &1u32, &None, &None);
     assert_eq!(res, Err(Ok(RentalError::ContractPaused)));

@@ -1045,7 +1045,7 @@ fn test_rate_limit_across_blocks() {
 
 #[test]
 fn test_rate_limit_with_pause_state() {
-    let (env, client, _admin, _) = create_contract();
+    let (env, client, admin, _) = create_contract();
 
     let config = RateLimitConfig {
         max_calls_per_block: 100,
@@ -1062,7 +1062,7 @@ fn test_rate_limit_with_pause_state() {
 
     client.create_agreement(&make_input(&env, "ag1", &landlord, &tenant, &payment_token));
 
-    client.pause(&String::from_str(&env, "maintenance"));
+    client.pause(&admin, &String::from_str(&env, "maintenance"));
 
     let paused_result =
         client.try_create_agreement(&make_input(&env, "ag2", &landlord, &tenant, &payment_token));

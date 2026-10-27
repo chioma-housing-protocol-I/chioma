@@ -12,12 +12,15 @@ import {
   HttpStatus,
   UseInterceptors,
   ClassSerializerInterceptor,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
@@ -27,6 +30,7 @@ import {
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { UpdateConsentDto } from './dto/update-consent.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -175,14 +179,19 @@ export class UsersController {
 
   @Post('me/consent')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: UpdateConsentDto })
   @ApiOperation({ summary: 'Update user consent preferences (GDPR)' })
   @ApiResponse({ status: 200, description: 'Consent updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateConsent(
     @CurrentUser() user: User,
-    @Body() consent: Record<string, unknown>,
+    @Body() consent: UpdateConsentDto,
+    @Req() request: Request,
   ) {
-    return this.usersService.updateConsent(user.id, consent);
+    return this.usersService.updateConsent(user.id, consent, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent') ?? undefined,
+    });
   }
 
   @Get('me/privacy-settings')

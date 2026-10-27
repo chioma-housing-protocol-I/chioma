@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
+import { useUIStore } from '@/store/ui-store';
 
 const pushMock = vi.fn();
 const usePathnameMock = vi.fn(() => '/');
@@ -100,6 +101,8 @@ describe('Navbar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     usePathnameMock.mockReturnValue('/');
+    useUIStore.getState().setTheme('system');
+    document.documentElement.classList.remove('dark');
   });
 
   it('renders the logo and nav links', () => {
@@ -142,6 +145,19 @@ describe('Navbar', () => {
     expect(screen.getByText('jane@example.com')).toBeInTheDocument();
     const dashboardLinks = screen.getAllByText('Dashboard');
     expect(dashboardLinks.length).toBeGreaterThan(0);
+  });
+
+  it('persists the dark mode selection from the mobile menu', () => {
+    setSignedOut();
+    render(<Navbar />);
+
+    fireEvent.click(screen.getByLabelText('Toggle menu'));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+
+    expect(useUIStore.getState().theme).toBe('dark');
+    expect(
+      JSON.parse(localStorage.getItem('chioma-ui') ?? '{}').state.theme,
+    ).toBe('dark');
   });
 
   it('links to /admin for admin users and /user for regular users', () => {

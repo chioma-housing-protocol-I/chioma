@@ -1,5 +1,5 @@
 use crate::Config;
-use soroban_sdk::{contractevent, Address, Env, String};
+use soroban_sdk::{contractevent, Address, BytesN, Env, String, Symbol};
 
 /// Event emitted when the contract is initialized
 /// Topics: ["initialized", admin: Address]
@@ -26,6 +26,19 @@ pub struct AgreementCreated {
     pub start_date: u64,
     pub end_date: u64,
     pub agent: Option<Address>,
+}
+
+/// Event emitted when a booking (a new rental agreement) is created
+/// Topics: ["booking_created", tenant: Address, landlord: Address]
+#[contractevent(topics = ["v1", "booking_created"])]
+pub struct BookingCreated {
+    #[topic]
+    pub tenant: Address,
+    #[topic]
+    pub landlord: Address,
+    pub booking_id: String,
+    pub start_date: u64,
+    pub end_date: u64,
 }
 
 /// Event emitted when an agreement is signed
@@ -99,6 +112,25 @@ pub struct Paused {
 #[contractevent(topics = ["v1", "unpaused"])]
 pub struct Unpaused {
     #[topic]
+    pub unpaused_by: Address,
+}
+
+/// Event emitted when a single contract function is paused
+/// Topics: ["function_paused", function: Symbol]
+#[contractevent(topics = ["v1", "function_paused"])]
+pub struct FunctionPaused {
+    #[topic]
+    pub function: Symbol,
+    pub paused_by: Address,
+    pub reason: String,
+}
+
+/// Event emitted when a single contract function is unpaused
+/// Topics: ["function_unpaused", function: Symbol]
+#[contractevent(topics = ["v1", "function_unpaused"])]
+pub struct FunctionUnpaused {
+    #[topic]
+    pub function: Symbol,
     pub unpaused_by: Address,
 }
 
@@ -281,6 +313,17 @@ pub struct ActionExecuted {
     pub action_type: crate::types::ActionType,
 }
 
+/// Event emitted when an emergency withdrawal is executed (#2087)
+/// Topics: ["emergency_withdrawal_executed", proposal_id: String]
+#[contractevent(topics = ["v1", "emergency_withdrawal_executed"])]
+pub struct EmergencyWithdrawalExecuted {
+    #[topic]
+    pub proposal_id: String,
+    pub token: Address,
+    pub amount: i128,
+    pub recipient: Address,
+}
+
 /// Event emitted when a multi-sig action is rejected
 /// Topics: ["action_rejected", proposal_id: String]
 #[contractevent(topics = ["v1", "action_rejected"])]
@@ -437,6 +480,23 @@ pub struct UpgradeExecuted {
     pub proposal_id: String,
 }
 
+/// Event emitted when the contract WASM is replaced in place
+/// Topics: ["contract_upgraded", proposal_id: String]
+#[contractevent(topics = ["v1", "contract_upgraded"])]
+pub struct ContractUpgraded {
+    #[topic]
+    pub proposal_id: String,
+    pub new_wasm_hash: BytesN<32>,
+}
+
+/// Event emitted when storage is migrated to a new layout after an upgrade
+/// Topics: ["storage_migrated"]
+#[contractevent(topics = ["v1", "storage_migrated"])]
+pub struct StorageMigrated {
+    pub from_version: u32,
+    pub to_version: u32,
+}
+
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 /// Helper function to emit contract initialized event
@@ -472,6 +532,25 @@ pub(crate) fn agreement_created(
         start_date,
         end_date,
         agent,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit booking created event
+pub(crate) fn booking_created(
+    env: &Env,
+    booking_id: String,
+    tenant: Address,
+    landlord: Address,
+    start_date: u64,
+    end_date: u64,
+) {
+    BookingCreated {
+        tenant,
+        landlord,
+        booking_id,
+        start_date,
+        end_date,
     }
     .publish(env);
 }
@@ -544,6 +623,25 @@ pub(crate) fn paused(env: &Env, reason: String, paused_by: Address) {
 /// Helper function to emit contract unpaused event
 pub(crate) fn unpaused(env: &Env, unpaused_by: Address) {
     Unpaused { unpaused_by }.publish(env);
+}
+
+/// Helper function to emit function paused event
+pub(crate) fn function_paused(env: &Env, function: Symbol, paused_by: Address, reason: String) {
+    FunctionPaused {
+        function,
+        paused_by,
+        reason,
+    }
+    .publish(env);
+}
+
+/// Helper function to emit function unpaused event
+pub(crate) fn function_unpaused(env: &Env, function: Symbol, unpaused_by: Address) {
+    FunctionUnpaused {
+        function,
+        unpaused_by,
+    }
+    .publish(env);
 }
 
 pub(crate) fn token_added(env: &Env, token: Address, symbol: String) {
@@ -730,6 +828,22 @@ pub(crate) fn action_rejected(env: &Env, proposal_id: String) {
     ActionRejected { proposal_id }.publish(env);
 }
 
+pub(crate) fn emergency_withdrawal_executed(
+    env: &Env,
+    proposal_id: String,
+    token: Address,
+    amount: i128,
+    recipient: Address,
+) {
+    EmergencyWithdrawalExecuted {
+        proposal_id,
+        token,
+        amount,
+        recipient,
+    }
+    .publish(env);
+}
+
 pub(crate) fn admin_added(env: &Env, admin: Address, total_admins: u32) {
     AdminAdded {
         admin,
@@ -841,4 +955,20 @@ pub(crate) fn upgrade_approved(env: &Env, proposal_id: String, approvals: u32) {
 
 pub(crate) fn upgrade_executed(env: &Env, proposal_id: String) {
     UpgradeExecuted { proposal_id }.publish(env);
+}
+
+pub(crate) fn contract_upgraded(env: &Env, proposal_id: String, new_wasm_hash: BytesN<32>) {
+    ContractUpgraded {
+        proposal_id,
+        new_wasm_hash,
+    }
+    .publish(env);
+}
+
+pub(crate) fn storage_migrated(env: &Env, from_version: u32, to_version: u32) {
+    StorageMigrated {
+        from_version,
+        to_version,
+    }
+    .publish(env);
 }

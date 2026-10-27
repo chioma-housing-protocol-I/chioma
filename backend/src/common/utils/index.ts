@@ -8,3 +8,4 @@ export * from './file/file.utils';
 export * from './notification/notification.utils';
 export * from './format/format.utils';
 export * from './batch/batch.utils';
+export * from './geo/geo.utils';
