@@ -10,9 +10,17 @@
    ──────────────────────────────────────────────────────────────────────────── */
 
 :root {
+  --background: #f8f6f0;
+  --foreground: #1c1f27;
+}
+
+.dark {
   --background: #0d0e12;
   --foreground: #f7f4ec;
+  color-scheme: dark;
 }
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   /* Background & Foreground */

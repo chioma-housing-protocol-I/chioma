@@ -12,6 +12,39 @@ import { API_SCOPES_KEY } from '../decorators/api-scopes.decorator';
 
 export const API_KEY_HEADER = 'x-api-key';
 
+/**
+ * Extracts an API key from either the dedicated `x-api-key` header or
+ * `Authorization: Bearer <key>` (#2056). Supporting both lets a
+ * server-to-server client use whichever convention its HTTP client
+ * library makes easiest, without requiring it to know this API's
+ * specific header name.
+ *
+ * Safe to combine with JWT Bearer auth on a shared route: a JWT is
+ * three dot-separated base64url segments, never DeveloperService's own
+ * `chioma_sk_...`-prefixed format, so `validateKey` already rejects a
+ * JWT passed in this way (see its `rawKey.startsWith(PREFIX)` check) —
+ * this guard doesn't need its own extra check to avoid misreading one
+ * credential type as the other.
+ */
+function extractApiKey(request: {
+  headers: Record<string, string | string[] | undefined>;
+}): string | undefined {
+  const headerKey = request.headers[API_KEY_HEADER];
+  if (typeof headerKey === 'string' && headerKey.trim()) {
+    return headerKey.trim();
+  }
+
+  const authHeader = request.headers['authorization'];
+  if (typeof authHeader === 'string') {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+}
+
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(
@@ -27,11 +60,10 @@ export class ApiKeyGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest();
-    const apiKey =
-      request.headers[API_KEY_HEADER] ?? request.headers['x-api-key'];
-    if (!apiKey || typeof apiKey !== 'string') return false;
+    const apiKey = extractApiKey(request);
+    if (!apiKey) return false;
 
-    const key = await this.developerService.validateKey(apiKey.trim());
+    const key = await this.developerService.validateKey(apiKey);
     if (!key) {
       throw new UnauthorizedException({
         message: 'Invalid, expired, or revoked API key',

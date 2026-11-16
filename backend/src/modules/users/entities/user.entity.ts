@@ -197,6 +197,52 @@ export class User {
   @Column({ name: 'marketing_opt_in', type: 'boolean', default: false })
   marketingOptIn: boolean;
 
+  @Column({ name: 'cookie_consent', type: 'boolean', default: false })
+  cookieConsent?: boolean;
+
+  @Column({
+    name: 'cookie_consent_updated_at',
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
+  cookieConsentUpdatedAt?: Date | null;
+
+  @Column({
+    name: 'marketing_opt_in_updated_at',
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
+  marketingOptInUpdatedAt?: Date | null;
+
+  @Column({
+    name: 'data_processing_agreement_accepted',
+    type: 'boolean',
+    default: false,
+  })
+  dataProcessingAgreementAccepted?: boolean;
+
+  @Column({
+    name: 'data_processing_agreement_version',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  dataProcessingAgreementVersion?: string | null;
+
+  @Column({
+    name: 'data_processing_agreement_accepted_at',
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
+  dataProcessingAgreementAcceptedAt?: Date | null;
+
+  @Column({
+    name: 'data_processing_agreement_updated_at',
+    type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
+  dataProcessingAgreementUpdatedAt?: Date | null;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 

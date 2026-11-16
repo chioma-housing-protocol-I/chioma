@@ -1,0 +1,53 @@
+# Gitleaks configuration (issue #1455)
+# Used by .github/workflows/secrets-scan.yml (full git history) and the
+# husky pre-commit hook (staged changes). See docs/secrets-scanning.md.
+
+title = "chioma gitleaks config"
+
+[extend]
+# Start from the upstream ruleset (AWS, GitHub, Stripe, JWTs, private keys, ...)
+useDefault = true
+
+# ─── Project-specific rules ────────────────────────────────────────────────
+
+[[rules]]
+id = "stellar-secret-seed"
+description = "Stellar account secret seed (StrKey, starts with S)"
+# StrKey secret seeds are 56 base32 chars beginning with 'S'.
+regex = '''\b(S[A-Z2-7]{55})\b'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["s"]
+
+[[rules]]
+id = "paystack-secret-key"
+description = "Paystack secret key"
+regex = '''\b(sk_(?:live|test)_[a-zA-Z0-9]{40})\b'''
+secretGroup = 1
+keywords = ["sk_live_", "sk_test_"]
+
+[[rules]]
+id = "flutterwave-secret-key"
+description = "Flutterwave secret key"
+regex = '''\b(FLWSECK(?:_TEST)?-[a-zA-Z0-9]{32}-X)\b'''
+secretGroup = 1
+keywords = ["flwseck"]
+
+# ─── Allowlist ─────────────────────────────────────────────────────────────
+# Keep this narrow. Never allowlist a real env file to silence a finding:
+# rotate the credential and remove it instead.
+
+[allowlist]
+description = "Templates, lockfiles and generated artefacts"
+paths = [
+  '''(^|/)\.env(\.[a-z]+)?\.example$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)Cargo\.lock$''',
+  '''(^|/)test_snapshots/''',
+  '''(^|/)openapi\.json$''',
+]
+regexes = [
+  # Unexpanded placeholders such as ${JWT_SECRET} in deploy env templates
+  '''^\$\{[A-Z0-9_]+\}$''',
+]

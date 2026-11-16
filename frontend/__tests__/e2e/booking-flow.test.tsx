@@ -4,7 +4,7 @@
  * confirmation routing to the user's trips/stays list.
  * Issue: #1250
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
@@ -95,6 +95,28 @@ const LATER_DATE = '2027-03-05';
 
 describe('[E2E] Booking flow – Step 1: Date/guest selection', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.useRealTimers());
+
+  it("uses the user's local calendar date for the check-in minimum, not the UTC date (#2039)", () => {
+    // 8pm Pacific on April 1st is already April 2nd in UTC. A user-west-of-UTC
+    // evening booking is exactly the scenario that silently rolled the
+    // earliest selectable check-in date forward by a day before this fix.
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2027-04-02T03:00:00Z'));
+
+    try {
+      const { container } = render(
+        React.createElement(BookingStep1, { onNext: vi.fn() }),
+      );
+      const [checkIn] = container.querySelectorAll('input[type="date"]');
+
+      expect(checkIn.getAttribute('min')).toBe('2027-04-01');
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
 
   it('renders check-in and check-out date inputs', () => {
     const { container } = render(

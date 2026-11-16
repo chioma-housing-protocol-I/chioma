@@ -1,35 +1,3 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import { Job, Queue } from 'bull';
-import { DeadLetterQueueService } from '../services/dead-letter-queue.service';
-
-/** Routes jobs that exhausted their retries into the DLQ store. */
-@Injectable()
-export class DeadLetterQueueListener implements OnModuleInit {
-  constructor(
-    private readonly dlq: DeadLetterQueueService,
-    @InjectQueue('email') private emailQueue: Queue,
-    @InjectQueue('documents') private documentsQueue: Queue,
-    @InjectQueue('blockchain') private blockchainQueue: Queue,
-    @InjectQueue('data-sync') private dataSyncQueue: Queue,
-  ) {}
-
-  onModuleInit(): void {
-    for (const queue of [
-      this.emailQueue,
-      this.documentsQueue,
-      this.blockchainQueue,
-      this.dataSyncQueue,
-    ]) {
-      this.dlq.registerQueue(queue);
-      queue.on('failed', (job: Job, err: Error) => {
-        const maxAttempts = job.opts?.attempts ?? 1;
-        if (job.attemptsMade >= maxAttempts) {
-          void this.dlq.archiveJob(job, err);
-        }
-      });
-      queue.on('completed', (job: Job) => void this.dlq.markResolved(job));
-    }
 import { Injectable, Logger } from '@nestjs/common';
 import { OnQueueFailed, Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
@@ -54,6 +22,11 @@ export class DeadLetterQueueProcessor {
   }
 }
 
+/**
+ * Watches every worker queue's `failed` event and routes a job into the
+ * dead-letter queue once it has exhausted its retry budget (#2092). A job
+ * that still has attempts remaining is left alone to retry normally.
+ */
 @Injectable()
 export class DeadLetterQueueListener {
   private readonly logger = new Logger(DeadLetterQueueListener.name);

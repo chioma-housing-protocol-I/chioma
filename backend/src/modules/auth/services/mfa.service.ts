@@ -227,9 +227,12 @@ export class MfaService {
       },
     });
 
-    for (const device of devices) {
+    // Single batched save instead of one query per device (#2078).
+    devices.forEach((device) => {
       device.status = MfaDeviceStatus.DISABLED;
-      await this.mfaDeviceRepository.save(device);
+    });
+    if (devices.length > 0) {
+      await this.mfaDeviceRepository.save(devices);
     }
 
     this.logger.log(`MFA disabled for user: ${userId}`);

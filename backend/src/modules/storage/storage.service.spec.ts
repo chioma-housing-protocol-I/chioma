@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import * as crypto from 'crypto';
 
 import { StorageService } from './storage.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -200,6 +201,122 @@ describe('StorageService', () => {
     expect(sendSpy).toHaveBeenCalledTimes(1);
     expect(result.url).toContain('https://');
     expect(result.variants).toEqual({});
+  });
+
+  it('should compute and persist a SHA-256 checksum of the uploaded buffer (#2091)', async () => {
+    const buffer = Buffer.from('test content');
+    const expectedChecksum = crypto
+      .createHash('sha256')
+      .update(buffer)
+      .digest('hex');
+
+    const result = await service.uploadBuffer(
+      buffer,
+      'docs/owner/file.pdf',
+      'application/pdf',
+      'owner',
+      'file.pdf',
+    );
+
+    expect(result.checksum).toBe(expectedChecksum);
+    expect(repo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: expectedChecksum }),
+    );
+  });
+
+  it('should record a checksum on a quarantined upload too', async () => {
+    malwareScan.scan.mockResolvedValueOnce({
+      clean: false,
+      reason: 'eicar_test_signature',
+    });
+    repo.save.mockResolvedValueOnce({ id: 'file-1' });
+    const buffer = Buffer.from('malicious content');
+    const expectedChecksum = crypto
+      .createHash('sha256')
+      .update(buffer)
+      .digest('hex');
+
+    await expect(
+      service.uploadBuffer(
+        buffer,
+        'docs/owner/bad.pdf',
+        'application/pdf',
+        'owner',
+        'bad.pdf',
+      ),
+    ).rejects.toThrow();
+
+    expect(repo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: expectedChecksum }),
+    );
+  });
+
+  describe('verifyIntegrity', () => {
+    it('reports verified: true when the stored object hashes to the recorded checksum', async () => {
+      const buffer = Buffer.from('unchanged bytes');
+      const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
+      repo.findOne.mockResolvedValue({
+        s3Key: 'docs/owner/file.pdf',
+        ownerId: 'owner',
+        checksum,
+      });
+      (jest.spyOn(service['s3'], 'send') as jest.Mock).mockResolvedValue({
+        Body: { transformToByteArray: async () => buffer },
+      });
+
+      const result = await service.verifyIntegrity(
+        'docs/owner/file.pdf',
+        'owner',
+      );
+
+      expect(result).toEqual({ verified: true, expectedChecksum: checksum });
+    });
+
+    it('reports verified: false when the stored object has drifted from the recorded checksum', async () => {
+      repo.findOne.mockResolvedValue({
+        s3Key: 'docs/owner/file.pdf',
+        ownerId: 'owner',
+        checksum: 'a'.repeat(64),
+      });
+      (jest.spyOn(service['s3'], 'send') as jest.Mock).mockResolvedValue({
+        Body: {
+          transformToByteArray: async () => Buffer.from('corrupted bytes'),
+        },
+      });
+
+      const result = await service.verifyIntegrity(
+        'docs/owner/file.pdf',
+        'owner',
+      );
+
+      expect(result.verified).toBe(false);
+      expect(result.expectedChecksum).toBe('a'.repeat(64));
+    });
+
+    it('reports verified: null for a legacy file with no recorded checksum', async () => {
+      repo.findOne.mockResolvedValue({
+        s3Key: 'docs/owner/file.pdf',
+        ownerId: 'owner',
+        checksum: null,
+      });
+      const sendSpy = jest.spyOn(service['s3'], 'send');
+
+      const result = await service.verifyIntegrity(
+        'docs/owner/file.pdf',
+        'owner',
+      );
+
+      expect(result).toEqual({ verified: null, expectedChecksum: null });
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('throws when the file is not owned by the requesting user', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.verifyIntegrity('docs/owner/file.pdf', 'someone-else'),
+      ).rejects.toThrow('File not found or access denied');
+    });
   });
 
   it('should return CDN download URL when CDN is configured', async () => {

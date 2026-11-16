@@ -448,9 +448,15 @@ enforcement, either:
 - Amend the peripheral `upgrade.rs` to read `required_signatures` from a
   stored config (follow the `chioma` pattern).
 
-### 6.6 Actual WASM update not called
+### 6.6 Actual WASM update not called (peripheral contracts)
 
-The current `execute_upgrade` implementations record state but do not call
+`chioma`'s `execute_contract_upgrade` now performs the bytecode swap itself
+via `update_current_contract_wasm` and emits `contract_upgraded`; follow it
+with `migrate` if the release bumps `STORAGE_VERSION` (see
+[CHIOMA.md](../contracts/CHIOMA.md#upgrading-without-losing-state)). No
+separate `stellar contract upgrade` step is needed for `chioma`.
+
+The peripheral `execute_upgrade` implementations still record state but do not call
 `env.deployer().update_current_contract_wasm(wasm_hash)`. This means the
 proposal workflow is correctly gated but the actual bytecode swap is a
 **separate** step that must be done via `stellar contract upgrade`:

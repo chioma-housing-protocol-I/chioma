@@ -15,13 +15,16 @@ import { AuthMetricsService } from './services/auth-metrics.service';
 import { AuthMetricsController } from './controllers/auth-metrics.controller';
 import { StellarAuthService } from './services/stellar-auth.service';
 import { StellarAuthController } from './controllers/stellar-auth.controller';
+import { LoginActivityController } from './controllers/login-activity.controller';
 import { User } from '../users/entities/user.entity';
 import { AuthMetric } from './entities/auth-metric.entity';
 import { MfaDevice } from './entities/mfa-device.entity';
+import { LoginActivity } from './entities/login-activity.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { MfaService } from './services/mfa.service';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { LoginActivityService } from './services/login-activity.service';
 import { SessionCleanupService } from './cron/session-cleanup.service';
 import { OAuth2Service } from './oauth/oauth2.service';
 import { OAuth2ClientService } from './oauth/oauth2-client.service';
@@ -31,7 +34,14 @@ import { OAuthState } from './oauth/entities/oauth-state.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, AuthMetric, MfaDevice, OAuthAccount, OAuthState]),
+    TypeOrmModule.forFeature([
+      User,
+      AuthMetric,
+      MfaDevice,
+      LoginActivity,
+      OAuthAccount,
+      OAuthState,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -61,6 +71,7 @@ import { OAuthState } from './oauth/entities/oauth-state.entity';
     AuthController,
     StellarAuthController,
     AuthMetricsController,
+    LoginActivityController,
     OAuth2Controller,
   ],
   providers: [
@@ -71,6 +82,7 @@ import { OAuthState } from './oauth/entities/oauth-state.entity';
     OAuth2ClientService,
     MfaService,
     PasswordPolicyService,
+    LoginActivityService,
     JwtStrategy,
     RefreshTokenStrategy,
     SessionCleanupService,
@@ -81,6 +93,7 @@ import { OAuthState } from './oauth/entities/oauth-state.entity';
     OAuth2Service,
     MfaService,
     PasswordPolicyService,
+    LoginActivityService,
     JwtModule,
     PassportModule,
   ],

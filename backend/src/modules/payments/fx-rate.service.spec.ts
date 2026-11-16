@@ -8,12 +8,14 @@ import {
 import axios from 'axios';
 import { FxRateService } from './fx-rate.service';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
+import { CacheService } from '../../common/cache/cache.service';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('FxRateService', () => {
   let service: FxRateService;
+  let cacheService: Pick<CacheService, 'get' | 'set'>;
 
   const mockSupportedCurrencyRepo = {
     findOne: jest.fn(),
@@ -25,6 +27,17 @@ describe('FxRateService', () => {
       code,
       isActive: true,
     }) as SupportedCurrency;
+
+  /** Minimal in-memory stand-in so caching behavior is actually exercised across calls within a test, not just asserted via mock call counts. */
+  const buildFakeCacheService = (): Pick<CacheService, 'get' | 'set'> => {
+    const store = new Map<string, unknown>();
+    return {
+      get: jest.fn(async (key: string) => store.get(key) ?? null) as never,
+      set: jest.fn(async (key: string, value: unknown) => {
+        store.set(key, value);
+      }) as never,
+    };
+  };
 
   const buildModule = async (
     configOverrides: Record<string, string> = {},
@@ -39,6 +52,8 @@ describe('FxRateService', () => {
       }),
     };
 
+    cacheService = buildFakeCacheService();
+
     return Test.createTestingModule({
       providers: [
         FxRateService,
@@ -47,6 +62,7 @@ describe('FxRateService', () => {
           useValue: mockSupportedCurrencyRepo,
         },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
   };
@@ -191,6 +207,56 @@ describe('FxRateService', () => {
       await expect(service.getRate('NGN', 'USDC')).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+
+    it('caches a successful lookup so a second call for the same pair does not hit the provider again (#2093)', async () => {
+      mockedAxios.get.mockResolvedValueOnce({ data: { rate: 0.00025 } });
+
+      const first = await service.getRate('NGN', 'USDC');
+      const second = await service.getRate('NGN', 'USDC');
+
+      expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+      expect(second.rate).toBe(first.rate);
+      expect(second.source).toBe('external');
+    });
+
+    it('caches each currency pair independently', async () => {
+      mockedAxios.get
+        .mockResolvedValueOnce({ data: { rate: 0.00025 } })
+        .mockResolvedValueOnce({ data: { rate: 0.00031 } });
+
+      const ngnToUsdc = await service.getRate('NGN', 'USDC');
+      const ngnToXlm = await service.getRate('NGN', 'XLM');
+      await service.getRate('NGN', 'USDC');
+      await service.getRate('NGN', 'XLM');
+
+      expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+      expect(ngnToUsdc.rate).toBe(0.00025);
+      expect(ngnToXlm.rate).toBe(0.00031);
+    });
+
+    it('does not cache a failed lookup, so the next call retries the provider', async () => {
+      mockedAxios.get
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+        .mockResolvedValueOnce({ data: { rate: 0.00025 } });
+
+      await expect(service.getRate('NGN', 'USDC')).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      const result = await service.getRate('NGN', 'USDC');
+
+      expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+      expect(result.rate).toBe(0.00025);
+    });
+
+    it('preserves the original resolution timestamp on a cache hit rather than reporting the cache-hit time', async () => {
+      mockedAxios.get.mockResolvedValueOnce({ data: { rate: 0.00025 } });
+
+      const first = await service.getRate('NGN', 'USDC');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const second = await service.getRate('NGN', 'USDC');
+
+      expect(second.resolvedAt.getTime()).toBe(first.resolvedAt.getTime());
     });
   });
 });

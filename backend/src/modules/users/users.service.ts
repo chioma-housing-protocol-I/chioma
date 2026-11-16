@@ -16,6 +16,7 @@ import {
   ChangePasswordDto,
 } from './dto/update-user.dto';
 import { UserRestoreDto } from './dto/user-restore.dto';
+import { UpdateConsentDto } from './dto/update-consent.dto';
 import {
   AdminUserQueryDto,
   AdminUserSortField,
@@ -361,9 +362,41 @@ export class UsersService {
 
   async updateConsent(
     userId: string,
-    consent: Record<string, unknown>,
+    consent: UpdateConsentDto,
+    context?: { ipAddress?: string; userAgent?: string },
   ): Promise<{ message: string }> {
     const user = await this.findById(userId);
+    if (
+      consent.dataProcessingAgreementAccepted === true &&
+      !consent.dataProcessingAgreementVersion?.trim()
+    ) {
+      throw new BadRequestException(
+        'A data processing agreement version is required for acceptance',
+      );
+    }
+
+    const oldValues = {
+      cookieConsent: user.cookieConsent ?? false,
+      cookieConsentUpdatedAt: user.cookieConsentUpdatedAt ?? null,
+      emailNotifications: user.emailNotifications,
+      smsNotifications: user.smsNotifications,
+      marketingOptIn: user.marketingOptIn,
+      marketingOptInUpdatedAt: user.marketingOptInUpdatedAt ?? null,
+      dataProcessingAgreementAccepted:
+        user.dataProcessingAgreementAccepted ?? false,
+      dataProcessingAgreementVersion:
+        user.dataProcessingAgreementVersion ?? null,
+      dataProcessingAgreementAcceptedAt:
+        user.dataProcessingAgreementAcceptedAt ?? null,
+      dataProcessingAgreementUpdatedAt:
+        user.dataProcessingAgreementUpdatedAt ?? null,
+    };
+    const recordedAt = new Date();
+
+    if (typeof consent.cookieConsent === 'boolean') {
+      user.cookieConsent = consent.cookieConsent;
+      user.cookieConsentUpdatedAt = recordedAt;
+    }
     if (typeof consent.emailNotifications === 'boolean') {
       user.emailNotifications = consent.emailNotifications;
     }
@@ -372,32 +405,90 @@ export class UsersService {
     }
     if (typeof consent.marketingOptIn === 'boolean') {
       user.marketingOptIn = consent.marketingOptIn;
+      user.marketingOptInUpdatedAt = recordedAt;
+    }
+    if (typeof consent.dataProcessingAgreementAccepted === 'boolean') {
+      const accepted = consent.dataProcessingAgreementAccepted;
+      const agreementVersion = consent.dataProcessingAgreementVersion?.trim();
+      if (accepted) {
+        user.dataProcessingAgreementAccepted = true;
+        user.dataProcessingAgreementVersion = agreementVersion;
+        if (
+          !oldValues.dataProcessingAgreementAccepted ||
+          oldValues.dataProcessingAgreementVersion !== agreementVersion
+        ) {
+          user.dataProcessingAgreementAcceptedAt = recordedAt;
+        }
+      } else {
+        user.dataProcessingAgreementAccepted = false;
+      }
+      user.dataProcessingAgreementUpdatedAt = recordedAt;
     }
     await this.userRepository.save(user);
+
+    const newValues = {
+      cookieConsent: user.cookieConsent ?? false,
+      cookieConsentUpdatedAt: user.cookieConsentUpdatedAt ?? null,
+      emailNotifications: user.emailNotifications,
+      smsNotifications: user.smsNotifications,
+      marketingOptIn: user.marketingOptIn,
+      marketingOptInUpdatedAt: user.marketingOptInUpdatedAt ?? null,
+      dataProcessingAgreementAccepted:
+        user.dataProcessingAgreementAccepted ?? false,
+      dataProcessingAgreementVersion:
+        user.dataProcessingAgreementVersion ?? null,
+      dataProcessingAgreementAcceptedAt:
+        user.dataProcessingAgreementAcceptedAt ?? null,
+      dataProcessingAgreementUpdatedAt:
+        user.dataProcessingAgreementUpdatedAt ?? null,
+    };
+
     await this.auditService.log({
       action: AuditAction.UPDATE,
       entityType: 'User',
       entityId: user.id,
       performedBy: user.id,
+      oldValues,
+      newValues,
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
       status: AuditStatus.SUCCESS,
       level: AuditLevel.SECURITY,
-      metadata: { type: 'GDPR_CONSENT', consent },
+      metadata: { type: 'GDPR_CONSENT' },
     });
     this.logger.log(`Consent updated for user: ${user.id}`);
     return { message: 'Consent updated' };
   }
 
   async getPrivacySettings(userId: string): Promise<{
+    cookieConsent: boolean;
+    cookieConsentUpdatedAt: Date | null;
     emailNotifications: boolean;
     smsNotifications: boolean;
     marketingOptIn: boolean;
+    marketingOptInUpdatedAt: Date | null;
+    dataProcessingAgreementAccepted: boolean;
+    dataProcessingAgreementVersion: string | null;
+    dataProcessingAgreementAcceptedAt: Date | null;
+    dataProcessingAgreementUpdatedAt: Date | null;
     dataRetention: string;
   }> {
     const user = await this.findById(userId);
     return {
+      cookieConsent: user.cookieConsent ?? false,
+      cookieConsentUpdatedAt: user.cookieConsentUpdatedAt ?? null,
       emailNotifications: user.emailNotifications,
       smsNotifications: user.smsNotifications,
       marketingOptIn: user.marketingOptIn,
+      marketingOptInUpdatedAt: user.marketingOptInUpdatedAt ?? null,
+      dataProcessingAgreementAccepted:
+        user.dataProcessingAgreementAccepted ?? false,
+      dataProcessingAgreementVersion:
+        user.dataProcessingAgreementVersion ?? null,
+      dataProcessingAgreementAcceptedAt:
+        user.dataProcessingAgreementAcceptedAt ?? null,
+      dataProcessingAgreementUpdatedAt:
+        user.dataProcessingAgreementUpdatedAt ?? null,
       dataRetention: 'standard',
     };
   }

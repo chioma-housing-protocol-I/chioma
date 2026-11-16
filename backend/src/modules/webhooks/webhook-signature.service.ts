@@ -136,10 +136,9 @@ export class WebhookSignatureService {
       throw new UnauthorizedException('Missing webhook signature');
     }
 
-    const secrets = (Array.isArray(secret) ? secret : [secret]).filter(
-      (value): value is string => Boolean(value),
-    );
-    const secrets = this.resolveSecrets(secret);
+    const secrets = Array.isArray(secret)
+      ? secret.filter((value): value is string => Boolean(value))
+      : this.resolveSecrets(secret as string | undefined);
     if (secrets.length === 0) {
       this.logRejection(
         WEBHOOK_SIGNATURE_REJECTION_REASONS.SECRET_NOT_CONFIGURED,
@@ -180,31 +179,20 @@ export class WebhookSignatureService {
     }
 
     const signatureBuffer = Buffer.from(signature, 'hex');
-    let expectedSignature = '';
-    let matched = false;
-    for (const candidateSecret of secrets) {
-      const candidateSignature = this.generateSignature(
+
+    // Checked oldest-to-newest order doesn't matter for correctness, only
+    // that every currently-valid secret (including one mid-rotation) is
+    // tried before rejecting.
     const matchingSecret = secrets.find((candidateSecret) => {
-      const expectedSignature = this.generateSignature(
+      const candidateSignature = this.generateSignature(
         payload,
         timestamp,
         candidateSecret,
       );
-      const expectedBuffer = Buffer.from(candidateSignature, 'hex');
-      const candidateMatched =
-        signatureBuffer.length === expectedBuffer.length &&
-        crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
-      matched = candidateMatched || matched;
-      if (!expectedSignature) expectedSignature = candidateSignature;
-    }
-
-    if (!matched) {
-      const signatureBuffer = Buffer.from(signature, 'hex');
-      const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-
+      const candidateBuffer = Buffer.from(candidateSignature, 'hex');
       return (
-        signatureBuffer.length === expectedBuffer.length &&
-        crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+        signatureBuffer.length === candidateBuffer.length &&
+        crypto.timingSafeEqual(signatureBuffer, candidateBuffer)
       );
     });
 

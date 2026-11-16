@@ -3,6 +3,12 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
+import { resolveApmConfig } from './apm.config';
 
 const logger = new Logger('Tracing');
 
@@ -16,13 +22,20 @@ if (process.env.OTEL_LOG_LEVEL) {
   );
 }
 
-const otlpEndpoint =
-  process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
-  'http://localhost:4318/v1/traces';
+// Resolve the APM backend (Datadog, New Relic or a generic OTLP collector).
+// Request duration comes from the HTTP/Express spans and DB query times from
+// the pg/TypeORM spans produced by the auto-instrumentations.
+const apmConfig = resolveApmConfig();
 
 export const tracingSDK = new NodeSDK({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: apmConfig.serviceName,
+    [ATTR_SERVICE_VERSION]: apmConfig.serviceVersion,
+    'deployment.environment': apmConfig.environment,
+  }),
   traceExporter: new OTLPTraceExporter({
-    url: otlpEndpoint,
+    url: apmConfig.tracesEndpoint,
+    headers: apmConfig.headers,
   }),
   instrumentations: [getNodeAutoInstrumentations()],
 });
@@ -30,7 +43,9 @@ export const tracingSDK = new NodeSDK({
 export function startTracing(): void {
   try {
     tracingSDK.start();
-    logger.log('🚀 OpenTelemetry tracing started');
+    logger.log(
+      `🚀 OpenTelemetry tracing started (APM provider: ${apmConfig.provider})`,
+    );
   } catch (error) {
     logger.error('❌ Error starting OpenTelemetry tracing:', error);
   }

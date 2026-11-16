@@ -1,33 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ErrorCode } from '../errors/error-codes';
 
-export class ErrorResponseDto {
-  @ApiProperty({
-    example: 400,
-    description: 'The HTTP status code',
-  })
-  statusCode: number;
-
-  @ApiProperty({
-    example: 'Bad Request',
-    description: 'The error message summary',
-  })
-  message: string | string[];
-
-  @ApiProperty({
-    example: 'Bad Request',
-    description: 'The error type',
-    required: false,
-  })
-  error?: string;
-
+export class ErrorBodyDto {
   @ApiProperty({
     example: 'VAL_2001',
     description: 'Machine-readable error code',
     enum: ErrorCode,
+  })
+  code: ErrorCode;
+
+  @ApiProperty({
+    example: 'The provided data is invalid',
+    description: 'Human-readable error message',
+  })
+  message: string | string[];
+
+  @ApiProperty({
+    example: { field: 'email', reason: 'must be an email' },
+    description:
+      'Additional error context (validation issues, conflicting values, etc). Omitted when there is nothing beyond the message.',
     required: false,
   })
-  code?: ErrorCode;
+  details?: unknown;
 
   @ApiProperty({
     example: '2026-04-23T10:30:00.000Z',
@@ -49,26 +43,15 @@ export class ErrorResponseDto {
     required: false,
   })
   path?: string;
+}
 
-  @ApiProperty({
-    example: 60,
-    description: 'Seconds to wait before retrying (for rate limit errors)',
-    required: false,
-  })
-  retryAfter?: number;
-
-  @ApiProperty({
-    example: 25,
-    description:
-      'Amount actually available for the operation (e.g. remaining refundable amount)',
-    required: false,
-  })
-  available?: number;
-
-  @ApiProperty({
-    example: 100,
-    description: 'Amount that was requested for the operation',
-    required: false,
-  })
-  requested?: number;
+/**
+ * Standard error envelope returned by every endpoint (#2071). All error
+ * bodies are shaped as `{ error: { code, message, details } }`; details is
+ * only present when there is more to report than the message itself
+ * (e.g. per-field validation failures).
+ */
+export class ErrorResponseDto {
+  @ApiProperty({ type: ErrorBodyDto })
+  error: ErrorBodyDto;
 }

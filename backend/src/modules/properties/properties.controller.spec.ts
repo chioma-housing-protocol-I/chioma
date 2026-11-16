@@ -13,6 +13,9 @@ import {
 } from './entities/property.entity';
 import { User, UserRole, AuthMethod } from '../users/entities/user.entity';
 import { KycStatus } from '../kyc/kyc-status.enum';
+import { ReviewsService } from '../reviews/reviews.service';
+import { PropertyNotFoundError } from '../../common/errors/domain-errors';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 describe('PropertiesController', () => {
   let controller: PropertiesController;
@@ -48,6 +51,7 @@ describe('PropertiesController', () => {
     emailNotifications: true,
     smsNotifications: false,
     marketingOptIn: false,
+    emailCollectedAt: null,
   };
 
   const mockProperty: Property = {
@@ -141,6 +145,10 @@ describe('PropertiesController', () => {
     recordFavorite: jest.fn(),
   };
 
+  const mockReviewsService = {
+    getPropertyReviews: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PropertiesController],
@@ -148,6 +156,10 @@ describe('PropertiesController', () => {
         {
           provide: PropertiesService,
           useValue: mockPropertiesService,
+        },
+        {
+          provide: ReviewsService,
+          useValue: mockReviewsService,
         },
       ],
     }).compile();
@@ -232,6 +244,86 @@ describe('PropertiesController', () => {
       expect(result).toEqual(mockProperty);
       expect(mockPropertiesService.findOnePublic).toHaveBeenCalledWith(
         'property-id',
+      );
+    });
+  });
+
+  describe('getPropertyReviews', () => {
+    const mockReview = {
+      id: 'review-id',
+      propertyId: 'property-id',
+      rating: 5,
+      comment: 'Great place to stay',
+    };
+
+    it('returns paginated reviews for a published property', async () => {
+      mockPropertiesService.findOnePublic.mockResolvedValue(mockProperty);
+      const paginatedReviews = {
+        data: [mockReview],
+        total: 1,
+        page: 1,
+        limit: 20,
+      };
+      mockReviewsService.getPropertyReviews.mockResolvedValue(paginatedReviews);
+
+      const query: PaginationQueryDto = { page: 1, limit: 20 };
+      const result = await controller.getPropertyReviews('property-id', query);
+
+      expect(result).toEqual(paginatedReviews);
+      expect(mockPropertiesService.findOnePublic).toHaveBeenCalledWith(
+        'property-id',
+      );
+      expect(mockReviewsService.getPropertyReviews).toHaveBeenCalledWith(
+        'property-id',
+        1,
+        20,
+      );
+    });
+
+    it('returns an empty page when the property has no reviews', async () => {
+      mockPropertiesService.findOnePublic.mockResolvedValue(mockProperty);
+      mockReviewsService.getPropertyReviews.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+      });
+
+      const result = await controller.getPropertyReviews('property-id', {});
+
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('propagates PropertyNotFoundError without querying reviews for a nonexistent property', async () => {
+      mockPropertiesService.findOnePublic.mockRejectedValue(
+        new PropertyNotFoundError('missing-id'),
+      );
+
+      await expect(
+        controller.getPropertyReviews('missing-id', {}),
+      ).rejects.toThrow(PropertyNotFoundError);
+      expect(mockReviewsService.getPropertyReviews).not.toHaveBeenCalled();
+    });
+
+    it('passes page and limit through to the reviews service unchanged', async () => {
+      mockPropertiesService.findOnePublic.mockResolvedValue(mockProperty);
+      mockReviewsService.getPropertyReviews.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 3,
+        limit: 5,
+      });
+
+      await controller.getPropertyReviews('property-id', {
+        page: 3,
+        limit: 5,
+      });
+
+      expect(mockReviewsService.getPropertyReviews).toHaveBeenCalledWith(
+        'property-id',
+        3,
+        5,
       );
     });
   });

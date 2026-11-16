@@ -1,7 +1,7 @@
 import { SelectQueryBuilder } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { QueryPropertyDto } from './dto/query-property.dto';
-import { QueryBuilderUtils } from '../../common/utils';
+import { GeoUtils, QueryBuilderUtils } from '../../common/utils';
 
 /**
  * PropertyQueryBuilder - Fluent interface for building property queries
@@ -196,9 +196,28 @@ export class PropertyQueryBuilder {
   /**
    * Filter by proximity using the Haversine formula.
    * Requires lat, lng, and radiusKm to all be defined.
+   *
+   * A bounding-box prefilter on the raw latitude/longitude columns runs
+   * first so the planner can use the `IDX_properties_status_lat_lng_price`
+   * index; the Haversine check then only refines the candidate rows.
    */
   applyProximityFilter(lat?: number, lng?: number, radiusKm?: number): this {
     if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
+      const box = GeoUtils.boundingBox(
+        Number(lat),
+        Number(lng),
+        Number(radiusKm),
+      );
+      this.queryBuilder.andWhere(
+        'property.latitude BETWEEN :minLat AND :maxLat',
+        { minLat: box.minLat, maxLat: box.maxLat },
+      );
+      if (box.minLng !== undefined && box.maxLng !== undefined) {
+        this.queryBuilder.andWhere(
+          'property.longitude BETWEEN :minLng AND :maxLng',
+          { minLng: box.minLng, maxLng: box.maxLng },
+        );
+      }
       this.queryBuilder.andWhere(
         `(
           6371 * acos(

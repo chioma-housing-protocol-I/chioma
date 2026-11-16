@@ -14,6 +14,7 @@ import { OAuth2Service } from '../oauth2.service';
 import { AuthService } from '../../auth.service';
 import { User, UserRole } from '../../../users/entities/user.entity';
 import { OAuthAccount } from '../entities/oauth-account.entity';
+import { OAuthState } from '../entities/oauth-state.entity';
 import { MockOAuth2Provider } from '../providers/mock-oauth2.provider';
 import { OAuth2Provider } from '../oauth2.types';
 import { CertificatePinningService } from '../../../../common/security/certificate-pinning.service';
@@ -54,6 +55,24 @@ describe('OAuth2 Integration (issue #1120)', () => {
 
   const users: User[] = [];
   const oauthLinks: OAuthAccount[] = [];
+  const oauthStates = new Map<string, OAuthState>();
+
+  const mockOAuthStateRepository = {
+    create: jest.fn((data: Partial<OAuthState>) =>
+      Object.assign(new OAuthState(), data),
+    ),
+    save: jest.fn(async (state: OAuthState) => {
+      oauthStates.set(state.state, state);
+      return state;
+    }),
+    findOne: jest.fn(
+      async ({ where }: { where: { state: string } }) =>
+        oauthStates.get(where.state) ?? null,
+    ),
+    delete: jest.fn(async ({ state }: { state: string }) => ({
+      affected: oauthStates.delete(state) ? 1 : 0,
+    })),
+  };
 
   const mockUserRepository = {
     findOne: jest.fn(
@@ -168,6 +187,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
   beforeEach(async () => {
     users.length = 0;
     oauthLinks.length = 0;
+    oauthStates.clear();
     jest.clearAllMocks();
 
     mockProvider = new MockOAuth2Provider(providerConfig);
@@ -183,6 +203,10 @@ describe('OAuth2 Integration (issue #1120)', () => {
         {
           provide: getRepositoryToken(OAuthAccount),
           useValue: mockOAuthAccountRepository,
+        },
+        {
+          provide: getRepositoryToken(OAuthState),
+          useValue: mockOAuthStateRepository,
         },
         {
           provide: JwtService,
@@ -207,8 +231,8 @@ describe('OAuth2 Integration (issue #1120)', () => {
   });
 
   describe('Authorization code flow', () => {
-    it('returns an authorization URL with state', () => {
-      const result = oauth2Service.initiateAuthorization(
+    it('returns an authorization URL with state', async () => {
+      const result = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -216,7 +240,8 @@ describe('OAuth2 Integration (issue #1120)', () => {
       expect(result.authorizationUrl).toContain(providerConfig.baseUrl);
       expect(result.authorizationUrl).toContain('response_type=code');
       expect(result.authorizationUrl).toContain(`state=${result.state}`);
-      expect(result.state).toHaveLength(48);
+      expect(result.state).toMatch(/^[a-f0-9]{64}$/);
+      expect(oauthStates.has(result.state)).toBe(true);
     });
 
     it('rejects callback with invalid state', async () => {
@@ -237,7 +262,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
     });
 
     it('rejects callback with provider mismatch', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -260,7 +285,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
 
   describe('Token exchange and authentication', () => {
     it('completes the full OAuth2 login flow for a new user', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -296,7 +321,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
         id: 'google-existing-999',
       };
 
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -318,7 +343,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
     });
 
     it('rejects reused authorization codes', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -335,7 +360,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
         redirectUri,
       );
 
-      const { state: state2 } = oauth2Service.initiateAuthorization(
+      const { state: state2 } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -353,7 +378,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
 
   describe('User profile retrieval', () => {
     it('fetches profile from provider using access token', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -395,7 +420,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
     it('links a provider account to an authenticated user', async () => {
       users.push({ ...existingUser });
 
-      const linkInit = oauth2Service.initiateAccountLink(
+      const linkInit = await oauth2Service.initiateAccountLink(
         existingUser.id,
         OAuth2Provider.GITHUB,
         redirectUri,
@@ -445,7 +470,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
         linkedAt: new Date(),
       });
 
-      const linkInit = oauth2Service.initiateAccountLink(
+      const linkInit = await oauth2Service.initiateAccountLink(
         existingUser.id,
         OAuth2Provider.GITHUB,
         redirectUri,
@@ -474,7 +499,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
 
   describe('Token refresh', () => {
     it('refreshes provider access tokens', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );
@@ -502,7 +527,7 @@ describe('OAuth2 Integration (issue #1120)', () => {
 
   describe('Logout and token revocation', () => {
     it('logs out and revokes provider tokens', async () => {
-      const { state } = oauth2Service.initiateAuthorization(
+      const { state } = await oauth2Service.initiateAuthorization(
         OAuth2Provider.GOOGLE,
         redirectUri,
       );

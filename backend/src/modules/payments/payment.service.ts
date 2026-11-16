@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   Payment,
   PaymentStatus,
@@ -265,6 +265,124 @@ export class PaymentService {
     );
 
     return savedPayment;
+  }
+
+  /**
+   * Creates a pending payment record for a newly-created booking (#2040).
+   * Previously duplicated inline in BookingsService.create as a raw
+   * queryRunner.manager.create/save call; consolidated here so booking,
+   * rent, and agreement flows that each create a "pay later, confirm
+   * on booking/agreement confirmation" style payment share one
+   * implementation instead of three ad-hoc ones.
+   *
+   * Accepts an optional EntityManager so the caller's own transaction
+   * (e.g. BookingsService.create's queryRunner) covers this write too,
+   * rolling back together with the booking/agreement record it belongs to.
+   */
+  async createPendingPayment(
+    params: {
+      userId: string;
+      bookingId?: string;
+      agreementId?: string;
+      amount: number;
+      currency: string;
+      paymentMethod?: string;
+      metadata?: PaymentMetadata;
+    },
+    manager?: EntityManager,
+  ): Promise<Payment> {
+    const repo = manager
+      ? manager.getRepository(Payment)
+      : this.paymentRepository;
+
+    const payment = repo.create({
+      userId: params.userId,
+      bookingId: params.bookingId ?? null,
+      agreementId: params.agreementId ?? null,
+      amount: params.amount,
+      transactionFee: 0,
+      netAmount: params.amount,
+      currency: params.currency,
+      status: PaymentStatus.PENDING,
+      paymentMethod: params.paymentMethod,
+      metadata: params.metadata,
+    });
+
+    return repo.save(payment);
+  }
+
+  /**
+   * Marks the payment for a booking as completed (#2040). Previously
+   * duplicated inline in BookingsService.confirm. No-op (returns null)
+   * when the booking has no payment record, matching the prior inline
+   * behavior exactly.
+   */
+  async completePaymentForBooking(
+    bookingId: string,
+    manager?: EntityManager,
+  ): Promise<Payment | null> {
+    const repo = manager
+      ? manager.getRepository(Payment)
+      : this.paymentRepository;
+
+    const payment = await repo.findOne({ where: { bookingId } });
+    if (!payment) {
+      return null;
+    }
+
+    payment.status = PaymentStatus.COMPLETED;
+    payment.processedAt = new Date();
+    return repo.save(payment);
+  }
+
+  /**
+   * Marks the payment for a cancelled booking as refunded (#2040).
+   * Previously duplicated inline in BookingsService.cancel. Only refunds a
+   * payment that actually completed (matching the prior inline check); a
+   * still-pending payment for a cancelled booking is left as-is rather
+   * than being marked refunded for an amount that was never charged.
+   */
+  async refundPaymentForBooking(
+    bookingId: string,
+    manager?: EntityManager,
+  ): Promise<Payment | null> {
+    const repo = manager
+      ? manager.getRepository(Payment)
+      : this.paymentRepository;
+
+    const payment = await repo.findOne({ where: { bookingId } });
+    if (!payment || payment.status !== PaymentStatus.COMPLETED) {
+      return null;
+    }
+
+    payment.status = PaymentStatus.REFUNDED;
+    payment.refundAmount = payment.amount;
+    return repo.save(payment);
+  }
+
+  /**
+   * Updates the amount (and recomputed net amount) on a booking's payment
+   * after a reschedule changes its price (#2040). Previously duplicated
+   * inline in BookingsService.reschedule. No-op when the booking has no
+   * payment record.
+   */
+  async updatePaymentAmountForBooking(
+    bookingId: string,
+    newAmount: number,
+    manager?: EntityManager,
+  ): Promise<Payment | null> {
+    const repo = manager
+      ? manager.getRepository(Payment)
+      : this.paymentRepository;
+
+    const payment = await repo.findOne({ where: { bookingId } });
+    if (!payment) {
+      return null;
+    }
+
+    payment.amount = newAmount;
+    payment.netAmount = newAmount - payment.transactionFee;
+    return repo.save(payment);
   }
 
   async generateReceipt(paymentId: string, userId: string): Promise<any> {

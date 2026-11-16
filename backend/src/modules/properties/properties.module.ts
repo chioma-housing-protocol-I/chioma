@@ -20,12 +20,14 @@ import { ICalService } from './services/ical.service';
 import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
 import { SearchModule } from '../search/search.module';
+import { ReviewsModule } from '../reviews/reviews.module';
 
 @Module({
   imports: [
     ScheduleModule,
     FraudModule,
     SearchModule,
+    ReviewsModule,
     TypeOrmModule.forFeature([
       Property,
       PropertyImage,

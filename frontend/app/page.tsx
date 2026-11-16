@@ -1,12 +1,22 @@
+import nextDynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/landing/Hero';
-import Features from '@/components/landing/Features';
-import HowItWorks from '@/components/landing/HowItWorks';
 import Stats from '@/components/landing/Stats';
-import Testimonials from '@/components/landing/Testimonials';
-import CTA from '@/components/landing/CTA';
-import Footer from '@/components/landing/Footer';
-import ForWho from '@/components/landing/ForWho';
+
+// Above-the-fold sections (Navbar, Hero, Stats) ship in the route chunk.
+// Everything below the fold is split into its own chunk so the landing
+// route's initial JS stays small; sections are still server-rendered, so
+// content and SEO are unchanged.
+const Features = nextDynamic(() => import('@/components/landing/Features'));
+const HowItWorks = nextDynamic(
+  () => import('@/components/landing/HowItWorks'),
+);
+const ForWho = nextDynamic(() => import('@/components/landing/ForWho'));
+const Testimonials = nextDynamic(
+  () => import('@/components/landing/Testimonials'),
+);
+const CTA = nextDynamic(() => import('@/components/landing/CTA'));
+const Footer = nextDynamic(() => import('@/components/landing/Footer'));
 
 export const dynamic = 'force-dynamic';
 

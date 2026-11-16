@@ -93,23 +93,65 @@ The `AllExceptionsFilter` is a NestJS `@Catch()` filter that intercepts every un
 
 ### Error Response Format
 
-All error responses follow this structure:
+All error responses are nested under a single `error` key (#2071), so a
+client only ever needs to look in one place regardless of which endpoint or
+exception type produced the error:
 
 ```json
 {
-  "statusCode": 400,
-  "message": "Human-readable description of the error",
-  "error": "Bad Request"
+  "error": {
+    "code": "VAL_2001",
+    "message": "Human-readable description of the error",
+    "timestamp": "2026-04-23T10:30:00.000Z",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "path": "/api/v1/users"
+  }
 }
 ```
 
-For rate-limited responses, an additional field is included:
+- `code` is a stable, machine-readable identifier (see `ErrorCode` in
+  `backend/src/common/errors/error-codes.ts`) that a client can switch on
+  without parsing `message`, which is free text and may change wording.
+- `details` is included only when there is more to report than the message
+  itself, for example per-field validation failures:
 
 ```json
 {
-  "statusCode": 429,
-  "message": "Too Many Requests",
-  "retryAfter": 60
+  "error": {
+    "code": "VAL_2001",
+    "message": ["email must be an email", "password must be longer than or equal to 8 characters"],
+    "details": [
+      { "message": "email must be an email" },
+      { "message": "password must be longer than or equal to 8 characters" }
+    ],
+    "timestamp": "2026-04-23T10:30:00.000Z",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "path": "/api/v1/users"
+  }
+}
+```
+
+The HTTP status code itself is carried only by the response's actual status
+line, not duplicated in the body.
+
+Rate-limited responses carry their retry guidance on the `Retry-After`
+header rather than in the JSON body, so a client can read it the same way
+regardless of error type:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+```json
+{
+  "error": {
+    "code": "RATE_8001",
+    "message": "Too Many Requests",
+    "timestamp": "2026-04-23T10:30:00.000Z",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "path": "/api/v1/properties"
+  }
 }
 ```
 
@@ -183,24 +225,32 @@ Validation errors produce `400 Bad Request` responses with field-level details (
 
 ```json
 {
-  "statusCode": 400,
-  "message": [
-    "email must be an email",
-    "password must be at least 8 characters"
-  ],
-  "error": "Bad Request"
+  "error": {
+    "code": "VAL_2001",
+    "message": [
+      "email must be an email",
+      "password must be at least 8 characters"
+    ],
+    "details": [
+      { "message": "email must be an email" },
+      { "message": "password must be at least 8 characters" }
+    ]
+  }
 }
 ```
 
 ### Rate Limiting Errors
 
-When rate limits are exceeded, the filter returns:
+When rate limits are exceeded, the filter returns `429` with the retry
+delay on the `Retry-After` header (not in the body, see
+[Error Response Format](#error-response-format)):
 
 ```json
 {
-  "statusCode": 429,
-  "message": "Too Many Requests",
-  "retryAfter": 60
+  "error": {
+    "code": "RATE_8001",
+    "message": "Too Many Requests"
+  }
 }
 ```
 

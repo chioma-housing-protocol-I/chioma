@@ -47,13 +47,14 @@ Consistent key naming is critical for effective invalidation and observability.
 
 ### Key Patterns (Constants in `cache.constants.ts`)
 
-| Domain          | Pattern                    | Example                    |
-| :-------------- | :------------------------- | :------------------------- |
-| **Properties**  | `property:{id}`            | `property:abc-123`         |
-| **Listings**    | `properties:list:{hash}`   | `properties:list:d41d8cd9` |
-| **Search**      | `search:properties:{hash}` | `search:properties:a1b2c3` |
-| **Suggestions** | `suggest:{hash}`           | `suggest:xyz`              |
-| **Locks**       | `lock:{resource}:{id}`     | `lock:payment:789`         |
+| Domain              | Pattern                    | Example                        |
+| :------------------ | :------------------------- | :------------------------------ |
+| **Properties**      | `property:{id}`            | `property:abc-123`             |
+| **Listings**        | `properties:list:{hash}`   | `properties:list:d41d8cd9`     |
+| **Search**          | `search:properties:{hash}` | `search:properties:a1b2c3`     |
+| **Suggestions**     | `suggest:{hash}`           | `suggest:xyz`                  |
+| **Locks**           | `lock:{resource}:{id}`     | `lock:payment:789`             |
+| **HTTP response**   | `http:response:{url}`      | `http:response:/reviews?page=2` |
 
 > [!TIP]
 > For complex query objects (filters, pagination), always canonicalize and MD5 hash the object to generate a stable cache key.
@@ -91,6 +92,20 @@ Immediate invalidation after a successful database write.
 Entries are registered with "tags" (e.g., `user:123`, `property:*`). Invalidation of a tag clears all associated keys.
 
 - **Implementation**: Handled by `CacheService.getOrSet` options.
+- **Generic HTTP response cache**: `CacheResponseInterceptor`
+  (`src/common/interceptors/cache-response.interceptor.ts`) is a drop-in
+  `@UseInterceptors()` for any controller with no existing domain-specific
+  caching. It caches each GET request's response under
+  `http:response:{full URL including query string}` and tags it with
+  `http:response:dep:/{first path segment}`. Any mutating request
+  (POST/PUT/PATCH/DELETE) that reaches a route under the same controller
+  invalidates every cached GET tagged with that same base path once the
+  mutation itself succeeds, so a `PATCH /reviews/:id` also clears the
+  cached `GET /reviews` list, not only the exact mutated URL. This is
+  coarser than the hand-tuned dependency tags `PropertiesService` uses
+  (see "Cascade Invalidation" below), so it is meant for endpoints that
+  have no caching at all yet, not as a replacement for existing
+  domain-specific caching.
 
 ### 4) Cascade Invalidation
 

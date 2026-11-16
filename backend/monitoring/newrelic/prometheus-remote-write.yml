@@ -1,0 +1,14 @@
+# Add this block to monitoring/prometheus/prometheus.yml to forward the backend
+# metrics (request duration, DB query time, cache hit rate, errors) to
+# New Relic. Store the license key in a file mounted into the Prometheus
+# container; never commit it.
+#
+# EU accounts: https://metric-api.eu.newrelic.com/prometheus/v1/write?prometheus_server=chioma
+remote_write:
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=chioma
+    authorization:
+      credentials_file: /etc/prometheus/newrelic_license_key
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(http_request_duration_ms.*|http_requests_total|http_errors_total|db_query_duration_ms.*|database_.*|cache_.*|blockchain_.*|queue_.*)'
+        action: keep

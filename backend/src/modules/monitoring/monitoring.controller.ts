@@ -12,6 +12,7 @@ import { AlertService } from './alert.service';
 import { CacheService } from '../../common/cache/cache.service';
 import { DatabaseMonitorService } from './database-monitor.service';
 import { ImageProcessingService } from '../storage/image-processing.service';
+import { CompressionService } from '../../common/middleware/compression.service';
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
@@ -25,6 +26,7 @@ export class MonitoringController {
     private readonly cacheService: CacheService,
     private readonly databaseMonitorService: DatabaseMonitorService,
     private readonly imageProcessingService: ImageProcessingService,
+    private readonly compressionService: CompressionService,
   ) {}
 
   @ApiResponse({ status: 200, description: 'Retrieved' })
@@ -41,6 +43,26 @@ export class MonitoringController {
     return {
       ...this.cacheService.getStats(),
       imageProcessing: this.imageProcessingService.getCacheMetrics(),
+    };
+  }
+
+  @ApiResponse({ status: 200, description: 'Retrieved' })
+  @ApiOperation({
+    summary: 'Get API response compression stats',
+    description:
+      'Reports the byte reduction achieved by the response compression middleware (#2075), e.g. bytesBeforeCompression/bytesAfterCompression to measure the actual compression ratio in production.',
+  })
+  @Get('compression/stats')
+  getCompressionStats() {
+    const metrics = this.compressionService.getMetrics();
+    const reductionRatio =
+      metrics.bytesBeforeCompression > 0
+        ? 1 - metrics.bytesAfterCompression / metrics.bytesBeforeCompression
+        : 0;
+
+    return {
+      ...metrics,
+      reductionPercent: Math.round(reductionRatio * 10000) / 100,
     };
   }
 

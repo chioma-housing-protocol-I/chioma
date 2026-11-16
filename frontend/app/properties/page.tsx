@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import Footer from '@/components/landing/Footer';
+import nextDynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
@@ -19,6 +19,10 @@ import {
 } from '@/lib/query/hooks/use-properties';
 import { toPropertyCardShape } from '@/lib/utils/property-adapter';
 import type { Property } from '@/types';
+
+// The footer sits below an infinitely-scrolling grid and is never part of the
+// first paint, so it is split out of the route chunk.
+const Footer = nextDynamic(() => import('@/components/landing/Footer'));
 
 // Estimated card heights (image + content) per column count — used only to
 // pick which rows are in the virtualization window, not to clip content.

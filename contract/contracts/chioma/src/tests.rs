@@ -264,7 +264,8 @@ fn test_create_agreement_success() {
     });
 
     let events = env.events().all();
-    assert_eq!(events.len(), 1);
+    // booking_created followed by agreement_created
+    assert_eq!(events.len(), 2);
     // Event structure: (contract_id, topics, data)
     // Topics now include: ["v1", "agr_created", tenant, landlord] (#1681
     // added the leading schema-version topic segment)
@@ -1193,7 +1194,7 @@ fn test_contract_paused_operations() {
     };
     client.initialize(&admin, &config);
 
-    client.pause(&String::from_str(&env, "incident response"));
+    client.pause(&admin, &String::from_str(&env, "incident response"));
 
     assert!(client.is_paused());
 
@@ -1265,7 +1266,7 @@ fn test_contract_paused_operations() {
         );
     });
 
-    client.pause(&String::from_str(&env, "second incident"));
+    client.pause(&admin, &String::from_str(&env, "second incident"));
 
     let res_sign = client.try_sign_agreement(&tenant, &agreement_id);
     assert_eq!(res_sign, Err(Ok(RentalError::ContractPaused)));
@@ -1290,7 +1291,7 @@ fn test_pause_unpause_events_emitted() {
 
     client.initialize(&admin, &config);
 
-    let pause_res = client.try_pause(&String::from_str(&env, "security patching"));
+    let pause_res = client.try_pause(&admin, &String::from_str(&env, "security patching"));
     assert!(pause_res.is_ok());
     let events_after_pause = env.events().all();
     assert_eq!(events_after_pause.len(), 1);
@@ -1315,9 +1316,9 @@ fn test_pause_double_call_fails() {
     };
 
     client.initialize(&admin, &config);
-    client.pause(&String::from_str(&env, "maintenance"));
+    client.pause(&admin, &String::from_str(&env, "maintenance"));
 
-    let result = client.try_pause(&String::from_str(&env, "maintenance again"));
+    let result = client.try_pause(&admin, &String::from_str(&env, "maintenance again"));
     assert_eq!(result, Err(Ok(RentalError::AlreadyPaused)));
 }
 
@@ -1361,7 +1362,7 @@ fn test_pause_unauthorized() {
                 sub_invokes: &[],
             },
         }])
-        .pause(&reason);
+        .pause(&admin, &reason);
 }
 
 #[test]
@@ -1383,7 +1384,7 @@ fn test_unpause_unauthorized() {
                 sub_invokes: &[],
             },
         }])
-        .pause(&reason);
+        .pause(&admin, &reason);
 
     let attacker = Address::generate(&env);
 

@@ -131,4 +131,4 @@ We utilize the following tools for our performance monitoring stack:
 - **Alerting**: PagerDuty, Prometheus Alertmanager, Slack Integrations
 - **Distributed Tracing**: OpenTelemetry, Jaeger
 - **Load Testing**: K6, Artillery
-- **APM**: Datadog APM, New Relic
+- **APM**: Datadog APM, New Relic — setup and signal mapping in [`apm.md`](./apm.md)

@@ -12,7 +12,7 @@ import {
   AgreementStatus,
 } from '../rent/entities/rent-contract.entity';
 import { CacheService } from '../../common/cache/cache.service';
-import { PaginationUtils } from '../../common/utils';
+import { GeoUtils, PaginationUtils } from '../../common/utils';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import {
   CACHE_PREFIX_SEARCH_PROPERTIES,
@@ -274,6 +274,23 @@ export class SearchService {
       filters.lng !== undefined &&
       filters.radiusKm !== undefined
     ) {
+      // Sargable bounding-box prefilter so the lat/lng composite index is
+      // used before the (unindexable) Haversine refinement below.
+      const box = GeoUtils.boundingBox(
+        Number(filters.lat),
+        Number(filters.lng),
+        Number(filters.radiusKm),
+      );
+      qb.andWhere('property.latitude BETWEEN :minLat AND :maxLat', {
+        minLat: box.minLat,
+        maxLat: box.maxLat,
+      });
+      if (box.minLng !== undefined && box.maxLng !== undefined) {
+        qb.andWhere('property.longitude BETWEEN :minLng AND :maxLng', {
+          minLng: box.minLng,
+          maxLng: box.maxLng,
+        });
+      }
       qb.andWhere(
         `(6371 * acos(cos(radians(:lat)) * cos(radians(CAST(property.latitude AS float))) * cos(radians(CAST(property.longitude AS float)) - radians(:lng)) + sin(radians(:lat)) * sin(radians(CAST(property.latitude AS float))))) <= :radius`,
         { lat: filters.lat, lng: filters.lng, radius: filters.radiusKm },

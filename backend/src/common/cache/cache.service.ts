@@ -8,6 +8,7 @@ import {
   CACHE_PREFIX_SEARCH_PROPERTIES,
   CACHE_PREFIX_SUGGEST,
 } from './cache.constants';
+import { notifyCacheLookup } from './cache-metrics';
 
 /**
  * Application cache layer with pattern invalidation, dependency tags, stats,
@@ -38,9 +39,11 @@ export class CacheService {
     const value = await this.cacheManager.get<T>(key);
     if (value !== undefined && value !== null) {
       this.stats.hits++;
+      notifyCacheLookup(true);
       return value;
     }
     this.stats.misses++;
+    notifyCacheLookup(false);
     return null;
   }
 

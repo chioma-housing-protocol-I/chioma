@@ -3,6 +3,7 @@ import { ArgumentsHost } from '@nestjs/common/interfaces';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { ErrorCode } from '../errors/error-codes';
 import { RateLimitError } from '../errors/domain-errors';
+import { BaseAppError } from '../errors/base.error';
 
 const buildArgumentsHost = (request: any, response: any): ArgumentsHost =>
   ({
@@ -45,16 +46,21 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(400);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: 400,
-        message: [
-          'email must be an email',
-          'password must be longer than or equal to 8 characters',
-        ],
-        error: 'Bad Request',
-        code: ErrorCode.VALIDATION_FAILED,
-        path: '/api/test',
+        error: expect.objectContaining({
+          message: [
+            'email must be an email',
+            'password must be longer than or equal to 8 characters',
+          ],
+          code: ErrorCode.VALIDATION_FAILED,
+          path: '/api/test',
+        }),
       }),
     );
+    const [body] = response.json.mock.calls[0];
+    expect(body.error.details).toEqual([
+      { message: 'email must be an email' },
+      { message: 'password must be longer than or equal to 8 characters' },
+    ]);
   });
 
   it('returns generic internal server error shape for unexpected exceptions', () => {
@@ -65,16 +71,16 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: 500,
-        message: 'An unexpected error occurred',
-        error: 'Internal Server Error',
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
-        path: '/api/test',
+        error: expect.objectContaining({
+          message: 'An unexpected error occurred',
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+          path: '/api/test',
+        }),
       }),
     );
   });
 
-  it('preserves custom HttpException response bodies', () => {
+  it('preserves custom HttpException response bodies as details', () => {
     const exception = new HttpException(
       { message: 'Custom body', extra: 'data' },
       403,
@@ -85,10 +91,12 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(403);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Custom body',
-        extra: 'data',
-        path: '/api/test',
-        requestId: 'request-id',
+        error: expect.objectContaining({
+          message: 'Custom body',
+          details: { extra: 'data' },
+          path: '/api/test',
+          requestId: 'request-id',
+        }),
       }),
     );
   });
@@ -101,7 +109,7 @@ describe('AllExceptionsFilter', () => {
     expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '42');
     expect(response.status).toHaveBeenCalledWith(429);
     const [body] = response.json.mock.calls[0];
-    expect(body).not.toHaveProperty('retryAfter');
+    expect(body.error).not.toHaveProperty('retryAfter');
   });
 
   it('does not set a Retry-After header when the exception has no retryAfter', () => {
@@ -123,7 +131,23 @@ describe('AllExceptionsFilter', () => {
     expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '60');
     expect(response.status).toHaveBeenCalledWith(429);
     const [body] = response.json.mock.calls[0];
-    expect(body).not.toHaveProperty('retryAfter');
-    expect(body.code).toBe(ErrorCode.RATE_LIMIT_EXCEEDED);
+    expect(body.error).not.toHaveProperty('retryAfter');
+    expect(body.error.code).toBe(ErrorCode.RATE_LIMIT_EXCEEDED);
+  });
+
+  it('nests BaseAppError context under error.details', () => {
+    const exception = new BaseAppError(
+      ErrorCode.INSUFFICIENT_FUNDS,
+      402,
+      'Not enough balance',
+      true,
+      { available: 25, requested: 100 },
+    );
+
+    filter.catch(exception, buildArgumentsHost(request, response));
+
+    const [body] = response.json.mock.calls[0];
+    expect(body.error.code).toBe(ErrorCode.INSUFFICIENT_FUNDS);
+    expect(body.error.details).toEqual({ available: 25, requested: 100 });
   });
 });

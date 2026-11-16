@@ -5,8 +5,11 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, Search, User } from 'lucide-react';
-import { NotificationBell } from '@/components/notifications';
-import { Sidebar } from '@/components/user-dashboard';
+// Direct module imports (not the `@/components/notifications` /
+// `@/components/user-dashboard` barrels) so this layout — shared by every
+// /user/* route — doesn't bundle NotificationsPage, TransactionsTable, etc.
+import NotificationBell from '@/components/notifications/NotificationBell';
+import Sidebar from '@/components/user-dashboard/Sidebar';
 import { userNavItems } from '@/data/user-nav-items';
 import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
 import { useAuth } from '@/store/authStore';

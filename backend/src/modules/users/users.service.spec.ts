@@ -65,6 +65,13 @@ describe('UsersService', () => {
     emailNotifications: true,
     smsNotifications: false,
     marketingOptIn: false,
+    cookieConsent: false,
+    cookieConsentUpdatedAt: null,
+    marketingOptInUpdatedAt: null,
+    dataProcessingAgreementAccepted: false,
+    dataProcessingAgreementVersion: null,
+    dataProcessingAgreementAcceptedAt: null,
+    dataProcessingAgreementUpdatedAt: null,
   };
 
   const mockUserRepository = {
@@ -173,6 +180,94 @@ describe('UsersService', () => {
       await expect(service.getUserById('999')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('updateConsent', () => {
+    it('stores consent decisions with timestamps and an auditable before/after record', async () => {
+      const user = { ...mockUser };
+      mockUserRepository.findOne.mockResolvedValue(user);
+      mockUserRepository.save.mockImplementation((savedUser: User) =>
+        Promise.resolve(savedUser),
+      );
+
+      await service.updateConsent(
+        user.id,
+        {
+          cookieConsent: true,
+          marketingOptIn: true,
+          dataProcessingAgreementAccepted: true,
+          dataProcessingAgreementVersion: '2026-10-v1',
+        },
+        { ipAddress: '192.0.2.10', userAgent: 'test-agent' },
+      );
+
+      expect(user.cookieConsent).toBe(true);
+      expect(user.cookieConsentUpdatedAt).toBeInstanceOf(Date);
+      expect(user.marketingOptInUpdatedAt).toBeInstanceOf(Date);
+      expect(user.dataProcessingAgreementAccepted).toBe(true);
+      expect(user.dataProcessingAgreementVersion).toBe('2026-10-v1');
+      expect(user.dataProcessingAgreementAcceptedAt).toBeInstanceOf(Date);
+      expect(user.dataProcessingAgreementUpdatedAt).toBeInstanceOf(Date);
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.UPDATE,
+          oldValues: expect.objectContaining({
+            cookieConsent: false,
+            marketingOptIn: false,
+            dataProcessingAgreementAccepted: false,
+          }),
+          newValues: expect.objectContaining({
+            cookieConsent: true,
+            marketingOptIn: true,
+            dataProcessingAgreementAccepted: true,
+            dataProcessingAgreementVersion: '2026-10-v1',
+          }),
+          ipAddress: '192.0.2.10',
+          userAgent: 'test-agent',
+        }),
+      );
+    });
+
+    it('requires an agreement version before recording acceptance', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
+
+      await expect(
+        service.updateConsent('1', {
+          dataProcessingAgreementAccepted: true,
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('allows withdrawing consent while preserving the accepted agreement version', async () => {
+      const acceptedAt = new Date('2026-09-01T12:00:00.000Z');
+      const user = {
+        ...mockUser,
+        cookieConsent: true,
+        marketingOptIn: true,
+        dataProcessingAgreementAccepted: true,
+        dataProcessingAgreementVersion: '2026-09-v1',
+        dataProcessingAgreementAcceptedAt: acceptedAt,
+      };
+      mockUserRepository.findOne.mockResolvedValue(user);
+      mockUserRepository.save.mockImplementation((savedUser: User) =>
+        Promise.resolve(savedUser),
+      );
+
+      await service.updateConsent('1', {
+        cookieConsent: false,
+        marketingOptIn: false,
+        dataProcessingAgreementAccepted: false,
+      });
+
+      expect(user.cookieConsent).toBe(false);
+      expect(user.marketingOptIn).toBe(false);
+      expect(user.dataProcessingAgreementAccepted).toBe(false);
+      expect(user.dataProcessingAgreementVersion).toBe('2026-09-v1');
+      expect(user.dataProcessingAgreementAcceptedAt).toBe(acceptedAt);
+      expect(user.dataProcessingAgreementUpdatedAt).toBeInstanceOf(Date);
     });
   });
 

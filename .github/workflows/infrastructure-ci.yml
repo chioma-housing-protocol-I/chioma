@@ -1,0 +1,58 @@
+name: Infrastructure CI
+
+# Validate the Terraform configuration in infrastructure/ on every change.
+# This workflow never applies; plans/applies are run by an operator with
+# credentials (see infrastructure/README.md).
+
+on:
+  push:
+    branches:
+      - main
+      - devv
+      - develop
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/infrastructure-ci.yml"
+  pull_request:
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/infrastructure-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform fmt & validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Validate root module
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Validate bootstrap module
+        working-directory: infrastructure/bootstrap
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate

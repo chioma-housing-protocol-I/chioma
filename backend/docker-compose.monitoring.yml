@@ -93,6 +93,28 @@ services:
     networks:
       - monitoring
 
+  # Datadog Agent - APM (opt-in: docker compose --profile datadog up)
+  # Receives OTLP traces from the backend (APM_PROVIDER=datadog) and scrapes
+  # the Prometheus /metrics endpoint for request, DB, cache and error metrics.
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: chioma-datadog-agent
+    profiles: ['datadog']
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_ENV=${DD_ENV:-production}
+      - DD_APM_ENABLED=true
+      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT=0.0.0.0:4318
+      - DD_LOGS_ENABLED=false
+    ports:
+      - '4318:4318'
+    volumes:
+      - ./monitoring/datadog/conf.d/openmetrics.d:/etc/datadog-agent/conf.d/openmetrics.d:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring
+
 volumes:
   prometheus-data:
   grafana-data:

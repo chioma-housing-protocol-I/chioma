@@ -25,7 +25,7 @@ async function readAuthHint(): Promise<AuthHint | null> {
 
 export const viewport: Viewport = {
   themeColor: '#0d0e12',
-  colorScheme: 'dark',
+  colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -93,7 +93,7 @@ export default async function RootLayout({
 
       <body
         suppressHydrationWarning
-        className="font-sans bg-ink-900 text-cream"
+        className="font-sans bg-background text-foreground"
       >
         {/* Accessibility: skip link */}
         <a href="#main-content" className="skip-link">

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { ConfirmDialog } from './ConfirmDialog';
 
 const meta: Meta<typeof ConfirmDialog> = {
@@ -37,6 +38,10 @@ const meta: Meta<typeof ConfirmDialog> = {
       description: 'Whether the dialog is visible',
     },
   },
+  args: {
+    onCancel: fn(),
+    onConfirm: fn(),
+  },
 };
 
 export default meta;
@@ -59,6 +64,23 @@ export const Default: Story = {
       </div>
     ),
   ],
+  play: async ({ canvasElement, args }) => {
+    // The dialog renders in a portal outside the story canvas
+    const screen = within(canvasElement.ownerDocument.body);
+    const dialog = await screen.findByRole('dialog');
+
+    await expect(within(dialog).getByText('Confirm Action')).toBeVisible();
+
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm' }),
+    );
+    await expect(args.onConfirm).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Cancel' }),
+    );
+    await expect(args.onCancel).toHaveBeenCalled();
+  },
 };
 
 export const Danger: Story = {
@@ -98,6 +120,20 @@ export const Loading: Story = {
       </div>
     ),
   ],
+  play: async ({ canvasElement, args }) => {
+    const screen = within(canvasElement.ownerDocument.body);
+    const dialog = await screen.findByRole('dialog');
+
+    const confirm = within(dialog).getByRole('button', {
+      name: 'Please wait...',
+    });
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+
+    await expect(confirm).toBeDisabled();
+    await expect(cancel).toBeDisabled();
+    await userEvent.click(confirm, { pointerEventsCheck: 0 });
+    await expect(args.onConfirm).not.toHaveBeenCalled();
+  },
 };
 
 export const Interactive: Story = {
@@ -126,5 +162,30 @@ export const Interactive: Story = {
       );
     }
     return <DialogDemo />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const screen = within(canvasElement.ownerDocument.body);
+
+    // Opening the dialog
+    await userEvent.click(canvas.getByRole('button', { name: 'Open Dialog' }));
+    const dialog = await screen.findByRole('dialog');
+    await expect(
+      within(dialog).getByText('Are you sure you want to proceed?'),
+    ).toBeVisible();
+
+    // Cancelling closes it
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'No, cancel' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    // Re-opening and confirming also closes it
+    await userEvent.click(canvas.getByRole('button', { name: 'Open Dialog' }));
+    const reopened = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(reopened).getByRole('button', { name: 'Yes, proceed' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   },
 };

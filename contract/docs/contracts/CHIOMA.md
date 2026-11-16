@@ -12,6 +12,7 @@
 - [Integration Notes](#integration-notes)
 - [Security Considerations](#security-considerations)
 - [Testing](#testing)
+- [Constants Reference](./CHIOMA-CONSTANTS.md) — every fee, threshold, and timeout, with rationale
 
 ---
 
@@ -113,21 +114,52 @@ The contract exposes a large API surface. The tables below group functions by ca
 | `get_version_history(env)`                                                              | Return all recorded versions.                      |
 | `propose_contract_upgrade(env, proposer, proposal_id, wasm_hash, notes, delay_seconds)` | Start an upgrade proposal.                         |
 | `approve_contract_upgrade(env, approver, proposal_id)`                                  | Add multisig approval to an upgrade.               |
-| `execute_contract_upgrade(env, executor, proposal_id, new_version)`                     | Execute an approved upgrade after ETA.             |
+| `execute_contract_upgrade(env, executor, proposal_id, new_version)`                     | Swap in the new WASM after ETA; state is kept.     |
 | `get_upgrade_proposal(env, proposal_id)`                                                | Fetch one upgrade proposal.                        |
 | `get_active_upgrade_proposals(env)`                                                     | List active upgrade proposal IDs.                  |
 | `get_upgrade_proposal_count(env)`                                                       | Return total proposal count.                       |
+| `get_storage_version(env)`                                                              | Return the persisted storage layout version.       |
+| `migrate(env)`                                                                          | Bring stored state up to `STORAGE_VERSION`. Admin. |
+
+#### Upgrading without losing state
+
+`execute_contract_upgrade` calls `env.deployer().update_current_contract_wasm`
+with the proposal's 32-byte `wasm_hash` (validated at proposal time). This
+replaces the code in place: the contract address, token balances, and all
+instance/persistent/temporary storage are unchanged, and the new code takes
+effect once the call completes.
+
+If a release changes how existing state is stored, it bumps the
+`STORAGE_VERSION` constant and adds the matching rewrite step to `migrate`.
+After the upgrade executes, the admin calls `migrate` once on the upgraded
+contract. `migrate` is a no-op when storage is already current and refuses to
+run when the stored version is newer than the code (downgrade).
+
+Recommended sequence: `pause` → upload WASM → `propose_contract_upgrade` →
+approvals → `execute_contract_upgrade` → `migrate` → `unpause`.
 
 ### 2. Contract state and safety controls
 
-| Function                         | Purpose                        |
-| -------------------------------- | ------------------------------ |
-| `initialize(env, admin, config)` | One-time setup.                |
-| `get_state(env)`                 | Return stored `ContractState`. |
-| `update_config(env, new_config)` | Update fee and paused state.   |
-| `pause(env, reason)`             | Pause write operations.        |
-| `unpause(env)`                   | Resume normal operations.      |
-| `is_paused(env)`                 | Check current pause state.     |
+| Function                                | Purpose                        |
+| --------------------------------------- | ------------------------------ |
+| `initialize(env, admin, config)`        | One-time setup.                |
+| `get_state(env)`                        | Return stored `ContractState`. |
+| `update_config(env, new_config)`        | Update fee and paused state.   |
+| `pause(env, reason)`                    | Pause write operations.        |
+| `unpause(env)`                          | Resume normal operations.      |
+| `is_paused(env)`                        | Check current pause state.     |
+| `pause_function(env, function, reason)` | Pause one entry point. Admin.  |
+| `unpause_function(env, function)`       | Resume one entry point. Admin. |
+| `is_function_paused(env, function)`     | Check one entry point's pause. |
+
+`pause` halts every state-changing entry point. `pause_function` is the
+narrower emergency switch: it takes the function name as a `Symbol` (for
+example `make_payment_with_token`) and blocks only that function while the
+rest of the contract keeps working. Either way, blocked calls fail with
+`ContractPaused` (error code 17, "Operations are currently paused by the
+administrator."). Pausing an already-paused function returns `AlreadyPaused`;
+unpausing one that isn't paused returns `NotPaused`. Read-only getters are
+never paused.
 
 ### 3. Token management and exchange rates
 
@@ -368,6 +400,8 @@ pub enum DataKey {
     UpgradeProposalCount,
     ActiveUpgradeProposals,
     GasMetrics(String),
+    PausedFunction(Symbol),
+    StorageVersion,
 }
 ```
 
@@ -427,6 +461,8 @@ The contract emits events for agreement actions, token support, governance, upgr
 - `config_updated`
 - `paused`
 - `unpaused`
+- `function_paused`
+- `function_unpaused`
 
 ### Token and payment events
 
@@ -470,6 +506,8 @@ The contract emits events for agreement actions, token support, governance, upgr
 - `upgrade_proposed`
 - `upgrade_approved`
 - `upgrade_executed`
+- `contract_upgraded`
+- `storage_migrated`
 
 ### Event consumption example
 
