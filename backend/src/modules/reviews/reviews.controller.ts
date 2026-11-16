@@ -10,6 +10,7 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
@@ -24,10 +25,12 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 import { RespondReviewDto } from './dto/respond-review.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { CacheResponseInterceptor } from '../../common/interceptors/cache-response.interceptor';
 
 @ApiTags('Reviews')
 @Controller('reviews')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(CacheResponseInterceptor)
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 

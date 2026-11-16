@@ -36,7 +36,7 @@ export class DeveloperController {
   @ApiOperation({
     summary: 'Create API key',
     description:
-      'Create a new API key for use with X-API-Key header. The raw key is returned only once. Key expires in 90 days by default.',
+      'Create a new API key. Use it via the X-API-Key header or Authorization: Bearer <key> (#2056). The raw key is returned only once. Key expires in 90 days by default.',
   })
   @ApiResponse({
     status: 201,

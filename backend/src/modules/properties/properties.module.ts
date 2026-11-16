@@ -20,12 +20,15 @@ import { ICalService } from './services/ical.service';
 import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
 import { SearchModule } from '../search/search.module';
+import { ReviewsModule } from '../reviews/reviews.module';
+import { PropertiesResolver } from './graphql/properties.resolver';
 
 @Module({
   imports: [
     ScheduleModule,
     FraudModule,
     SearchModule,
+    ReviewsModule,
     TypeOrmModule.forFeature([
       Property,
       PropertyImage,
@@ -49,6 +52,7 @@ import { SearchModule } from '../search/search.module';
     PropertyModesService,
     AvailabilityService,
     ICalService,
+    PropertiesResolver,
   ],
   exports: [
     PropertiesService,

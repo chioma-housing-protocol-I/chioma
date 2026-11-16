@@ -2,13 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-
-export interface AvailabilityDay {
-  date: string;
-  available: boolean;
-  customPrice: number | string | null;
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '../keys';
 
 /**
@@ -27,28 +20,30 @@ export interface AvailabilityDay {
   blockedByBookingId: string | null;
 }
 
-export const availabilityKeys = {
-  all: ['availability'] as const,
-  range: (propertyId: string, startDate: string, endDate: string) =>
-    [...availabilityKeys.all, propertyId, startDate, endDate] as const,
-  property: (propertyId: string) =>
-    [...availabilityKeys.all, propertyId] as const,
-};
-
+/**
+ * Fetch the availability (and per-night pricing) calendar for a property over
+ * an inclusive date range. Used up front in the booking flow so guests see
+ * blocked dates and the computed price before submitting — the server-side
+ * overlap check in `bookings.service` remains the source of truth.
+ */
 export function useAvailability(
-  propertyId: string | null,
+  propertyId: string | null | undefined,
   startDate: string,
   endDate: string,
 ) {
+  const id = propertyId ? String(propertyId) : '';
+
   return useQuery({
-    queryKey: availabilityKeys.range(propertyId ?? '', startDate, endDate),
+    queryKey: queryKeys.availability.calendar(id, startDate, endDate),
     queryFn: async () => {
+      const query = new URLSearchParams({ startDate, endDate }).toString();
       const { data } = await apiClient.get<AvailabilityDay[]>(
-        `/properties/${propertyId}/availability?startDate=${startDate}&endDate=${endDate}`,
+        `/properties/${id}/availability?${query}`,
       );
       return data;
     },
-    enabled: !!propertyId,
+    enabled: Boolean(id) && Boolean(startDate) && Boolean(endDate),
+    staleTime: 60_000,
   });
 }
 
@@ -78,33 +73,9 @@ export function useUpdateAvailabilityDay(propertyId: string | null) {
     onSuccess: () => {
       if (propertyId) {
         queryClient.invalidateQueries({
-          queryKey: availabilityKeys.property(propertyId),
+          queryKey: queryKeys.availability.all,
         });
       }
     },
-/**
- * Fetch the availability (and per-night pricing) calendar for a property over
- * an inclusive date range. Used up front in the booking flow so guests see
- * blocked dates and the computed price before submitting — the server-side
- * overlap check in `bookings.service` remains the source of truth.
- */
-export function useAvailability(
-  propertyId: string | null | undefined,
-  startDate: string,
-  endDate: string,
-) {
-  const id = propertyId ? String(propertyId) : '';
-
-  return useQuery({
-    queryKey: queryKeys.availability.calendar(id, startDate, endDate),
-    queryFn: async () => {
-      const query = new URLSearchParams({ startDate, endDate }).toString();
-      const { data } = await apiClient.get<AvailabilityDay[]>(
-        `/properties/${id}/availability?${query}`,
-      );
-      return data;
-    },
-    enabled: Boolean(id) && Boolean(startDate) && Boolean(endDate),
-    staleTime: 60_000,
   });
 }

@@ -4,7 +4,7 @@
  * confirmation routing to the user's trips/stays list.
  * Issue: #1250
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
@@ -95,6 +95,28 @@ const LATER_DATE = '2027-03-05';
 
 describe('[E2E] Booking flow – Step 1: Date/guest selection', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.useRealTimers());
+
+  it("uses the user's local calendar date for the check-in minimum, not the UTC date (#2039)", () => {
+    // 8pm Pacific on April 1st is already April 2nd in UTC. A user-west-of-UTC
+    // evening booking is exactly the scenario that silently rolled the
+    // earliest selectable check-in date forward by a day before this fix.
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2027-04-02T03:00:00Z'));
+
+    try {
+      const { container } = render(
+        React.createElement(BookingStep1, { onNext: vi.fn() }),
+      );
+      const [checkIn] = container.querySelectorAll('input[type="date"]');
+
+      expect(checkIn.getAttribute('min')).toBe('2027-04-01');
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
 
   it('renders check-in and check-out date inputs', () => {
     const { container } = render(
@@ -528,5 +550,41 @@ describe('[E2E] Booking flow – Full wizard', () => {
     expect(body.propertyId).toBe('prop-42');
     expect(body.checkIn).toBe(FUTURE_DATE);
     expect(body.checkOut).toBe(LATER_DATE);
+  });
+
+  it('resets back to step 1 with a blank form after a successful booking, so a cached page does not show stale data (#2097)', async () => {
+    await runFullBookingFlow();
+    fireEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/guest/trips'));
+
+    // The component instance is still mounted (push is mocked, so there is
+    // no real navigation to unmount it) — if the browser's back/forward
+    // cache were to restore this exact instance, it should show a fresh
+    // step 1 rather than the just-submitted booking's data.
+    await waitFor(() =>
+      expect(screen.getByText(/when are you traveling/i)).toBeInTheDocument(),
+    );
+    const [checkIn, checkOut] = document.querySelectorAll(
+      'input[type="date"]',
+    ) as NodeListOf<HTMLInputElement>;
+    expect(checkIn.value).toBe('');
+    expect(checkOut.value).toBe('');
+  });
+
+  it('does not reset the form when the booking submission fails', async () => {
+    mockFetch.mockResolvedValue({ ok: false });
+
+    await runFullBookingFlow();
+    fireEvent.click(screen.getByRole('button', { name: /confirm booking/i }));
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Something went wrong. Please try again.',
+      ),
+    );
+
+    expect(screen.getByText(/review your booking/i)).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

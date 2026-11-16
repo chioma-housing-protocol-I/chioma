@@ -4,8 +4,8 @@ import {
   NestModule,
   forwardRef,
 } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PooledHttpModule } from '../../common/http/pooled-http.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MetricsService } from './metrics.service';
 import { PerformanceAlertService } from './performance-alert.service';
@@ -13,7 +13,10 @@ import { PerformanceAlert } from './entities/performance-alert.entity';
 import { MetricsMiddleware } from './metrics.middleware';
 import { PerformanceMiddleware } from './performance.middleware';
 import { MonitoringController } from './monitoring.controller';
-import { PerformanceController } from './performance.controller';
+import {
+  PerformanceController,
+  PerformanceAlertsController,
+} from './performance.controller';
 import { AlertService } from './alert.service';
 import { ErrorNotificationService } from './error-notification.service';
 import { ErrorEscalationService } from './error-escalation.service';
@@ -28,13 +31,17 @@ import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
-    HttpModule,
+    PooledHttpModule,
     ScheduleModule.forRoot(),
     forwardRef(() => NotificationsModule),
     StorageModule,
     TypeOrmModule.forFeature([PerformanceAlert]),
   ],
-  controllers: [MonitoringController, PerformanceController],
+  controllers: [
+    MonitoringController,
+    PerformanceController,
+    PerformanceAlertsController,
+  ],
   providers: [
     MetricsService,
     PerformanceAlertService,

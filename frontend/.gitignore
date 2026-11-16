@@ -23,6 +23,9 @@
 /.next/
 /out/
 
+# lighthouse CI output (#2079)
+/.lighthouseci/
+
 # production
 /build
 

@@ -252,7 +252,7 @@ export class WebhooksService {
 
   async deleteEndpoint(userId: string, id: string): Promise<void> {
     const endpoint = await this.getEndpointForUser(userId, id);
-    await this.endpointRepository.remove(endpoint);
+    await this.endpointRepository.softRemove(endpoint);
   }
 
   async listDeliveriesForUser(

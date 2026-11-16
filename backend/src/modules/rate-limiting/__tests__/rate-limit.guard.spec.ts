@@ -58,7 +58,14 @@ describe('RateLimitGuard', () => {
   });
 
   const createMockExecutionContext = (user?: any): ExecutionContext => {
-    return {
+    return createMockExecutionContextWithResponse(user).context;
+  };
+
+  const createMockExecutionContextWithResponse = (
+    user?: any,
+  ): { context: ExecutionContext; setHeader: jest.Mock } => {
+    const setHeader = jest.fn();
+    const context = {
       switchToHttp: () => ({
         getRequest: () => ({
           user,
@@ -67,10 +74,12 @@ describe('RateLimitGuard', () => {
           headers: {},
           rateLimitInfo: undefined,
         }),
+        getResponse: () => ({ setHeader }),
       }),
       getHandler: jest.fn(),
       getClass: jest.fn(),
     } as any;
+    return { context, setHeader };
   };
 
   it('should be defined', () => {
@@ -117,6 +126,68 @@ describe('RateLimitGuard', () => {
         false,
         expect.any(Number),
       );
+    });
+
+    it('sets X-RateLimit-* headers directly on the response (#2072)', async () => {
+      reflector.getAllAndOverride
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(EndpointCategory.PUBLIC)
+        .mockReturnValueOnce(1);
+
+      rateLimitService.isWhitelisted.mockResolvedValue(false);
+      abuseDetectionService.isBlocked.mockResolvedValue(false);
+      abuseDetectionService.detectAbuse.mockResolvedValue({
+        isAbuser: false,
+        abuseScore: 10,
+        violations: [],
+      });
+      rateLimitService.consumePoints.mockResolvedValue({
+        success: true,
+        remainingPoints: 95,
+        msBeforeNext: 60000,
+        isBlocked: false,
+      });
+
+      const { context, setHeader } = createMockExecutionContextWithResponse();
+      await guard.canActivate(context);
+
+      expect(setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 96);
+      expect(setHeader).toHaveBeenCalledWith('X-RateLimit-Remaining', 95);
+      expect(setHeader).toHaveBeenCalledWith(
+        'X-RateLimit-Reset',
+        expect.any(String),
+      );
+      expect(setHeader).toHaveBeenCalledWith(
+        'X-RateLimit-Category',
+        EndpointCategory.PUBLIC,
+      );
+    });
+
+    it('still sets X-RateLimit-* headers on a request that gets rate limited', async () => {
+      reflector.getAllAndOverride
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(EndpointCategory.PUBLIC)
+        .mockReturnValueOnce(1);
+
+      rateLimitService.isWhitelisted.mockResolvedValue(false);
+      abuseDetectionService.isBlocked.mockResolvedValue(false);
+      abuseDetectionService.detectAbuse.mockResolvedValue({
+        isAbuser: false,
+        abuseScore: 10,
+        violations: [],
+      });
+      rateLimitService.consumePoints.mockResolvedValue({
+        success: false,
+        remainingPoints: 0,
+        msBeforeNext: 30000,
+        isBlocked: false,
+      });
+
+      const { context, setHeader } = createMockExecutionContextWithResponse();
+      await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
+
+      expect(setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 0);
+      expect(setHeader).toHaveBeenCalledWith('X-RateLimit-Remaining', 0);
     });
 
     it('should block request when rate limit exceeded', async () => {

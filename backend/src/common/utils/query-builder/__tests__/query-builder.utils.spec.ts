@@ -228,6 +228,48 @@ describe('QueryBuilderUtils', () => {
       const result = QueryBuilderUtils.applyPagination(mockQb, 1, 10);
       expect(result).toBe(mockQb);
     });
+
+    it('clamps an offset that would overflow a 32-bit signed integer', () => {
+      QueryBuilderUtils.applyPagination(mockQb, 100_000_000, 100);
+
+      expect(mockQb.skip).toHaveBeenCalledWith(2147483647);
+      expect(mockQb.take).toHaveBeenCalledWith(100);
+    });
+
+    it('rejects a page number below 1', () => {
+      expect(() => QueryBuilderUtils.applyPagination(mockQb, 0, 10)).toThrow(
+        'Page number must be at least 1',
+      );
+      expect(mockQb.skip).not.toHaveBeenCalled();
+    });
+
+    it('rejects a negative page number', () => {
+      expect(() => QueryBuilderUtils.applyPagination(mockQb, -5, 10)).toThrow(
+        'Page number must be at least 1',
+      );
+      expect(mockQb.skip).not.toHaveBeenCalled();
+    });
+
+    it('rejects a limit below 1', () => {
+      expect(() => QueryBuilderUtils.applyPagination(mockQb, 1, 0)).toThrow(
+        'Limit must be at least 1',
+      );
+      expect(mockQb.skip).not.toHaveBeenCalled();
+    });
+
+    it('rejects a limit above MAX_PAGE_SIZE', () => {
+      expect(() =>
+        QueryBuilderUtils.applyPagination(mockQb, 1, 100_000),
+      ).toThrow('Limit cannot exceed');
+      expect(mockQb.skip).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty page without erroring when requesting far beyond the dataset', () => {
+      QueryBuilderUtils.applyPagination(mockQb, 500, 20);
+
+      expect(mockQb.skip).toHaveBeenCalledWith(9980);
+      expect(mockQb.take).toHaveBeenCalledWith(20);
+    });
   });
 
   describe('chaining', () => {

@@ -1,7 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
 import { BaseAppError } from '../../errors/base.error';
-import { ErrorFactory } from '../../errors/error-factory';
 import {
   ResourceNotFoundError,
   DuplicateEntryError,
@@ -91,60 +90,6 @@ export class ErrorMapperUtils {
       errors,
       statusCode: HttpStatus.BAD_REQUEST,
       code: ErrorCode.VALIDATION_FAILED,
-    };
-  }
-
-  /**
-   * Maps database errors to a structured response
-   */
-  static mapDatabaseError(error: unknown): StandardErrorResponse {
-    const message =
-      error instanceof Error ? error.message : 'Database operation failed';
-
-    return {
-      success: false,
-      message: 'Database operation failed',
-      errors: [message],
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      code: ErrorCode.DATABASE_ERROR,
-    };
-  }
-
-  /**
-   * Converts any error to a standardized error response
-   */
-  static toErrorResponse(error: unknown): StandardErrorResponse {
-    if (error instanceof BaseAppError) {
-      return {
-        success: false,
-        message: error.message,
-        statusCode: error.statusCode,
-        code: error.code,
-      };
-    }
-
-    if (error instanceof HttpException) {
-      const status = error.getStatus();
-      const response = error.getResponse();
-      const message =
-        typeof response === 'string'
-          ? response
-          : (response as { message?: string }).message || error.message;
-
-      return {
-        success: false,
-        message,
-        statusCode: status,
-        code: ErrorFactory.getErrorCode(error),
-      };
-    }
-
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : 'An unexpected error occurred',
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      code: ErrorCode.INTERNAL_SERVER_ERROR,
     };
   }
 }

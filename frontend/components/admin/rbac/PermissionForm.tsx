@@ -79,7 +79,7 @@ export function PermissionForm({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="resource" className="block text-sm font-medium text-white mb-2">
               Resource
             </label>
             <select
@@ -106,7 +106,7 @@ export function PermissionForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="action" className="block text-sm font-medium text-white mb-2">
               Action
             </label>
             <select
@@ -134,7 +134,7 @@ export function PermissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
             Permission Code
           </label>
           <input
@@ -156,10 +156,11 @@ export function PermissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
+          <label htmlFor="description" className="block text-sm font-medium text-white mb-2">
             Description
           </label>
           <textarea
+            id="description"
             {...register('description')}
             placeholder="What does this permission allow?"
             rows={3}

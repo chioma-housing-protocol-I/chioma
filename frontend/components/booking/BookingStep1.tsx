@@ -15,8 +15,24 @@ interface Props {
 /** How far ahead we fetch availability so blocked dates can be surfaced. */
 const WINDOW_DAYS = 180;
 
+/**
+ * Formats a Date as a UTC-anchored `YYYY-MM-DD` string. Used for dates that
+ * are already UTC-anchored internally (addDays/eachNight below), never for
+ * "today" from the user's own clock (#2039): `date.toISOString()` always
+ * converts to UTC first, so for a user west of UTC in the evening, "today"
+ * in their timezone can already be "tomorrow" in UTC, silently shifting
+ * every date-picker constraint by a day.
+ */
 function toISO(date: Date): string {
   return date.toISOString().split('T')[0];
+}
+
+/** Formats a Date as the user's own local-timezone `YYYY-MM-DD` calendar date. */
+function toLocalISO(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(iso: string, days: number): string {
@@ -46,7 +62,7 @@ export function BookingStep1({
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
 
-  const today = toISO(new Date());
+  const today = toLocalISO(new Date());
   const windowEnd = addDays(today, WINDOW_DAYS);
 
   const { data: calendar, isLoading } = useAvailability(

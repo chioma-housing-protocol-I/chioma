@@ -9,6 +9,11 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
+import { CacheService } from '../../common/cache/cache.service';
+import {
+  CACHE_PREFIX_FX_RATE,
+  TTL_FX_RATE_MS,
+} from '../../common/cache/cache.constants';
 
 export interface FxRateResult {
   fromCurrency: string;
@@ -35,6 +40,12 @@ export interface FxRateResult {
  * A rate that cannot be resolved MUST fail settlement rather than fall back
  * to a stale or 1:1 rate — every method here throws instead of returning a
  * guessed value.
+ *
+ * External provider rates are cached for `TTL_FX_RATE_MS` (1 hour) per
+ * currency pair (#2093), so routine conversions do not round-trip to the
+ * provider on every call; a failed lookup is never cached, so a transient
+ * outage self-heals on the next call instead of being locked in for the
+ * cache window. Mock rates are deterministic and intentionally not cached.
  */
 @Injectable()
 export class FxRateService {
@@ -48,6 +59,7 @@ export class FxRateService {
     @InjectRepository(SupportedCurrency)
     private readonly supportedCurrencyRepo: Repository<SupportedCurrency>,
     private readonly configService: ConfigService,
+    private readonly cacheService: CacheService,
   ) {
     this.provider = (this.configService.get<string>('FX_RATE_PROVIDER') ||
       'mock') as 'mock' | 'external';
@@ -163,7 +175,45 @@ export class FxRateService {
     };
   }
 
+  /**
+   * Resolves the external provider rate, cached for `TTL_FX_RATE_MS` (1
+   * hour) per currency pair (#2093). A failed lookup is never cached, so a
+   * transient provider outage does not lock in an error (or, worse, a
+   * previously-successful but now-stale rate well past its TTL) for the
+   * full cache window; the next call simply retries the provider.
+   */
   private async getExternalRate(
+    fromCurrency: string,
+    toCurrency: string,
+  ): Promise<FxRateResult> {
+    const cacheKey = `${CACHE_PREFIX_FX_RATE}:${fromCurrency}:${toCurrency}`;
+
+    const cached = await this.cacheService.get<{
+      rate: number;
+      resolvedAt: string;
+    }>(cacheKey);
+    if (cached) {
+      return {
+        fromCurrency,
+        toCurrency,
+        rate: cached.rate,
+        source: 'external',
+        resolvedAt: new Date(cached.resolvedAt),
+      };
+    }
+
+    const result = await this.fetchExternalRate(fromCurrency, toCurrency);
+
+    await this.cacheService.set(
+      cacheKey,
+      { rate: result.rate, resolvedAt: result.resolvedAt.toISOString() },
+      TTL_FX_RATE_MS,
+    );
+
+    return result;
+  }
+
+  private async fetchExternalRate(
     fromCurrency: string,
     toCurrency: string,
   ): Promise<FxRateResult> {

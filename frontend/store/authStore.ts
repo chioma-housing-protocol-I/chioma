@@ -6,7 +6,6 @@ import { clearEmailOnboardingSkip } from '@/lib/onboarding/email-onboarding';
 import { create } from 'zustand';
 import { withMiddleware } from './middleware';
 import { useUIStore } from './ui-store';
-import { clearEmailOnboardingSkip } from '@/hooks/useOnboardingGate';
 
 // --- Types -------------------------------------------------------------------
 

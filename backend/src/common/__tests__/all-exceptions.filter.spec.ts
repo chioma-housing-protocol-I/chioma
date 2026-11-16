@@ -42,10 +42,11 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.NOT_FOUND,
-        message: 'Not found',
-        code: ErrorCode.RESOURCE_NOT_FOUND,
-        requestId: 'test-request-id',
+        error: expect.objectContaining({
+          message: 'Not found',
+          code: ErrorCode.RESOURCE_NOT_FOUND,
+          requestId: 'test-request-id',
+        }),
       }),
     );
   });
@@ -58,9 +59,10 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Bad request',
-        requestId: 'test-request-id',
+        error: expect.objectContaining({
+          message: 'Bad request',
+          requestId: 'test-request-id',
+        }),
       }),
     );
   });
@@ -80,7 +82,35 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.BAD_REQUEST,
+        error: expect.objectContaining({
+          message: ['error 1', 'error 2'],
+          code: ErrorCode.VALIDATION_FAILED,
+        }),
+      }),
+    );
+  });
+
+  it('should handle ValidationPipe errors as 422 (#2062, array message)', () => {
+    // The global ValidationPipe (main.ts) is configured with
+    // errorHttpStatusCode: UNPROCESSABLE_ENTITY, so 422 with an array
+    // message is the actual shape ValidationPipe throws today.
+    const error = new HttpException(
+      {
+        message: ['error 1', 'error 2'],
+        error: 'Unprocessable Entity',
+        statusCode: 422,
+      },
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+
+    filter.catch(error, mockArgumentsHost as ArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         message: ['error 1', 'error 2'],
         code: ErrorCode.VALIDATION_FAILED,
       }),
@@ -97,8 +127,9 @@ describe('AllExceptionsFilter', () => {
     );
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
+        error: expect.objectContaining({
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+        }),
       }),
     );
   });

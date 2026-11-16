@@ -74,7 +74,9 @@ export class WebhookSignatureGuard implements CanActivate {
         payload,
         signature,
         timestamp,
-        [secret, previousSecret],
+        [secret, previousSecret].filter(
+          (value): value is string => value !== undefined,
+        ),
         undefined,
         verificationContext,
       );

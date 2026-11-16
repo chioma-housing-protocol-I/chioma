@@ -374,7 +374,7 @@ fn test_pause_and_unpause_success() {
     assert!(!client.is_paused());
 
     let reason = String::from_str(&env, "Emergency maintenance");
-    client.pause(&reason);
+    client.pause(&admin, &reason);
 
     assert!(client.is_paused());
     let state = client.get_state().unwrap();
@@ -396,7 +396,7 @@ fn test_pause_metadata_and_reasons() {
     let timestamp = 999888777;
     env.ledger().with_mut(|li| li.timestamp = timestamp);
 
-    client.pause(&reason);
+    client.pause(&admin, &reason);
 
     // PauseState is not directly exposed in Contract struct,
     // but we can check it indirectly or by looking at events if needed.
@@ -412,8 +412,8 @@ fn test_prevent_double_pause() {
     let admin = Address::generate(&env);
     initialize_contract(&env, &client, &admin);
 
-    client.pause(&String::from_str(&env, "one"));
-    client.pause(&String::from_str(&env, "two"));
+    client.pause(&admin, &String::from_str(&env, "one"));
+    client.pause(&admin, &String::from_str(&env, "two"));
 }
 
 #[test]
@@ -437,7 +437,7 @@ fn test_pause_requires_admin_auth() {
     initialize_contract(&env, &client, &admin);
 
     let _attacker = Address::generate(&env);
-    client.pause(&String::from_str(&env, "malicious"));
+    client.pause(&admin, &String::from_str(&env, "malicious"));
 }
 
 // --- Pause State Enforcement Tests ---
@@ -451,7 +451,7 @@ fn test_operations_blocked_when_paused() {
     let admin = Address::generate(&env);
     initialize_contract(&env, &client, &admin);
 
-    client.pause(&String::from_str(&env, "halt"));
+    client.pause(&admin, &String::from_str(&env, "halt"));
 
     let tenant = Address::generate(&env);
     let landlord = Address::generate(&env);
@@ -484,7 +484,7 @@ fn test_admin_bypass_pause_for_maintenance() {
     let admin = Address::generate(&env);
     initialize_contract(&env, &client, &admin);
 
-    client.pause(&String::from_str(&env, "maintenance"));
+    client.pause(&admin, &String::from_str(&env, "maintenance"));
 
     // Admin should still be able to record version even if paused
     let res = client.try_record_version(&ContractVersion {
@@ -510,7 +510,7 @@ fn test_multiple_pause_unpause_cycles() {
     initialize_contract(&env, &client, &admin);
 
     for _ in 0..5 {
-        client.pause(&String::from_str(&env, "cycling"));
+        client.pause(&admin, &String::from_str(&env, "cycling"));
         assert!(client.is_paused());
         client.unpause();
         assert!(!client.is_paused());
@@ -526,13 +526,13 @@ fn test_pause_with_empty_and_long_reasons() {
     initialize_contract(&env, &client, &admin);
 
     // Empty reason
-    client.pause(&String::from_str(&env, ""));
+    client.pause(&admin, &String::from_str(&env, ""));
     assert!(client.is_paused());
     client.unpause();
 
     // Long reason
     let long_reason = String::from_str(&env, "This is a very long reason for pausing the contract to ensure that the storage can handle large strings even in the pause state as specified in the test cases of issue 658 development");
-    client.pause(&long_reason);
+    client.pause(&admin, &long_reason);
     assert!(client.is_paused());
 }
 
@@ -554,7 +554,7 @@ fn test_version_history_persists_through_pause() {
         updated_at: env.ledger().timestamp(),
     });
 
-    client.pause(&String::from_str(&env, "halt"));
+    client.pause(&admin, &String::from_str(&env, "halt"));
 
     client.record_version(&ContractVersion {
         major: 2,

@@ -1,8 +1,13 @@
-import { BadRequestException, HttpException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ArgumentsHost } from '@nestjs/common/interfaces';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { ErrorCode } from '../errors/error-codes';
 import { RateLimitError } from '../errors/domain-errors';
+import { BaseAppError } from '../errors/base.error';
 
 const buildArgumentsHost = (request: any, response: any): ArgumentsHost =>
   ({
@@ -34,7 +39,7 @@ describe('AllExceptionsFilter', () => {
     };
   });
 
-  it('formats validation errors consistently for ValidationPipe bad requests', () => {
+  it('formats validation errors consistently for a plain 400 with an array message', () => {
     const exception = new BadRequestException([
       'email must be an email',
       'password must be longer than or equal to 8 characters',
@@ -45,12 +50,43 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(400);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: 400,
+        error: expect.objectContaining({
+          message: [
+            'email must be an email',
+            'password must be longer than or equal to 8 characters',
+          ],
+          code: ErrorCode.VALIDATION_FAILED,
+          path: '/api/test',
+        }),
+      }),
+    );
+    const [body] = response.json.mock.calls[0];
+    expect(body.error.details).toEqual([
+      { message: 'email must be an email' },
+      { message: 'password must be longer than or equal to 8 characters' },
+    ]);
+  });
+
+  it('formats validation errors from the global ValidationPipe as 422, not 400 (#2062)', () => {
+    // The global ValidationPipe (main.ts) is configured with
+    // errorHttpStatusCode: UNPROCESSABLE_ENTITY, so this is the actual
+    // exception shape ValidationPipe throws today, not BadRequestException.
+    const exception = new UnprocessableEntityException([
+      'email must be an email',
+      'password must be longer than or equal to 8 characters',
+    ]);
+
+    filter.catch(exception, buildArgumentsHost(request, response));
+
+    expect(response.status).toHaveBeenCalledWith(422);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 422,
         message: [
           'email must be an email',
           'password must be longer than or equal to 8 characters',
         ],
-        error: 'Bad Request',
+        error: 'Unprocessable Entity',
         code: ErrorCode.VALIDATION_FAILED,
         path: '/api/test',
       }),
@@ -65,16 +101,16 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        statusCode: 500,
-        message: 'An unexpected error occurred',
-        error: 'Internal Server Error',
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
-        path: '/api/test',
+        error: expect.objectContaining({
+          message: 'An unexpected error occurred',
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+          path: '/api/test',
+        }),
       }),
     );
   });
 
-  it('preserves custom HttpException response bodies', () => {
+  it('preserves custom HttpException response bodies as details', () => {
     const exception = new HttpException(
       { message: 'Custom body', extra: 'data' },
       403,
@@ -85,10 +121,12 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(403);
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Custom body',
-        extra: 'data',
-        path: '/api/test',
-        requestId: 'request-id',
+        error: expect.objectContaining({
+          message: 'Custom body',
+          details: { extra: 'data' },
+          path: '/api/test',
+          requestId: 'request-id',
+        }),
       }),
     );
   });
@@ -101,7 +139,7 @@ describe('AllExceptionsFilter', () => {
     expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '42');
     expect(response.status).toHaveBeenCalledWith(429);
     const [body] = response.json.mock.calls[0];
-    expect(body).not.toHaveProperty('retryAfter');
+    expect(body.error).not.toHaveProperty('retryAfter');
   });
 
   it('does not set a Retry-After header when the exception has no retryAfter', () => {
@@ -123,7 +161,23 @@ describe('AllExceptionsFilter', () => {
     expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '60');
     expect(response.status).toHaveBeenCalledWith(429);
     const [body] = response.json.mock.calls[0];
-    expect(body).not.toHaveProperty('retryAfter');
-    expect(body.code).toBe(ErrorCode.RATE_LIMIT_EXCEEDED);
+    expect(body.error).not.toHaveProperty('retryAfter');
+    expect(body.error.code).toBe(ErrorCode.RATE_LIMIT_EXCEEDED);
+  });
+
+  it('nests BaseAppError context under error.details', () => {
+    const exception = new BaseAppError(
+      ErrorCode.INSUFFICIENT_FUNDS,
+      402,
+      'Not enough balance',
+      true,
+      { available: 25, requested: 100 },
+    );
+
+    filter.catch(exception, buildArgumentsHost(request, response));
+
+    const [body] = response.json.mock.calls[0];
+    expect(body.error.code).toBe(ErrorCode.INSUFFICIENT_FUNDS);
+    expect(body.error.details).toEqual({ available: 25, requested: 100 });
   });
 });

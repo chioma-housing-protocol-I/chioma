@@ -10,6 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
@@ -36,12 +38,30 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ListingStatus, Property } from './entities/property.entity';
 import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-response.decorator';
+import { ReviewsService } from '../reviews/reviews.service';
+import { Review } from '../reviews/review.entity';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CacheControl } from '../../common/decorators/cache-control.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
 @ApiStandardErrors()
+// Every response here can carry a loaded `owner` (User) relation
+// (findOne/findOnePublic load it via `relations: [..., 'owner']`).
+// Without this, class-transformer's @Exclude() decorators on
+// User (password, refreshToken, etc.) are never applied, so a public,
+// unauthenticated GET /properties/:id call returns the landlord's
+// bcrypt password hash in the response. Found while writing snapshot
+// tests for this endpoint (#2044); the same gap likely exists on other
+// controllers that load a User relation without this interceptor
+// (agreements, bookings before this was added elsewhere, payments) —
+// see this PR's description for the full disclosure.
+@UseInterceptors(ClassSerializerInterceptor)
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+    private readonly reviewsService: ReviewsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -73,6 +93,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Browse listings tolerate brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -90,6 +111,7 @@ export class PropertiesController {
   @Get('my-properties')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @CacheControl.private(30)
   @ApiOperation({
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
@@ -145,6 +167,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Property detail view tolerates brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'Get a specific property',
     description:
@@ -162,6 +185,38 @@ export class PropertiesController {
   @ApiResponse({ status: 404, description: 'Property not found' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return await this.propertiesService.findOnePublic(id);
+  }
+
+  @Get(':id/reviews')
+  @UseReplica({
+    maxStaleness: '30s',
+    reason: 'Review listings tolerate brief replication lag',
+  })
+  @ApiOperation({
+    summary: 'Get reviews for a property',
+    description:
+      'Retrieve a paginated list of reviews for a specific property.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Property UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiPaginatedResponse(Review)
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async getPropertyReviews(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    // Validates the property exists (and is published) before listing its
+    // reviews, so an unpublished or deleted property's ID 404s instead of
+    // silently returning an empty page.
+    await this.propertiesService.findOnePublic(id);
+    return await this.reviewsService.getPropertyReviews(
+      id,
+      query.page,
+      query.limit,
+    );
   }
 
   @Patch(':id')

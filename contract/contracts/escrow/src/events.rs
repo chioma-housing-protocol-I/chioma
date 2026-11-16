@@ -545,3 +545,43 @@ pub(crate) fn upgrade_executed(env: &Env, proposal_id: String, executor: Address
     }
     .publish(env);
 }
+
+/// Event emitted when a sensitive operation is queued behind a timelock (#2085)
+/// Topics: ["timelock_queued", action_id: String]
+#[contractevent(topics = ["v1", "timelock_queued"])]
+pub struct TimelockActionQueued {
+    #[topic]
+    pub action_id: String,
+    pub eta: u64,
+}
+
+/// Event emitted when a queued action's delay has passed and it executes
+/// Topics: ["timelock_executed", action_id: String]
+#[contractevent(topics = ["v1", "timelock_executed"])]
+pub struct TimelockActionExecuted {
+    #[topic]
+    pub action_id: String,
+}
+
+/// Event emitted when the admin cancels a queued action before it executes
+/// Topics: ["timelock_cancelled", action_id: String]
+#[contractevent(topics = ["v1", "timelock_cancelled"])]
+pub struct TimelockActionCancelled {
+    #[topic]
+    pub action_id: String,
+}
+
+/// Helper function to emit timelock action queued event
+pub(crate) fn timelock_action_queued(env: &Env, action_id: String, eta: u64) {
+    TimelockActionQueued { action_id, eta }.publish(env);
+}
+
+/// Helper function to emit timelock action executed event
+pub(crate) fn timelock_action_executed(env: &Env, action_id: String) {
+    TimelockActionExecuted { action_id }.publish(env);
+}
+
+/// Helper function to emit timelock action cancelled event
+pub(crate) fn timelock_action_cancelled(env: &Env, action_id: String) {
+    TimelockActionCancelled { action_id }.publish(env);
+}

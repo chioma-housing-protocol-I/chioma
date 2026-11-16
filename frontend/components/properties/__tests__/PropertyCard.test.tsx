@@ -168,4 +168,11 @@ describe('PropertyCard', () => {
     const img = screen.getByAltText('Luxury Waterfront Apartment');
     expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
   });
+
+  it('lazy-loads the manager avatar image (#2098)', () => {
+    render(React.createElement(PropertyCard, { property: mockProperty }));
+
+    const avatar = screen.getByAltText('John Smith');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
+  });
 });

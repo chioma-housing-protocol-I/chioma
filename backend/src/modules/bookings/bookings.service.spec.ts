@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { getQueueToken } from '@nestjs/bull';
 import { DataSource, DeepPartial, FindOneOptions, Repository } from 'typeorm';
 import { BookingsService } from './bookings.service';
 import { Payment } from '../payments/entities/payment.entity';
@@ -27,6 +28,7 @@ describe('BookingsService', () => {
   let propertyRepository: jest.Mocked<Repository<Property>>;
   let notificationsService: jest.Mocked<NotificationsService>;
   let dataSource: DataSource;
+  let emailQueue: { add: jest.Mock };
 
   const mockProperty = {
     id: 'property-1',
@@ -61,9 +63,15 @@ describe('BookingsService', () => {
   };
 
   beforeEach(async () => {
+    emailQueue = { add: jest.fn().mockResolvedValue({ id: 'email-job-1' }) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookingsService,
+        {
+          provide: getQueueToken('email'),
+          useValue: emailQueue,
+        },
         {
           provide: getRepositoryToken(Booking),
           useValue: {
@@ -327,10 +335,18 @@ describe('BookingsService', () => {
   describe('confirm / cancel', () => {
     const pendingBooking = {
       id: 'booking-1',
+      propertyId: 'property-1',
       status: BookingStatus.PENDING,
-      property: { ownerId: 'host-1' },
       guest: { id: 'guest-1' },
     } as Booking;
+
+    beforeEach(() => {
+      // confirm()/cancel() look up the property separately (by
+      // booking.propertyId) rather than through a joined relation, so
+      // ownership checks resolve against this rather than a nested
+      // booking.property field.
+      propertyRepository.findOne.mockResolvedValue(mockProperty);
+    });
 
     it('throws when the booking does not exist', async () => {
       bookingRepository.findOne.mockResolvedValue(null);
@@ -368,12 +384,89 @@ describe('BookingsService', () => {
       expect(bookingRepository.save).toHaveBeenCalled();
     });
 
+    it('enqueues a booking confirmation email with retry/backoff when the guest has an email on file (#2092)', async () => {
+      bookingRepository.findOne.mockResolvedValue({
+        ...pendingBooking,
+        checkInDate: '2026-09-01',
+        checkOutDate: '2026-09-05',
+        guest: { id: 'guest-1', email: 'guest@example.com' },
+        property: { ownerId: 'host-1', title: 'Seaside Cottage' },
+      } as unknown as Booking);
+
+      await service.confirm('host-1', 'booking-1');
+
+      expect(emailQueue.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'booking-confirmation',
+          email: 'guest@example.com',
+          data: expect.objectContaining({
+            message: expect.stringContaining('Seaside Cottage'),
+          }),
+        }),
+        expect.objectContaining({
+          attempts: 3,
+          backoff: expect.objectContaining({ type: 'exponential' }),
+        }),
+      );
+    });
+
+    it('skips the confirmation email without failing when the guest has no email on file', async () => {
+      bookingRepository.findOne.mockResolvedValue({ ...pendingBooking });
+
+      const result = await service.confirm('host-1', 'booking-1');
+
+      expect(result.status).toBe(BookingStatus.CONFIRMED);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('still confirms the booking even if enqueueing the confirmation email fails', async () => {
+      emailQueue.add.mockRejectedValueOnce(new Error('redis unreachable'));
+      bookingRepository.findOne.mockResolvedValue({
+        ...pendingBooking,
+        guest: { id: 'guest-1', email: 'guest@example.com' },
+        property: { ownerId: 'host-1', title: 'Seaside Cottage' },
+      } as unknown as Booking);
+
+      const result = await service.confirm('host-1', 'booking-1');
+
+      expect(result.status).toBe(BookingStatus.CONFIRMED);
+    });
+
     it('cancels a pending booking owned by the caller', async () => {
       bookingRepository.findOne.mockResolvedValue({ ...pendingBooking });
 
       const result = await service.cancel('host-1', 'booking-1');
 
       expect(result.status).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('takes a pessimistic write lock on the booking row before checking its status (#2035)', async () => {
+      bookingRepository.findOne.mockResolvedValue({ ...pendingBooking });
+
+      await service.confirm('host-1', 'booking-1');
+
+      const bookingLockCall = mockQueryRunner.manager.findOne.mock.calls.find(
+        ([entity]: [unknown]) => entity === Booking,
+      );
+      expect(bookingLockCall?.[1]).toMatchObject({
+        lock: { mode: 'pessimistic_write' },
+      });
+    });
+
+    it('rejects confirming a booking that was already confirmed by a concurrent request (#2035)', async () => {
+      // Simulates the outcome a real pessimistic lock produces: the second
+      // of two concurrent confirm calls only gets to read the row after the
+      // first has already committed CONFIRMED, so it must see the updated
+      // status rather than the stale PENDING it read before the lock.
+      bookingRepository.findOne.mockResolvedValue({
+        ...pendingBooking,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      await expect(service.confirm('host-1', 'booking-1')).rejects.toThrow(
+        BusinessRuleViolationError,
+      );
+      expect(bookingRepository.save).not.toHaveBeenCalled();
     });
   });
 

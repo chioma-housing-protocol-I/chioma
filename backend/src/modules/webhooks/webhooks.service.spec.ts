@@ -56,6 +56,7 @@ describe('WebhooksService', () => {
           Promise.resolve({ ...e, id: e.id ?? 'endpoint-1' }),
         ),
       remove: jest.fn().mockImplementation((e) => Promise.resolve(e)),
+      softRemove: jest.fn().mockImplementation((e) => Promise.resolve(e)),
     };
 
     deliveryRepository = {
@@ -438,7 +439,8 @@ describe('WebhooksService', () => {
 
       await service.deleteEndpoint('user-1', 'endpoint-1');
 
-      expect(endpointRepository.remove).toHaveBeenCalledWith(endpoint);
+      expect(endpointRepository.softRemove).toHaveBeenCalledWith(endpoint);
+      expect(endpointRepository.remove).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when the endpoint is not owned by the user', async () => {

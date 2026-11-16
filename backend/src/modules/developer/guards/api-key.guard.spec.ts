@@ -121,6 +121,67 @@ describe('ApiKeyGuard', () => {
         apiKeyId: 'key-id-123',
       });
     });
+
+    it('accepts the key via Authorization: Bearer as well as x-api-key (#2056)', async () => {
+      reflector.getAllAndOverride.mockReturnValue(false);
+      const context = createMockExecutionContext({
+        authorization: 'Bearer chioma_sk_validkey123',
+      });
+      const mockKey = { id: 'key-id-123', userId: 'user-id-456' } as ApiKey;
+      developerService.validateKey.mockResolvedValue(mockKey);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(developerService.validateKey).toHaveBeenCalledWith(
+        'chioma_sk_validkey123',
+      );
+    });
+
+    it('is case-insensitive on the Bearer scheme', async () => {
+      reflector.getAllAndOverride.mockReturnValue(false);
+      const context = createMockExecutionContext({
+        authorization: 'bearer chioma_sk_validkey123',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id',
+        userId: 'user-id',
+      } as ApiKey);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+    });
+
+    it('prefers x-api-key over Authorization when both are present', async () => {
+      reflector.getAllAndOverride.mockReturnValue(false);
+      const context = createMockExecutionContext({
+        'x-api-key': 'chioma_sk_fromheader',
+        authorization: 'Bearer chioma_sk_frombearer',
+      });
+      developerService.validateKey.mockResolvedValue({
+        id: 'key-id',
+        userId: 'user-id',
+      } as ApiKey);
+
+      await guard.canActivate(context);
+
+      expect(developerService.validateKey).toHaveBeenCalledWith(
+        'chioma_sk_fromheader',
+      );
+    });
+
+    it('returns false for a non-Bearer Authorization header', async () => {
+      reflector.getAllAndOverride.mockReturnValue(false);
+      const context = createMockExecutionContext({
+        authorization: 'Basic dXNlcjpwYXNz',
+      });
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(false);
+      expect(developerService.validateKey).not.toHaveBeenCalled();
+    });
   });
 
   describe('scope enforcement', () => {

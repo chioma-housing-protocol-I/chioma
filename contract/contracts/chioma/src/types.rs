@@ -378,3 +378,37 @@ pub struct ContractVersion {
     pub hash: Bytes,
     pub updated_at: u64,
 }
+
+/// Aggregate contract usage metrics (#2088).
+///
+/// `total_value_locked` is the contract's *current* token balance for the
+/// requested token — a live on-chain query, not a running total, since the
+/// contract only ever escrows that token through deposits and releases and
+/// the balance already reflects every one of them to date.
+/// `average_transaction_size` is derived at query time from
+/// `total_transaction_volume / total_transaction_count` rather than stored,
+/// so it never needs updating on its own.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContractMetrics {
+    pub total_value_locked: i128,
+    pub total_transaction_count: u64,
+    pub total_transaction_volume: i128,
+    pub average_transaction_size: i128,
+}
+
+/// A pending or completed emergency withdrawal (#2087). Created alongside a
+/// multi-sig `AdminProposal` (same `proposal_id`, `ActionType::EmergencyAction`)
+/// so the withdrawal inherits the existing multi-sig approval flow, but
+/// stores its own strongly-typed `token`/`amount`/`recipient` rather than
+/// the proposal's opaque `data: Bytes` field, which nothing in this
+/// contract decodes.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EmergencyWithdrawalRequest {
+    pub proposal_id: String,
+    pub token: Address,
+    pub amount: i128,
+    pub recipient: Address,
+    pub executed: bool,
+}
