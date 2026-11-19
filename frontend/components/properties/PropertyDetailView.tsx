@@ -1,213 +1,202 @@
 'use client';
 
-import {
-  MapPin,
-  Bed,
-  Bath,
-  Ruler,
-  Share2,
-  Heart,
-  Shield,
-  TrendingUp,
-  Calendar,
-  MessageCircle,
-  Phone,
-} from 'lucide-react';
 import Image from 'next/image';
+import { MapPin, User, ShieldCheck } from 'lucide-react';
 import ImageGallery from './ImageGallery';
-import AmenitiesList, { Amenity } from './AmenitiesList';
+import AmenitiesList, { type Amenity } from './AmenitiesList';
+import { ReviewList } from '@/components/reviews/ReviewList';
+import type { Review } from '@/components/reviews/ReviewCard';
+import type { RatingStats } from '@/components/reviews/RatingSummary';
+
+export interface PropertyDetailData {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  location: string;
+  status: 'AVAILABLE' | 'RENTED';
+  images: string[];
+  amenities: Amenity[];
+  owner: {
+    name: string;
+    avatar?: string;
+    contactInfo?: string;
+  };
+  rentalUnits: {
+    total: number;
+    available: number;
+  };
+  reviews: Review[];
+  ratingStats: RatingStats;
+}
 
 interface PropertyDetailViewProps {
-  property: {
-    id: number;
-    title: string;
-    description: string;
-    price: string;
-    location: string;
-    beds: number;
-    baths: number;
-    sqft: number;
-    images: string[];
-    verified: boolean;
-    amenities: Amenity[];
-    manager: {
-      name: string;
-      avatar?: string;
-      verified: boolean;
-      responseTime: string;
-    };
-    category: string;
-    listedDate: string;
-  };
+  property: PropertyDetailData;
+  onInitializeLease?: () => void;
+  onSubmitReview?: (rating: number, comment: string) => Promise<void>;
 }
 
 export default function PropertyDetailView({
   property,
+  onInitializeLease,
+  onSubmitReview,
 }: PropertyDetailViewProps) {
+  const isRented = property.status === 'RENTED';
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              {property.title}
-            </h1>
-            {property.verified && (
-              <div className="bg-emerald-600/20 backdrop-blur-md text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow-lg">
-                <Shield className="w-4 h-4" />
-                Verified
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-blue-200/70 text-lg">
-            <MapPin className="w-5 h-5 shrink-0" />
-            <p>{property.location}</p>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      {/* Header section with title, location, gallery */}
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-sans bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent mb-4 tracking-tight">
+          {property.title}
+        </h1>
+        <div className="flex items-start sm:items-center text-blue-200/80 mb-6 sm:mb-8 text-base sm:text-lg font-medium gap-2">
+          <MapPin className="w-5 h-5 shrink-0 text-blue-400 mt-0.5 sm:mt-0" />
+          <span>{property.location}</span>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-slate-700/50 text-white px-5 py-3 rounded-2xl border border-white/10 transition-all">
-            <Share2 className="w-5 h-5" />
-            <span>Share</span>
-          </button>
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-slate-700/50 text-white px-5 py-3 rounded-2xl border border-white/10 transition-all">
-            <Heart className="w-5 h-5" />
-            <span>Save</span>
-          </button>
-        </div>
+        <ImageGallery images={property.images} title={property.title} />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Gallery & Details */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Gallery */}
-          <div className="backdrop-blur-xl bg-slate-800/30 border border-white/5 rounded-[2.5rem] p-4 shadow-2xl">
-            <ImageGallery images={property.images} title={property.title} />
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 backdrop-blur-xl bg-slate-800/50 border border-white/10 rounded-3xl p-6 shadow-xl">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Bed className="w-6 h-6 text-blue-400" />
-              <div className="text-white font-bold text-lg">
-                {property.beds}
-              </div>
-              <div className="text-blue-200/50 text-xs uppercase tracking-wider">
-                Bedrooms
-              </div>
+      {/* Details 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 relative items-start">
+        {/* Left Column (Main Content - roughly 66%) */}
+        <div className="lg:col-span-8 flex flex-col gap-10">
+          {/* Units Status */}
+          <div className="backdrop-blur-xl bg-blue-500/10 border border-blue-400/30 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+            <div>
+              <h3 className="text-xl font-bold text-white">Rental Units</h3>
+              <p className="text-blue-200/70 mt-1">
+                Smart Contract execution enabled for transparent leasing.
+              </p>
             </div>
-            <div className="flex flex-col items-center gap-2 text-center border-x border-white/10 px-4 text-center">
-              <Bath className="w-6 h-6 text-blue-400" />
-              <div className="text-white font-bold text-lg">
-                {property.baths}
+            <div className="flex gap-4">
+              <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 px-4 py-2 rounded-xl shadow-sm text-center">
+                <span className="block text-2xl font-black text-white">
+                  {property.rentalUnits.total}
+                </span>
+                <span className="text-xs font-semibold text-blue-200/70 uppercase tracking-wider">
+                  Total
+                </span>
               </div>
-              <div className="text-blue-200/50 text-xs uppercase tracking-wider">
-                Bathrooms
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Ruler className="w-6 h-6 text-blue-400" />
-              <div className="text-white font-bold text-lg">
-                {property.sqft}
-              </div>
-              <div className="text-blue-200/50 text-xs uppercase tracking-wider">
-                sqft Area
+              <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 px-4 py-2 rounded-xl shadow-sm text-center">
+                <span
+                  className={`block text-2xl font-black ${property.rentalUnits.available > 0 ? 'text-green-400' : 'text-red-400'}`}
+                >
+                  {property.rentalUnits.available}
+                </span>
+                <span className="text-xs font-semibold text-blue-200/70 uppercase tracking-wider">
+                  Available
+                </span>
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-4">
               About this property
-            </h2>
-            <div className="text-blue-200/70 leading-relaxed text-lg whitespace-pre-line">
+            </h3>
+            <p className="text-blue-200/80 leading-relaxed text-lg">
               {property.description}
-            </div>
+            </p>
           </div>
 
           {/* Amenities */}
+          <hr className="border-white/10" />
           <AmenitiesList amenities={property.amenities} />
-        </div>
+          <hr className="border-white/10" />
 
-        {/* Right Column: Sidebar */}
-        <div className="space-y-6">
-          {/* Pricing & Booking Card */}
-          <div className="sticky top-24 backdrop-blur-2xl bg-slate-900/80 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl space-y-6">
-            <div className="space-y-1">
-              <div className="text-blue-200/50 text-sm font-medium uppercase tracking-widest">
-                Monthly Rent
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-white">
-                  {property.price}
-                </span>
-                <span className="text-blue-200/50 text-lg">/mo</span>
-              </div>
+          {/* Landlord Info */}
+          <div className="flex items-center gap-6 p-6 rounded-2xl backdrop-blur-xl bg-slate-800/50 border border-white/10 shadow-lg">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
+              {property.owner.avatar ? (
+                <Image
+                  src={property.owner.avatar}
+                  alt={property.owner.name}
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="text-white w-8 h-8" />
+              )}
             </div>
-
-            <div className="pt-4 space-y-3">
-              <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                <span>Apply for Smart Lease</span>
-              </button>
-              <button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-4 rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-2">
-                <Calendar className="w-5 h-5" />
-                <span>Schedule a Tour</span>
-              </button>
-            </div>
-
-            <div className="pt-6 border-t border-white/5 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-lg">
-                  <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-                    {property.manager.avatar ? (
-                      <Image
-                        src={property.manager.avatar}
-                        alt={property.manager.name}
-                        width={56}
-                        height={56}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      property.manager.name.charAt(0)
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-white text-lg">
-                      {property.manager.name}
-                    </span>
-                    {property.manager.verified && (
-                      <Shield className="w-4 h-4 text-blue-400" />
-                    )}
-                  </div>
-                  <div className="text-blue-200/50 text-sm">
-                    Response time: {property.manager.responseTime}
-                  </div>
-                </div>
+            <div>
+              <h4 className="text-xl font-bold text-white mb-1">
+                Managed by {property.owner.name}
+              </h4>
+              <div className="flex items-center text-sm font-medium text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-full w-fit">
+                <ShieldCheck className="w-4 h-4 mr-1.5" />
+                {property.owner.contactInfo || 'Verified Source'}
               </div>
-
-              <div className="flex gap-3">
-                <button className="flex-1 flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-slate-700/50 text-white p-3 rounded-xl border border-white/10 transition-all">
-                  <MessageCircle className="w-5 h-5" />
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-slate-700/50 text-white p-3 rounded-xl border border-white/10 transition-all">
-                  <Phone className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 text-center">
-              <p className="text-xs text-blue-200/30">
-                Property ID: CHI-{property.id.toString().padStart(6, '0')}
-              </p>
             </div>
           </div>
         </div>
+
+        {/* Right Column (Sticky CTA - roughly 33%) */}
+        <div className="lg:col-span-4 sticky top-24 lg:top-32 w-full">
+          <div className="backdrop-blur-xl bg-slate-800/50 border border-white/10 shadow-2xl rounded-3xl p-5 sm:p-8">
+            {/* Price */}
+            <div className="mb-8 pb-6 border-b border-white/10">
+              <span className="block text-sm font-semibold text-blue-200/70 mb-1 uppercase tracking-wider">
+                Rent Price
+              </span>
+              <div className="flex items-end gap-2 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent font-extrabold text-4xl">
+                {property.price}
+                <span className="text-lg font-medium text-blue-200/70 mb-1">
+                  /year
+                </span>
+              </div>
+            </div>
+
+            {/* Status Badges */}
+            {isRented && (
+              <div className="mb-6 bg-red-500/20 text-red-300 px-4 py-3 rounded-xl font-bold text-center border border-red-400/30 flex items-center justify-center backdrop-blur-sm">
+                <span className="w-2 h-2 bg-red-400 rounded-full mr-2 animate-pulse" />
+                Property Not Available
+              </div>
+            )}
+            {!isRented && (
+              <div className="mb-6 bg-emerald-500/20 text-emerald-300 px-4 py-3 rounded-xl font-bold text-center border border-emerald-400/30 flex items-center justify-center backdrop-blur-sm">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2" />
+                Available for Smart Lease
+              </div>
+            )}
+
+            {/* Action Button */}
+            <button
+              disabled={isRented}
+              onClick={onInitializeLease}
+              className={`w-full py-4 rounded-full font-bold text-lg transition-all transform duration-200
+                ${
+                  isRented
+                    ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed border border-white/10'
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0'
+                }`}
+            >
+              {isRented ? 'Currently Rented' : 'Initialize Rent Agreement'}
+            </button>
+
+            {!isRented && (
+              <p className="text-center text-xs text-blue-200/70 mt-4 font-medium flex items-center justify-center gap-1.5">
+                <ShieldCheck className="w-4 h-4" />
+                Powered by secure Smart Contracts
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews Section at the bottom */}
+      <div className="mt-20 pt-10 border-t border-white/10">
+        <ReviewList
+          reviews={property.reviews}
+          stats={property.ratingStats}
+          title="Tenant Reviews"
+          subtitle="See what past and current tenants say about this property"
+          onSubmitReview={onSubmitReview}
+        />
       </div>
     </div>
   );
