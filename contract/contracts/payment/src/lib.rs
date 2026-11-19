@@ -6,7 +6,7 @@
 //! Handles rent payment processing with automatic commission splitting
 //! and payment record management.
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 
 pub mod admin;
 pub mod errors;
@@ -249,6 +249,37 @@ impl PaymentContract {
     /// Whether the contract is currently globally paused.
     pub fn is_paused(env: Env) -> bool {
         admin::is_paused(&env)
+    }
+
+    /// Propose a contract upgrade. Admin only (#2084).
+    pub fn propose_upgrade(
+        env: Env,
+        proposer: Address,
+        proposal_id: String,
+        wasm_hash: Bytes,
+        notes: String,
+        delay_seconds: u64,
+    ) -> Result<(), Error> {
+        payment_impl::propose_upgrade(env, proposer, proposal_id, wasm_hash, notes, delay_seconds)
+    }
+
+    /// Approve a pending upgrade proposal. Admin only (#2084).
+    pub fn approve_upgrade(env: Env, approver: Address, proposal_id: String) -> Result<(), Error> {
+        payment_impl::approve_upgrade(env, approver, proposal_id)
+    }
+
+    /// Execute an approved, due upgrade proposal, swapping this contract's
+    /// WASM in place (#2084). Admin only.
+    pub fn execute_upgrade(env: Env, executor: Address, proposal_id: String) -> Result<(), Error> {
+        payment_impl::execute_upgrade(env, executor, proposal_id)
+    }
+
+    /// Get an upgrade proposal by ID.
+    pub fn get_upgrade_proposal(
+        env: Env,
+        proposal_id: String,
+    ) -> Result<upgrade::UpgradeProposal, Error> {
+        payment_impl::get_upgrade_proposal(env, proposal_id)
     }
 
     /// Get a payment record by ID

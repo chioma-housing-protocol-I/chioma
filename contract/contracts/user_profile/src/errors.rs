@@ -31,6 +31,9 @@ pub enum ContractError {
 
     /// Caller is within the cooldown period for this function
     CooldownNotMet = 9,
+
+    /// The stored upgrade proposal's wasm hash is not a valid 32-byte hash
+    InvalidWasmHash = 10,
 }
 
 /// Pins every `ContractError` discriminant so off-chain code that maps
@@ -52,5 +55,6 @@ mod pin_tests {
         assert_eq!(ContractError::AccessDenied as u32, 7);
         assert_eq!(ContractError::RateLimitExceeded as u32, 8);
         assert_eq!(ContractError::CooldownNotMet as u32, 9);
+        assert_eq!(ContractError::InvalidWasmHash as u32, 10);
     }
 }
