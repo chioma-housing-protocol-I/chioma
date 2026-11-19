@@ -18,6 +18,7 @@ pub enum ObligationError {
     AdminNotSet = 12,
     RateLimitExceeded = 13,
     CooldownNotMet = 14,
+    InvalidWasmHash = 15,
 }
 
 /// Pins every `ObligationError` discriminant so off-chain code that maps
@@ -44,5 +45,6 @@ mod pin_tests {
         assert_eq!(ObligationError::AdminNotSet as u32, 12);
         assert_eq!(ObligationError::RateLimitExceeded as u32, 13);
         assert_eq!(ObligationError::CooldownNotMet as u32, 14);
+        assert_eq!(ObligationError::InvalidWasmHash as u32, 15);
     }
 }
