@@ -37,6 +37,8 @@ import { OpenApiDocumentRegistryService } from './common/validation/openapi-docu
 import { EnvironmentVariables } from './config/environment-variables';
 import { EncryptionService } from './modules/stellar/services/encryption.service';
 import { getCorsConfig, validateCorsConfig } from './config/cors.config';
+import { DataSource } from 'typeorm';
+import { dataSourceWarmUpQuery, startPoolWarmUp } from './database/pool-warmer';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -255,6 +257,22 @@ async function bootstrap() {
     process.exit(1);
   }
 
+  // Pre-warm half the connection pool while the listener is starting. This is
+  // deliberately fire-and-forget: bootstrap never waits on a warm-up query.
+  const dataSource = app.get(DataSource);
+  const poolMax = Number(
+    (dataSource.options as { extra?: { max?: number } }).extra?.max ?? 20,
+  );
+  const cancelPoolWarmUp = startPoolWarmUp(
+    dataSourceWarmUpQuery(dataSource),
+    { maxConnections: poolMax },
+    {
+      log: (message) => bootstrapLogger.log(`[STARTUP] ${message}`),
+      warn: (message, context) =>
+        bootstrapLogger.warn(`[STARTUP] ${message}`, context),
+    },
+  );
+
   const port = process.env.PORT ?? 5000;
   const server = await app.listen(port);
   bootstrapLogger.log(`Application started on port ${port}`);
@@ -276,6 +294,7 @@ async function bootstrap() {
     }
 
     isShuttingDown = true;
+    cancelPoolWarmUp();
     bootstrapLogger.log(`Received ${signal}, starting graceful shutdown...`);
 
     // Stop accepting new connections

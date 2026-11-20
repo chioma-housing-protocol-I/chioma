@@ -117,6 +117,14 @@ export class QueryAuditLogsDto {
   limit?: number = 50;
 
   @ApiPropertyOptional({
+    example: true,
+    description: 'Only return business state-change events',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  businessEventsOnly?: boolean;
+
+  @ApiPropertyOptional({
     example: AuditLogSortField.PERFORMED_AT,
     enum: AuditLogSortField,
     description: 'Field to sort by',
