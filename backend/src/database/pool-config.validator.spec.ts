@@ -28,6 +28,22 @@ describe('PoolConfigValidator', () => {
         expect(result.warnings).toHaveLength(0);
       });
 
+      it('should accept bounded backpressure queue settings', () => {
+        const config: PoolConfig = {
+          min: 10,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+          backpressureQueueSize: 100,
+          backpressureQueueTimeoutMs: 2000,
+        };
+
+        const result = validator.validate(config);
+
+        expect(result.isValid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+      });
+
       it('should accept development configuration', () => {
         const config: PoolConfig = {
           min: 2,
@@ -267,6 +283,44 @@ describe('PoolConfigValidator', () => {
         expect(
           result.warnings.filter((w) => w.includes('Connection timeout')),
         ).toHaveLength(0);
+      });
+    });
+
+    describe('backpressure queue validation', () => {
+      it('should reject negative backpressure queue size', () => {
+        const config: PoolConfig = {
+          min: 10,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+          backpressureQueueSize: -1,
+        };
+
+        const result = validator.validate(config);
+
+        expect(result.isValid).toBe(false);
+        expect(result.errors[0]).toContain('Backpressure queue size');
+      });
+
+      it('should warn for zero queue size and very long queue timeout', () => {
+        const config: PoolConfig = {
+          min: 10,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+          backpressureQueueSize: 0,
+          backpressureQueueTimeoutMs: 60000,
+        };
+
+        const result = validator.validate(config);
+
+        expect(result.isValid).toBe(true);
+        expect(
+          result.warnings.some((w) => w.includes('Backpressure queue size')),
+        ).toBe(true);
+        expect(
+          result.warnings.some((w) => w.includes('Backpressure queue timeout')),
+        ).toBe(true);
       });
     });
   });

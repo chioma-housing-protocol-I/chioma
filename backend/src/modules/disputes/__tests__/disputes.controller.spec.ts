@@ -43,6 +43,7 @@ describe('DisputesController', () => {
           provide: DisputesService,
           useValue: {
             createDispute: jest.fn(),
+            reportDispute: jest.fn(),
             findAll: jest.fn(),
             findOne: jest.fn(),
             findByDisputeId: jest.fn(),
@@ -95,6 +96,35 @@ describe('DisputesController', () => {
       expect(service.createDispute).toHaveBeenCalledWith(
         createDisputeDto,
         mockUser.id,
+      );
+    });
+  });
+
+  describe('reportDispute', () => {
+    it('should report a dispute with optional evidence attachment', async () => {
+      const createDisputeDto: CreateDisputeDto = {
+        agreementId: '1',
+        disputeType: DisputeType.RENT_PAYMENT,
+        requestedAmount: 500,
+        description: 'Test dispute description',
+      };
+      const file = { originalname: 'evidence.png', size: 10 } as any;
+
+      jest.spyOn(service, 'reportDispute').mockResolvedValue(mockDispute);
+
+      const result = await controller.reportDispute(
+        createDisputeDto,
+        { user: mockUser },
+        file,
+        'damage photo',
+      );
+
+      expect(result).toEqual(mockDispute);
+      expect(service.reportDispute).toHaveBeenCalledWith(
+        createDisputeDto,
+        mockUser.id,
+        file,
+        'damage photo',
       );
     });
   });

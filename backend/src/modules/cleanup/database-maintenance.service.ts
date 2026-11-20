@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
+import { AlertService } from '../monitoring/alert.service';
+import { runBackgroundTask } from './background-task.utils';
 
 export interface DatabaseMaintenanceStats {
   checkedAt: string;
@@ -13,13 +15,28 @@ export interface DatabaseMaintenanceStats {
 export class DatabaseMaintenanceService {
   private readonly logger = new Logger(DatabaseMaintenanceService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    @Optional() private readonly alertService?: AlertService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async runScheduledMaintenance(): Promise<void> {
-    const stats = await this.runMaintenance();
-    this.logger.log(
-      `Database maintenance completed: vacuum=${stats.vacuumAnalyzeRan}, tablesNeedingVacuum=${stats.tablesNeedingVacuum}`,
+    await runBackgroundTask(
+      this.logger,
+      {
+        task: 'database-maintenance',
+        databaseType: String(this.dataSource.options.type),
+      },
+      async () => {
+        const stats = await this.runMaintenance();
+        this.logger.log(
+          `Database maintenance completed: vacuum=${stats.vacuumAnalyzeRan}, tablesNeedingVacuum=${stats.tablesNeedingVacuum}`,
+          JSON.stringify({ task: 'database-maintenance', ...stats }),
+        );
+        return stats;
+      },
+      this.alertService,
     );
   }
 
@@ -33,7 +50,10 @@ export class DatabaseMaintenanceService {
     };
 
     if (databaseType !== 'postgres') {
-      this.logger.debug(`Skipping maintenance for ${databaseType} database`);
+      this.logger.debug(
+        `Skipping maintenance for ${databaseType} database`,
+        JSON.stringify({ task: 'database-maintenance', databaseType }),
+      );
       return stats;
     }
 

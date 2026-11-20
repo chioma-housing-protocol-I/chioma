@@ -84,8 +84,13 @@ export function createDatabaseConnectionOptions(
   const poolMax = parseNumber(env.DB_POOL_MAX, 20);
   const poolIdleTimeout = parseNumber(env.DB_POOL_IDLE_TIMEOUT, 30000);
   const poolConnTimeout = parseNumber(env.DB_POOL_CONNECTION_TIMEOUT, 2000);
+  const backpressureQueueSize = parseNumber(env.DB_POOL_BACKPRESSURE_MAX_QUEUE, 100);
+  const backpressureQueueTimeoutMs = parseNumber(
+    env.DB_POOL_BACKPRESSURE_QUEUE_TIMEOUT_MS,
+    poolConnTimeout,
+  );
 
-  // Validate pool configuration
+  // Validate pool and backpressure configuration
   const validator = new PoolConfigValidator();
   validator.validateAndLog(
     {
@@ -93,6 +98,8 @@ export function createDatabaseConnectionOptions(
       max: poolMax,
       idleTimeoutMillis: poolIdleTimeout,
       connectionTimeoutMillis: poolConnTimeout,
+      backpressureQueueSize,
+      backpressureQueueTimeoutMs,
     },
     false, // Non-strict mode: warn but don't throw
   );
