@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { MetricsService } from './metrics.service';
 import { AlertService } from './alert.service';
 import { AlertPayload } from './alert.types';
+import { QueryPlanSummary } from './query-plan.analyzer';
 
 export interface PerformanceMetrics {
   timestamp: Date;
@@ -101,6 +102,11 @@ export class PerformanceMonitorService {
   private readonly SLOW_QUERY_THRESHOLD_MS = 500;
   private readonly MAX_SLOW_QUERY_HISTORY = 100;
 
+  // Redacted query plans reported by DatabaseMonitorService. Bounded so the
+  // dashboard can show recent plans without growing without limit.
+  private readonly queryPlans: QueryPlanSummary[] = [];
+  private readonly MAX_QUERY_PLAN_HISTORY = 20;
+
   constructor(
     private readonly metricsService: MetricsService,
     private readonly alertService: AlertService,
@@ -175,6 +181,19 @@ export class PerformanceMonitorService {
     }
   }
 
+  /** Stores a redacted query plan so the dashboard can display recent plans. */
+  recordQueryPlan(summary: QueryPlanSummary): void {
+    this.queryPlans.push(summary);
+    if (this.queryPlans.length > this.MAX_QUERY_PLAN_HISTORY) {
+      this.queryPlans.shift();
+    }
+  }
+
+  /** Recent redacted plans, newest first. */
+  getRecentQueryPlans(): QueryPlanSummary[] {
+    return this.queryPlans.slice().reverse();
+  }
+
   /**
    * Aggregated database query statistics, including the slowest operations
    * (bottleneck detection) and recent slow queries.
@@ -198,6 +217,7 @@ export class PerformanceMonitorService {
       duration: number;
       timestamp: Date;
     }>;
+    queryPlans: QueryPlanSummary[];
   } {
     const operations = Array.from(this.databaseQueryData.entries()).map(
       ([operation, durations]) => ({
@@ -225,6 +245,7 @@ export class PerformanceMonitorService {
       operations,
       slowestOperations,
       recentSlowQueries: this.slowQueries.slice(-20),
+      queryPlans: this.getRecentQueryPlans(),
     };
   }
 

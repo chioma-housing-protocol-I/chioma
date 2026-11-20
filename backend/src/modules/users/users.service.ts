@@ -23,6 +23,7 @@ import {
 } from './dto/admin-user-query.dto';
 import { KycStatus } from '../kyc/kyc-status.enum';
 import { PaginationUtils } from '../../common/utils';
+import { err, ok, Result, unwrap } from '../../common/utils/result';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { AuditService } from '../audit/audit.service';
 import { Locked, LockService } from '../../common/lock';
@@ -146,7 +147,7 @@ export class UsersService {
     userId: string,
     performedBy: string = userId,
   ): Promise<Omit<User, 'password'> & Record<string, unknown>> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
     const { password, ...exportData } = user;
     void password;
     await this.auditService.log({
@@ -200,7 +201,7 @@ export class UsersService {
    * the entire erasure back rather than leaving it silently untracked.
    */
   async gdprDeleteAccount(userId: string): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     // ── 1. Prepare anonymized User row ──────────────────────────────────────
     const anonEmail = `deleted_${user.id}@anonymized.local`;
@@ -365,7 +366,7 @@ export class UsersService {
     consent: UpdateConsentDto,
     context?: { ipAddress?: string; userAgent?: string },
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
     if (
       consent.dataProcessingAgreementAccepted === true &&
       !consent.dataProcessingAgreementVersion?.trim()
@@ -473,7 +474,7 @@ export class UsersService {
     dataProcessingAgreementUpdatedAt: Date | null;
     dataRetention: string;
   }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
     return {
       cookieConsent: user.cookieConsent ?? false,
       cookieConsentUpdatedAt: user.cookieConsentUpdatedAt ?? null,
@@ -505,7 +506,7 @@ export class UsersService {
     userId: string,
     updateProfileDto: UpdateUserProfileDto,
   ): Promise<User> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     // Encrypt PII fields before saving
     if (updateProfileDto.firstName !== undefined) {
@@ -569,7 +570,7 @@ export class UsersService {
     userId: string,
     changeEmailDto: ChangeEmailDto,
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     const isPasswordValid = await bcrypt.compare(
       changeEmailDto.currentPassword,
@@ -625,7 +626,7 @@ export class UsersService {
     userId: string,
     changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     const isPasswordValid = await bcrypt.compare(
       changePasswordDto.currentPassword,
@@ -657,7 +658,7 @@ export class UsersService {
   }
 
   async deactivateAccount(userId: string): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     await this.userRepository.update(userId, {
       isActive: false,
@@ -670,7 +671,7 @@ export class UsersService {
   }
 
   async deleteAccount(userId: string): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
     await this.userRepository.softDelete(userId);
     this.logger.log(`Account soft-deleted for user: ${user.email}`);
     return { message: 'Account deleted successfully' };
@@ -759,7 +760,7 @@ export class UsersService {
     userId: string,
     adminId: string,
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     await this.userRepository.update(userId, {
       isActive: false,
@@ -786,7 +787,7 @@ export class UsersService {
     userId: string,
     adminId: string,
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
 
     await this.userRepository.update(userId, { emailVerified: true });
 
@@ -810,7 +811,7 @@ export class UsersService {
     userId: string,
     adminId: string,
   ): Promise<{ message: string }> {
-    const user = await this.findById(userId, true);
+    const user = await this.requireUserById(userId, true);
 
     if (user.deletedAt) {
       await this.userRepository.restore(userId);
@@ -848,7 +849,7 @@ export class UsersService {
   }
 
   async hardDeleteAccount(userId: string): Promise<{ message: string }> {
-    const user = await this.findById(userId, true);
+    const user = await this.requireUserById(userId, true);
     // `softRemove` is TypeORM's soft-delete method (sets deletedAt), the
     // same operation `deleteAccount` already performs. Despite this
     // method's name and its "Delete user account while preserving
@@ -876,7 +877,7 @@ export class UsersService {
     emailVerified: boolean;
     isActive: boolean;
   }> {
-    const user = await this.findById(userId);
+    const user = await this.requireUserById(userId);
     return {
       lastLogin: user.lastLoginAt,
       accountCreated: user.createdAt,
@@ -890,19 +891,33 @@ export class UsersService {
     this.logger.log(`KYC status updated for user ${userId}: ${status}`);
   }
 
-  private async findById(userId: string, withDeleted = false): Promise<User> {
+  /**
+   * Internal lookup helper. A missing user is an explicit Err; the boundary
+   * helper below converts it back into the NotFoundException callers expect.
+   */
+  private async findById(
+    userId: string,
+    withDeleted = false,
+  ): Promise<Result<User, NotFoundException>> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       withDeleted,
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      return err(new NotFoundException('User not found'));
     }
-    return user;
+    return ok(user);
+  }
+
+  private async requireUserById(
+    userId: string,
+    withDeleted = false,
+  ): Promise<User> {
+    return unwrap(await this.findById(userId, withDeleted));
   }
 
   async getUserById(userId: string, withDeleted = false): Promise<User> {
-    return this.findById(userId, withDeleted);
+    return this.requireUserById(userId, withDeleted);
   }
 
   /**
