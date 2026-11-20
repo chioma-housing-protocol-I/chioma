@@ -38,6 +38,7 @@ import {
   extractStellarErrorMessage,
   isTransientStellarError,
 } from './stellar-transaction-resilience';
+import { TransactionSubmissionPoolService } from './transaction-submission-pool.service';
 
 type SubmitTransactionResponse = Awaited<
   ReturnType<StellarSdk.Horizon.Server['submitTransaction']>
@@ -63,6 +64,7 @@ export class StellarService {
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
     private readonly encryptionService: EncryptionService,
+    private readonly submissionPool: TransactionSubmissionPoolService,
   ) {
     this.stellarConfig = this.configService.get<StellarConfig>('stellar')!;
     this.horizon = new StellarSdk.Horizon.Server(this.stellarConfig.horizonUrl);
@@ -408,23 +410,44 @@ export class StellarService {
 
       // Submit to network
       try {
-        const result = await this.submitTransactionWithRetry({
-          transaction,
-          sourcePublicKey: dto.sourcePublicKey,
-          sourceKeypair,
-          rebuildAndResign: async () => {
-            const freshSource = await this.horizon.loadAccount(
-              dto.sourcePublicKey,
-            );
-            const rebuilt = buildTransaction(freshSource);
-            rebuilt.sign(sourceKeypair);
-            transaction = rebuilt;
-            return rebuilt;
-          },
-        });
+        const usePooledSubmission = this.shouldPoolPayment(dto);
+        const submitWithTimeout = async (tx: StellarSdk.Transaction) => {
+          const response = await this.submitWithTimeout(tx);
+          return { hash: response.hash, ledger: response.ledger };
+        };
 
+        const result = usePooledSubmission
+          ? await this.submissionPool.enqueue({
+              sourcePublicKey: dto.sourcePublicKey,
+              sourceKeypair,
+              buildOperations: () => [this.buildPaymentOperation(dto, asset)],
+              submit: submitWithTimeout,
+            })
+          : await this.submitTransactionWithRetry({
+              transaction,
+              sourcePublicKey: dto.sourcePublicKey,
+              sourceKeypair,
+              rebuildAndResign: async () => {
+                const freshSource = await this.horizon.loadAccount(
+                  dto.sourcePublicKey,
+                );
+                const rebuilt = buildTransaction(freshSource);
+                rebuilt.sign(sourceKeypair);
+                transaction = rebuilt;
+                return rebuilt;
+              },
+            }).then((r) => ({ hash: r.hash, ledger: r.ledger }));
+
+        // Record submission outcome. For pooled multi-op batches the on-chain
+        // transaction hash is shared across operations; keep the per-request
+        // computed hash as the stable record identifier to avoid uniqueness
+        // conflicts while still capturing ledger completion.
+        if (!usePooledSubmission) {
+          txRecord.transactionHash = result.hash;
+        }
         txRecord.status = TransactionStatus.COMPLETED;
         txRecord.ledger = result.ledger;
+        txRecord.errorMessage = null;
 
         await queryRunner.manager.save(txRecord);
         await queryRunner.commitTransaction();
@@ -434,7 +457,9 @@ export class StellarService {
           this.logger.error('Failed to sync source account', err),
         );
 
-        this.logger.log(`Payment successful: ${txRecord.transactionHash}`);
+        this.logger.log(
+          `Payment successful: ${txRecord.transactionHash}${usePooledSubmission ? ' (pooled submit)' : ''}`,
+        );
         return txRecord;
       } catch (submitError: any) {
         txRecord.status = TransactionStatus.FAILED;
@@ -1073,6 +1098,26 @@ export class StellarService {
   }
 
   // ==================== Helper Methods ====================
+
+  private shouldPoolPayment(dto: CreatePaymentDto): boolean {
+    if (process.env.STELLAR_SUBMISSION_POOLING_ENABLED !== 'true') return false;
+    // Pool only simple native payments without memos or explicit idempotency
+    // coupling so coalesced multi-op submissions remain deterministic and to
+    // preserve per-request semantics for non-trivial submissions.
+    const isNative = !dto.asset || dto.asset.type === AssetType.NATIVE;
+    return isNative && !dto.memo && !dto.idempotencyKey;
+  }
+
+  private buildPaymentOperation(
+    dto: CreatePaymentDto,
+    asset: StellarSdk.Asset,
+  ): StellarSdk.xdr.Operation {
+    return StellarSdk.Operation.payment({
+      destination: dto.destinationPublicKey,
+      asset,
+      amount: dto.amount,
+    });
+  }
 
   private async submitTransactionWithRetry(params: {
     transaction: StellarSdk.Transaction;

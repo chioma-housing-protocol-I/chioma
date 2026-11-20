@@ -695,4 +695,76 @@ describe('AgreementsService (lease extensions)', () => {
       expect(mockTerminationReconciliationRepo.save).not.toHaveBeenCalled();
     });
   });
+
+
+  describe('activate and transition', () => {
+    it('activates a signed agreement when preconditions are satisfied', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.SIGNED,
+        startDate: new Date('2024-01-01'),
+        escrowBalance: 2000,
+        securityDeposit: 2000,
+      });
+      mockAgreementRepo.save.mockImplementation((a) => Promise.resolve(a));
+
+      const result = await service.activate('agr-1', { enforcePreconditions: true });
+
+      expect(result.status).toBe(AgreementStatus.ACTIVE);
+      expect(mockAgreementRepo.save).toHaveBeenCalled();
+    });
+
+    it('rejects activation before start date when preconditions enforced', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.SIGNED,
+        startDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        escrowBalance: 5000,
+        securityDeposit: 2000,
+      });
+
+      await expect(service.activate('agr-1', {})).rejects.toThrow(BadRequestException);
+      expect(mockAgreementRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects activation when required security deposit is not fully funded', async () => {
+      mockAgreementRepo.findOne.mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.SIGNED,
+        startDate: new Date('2024-01-01'),
+        escrowBalance: 100,
+        securityDeposit: 2000,
+      });
+
+      await expect(service.activate('agr-1', {})).rejects.toThrow(BadRequestException);
+    });
+
+    it('routes transition to sign for SIGNED target', async () => {
+      const signSpy = jest.spyOn(service, 'sign').mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.SIGNED,
+      } as any);
+
+      await service.transition('agr-1', { status: AgreementStatus.SIGNED } as any);
+
+      expect(signSpy).toHaveBeenCalledWith('agr-1', {});
+    });
+
+    it('routes transition to terminate for TERMINATED target', async () => {
+      const terminateSpy = jest.spyOn(service, 'terminate').mockResolvedValue({
+        ...baseAgreement,
+        status: AgreementStatus.TERMINATED,
+      } as any);
+
+      await service.transition('agr-1', {
+        status: AgreementStatus.TERMINATED,
+        reason: 'ended',
+      } as any);
+
+      expect(terminateSpy).toHaveBeenCalledWith('agr-1', {
+        terminationReason: 'ended',
+      });
+    });
+  });
+
 });
