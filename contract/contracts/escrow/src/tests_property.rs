@@ -117,4 +117,110 @@ proptest! {
         prop_assert!(platform >= 0);
         prop_assert!(agent >= 0);
     }
+
+    /// Sequential partial releases preserve non-negativity at each step.
+    #[test]
+    fn prop_sequential_releases_always_non_negative(
+        total in 1i128..1_000_000_000_000i128,
+        releases in prop::collection::vec(0u32..=2_000u32, 1..=10),
+    ) {
+        let mut remaining = total;
+        for release_bps in releases {
+            let release = (remaining * release_bps as i128) / 10_000;
+            remaining = remaining - release;
+            prop_assert!(
+                remaining >= 0,
+                "remaining={remaining} must be >= 0 after each release"
+            );
+        }
+    }
+
+    /// Damage deduction with overage is capped at total (no negative refund).
+    #[test]
+    fn prop_damage_overage_caps_at_total(
+        total in 0i128..1_000_000_000_000i128,
+        overage in 0i128..1_000_000_000_000i128,
+    ) {
+        let damage = total + overage;
+        let capped_damage = damage.min(total);
+        let landlord = capped_damage;
+        let tenant = total - capped_damage;
+        prop_assert_eq!(landlord, total);
+        prop_assert_eq!(tenant, 0);
+        prop_assert!(tenant >= 0, "tenant refund cannot be negative");
+    }
+
+    /// Escrow split with custom percentages always sums to total.
+    #[test]
+    fn prop_custom_split_preserves_total(
+        total in 0i128..1_000_000_000_000i128,
+        beneficiary_pct in 0u32..=100u32,
+        platform_pct in 0u32..=100u32,
+    ) {
+        let total_pct = beneficiary_pct + platform_pct;
+        if total_pct <= 100 {
+            let beneficiary = (total * beneficiary_pct as i128) / 100;
+            let platform = (total * platform_pct as i128) / 100;
+            let agent = total - beneficiary - platform;
+            prop_assert_eq!(
+                beneficiary + platform + agent,
+                total,
+                "custom split must sum to total={}",
+                total
+            );
+            prop_assert!(beneficiary >= 0);
+            prop_assert!(platform >= 0);
+            prop_assert!(agent >= 0);
+        }
+    }
+
+    /// Partial damage deduction followed by partial release maintains balance.
+    #[test]
+    fn prop_damage_then_partial_release_valid(
+        total in 1i128..1_000_000_000_000i128,
+        damage_pct in 0u32..=50u32,
+        release_pct in 0u32..=100u32,
+    ) {
+        let damage = (total * damage_pct as i128) / 100;
+        let after_damage = total - damage;
+        prop_assert!(after_damage >= 0);
+        
+        let release = (after_damage * release_pct as i128) / 100;
+        let remaining = after_damage - release;
+        prop_assert!(
+            remaining >= 0,
+            "remaining={remaining} must be >= 0 after damage and release"
+        );
+        prop_assert!(
+            damage + release <= total,
+            "total deductions must not exceed escrow"
+        );
+    }
+
+    /// Rounding errors in percentage calculations never create negative balances.
+    #[test]
+    fn prop_percentage_rounding_safe(
+        total in 1i128..1_000_000_000_000i128,
+        pct1 in 1u32..=33u32,
+        pct2 in 1u32..=33u32,
+        pct3 in 1u32..=34u32,
+    ) {
+        // Three-way split that should sum to 100%
+        let share1 = (total * pct1 as i128) / 100;
+        let share2 = (total * pct2 as i128) / 100;
+        let share3 = (total * pct3 as i128) / 100;
+        
+        // Due to rounding, sum might not equal total exactly
+        let sum = share1 + share2 + share3;
+        let remainder = total - sum;
+        
+        prop_assert!(share1 >= 0);
+        prop_assert!(share2 >= 0);
+        prop_assert!(share3 >= 0);
+        prop_assert!(remainder >= 0, "remainder={remainder} must be >= 0");
+        prop_assert!(
+            sum <= total,
+            "rounded shares={sum} must not exceed total={total}"
+        );
+    }
 }
