@@ -131,6 +131,7 @@ powers, so admin custody is the single most important decision here.
 
 ## Pre-deployment checklist
 
+- [ ] [Pre-deployment security checklist](../security/PRE_DEPLOYMENT_SECURITY_CHECKLIST.md) completed and signed off for this commit.
 - [ ] [Production Launch Gate](#production-launch-gate) fully satisfied (audit done).
 - [ ] Deploying from the **exact commit** covered by the audit; `git status` clean.
 - [ ] `cargo test` green and `./check-all.sh` passes on that commit.
