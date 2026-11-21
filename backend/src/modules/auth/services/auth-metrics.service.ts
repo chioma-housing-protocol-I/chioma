@@ -8,9 +8,9 @@ export interface AuthAttemptData {
   authMethod: AuthMethod;
   success: boolean;
   duration: number; // in milliseconds
-  ipAddress?: string;
-  userAgent?: string;
-  errorMessage?: string;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
+  errorMessage?: string | undefined;
 }
 
 export interface AuthStats {

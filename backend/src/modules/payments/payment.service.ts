@@ -285,7 +285,7 @@ export class PaymentService {
       agreementId?: string;
       amount: number;
       currency: string;
-      paymentMethod?: string;
+      paymentMethod?: string | undefined;
       metadata?: PaymentMetadata;
     },
     manager?: EntityManager,

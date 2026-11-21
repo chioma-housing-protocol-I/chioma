@@ -35,22 +35,22 @@ export const KYC_VERIFICATION_TIMEOUT_MS = Number.parseInt(
 
 export interface AdminKycUserView {
   id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
+  name?: string | undefined;
+  email?: string | undefined;
+  phone?: string | undefined;
+  role?: string | undefined;
 }
 
 export interface AdminKycView {
   id: string;
   userId: string;
   status: KycStatus;
-  reason?: string;
-  providerReference?: string;
+  reason?: string | undefined;
+  providerReference?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
-  user?: AdminKycUserView;
-  kycData?: Record<string, unknown>;
+  user?: AdminKycUserView | undefined;
+  kycData?: Record<string, unknown> | undefined;
   documents: [];
 }
 

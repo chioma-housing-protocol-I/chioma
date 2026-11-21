@@ -138,14 +138,14 @@ export class ProfileCreatedResponseDto {
     description: 'IPFS Content Identifier (CID) where profile data is stored',
     example: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
   })
-  ipfsCid?: string;
+  ipfsCid?: string | undefined;
 
   @ApiPropertyOptional({
     description: 'IPFS gateway URL to access the profile data',
     example:
       'https://gateway.pinata.cloud/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
   })
-  ipfsUrl?: string;
+  ipfsUrl?: string | undefined;
 }
 
 export class ProfileUpdatedResponseDto {
@@ -161,7 +161,7 @@ export class ProfileUpdatedResponseDto {
     example:
       '3b340d0f8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
   })
-  transactionHash?: string;
+  transactionHash?: string | undefined;
 
   @ApiProperty({
     description: 'Whether on-chain data was updated',
@@ -179,14 +179,14 @@ export class ProfileUpdatedResponseDto {
     description: 'IPFS Content Identifier (CID) where profile data is stored',
     example: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
   })
-  ipfsCid?: string;
+  ipfsCid?: string | undefined;
 
   @ApiPropertyOptional({
     description: 'IPFS gateway URL to access the profile data',
     example:
       'https://gateway.pinata.cloud/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
   })
-  ipfsUrl?: string;
+  ipfsUrl?: string | undefined;
 }
 
 export class DataIntegrityResponseDto {

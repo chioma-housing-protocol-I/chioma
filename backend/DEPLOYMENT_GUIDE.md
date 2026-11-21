@@ -444,6 +444,35 @@ curl http://alertmanager:9093/api/v1/alerts
 open http://grafana:3000
 ```
 
+## CI/CD Deployment
+
+The GitHub Actions workflow (`backend-ci-cd.yml`) deploys automatically on every push to `develop` (staging) and `main` (production).
+
+### How it works
+
+1. `docker-build` pushes the image to GHCR tagged `sha-<git-sha>`.
+2. `deploy-staging` / `deploy-production` runs `kubectl set image` to update the running `chioma-backend` Deployment to that exact SHA-tagged image.
+3. `kubectl rollout status --timeout` blocks the job until all pods pass their readiness probe or the timeout expires.
+4. If the rollout times out or any step fails, the `Rollback on failure` step runs `kubectl rollout undo` automatically and the job exits non-zero — the pipeline turns red.
+
+### Required secrets
+
+| Secret | Environment | Description |
+|---|---|---|
+| `KUBECONFIG_STAGING` | staging | kubeconfig with `get/patch` on `deployments` in the `staging` namespace |
+| `KUBECONFIG_PRODUCTION` | production | kubeconfig with `get/patch` on `deployments` in the `production` namespace |
+
+Configure these in **GitHub → Settings → Environments → staging / production → Secrets**.
+
+### Deployment targets
+
+| Branch | Environment | Kubernetes namespace | Timeout |
+|---|---|---|---|
+| `develop` | staging | `staging` | 5 min |
+| `main` | production | `production` | 10 min |
+
+---
+
 ## Rollback Procedures
 
 ### Rollback to Previous Version

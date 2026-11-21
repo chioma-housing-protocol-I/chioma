@@ -241,7 +241,7 @@ export class ConditionValidationResult {
   satisfied: boolean;
   required: boolean;
   description?: string;
-  validationDetails?: Record<string, any>;
+  validationDetails?: Record<string, any> | undefined;
 }
 
 export class EscrowConditionsStatusDto {
