@@ -4,6 +4,8 @@ import {
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
+  ServiceUnavailableException,
+  Optional,
 } from '@nestjs/common';
 import { Retry } from '../../../common/decorators/retry.decorator';
 import { PaginationUtils } from '../../../common/utils';
@@ -38,10 +40,22 @@ import {
   extractStellarErrorMessage,
   isTransientStellarError,
 } from './stellar-transaction-resilience';
+import {
+  CircuitBreakerOpenError,
+  CircuitBreakerOptions,
+  CircuitBreakerService,
+} from '../../../common/resilience/circuit-breaker.service';
 
 type SubmitTransactionResponse = Awaited<
   ReturnType<StellarSdk.Horizon.Server['submitTransaction']>
 >;
+
+/** Distinct so retry logic does not mistake an open circuit for a transient Horizon error. */
+export class StellarUnavailableException extends ServiceUnavailableException {
+  constructor() {
+    super('Stellar service is temporarily unavailable. Please retry shortly.');
+  }
+}
 
 @Injectable()
 export class StellarService {
@@ -53,6 +67,15 @@ export class StellarService {
   private readonly baseFee: string;
   private readonly stellarConfig: StellarConfig;
 
+  /** One shared breaker so a degraded Horizon trips every call site at once. */
+  private readonly horizonBreakerName = 'stellar-horizon';
+  private readonly horizonBreakerOptions: CircuitBreakerOptions = {
+    failureThreshold: 0.5,
+    successThreshold: 0.5,
+    timeout: 30_000,
+    windowSize: 20,
+  };
+
   constructor(
     @InjectRepository(StellarAccount)
     private readonly accountRepository: Repository<StellarAccount>,
@@ -63,6 +86,9 @@ export class StellarService {
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
     private readonly encryptionService: EncryptionService,
+    // Optional so isolated unit tests can construct the service without the
+    // global resilience module; production always resolves it.
+    @Optional() private readonly circuitBreaker?: CircuitBreakerService,
   ) {
     this.stellarConfig = this.configService.get<StellarConfig>('stellar')!;
     this.horizon = new StellarSdk.Horizon.Server(this.stellarConfig.horizonUrl);
@@ -203,8 +229,9 @@ export class StellarService {
     publicKey: string,
   ): Promise<StellarSdk.Horizon.AccountResponse> {
     try {
-      return await this.horizon.loadAccount(publicKey);
+      return await this.loadAccountFromNetwork(publicKey);
     } catch (error: any) {
+      if (error instanceof StellarUnavailableException) throw error;
       if (error.response?.status === 404) {
         throw new NotFoundException(
           'Account not found on Stellar network. It may need to be funded.',
@@ -233,7 +260,7 @@ export class StellarService {
     const account = await this.getAccountByPublicKey(publicKey);
 
     try {
-      const networkAccount = await this.horizon.loadAccount(publicKey);
+      const networkAccount = await this.loadAccountFromNetwork(publicKey);
 
       // Get native balance
       const nativeBalance = networkAccount.balances.find(
@@ -304,7 +331,7 @@ export class StellarService {
       const sourceKeypair = StellarSdk.Keypair.fromSecret(secretKey);
 
       // Load account from network
-      const networkAccount = await this.horizon.loadAccount(
+      const networkAccount = await this.loadAccountFromNetwork(
         dto.sourcePublicKey,
       );
 
@@ -413,7 +440,7 @@ export class StellarService {
           sourcePublicKey: dto.sourcePublicKey,
           sourceKeypair,
           rebuildAndResign: async () => {
-            const freshSource = await this.horizon.loadAccount(
+            const freshSource = await this.loadAccountFromNetwork(
               dto.sourcePublicKey,
             );
             const rebuilt = buildTransaction(freshSource);
@@ -577,7 +604,7 @@ export class StellarService {
       const sourceKeypair = StellarSdk.Keypair.fromSecret(sourceSecretKey);
 
       // Load source account from network
-      const networkAccount = await this.horizon.loadAccount(
+      const networkAccount = await this.loadAccountFromNetwork(
         dto.sourcePublicKey,
       );
 
@@ -598,10 +625,10 @@ export class StellarService {
       transaction.sign(sourceKeypair);
 
       // Submit transaction
-      const result = await this.horizon.submitTransaction(transaction);
+      const result = await this.submitToNetwork(transaction);
 
       // Get escrow account sequence number
-      const escrowNetworkAccount = await this.horizon.loadAccount(
+      const escrowNetworkAccount = await this.loadAccountFromNetwork(
         escrowAccount.publicKey,
       );
 
@@ -708,7 +735,7 @@ export class StellarService {
       const escrowKeypair = StellarSdk.Keypair.fromSecret(escrowSecretKey);
 
       // Load escrow account from network
-      const networkAccount = await this.horizon.loadAccount(
+      const networkAccount = await this.loadAccountFromNetwork(
         escrowAccount.publicKey,
       );
 
@@ -761,7 +788,7 @@ export class StellarService {
       transaction.sign(escrowKeypair);
 
       // Submit transaction
-      const result = await this.horizon.submitTransaction(transaction);
+      const result = await this.submitToNetwork(transaction);
 
       // Update escrow status
       escrow.status = EscrowStatus.RELEASED;
@@ -873,7 +900,7 @@ export class StellarService {
       const escrowKeypair = StellarSdk.Keypair.fromSecret(escrowSecretKey);
 
       // Load escrow account from network
-      const networkAccount = await this.horizon.loadAccount(
+      const networkAccount = await this.loadAccountFromNetwork(
         escrowAccount.publicKey,
       );
 
@@ -930,7 +957,7 @@ export class StellarService {
       transaction.sign(escrowKeypair);
 
       // Submit transaction
-      const result = await this.horizon.submitTransaction(transaction);
+      const result = await this.submitToNetwork(transaction);
 
       // Update escrow state: cumulative refunded-to-date balance always
       // advances; only a full refund is terminal.
@@ -1074,6 +1101,44 @@ export class StellarService {
 
   // ==================== Helper Methods ====================
 
+  /**
+   * Run a Horizon call through the shared circuit breaker. When the breaker is
+   * open we return a clear 503 instead of leaking a generic SDK error or
+   * hammering a network that is already failing.
+   */
+  private async withHorizonBreaker<T>(operation: () => Promise<T>): Promise<T> {
+    if (!this.circuitBreaker) return operation();
+
+    try {
+      return await this.circuitBreaker.execute(
+        this.horizonBreakerName,
+        operation,
+        this.horizonBreakerOptions,
+      );
+    } catch (error) {
+      if (error instanceof CircuitBreakerOpenError) {
+        throw new StellarUnavailableException();
+      }
+      throw error;
+    }
+  }
+
+  private async loadAccountFromNetwork(
+    publicKey: string,
+  ): Promise<StellarSdk.Horizon.AccountResponse> {
+    const horizon = this.horizon;
+    return this.withHorizonBreaker(() => horizon.loadAccount(publicKey));
+  }
+
+  private async submitToNetwork(
+    transaction: StellarSdk.Transaction,
+  ): Promise<SubmitTransactionResponse> {
+    const horizon = this.horizon;
+    return this.withHorizonBreaker(() =>
+      horizon.submitTransaction(transaction),
+    );
+  }
+
   private async submitTransactionWithRetry(params: {
     transaction: StellarSdk.Transaction;
     sourcePublicKey: string;
@@ -1087,6 +1152,10 @@ export class StellarService {
       try {
         return await this.submitWithTimeout(currentTx);
       } catch (error: any) {
+        // An open circuit is not a transient Horizon failure. Retrying it just
+        // adds latency, so surface the 503 immediately.
+        if (error instanceof StellarUnavailableException) throw error;
+
         const sequenceConflict =
           error?.response?.data?.extras?.result_codes?.transaction ===
           'tx_bad_seq';
@@ -1122,7 +1191,7 @@ export class StellarService {
     transaction: StellarSdk.Transaction,
   ): Promise<SubmitTransactionResponse> {
     return Promise.race([
-      this.horizon.submitTransaction(transaction),
+      this.submitToNetwork(transaction),
       new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error('Transaction submission timeout')),
