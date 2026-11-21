@@ -1,6 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { fieldA11yProps, fieldErrorId } from '@/lib/forms/a11y';
 import { FormErrorSummary } from '@/components/forms/FormErrorSummary';
@@ -162,9 +162,16 @@ export function WebhookForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+          className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
         >
-          {isLoading ? 'Saving...' : 'Save Webhook'}
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              Saving...
+            </>
+          ) : (
+            'Save Webhook'
+          )}
         </button>
         <button
           type="button"

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -230,9 +230,12 @@ export default function NewDisputePage() {
             </Link>
             <Button
               type="submit"
-              className="flex-1 font-semibold"
+              className="flex-1 font-semibold flex items-center justify-center gap-2"
               disabled={submitting}
             >
+              {submitting && (
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              )}
               {submitting ? 'Creating Dispute...' : 'File Dispute'}
             </Button>
           </div>

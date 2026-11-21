@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Users, MessageSquare, CreditCard } from 'lucide-react';
+import { CalendarDays, CreditCard, Loader2, MessageSquare, Users } from 'lucide-react';
 
 interface BookingData {
   checkIn: string;
@@ -89,7 +89,14 @@ export function BookingStep4({
           disabled={isSubmitting}
           className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-60"
         >
-          {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              Confirming...
+            </>
+          ) : (
+            'Confirm Booking'
+          )}
         </button>
       </div>
     </div>
