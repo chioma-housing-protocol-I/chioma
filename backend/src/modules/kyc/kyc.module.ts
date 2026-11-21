@@ -12,6 +12,7 @@ import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { KycRetentionService } from './kyc-retention.service';
+import { KycManualReviewService } from './kyc-manual-review.service';
 
 @Module({
   imports: [
@@ -23,8 +24,8 @@ import { KycRetentionService } from './kyc-retention.service';
     WebhooksModule,
     ScheduleModule.forRoot(),
   ],
-  providers: [KycService, KycRetentionService],
+  providers: [KycService, KycRetentionService, KycManualReviewService],
   controllers: [KycController, AdminKycController],
-  exports: [KycService, KycRetentionService],
+  exports: [KycService, KycRetentionService, KycManualReviewService],
 })
 export class KycModule {}

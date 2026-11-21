@@ -24,7 +24,9 @@ import {
 import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
 import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import { PropertiesService } from './properties.service';
+import { PropertyImportService } from './property-import.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { BulkCreatePropertiesDto } from './dto/bulk-create-properties.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
 import {
@@ -60,6 +62,7 @@ import { CacheControl } from '../../common/decorators/cache-control.decorator';
 export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
+    private readonly propertyImportService: PropertyImportService,
     private readonly reviewsService: ReviewsService,
   ) {}
 
@@ -83,6 +86,28 @@ export class PropertiesController {
   ) {
     return await this.propertiesService.create(
       createPropertyDto,
+      user.id,
+      user,
+    );
+  }
+
+  @Post('bulk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Bulk import property listings',
+    description:
+      'Imports up to 500 listings in chunks of 50, with one transaction per chunk.',
+  })
+  @ApiResponse({ status: 201, description: 'Properties imported successfully' })
+  async bulkCreate(
+    @Body() dto: BulkCreatePropertiesDto,
+    @CurrentUser() user: User,
+  ) {
+    return await this.propertyImportService.bulkCreate(
+      dto.properties,
       user.id,
       user,
     );
