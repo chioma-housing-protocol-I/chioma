@@ -16,6 +16,7 @@ import {
   Camera,
   Lock,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import { getFreighterPublicKey } from '@/lib/stellar-auth';
@@ -438,8 +439,11 @@ export default function UserProfilePage() {
                   <button
                     type="submit"
                     disabled={isUpdating}
-                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-60 text-sm"
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-60 text-sm flex items-center gap-2"
                   >
+                    {isUpdating && (
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    )}
                     {isUpdating ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
@@ -563,12 +567,17 @@ export default function UserProfilePage() {
                   disabled={submitKycMutation.isPending}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-2xl transition-all flex items-center justify-center space-x-2 active:scale-[0.98] text-sm"
                 >
-                  <span>
-                    {submitKycMutation.isPending
-                      ? 'Submitting...'
-                      : 'Submit for Verification'}
-                  </span>
-                  {!submitKycMutation.isPending && <ChevronRight size={16} />}
+                  {submitKycMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit for Verification</span>
+                      <ChevronRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             ) : (

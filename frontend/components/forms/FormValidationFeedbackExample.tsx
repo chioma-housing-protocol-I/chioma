@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   FormValidationFeedback,
@@ -19,6 +20,7 @@ export default function FormValidationFeedbackExample() {
   const [emailError, setEmailError] = React.useState('');
   const [formErrors, setFormErrors] = React.useState<FieldError[]>([]);
   const [formSuccess, setFormSuccess] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Simulate async email validation
   const validateEmail = React.useCallback(async (value: string) => {
@@ -50,14 +52,14 @@ export default function FormValidationFeedbackExample() {
     }
   }, [email, validateEmail]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Clear previous feedback
     setFormErrors([]);
     setFormSuccess('');
 
-    // Validate form
+    // Validate form before going async
     const errors: FieldError[] = [];
 
     if (!email) {
@@ -80,10 +82,20 @@ export default function FormValidationFeedbackExample() {
       return;
     }
 
-    // Success
-    setFormSuccess('Account created successfully! Redirecting...');
-    setEmail('');
-    setPassword('');
+    // Disable the form for the duration of the async submission
+    setIsSubmitting(true);
+    try {
+      // Simulate network request
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      setFormSuccess('Account created successfully! Redirecting...');
+      setEmail('');
+      setPassword('');
+    } catch {
+      setFormErrors([{ field: 'Form', message: 'Submission failed. Please try again.' }]);
+    } finally {
+      // Always re-enable the form whether the request succeeded or failed
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -324,6 +336,7 @@ export default function FormValidationFeedbackExample() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={emailError ? 'border-destructive' : ''}
+              disabled={isSubmitting}
             />
           </ValidatedInputWrapper>
 
@@ -339,14 +352,23 @@ export default function FormValidationFeedbackExample() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
             />
           </ValidatedInputWrapper>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+            disabled={isSubmitting}
+            className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Create Account
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Creating account...
+              </>
+            ) : (
+              'Create Account'
+            )}
           </button>
         </form>
       </section>
