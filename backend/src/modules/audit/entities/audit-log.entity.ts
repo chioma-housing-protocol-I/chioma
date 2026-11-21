@@ -6,6 +6,8 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  BeforeUpdate,
+  BeforeRemove,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
@@ -123,4 +125,21 @@ export class AuditLog {
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: any;
+
+  /** Guard for ORM-level mutations. The DB trigger covers raw SQL too. */
+  assertImmutable(operation: 'update' | 'remove'): void {
+    throw new Error(
+      `Audit log entries are immutable; ${operation} is not allowed`,
+    );
+  }
+
+  @BeforeUpdate()
+  guardUpdate(): void {
+    this.assertImmutable('update');
+  }
+
+  @BeforeRemove()
+  guardRemove(): void {
+    this.assertImmutable('remove');
+  }
 }

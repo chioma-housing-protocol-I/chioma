@@ -9,6 +9,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import { AuditInterceptor } from './audit.interceptor';
 import { AuditLogInterceptor } from './interceptors/audit-log.interceptor';
 import { AuditRetentionService } from './audit-retention.service';
+import { BusinessEventService } from './business-event.service';
 
 @Module({
   imports: [
@@ -29,7 +30,13 @@ import { AuditRetentionService } from './audit-retention.service';
     },
     AuditLogInterceptor,
     AuditRetentionService,
+    BusinessEventService,
   ],
-  exports: [AuditService, AuditLogInterceptor, AuditRetentionService],
+  exports: [
+    AuditService,
+    AuditLogInterceptor,
+    AuditRetentionService,
+    BusinessEventService,
+  ],
 })
 export class AuditModule {}

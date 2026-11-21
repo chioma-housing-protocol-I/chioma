@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import * as crypto from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -56,6 +57,7 @@ import { Idempotent, IdempotencyService } from '../../common/idempotency';
 import { FraudHooksService } from '../fraud/fraud-hooks.service';
 import { FxRateService } from './fx-rate.service';
 import { UsersService } from '../users/users.service';
+import { DEFAULT_PAYMENT_TRACER, PaymentTracer } from './payment-tracer';
 
 @Injectable()
 export class PaymentService {
@@ -75,7 +77,12 @@ export class PaymentService {
     private readonly fraudHooksService: FraudHooksService,
     private readonly fxRateService: FxRateService,
     private readonly usersService: UsersService,
+    @Optional() private readonly paymentTracer?: PaymentTracer,
   ) {}
+
+  private tracer(): PaymentTracer {
+    return this.paymentTracer ?? DEFAULT_PAYMENT_TRACER;
+  }
 
   @Locked({
     key: (dto: CreatePaymentRecordDto) =>
@@ -677,6 +684,8 @@ export class PaymentService {
     dto: ProcessStellarRentGatewayDto,
     userId: string,
   ): Promise<Payment> {
+    const tracer = this.tracer();
+    const spanAttributes = { operation: 'stellar_rent' };
     requireValue(dto, 'Stellar rent payment data is required');
     ensureUserId(userId);
     requireNonEmptyString(dto.userAddress, 'User address');
@@ -686,38 +695,47 @@ export class PaymentService {
 
     // FX conversion (#1543): when the caller supplies a fiat amount/currency
     // instead of an already-converted XLM amount, resolve the settlement
-    // amount here — before any on-chain call — so a rate-lookup failure
-    // blocks settlement outright rather than surfacing after funds moved.
+    // amount here before any on-chain call, so a rate-lookup failure blocks
+    // settlement rather than surfacing after funds moved.
     // `dto.amount` remains the on-chain XLM amount in every other case,
     // matching this endpoint's pre-existing contract exactly.
     let onChainAmount = dto.amount;
     let fxMetadata: Partial<PaymentMetadata> = {};
-    if (dto.fiatCurrency && dto.fiatAmount) {
-      const { convertedAmount, rateResult } = await this.fxRateService.convert(
-        Number(dto.fiatAmount),
-        dto.fiatCurrency,
-        'XLM',
-      );
-      onChainAmount = convertedAmount.toString();
-      fxMetadata = {
-        fxFromCurrency: rateResult.fromCurrency,
-        fxToCurrency: rateResult.toCurrency,
-        fxRate: rateResult.rate,
-        fxRateSource: rateResult.source,
-        fxRateResolvedAt: rateResult.resolvedAt.toISOString(),
-        fxOriginalAmount: Number(dto.fiatAmount),
-      };
-    }
+    await tracer.validation(async () => {
+      ensureUserId(userId);
+      if (dto.fiatCurrency && dto.fiatAmount) {
+        const { convertedAmount, rateResult } =
+          await this.fxRateService.convert(
+            Number(dto.fiatAmount),
+            dto.fiatCurrency,
+            'XLM',
+          );
+        onChainAmount = convertedAmount.toString();
+        fxMetadata = {
+          fxFromCurrency: rateResult.fromCurrency,
+          fxToCurrency: rateResult.toCurrency,
+          fxRate: rateResult.rate,
+          fxRateSource: rateResult.source,
+          fxRateResolvedAt: rateResult.resolvedAt.toISOString(),
+          fxOriginalAmount: Number(dto.fiatAmount),
+        };
+      }
+    }, spanAttributes);
 
     let transactionHash: string;
     try {
-      const callerKeypair = StellarSdk.Keypair.fromSecret(dto.userSecret);
-      transactionHash = await this.paymentProcessingService.processRentPayment(
-        dto.userAddress,
-        dto.agreementId,
-        onChainAmount,
-        callerKeypair,
-      );
+      transactionHash = await tracer.contractCall(async () => {
+        const callerKeypair = await tracer.auth(
+          () => StellarSdk.Keypair.fromSecret(dto.userSecret),
+          spanAttributes,
+        );
+        return this.paymentProcessingService.processRentPayment(
+          dto.userAddress,
+          dto.agreementId,
+          onChainAmount,
+          callerKeypair,
+        );
+      }, spanAttributes);
     } catch (error) {
       // The on-chain transfer itself failed, so nothing needs to be
       // reconciled - it's safe to record this as a failed payment.
@@ -743,40 +761,42 @@ export class PaymentService {
     }
 
     try {
-      const payment = this.paymentRepository.create({
-        userId,
-        agreementId: dto.agreementId,
-        amount: Number(onChainAmount),
-        transactionFee: 0,
-        netAmount: Number(onChainAmount),
-        currency: 'XLM',
-        status: PaymentStatus.COMPLETED,
-        referenceNumber: transactionHash,
-        processedAt: new Date(),
-        metadata: {
-          gateway: 'stellar',
-          flow: 'rent',
-          transactionHash,
-          userAddress: dto.userAddress,
-          reconciledAt: new Date().toISOString(),
-          ...fxMetadata,
-        } as PaymentMetadata,
-      });
+      return await tracer.confirmation(async () => {
+        const payment = this.paymentRepository.create({
+          userId,
+          agreementId: dto.agreementId,
+          amount: Number(onChainAmount),
+          transactionFee: 0,
+          netAmount: Number(onChainAmount),
+          currency: 'XLM',
+          status: PaymentStatus.COMPLETED,
+          referenceNumber: transactionHash,
+          processedAt: new Date(),
+          metadata: {
+            gateway: 'stellar',
+            flow: 'rent',
+            transactionHash,
+            userAddress: dto.userAddress,
+            reconciledAt: new Date().toISOString(),
+            ...fxMetadata,
+          } as PaymentMetadata,
+        });
 
-      const saved = await this.paymentRepository.save(payment);
-      void this.fraudHooksService.onPaymentRecorded({
-        userId,
-        amount: Number(saved.amount),
-        currency: saved.currency,
-        paymentMethod: saved.paymentMethod ?? undefined,
-      });
-      await this.notificationsService.notify(
-        userId,
-        'Stellar rent payment processed',
-        `Your rent payment of ${onChainAmount} XLM was submitted successfully.`,
-        'PAYMENT_RECEIVED',
-      );
-      return saved;
+        const saved = await this.paymentRepository.save(payment);
+        void this.fraudHooksService.onPaymentRecorded({
+          userId,
+          amount: Number(saved.amount),
+          currency: saved.currency,
+          paymentMethod: saved.paymentMethod ?? undefined,
+        });
+        await this.notificationsService.notify(
+          userId,
+          'Stellar rent payment processed',
+          `Your rent payment of ${onChainAmount} XLM was submitted successfully.`,
+          'PAYMENT_RECEIVED',
+        );
+        return saved;
+      }, spanAttributes);
     } catch (persistError) {
       // The on-chain transfer already succeeded. Recording it as FAILED here
       // would hide a real transfer of funds, so surface a distinct error
