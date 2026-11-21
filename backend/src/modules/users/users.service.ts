@@ -363,7 +363,7 @@ export class UsersService {
   async updateConsent(
     userId: string,
     consent: UpdateConsentDto,
-    context?: { ipAddress?: string; userAgent?: string },
+    context?: { ipAddress?: string | undefined; userAgent?: string | undefined },
   ): Promise<{ message: string }> {
     const user = await this.findById(userId);
     if (

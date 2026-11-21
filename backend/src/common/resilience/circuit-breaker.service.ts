@@ -117,7 +117,7 @@ class CircuitBreaker {
   private failureCount = 0;
   private successCount = 0;
   private rejectCount = 0;
-  private lastFailureTime?: number;
+  private lastFailureTime?: number | undefined;
   private recoveryTimer?: NodeJS.Timeout;
 
   private readonly failureThreshold: number;

@@ -149,7 +149,7 @@ export class DisputesService {
         paymentId?: string;
         rentPaymentId?: string;
         disputedPaymentAmount?: number;
-        paymentReferenceNumber?: string;
+        paymentReferenceNumber?: string | undefined;
         paymentDate?: Date;
       } = {};
 

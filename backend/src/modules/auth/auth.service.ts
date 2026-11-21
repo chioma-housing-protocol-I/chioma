@@ -172,7 +172,7 @@ export class AuthService {
 
   async login(
     loginDto: LoginDto,
-    context?: { ipAddress?: string; userAgent?: string },
+    context?: { ipAddress?: string | undefined; userAgent?: string | undefined },
   ): Promise<AuthSuccessResponseDto | MfaRequiredResponseDto> {
     const { email, password } = loginDto;
 
@@ -694,7 +694,7 @@ export class AuthService {
    */
   private async detectLoginAnomaly(
     user: User,
-    context?: { ipAddress?: string; userAgent?: string },
+    context?: { ipAddress?: string | undefined; userAgent?: string | undefined },
   ): Promise<string[]> {
     if (!context?.ipAddress && !context?.userAgent) return [];
 
@@ -1003,7 +1003,7 @@ export class AuthService {
     email?: string | null;
     loginMethod: LoginMethod;
     status: LoginStatus;
-    context?: { ipAddress?: string; userAgent?: string };
+    context?: { ipAddress?: string | undefined; userAgent?: string | undefined };
     failureReason?: string;
     isSuspicious?: boolean;
     anomalyFlags?: string[];

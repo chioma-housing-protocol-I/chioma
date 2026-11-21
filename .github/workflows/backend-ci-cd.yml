@@ -161,39 +161,85 @@ jobs:
     runs-on: ubuntu-latest
     needs: docker-build
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    defaults:
-      run:
-        working-directory: ./backend
+    environment: staging
+    env:
+      NAMESPACE: staging
+      DEPLOYMENT: chioma-backend
+      CONTAINER: backend
+      IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
 
-      - name: Deploy to staging
+      - name: Set Kubernetes context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_STAGING }}
+
+      - name: Roll out new image
         run: |
-          echo "Add your staging deployment commands here"
-          echo "For example: kubectl apply -f k8s/staging/"
+          kubectl set image deployment/${{ env.DEPLOYMENT }} \
+            ${{ env.CONTAINER }}=${{ env.IMAGE }} \
+            -n ${{ env.NAMESPACE }}
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=5m
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Rollout failed — rolling back to previous revision"
+          kubectl rollout undo deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=2m
 
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: docker-build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    defaults:
-      run:
-        working-directory: ./backend
+    environment: production
+    env:
+      NAMESPACE: production
+      DEPLOYMENT: chioma-backend
+      CONTAINER: backend
+      IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Set Kubernetes context
+        uses: azure/k8s-set-context@v4
         with:
-          name: backend-build
-          path: backend/dist/
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_PRODUCTION }}
 
-      - name: Deploy to production
+      - name: Roll out new image
         run: |
-          echo "Add your production deployment commands here"
-          echo "For example: kubectl apply -f k8s/production/"
+          kubectl set image deployment/${{ env.DEPLOYMENT }} \
+            ${{ env.CONTAINER }}=${{ env.IMAGE }} \
+            -n ${{ env.NAMESPACE }}
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=10m
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Rollout failed — rolling back to previous revision"
+          kubectl rollout undo deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/${{ env.DEPLOYMENT }} \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=2m

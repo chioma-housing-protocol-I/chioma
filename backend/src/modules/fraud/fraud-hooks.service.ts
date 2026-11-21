@@ -6,8 +6,8 @@ import { CheckTransactionFraudDto } from './dto/check-transaction-fraud.dto';
 export type PaymentRecordedFraudParams = {
   userId: string;
   amount: number;
-  currency?: string;
-  paymentMethod?: string;
+  currency?: string | undefined;
+  paymentMethod?: string | undefined;
 };
 
 @Injectable()
