@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PropertiesController } from './properties.controller';
 import { PropertiesService } from './properties.service';
+import { PropertyImportService } from './property-import.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
@@ -157,6 +158,10 @@ describe('PropertiesController', () => {
         {
           provide: PropertiesService,
           useValue: mockPropertiesService,
+        },
+        {
+          provide: PropertyImportService,
+          useValue: { bulkCreate: jest.fn() },
         },
         {
           provide: ReviewsService,

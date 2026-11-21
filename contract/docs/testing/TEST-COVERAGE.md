@@ -18,7 +18,9 @@ Contract changes must include meaningful tests for changed behavior. The target 
 
 ## Critical Invariants
 
-Always protect these invariants with tests when touched:
+Always protect these invariants with tests when touched. Rules that must hold
+for every valid input belong in a property test using the
+[invariant testing framework](INVARIANT-TESTING.md):
 
 - Escrow funds cannot be released twice.
 - A single signer cannot satisfy multi-sig approval alone.

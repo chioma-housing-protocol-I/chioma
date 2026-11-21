@@ -72,6 +72,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { DatabaseTimeoutInterceptor } from './common/database.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
 import { FieldFilteringInterceptor } from './common/interceptors/field-filtering.interceptor';
@@ -324,6 +325,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DatabaseTimeoutInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

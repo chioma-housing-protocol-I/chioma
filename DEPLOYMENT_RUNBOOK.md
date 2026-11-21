@@ -1170,7 +1170,35 @@ npm run perf:local
 
 ### Backend Rollback
 
-**Option 1: Kubernetes Rollout Undo (Recommended)**
+**Option 1: GitHub Actions rollback workflow (use this first)**
+
+The `Backend Rollback` workflow is runnable from the Actions tab. It is the
+fastest documented path back because it verifies the target image exists before
+touching the cluster and records the previous image in the run summary.
+
+1. Open **Actions -> Backend Rollback -> Run workflow**.
+2. Choose the environment (`production` or `staging`).
+3. Enter the exact image tag to deploy, for example `sha-abc1234` or `v1.2.3`.
+   Tags are produced by `backend-ci-cd.yml` and can be listed with
+   `docker manifest inspect ghcr.io/chioma-housing-protocol-I/chioma/backend:<tag>`.
+4. Enter the incident or change reference. This is written to the run summary
+   for the audit trail.
+5. The selected environment's required reviewers must approve the run. If no
+   approval prompt appears, the environment is not protected yet; stop and
+   have an admin add required reviewers before proceeding.
+6. Watch the run. It rolls the `chioma-backend` deployment to the requested
+   image, waits for the rollout to finish, and prints the resulting image.
+
+Prerequisites: the `production` and `staging` environments must have required
+reviewers, and each needs a `KUBE_CONFIG` secret with access to its cluster.
+The workflow uses `GITHUB_TOKEN` to read GHCR, so the operator does not need to
+pass a registry credential. Running the workflow does not revert database
+migrations; follow the migration guidance below if a migration was part of the
+bad release.
+
+**Option 2: Kubernetes Rollout Undo**
+
+If the Actions workflow is unavailable, undo the last rollout directly:
 
 ```bash
 # Check rollout history
@@ -1189,7 +1217,7 @@ kubectl get pods -n production -l app=chioma-backend
 curl https://api.chioma.app/health
 ```
 
-**Option 2: Rollback to Specific Revision**
+**Option 3: Rollback to Specific Revision**
 
 ```bash
 # View revision history with details
@@ -1204,7 +1232,7 @@ kubectl rollout undo deployment/chioma-backend \
 kubectl rollout status deployment/chioma-backend -n production
 ```
 
-**Option 3: Manual Image Rollback**
+**Option 4: Manual Image Rollback**
 
 ```bash
 # Get previous working image

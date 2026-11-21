@@ -11,6 +11,8 @@ doctest = false
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+proptest = "1.4.0"
+invariant-testing = { path = "../invariant-testing" }
 property_registry = { path = "../property_registry" }
 agent_registry = { path = "../agent_registry" }
 escrow = { path = "../escrow" }
