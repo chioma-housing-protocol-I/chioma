@@ -76,6 +76,8 @@ import { DatabaseTimeoutInterceptor } from './common/database.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
 import { FieldFilteringInterceptor } from './common/interceptors/field-filtering.interceptor';
+import { DatabaseBackpressureService } from './database/database-backpressure.service';
+import { DatabaseBackpressureInterceptor } from './database/database-backpressure.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
@@ -317,6 +319,11 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    DatabaseBackpressureService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DatabaseBackpressureInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

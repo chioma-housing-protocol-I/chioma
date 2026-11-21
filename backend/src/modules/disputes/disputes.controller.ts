@@ -66,6 +66,35 @@ export class DisputesController {
     return this.disputesService.createDispute(createDisputeDto, req.user.id);
   }
 
+  @Post('report')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Report a dispute with optional evidence attachment',
+  })
+  @ApiResponse({ status: 201, description: 'Dispute reported' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @AuditLog({
+    action: AuditAction.ESCROW_DISPUTED,
+    entityType: 'Dispute',
+    level: AuditLevel.WARN,
+    includeNewValues: true,
+  })
+  async reportDispute(
+    @Body() createDisputeDto: CreateDisputeDto,
+    @Request() req,
+    @UploadedFile() file?: any,
+    @Body('evidenceDescription') evidenceDescription?: string,
+  ) {
+    return this.disputesService.reportDispute(
+      createDisputeDto,
+      req.user.id,
+      file,
+      evidenceDescription,
+    );
+  }
+
   @Get()
   @ApiOperation({ summary: 'List disputes with filters' })
   @ApiPaginatedResponse(Dispute)
