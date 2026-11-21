@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PropertiesController } from './properties.controller';
 import { PropertyWizardController } from './property-wizard.controller';
 import { PropertiesService } from './properties.service';
+import { PropertyImportService } from './property-import.service';
 import { PropertyWizardService } from './property-wizard.service';
 import { PropertyCacheWarmingService } from './property-cache-warming.service';
 import { PropertyModesService } from './services/property-modes.service';
@@ -46,6 +47,7 @@ import { PropertiesResolver } from './graphql/properties.resolver';
   ],
   providers: [
     PropertiesService,
+    PropertyImportService,
     PropertyWizardService,
     PropertyCacheWarmingService,
     CacheService,
@@ -56,6 +58,7 @@ import { PropertiesResolver } from './graphql/properties.resolver';
   ],
   exports: [
     PropertiesService,
+    PropertyImportService,
     PropertyWizardService,
     PropertyModesService,
     AvailabilityService,

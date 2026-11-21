@@ -876,9 +876,18 @@ dependencies = [
  "chioma",
  "dispute_resolution",
  "escrow",
+ "invariant-testing",
  "payment",
  "property_registry",
+ "proptest",
  "soroban-sdk",
+]
+
+[[package]]
+name = "invariant-testing"
+version = "0.0.0"
+dependencies = [
+ "proptest",
 ]
 
 [[package]]

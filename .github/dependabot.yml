@@ -133,6 +133,29 @@ updates:
           - "minor"
           - "patch"
 
+  - package-ecosystem: "cargo"
+    directory: "/contract"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "contract"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      soroban-sdk:
+        patterns:
+          - "soroban-sdk"
+          - "soroban-*"
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: "docker"
     directory: "/backend"
     schedule:

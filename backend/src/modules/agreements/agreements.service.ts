@@ -23,6 +23,8 @@ import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { RenewAgreementDto } from './dto/renew-agreement.dto';
 import { SignAgreementDto } from './dto/sign-agreement.dto';
+import { ActivateAgreementDto } from './dto/activate-agreement.dto';
+import { TransitionAgreementDto } from './dto/transition-agreement.dto';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
 import { ReviewPromptService } from '../reviews/review-prompt.service';
@@ -292,6 +294,58 @@ export class AgreementsService {
     );
 
     return saved;
+  }
+
+  @Locked({ key: (id: string) => `agreement:activate:${id}`, ttlMs: 10000 })
+  async activate(id: string, dto: ActivateAgreementDto = {}) {
+    const enforcePreconditions = dto.enforcePreconditions !== false;
+    const agreement = await this.findOne(id);
+
+    if (enforcePreconditions) {
+      const now = new Date();
+      if (agreement.startDate) {
+        const startDate = new Date(agreement.startDate);
+        if (startDate > now) {
+          throw new BadRequestException(
+            'Agreement cannot be activated before its start date',
+          );
+        }
+      }
+      const securityDeposit = Number(agreement.securityDeposit ?? 0);
+      const escrowBalance = Number(agreement.escrowBalance ?? 0);
+      if (securityDeposit > 0 && escrowBalance < securityDeposit) {
+        throw new BadRequestException(
+          'Agreement cannot be activated before the required security deposit is fully funded in escrow',
+        );
+      }
+    }
+
+    return await this.updateStatusWithGuard(
+      id,
+      AgreementStatus.ACTIVE,
+      'Agreement activated via API',
+      agreement.userId,
+    );
+  }
+
+  @Locked({ key: (id: string) => `agreement:transition:${id}`, ttlMs: 10000 })
+  async transition(id: string, dto: TransitionAgreementDto) {
+    if (dto.status === AgreementStatus.SIGNED) {
+      return await this.sign(id, {});
+    }
+    if (dto.status === AgreementStatus.ACTIVE) {
+      return await this.activate(id, { enforcePreconditions: true });
+    }
+    if (dto.status === AgreementStatus.TERMINATED) {
+      return await this.terminate(id, {
+        terminationReason: dto.reason || 'Agreement terminated via transition API',
+      });
+    }
+    return await this.updateStatusWithGuard(
+      id,
+      dto.status,
+      dto.reason || 'Agreement transitioned via API',
+    );
   }
 
   async getFees(id: string, daysPastDue?: number) {
