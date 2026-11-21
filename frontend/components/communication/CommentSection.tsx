@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { CornerDownRight, Heart, MessageSquare, Send } from 'lucide-react';
+import { CornerDownRight, Heart, Loader2, MessageSquare, Send } from 'lucide-react';
 import { useDateFnsLocale } from '@/lib/utils/date-fns-locale';
 
 export interface CommentThreadItem {
@@ -88,7 +88,11 @@ export function CommentSection({
             onClick={() => void handleSubmit()}
             className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:pointer-events-none disabled:opacity-50"
           >
-            <Send className="h-4 w-4" />
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden="true" />
+            )}
             {isSubmitting ? 'Posting...' : 'Post comment'}
           </button>
         </div>
@@ -195,8 +199,11 @@ function CommentCard({
                   !replyDraft.trim() || !onSubmitComment || isSubmittingReply
                 }
                 onClick={() => void handleReply()}
-                className="rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:pointer-events-none disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:pointer-events-none disabled:opacity-50"
               >
+                {isSubmittingReply && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                )}
                 {isSubmittingReply ? 'Replying...' : 'Reply'}
               </button>
             </div>
