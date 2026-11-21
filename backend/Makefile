@@ -96,6 +96,11 @@ test-mutation: ## Run mutation tests (Stryker)
 	pnpm run test:mutation
 	@echo "$(GREEN)✓ Mutation tests complete$(NC)"
 
+test-mutation-payment: ## Run mutation tests on payment service (Stryker)
+	@echo "$(BLUE)Running payment mutation tests...$(NC)"
+	pnpm run test:mutation:payment
+	@echo "$(GREEN)✓ Payment mutation tests complete$(NC)"
+
 test-mutation-fast: ## Run mutation tests on a subset of files (common utils)
 	@echo "$(BLUE)Running fast mutation tests...$(NC)"
 	pnpm run test:mutation:fast

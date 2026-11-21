@@ -23,6 +23,9 @@ pnpm run perf
 # Run enhanced performance benchmark with detailed reporting
 pnpm run perf:enhanced
 
+# Run performance regression tests (5 key endpoints, 110% baseline gate)
+pnpm run perf:regression
+
 # Run comprehensive E2E performance tests
 pnpm run perf:comprehensive
 
@@ -128,6 +131,29 @@ pnpm run test:e2e -- --testPathPattern=performance-comprehensive
 - Rate limiting performance
 - Stress testing
 - Concurrent operation testing
+
+### 5. Performance Regression Tests (`backend/test/performance.regression-spec.ts`)
+
+Performance regression tests guard key platform endpoints against latency degradation.
+
+**Usage:**
+
+```bash
+pnpm run perf:regression
+# or
+pnpm run test:regression
+```
+
+**Acceptance Criteria & Policy:**
+
+- **Baselines for 5 key endpoints**: Established in-process response time baselines:
+  - `GET /health`: 250ms baseline (275ms 110% ceiling)
+  - `GET /health/detailed`: 350ms baseline (385ms 110% ceiling)
+  - `GET /security.txt`: 150ms baseline (165ms 110% ceiling)
+  - `GET /api/docs-json`: 600ms baseline (660ms 110% ceiling)
+  - `GET /api/properties`: 800ms baseline (880ms 110% ceiling)
+- **110% Failure Policy**: Tests strictly fail if recorded latency > 110% of baseline.
+- **Latencies Recorded**: All measured latencies are tracked with diagnostic metadata (`baselineMs`, `thresholdMs`, `recordedLatencyMs`, `percentageOfBaseline`, `status`, `samples`) and aggregated into test reports.
 
 ## Performance Monitoring
 
