@@ -8,6 +8,7 @@
  */
 
 import type { Property } from '@/types';
+import type { PropertyCardStatus } from '@/components/properties/PropertyCard';
 
 /** Shape that PropertyCard.tsx consumes directly. */
 export interface PropertyCardShape {
@@ -27,6 +28,7 @@ export interface PropertyCardShape {
   amenities?: string[];
   description?: string;
   images?: string[];
+  status?: PropertyCardStatus;
 }
 
 /**
@@ -69,6 +71,27 @@ function resolveManagerName(property: Property): string {
     property.owner ??
     (property as unknown as { landlord?: { name?: string } }).landlord;
   return owner?.name ?? 'Property Manager';
+}
+
+/**
+ * Map a backend `ListingStatus` to the card's display status.
+ * - 'published' → 'active'
+ * - 'rented' → 'sold'
+ * - 'draft' / 'archived' → 'pending'
+ */
+function resolveCardStatus(
+  listingStatus: Property['status'] | undefined,
+): PropertyCardStatus {
+  switch (listingStatus) {
+    case 'rented':
+      return 'sold';
+    case 'draft':
+    case 'archived':
+      return 'pending';
+    case 'published':
+    default:
+      return 'active';
+  }
 }
 
 /**
@@ -119,5 +142,6 @@ export function toPropertyCardShape(property: Property): PropertyCardShape {
     amenities: amenityNames,
     description: property.description,
     images: allImageUrls.length > 0 ? allImageUrls : undefined,
+    status: resolveCardStatus(property.status),
   };
 }

@@ -8,6 +8,8 @@ import { useModal } from '@/contexts/ModalContext';
 import { shimmerBlurDataURL } from '@/lib/utils/image-placeholder';
 import type { PropertyDetailData } from '@/components/modals/types';
 
+export type PropertyCardStatus = 'active' | 'sold' | 'pending';
+
 interface PropertyCardProps {
   property: {
     id: number | string;
@@ -26,6 +28,7 @@ interface PropertyCardProps {
     latitude?: number;
     longitude?: number;
     images?: string[];
+    status?: PropertyCardStatus;
   };
   variant?: 'grid' | 'list';
   priority?: boolean;
@@ -40,6 +43,9 @@ function PropertyCard({
   const [imageError, setImageError] = useState(false);
   const { openModal } = useModal();
   const propertyId = String(property.id);
+  const status = property.status ?? 'active';
+  const isSold = status === 'sold';
+  const isPending = status === 'pending';
   const { data: favoriteStatus } = useFavoriteStatus(propertyId);
   const { isPending: isFavoritePending, toggleFavorite } =
     useToggleFavorite(propertyId);
@@ -92,9 +98,10 @@ function PropertyCard({
   return (
     <div
       onClick={handlePropertyClick}
-      className="block group cursor-pointer"
+      className={`block group cursor-pointer ${isSold ? 'opacity-75 pointer-events-auto' : ''}`}
       data-testid="property-card"
       data-property-id={String(property.id)}
+      data-status={status}
     >
       <div
         className={`glass-card rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
@@ -130,7 +137,7 @@ function PropertyCard({
           )}
 
           {/* Status Badge */}
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
             {property.verified ? (
               <div className="bg-emerald-500/20 backdrop-blur-xl text-emerald-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-emerald-400/30 shadow-2xl">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -141,16 +148,56 @@ function PropertyCard({
                 New Listing
               </div>
             )}
+
+            {/* Property Status Badge */}
+            {isSold && (
+              <div
+                data-testid="status-badge-sold"
+                className="bg-red-500/20 backdrop-blur-xl text-red-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-red-400/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Sold
+              </div>
+            )}
+            {isPending && (
+              <div
+                data-testid="status-badge-pending"
+                className="bg-amber-500/20 backdrop-blur-xl text-amber-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-amber-400/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Pending
+              </div>
+            )}
+            {status === 'active' && (
+              <div
+                data-testid="status-badge-active"
+                className="bg-emerald-500/20 backdrop-blur-xl text-emerald-300 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-emerald-300/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                Active
+              </div>
+            )}
           </div>
+
+          {/* Sold overlay */}
+          {isSold && (
+            <div className="absolute inset-0 bg-black/40 z-[5] flex items-center justify-center">
+              <span className="text-white/80 text-2xl font-black uppercase tracking-widest rotate-[-15deg]">
+                Sold
+              </span>
+            </div>
+          )}
 
           {/* Wishlist Heart */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              void toggleFavorite(isFavorited);
+              if (!isSold) {
+                void toggleFavorite(isFavorited);
+              }
             }}
-            disabled={isFavoritePending}
+            disabled={isFavoritePending || isSold}
             aria-pressed={isFavorited}
             aria-label={
               isFavorited ? 'Remove from favorites' : 'Add to favorites'

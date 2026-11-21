@@ -14,13 +14,17 @@ vi.mock('next/image', () => ({
   }) => React.createElement('img', { src, alt, ...props }),
 }));
 
+const mockOpenModal = vi.fn();
+
 vi.mock('@/contexts/ModalContext', () => ({
   useModal: vi.fn(() => ({
-    openModal: vi.fn(),
+    openModal: mockOpenModal,
     closeModal: vi.fn(),
     modalState: { type: null, isOpen: false },
   })),
 }));
+
+const mockToggleFavorite = vi.fn();
 
 vi.mock('@/lib/query/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/query/hooks')>();
@@ -29,7 +33,7 @@ vi.mock('@/lib/query/hooks', async (importOriginal) => {
     useFavoriteStatus: vi.fn(() => ({ data: undefined })),
     useToggleFavorite: vi.fn(() => ({
       isPending: false,
-      toggleFavorite: vi.fn(),
+      toggleFavorite: mockToggleFavorite,
     })),
   };
 });
