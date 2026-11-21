@@ -81,6 +81,8 @@ pub enum PaymentError {
     /// a payment against stale/inconsistent local data rather than silently
     /// trusting whichever copy it happens to hold.
     AgreementDataMismatch = 43,
+    /// The stored upgrade proposal's wasm hash is not a valid 32-byte hash.
+    InvalidWasmHash = 44,
 }
 
 /// Pins every `PaymentError` discriminant so off-chain code that maps error
@@ -126,5 +128,6 @@ mod pin_tests {
         assert_eq!(PaymentError::ChiomaContractNotSet as u32, 41);
         assert_eq!(PaymentError::ChiomaAgreementLookupFailed as u32, 42);
         assert_eq!(PaymentError::AgreementDataMismatch as u32, 43);
+        assert_eq!(PaymentError::InvalidWasmHash as u32, 44);
     }
 }

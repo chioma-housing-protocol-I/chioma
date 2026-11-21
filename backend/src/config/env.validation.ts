@@ -113,9 +113,7 @@ function validateJwtSecret(
 
   const entropy = calculateShannonEntropyBitsPerChar(value);
   if (entropy < MIN_JWT_SECRET_ENTROPY_BITS_PER_CHAR) {
-    errors.push(
-
-    );
+    errors.push();
   }
 }
 
@@ -214,7 +212,9 @@ function validateTierADeploymentConfig(
     isNonEmpty(config.STELLAR_HORIZON_URL) &&
     config.STELLAR_HORIZON_URL === config.STELLAR_HORIZON_FALLBACK_URL
   ) {
-    errors.push('STELLAR_HORIZON_FALLBACK_URL must differ from STELLAR_HORIZON_URL');
+    errors.push(
+      'STELLAR_HORIZON_FALLBACK_URL must differ from STELLAR_HORIZON_URL',
+    );
   }
 
   if (
@@ -779,7 +779,12 @@ export function validateEnvironment(
   const isDeployed = nodeEnv === 'production' || nodeEnv === 'staging';
 
   validateJwtSecret('JWT_SECRET', config.JWT_SECRET, errors, isDeployed);
-  validateJwtSecret('JWT_REFRESH_SECRET', config.JWT_REFRESH_SECRET, errors, isDeployed);
+  validateJwtSecret(
+    'JWT_REFRESH_SECRET',
+    config.JWT_REFRESH_SECRET,
+    errors,
+    isDeployed,
+  );
 
   if (isDeployed) {
     validateProductionSecrets(config, errors);

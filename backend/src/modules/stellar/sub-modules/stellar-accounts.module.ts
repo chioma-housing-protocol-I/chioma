@@ -8,6 +8,7 @@ import { EscrowSignature } from '../entities/escrow-signature.entity';
 import { EscrowCondition } from '../entities/escrow-condition.entity';
 import { StellarService } from '../services/stellar.service';
 import { EncryptionService } from '../services/encryption.service';
+import { TransactionSubmissionPoolService } from '../services/transaction-submission-pool.service';
 import { StellarController } from '../controllers/stellar.controller';
 import stellarConfig from '../config/stellar.config';
 
@@ -23,7 +24,7 @@ import stellarConfig from '../config/stellar.config';
     ]),
   ],
   controllers: [StellarController],
-  providers: [StellarService, EncryptionService],
-  exports: [StellarService, EncryptionService],
+  providers: [StellarService, EncryptionService, TransactionSubmissionPoolService],
+  exports: [StellarService, EncryptionService, TransactionSubmissionPoolService],
 })
 export class StellarAccountsModule {}

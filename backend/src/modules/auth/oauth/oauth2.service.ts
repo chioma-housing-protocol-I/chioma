@@ -210,7 +210,9 @@ export class OAuth2Service {
   @Cron(CronExpression.EVERY_10_MINUTES)
   async cleanupExpiredStates(): Promise<void> {
     try {
-      await this.oauthStateRepository.delete({ expiresAt: LessThan(new Date()) });
+      await this.oauthStateRepository.delete({
+        expiresAt: LessThan(new Date()),
+      });
     } catch (error) {
       this.logger.error(
         `Failed to cleanup expired OAuth states: ${(error as Error).message}`,
@@ -293,7 +295,9 @@ export class OAuth2Service {
     }
 
     if (!oauthState.isValid(provider)) {
-      throw new UnauthorizedException('OAuth provider mismatch or state expired');
+      throw new UnauthorizedException(
+        'OAuth provider mismatch or state expired',
+      );
     }
 
     if ((oauthState.userId ?? undefined) !== expectedUserId) {

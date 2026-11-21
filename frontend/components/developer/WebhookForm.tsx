@@ -158,10 +158,11 @@ export function WebhookForm({
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-name" className="block text-sm font-semibold text-neutral-900">
               Webhook name
             </label>
             <input
+              id="webhook-name"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               placeholder="Payments collector"
@@ -169,10 +170,11 @@ export function WebhookForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-method" className="block text-sm font-semibold text-neutral-900">
               HTTP method
             </label>
             <select
+              id="webhook-method"
               value={method}
               onChange={(event) =>
                 setMethod(event.target.value as WebhookMethod)
@@ -187,10 +189,11 @@ export function WebhookForm({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-900">
+          <label htmlFor="webhook-url" className="block text-sm font-semibold text-neutral-900">
             Endpoint URL
           </label>
           <input
+            id="webhook-url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://example.com/webhooks/chioma"
@@ -198,10 +201,10 @@ export function WebhookForm({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900">
+        <fieldset>
+          <legend className="block text-sm font-semibold text-neutral-900">
             Events
-          </label>
+          </legend>
           <div className="mt-2 grid gap-2 md:grid-cols-2">
             {AVAILABLE_WEBHOOK_EVENTS.map((event) => (
               <label
@@ -222,14 +225,15 @@ export function WebhookForm({
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-retry-policy" className="block text-sm font-semibold text-neutral-900">
               Retry policy
             </label>
             <select
+              id="webhook-retry-policy"
               value={retryPolicy}
               onChange={(event) =>
                 setRetryPolicy(event.target.value as RetryPolicy)
@@ -242,10 +246,11 @@ export function WebhookForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-timeout" className="block text-sm font-semibold text-neutral-900">
               Timeout
             </label>
             <input
+              id="webhook-timeout"
               type="number"
               min={1000}
               step={1000}
@@ -255,10 +260,11 @@ export function WebhookForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-authentication" className="block text-sm font-semibold text-neutral-900">
               Authentication
             </label>
             <select
+              id="webhook-authentication"
               value={authentication}
               onChange={(event) =>
                 setAuthentication(event.target.value as AuthType)
@@ -274,10 +280,11 @@ export function WebhookForm({
 
         {authentication !== 'none' ? (
           <div>
-            <label className="block text-sm font-semibold text-neutral-900">
+            <label htmlFor="webhook-auth-value" className="block text-sm font-semibold text-neutral-900">
               Authentication value
             </label>
             <input
+              id="webhook-auth-value"
               value={authValue}
               onChange={(event) => setAuthValue(event.target.value)}
               placeholder={
@@ -291,10 +298,11 @@ export function WebhookForm({
         ) : null}
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-900">
+          <label htmlFor="webhook-custom-headers" className="block text-sm font-semibold text-neutral-900">
             Custom headers
           </label>
           <textarea
+            id="webhook-custom-headers"
             value={headersText}
             onChange={(event) => setHeadersText(event.target.value)}
             rows={4}

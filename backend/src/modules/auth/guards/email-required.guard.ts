@@ -54,9 +54,7 @@ export class EmailRequiredGuard implements CanActivate {
       return true;
     }
 
-    const request = context
-      .switchToHttp()
-      .getRequest<{ user?: RequestUser }>();
+    const request = context.switchToHttp().getRequest<{ user?: RequestUser }>();
 
     // Guard only applies to authenticated requests.  Unauthenticated requests
     // are caught upstream by JwtAuthGuard before this guard runs.

@@ -1,1155 +1,1993 @@
 # Database Schema Documentation
 
+> **Generated file — do not hand-edit.** Run `pnpm run docs:schema`
+> (`scripts/generate-schema-docs.mjs`) to regenerate this document from the
+> `@Entity` decorators in `src/**/*.entity.ts` after adding or changing an
+> entity. (#2046)
+
 ## Overview
 
-This document provides a comprehensive reference for the Chioma backend database schema. The database is built on PostgreSQL with TypeORM as the ORM layer, using the `SnakeNamingStrategy` for all table and column names.
+84 tables, derived from 88 entity files under `backend/src`.
 
-**Key Schema Characteristics:**
-- Primary keys are predominantly UUIDs (some tables use integers)
-- Soft-delete pattern via `deleted_at` timestamps on user-facing entities
-- Field-level encryption for PII and sensitive data with companion hash columns for lookups
-- Comprehensive indexing strategy for high-traffic query patterns
-- Blockchain integration fields linking to Stellar network state
+For the domain-level narrative behind these relationships (e.g. what a
+landlord/tenant/agent role on `rent_agreements` actually means), see
+[SCHEMA_RELATIONSHIPS.md](./SCHEMA_RELATIONSHIPS.md), which is hand-written
+and complementary to this generated reference rather than a duplicate of it.
 
-**Database Stack:**
-- **Engine**: PostgreSQL 14+
-- **ORM**: TypeORM 0.3.x
-- **Migrations Table**: `migrations`
-- **Local/Test Mode**: PostgreSQL (SQLite for select test flows)
-- **Naming Convention**: snake_case via `SnakeNamingStrategy`
-
----
-
-## Table of Contents
-
-- [Entity Relationship Overview](#entity-relationship-overview)
-- [Core Domain Tables](#core-domain-tables)
-  - [Users and Identity](#users-and-identity)
-  - [Properties and Listings](#properties-and-listings)
-  - [Rental Agreements and Payments](#rental-agreements-and-payments)
-  - [Reviews and Communication](#reviews-and-communication)
-  - [Disputes and Resolution](#disputes-and-resolution)
-- [Blockchain Integration Tables](#blockchain-integration-tables)
-- [Security and Compliance Tables](#security-and-compliance-tables)
-- [System and Integration Tables](#system-and-integration-tables)
-- [Migration History](#migration-history)
-- [Indexes and Performance](#indexes-and-performance)
-- [Data Types and Conventions](#data-types-and-conventions)
-
----
-
-## Entity Relationship Overview
+## Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    users ||--o{ properties : owns
-    users ||--o{ rent_agreements : "landlord/tenant"
-    users ||--o{ stellar_accounts : has
-    users ||--o{ reviews : "reviews/reviewed-by"
-    users ||--o{ disputes : initiates
-    users ||--o{ payments : makes
-    users ||--o{ kyc : "has-verification"
-    users ||--o{ mfa_devices : registers
-    
-    properties ||--o{ property_images : contains
-    properties ||--o{ property_amenities : features
-    properties ||--o{ rental_units : "divided-into"
-    properties ||--o{ property_availability : "has-calendar"
-    properties ||--o{ property_inquiries : receives
-    properties ||--o{ rent_agreements : "rented-via"
-    
-    rent_agreements ||--o{ payments : "paid-via"
-    rent_agreements ||--o{ rent_payments : tracks
-    rent_agreements ||--o{ stellar_escrows : "secured-by"
-    rent_agreements ||--o{ disputes : "disputed-via"
-    rent_agreements ||--o{ rent_reminders : triggers
-    rent_agreements ||--o{ maintenance_requests : spawns
-    
-    disputes ||--o{ dispute_comments : contains
-    disputes ||--o{ dispute_evidence : "supported-by"
-    disputes ||--o{ dispute_votes : "resolved-by"
-    disputes ||--o{ dispute_events : logs
-    
-    stellar_accounts ||--o{ stellar_transactions : participates
-    stellar_accounts ||--o{ stellar_payments : sends
-    stellar_escrows ||--o{ escrow_signatures : "signed-by"
-    stellar_escrows ||--o{ escrow_conditions : "governed-by"
-    
-    roles ||--o{ role_permissions : grants
-    permissions ||--o{ role_permissions : "granted-to"
-    users ||--o{ audit_logs : "tracked-in"
-    users ||--o{ security_events : triggers
+  Arbiter }o--|| User : ManyToOne
+  AuditLog }o--|| User : ManyToOne
+  Booking }o--|| Property : ManyToOne
+  Booking }o--|| User : ManyToOne
+  Dispute }o--|| RentAgreement : ManyToOne
+  Dispute }o--|| User : ManyToOne
+  DisputeComment }o--|| Dispute : ManyToOne
+  DisputeComment }o--|| User : ManyToOne
+  DisputeEvidence }o--|| Dispute : ManyToOne
+  DisputeEvidence }o--|| User : ManyToOne
+  DisputeVote }o--|| Arbiter : ManyToOne
+  DisputeVote }o--|| Dispute : ManyToOne
+  DocumentVersion }o--|| Document : ManyToOne
+  EscrowCondition }o--|| StellarEscrow : ManyToOne
+  EscrowSignature }o--|| StellarEscrow : ManyToOne
+  Favorite }o--|| FavoriteCollection : ManyToOne
+  Favorite }o--|| Property : ManyToOne
+  Favorite }o--|| User : ManyToOne
+  FavoriteCollection }o--|| User : ManyToOne
+  LoginActivity }o--|| User : ManyToOne
+  MfaDevice }o--|| User : ManyToOne
+  NFTTransfer }o--|| RentObligationNft : ManyToOne
+  Notification }o--|| User : ManyToOne
+  Payment }o--|| RentAgreement : ManyToOne
+  ProfileMetadata }o--|| User : ManyToOne
+  Property }o--|| User : ManyToOne
+  PropertyAmenity }o--|| Property : ManyToOne
+  PropertyAvailability }o--|| Property : ManyToOne
+  PropertyImage }o--|| Property : ManyToOne
+  PropertyTourEngagement }o--|| Property : ManyToOne
+  Referral }o--|| User : ManyToOne
+  RentObligationNft }o--|| RentAgreement : ManyToOne
+  RentalUnit }o--|| Property : ManyToOne
+  SavedSearch }o--|| User : ManyToOne
+  SettlementOffer }o--|| Dispute : ManyToOne
+  StellarAccount }o--|| User : ManyToOne
+  StellarEscrow ||--|| StellarAccount : OneToOne
+  StellarEscrow }o--|| StellarAccount : ManyToOne
+  StellarTransaction }o--|| StellarAccount : ManyToOne
+  UserNotificationPreference ||--|| User : OneToOne
+  WebhookDelivery }o--|| WebhookEndpoint : ManyToOne
+  AdminPermissionDelegation
+  AgentTransaction
+  AgreementTemplate
+  AnchorTransaction
+  ApiKeyRotationHistory
+  ApiKey
+  AuthMetric
+  DeadLetterJob
+  DisputeEvent
+  FeatureFlag
+  Feedback
+  FileMetadata
+  FraudAlertEntity
+  FraudThresholds
+  GuestReview
+  HostReview
+  IndexedTransaction
+  Kyc
+  MaintenanceRequest
+  Vendor
+  MessageRead
+  OAuthAccount
+  OAuthState
+  PaymentMethod
+  PaymentSchedule
+  PerformanceAlert
+  Permission
+  PropertyInquiry
+  PropertyListingDraft
+  RentPayment
+  RentReminder
+  ReviewPrompt
+  Review
+  Role
+  SecurityEvent
+  StellarPayment
+  SubletBooking
+  SubletRequest
+  SupportedCurrency
+  TemplateClause
+  TenantScreeningConsent
+  TenantScreeningReport
+  TenantScreeningRequest
+  TerminationReconciliation
+  ThreatEvent
+  UserPreferences
 ```
 
----
-
-## Core Domain Tables
-
-### Users and Identity
-
-#### `users`
-
-Central identity and authentication table.
-
-| Column                       | Type                        | Constraints                 | Description                                            |
-| ---------------------------- | --------------------------- | --------------------------- | ------------------------------------------------------ |
-| `id`                         | UUID                        | PRIMARY KEY                 | User unique identifier                                 |
-| `email`                      | VARCHAR                     | UNIQUE, NULLABLE            | User email (nullable for wallet-only signups)          |
-| `email_encrypted`            | BYTEA                       | NULLABLE, SELECT FALSE      | AES-256-GCM encrypted email                            |
-| `email_hash`                 | VARCHAR(64)                 | INDEXED, NULLABLE           | SHA-256 hash for email lookup                          |
-| `password`                   | VARCHAR                     | NULLABLE                    | Bcrypt hashed password                                 |
-| `first_name`                 | VARCHAR                     | NULLABLE                    | User first name (cleartext)                            |
-| `first_name_encrypted`       | BYTEA                       | NULLABLE, SELECT FALSE      | Encrypted first name                                   |
-| `last_name`                  | VARCHAR                     | NULLABLE                    | User last name (cleartext)                             |
-| `last_name_encrypted`        | BYTEA                       | NULLABLE, SELECT FALSE      | Encrypted last name                                    |
-| `phone_number`               | VARCHAR                     | NULLABLE                    | User phone number (cleartext)                          |
-| `phone_number_encrypted`     | BYTEA                       | NULLABLE, SELECT FALSE      | Encrypted phone number                                 |
-| `phone_number_hash`          | VARCHAR(64)                 | INDEXED, NULLABLE           | SHA-256 hash for phone lookup                          |
-| `avatar_url`                 | VARCHAR                     | NULLABLE                    | Profile picture URL                                    |
-| `role`                       | ENUM(UserRole)              | DEFAULT 'user'              | User role: user, admin, agent, super_admin             |
-| `email_verified`             | BOOLEAN                     | DEFAULT FALSE               | Email verification status                              |
-| `email_collected_at`         | TIMESTAMP                   | NULLABLE                    | When email was first collected                         |
-| `kyc_status`                 | ENUM(KycStatus)             | DEFAULT 'PENDING'           | KYC verification status                                |
-| `verification_token`         | VARCHAR                     | UNIQUE, NULLABLE            | Email verification token                               |
-| `verification_token_expires` | TIMESTAMP                   | NULLABLE                    | Verification token expiration                          |
-| `reset_token`                | VARCHAR                     | NULLABLE                    | Password reset token                                   |
-| `reset_token_expires`        | TIMESTAMP                   | NULLABLE                    | Reset token expiration                                 |
-| `failed_login_attempts`      | INTEGER                     | DEFAULT 0                   | Failed login counter                                   |
-| `account_locked_until`       | TIMESTAMP                   | NULLABLE                    | Account lockout expiration                             |
-| `last_login_at`              | TIMESTAMP                   | NULLABLE                    | Last successful login                                  |
-| `login_count`                | INTEGER                     | DEFAULT 0                   | Total login count                                      |
-| `preferred_language`         | VARCHAR(10)                 | DEFAULT 'en'                | User language preference                               |
-| `timezone`                   | VARCHAR(50)                 | DEFAULT 'UTC'               | User timezone                                          |
-| `two_factor_enabled`         | BOOLEAN                     | DEFAULT FALSE               | MFA enabled flag                                       |
-| `email_notifications`        | BOOLEAN                     | DEFAULT TRUE                | Email notification preference                          |
-| `sms_notifications`          | BOOLEAN                     | DEFAULT FALSE               | SMS notification preference                            |
-| `marketing_opt_in`           | BOOLEAN                     | DEFAULT FALSE               | Marketing communication opt-in                         |
-| `is_active`                  | BOOLEAN                     | DEFAULT TRUE                | Account active status                                  |
-| `wallet_address`             | VARCHAR                     | UNIQUE, NULLABLE            | Stellar wallet address (cleartext)                     |
-| `wallet_address_encrypted`   | BYTEA                       | NULLABLE, SELECT FALSE      | Encrypted wallet address                               |
-| `wallet_address_hash`        | VARCHAR(64)                 | INDEXED, NULLABLE           | SHA-256 hash for wallet lookup                         |
-| `encryption_key_version`     | INTEGER                     | DEFAULT 1, SELECT FALSE     | Encryption key version for rotation                    |
-| `auth_method`                | ENUM(AuthMethod)            | DEFAULT 'password'          | Authentication method: password, stellar               |
-| `refresh_token`              | VARCHAR                     | NULLABLE                    | JWT refresh token                                      |
-| `referral_code`              | VARCHAR(10)                 | UNIQUE, NULLABLE            | User's referral code                                   |
-| `referred_by_id`             | UUID                        | NULLABLE, FK → users        | Referrer user ID                                       |
-| `created_at`                 | TIMESTAMP                   | NOT NULL                    | Record creation timestamp                              |
-| `updated_at`                 | TIMESTAMP                   | NOT NULL                    | Record last update timestamp                           |
-| `deleted_at`                 | TIMESTAMP                   | NULLABLE                    | Soft delete timestamp                                  |
-
-**Indexes:**
-- `idx_users_email` (email)
-- `idx_users_email_hash` (email_hash)
-- `idx_users_phone_hash` (phone_number_hash)
-- `idx_users_wallet_hash` (wallet_address_hash)
-- `idx_users_verification_token` (verification_token, unique)
-- `idx_users_referral_code` (referral_code, unique)
-
-**Related Tables:**
-- `kyc`: KYC verification data
-- `mfa_devices`: Multi-factor authentication devices
-- `stellar_accounts`: Blockchain accounts
-- `properties`: Owned properties
-- `rent_agreements`: Rental agreements (as landlord/tenant/agent)
-
----
-
-#### `mfa_devices`
-
-Multi-factor authentication device registry.
-
-| Column          | Type      | Constraints         | Description                     |
-| --------------- | --------- | ------------------- | ------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Device unique identifier        |
-| `user_id`       | UUID      | NOT NULL, FK→users  | Owner user ID                   |
-| `device_name`   | VARCHAR   | NOT NULL            | User-assigned device name       |
-| `secret_key`    | VARCHAR   | NOT NULL            | TOTP secret (encrypted at rest) |
-| `backup_codes`  | TEXT[]    | NULLABLE            | Recovery codes                  |
-| `is_active`     | BOOLEAN   | DEFAULT TRUE        | Device active status            |
-| `last_used_at`  | TIMESTAMP | NULLABLE            | Last successful use             |
-| `created_at`    | TIMESTAMP | NOT NULL            | Device registration timestamp   |
-| `updated_at`    | TIMESTAMP | NOT NULL            | Last update timestamp           |
-
----
-
-#### `kyc`
-
-KYC (Know Your Customer) verification data storage.
-
-| Column                 | Type             | Constraints        | Description                           |
-| ---------------------- | ---------------- | ------------------ | ------------------------------------- |
-| `id`                   | UUID             | PRIMARY KEY        | KYC record unique identifier          |
-| `user_id`              | UUID             | NOT NULL, FK→users | Associated user                       |
-| `status`               | ENUM(KycStatus)  | NOT NULL           | Verification status                   |
-| `provider_reference`   | VARCHAR          | NULLABLE           | External provider reference ID        |
-| `encrypted_data`       | BYTEA            | NULLABLE           | Encrypted KYC document data           |
-| `encryption_version`   | INTEGER          | DEFAULT 1          | Encryption key version                |
-| `document_type`        | VARCHAR          | NULLABLE           | ID document type                      |
-| `verification_date`    | TIMESTAMP        | NULLABLE           | Date of successful verification       |
-| `expiration_date`      | TIMESTAMP        | NULLABLE           | Document/verification expiration date |
-| `rejection_reason`     | TEXT             | NULLABLE           | Reason for rejection                  |
-| `created_at`           | TIMESTAMP        | NOT NULL           | Record creation timestamp             |
-| `updated_at`           | TIMESTAMP        | NOT NULL           | Last update timestamp                 |
-
----
-
-### Properties and Listings
-
-#### `properties`
-
-Main property listing table.
-
-| Column                    | Type      | Constraints         | Description                             |
-| ------------------------- | --------- | ------------------- | --------------------------------------- |
-| `id`                      | UUID      | PRIMARY KEY         | Property unique identifier              |
-| `title`                   | VARCHAR   | NOT NULL            | Property listing title                  |
-| `description`             | TEXT      | NOT NULL            | Detailed property description           |
-| `address_line1`           | VARCHAR   | NOT NULL            | Street address                          |
-| `address_line2`           | VARCHAR   | NULLABLE            | Apartment/unit number                   |
-| `city`                    | VARCHAR   | NOT NULL            | City                                    |
-| `state`                   | VARCHAR   | NOT NULL            | State/province                          |
-| `postal_code`             | VARCHAR   | NOT NULL            | ZIP/postal code                         |
-| `country`                 | VARCHAR   | NOT NULL            | Country code (ISO 3166-1)               |
-| `latitude`                | DECIMAL   | NULLABLE            | Geolocation latitude                    |
-| `longitude`               | DECIMAL   | NULLABLE            | Geolocation longitude                   |
-| `property_type`           | VARCHAR   | NOT NULL            | Type: apartment, house, condo, etc.     |
-| `bedrooms`                | INTEGER   | NOT NULL            | Number of bedrooms                      |
-| `bathrooms`               | DECIMAL   | NOT NULL            | Number of bathrooms                     |
-| `square_feet`             | INTEGER   | NULLABLE            | Property area in square feet            |
-| `monthly_rent`            | DECIMAL   | NOT NULL            | Base monthly rent amount                |
-| `currency`                | VARCHAR   | DEFAULT 'USD'       | Rent currency code                      |
-| `security_deposit`        | DECIMAL   | NULLABLE            | Security deposit amount                 |
-| `lease_duration_months`   | INTEGER   | DEFAULT 12          | Default lease duration                  |
-| `available_from`          | DATE      | NOT NULL            | Availability start date                 |
-| `is_available`            | BOOLEAN   | DEFAULT TRUE        | Current availability flag               |
-| `pets_allowed`            | BOOLEAN   | DEFAULT FALSE       | Pets allowed flag                       |
-| `smoking_allowed`         | BOOLEAN   | DEFAULT FALSE       | Smoking allowed flag                    |
-| `max_occupants`           | INTEGER   | NULLABLE            | Maximum occupant limit                  |
-| `owner_id`                | UUID      | NOT NULL, FK→users  | Property owner user ID                  |
-| `is_verified`             | BOOLEAN   | DEFAULT FALSE       | Admin verification status               |
-| `view_count`              | INTEGER   | DEFAULT 0           | Total view counter                      |
-| `inquiry_count`           | INTEGER   | DEFAULT 0           | Total inquiry counter                   |
-| `featured`                | BOOLEAN   | DEFAULT FALSE       | Featured listing flag                   |
-| `listing_status`          | VARCHAR   | DEFAULT 'active'    | Status: active, inactive, rented        |
-| `primary_image_url`       | VARCHAR   | NULLABLE            | Primary listing image URL               |
-| `virtual_tour_url`        | VARCHAR   | NULLABLE            | Virtual tour link                       |
-| `created_at`              | TIMESTAMP | NOT NULL            | Listing creation timestamp              |
-| `updated_at`              | TIMESTAMP | NOT NULL            | Last update timestamp                   |
-| `deleted_at`              | TIMESTAMP | NULLABLE            | Soft delete timestamp                   |
-
-**Indexes:**
-- `idx_properties_owner_id` (owner_id)
-- `idx_properties_listing_status` (listing_status)
-- `idx_properties_location` (city, state, country)
-- `idx_properties_available_from` (available_from)
-- GiST index on lat/long for geospatial queries (location)
-
-**Related Tables:**
-- `property_images`: Property photos
-- `property_amenities`: Property features
-- `rental_units`: Multi-unit properties
-- `property_availability`: Availability calendar
-- `property_inquiries`: User inquiries
-
----
-
-#### `property_images`
-
-Property listing photos.
-
-| Column       | Type      | Constraints            | Description                      |
-| ------------ | --------- | ---------------------- | -------------------------------- |
-| `id`         | UUID      | PRIMARY KEY            | Image unique identifier          |
-| `property_id`| UUID      | NOT NULL, FK→properties| Parent property                  |
-| `url`        | VARCHAR   | NOT NULL               | Image URL (S3/CDN)               |
-| `caption`    | VARCHAR   | NULLABLE               | Image caption/description        |
-| `sort_order` | INTEGER   | DEFAULT 0              | Display order                    |
-| `is_primary` | BOOLEAN   | DEFAULT FALSE          | Primary image flag               |
-| `created_at` | TIMESTAMP | NOT NULL               | Upload timestamp                 |
-
----
-
-#### `property_amenities`
-
-Property features and amenities.
-
-| Column        | Type      | Constraints            | Description                      |
-| ------------- | --------- | ---------------------- | -------------------------------- |
-| `id`          | UUID      | PRIMARY KEY            | Amenity unique identifier        |
-| `property_id` | UUID      | NOT NULL, FK→properties| Parent property                  |
-| `name`        | VARCHAR   | NOT NULL               | Amenity name                     |
-| `icon`        | VARCHAR   | NULLABLE               | Icon identifier                  |
-| `category`    | VARCHAR   | NULLABLE               | Amenity category                 |
-| `created_at`  | TIMESTAMP | NOT NULL               | Record creation timestamp        |
-
----
-
-#### `property_availability`
-
-Property availability calendar.
-
-| Column                | Type      | Constraints            | Description                        |
-| --------------------- | --------- | ---------------------- | ---------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY            | Availability record identifier     |
-| `property_id`         | UUID      | NOT NULL, FK→properties| Parent property                    |
-| `date`                | DATE      | NOT NULL               | Calendar date                      |
-| `available`           | BOOLEAN   | DEFAULT TRUE           | Available flag for this date       |
-| `blocked_by_booking_id`| UUID     | NULLABLE               | Booking ID if blocked              |
-| `notes`               | TEXT      | NULLABLE               | Availability notes                 |
-| `created_at`          | TIMESTAMP | NOT NULL               | Record creation timestamp          |
-| `updated_at`          | TIMESTAMP | NOT NULL               | Last update timestamp              |
-
-**Indexes:**
-- `idx_property_availability_property_date` (property_id, date, unique)
-
----
-
-#### `property_listing_drafts`
-
-Draft storage for property listing wizard.
-
-| Column           | Type      | Constraints         | Description                          |
-| ---------------- | --------- | ------------------- | ------------------------------------ |
-| `id`             | UUID      | PRIMARY KEY         | Draft unique identifier              |
-| `landlord_id`    | UUID      | NOT NULL, FK→users  | Draft author                         |
-| `current_step`   | INTEGER   | DEFAULT 1           | Current wizard step (1-8)            |
-| `draft_data`     | JSONB     | NOT NULL            | Serialized draft state               |
-| `expires_at`     | TIMESTAMP | NOT NULL            | Draft expiration (30 days default)   |
-| `created_at`     | TIMESTAMP | NOT NULL            | Draft creation timestamp             |
-| `updated_at`     | TIMESTAMP | NOT NULL            | Last save timestamp                  |
-
----
-
-### Rental Agreements and Payments
-
-#### `rent_agreements`
-
-Core rental agreement contracts.
-
-| Column                      | Type      | Constraints            | Description                                |
-| --------------------------- | --------- | ---------------------- | ------------------------------------------ |
-| `id`                        | UUID      | PRIMARY KEY            | Agreement unique identifier                |
-| `agreement_number`          | VARCHAR   | UNIQUE, NOT NULL       | Human-readable agreement number            |
-| `property_id`               | UUID      | NOT NULL, FK→properties| Associated property                        |
-| `landlord_id`               | UUID      | NOT NULL, FK→users     | Landlord user ID                           |
-| `tenant_id`                 | UUID      | NOT NULL, FK→users     | Tenant user ID                             |
-| `agent_id`                  | UUID      | NULLABLE, FK→users     | Optional agent user ID                     |
-| `start_date`                | DATE      | NOT NULL               | Lease start date                           |
-| `end_date`                  | DATE      | NOT NULL               | Lease end date                             |
-| `monthly_rent`              | DECIMAL   | NOT NULL               | Monthly rent amount                        |
-| `currency`                  | VARCHAR   | DEFAULT 'USD'          | Rent currency                              |
-| `security_deposit`          | DECIMAL   | NULLABLE               | Security deposit amount                    |
-| `payment_day`               | INTEGER   | NOT NULL               | Monthly payment due day (1-31)             |
-| `agent_commission_percent`  | DECIMAL   | DEFAULT 0              | Agent commission percentage                |
-| `landlord_share_percent`    | DECIMAL   | DEFAULT 100            | Landlord payment share percentage          |
-| `status`                    | VARCHAR   | DEFAULT 'pending'      | Status: pending, active, completed, etc.   |
-| `blockchain_transaction_hash`| VARCHAR  | NULLABLE               | Stellar transaction hash                   |
-| `blockchain_created_at`     | TIMESTAMP | NULLABLE               | Blockchain creation timestamp              |
-| `nft_minted`                | BOOLEAN   | DEFAULT FALSE          | Rent obligation NFT minted flag            |
-| `nft_token_id`              | VARCHAR   | NULLABLE               | NFT token identifier                       |
-| `contract_document_url`     | VARCHAR   | NULLABLE               | Signed contract document URL               |
-| `terms_accepted_at`         | TIMESTAMP | NULLABLE               | Timestamp when terms were accepted         |
-| `created_at`                | TIMESTAMP | NOT NULL               | Agreement creation timestamp               |
-| `updated_at`                | TIMESTAMP | NOT NULL               | Last update timestamp                      |
-| `deleted_at`                | TIMESTAMP | NULLABLE               | Soft delete timestamp                      |
-
-**Indexes:**
-- `idx_rent_agreements_landlord` (landlord_id)
-- `idx_rent_agreements_tenant` (tenant_id)
-- `idx_rent_agreements_property` (property_id)
-- `idx_rent_agreements_status` (status)
-- `idx_rent_agreements_dates` (start_date, end_date)
-
----
-
-#### `payments`
-
-General payment ledger.
-
-| Column                | Type      | Constraints                | Description                           |
-| --------------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY                | Payment unique identifier             |
-| `user_id`             | UUID      | NOT NULL, FK→users         | Payer user ID                         |
-| `agreement_id`        | UUID      | NULLABLE, FK→rent_agreements| Associated agreement                 |
-| `amount`              | DECIMAL   | NOT NULL                   | Payment amount                        |
-| `currency`            | VARCHAR   | DEFAULT 'USD'              | Payment currency                      |
-| `status`              | VARCHAR   | NOT NULL                   | Status: pending, completed, failed    |
-| `payment_method_id`   | UUID      | NULLABLE, FK→payment_methods| Payment method used                  |
-| `payment_type`        | VARCHAR   | NOT NULL                   | Type: rent, deposit, commission       |
-| `reference_number`    | VARCHAR   | UNIQUE, NULLABLE           | External payment reference            |
-| `idempotency_key`     | VARCHAR   | UNIQUE, NULLABLE           | Idempotency key for retry safety      |
-| `receipt_url`         | VARCHAR   | NULLABLE                   | Payment receipt URL                   |
-| `refund_amount`       | DECIMAL   | DEFAULT 0                  | Total refunded amount                 |
-| `refund_reason`       | TEXT      | NULLABLE                   | Refund justification                  |
-| `processed_at`        | TIMESTAMP | NULLABLE                   | Payment processing timestamp          |
-| `created_at`          | TIMESTAMP | NOT NULL                   | Payment record creation timestamp     |
-| `updated_at`          | TIMESTAMP | NOT NULL                   | Last update timestamp                 |
-
-**Indexes:**
-- `idx_payments_user_id` (user_id)
-- `idx_payments_status` (status)
-- `idx_payments_processed_at` (processed_at)
-
----
-
-#### `payment_methods`
-
-Saved payment instruments.
-
-| Column            | Type      | Constraints         | Description                          |
-| ----------------- | --------- | ------------------- | ------------------------------------ |
-| `id`              | UUID      | PRIMARY KEY         | Payment method unique identifier     |
-| `user_id`         | UUID      | NOT NULL, FK→users  | Owner user ID                        |
-| `payment_type`    | VARCHAR   | NOT NULL            | Type: card, bank, stellar            |
-| `last_four`       | VARCHAR   | NULLABLE            | Last 4 digits of card/account        |
-| `expiry_date`     | VARCHAR   | NULLABLE            | Card expiration (MM/YY)              |
-| `is_default`      | BOOLEAN   | DEFAULT FALSE       | Default payment method flag          |
-| `encrypted_metadata`| BYTEA   | NULLABLE            | Encrypted sensitive payment details  |
-| `created_at`      | TIMESTAMP | NOT NULL            | Method creation timestamp            |
-| `updated_at`      | TIMESTAMP | NOT NULL            | Last update timestamp                |
-
----
-
-#### `payment_schedules`
-
-Recurring payment scheduling.
-
-| Column               | Type      | Constraints                 | Description                           |
-| -------------------- | --------- | --------------------------- | ------------------------------------- |
-| `id`                 | UUID      | PRIMARY KEY                 | Schedule unique identifier            |
-| `user_id`            | UUID      | NOT NULL, FK→users          | Payer user ID                         |
-| `agreement_id`       | UUID      | NULLABLE, FK→rent_agreements| Associated agreement                  |
-| `payment_method_id`  | UUID      | NOT NULL, FK→payment_methods| Payment method to charge              |
-| `amount`             | DECIMAL   | NOT NULL                    | Scheduled payment amount              |
-| `currency`           | VARCHAR   | DEFAULT 'USD'               | Payment currency                      |
-| `interval`           | VARCHAR   | NOT NULL                    | Frequency: monthly, weekly, etc.      |
-| `next_run_at`        | TIMESTAMP | NOT NULL                    | Next scheduled execution              |
-| `last_run_at`        | TIMESTAMP | NULLABLE                    | Last execution timestamp              |
-| `retry_count`        | INTEGER   | DEFAULT 0                   | Failed retry counter                  |
-| `max_retries`        | INTEGER   | DEFAULT 3                   | Maximum retry attempts                |
-| `status`             | VARCHAR   | DEFAULT 'active'            | Status: active, paused, completed     |
-| `created_at`         | TIMESTAMP | NOT NULL                    | Schedule creation timestamp           |
-| `updated_at`         | TIMESTAMP | NOT NULL                    | Last update timestamp                 |
-
-**Indexes:**
-- `idx_payment_schedules_user_id` (user_id)
-- `idx_payment_schedules_next_run_at` (next_run_at)
-
----
-
-#### `rent_payments`
-
-Rent-specific payment tracking.
-
-| Column                | Type      | Constraints                | Description                           |
-| --------------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY                | Rent payment unique identifier        |
-| `agreement_id`        | UUID      | NOT NULL, FK→rent_agreements| Associated agreement                 |
-| `amount`              | DECIMAL   | NOT NULL                   | Payment amount                        |
-| `currency`            | VARCHAR   | DEFAULT 'USD'              | Payment currency                      |
-| `status`              | VARCHAR   | NOT NULL                   | Status: pending, paid, overdue        |
-| `due_date`            | DATE      | NOT NULL                   | Payment due date                      |
-| `paid_at`             | TIMESTAMP | NULLABLE                   | Actual payment timestamp              |
-| `reference_number`    | VARCHAR   | NULLABLE                   | External payment reference            |
-| `notes`               | TEXT      | NULLABLE                   | Payment notes                         |
-| `created_at`          | TIMESTAMP | NOT NULL                   | Record creation timestamp             |
-| `updated_at`          | TIMESTAMP | NOT NULL                   | Last update timestamp                 |
-
----
-
-#### `maintenance_requests`
-
-Property maintenance request tracking.
-
-| Column          | Type      | Constraints                | Description                           |
-| --------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY                | Request unique identifier             |
-| `property_id`   | UUID      | NOT NULL, FK→properties    | Associated property                   |
-| `tenant_id`     | UUID      | NOT NULL, FK→users         | Requesting tenant                     |
-| `landlord_id`   | UUID      | NOT NULL, FK→users         | Property landlord                     |
-| `category`      | VARCHAR   | NOT NULL                   | Category: plumbing, electrical, etc.  |
-| `priority`      | VARCHAR   | DEFAULT 'medium'           | Priority: low, medium, high, urgent   |
-| `title`         | VARCHAR   | NOT NULL                   | Request title                         |
-| `description`   | TEXT      | NOT NULL                   | Detailed description                  |
-| `status`        | VARCHAR   | DEFAULT 'pending'          | Status: pending, in_progress, etc.    |
-| `media_urls`    | TEXT[]    | NULLABLE                   | Uploaded photo/video URLs             |
-| `resolved_at`   | TIMESTAMP | NULLABLE                   | Resolution timestamp                  |
-| `created_at`    | TIMESTAMP | NOT NULL                   | Request creation timestamp            |
-| `updated_at`    | TIMESTAMP | NOT NULL                   | Last update timestamp                 |
-
----
-
-### Reviews and Communication
-
-#### `reviews`
-
-General review system (polymorphic).
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Review unique identifier              |
-| `reviewer_id`   | UUID      | NOT NULL, FK→users  | Reviewer user ID                      |
-| `reviewee_id`   | UUID      | NOT NULL, FK→users  | Reviewed user ID                      |
-| `rating`        | INTEGER   | NOT NULL            | Rating (1-5)                          |
-| `comment`       | TEXT      | NULLABLE            | Review comment text                   |
-| `context`       | VARCHAR   | NOT NULL            | Context: tenant, landlord, agent      |
-| `property_id`   | UUID      | NULLABLE, FK→properties| Associated property                 |
-| `is_reported`   | BOOLEAN   | DEFAULT FALSE       | Flagged for moderation                |
-| `created_at`    | TIMESTAMP | NOT NULL            | Review creation timestamp             |
-| `updated_at`    | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
-**Indexes:**
-- `idx_reviews_reviewer_id` (reviewer_id)
-- `idx_reviews_reviewee_id` (reviewee_id)
-
----
-
-#### `guest_reviews`
-
-Guest-specific review details.
-
-| Column                    | Type      | Constraints         | Description                           |
-| ------------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                      | UUID      | PRIMARY KEY         | Guest review unique identifier        |
-| `booking_id`              | UUID      | NOT NULL            | Associated booking                    |
-| `host_id`                 | UUID      | NOT NULL, FK→users  | Reviewing host                        |
-| `guest_id`                | UUID      | NOT NULL, FK→users  | Reviewed guest                        |
-| `cleanliness_rating`      | INTEGER   | NOT NULL            | Cleanliness score (1-5)               |
-| `communication_rating`    | INTEGER   | NOT NULL            | Communication score (1-5)             |
-| `house_rules_rating`      | INTEGER   | NOT NULL            | House rules adherence (1-5)           |
-| `overall_rating`          | INTEGER   | NOT NULL            | Overall rating (1-5)                  |
-| `comment`                 | TEXT      | NULLABLE            | Review comment                        |
-| `created_at`              | TIMESTAMP | NOT NULL            | Review creation timestamp             |
-
-**Indexes:**
-- `idx_guest_reviews_booking_host` (booking_id, host_id, unique)
-- `idx_guest_reviews_guest_id` (guest_id)
-
----
-
-#### `host_reviews`
-
-Host-specific review details.
-
-| Column                    | Type      | Constraints         | Description                           |
-| ------------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                      | UUID      | PRIMARY KEY         | Host review unique identifier         |
-| `booking_id`              | UUID      | NOT NULL            | Associated booking                    |
-| `guest_id`                | UUID      | NOT NULL, FK→users  | Reviewing guest                       |
-| `host_id`                 | UUID      | NOT NULL, FK→users  | Reviewed host                         |
-| `accuracy_rating`         | INTEGER   | NOT NULL            | Listing accuracy score (1-5)          |
-| `communication_rating`    | INTEGER   | NOT NULL            | Communication score (1-5)             |
-| `cleanliness_rating`      | INTEGER   | NOT NULL            | Property cleanliness (1-5)            |
-| `location_rating`         | INTEGER   | NOT NULL            | Location score (1-5)                  |
-| `value_rating`            | INTEGER   | NOT NULL            | Value for money (1-5)                 |
-| `overall_rating`          | INTEGER   | NOT NULL            | Overall rating (1-5)                  |
-| `comment`                 | TEXT      | NULLABLE            | Review comment                        |
-| `created_at`              | TIMESTAMP | NOT NULL            | Review creation timestamp             |
-
-**Indexes:**
-- `idx_host_reviews_booking_guest` (booking_id, guest_id, unique)
-- `idx_host_reviews_host_id` (host_id)
-
----
-
-### Disputes and Resolution
-
-#### `disputes`
-
-Dispute lifecycle management.
-
-| Column                        | Type      | Constraints                | Description                           |
-| ----------------------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`                          | UUID      | PRIMARY KEY                | Dispute unique identifier             |
-| `agreement_id`                | UUID      | NULLABLE, FK→rent_agreements| Associated agreement                 |
-| `payment_id`                  | UUID      | NULLABLE, FK→payments      | Disputed payment                      |
-| `rent_payment_id`             | UUID      | NULLABLE                   | Disputed rent payment                 |
-| `initiator_id`                | UUID      | NOT NULL, FK→users         | User who initiated dispute            |
-| `respondent_id`               | UUID      | NOT NULL, FK→users         | Responding party                      |
-| `dispute_type`                | VARCHAR   | NOT NULL                   | Type: payment, property, etc.         |
-| `status`                      | VARCHAR   | DEFAULT 'open'             | Status: open, in_review, resolved     |
-| `description`                 | TEXT      | NOT NULL                   | Dispute description                   |
-| `resolution`                  | TEXT      | NULLABLE                   | Final resolution text                 |
-| `blockchain_escrow_id`        | VARCHAR   | NULLABLE                   | Linked Stellar escrow                 |
-| `total_votes`                 | INTEGER   | DEFAULT 0                  | Total arbiter votes                   |
-| `votes_for_initiator`         | INTEGER   | DEFAULT 0                  | Votes favoring initiator              |
-| `votes_for_respondent`        | INTEGER   | DEFAULT 0                  | Votes favoring respondent             |
-| `blockchain_transaction_hash` | VARCHAR   | NULLABLE                   | Resolution transaction hash           |
-| `resolved_at`                 | TIMESTAMP | NULLABLE                   | Resolution timestamp                  |
-| `created_at`                  | TIMESTAMP | NOT NULL                   | Dispute creation timestamp            |
-| `updated_at`                  | TIMESTAMP | NOT NULL                   | Last update timestamp                 |
-
-**Indexes:**
-- `IDX_disputes_payment_id` (payment_id)
-- `IDX_disputes_rent_payment_id` (rent_payment_id)
-- `IDX_disputes_status` (status)
-
----
-
-#### `dispute_evidence`
-
-Uploaded evidence attachments.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | INTEGER   | PRIMARY KEY         | Evidence unique identifier            |
-| `dispute_id`    | UUID      | NOT NULL, FK→disputes| Parent dispute                       |
-| `uploader_id`   | UUID      | NOT NULL, FK→users  | User who uploaded evidence            |
-| `file_url`      | VARCHAR   | NOT NULL            | Evidence file URL                     |
-| `file_name`     | VARCHAR   | NOT NULL            | Original file name                    |
-| `file_size`     | INTEGER   | NULLABLE            | File size in bytes                    |
-| `file_type`     | VARCHAR   | NULLABLE            | MIME type                             |
-| `description`   | TEXT      | NULLABLE            | Evidence description                  |
-| `uploaded_at`   | TIMESTAMP | NOT NULL            | Upload timestamp                      |
-
----
-
-#### `dispute_comments`
-
-Dispute discussion thread.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | INTEGER   | PRIMARY KEY         | Comment unique identifier             |
-| `dispute_id`    | UUID      | NOT NULL, FK→disputes| Parent dispute                       |
-| `user_id`       | UUID      | NOT NULL, FK→users  | Comment author                        |
-| `content`       | TEXT      | NOT NULL            | Comment text                          |
-| `is_internal`   | BOOLEAN   | DEFAULT FALSE       | Internal admin comment flag           |
-| `created_at`    | TIMESTAMP | NOT NULL            | Comment creation timestamp            |
-
----
-
-#### `dispute_votes`
-
-Arbiter voting records.
-
-| Column          | Type      | Constraints            | Description                           |
-| --------------- | --------- | ---------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY            | Vote unique identifier                |
-| `dispute_id`    | UUID      | NOT NULL, FK→disputes  | Disputed case                         |
-| `arbiter_id`    | UUID      | NOT NULL, FK→arbiters  | Voting arbiter                        |
-| `vote_decision` | VARCHAR   | NOT NULL               | Decision: for_initiator, for_respondent|
-| `vote_weight`   | INTEGER   | DEFAULT 1              | Vote weight (future use)              |
-| `reasoning`     | TEXT      | NULLABLE               | Vote justification                    |
-| `evidence_reviewed`| TEXT[] | NULLABLE               | Evidence IDs reviewed                 |
-| `created_at`    | TIMESTAMP | NOT NULL               | Vote timestamp                        |
-
-**Indexes:**
-- `IDX_dispute_votes_dispute_arbiter` (dispute_id, arbiter_id, unique)
-
----
+## Table of Contents
+
+- [`admin_permission_delegations`](#adminpermissiondelegations)
+- [`agent_transactions`](#agenttransactions)
+- [`agreement_templates`](#agreementtemplates)
+- [`anchor_transactions`](#anchortransactions)
+- [`api_key_rotation_history`](#apikeyrotationhistory)
+- [`api_keys`](#apikeys)
+- [`arbiters`](#arbiters)
+- [`audit_logs`](#auditlogs)
+- [`auth_metrics`](#authmetrics)
+- [`bookings`](#bookings)
+- [`dead_letter_jobs`](#deadletterjobs)
+- [`dispute_comments`](#disputecomments)
+- [`dispute_events`](#disputeevents)
+- [`dispute_evidence`](#disputeevidence)
+- [`dispute_settlement_offers`](#disputesettlementoffers)
+- [`dispute_votes`](#disputevotes)
+- [`disputes`](#disputes)
+- [`document_versions`](#documentversions)
+- [`documents`](#documents)
+- [`escrow_conditions`](#escrowconditions)
+- [`escrow_signatures`](#escrowsignatures)
+- [`favorite_collections`](#favoritecollections)
+- [`favorites`](#favorites)
+- [`feature_flags`](#featureflags)
+- [`feedback`](#feedback)
+- [`file_metadata`](#filemetadata)
+- [`fraud_alerts`](#fraudalerts)
+- [`fraud_thresholds`](#fraudthresholds)
+- [`guest_reviews`](#guestreviews)
+- [`host_reviews`](#hostreviews)
+- [`indexed_transactions`](#indexedtransactions)
+- [`kyc`](#kyc)
+- [`login_activities`](#loginactivities)
+- [`maintenance_requests`](#maintenancerequests)
+- [`maintenance_vendors`](#maintenancevendors)
+- [`message_read`](#messageread)
+- [`mfa_devices`](#mfadevices)
+- [`nft_transfers`](#nfttransfers)
+- [`notifications`](#notifications)
+- [`oauth_accounts`](#oauthaccounts)
+- [`oauth_states`](#oauthstates)
+- [`payment_methods`](#paymentmethods)
+- [`payment_schedules`](#paymentschedules)
+- [`payments`](#payments)
+- [`performance_alerts`](#performancealerts)
+- [`permissions`](#permissions)
+- [`profile_metadata`](#profilemetadata)
+- [`properties`](#properties)
+- [`property_amenities`](#propertyamenities)
+- [`property_availability`](#propertyavailability)
+- [`property_images`](#propertyimages)
+- [`property_inquiries`](#propertyinquiries)
+- [`property_listing_drafts`](#propertylistingdrafts)
+- [`property_tour_engagements`](#propertytourengagements)
+- [`referrals`](#referrals)
+- [`rent_agreements`](#rentagreements)
+- [`rent_obligation_nfts`](#rentobligationnfts)
+- [`rent_payments`](#rentpayments)
+- [`rent_payments`](#rentpayments)
+- [`rent_reminders`](#rentreminders)
+- [`rental_units`](#rentalunits)
+- [`review_prompts`](#reviewprompts)
+- [`reviews`](#reviews)
+- [`roles`](#roles)
+- [`saved_searches`](#savedsearches)
+- [`security_events`](#securityevents)
+- [`stellar_accounts`](#stellaraccounts)
+- [`stellar_escrows`](#stellarescrows)
+- [`stellar_payments`](#stellarpayments)
+- [`stellar_transactions`](#stellartransactions)
+- [`sublet_bookings`](#subletbookings)
+- [`sublet_requests`](#subletrequests)
+- [`supported_currencies`](#supportedcurrencies)
+- [`template_clauses`](#templateclauses)
+- [`tenant_screening_consents`](#tenantscreeningconsents)
+- [`tenant_screening_reports`](#tenantscreeningreports)
+- [`tenant_screening_requests`](#tenantscreeningrequests)
+- [`termination_reconciliations`](#terminationreconciliations)
+- [`threat_events`](#threatevents)
+- [`user_ai_preferences`](#useraipreferences)
+- [`user_notification_preferences`](#usernotificationpreferences)
+- [`users`](#users)
+- [`webhook_deliveries`](#webhookdeliveries)
+- [`webhook_endpoints`](#webhookendpoints)
+
+## Tables
+
+#### `admin_permission_delegations`
+
+Entity class: `AdminPermissionDelegation` (backend/src/modules/security/entities/admin-permission-delegation.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `grantor_id` | uuid | not null |
+| `grantee_id` | uuid | not null |
+| `resource` | varchar | not null |
+| `action` | varchar | not null |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `grantee_id, resource, action` (unique)
+
+#### `agent_transactions`
+
+Entity class: `AgentTransaction` (backend/src/modules/stellar/entities/agent-transaction.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `agent_address` | inferred | not null |
+| `parties` | inferred | not null |
+| `completed` | inferred | not null default: false |
+| `blockchain_hash` | varchar | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `agreement_templates`
+
+Entity class: `AgreementTemplate` (backend/src/modules/agreements/entities/agreement-template.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `name` | inferred | not null |
+| `base_content` | text | not null |
+| `jurisdiction` | inferred | not null |
+| `is_active` | inferred | not null default: true |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `anchor_transactions`
+
+Entity class: `AnchorTransaction` (backend/src/modules/transactions/entities/anchor-transaction.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `anchor_transaction_id` | inferred | - |
+| `type` | enum | not null |
+| `status` | enum | not null default: AnchorTransactionStatus.PENDING |
+| `amount` | decimal | not null |
+| `currency` | inferred | not null |
+| `wallet_address` | inferred | not null |
+| `payment_method` | inferred | - |
+| `destination` | text | - |
+| `stellar_transaction_id` | inferred | indexed |
+| `memo` | text | - |
+| `metadata` | jsonb | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `wallet_address, status`, `anchor_transaction_id`, `stellar_transaction_id`
+
+#### `api_key_rotation_history`
+
+Entity class: `ApiKeyRotationHistory` (backend/src/modules/developer/entities/api-key-rotation-history.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `api_key_id` | uuid | not null |
+| `user_id` | uuid | not null |
+| `old_key_hash` | varchar | not null |
+| `new_key_hash` | varchar | not null |
+| `old_key_prefix` | varchar | - |
+| `new_key_prefix` | varchar | - |
+| `rotated_at` | timestamp | not null |
+
+#### `api_keys`
+
+Entity class: `ApiKey` (backend/src/modules/developer/entities/api-key.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `name` | varchar | not null |
+| `description` | varchar | - |
+| `key_hash` | varchar | not null |
+| `key_prefix` | varchar | - |
+| `permissions` | inferred | not null default: '' |
+| `last_used_at` | varchar | - |
+| `expires_at` | varchar | - |
+| `rotated_at` | varchar | - |
+| `previous_key_hash` | varchar | - |
+| `is_rotated` | boolean | not null default: false |
+| `status` | varchar | not null default: ApiKeyStatus.ACTIVE |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
 
 #### `arbiters`
 
-Dispute arbiter registry.
-
-| Column                          | Type      | Constraints         | Description                           |
-| ------------------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                            | UUID      | PRIMARY KEY         | Arbiter unique identifier             |
-| `user_id`                       | UUID      | NOT NULL, FK→users  | Associated user account               |
-| `stellar_address`               | VARCHAR   | UNIQUE, NOT NULL    | Arbiter's Stellar address             |
-| `active`                        | BOOLEAN   | DEFAULT TRUE        | Active arbiter flag                   |
-| `total_cases_resolved`          | INTEGER   | DEFAULT 0           | Total resolved dispute count          |
-| `blockchain_registration_hash`  | VARCHAR   | NULLABLE            | Registration transaction hash         |
-| `blockchain_registered_at`      | TIMESTAMP | NULLABLE            | Blockchain registration timestamp     |
-| `created_at`                    | TIMESTAMP | NOT NULL            | Arbiter creation timestamp            |
-| `updated_at`                    | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
-**Indexes:**
-- `IDX_arbiters_stellar_address` (stellar_address)
-- `IDX_arbiters_active` (active)
-
----
-
-## Blockchain Integration Tables
-
-### `stellar_accounts`
-
-Managed Stellar blockchain accounts.
-
-| Column                | Type      | Constraints         | Description                           |
-| --------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY         | Account record unique identifier      |
-| `user_id`             | UUID      | NOT NULL, FK→users  | Associated user                       |
-| `public_key`          | VARCHAR   | UNIQUE, NOT NULL    | Stellar public key                    |
-| `secret_encrypted`    | BYTEA     | NOT NULL            | Encrypted secret key                  |
-| `account_type`        | VARCHAR   | NOT NULL            | Type: user, escrow, agent             |
-| `balance`             | DECIMAL   | DEFAULT 0           | Current XLM balance                   |
-| `sequence`            | VARCHAR   | NULLABLE            | Current account sequence number       |
-| `is_active`           | BOOLEAN   | DEFAULT TRUE        | Account active flag                   |
-| `created_at`          | TIMESTAMP | NOT NULL            | Account creation timestamp            |
-| `updated_at`          | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
-**Indexes:**
-- `IDX_stellar_accounts_user_id` (user_id)
-- `IDX_stellar_accounts_account_type` (account_type)
-
----
-
-### `stellar_escrows`
-
-Stellar escrow state tracking.
-
-| Column                      | Type      | Constraints                  | Description                           |
-| --------------------------- | --------- | ---------------------------- | ------------------------------------- |
-| `id`                        | UUID      | PRIMARY KEY                  | Escrow unique identifier              |
-| `source_account_id`         | UUID      | NOT NULL, FK→stellar_accounts| Source account                        |
-| `destination_account_id`    | UUID      | NOT NULL, FK→stellar_accounts| Destination account                   |
-| `asset_code`                | VARCHAR   | NOT NULL                     | Stellar asset code                    |
-| `asset_issuer`              | VARCHAR   | NULLABLE                     | Asset issuer address                  |
-| `amount`                    | DECIMAL   | NOT NULL                     | Escrow amount                         |
-| `status`                    | VARCHAR   | DEFAULT 'pending'            | Status: pending, locked, released     |
-| `release_conditions`        | JSONB     | NULLABLE                     | Release condition data                |
-| `expiration_date`           | TIMESTAMP | NULLABLE                     | Escrow expiration                     |
-| `transaction_hash`          | VARCHAR   | NULLABLE                     | Creation transaction hash             |
-| `dispute_id`                | UUID      | NULLABLE, FK→disputes        | Associated dispute                    |
-| `requires_multisig`         | BOOLEAN   | DEFAULT FALSE                | Multi-signature requirement flag      |
-| `signers_required`          | INTEGER   | DEFAULT 1                    | Required signer count                 |
-| `refunded_amount`           | DECIMAL   | DEFAULT 0                    | Amount refunded                       |
-| `created_at`                | TIMESTAMP | NOT NULL                     | Escrow creation timestamp             |
-| `updated_at`                | TIMESTAMP | NOT NULL                     | Last update timestamp                 |
-
-**Indexes:**
-- `IDX_stellar_escrows_source_account` (source_account_id)
-- `IDX_stellar_escrows_destination_account` (destination_account_id)
-- `IDX_stellar_escrows_status` (status)
-
----
-
-### `stellar_payments`
-
-Stellar payment transaction mirror.
-
-| Column                | Type      | Constraints                | Description                           |
-| --------------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY                | Payment record unique identifier      |
-| `agreement_id`        | UUID      | NULLABLE, FK→rent_agreements| Associated agreement                 |
-| `from_address`        | VARCHAR   | NOT NULL                   | Sender Stellar address                |
-| `to_address`          | VARCHAR   | NOT NULL                   | Recipient Stellar address             |
-| `amount`              | DECIMAL   | NOT NULL                   | Payment amount                        |
-| `asset_code`          | VARCHAR   | NOT NULL                   | Asset code                            |
-| `asset_issuer`        | VARCHAR   | NULLABLE                   | Asset issuer address                  |
-| `transaction_hash`    | VARCHAR   | UNIQUE, NOT NULL           | Stellar transaction hash              |
-| `status`              | VARCHAR   | DEFAULT 'pending'          | Status: pending, completed, failed    |
-| `payment_date`        | TIMESTAMP | NOT NULL                   | Payment execution timestamp           |
-| `created_at`          | TIMESTAMP | NOT NULL                   | Record creation timestamp             |
-
-**Indexes:**
-- `IDX_stellar_payments_agreement_id` (agreement_id)
-- `IDX_stellar_payments_status` (status)
-
----
-
-### `stellar_transactions`
-
-General Stellar transaction index.
-
-| Column                | Type      | Constraints                  | Description                           |
-| --------------------- | --------- | ---------------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY                  | Transaction record identifier         |
-| `transaction_hash`    | VARCHAR   | UNIQUE, NOT NULL             | Stellar transaction hash              |
-| `ledger`              | INTEGER   | NOT NULL                     | Ledger number                         |
-| `from_account_id`     | UUID      | NULLABLE, FK→stellar_accounts| Sender account                        |
-| `to_account_id`       | UUID      | NULLABLE, FK→stellar_accounts| Recipient account                     |
-| `transaction_type`    | VARCHAR   | NOT NULL                     | Type: payment, escrow, etc.           |
-| `amount`              | DECIMAL   | NULLABLE                     | Transaction amount                    |
-| `asset_code`          | VARCHAR   | NULLABLE                     | Asset code                            |
-| `asset_issuer`        | VARCHAR   | NULLABLE                     | Asset issuer                          |
-| `fee`                 | INTEGER   | NOT NULL                     | Transaction fee (stroops)             |
-| `memo`                | VARCHAR   | NULLABLE                     | Transaction memo                      |
-| `status`              | VARCHAR   | DEFAULT 'pending'            | Status: pending, success, failed      |
-| `error_message`       | TEXT      | NULLABLE                     | Error message on failure              |
-| `created_at`          | TIMESTAMP | NOT NULL                     | Record creation timestamp             |
-
-**Indexes:**
-- `IDX_stellar_transactions_from_account` (from_account_id)
-- `IDX_stellar_transactions_to_account` (to_account_id)
-- `IDX_stellar_transactions_hash` (transaction_hash)
-
----
-
-### `rent_obligation_nfts`
-
-NFT-backed rent obligation tracking.
-
-| Column                | Type      | Constraints                | Description                           |
-| --------------------- | --------- | -------------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY                | NFT record unique identifier          |
-| `agreement_id`        | UUID      | NOT NULL, FK→rent_agreements| Associated agreement                 |
-| `nft_token_id`        | VARCHAR   | UNIQUE, NOT NULL           | NFT token identifier                  |
-| `owner_address`       | VARCHAR   | NOT NULL                   | Current NFT owner address             |
-| `mint_transaction_hash`| VARCHAR  | NULLABLE                   | Minting transaction hash              |
-| `transfer_count`      | INTEGER   | DEFAULT 0                  | Number of transfers                   |
-| `status`              | VARCHAR   | DEFAULT 'active'           | Status: active, burned, transferred   |
-| `metadata_uri`        | VARCHAR   | NULLABLE                   | NFT metadata URI                      |
-| `created_at`          | TIMESTAMP | NOT NULL                   | Minting timestamp                     |
-| `updated_at`          | TIMESTAMP | NOT NULL                   | Last update timestamp                 |
-
----
-
-## Security and Compliance Tables
-
-### `roles`
-
-RBAC role catalog.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Role unique identifier                |
-| `name`          | VARCHAR   | UNIQUE, NOT NULL    | Role name                             |
-| `description`   | TEXT      | NULLABLE            | Role description                      |
-| `system_role`   | BOOLEAN   | DEFAULT FALSE       | System-defined role flag              |
-| `is_active`     | BOOLEAN   | DEFAULT TRUE        | Role active status                    |
-| `created_at`    | TIMESTAMP | NOT NULL            | Role creation timestamp               |
-| `updated_at`    | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
----
-
-### `permissions`
-
-RBAC permission catalog.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Permission unique identifier          |
-| `name`          | VARCHAR   | UNIQUE, NOT NULL    | Permission name                       |
-| `resource`      | VARCHAR   | NOT NULL            | Resource type                         |
-| `action`        | VARCHAR   | NOT NULL            | Action: read, write, delete, etc.     |
-| `description`   | TEXT      | NULLABLE            | Permission description                |
-| `is_active`     | BOOLEAN   | DEFAULT TRUE        | Permission active status              |
-| `created_at`    | TIMESTAMP | NOT NULL            | Permission creation timestamp         |
-| `updated_at`    | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
----
-
-### `role_permissions`
-
-Many-to-many role-permission mapping.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `role_id`       | UUID      | FK→roles            | Role ID                               |
-| `permission_id` | UUID      | FK→permissions      | Permission ID                         |
-
-**Indexes:**
-- PRIMARY KEY (role_id, permission_id)
-
----
-
-### `audit_logs`
-
-Immutable audit trail.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | INTEGER   | PRIMARY KEY         | Audit log entry identifier            |
-| `action`        | VARCHAR   | NOT NULL            | Action performed                      |
-| `entity_type`   | VARCHAR   | NOT NULL            | Entity type affected                  |
-| `entity_id`     | VARCHAR   | NULLABLE            | Entity identifier                     |
-| `performed_by`  | UUID      | NULLABLE, FK→users  | User who performed action             |
-| `status`        | VARCHAR   | NOT NULL            | Status: success, failure              |
-| `ip_address`    | VARCHAR   | NULLABLE            | Request IP address                    |
-| `user_agent`    | VARCHAR   | NULLABLE            | Request user agent                    |
-| `metadata`      | JSONB     | NULLABLE            | Additional context data               |
-| `timestamp`     | TIMESTAMP | NOT NULL            | Event timestamp                       |
-
-**Indexes:**
-- `idx_audit_logs_entity` (entity_type, entity_id)
-- `idx_audit_logs_performed_by` (performed_by)
-- `idx_audit_logs_timestamp` (timestamp)
-
----
-
-### `security_events`
-
-Security telemetry events.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Event unique identifier               |
-| `user_id`       | UUID      | NULLABLE, FK→users  | Associated user                       |
-| `event_type`    | VARCHAR   | NOT NULL            | Event type: login, logout, etc.       |
-| `severity`      | VARCHAR   | NOT NULL            | Severity: low, medium, high, critical |
-| `ip_address`    | VARCHAR   | NULLABLE            | Source IP address                     |
-| `user_agent`    | VARCHAR   | NULLABLE            | User agent string                     |
-| `details`       | JSONB     | NULLABLE            | Event details                         |
-| `success`       | BOOLEAN   | NOT NULL            | Success flag                          |
-| `error_message` | TEXT      | NULLABLE            | Error message on failure              |
-| `timestamp`     | TIMESTAMP | NOT NULL            | Event timestamp                       |
-
-**Indexes:**
-- `idx_security_events_user_id` (user_id)
-- `idx_security_events_timestamp` (timestamp)
-- `idx_security_events_severity` (severity)
-
----
-
-### `threat_events`
-
-Threat detection findings.
-
-| Column                | Type      | Constraints         | Description                           |
-| --------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY         | Threat event unique identifier        |
-| `user_id`             | UUID      | NULLABLE, FK→users  | Associated user                       |
-| `ip_address`          | VARCHAR   | NOT NULL            | Source IP address                     |
-| `user_agent`          | VARCHAR   | NULLABLE            | User agent string                     |
-| `threat_type`         | VARCHAR   | NOT NULL            | Threat type                           |
-| `threat_level`        | VARCHAR   | NOT NULL            | Level: low, medium, high, critical    |
-| `status`              | VARCHAR   | DEFAULT 'detected'  | Status: detected, mitigated, resolved |
-| `evidence`            | JSONB     | NULLABLE            | Threat evidence data                  |
-| `mitigation_action`   | VARCHAR   | NULLABLE            | Action taken                          |
-| `created_at`          | TIMESTAMP | NOT NULL            | Detection timestamp                   |
-| `resolved_at`         | TIMESTAMP | NULLABLE            | Resolution timestamp                  |
-
----
-
-### `api_keys`
-
-Developer API key management.
-
-| Column                | Type      | Constraints         | Description                           |
-| --------------------- | --------- | ------------------- | ------------------------------------- |
-| `id`                  | UUID      | PRIMARY KEY         | API key unique identifier             |
-| `user_id`             | UUID      | NOT NULL, FK→users  | Key owner                             |
-| `name`                | VARCHAR   | NOT NULL            | Key name/description                  |
-| `key_prefix`          | VARCHAR   | NOT NULL            | Key prefix for display                |
-| `key_hash`            | VARCHAR   | UNIQUE, NOT NULL    | Hashed key value                      |
-| `permissions`         | TEXT[]    | NULLABLE            | Granted permissions                   |
-| `last_used_at`        | TIMESTAMP | NULLABLE            | Last usage timestamp                  |
-| `expires_at`          | TIMESTAMP | NULLABLE            | Key expiration timestamp              |
-| `is_active`           | BOOLEAN   | DEFAULT TRUE        | Key active status                     |
-| `created_at`          | TIMESTAMP | NOT NULL            | Key creation timestamp                |
-| `updated_at`          | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
----
-
-## System and Integration Tables
-
-### `notifications`
-
-In-app notification delivery.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Notification unique identifier        |
-| `user_id`       | UUID      | NOT NULL, FK→users  | Recipient user                        |
-| `title`         | VARCHAR   | NOT NULL            | Notification title                    |
-| `message`       | TEXT      | NOT NULL            | Notification message                  |
-| `type`          | VARCHAR   | NOT NULL            | Type: info, warning, error, success   |
-| `read`          | BOOLEAN   | DEFAULT FALSE       | Read status                           |
-| `read_at`       | TIMESTAMP | NULLABLE            | Read timestamp                        |
-| `action_url`    | VARCHAR   | NULLABLE            | Optional action link                  |
-| `created_at`    | TIMESTAMP | NOT NULL            | Notification creation timestamp       |
-
----
-
-### `webhook_endpoints`
-
-Registered webhook targets.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Endpoint unique identifier            |
-| `user_id`       | UUID      | NOT NULL, FK→users  | Endpoint owner                        |
-| `url`           | VARCHAR   | NOT NULL            | Webhook URL                           |
-| `events`        | TEXT[]    | NOT NULL            | Subscribed event types                |
-| `secret`        | VARCHAR   | NOT NULL            | Webhook signing secret                |
-| `is_active`     | BOOLEAN   | DEFAULT TRUE        | Endpoint active status                |
-| `created_at`    | TIMESTAMP | NOT NULL            | Registration timestamp                |
-| `updated_at`    | TIMESTAMP | NOT NULL            | Last update timestamp                 |
-
----
-
-### `webhook_deliveries`
-
-Webhook delivery attempts.
-
-| Column          | Type      | Constraints              | Description                           |
-| --------------- | --------- | ------------------------ | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY              | Delivery unique identifier            |
-| `endpoint_id`   | UUID      | NOT NULL, FK→webhook_endpoints| Target endpoint                  |
-| `event_type`    | VARCHAR   | NOT NULL                 | Event type delivered                  |
-| `payload`       | JSONB     | NOT NULL                 | Event payload                         |
-| `response_status`| INTEGER  | NULLABLE                 | HTTP response status code             |
-| `response_body` | TEXT      | NULLABLE                 | Response body                         |
-| `successful`    | BOOLEAN   | NOT NULL                 | Delivery success flag                 |
-| `attempt_count` | INTEGER   | DEFAULT 1                | Delivery attempt counter              |
-| `created_at`    | TIMESTAMP | NOT NULL                 | Delivery timestamp                    |
-
-**Indexes:**
-- `idx_webhook_deliveries_endpoint` (endpoint_id, created_at)
-- `idx_webhook_deliveries_success` (endpoint_id, successful)
-
----
-
-### `file_metadata`
-
-Uploaded file metadata tracking.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | File unique identifier                |
-| `user_id`       | UUID      | NOT NULL, FK→users  | File owner                            |
-| `file_name`     | VARCHAR   | NOT NULL            | Original file name                    |
-| `file_size`     | INTEGER   | NOT NULL            | File size in bytes                    |
-| `mime_type`     | VARCHAR   | NOT NULL            | File MIME type                        |
-| `s3_key`        | VARCHAR   | UNIQUE, NOT NULL    | S3 object key                         |
-| `s3_bucket`     | VARCHAR   | NOT NULL            | S3 bucket name                        |
-| `url`           | VARCHAR   | NOT NULL            | Public/signed URL                     |
-| `created_at`    | TIMESTAMP | NOT NULL            | Upload timestamp                      |
-
----
-
-### `supported_currencies`
-
-Currency catalog for the platform.
-
-| Column          | Type      | Constraints         | Description                           |
-| --------------- | --------- | ------------------- | ------------------------------------- |
-| `id`            | UUID      | PRIMARY KEY         | Currency unique identifier            |
-| `code`          | VARCHAR   | UNIQUE, NOT NULL    | Currency code (USD, EUR, USDC, etc.)  |
-| `name`          | VARCHAR   | NOT NULL            | Currency full name                    |
-| `is_active`     | BOOLEAN   | DEFAULT TRUE        | Active currency flag                  |
-| `anchor_url`    | VARCHAR   | NULLABLE            | Stellar anchor URL                    |
-| `asset_code`    | VARCHAR   | NULLABLE            | Stellar asset code                    |
-| `asset_issuer`  | VARCHAR   | NULLABLE            | Stellar asset issuer                  |
-| `created_at`    | TIMESTAMP | NOT NULL            | Currency addition timestamp           |
-
----
-
-## Migration History
-
-Migrations are timestamped files in `backend/migrations/`. The following represent the major schema evolution milestones:
-
-| Migration                                       | Purpose                                  |
-| ----------------------------------------------- | ---------------------------------------- |
-| `1740020000000-CreateAnchorTables`              | Anchor transaction tables                |
-| `1740235212000-AddUserSoftDelete`               | Soft delete support for users            |
-| `1740300000000-AddBlockchainFieldsToAgreements` | Blockchain linkage for agreements        |
-| `1740310000000-AddBlockchainFieldsToEscrows`    | Blockchain linkage for escrows           |
-| `1740320000000-AddBlockchainFieldsToDisputes`   | Blockchain linkage for disputes          |
-| `1740325000000-CreateArbitersTable`             | Arbiter registry                         |
-| `1740330000000-CreateRentObligationNftsTable`   | NFT rent obligation tracking             |
-| `1740330000001-AddDisputeEnhancements`          | Dispute voting and metadata              |
-| `1740400000000-AddSecurityHardeningTables`      | Reserved (no-op)                         |
-| `1769188000000-CreateAuditLogsTable`            | Audit log table                          |
-| `1770500000000-AddKycStatusToUsers`             | KYC status column                        |
-| `1770600000000-CreatePropertyListingDraftsTable`| Property listing wizard drafts           |
-| `1774295000000-AddPerformanceIndexes`           | Performance index rollout                |
-| `1774296000000-AddEscrowEnhancements`           | Escrow lifecycle improvements            |
-| `1790000000000-CreateUserAiPreferencesTable`    | AI preference storage                    |
-| `1790000000001-AddPropertyRentalModeFields`     | Rental mode metadata                     |
-| `1790000000002-AddMaintenanceVendorCostWorkflow`| Maintenance vendor tracking              |
-| `1790000000002-CreatePropertyAvailabilityTable` | Property availability calendar           |
-| `1900000000000-EnablePgStatStatements`          | PostgreSQL query stats extension         |
-| `1900100000001-AddApiKeyPermissionsAndDescription`| API key permission refinements         |
-| `1900915000000-EncryptExistingKycDataAtRest`    | KYC data encryption migration            |
-| `1910000000000-AddUserPiiEncryptionFields`      | User PII encryption fields               |
-| `1910000000001-EncryptExistingUserPiiData`      | User PII encryption migration            |
-| `1920000000000-CreateFavoritesTable`            | User favorites/saved listings            |
-| `1925000000000-AddPaymentDisputeCorrelation`    | Payment-dispute linking                  |
-| `1930000000000-AddRefundedAmountToStellarEscrows`| Escrow refund tracking                  |
-| `1930200000000-CreateFeatureFlagsTable`         | Feature flag system                      |
-
-**Migration Commands:**
-```bash
-pnpm run migration:show         # List pending migrations
-pnpm run migration:run          # Apply pending migrations
-pnpm run migration:revert       # Roll back last migration
-pnpm run migration:generate     # Generate migration from entity changes
-```
-
----
-
-## Indexes and Performance
-
-The platform employs a comprehensive indexing strategy optimized for high-traffic query patterns. Key indexes include:
-
-**User Domain:**
-- `idx_users_email`, `idx_users_email_hash` — Email lookups
-- `idx_users_phone_hash`, `idx_users_wallet_hash` — Phone and wallet lookups
-- `idx_users_verification_token` — Email verification flow
-
-**Property Domain:**
-- `idx_properties_owner_id` — Owner property listings
-- `idx_properties_listing_status` — Active/inactive filtering
-- `idx_properties_location` — City/state/country filtering
-- GiST geospatial index — Radius/proximity search
-
-**Agreement & Payment Domain:**
-- `idx_rent_agreements_landlord`, `idx_rent_agreements_tenant` — User agreement queries
-- `idx_payments_user_id`, `idx_payments_status` — Payment history and status filtering
-- `idx_payment_schedules_next_run_at` — Scheduled payment processing
-
-**Blockchain Domain:**
-- `IDX_stellar_accounts_user_id` — User blockchain accounts
-- `IDX_stellar_escrows_status` — Escrow lifecycle queries
-- `IDX_stellar_transactions_hash` — Transaction hash lookups
-
-**Security & Compliance:**
-- `idx_audit_logs_entity`, `idx_audit_logs_timestamp` — Audit trail queries
-- `idx_security_events_user_id`, `idx_security_events_timestamp` — Security monitoring
-
-For detailed index rationale and query patterns, see [`docs/database/PERFORMANCE_INDEXES.md`](./PERFORMANCE_INDEXES.md).
-
----
-
-## Data Types and Conventions
-
-### Column Naming
-
-All columns use `snake_case` via TypeORM's `SnakeNamingStrategy`.
-
-### Primary Keys
-
-- Most tables use UUID primary keys for distributed system compatibility
-- Select tables (e.g., `audit_logs`, `dispute_evidence`) use auto-incrementing integers for performance
-
-### Timestamps
-
-- All entities have `created_at` and `updated_at` columns
-- Soft-delete entities include `deleted_at` nullable timestamp
-- Database timezone: UTC
-
-### Enums
-
-TypeORM enums map to PostgreSQL `ENUM` types (or `TEXT` for SQLite compatibility):
-- `UserRole`: `user`, `admin`, `agent`, `super_admin`
-- `AuthMethod`: `password`, `stellar`
-- `KycStatus`: `PENDING`, `VERIFIED`, `REJECTED`
-
-### Encrypted Fields
-
-Sensitive fields use the pattern:
-- `<field>` (VARCHAR/TEXT) — Cleartext or tokenized value for display
-- `<field>_encrypted` (BYTEA) — AES-256-GCM encrypted value
-- `<field>_hash` (VARCHAR(64)) — SHA-256 hash for lookups
-- `encryption_key_version` (INTEGER) — Key rotation support
-
-Examples:
-- `email` / `email_encrypted` / `email_hash`
-- `wallet_address` / `wallet_address_encrypted` / `wallet_address_hash`
-
-### JSON Columns
-
-JSONB columns store flexible structured data:
-- `draft_data` (property listing wizard state)
-- `metadata` (audit log context)
-- `details` (security event data)
-- `encrypted_metadata` (encrypted payment method details)
-
----
-
-## Related Documentation
-
-- [Database Documentation Guide](./DATABASE_DOCUMENTATION_GUIDE.md) — Operational guide for migrations, backups, and maintenance
-- [Performance Indexes](./PERFORMANCE_INDEXES.md) — Index strategy and query optimization
-- [Schema Relationships](./SCHEMA_RELATIONSHIPS.md) — Detailed entity relationships and ERDs
-- [Encryption Documentation](../encryption.md) — Field-level encryption implementation
-- [Architecture Documentation](../architecture/ARCHITECTURE_DOCUMENTATION.md) — System architecture overview
-- [Backend README](../../README.md) — Quick start and development guide
-
----
-
-**Last Updated:** 2025-01-17
+Entity class: `Arbiter` (backend/src/modules/disputes/entities/arbiter.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `stellar_address` | varchar | not null |
+| `user_id` | int | - |
+| `active` | inferred | not null default: true |
+| `blockchain_added_at` | bigint | - |
+| `transaction_hash` | varchar | - |
+| `total_votes` | inferred | not null default: 0 |
+| `total_disputes_resolved` | inferred | not null default: 0 |
+| `reputation_score` | decimal | not null default: 0 |
+| `successful_resolutions` | inferred | not null default: 0 |
+| `metadata` | jsonb | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `audit_logs`
+
+Entity class: `AuditLog` (backend/src/modules/audit/entities/audit-log.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `action` | varchar | not null |
+| `entity_type` | varchar | - |
+| `entity_id` | varchar | - |
+| `old_values` | jsonb | - |
+| `new_values` | jsonb | - |
+| `performed_by` | uuid | - |
+| `performed_at` | timestamptz | not null |
+| `ip_address` | inet | - |
+| `user_agent` | text | - |
+| `status` | varchar | - |
+| `error_message` | text | - |
+| `level` | varchar | not null default: 'INFO' |
+| `metadata` | jsonb | - |
+
+**Indexes:** `entity_type, entity_id`, `performed_by`, `performed_at`
+
+**Relations:** ManyToOne → `User` (via `performed_by`)
+
+#### `auth_metrics`
+
+Entity class: `AuthMetric` (backend/src/modules/auth/entities/auth-metric.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `auth_method` | enum | - default: AuthMethod.STELLAR |
+| `success` | boolean | not null |
+| `duration` | int | not null |
+| `ip_address` | varchar | - |
+| `user_agent` | text | - |
+| `error_message` | text | - |
+| `timestamp` | timestamp | not null |
+
+**Indexes:** `timestamp`, `auth_method`, `success`
+
+#### `bookings`
+
+Entity class: `Booking` (backend/src/modules/bookings/entities/booking.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `property_id` | uuid | indexed, not null |
+| `guest_id` | uuid | indexed, not null |
+| `check_in_date` | date | not null |
+| `check_out_date` | date | not null |
+| `guests` | int | not null default: 1 |
+| `special_requests` | text | - |
+| `payment_method` | enum | not null default: BookingPaymentMethod.CARD |
+| `total_amount` | decimal | not null |
+| `currency` | varchar | not null default: 'USD' |
+| `status` | enum | indexed, not null default: BookingStatus.PENDING |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `property_id`, `guest_id`, `status`
+
+**Relations:** ManyToOne → `Property` (via `property_id`), ManyToOne → `User` (via `guest_id`)
+
+#### `dead_letter_jobs`
+
+Entity class: `DeadLetterJob` (backend/src/modules/queues/entities/dead-letter-job.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `queue_name` | inferred | not null |
+| `job_name` | inferred | not null default: '__default__' |
+| `original_job_id` | inferred | - |
+| `payload` | jsonb | not null |
+| `options` | jsonb | - |
+| `error` | text | - |
+| `stacktrace` | text | - |
+| `attempt_count` | int | not null default: 0 |
+| `recovery_attempts` | int | not null default: 0 |
+| `status` | enum | not null default: DeadLetterJobStatus.PENDING |
+| `resolved_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `queue_name, status`
+
+#### `dispute_comments`
+
+Entity class: `DisputeComment` (backend/src/modules/disputes/entities/dispute-comment.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | inferred | not null |
+| `user_id` | uuid | not null |
+| `content` | text | not null |
+| `is_internal` | inferred | not null default: false |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Dispute` (via `dispute_id`), ManyToOne → `User` (via `user_id`)
+
+#### `dispute_events`
+
+Entity class: `DisputeEvent` (backend/src/modules/disputes/entities/dispute-event.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | varchar | not null |
+| `event_type` | varchar | not null |
+| `event_data` | jsonb | not null |
+| `timestamp` | timestamp | not null |
+| `triggered_by` | varchar | - |
+| `transaction_hash` | varchar | - |
+| `created_at` | timestamp | not null |
+
+#### `dispute_evidence`
+
+Entity class: `DisputeEvidence` (backend/src/modules/disputes/entities/dispute-evidence.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | inferred | not null |
+| `uploaded_by` | uuid | not null |
+| `file_url` | text | not null |
+| `file_name` | text | not null |
+| `file_type` | inferred | not null |
+| `file_size` | inferred | not null |
+| `description` | text | - |
+| `scan_status` | enum | not null default: ScanStatus.PENDING |
+| `processing_status` | enum | not null default: EvidenceProcessingStatus.NOT_APPLICABLE |
+| `video_variants` | jsonb | - |
+| `thumbnail_url` | text | - |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Dispute` (via `dispute_id`), ManyToOne → `User` (via `uploaded_by`)
+
+#### `dispute_settlement_offers`
+
+Entity class: `SettlementOffer` (backend/src/modules/disputes/entities/settlement-offer.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | int | not null |
+| `proposed_by` | uuid | not null |
+| `recipient_id` | uuid | not null |
+| `amount` | decimal | - |
+| `terms` | text | not null |
+| `status` | varchar | not null default: SettlementOfferStatus.PENDING |
+| `parent_offer_id` | uuid | - |
+| `response_note` | text | - |
+| `responded_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Dispute` (via `dispute_id`)
+
+#### `dispute_votes`
+
+Entity class: `DisputeVote` (backend/src/modules/disputes/entities/dispute-vote.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | inferred | not null |
+| `arbiter_id` | inferred | not null |
+| `favor_landlord` | inferred | not null |
+| `blockchain_voted_at` | bigint | - |
+| `transaction_hash` | varchar | - |
+| `comment` | text | - |
+| `evidence` | text | - |
+| `reasoning` | text | - |
+| `vote_weight` | int | not null default: 1 |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Dispute` (via `dispute_id`), ManyToOne → `Arbiter` (via `arbiter_id`)
+
+#### `disputes`
+
+Entity class: `Dispute` (backend/src/modules/disputes/entities/dispute.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `dispute_id` | inferred | not null |
+| `agreement_id` | uuid | not null |
+| `initiated_by` | uuid | not null |
+| `dispute_type` | varchar | not null |
+| `requested_amount` | decimal | - |
+| `description` | text | not null |
+| `status` | varchar | not null default: DisputeStatus.OPEN |
+| `resolution` | text | - |
+| `resolved_by` | uuid | - |
+| `resolved_at` | timestamp | - |
+| `metadata` | jsonb | - |
+| `blockchain_agreement_id` | inferred | - |
+| `details_hash` | inferred | - |
+| `blockchain_raised_at` | bigint | - |
+| `blockchain_resolved_at` | bigint | - |
+| `votes_favor_landlord` | inferred | not null default: 0 |
+| `votes_favor_tenant` | inferred | not null default: 0 |
+| `blockchain_outcome` | inferred | - |
+| `transaction_hash` | inferred | - |
+| `blockchain_synced_at` | timestamp | - |
+| `payment_id` | uuid | - |
+| `rent_payment_id` | varchar | - |
+| `disputed_payment_amount` | decimal | - |
+| `payment_reference_number` | varchar | - |
+| `payment_date` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `RentAgreement` (via `agreement_id`), ManyToOne → `User` (via `initiated_by`), ManyToOne → `User` (via `resolved_by`)
+
+#### `document_versions`
+
+Entity class: `DocumentVersion` (backend/src/modules/documents/entities/document-version.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `document_id` | uuid | not null |
+| `version` | int | not null |
+| `storage_key` | varchar | not null |
+| `mime_type` | varchar | - |
+| `checksum` | varchar | not null |
+| `uploaded_by` | uuid | not null |
+| `change_note` | text | - |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Document` (via `document_id`)
+
+#### `documents`
+
+Entity class: `Document` (backend/src/modules/documents/document.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `owner_id` | uuid | indexed, not null |
+| `name` | varchar | not null |
+| `description` | text | - |
+| `status` | varchar | not null default: DocumentStatus.DRAFT |
+| `storage_key` | varchar | not null |
+| `mime_type` | varchar | - |
+| `checksum` | varchar | not null |
+| `current_version` | int | not null default: 1 |
+| `signed_at` | timestamp | - |
+| `signed_by` | uuid | - |
+| `signed_checksum` | varchar | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+| `name` | inferred | not null |
+| `type` | varchar | not null default: 'OTHER' |
+| `status` | varchar | not null default: 'ACTIVE' |
+| `category` | varchar | not null default: 'other' |
+| `file_key` | inferred | not null |
+| `file_size` | inferred | not null |
+| `file_type` | inferred | not null |
+| `property_id` | varchar | - |
+| `tenant_id` | varchar | - |
+| `owner_id` | inferred | not null |
+| `description` | varchar | - |
+| `shared_with` | inferred | - |
+| `signatures` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `owner_id`
+
+#### `escrow_conditions`
+
+Entity class: `EscrowCondition` (backend/src/modules/stellar/entities/escrow-condition.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `escrow_id` | inferred | not null |
+| `condition_type` | varchar | not null |
+| `parameters` | jsonb | not null |
+| `satisfied` | inferred | not null default: false |
+| `satisfied_at` | timestamp | - |
+| `required` | inferred | not null default: true |
+| `description` | text | - |
+| `validation_result` | jsonb | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `StellarEscrow` (via `escrow_id`)
+
+#### `escrow_signatures`
+
+Entity class: `EscrowSignature` (backend/src/modules/stellar/entities/escrow-signature.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `escrow_id` | inferred | not null |
+| `signer_address` | varchar | not null |
+| `signature` | text | not null |
+| `signed_at` | timestamp | not null |
+| `is_valid` | inferred | not null default: true |
+| `signature_type` | varchar | not null default: 'release' |
+| `metadata` | jsonb | - |
+
+**Relations:** ManyToOne → `StellarEscrow` (via `escrow_id`)
+
+#### `favorite_collections`
+
+Entity class: `FavoriteCollection` (backend/src/modules/favorites/entities/favorite-collection.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `name` | varchar | not null |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `favorites`
+
+Entity class: `Favorite` (backend/src/modules/favorites/entities/favorite.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `property_id` | uuid | not null |
+| `collection_id` | uuid | - |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `FavoriteCollection` (via `collection_id`), ManyToOne → `User` (via `user_id`), ManyToOne → `Property` (via `property_id`)
+
+#### `feature_flags`
+
+Entity class: `FeatureFlag` (backend/src/modules/feature-flags/entities/feature-flag.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `key` | varchar | not null |
+| `description` | varchar | - |
+| `enabled` | boolean | not null default: true |
+| `rollout_percentage` | int | not null default: 100 |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `feedback`
+
+Entity class: `Feedback` (backend/src/modules/feedback/entities/feedback.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `email` | varchar | - |
+| `message` | text | not null |
+| `type` | varchar | not null default: FeedbackType.GENERAL |
+| `user_id` | uuid | - |
+| `status` | varchar | not null default: FeedbackStatus.NEW |
+| `reviewed_by` | uuid | - |
+| `reviewed_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+
+#### `file_metadata`
+
+Entity class: `FileMetadata` (backend/src/modules/storage/file-metadata.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `file_name` | inferred | not null |
+| `file_size` | inferred | not null |
+| `file_type` | inferred | not null |
+| `s3_key` | inferred | not null |
+| `owner_id` | inferred | not null |
+| `scan_status` | enum | not null default: ScanStatus.PENDING |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `fraud_alerts`
+
+Entity class: `FraudAlertEntity` (backend/src/modules/fraud/entities/fraud-alert.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `subject_type` | varchar | not null |
+| `subject_id` | uuid | not null |
+| `score` | int | not null |
+| `decision` | varchar | not null |
+| `reasons` | inferred | not null |
+| `model_version` | varchar | not null |
+| `features` | inferred | - |
+| `status` | varchar | not null default: 'open' |
+| `resolved_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `fraud_thresholds`
+
+Entity class: `FraudThresholds` (backend/src/modules/fraud/entities/fraud-thresholds.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `key` | varchar | not null default: 'default' |
+| `threshold_review` | int | not null |
+| `threshold_block` | int | not null |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `guest_reviews`
+
+Entity class: `GuestReview` (backend/src/modules/reviews/entities/guest-review.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `booking_id` | varchar | not null |
+| `guest_id` | varchar | not null |
+| `host_id` | varchar | not null |
+| `cleanliness` | int | not null default: 5 |
+| `communication` | int | not null default: 5 |
+| `respect_for_rules` | int | not null default: 5 |
+| `comment` | text | not null |
+| `would_host_again` | boolean | not null default: false |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `booking_id, host_id` (unique), `guest_id`, `host_id`
+
+#### `host_reviews`
+
+Entity class: `HostReview` (backend/src/modules/reviews/entities/host-review.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `booking_id` | varchar | not null |
+| `guest_id` | varchar | not null |
+| `host_id` | varchar | not null |
+| `accuracy` | int | not null default: 5 |
+| `cleanliness` | int | not null default: 5 |
+| `check_in` | int | not null default: 5 |
+| `communication` | int | not null default: 5 |
+| `location` | int | not null default: 5 |
+| `value` | int | not null default: 5 |
+| `comment` | text | not null |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `booking_id, guest_id` (unique), `guest_id`, `host_id`
+
+#### `indexed_transactions`
+
+Entity class: `IndexedTransaction` (backend/src/modules/transactions/entities/indexed-transaction.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `transaction_hash` | varchar | not null |
+| `ledger` | integer | not null |
+| `ledger_close_time` | inferred | not null |
+| `successful` | boolean | not null |
+| `transaction_type` | inferred | not null default: IndexedTransactionType.OTHER |
+| `source_account` | varchar | not null |
+| `destination_account` | varchar | - |
+| `amount` | varchar | not null |
+| `asset_code` | varchar | not null |
+| `asset_issuer` | varchar | - |
+| `fee` | varchar | not null |
+| `memo` | text | - |
+| `memo_type` | inferred | - |
+| `agreement_id` | uuid | - |
+| `property_id` | uuid | - |
+| `payment_id` | uuid | - |
+| `deposit_id` | uuid | - |
+| `operations` | inferred | not null default: () => (process.env.DB_TYPE === 'sqlite' ? "'[]'" : "'[]'::jsonb") |
+| `metadata` | inferred | not null default: () => (process.env.DB_TYPE === 'sqlite' ? "'{ |
+| `indexed` | boolean | not null default: false |
+| `indexed_at` | inferred | - |
+| `created_at` | timestamp | not null |
+
+#### `kyc`
+
+Entity class: `Kyc` (backend/src/modules/kyc/kyc.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | indexed, not null |
+| `encryption_version` | int | not null default: 1 |
+| `status` | enum | not null default: KycStatus.PENDING |
+| `provider_reference` | text | - |
+| `reason` | text | - |
+| `document_hash` | text | - |
+| `document_purged_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `user_id`
+
+#### `login_activities`
+
+Entity class: `LoginActivity` (backend/src/modules/auth/entities/login-activity.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | indexed |
+| `email` | varchar | - |
+| `login_method` | inferred | not null default: LoginMethod.PASSWORD |
+| `status` | inferred | not null |
+| `ip_address` | varchar | - |
+| `user_agent` | text | - |
+| `country` | varchar | - |
+| `city` | varchar | - |
+| `device` | varchar | - |
+| `browser` | varchar | - |
+| `os` | varchar | - |
+| `failure_reason` | varchar | - |
+| `is_suspicious` | boolean | not null default: false |
+| `anomaly_flags` | inferred | - |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `user_id, created_at`, `ip_address, created_at`, `status, created_at`, `user_id`
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `maintenance_requests`
+
+Entity class: `MaintenanceRequest` (backend/src/modules/maintenance/maintenance-request.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `property_id` | inferred | not null |
+| `tenant_id` | inferred | not null |
+| `landlord_id` | inferred | not null |
+| `category` | inferred | not null |
+| `description` | inferred | not null |
+| `priority` | inferred | not null default: 'MEDIUM' |
+| `status` | enum | not null default: MaintenanceStatus.OPEN |
+| `media_urls` | inferred | - |
+| `vendor_id` | inferred | - |
+| `estimated_cost` | inferred | - |
+| `cost_notes` | inferred | - |
+| `cost_approved_by` | inferred | - |
+| `cost_approved_at` | timestamp | - |
+| `cost_rejection_reason` | inferred | - |
+| `payment_id` | inferred | - |
+| `response_due_at` | timestamp | - |
+| `resolution_due_at` | timestamp | - |
+| `sla_escalation_tier` | enum | not null default: SlaEscalationTier.NONE |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `maintenance_vendors`
+
+Entity class: `Vendor` (backend/src/modules/maintenance/entities/vendor.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `name` | inferred | not null |
+| `email` | inferred | - |
+| `phone` | inferred | - |
+| `specialties` | inferred | - |
+| `landlord_id` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `message_read`
+
+Entity class: `MessageRead` (backend/src/modules/messaging/entities/message-read.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | inferred | not null |
+| `chat_room_id` | inferred | not null |
+| `read_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `user_id, chat_room` (unique), `user_id`
+
+#### `mfa_devices`
+
+Entity class: `MfaDevice` (backend/src/modules/auth/entities/mfa-device.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | inferred | not null |
+| `type` | enum | not null default: MfaDeviceType.TOTP |
+| `status` | enum | not null default: MfaDeviceStatus.ACTIVE |
+| `device_name` | varchar | - |
+| `secret_key` | varchar | - |
+| `backup_codes` | text | - |
+| `last_used_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `nft_transfers`
+
+Entity class: `NFTTransfer` (backend/src/modules/agreements/entities/nft-transfer.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `token_id` | inferred | not null |
+| `from_address` | inferred | not null |
+| `to_address` | inferred | not null |
+| `transaction_hash` | inferred | - |
+| `transferred_at` | timestamp | not null |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `RentObligationNft` (via `token_id`)
+
+#### `notifications`
+
+Entity class: `Notification` (backend/src/modules/notifications/entities/notification.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `title` | varchar | not null |
+| `message` | text | not null |
+| `is_read` | boolean | not null default: false |
+| `type` | varchar | - |
+| `user_id` | uuid | not null |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `oauth_accounts`
+
+Entity class: `OAuthAccount` (backend/src/modules/auth/oauth/entities/oauth-account.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `provider` | enum | not null |
+| `provider_user_id` | varchar | not null |
+| `email` | varchar | not null |
+| `linked_at` | timestamp | not null |
+
+**Indexes:** `user_id, provider` (unique), `provider, provider_user_id` (unique)
+
+#### `oauth_states`
+
+Entity class: `OAuthState` (backend/src/modules/auth/oauth/entities/oauth-state.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `provider` | enum | not null |
+| `redirect_uri` | varchar | not null |
+| `user_id` | uuid | - |
+| `expires_at` | timestamp | not null |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `expires_at`, `user_id, provider`
+
+#### `payment_methods`
+
+Entity class: `PaymentMethod` (backend/src/modules/payments/entities/payment-method.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | inferred | not null |
+| `payment_type` | inferred | not null |
+| `last_four` | inferred | - |
+| `expiry_date` | date | - |
+| `is_default` | inferred | not null default: false |
+| `metadata` | inferred | - |
+| `encrypted_metadata` | text | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `payment_schedules`
+
+Entity class: `PaymentSchedule` (backend/src/modules/payments/entities/payment-schedule.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | inferred | not null |
+| `agreement_id` | varchar | - |
+| `payment_method_id` | integer | - |
+| `amount` | inferred | not null |
+| `currency` | inferred | not null default: 'NGN' |
+| `interval` | varchar | not null |
+| `next_run_at` | inferred | not null |
+| `status` | varchar | not null default: PaymentScheduleStatus.ACTIVE |
+| `retries` | inferred | not null default: 0 |
+| `max_retries` | inferred | not null default: 3 |
+| `last_error` | text | - |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `payments`
+
+Entity class: `Payment` (backend/src/modules/payments/entities/payment.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | inferred | not null |
+| `agreement_id` | varchar | - |
+| `booking_id` | varchar | - |
+| `amount` | inferred | not null |
+| `transaction_fee` | inferred | not null default: 0.0 |
+| `net_amount` | inferred | - |
+| `currency` | inferred | not null default: 'NGN' |
+| `status` | inferred | not null default: PaymentStatus.PENDING |
+| `payment_method` | varchar | - |
+| `payment_method_relation_id` | inferred | - |
+| `receipt_url` | varchar | - |
+| `reference_number` | varchar | - |
+| `processed_at` | inferred | - |
+| `idempotency_key` | varchar | - |
+| `refund_status` | varchar | not null default: 'none' |
+| `refund_amount` | inferred | not null default: 0.0 |
+| `refund_reason` | text | - |
+| `metadata` | inferred | - |
+| `notes` | text | - |
+| `created_at` | timestamp | indexed, not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `created_at`
+
+#### `performance_alerts`
+
+Entity class: `PerformanceAlert` (backend/src/modules/monitoring/entities/performance-alert.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `metric` | inferred | not null |
+| `severity` | enum | not null |
+| `message` | inferred | not null |
+| `value` | inferred | - |
+| `threshold` | inferred | - |
+| `occurrences` | int | not null default: 1 |
+| `resolved` | inferred | not null default: false |
+| `resolved_at` | timestamp | - |
+| `last_seen_at` | timestamp | not null default: () => 'CURRENT_TIMESTAMP' |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `metric, resolved`
+
+#### `permissions`
+
+Entity class: `Permission` (backend/src/modules/security/entities/permission.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `name` | varchar | not null |
+| `description` | text | - |
+| `resource` | enum | not null |
+| `action` | enum | not null |
+| `is_active` | boolean | not null default: true |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `resource, action` (unique)
+
+#### `profile_metadata`
+
+Entity class: `ProfileMetadata` (backend/src/modules/profile/entities/profile-metadata.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `wallet_address` | varchar | not null |
+| `display_name` | varchar | - |
+| `bio` | text | - |
+| `metadata` | jsonb | - |
+| `avatar_url` | varchar | - |
+| `data_hash` | varchar | not null |
+| `ipfs_cid` | varchar | - |
+| `last_synced_at` | timestamp | not null |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `properties`
+
+Entity class: `Property` (backend/src/modules/properties/entities/property.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `title` | varchar | not null |
+| `description` | text | - |
+| `type` | enum | not null default: PropertyType.APARTMENT |
+| `status` | enum | not null default: ListingStatus.DRAFT |
+| `latitude` | decimal | - |
+| `longitude` | decimal | - |
+| `address` | varchar | - |
+| `city` | varchar | - |
+| `state` | varchar | - |
+| `postal_code` | varchar | - |
+| `country` | varchar | - |
+| `price` | decimal | not null |
+| `currency` | varchar | not null default: 'USD' |
+| `bedrooms` | int | - |
+| `bathrooms` | int | - |
+| `area` | decimal | - |
+| `floor` | int | - |
+| `is_furnished` | boolean | not null default: false |
+| `has_parking` | boolean | not null default: false |
+| `pets_allowed` | boolean | not null default: false |
+| `view_count` | int | not null default: 0 |
+| `favorite_count` | int | not null default: 0 |
+| `last_viewed_at` | timestamp | - |
+| `verification_status` | varchar | - |
+| `virtual_tour_url` | varchar | - |
+| `video_url` | varchar | - |
+| `floor_plan_url` | varchar | - |
+| `energy_rating` | varchar | - |
+| `pet_policy` | varchar | - |
+| `parking_spaces` | int | - |
+| `metadata` | inferred | - |
+| `owner_id` | uuid | indexed, not null |
+| `rental_mode` | enum | not null default: PropertyRentalMode.LONG_TERM |
+| `min_stay_days` | int | not null default: 1 |
+| `max_stay_days` | int | - |
+| `nightly_rate` | decimal | - |
+| `weekly_discount` | decimal | not null default: 0 |
+| `monthly_discount` | decimal | not null default: 0 |
+| `cleaning_fee` | decimal | not null default: 0 |
+| `extra_guest_fee` | decimal | not null default: 0 |
+| `max_guests` | int | not null default: 4 |
+| `instant_booking` | boolean | not null default: false |
+| `require_guest_verification` | boolean | not null default: true |
+| `minimum_guest_rating` | decimal | not null default: 0 |
+| `cancellation_policy` | enum | not null default: CancellationPolicy.MODERATE |
+| `check_in_time` | varchar | not null default: '15:00' |
+| `check_out_time` | varchar | not null default: '11:00' |
+| `check_in_method` | varchar | not null default: 'lockbox' |
+| `subletting_allowed` | boolean | not null default: false |
+| `subletting_approval_required` | boolean | not null default: true |
+| `subletting_max_days_per_year` | int | not null default: 90 |
+| `subletting_tenant_share` | decimal | not null default: 60 |
+| `subletting_landlord_share` | decimal | not null default: 30 |
+| `smoking_allowed` | boolean | not null default: false |
+| `parties_allowed` | boolean | not null default: false |
+| `children_allowed` | boolean | not null default: true |
+| `ai_pricing_suggestion` | decimal | - |
+| `ai_optimal_mode` | enum | - |
+| `ai_occupancy_prediction` | decimal | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `owner_id`
+
+**Relations:** ManyToOne → `User` (via `owner_id`)
+
+#### `property_amenities`
+
+Entity class: `PropertyAmenity` (backend/src/modules/properties/entities/property-amenity.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `name` | varchar | not null |
+| `icon` | varchar | - |
+| `property_id` | uuid | not null |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Property` (via `property_id`)
+
+#### `property_availability`
+
+Entity class: `PropertyAvailability` (backend/src/modules/properties/entities/property-availability.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `property_id` | uuid | not null |
+| `date` | date | not null |
+| `available` | boolean | not null default: true |
+| `custom_price` | decimal | - |
+| `notes` | text | - |
+| `blocked_by_booking_id` | uuid | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `property_id, date`
+
+**Relations:** ManyToOne → `Property` (via `property_id`)
+
+#### `property_images`
+
+Entity class: `PropertyImage` (backend/src/modules/properties/entities/property-image.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `url` | varchar | not null |
+| `sort_order` | int | not null default: 0 |
+| `is_primary` | boolean | not null default: false |
+| `property_id` | uuid | not null |
+| `created_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `Property` (via `property_id`)
+
+#### `property_inquiries`
+
+Entity class: `PropertyInquiry` (backend/src/modules/inquiries/entities/property-inquiry.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `property_id` | uuid | not null |
+| `from_user_id` | uuid | not null |
+| `to_user_id` | uuid | not null |
+| `message` | text | not null |
+| `sender_name` | varchar | - |
+| `sender_email` | varchar | - |
+| `sender_phone` | varchar | - |
+| `status` | varchar | not null default: PropertyInquiryStatus.PENDING |
+| `viewed_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `property_id`, `to_user_id`, `from_user_id`
+
+#### `property_listing_drafts`
+
+Entity class: `PropertyListingDraft` (backend/src/modules/properties/entities/property-listing-draft.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `landlord_id` | uuid | indexed, not null |
+| `data` | inferred | not null default: { |
+| `current_step` | int | not null default: 1 |
+| `completed_steps` | inferred | not null default: [] |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+| `expires_at` | timestamp | - |
+
+**Indexes:** `landlord_id, expires_at`, `landlord_id`
+
+#### `property_tour_engagements`
+
+Entity class: `PropertyTourEngagement` (backend/src/modules/properties/entities/property-tour-engagement.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `property_id` | uuid | indexed, not null |
+| `user_id` | uuid | - |
+| `session_id` | varchar | - |
+| `provider` | varchar | - |
+| `event_type` | varchar | not null |
+| `duration_seconds` | int | - |
+| `device_type` | varchar | - |
+| `source` | varchar | - |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `property_id`
+
+**Relations:** ManyToOne → `Property` (via `property_id`)
+
+#### `referrals`
+
+Entity class: `Referral` (backend/src/modules/referral/entities/referral.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `referrer_id` | uuid | not null |
+| `referred_id` | uuid | not null |
+| `status` | enum | not null default: ReferralStatus.PENDING |
+| `reward_amount` | decimal | not null default: 0 |
+| `reward_tx_hash` | varchar | - |
+| `converted_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `referrer_id`), ManyToOne → `User` (via `referred_id`)
+
+#### `rent_agreements`
+
+Entity class: `RentAgreement` (backend/src/modules/rent/entities/rent-contract.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `agreement_number` | inferred | - |
+| `property_id` | inferred | - |
+| `admin_id` | inferred | - |
+| `user_id` | inferred | - |
+| `agent_id` | inferred | - |
+| `admin_stellar_pub_key` | inferred | - |
+| `user_stellar_pub_key` | inferred | - |
+| `agent_stellar_pub_key` | inferred | - |
+| `escrow_account_pub_key` | inferred | - |
+| `monthly_rent` | decimal | not null default: 0 |
+| `security_deposit` | decimal | not null default: 0 |
+| `agent_commission_rate` | decimal | not null default: 10.0 |
+| `escrow_balance` | decimal | not null default: 0.0 |
+| `total_paid` | decimal | not null default: 0.0 |
+| `start_date` | timestamp | - |
+| `end_date` | timestamp | - |
+| `renewal_option` | boolean | - |
+| `renewal_notice_date` | date | - |
+| `move_in_date` | date | - |
+| `move_out_date` | date | - |
+| `utilities_included` | boolean | - |
+| `maintenance_responsibility` | varchar | - |
+| `early_termination_fee` | decimal | - |
+| `late_fee_percentage` | decimal | - |
+| `grace_period_days` | int | - |
+| `last_payment_date` | timestamp | - |
+| `terms_and_conditions` | text | - |
+| `status` | varchar | not null default: AgreementStatus.DRAFT |
+| `termination_date` | timestamp | - |
+| `termination_reason` | text | - |
+| `blockchain_agreement_id` | inferred | - |
+| `on_chain_status` | inferred | - |
+| `transaction_hash` | inferred | - |
+| `blockchain_synced_at` | timestamp | - |
+| `payment_split_config` | jsonb | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `property_id, status`
+
+#### `rent_obligation_nfts`
+
+Entity class: `RentObligationNft` (backend/src/modules/agreements/entities/rent-obligation-nft.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `agreement_id` | inferred | not null |
+| `obligation_id` | inferred | not null |
+| `current_owner` | inferred | not null |
+| `original_owner` | inferred | - |
+| `original_landlord` | inferred | - |
+| `is_active` | inferred | not null default: true |
+| `metadata` | inferred | - |
+| `mint_tx_hash` | inferred | - |
+| `burn_tx_hash` | inferred | - |
+| `last_transfer_tx_hash` | inferred | - |
+| `minted_at` | timestamp | - |
+| `burned_at` | timestamp | - |
+| `last_transferred_at` | timestamp | - |
+| `transfer_count` | inferred | not null default: 0 |
+| `status` | inferred | not null default: 'active' |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `agreement_id` (unique), `current_owner`, `original_owner`
+
+**Relations:** ManyToOne → `RentAgreement` (via `agreement_id`)
+
+#### `rent_payments`
+
+Entity class: `Payment` (backend/src/modules/rent/entities/payment.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `payment_id` | inferred | not null |
+| `agreement_id` | inferred | not null |
+| `amount` | decimal | not null |
+| `payment_date` | inferred | not null |
+| `payment_method` | inferred | - |
+| `reference_number` | inferred | - |
+| `status` | varchar | not null default: PaymentStatus.PENDING |
+| `notes` | text | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `RentAgreement` (via `agreement_id`)
+
+#### `rent_payments`
+
+Entity class: `RentPayment` (backend/src/modules/rent/entities/rent-payment.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `amount` | decimal | not null |
+| `status` | varchar | not null default: 'pending' |
+| `paid_at` | timestamp | not null |
+
+#### `rent_reminders`
+
+Entity class: `RentReminder` (backend/src/modules/rent/entities/rent-reminder.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `agreement_id` | inferred | not null |
+| `tenant_id` | inferred | not null |
+| `tenant_email` | inferred | - |
+| `due_date` | timestamp | not null |
+| `days_before` | integer | not null |
+| `amount` | decimal | not null |
+| `type` | varchar | not null default: ReminderType.EMAIL |
+| `sent` | boolean | not null default: false |
+| `sent_at` | timestamp | - |
+| `status` | varchar | not null default: ReminderStatus.PENDING |
+| `error_message` | text | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `agreement_id, due_date`, `tenant_id, status`
+
+#### `rental_units`
+
+Entity class: `RentalUnit` (backend/src/modules/properties/entities/rental-unit.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `unit_number` | varchar | not null |
+| `floor` | int | - |
+| `bedrooms` | int | - |
+| `bathrooms` | int | - |
+| `area` | decimal | - |
+| `price` | decimal | not null |
+| `status` | enum | not null default: RentalUnitStatus.AVAILABLE |
+| `property_id` | uuid | not null |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `property_id, status`
+
+**Relations:** ManyToOne → `Property` (via `property_id`)
+
+#### `review_prompts`
+
+Entity class: `ReviewPrompt` (backend/src/modules/reviews/entities/review-prompt.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `context` | varchar | not null |
+| `source_id` | inferred | not null |
+| `prompted_at` | timestamp | not null |
+
+#### `reviews`
+
+Entity class: `Review` (backend/src/modules/reviews/review.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `reviewer_id` | inferred | not null |
+| `reviewee_id` | inferred | not null |
+| `context` | enum | not null |
+| `rating` | int | not null |
+| `comment` | text | - |
+| `anonymous` | inferred | not null default: false |
+| `property_id` | inferred | - |
+| `created_at` | timestamp | not null |
+| `reported` | inferred | not null default: false |
+| `response` | text | - |
+| `responded_at` | timestamp | - |
+
+**Indexes:** `reviewer_id`, `reviewee_id`
+
+#### `roles`
+
+Entity class: `Role` (backend/src/modules/security/entities/role.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `name` | varchar | not null |
+| `description` | text | - |
+| `system_role` | enum | - |
+| `is_active` | boolean | not null default: true |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `name` (unique)
+
+#### `saved_searches`
+
+Entity class: `SavedSearch` (backend/src/modules/search/entities/saved-search.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `name` | varchar | not null |
+| `filters` | jsonb | not null |
+| `alerts_enabled` | boolean | not null default: true |
+| `last_notified_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `security_events`
+
+Entity class: `SecurityEvent` (backend/src/modules/security/entities/security-event.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | varchar | - |
+| `event_type` | enum | not null |
+| `severity` | enum | not null default: SecurityEventSeverity.MEDIUM |
+| `ip_address` | varchar | - |
+| `user_agent` | text | - |
+| `details` | text | - |
+| `success` | inferred | not null default: true |
+| `error_message` | text | - |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `user_id, created_at`, `event_type, created_at`, `severity, created_at`, `ip_address, created_at`
+
+#### `stellar_accounts`
+
+Entity class: `StellarAccount` (backend/src/modules/stellar/entities/stellar-account.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | - |
+| `public_key` | varchar | not null |
+| `secret_key_encrypted` | text | not null |
+| `sequence_number` | bigint | not null default: 0 |
+| `account_type` | varchar | not null |
+| `is_active` | inferred | not null default: true |
+| `balance` | decimal | not null default: 0 |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `User` (via `user_id`)
+
+#### `stellar_escrows`
+
+Entity class: `StellarEscrow` (backend/src/modules/stellar/entities/stellar-escrow.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `escrow_account_id` | inferred | not null |
+| `source_account_id` | inferred | not null |
+| `destination_account_id` | inferred | not null |
+| `amount` | decimal | not null |
+| `refunded_amount` | decimal | not null default: 0 |
+| `asset_type` | varchar | not null |
+| `asset_code` | varchar | - |
+| `asset_issuer` | varchar | - |
+| `sequence_number` | bigint | not null |
+| `status` | inferred | not null |
+| `release_conditions` | jsonb | - |
+| `expiration_date` | timestamp | - |
+| `released_at` | timestamp | - |
+| `refunded_at` | timestamp | - |
+| `release_transaction_hash` | varchar | - |
+| `refund_transaction_hash` | varchar | - |
+| `rent_agreement_id` | uuid | - |
+| `blockchain_escrow_id` | varchar | - |
+| `on_chain_status` | varchar | - |
+| `escrow_contract_address` | varchar | - |
+| `arbiter_address` | varchar | - |
+| `dispute_id` | uuid | - |
+| `dispute_reason` | text | - |
+| `blockchain_synced_at` | timestamp | - |
+| `approval_count` | int | not null default: 0 |
+| `escrow_metadata` | jsonb | - |
+| `is_multi_sig` | inferred | not null default: false |
+| `required_signatures` | inferred | not null default: 1 |
+| `participants` | inferred | - |
+| `release_time` | bigint | - |
+| `is_time_locked` | inferred | not null default: false |
+| `linked_dispute_id` | varchar | - |
+| `dispute_integrated` | inferred | not null default: false |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** OneToOne → `StellarAccount` (via `escrow_account_id`), ManyToOne → `StellarAccount` (via `source_account_id`), ManyToOne → `StellarAccount` (via `destination_account_id`)
+
+#### `stellar_payments`
+
+Entity class: `StellarPayment` (backend/src/modules/stellar/entities/stellar-payment.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `payment_id` | uuid | PK |
+| `agreement_id` | varchar | not null |
+| `amount` | decimal | not null |
+| `user_address` | varchar | not null |
+| `admin_address` | varchar | not null |
+| `platform_fee_collector` | varchar | not null |
+| `payment_date` | timestamp | not null |
+| `token_address` | varchar | not null |
+| `status` | enum | not null default: PaymentStatus.PENDING |
+| `transaction_hash` | varchar | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `stellar_transactions`
+
+Entity class: `StellarTransaction` (backend/src/modules/stellar/entities/stellar-transaction.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `transaction_hash` | inferred | not null |
+| `from_account_id` | int | - |
+| `to_account_id` | int | - |
+| `asset_type` | varchar | not null |
+| `asset_code` | varchar | - |
+| `asset_issuer` | varchar | - |
+| `amount` | decimal | not null |
+| `fee_paid` | integer | not null |
+| `memo` | text | - |
+| `memo_type` | varchar | - |
+| `status` | varchar | not null |
+| `ledger` | integer | - |
+| `source_account` | varchar | - |
+| `destination_account` | varchar | - |
+| `idempotency_key` | varchar | - |
+| `error_message` | text | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** ManyToOne → `StellarAccount` (via `from_account_id`), ManyToOne → `StellarAccount` (via `to_account_id`)
+
+#### `sublet_bookings`
+
+Entity class: `SubletBooking` (backend/src/modules/subletting/entities/sublet-booking.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `booking_id` | uuid | not null |
+| `agreement_id` | uuid | not null |
+| `tenant_id` | uuid | not null |
+| `landlord_id` | uuid | not null |
+| `guest_id` | uuid | not null |
+| `total_amount` | decimal | not null |
+| `tenant_earnings` | decimal | not null |
+| `landlord_earnings` | decimal | not null |
+| `platform_fee` | decimal | not null |
+| `payout_processed` | boolean | not null default: false |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `booking_id`, `agreement_id`, `tenant_id`, `landlord_id`, `guest_id`
+
+#### `sublet_requests`
+
+Entity class: `SubletRequest` (backend/src/modules/subletting/entities/sublet-request.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `agreement_id` | uuid | not null |
+| `tenant_id` | uuid | not null |
+| `landlord_id` | uuid | not null |
+| `status` | enum | not null default: SubletRequestStatus.PENDING |
+| `requested_start_date` | date | not null |
+| `requested_end_date` | date | not null |
+| `max_days_per_year` | int | not null |
+| `tenant_share` | decimal | not null |
+| `landlord_share` | decimal | not null |
+| `reason` | text | - |
+| `landlord_notes` | text | - |
+| `responded_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `agreement_id`, `tenant_id`, `landlord_id`, `status`
+
+#### `supported_currencies`
+
+Entity class: `SupportedCurrency` (backend/src/modules/transactions/entities/supported-currency.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `code` | inferred | not null |
+| `name` | inferred | not null |
+| `is_active` | inferred | not null default: true |
+| `anchor_url` | inferred | not null |
+| `stellar_asset_code` | inferred | - |
+| `stellar_asset_issuer` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `template_clauses`
+
+Entity class: `TemplateClause` (backend/src/modules/agreements/entities/template-clause.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `title` | inferred | not null |
+| `content` | text | not null |
+| `display_order` | inferred | not null default: 0 |
+| `is_mandatory` | inferred | not null default: false |
+
+#### `tenant_screening_consents`
+
+Entity class: `TenantScreeningConsent` (backend/src/modules/screening/entities/tenant-screening-consent.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `screening_id` | uuid | not null |
+| `tenant_id` | uuid | not null |
+| `provider` | enum | not null |
+| `consent_text_version` | varchar | not null |
+| `granted_at` | timestamp | not null |
+| `expires_at` | timestamp | - |
+| `ip_address` | varchar | - |
+| `user_agent` | text | - |
+| `revoked_at` | timestamp | - |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+
+**Indexes:** `screening_id`
+
+#### `tenant_screening_reports`
+
+Entity class: `TenantScreeningReport` (backend/src/modules/screening/entities/tenant-screening-report.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `screening_id` | uuid | not null |
+| `provider_report_id` | varchar | - |
+| `encrypted_report` | text | not null |
+| `risk_level` | enum | - |
+| `access_expires_at` | timestamp | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `screening_id` (unique)
+
+#### `tenant_screening_requests`
+
+Entity class: `TenantScreeningRequest` (backend/src/modules/screening/entities/tenant-screening-request.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `tenant_id` | uuid | not null |
+| `requested_by_user_id` | uuid | not null |
+| `provider` | enum | not null |
+| `requested_checks` | inferred | not null |
+| `status` | enum | not null default: UserScreeningStatus.PENDING_CONSENT |
+| `consent_required` | boolean | not null default: true |
+| `consent_version` | varchar | not null |
+| `provider_reference` | varchar | - |
+| `renewed_from_id` | uuid | - |
+| `encrypted_applicant_data` | text | not null |
+| `consent_granted_at` | timestamp | - |
+| `consent_expires_at` | timestamp | - |
+| `submitted_at` | timestamp | - |
+| `completed_at` | timestamp | - |
+| `failure_reason` | text | - |
+| `report_summary` | inferred | - |
+| `metadata` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `tenant_id, status`, `requested_by_user_id, status`
+
+#### `termination_reconciliations`
+
+Entity class: `TerminationReconciliation` (backend/src/modules/agreements/entities/termination-reconciliation.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `agreement_id` | uuid | not null |
+| `termination_date` | timestamp | not null |
+| `prorated_rent_owed` | decimal | not null |
+| `deposit_refund_status` | varchar | not null default: ReconciliationStepStatus.PENDING |
+| `deposit_refund_error` | text | - |
+| `escrow_release_status` | varchar | not null default: ReconciliationStepStatus.PENDING |
+| `escrow_release_error` | text | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `agreement_id` (unique)
+
+#### `threat_events`
+
+Entity class: `ThreatEvent` (backend/src/modules/security/entities/threat-event.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | varchar | - |
+| `ip_address` | varchar | - |
+| `user_agent` | text | - |
+| `request_path` | varchar | - |
+| `request_method` | varchar | - |
+| `threat_type` | enum | not null |
+| `threat_level` | enum | not null default: ThreatLevel.MEDIUM |
+| `status` | enum | not null default: ThreatStatus.DETECTED |
+| `evidence` | jsonb | - |
+| `description` | text | - |
+| `blocked` | boolean | not null default: false |
+| `auto_mitigated` | boolean | not null default: false |
+| `mitigation_action` | varchar | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Indexes:** `ip_address, created_at`, `user_id, created_at`, `threat_type, status`, `threat_level, created_at`
+
+#### `user_ai_preferences`
+
+Entity class: `UserPreferences` (backend/src/modules/ai/entities/user-preferences.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `preferred_city` | varchar | - |
+| `max_budget` | decimal | - |
+| `min_budget` | decimal | - |
+| `bedrooms` | int | - |
+| `bathrooms` | int | - |
+| `preferred_type` | varchar | - |
+| `pets_required` | boolean | not null default: false |
+| `parking_required` | boolean | not null default: false |
+| `furnished_required` | boolean | not null default: false |
+| `preferred_amenities` | inferred | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+#### `user_notification_preferences`
+
+Entity class: `UserNotificationPreference` (backend/src/modules/users/entities/user-notification-preference.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | not null |
+| `preferences` | inferred | not null default: () =>
+      process.env.DB_TYPE === 'sqlite'
+        ? '\'{"notifications":{"email":{"newPropertyMatches":true |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+
+**Relations:** OneToOne → `User` (via `user_id`)
+
+#### `users`
+
+Entity class: `User` (backend/src/modules/users/entities/user.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `email` | varchar | indexed |
+| `email_encrypted` | inferred | - |
+| `email_hash` | varchar | - |
+| `password` | varchar | - |
+| `first_name` | varchar | - |
+| `first_name_encrypted` | inferred | - |
+| `last_name` | varchar | - |
+| `last_name_encrypted` | inferred | - |
+| `phone_number` | varchar | - |
+| `phone_number_encrypted` | inferred | - |
+| `phone_number_hash` | varchar | - |
+| `avatar_url` | varchar | - |
+| `role` | inferred | not null default: UserRole.USER |
+| `email_verified` | boolean | not null default: false |
+| `email_collected_at` | inferred | - |
+| `kyc_status` | inferred | not null default: KycStatus.PENDING |
+| `verification_token` | varchar | - |
+| `verification_token_expires` | inferred | - |
+| `reset_token` | varchar | - |
+| `reset_token_expires` | inferred | - |
+| `failed_login_attempts` | int | not null default: 0 |
+| `account_locked_until` | inferred | - |
+| `last_login_at` | inferred | - |
+| `login_count` | int | not null default: 0 |
+| `preferred_language` | varchar | not null default: 'en' |
+| `timezone` | varchar | not null default: 'UTC' |
+| `two_factor_enabled` | boolean | not null default: false |
+| `email_notifications` | boolean | not null default: true |
+| `sms_notifications` | boolean | not null default: false |
+| `marketing_opt_in` | boolean | not null default: false |
+| `cookie_consent` | boolean | not null default: false |
+| `cookie_consent_updated_at` | inferred | - |
+| `marketing_opt_in_updated_at` | inferred | - |
+| `data_processing_agreement_accepted` | boolean | not null default: false |
+| `data_processing_agreement_version` | varchar | - |
+| `data_processing_agreement_accepted_at` | inferred | - |
+| `data_processing_agreement_updated_at` | inferred | - |
+| `is_active` | boolean | not null default: true |
+| `wallet_address` | varchar | - |
+| `wallet_address_encrypted` | inferred | - |
+| `wallet_address_hash` | varchar | - |
+| `encryption_key_version` | int | not null default: 1 |
+| `auth_method` | inferred | not null default: AuthMethod.PASSWORD |
+| `refresh_token` | varchar | - |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |
+| `referral_code` | varchar | - |
+| `referred_by_id` | uuid | - |
+
+**Indexes:** `email`
+
+#### `webhook_deliveries`
+
+Entity class: `WebhookDelivery` (backend/src/modules/webhooks/entities/webhook-delivery.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `endpoint_id` | uuid | not null |
+| `event` | varchar | not null |
+| `payload` | inferred | not null |
+| `response_status` | int | - |
+| `response_body` | text | - |
+| `successful` | boolean | not null default: false |
+| `attempt_count` | int | not null default: 0 |
+| `last_attempt_at` | timestamp | - |
+| `next_retry_at` | timestamp | - |
+| `exhausted` | boolean | not null default: false |
+| `error_code` | varchar | - |
+| `created_at` | timestamp | not null |
+| `delivered_at` | timestamp | - |
+
+**Indexes:** `endpoint_id, created_at`, `endpoint_id, successful`
+
+**Relations:** ManyToOne → `WebhookEndpoint` (via `endpoint_id`)
+
+#### `webhook_endpoints`
+
+Entity class: `WebhookEndpoint` (backend/src/modules/webhooks/entities/webhook-endpoint.entity.ts)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | - |
+| `url` | varchar | not null |
+| `events` | inferred | not null default: '' |
+| `secret` | text | - |
+| `is_active` | boolean | not null default: true |
+| `created_at` | timestamp | not null |
+| `updated_at` | timestamp | not null |

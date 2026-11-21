@@ -62,6 +62,9 @@ jobs:
       - name: Check API documentation coverage
         run: pnpm run check:api-docs
 
+      - name: Check database schema documentation is up to date
+        run: pnpm run docs:schema:check
+
       - name: Run unit tests
         run: pnpm test
 

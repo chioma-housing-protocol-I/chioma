@@ -26,6 +26,8 @@ import { FraudModule } from '../fraud/fraud.module';
 import { AuditModule } from '../audit/audit.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { SupportedCurrency } from '../transactions/entities/supported-currency.entity';
+import { MonitoringModule } from '../monitoring/monitoring.module';
+import { PaymentTracer } from './payment-tracer';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import { SupportedCurrency } from '../transactions/entities/supported-currency.e
     FraudModule,
     AuditModule,
     WebhooksModule,
+    MonitoringModule,
   ],
   controllers: [
     PaymentController,
@@ -59,6 +62,7 @@ import { SupportedCurrency } from '../transactions/entities/supported-currency.e
     PaymentGatewayService,
     AdminRefundsService,
     FxRateService,
+    PaymentTracer,
   ],
   exports: [PaymentService, PaymentGatewayService, FxRateService],
 })

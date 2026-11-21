@@ -3,7 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, Eye, EyeOff, CheckCircle2, XCircle, Lock } from 'lucide-react';
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  XCircle,
+  Lock,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -67,7 +74,9 @@ export function ResetPasswordForm({
   const [status, setStatus] = React.useState<Status>(token ? 'idle' : 'error');
   const [errors, setErrors] = React.useState<FieldError[]>([]);
   const [errorMessage, setErrorMessage] = React.useState(
-    token ? '' : 'This reset link is missing its token. Please request a new one.',
+    token
+      ? ''
+      : 'This reset link is missing its token. Please request a new one.',
   );
 
   const passwordStrength = React.useMemo(
@@ -220,11 +229,7 @@ export function ResetPasswordForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* New password */}
-        <ValidatedInputWrapper
-          label="New Password"
-          id="newPassword"
-          required
-        >
+        <ValidatedInputWrapper label="New Password" id="newPassword" required>
           <div className="space-y-3">
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -276,7 +281,9 @@ export function ResetPasswordForm({
               : undefined
           }
           success={
-            confirmPassword && newPassword === confirmPassword && passwordStrength.isValid
+            confirmPassword &&
+            newPassword === confirmPassword &&
+            passwordStrength.isValid
               ? 'Passwords match'
               : undefined
           }
@@ -298,7 +305,9 @@ export function ResetPasswordForm({
               type="button"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showConfirmPassword ? 'Hide password' : 'Show password'
+              }
               tabIndex={-1}
             >
               {showConfirmPassword ? (

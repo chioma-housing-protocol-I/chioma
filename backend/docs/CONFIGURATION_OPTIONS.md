@@ -4,6 +4,7 @@ Complete reference of all environment variables used by the Chioma backend.
 
 **Related documents:**
 
+- [Configuration Options (Extended)](./CONFIGURATION_OPTIONS_EXTENDED.md) - 145 additional validated environment variables not listed in this file (#2054)
 - [Configuration Management](./CONFIGURATION_MANAGEMENT.md) — setup, validation, secrets
 - [Secrets Management](./security/SECRETS_MANAGEMENT.md) — secret generation and rotation
 - [Production Setup](./deployment/PRODUCTION_SETUP.md) — production-specific configuration
@@ -104,7 +105,7 @@ Complete reference of all environment variables used by the Chioma backend.
 ## Search (Elasticsearch)
 
 | Variable            | Type   | Default                 | Dev | Stg | Prd | Test | Description                                                          |
-| -------------------- | ------ | ------------------------ | --- | --- | --- | ---- | --------------------------------------------------------------------- |
+| ------------------- | ------ | ----------------------- | --- | --- | --- | ---- | -------------------------------------------------------------------- |
 | `ELASTICSEARCH_URL` | string | `http://localhost:9200` | O   | O   | O   | -    | Elasticsearch base URL. Unset means search falls back to PostgreSQL. |
 
 ---
@@ -237,13 +238,13 @@ Complete reference of all environment variables used by the Chioma backend.
 
 ## Health Checks
 
-| Variable                   | Type           | Default              | Dev | Stg | Prd | Test | Description                           |
-| -------------------------- | -------------- | -------------------- | --- | --- | --- | ---- | ------------------------------------- |
-| `HEALTH_CHECK_TIMEOUT`     | number (ms)    | `5000`               | O   | O   | O   | -    | Health check timeout for dependencies |
-| `MEMORY_WARNING_THRESHOLD` | number (bytes) | `536870912` (512 MB) | O   | O   | O   | -    | Memory warning threshold              |
-| `MEMORY_ERROR_THRESHOLD`   | number (bytes) | `1073741824` (1 GB)  | O   | O   | O   | -    | Memory error threshold                |
-| `REDIS_HEALTH_TIMEOUT_MS`         | number (ms) | `2000` | O | O | O | -    | Timeout for the Redis `PING` health check           |
-| `ELASTICSEARCH_HEALTH_TIMEOUT_MS` | number (ms) | `3000` | O | O | O | -    | Timeout for the Elasticsearch `_cluster/health` call |
+| Variable                          | Type           | Default              | Dev | Stg | Prd | Test | Description                                          |
+| --------------------------------- | -------------- | -------------------- | --- | --- | --- | ---- | ---------------------------------------------------- |
+| `HEALTH_CHECK_TIMEOUT`            | number (ms)    | `5000`               | O   | O   | O   | -    | Health check timeout for dependencies                |
+| `MEMORY_WARNING_THRESHOLD`        | number (bytes) | `536870912` (512 MB) | O   | O   | O   | -    | Memory warning threshold                             |
+| `MEMORY_ERROR_THRESHOLD`          | number (bytes) | `1073741824` (1 GB)  | O   | O   | O   | -    | Memory error threshold                               |
+| `REDIS_HEALTH_TIMEOUT_MS`         | number (ms)    | `2000`               | O   | O   | O   | -    | Timeout for the Redis `PING` health check            |
+| `ELASTICSEARCH_HEALTH_TIMEOUT_MS` | number (ms)    | `3000`               | O   | O   | O   | -    | Timeout for the Elasticsearch `_cluster/health` call |
 
 `/health` and `/health/detailed` report `database`, `redis`, `elasticsearch`, `stellar` and `memory`. Each service entry
 carries a `criticality` of `critical` or `degraded`:

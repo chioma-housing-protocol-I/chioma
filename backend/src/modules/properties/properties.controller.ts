@@ -24,7 +24,9 @@ import {
 import { ApiStandardErrors } from '../../common/decorators/api-standard-errors.decorator';
 import { UseReplica } from '../../common/decorators/use-replica.decorator';
 import { PropertiesService } from './properties.service';
+import { PropertyImportService } from './property-import.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { BulkCreatePropertiesDto } from './dto/bulk-create-properties.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
 import {
@@ -41,6 +43,7 @@ import { ApiPaginatedResponse } from '../../common/decorators/api-paginated-resp
 import { ReviewsService } from '../reviews/reviews.service';
 import { Review } from '../reviews/review.entity';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CacheControl } from '../../common/decorators/cache-control.decorator';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -59,6 +62,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
+    private readonly propertyImportService: PropertyImportService,
     private readonly reviewsService: ReviewsService,
   ) {}
 
@@ -87,11 +91,34 @@ export class PropertiesController {
     );
   }
 
+  @Post('bulk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Bulk import property listings',
+    description:
+      'Imports up to 500 listings in chunks of 50, with one transaction per chunk.',
+  })
+  @ApiResponse({ status: 201, description: 'Properties imported successfully' })
+  async bulkCreate(
+    @Body() dto: BulkCreatePropertiesDto,
+    @CurrentUser() user: User,
+  ) {
+    return await this.propertyImportService.bulkCreate(
+      dto.properties,
+      user.id,
+      user,
+    );
+  }
+
   @Get()
   @UseReplica({
     maxStaleness: '30s',
     reason: 'Browse listings tolerate brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'List all properties',
     description:
@@ -109,6 +136,7 @@ export class PropertiesController {
   @Get('my-properties')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @CacheControl.private(30)
   @ApiOperation({
     summary: 'List current user properties',
     description: 'Retrieve all properties owned by the authenticated user.',
@@ -164,6 +192,7 @@ export class PropertiesController {
     maxStaleness: '30s',
     reason: 'Property detail view tolerates brief replication lag',
   })
+  @CacheControl.public(60)
   @ApiOperation({
     summary: 'Get a specific property',
     description:

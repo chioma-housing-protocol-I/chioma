@@ -1,6 +1,44 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Permission, ROLE_PERMISSIONS } from '../permissions.enum';
 import { UserRole } from '../../../modules/users/entities/user.entity';
+import { KycStatus } from '../../../modules/kyc/kyc-status.enum';
+
+/**
+ * Rights that are suspended while a user's KYC verification is queued for
+ * manual review. Read access and the ability to resubmit documents remain so
+ * the user can resolve the queue without contacting support.
+ */
+export const MANUAL_REVIEW_RESTRICTED_PERMISSIONS: Permission[] = [
+  Permission.PAYMENT_CREATE,
+  Permission.PAYMENT_PROCESS,
+  Permission.PAYMENT_REFUND,
+  Permission.PAYMENT_READ_ALL,
+  Permission.AGREEMENT_CREATE,
+  Permission.AGREEMENT_SIGN,
+  Permission.AGREEMENT_TERMINATE,
+  Permission.PROPERTY_CREATE,
+  Permission.PROPERTY_PUBLISH,
+  Permission.PROPERTY_APPROVE,
+  Permission.DISPUTE_CREATE,
+  Permission.STELLAR_TRANSACTION,
+  Permission.STELLAR_ESCROW,
+  Permission.STELLAR_ADMIN,
+  Permission.ANALYTICS_EXPORT,
+  Permission.REPORT_GENERATE,
+];
+
+/** Pure helper shared by RbacService and PermissionsGuard. */
+export function restrictPermissionsForKycStatus(
+  permissions: Permission[],
+  kycStatus?: KycStatus,
+): Permission[] {
+  if (kycStatus !== KycStatus.MANUAL_REVIEW) {
+    return permissions;
+  }
+  return permissions.filter(
+    (permission) => !MANUAL_REVIEW_RESTRICTED_PERMISSIONS.includes(permission),
+  );
+}
 
 /**
  * Service for checking permissions and role capabilities
@@ -12,34 +50,52 @@ export class RbacService {
   /**
    * Check if a role has a specific permission
    */
-  hasPermission(role: UserRole, permission: Permission): boolean {
-    const permissions = ROLE_PERMISSIONS[role] || [];
+  hasPermission(
+    role: UserRole,
+    permission: Permission,
+    kycStatus?: KycStatus,
+  ): boolean {
+    const permissions = restrictPermissionsForKycStatus(
+      ROLE_PERMISSIONS[role] || [],
+      kycStatus,
+    );
     return permissions.includes(permission);
   }
 
   /**
    * Check if a role has all of the specified permissions
    */
-  hasAllPermissions(role: UserRole, permissions: Permission[]): boolean {
+  hasAllPermissions(
+    role: UserRole,
+    permissions: Permission[],
+    kycStatus?: KycStatus,
+  ): boolean {
     return permissions.every((permission) =>
-      this.hasPermission(role, permission),
+      this.hasPermission(role, permission, kycStatus),
     );
   }
 
   /**
    * Check if a role has any of the specified permissions
    */
-  hasAnyPermission(role: UserRole, permissions: Permission[]): boolean {
+  hasAnyPermission(
+    role: UserRole,
+    permissions: Permission[],
+    kycStatus?: KycStatus,
+  ): boolean {
     return permissions.some((permission) =>
-      this.hasPermission(role, permission),
+      this.hasPermission(role, permission, kycStatus),
     );
   }
 
   /**
    * Get all permissions for a role
    */
-  getPermissionsForRole(role: UserRole): Permission[] {
-    return ROLE_PERMISSIONS[role] || [];
+  getPermissionsForRole(role: UserRole, kycStatus?: KycStatus): Permission[] {
+    return restrictPermissionsForKycStatus(
+      ROLE_PERMISSIONS[role] || [],
+      kycStatus,
+    );
   }
 
   /**
@@ -51,9 +107,10 @@ export class RbacService {
     userId: string,
     permission: Permission,
     resourceOwnerId?: string,
+    kycStatus?: KycStatus,
   ): boolean {
     // Check if user has the required permission
-    if (!this.hasPermission(userRole, permission)) {
+    if (!this.hasPermission(userRole, permission, kycStatus)) {
       this.logger.debug(
         `User ${userId} (${userRole}) lacks permission: ${permission}`,
       );
@@ -70,10 +127,7 @@ export class RbacService {
     }
 
     // For admin and super_admin, allow access to all resources
-    if (
-      userRole === UserRole.ADMIN ||
-      userRole === UserRole.SUPER_ADMIN
-    ) {
+    if (userRole === UserRole.ADMIN || userRole === UserRole.SUPER_ADMIN) {
       return true;
     }
 
@@ -121,9 +175,7 @@ export class RbacService {
 
     // Admin can manage user and agent roles, but not admin or super_admin
     if (managerRole === UserRole.ADMIN) {
-      return (
-        targetRole === UserRole.USER || targetRole === UserRole.AGENT
-      );
+      return targetRole === UserRole.USER || targetRole === UserRole.AGENT;
     }
 
     // Other roles cannot manage roles
@@ -154,12 +206,8 @@ export class RbacService {
     const fromPermissions = this.getPermissionsForRole(fromRole);
     const toPermissions = this.getPermissionsForRole(toRole);
 
-    const added = toPermissions.filter(
-      (p) => !fromPermissions.includes(p),
-    );
-    const removed = fromPermissions.filter(
-      (p) => !toPermissions.includes(p),
-    );
+    const added = toPermissions.filter((p) => !fromPermissions.includes(p));
+    const removed = fromPermissions.filter((p) => !toPermissions.includes(p));
 
     return { added, removed };
   }

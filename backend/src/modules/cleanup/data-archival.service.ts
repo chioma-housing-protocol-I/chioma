@@ -1,10 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TenantScreeningRequest } from '../screening/entities/tenant-screening-request.entity';
 import { TenantScreeningReport } from '../screening/entities/tenant-screening-report.entity';
 import { TenantScreeningConsent } from '../screening/entities/tenant-screening-consent.entity';
+import { AlertService } from '../monitoring/alert.service';
+import { errorDetails, runBackgroundTask } from './background-task.utils';
 
 export interface ArchivalConfig {
   retentionDays: number;
@@ -31,6 +33,7 @@ export class DataArchivalService {
     private readonly tenantScreeningReportRepository: Repository<TenantScreeningReport>,
     @InjectRepository(TenantScreeningConsent)
     private readonly tenantScreeningConsentRepository: Repository<TenantScreeningConsent>,
+    @Optional() private readonly alertService?: AlertService,
   ) {}
 
   private readonly archivalConfigs: Record<string, ArchivalConfig> = {
@@ -53,44 +56,105 @@ export class DataArchivalService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async performScheduledArchival(): Promise<void> {
-    this.logger.log('Starting scheduled data archival process');
+    await runBackgroundTask(
+      this.logger,
+      { task: 'data-archival' },
+      async () => {
+        this.logger.log(
+          'Starting scheduled data archival process',
+          JSON.stringify({ task: 'data-archival' }),
+        );
 
-    try {
-      const totalStats: ArchivalStats = {
-        archived: 0,
-        deleted: 0,
-        errors: 0,
-        duration: 0,
-      };
+        const totalStats: ArchivalStats = {
+          archived: 0,
+          deleted: 0,
+          errors: 0,
+          duration: 0,
+        };
 
-      const startTime = Date.now();
+        const startTime = Date.now();
 
-      for (const [entityType, config] of Object.entries(this.archivalConfigs)) {
-        try {
-          const stats = await this.archiveEntityData(entityType, config);
-          totalStats.archived += stats.archived;
-          totalStats.deleted += stats.deleted;
-          totalStats.errors += stats.errors;
+        for (const [entityType, config] of Object.entries(this.archivalConfigs)) {
+          try {
+            const stats = await this.archiveEntityData(entityType, config);
+            totalStats.archived += stats.archived;
+            totalStats.deleted += stats.deleted;
+            totalStats.errors += stats.errors;
 
-          this.logger.log(
-            `Completed archival for ${entityType}: ${stats.archived} archived, ${stats.deleted} deleted`,
-          );
-        } catch (error) {
-          totalStats.errors++;
-          this.logger.error(
-            `Failed to archive ${entityType}: ${error.message}`,
-          );
+            this.logger.log(
+              `Completed archival for ${entityType}: ${stats.archived} archived, ${stats.deleted} deleted`,
+              JSON.stringify({
+                task: 'data-archival',
+                entityType,
+                ...stats,
+              }),
+            );
+          } catch (error) {
+            totalStats.errors++;
+            const details = errorDetails(error);
+            this.logger.error(
+              `Failed to archive ${entityType}`,
+              details.stack ?? details.message,
+              JSON.stringify({
+                task: 'data-archival',
+                entityType,
+                error: details,
+              }),
+            );
+            await this.alertService?.handleAlert({
+              alerts: [
+                {
+                  status: 'firing',
+                  labels: {
+                    alertname: 'DataArchivalEntityFailure',
+                    severity: 'critical',
+                    service: 'chioma-backend',
+                    task: 'data-archival',
+                    entityType,
+                  },
+                  annotations: {
+                    summary: `Data archival failed for ${entityType}`,
+                    description: details.message,
+                  },
+                  startsAt: new Date().toISOString(),
+                  generatorURL: '',
+                },
+              ],
+            });
+          }
         }
-      }
 
-      totalStats.duration = Date.now() - startTime;
+        totalStats.duration = Date.now() - startTime;
 
-      this.logger.log(
-        `Scheduled archival completed: ${totalStats.archived} archived, ${totalStats.deleted} deleted, ${totalStats.errors} errors, ${totalStats.duration}ms`,
-      );
-    } catch (error) {
-      this.logger.error(`Scheduled archival failed: ${error.message}`);
-    }
+        this.logger.log(
+          `Scheduled archival completed: ${totalStats.archived} archived, ${totalStats.deleted} deleted, ${totalStats.errors} errors, ${totalStats.duration}ms`,
+          JSON.stringify({ task: 'data-archival', ...totalStats }),
+        );
+
+        if (totalStats.errors > 0) {
+          await this.alertService?.handleAlert({
+            alerts: [
+              {
+                status: 'firing',
+                labels: {
+                  alertname: 'DataArchivalCompletedWithErrors',
+                  severity: 'critical',
+                  service: 'chioma-backend',
+                  task: 'data-archival',
+                },
+                annotations: {
+                  summary: 'Scheduled data archival completed with errors',
+                  description: `${totalStats.errors} entity archival operation(s) failed`,
+                },
+                startsAt: new Date().toISOString(),
+                generatorURL: '',
+              },
+            ],
+          });
+        }
+      },
+      this.alertService,
+    );
   }
 
   async archiveEntityData(
@@ -174,7 +238,12 @@ export class DataArchivalService {
       });
     } catch (error) {
       stats.errors++;
-      this.logger.error(`Error archiving ${entityType}: ${error.message}`);
+      const details = errorDetails(error);
+      this.logger.error(
+        `Error archiving ${entityType}`,
+        details.stack ?? details.message,
+        JSON.stringify({ task: 'data-archival', entityType, error: details }),
+      );
       throw error;
     }
 
@@ -223,8 +292,16 @@ export class DataArchivalService {
         `);
       }
     } catch (error) {
+      const details = errorDetails(error);
       this.logger.error(
-        `Failed to create archive table ${archiveTable}: ${error.message}`,
+        `Failed to create archive table ${archiveTable}`,
+        details.stack ?? details.message,
+        JSON.stringify({
+          task: 'data-archival',
+          entityType,
+          archiveTable,
+          error: details,
+        }),
       );
       throw error;
     }
@@ -250,10 +327,13 @@ export class DataArchivalService {
           archiveTable: config.archiveTable,
         };
       } catch (error) {
+        const details = errorDetails(error);
         this.logger.error(
-          `Failed to get stats for ${entityType}: ${error.message}`,
+          `Failed to get stats for ${entityType}`,
+          details.stack ?? details.message,
+          JSON.stringify({ task: 'data-archival', entityType, error: details }),
         );
-        stats[entityType] = { error: error.message };
+        stats[entityType] = { error: details.message };
       }
     }
 

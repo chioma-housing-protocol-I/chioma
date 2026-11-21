@@ -21,9 +21,7 @@ import HostRouteError from '@/app/host/error';
  */
 describe('per-route-group error boundaries', () => {
   it('renders the admin-specific boundary, not the generic root fallback', () => {
-    render(
-      <AdminRouteError error={new Error('boom')} reset={() => {}} />,
-    );
+    render(<AdminRouteError error={new Error('boom')} reset={() => {}} />);
 
     expect(screen.getByText('Admin area error')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /go to safety/i })).toHaveAttribute(

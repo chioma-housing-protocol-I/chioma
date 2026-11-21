@@ -22,6 +22,7 @@ import {
   NotificationChannel,
 } from './notification-channel.policy';
 import { PaginationUtils } from '../../common/utils';
+import { err, ok, Result } from '../../common/utils/result';
 
 /**
  * Renders an unknown thrown value as a human-readable string. Plain objects are
@@ -75,7 +76,7 @@ export class NotificationsService {
     const payload = { userId, title, message, type };
 
     try {
-      const saved = await this.deliverWithRetry(
+      const delivery = await this.deliverWithRetry(
         'persist',
         payload,
         async () => {
@@ -88,16 +89,29 @@ export class NotificationsService {
           return this.notificationRepository.save(notification);
         },
       );
+      if (!delivery.ok) {
+        throw delivery.error;
+      }
+      const saved = delivery.value;
 
       const preferences = await this.getUserPreferences(userId);
       if (this.shouldDeliverRealtime(preferences, type)) {
         // Best-effort: a failed/exhausted realtime emit must not fail the
         // notification as a whole, since it already persisted successfully
         // and the recipient can still see it on next fetch/poll.
-        await this.deliverWithRetry('realtime', payload, () => {
-          this.realtimeService.emitToUser(userId, saved);
-          return Promise.resolve();
-        }).catch(() => undefined);
+        const realtimeDelivery = await this.deliverWithRetry(
+          'realtime',
+          payload,
+          () => {
+            this.realtimeService.emitToUser(userId, saved);
+            return Promise.resolve();
+          },
+        );
+        if (!realtimeDelivery.ok) {
+          this.logger.debug(
+            `Realtime notification delivery failed for ${userId}: ${realtimeDelivery.error.message}`,
+          );
+        }
       }
 
       this.logger.log(`Notification sent to user ${userId}: ${title}`);
@@ -163,18 +177,21 @@ export class NotificationsService {
     channel: NotificationChannel,
     payload: Record<string, unknown>,
     fn: () => Promise<T>,
-  ): Promise<T> {
+  ): Promise<Result<T, Error>> {
     try {
-      return await this.retryService.execute(
+      const delivered = await this.retryService.execute(
         fn,
         NOTIFICATION_CHANNEL_RETRY_POLICY[channel],
         `NotificationsService:${channel}`,
       );
+      return ok(delivered);
     } catch (error) {
       if (error instanceof MaxRetriesExceededError) {
         await this.deadLetter(channel, payload, error);
       }
-      throw error;
+      return err(
+        error instanceof Error ? error : new Error(describeError(error)),
+      );
     }
   }
 

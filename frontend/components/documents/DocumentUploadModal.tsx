@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Uploader } from '@/components/ui/Uploader';
 import type { DocumentMetadata, DocumentCategory } from './types';
 import toast from 'react-hot-toast';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -28,6 +29,21 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  const handleClose = () => {
+    if (isUploading) {
+      toast.error('Please wait for the upload to complete');
+      return;
+    }
+    setSelectedFiles([]);
+    setCategory('other');
+    setDescription('');
+    setUploadProgress(0);
+    onClose();
+  };
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, handleClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -88,18 +104,6 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     }
   };
 
-  const handleClose = () => {
-    if (isUploading) {
-      toast.error('Please wait for the upload to complete');
-      return;
-    }
-    setSelectedFiles([]);
-    setCategory('other');
-    setDescription('');
-    setUploadProgress(0);
-    onClose();
-  };
-
   const categories: { value: DocumentCategory; label: string }[] = [
     { value: 'lease', label: 'Lease Agreement' },
     { value: 'identity', label: 'Identity Document' },
@@ -110,8 +114,15 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-white/5 flex items-center justify-between bg-neutral-50 dark:bg-white/5 shrink-0">
           <div className="flex items-center gap-3">

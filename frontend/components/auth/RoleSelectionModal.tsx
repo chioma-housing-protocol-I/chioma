@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/authStore';
 import { Building2, Home, Briefcase } from 'lucide-react';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface RoleSelectionModalProps {
   walletAddress: string;
@@ -19,6 +20,12 @@ export default function RoleSelectionModal({
   const { setTokens } = useAuth();
   const [selectedRole, setSelectedRole] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  // Intentionally has no close mechanism: a new user must pick a role
+  // before continuing, so Escape does not close it (#2048). Tab-trapping
+  // still applies so keyboard focus can't silently drift behind the modal.
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, () => {}, isOpen);
 
   if (!isOpen) return null;
 
@@ -80,8 +87,16 @@ export default function RoleSelectionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 max-w-2xl w-full border border-white/10 shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Select your role"
+    >
+      <div
+        ref={modalRef}
+        className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 max-w-2xl w-full border border-white/10 shadow-2xl"
+      >
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-white mb-2">
             Welcome to Chioma

@@ -15,6 +15,13 @@ export class TimeoutError extends BaseAppError {
   }
 }
 
+/**
+ * Boundary name for timeout failures mapped from database/network drivers.
+ * It extends TimeoutError so existing retry and filter logic keeps treating
+ * it as the same operational timeout.
+ */
+export class TimeoutException extends TimeoutError {}
+
 /** Thrown when a network-level failure occurs (e.g. ECONNRESET, ENOTFOUND). */
 export class NetworkError extends BaseAppError {
   constructor(message?: string, context?: Record<string, unknown>) {

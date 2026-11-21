@@ -76,7 +76,10 @@ describe('BlockchainAuditService', () => {
   describe('extractTransactionHash', () => {
     it('returns the hash from a well-formed Stellar response', () => {
       expect(
-        (service as any).extractTransactionHash({ hash: VALID_HASH, ledger: 1 }),
+        (service as any).extractTransactionHash({
+          hash: VALID_HASH,
+          ledger: 1,
+        }),
       ).toBe(VALID_HASH);
     });
 
@@ -112,11 +115,15 @@ describe('BlockchainAuditService', () => {
 
     beforeEach(() => {
       jest.spyOn(service as any, 'getUnanchoredLogs').mockResolvedValue(logs);
-      jest.spyOn(service as any, 'markLogsAnchored').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'markLogsAnchored')
+        .mockResolvedValue(undefined);
     });
 
     it('records the tx hash when Stellar returns a valid hash', async () => {
-      jest.spyOn(service as any, 'submitToStellar').mockResolvedValue(VALID_HASH);
+      jest
+        .spyOn(service as any, 'submitToStellar')
+        .mockResolvedValue(VALID_HASH);
 
       const record = await service.anchorAuditBatch();
 

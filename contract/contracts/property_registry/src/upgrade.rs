@@ -2,7 +2,7 @@ use crate::errors::PropertyError;
 use crate::events;
 use crate::storage::DataKey;
 use crate::types::ContractState;
-use soroban_sdk::{Address, Bytes, Env, String, Vec};
+use soroban_sdk::{Address, Bytes, BytesN, Env, String, Vec};
 
 /// Contract upgrade proposal
 #[derive(Clone)]
@@ -38,6 +38,10 @@ pub fn propose_upgrade(
 
     if proposer != state.admin {
         return Err(PropertyError::Unauthorized);
+    }
+
+    if wasm_hash.len() != 32 {
+        return Err(PropertyError::InvalidWasmHash);
     }
 
     if env
@@ -149,10 +153,19 @@ pub fn execute_upgrade(
         return Err(PropertyError::NotInitialized);
     }
 
+    let new_wasm_hash: BytesN<32> = proposal
+        .wasm_hash
+        .clone()
+        .try_into()
+        .map_err(|_| PropertyError::InvalidWasmHash)?;
+
     proposal.executed = true;
     env.storage()
         .persistent()
         .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+    // Actually swap this contract's executable code (#2084 parity fix).
+    env.deployer().update_current_contract_wasm(new_wasm_hash);
 
     events::upgrade_executed(env, proposal_id, executor);
 

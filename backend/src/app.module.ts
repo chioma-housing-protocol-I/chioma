@@ -28,6 +28,8 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AuthRateLimitMiddleware } from './modules/auth/middleware/rate-limit.middleware';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BatchModule } from './modules/batch/batch.module';
+import { FavoritesNotificationsBatchModule } from './modules/favorites-notifications-batch/favorites-notifications-batch.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestSizeLimitMiddleware } from './common/middleware/request-size-limit.middleware';
 import { QueryDepthLimitMiddleware } from './common/middleware/query-depth-limit.middleware';
@@ -70,15 +72,21 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { DatabaseTimeoutInterceptor } from './common/database.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { ReadReplicaInterceptor } from './common/interceptors/read-replica.interceptor';
 import { FieldFilteringInterceptor } from './common/interceptors/field-filtering.interceptor';
+import { DatabaseBackpressureService } from './database/database-backpressure.service';
+import { DatabaseBackpressureInterceptor } from './database/database-backpressure.interceptor';
 import { createDatabaseConnectionOptions } from './database/database-config';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { CertificatePinningModule } from './common/security/certificate-pinning.module';
 import { OpenApiDocumentRegistryModule } from './common/validation/openapi-document-registry.module';
 import { RbacModule } from './common/rbac/rbac.module';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { join } from 'path';
 
 const appLogger = new Logger('AppModule');
 
@@ -93,6 +101,17 @@ const appLogger = new Logger('AppModule');
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
       validate: validateEnvironment,
+    }),
+    // Parallel, read-only GraphQL surface (#2050): lets clients request
+    // only the fields they render instead of the full REST response
+    // shape, which the properties list/detail REST endpoints always
+    // eager-load (images, amenities, owner).
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
+      playground: process.env.NODE_ENV !== 'production',
+      introspection: process.env.NODE_ENV !== 'production',
     }),
     LoggerModule,
     LockModule,
@@ -250,6 +269,7 @@ const appLogger = new Logger('AppModule');
       : []),
     PaymentModule,
     NotificationsModule,
+    BatchModule,
     ProfileModule,
     SecurityModule,
     I18nModule,
@@ -270,6 +290,7 @@ const appLogger = new Logger('AppModule');
     InquiriesModule,
     AnalyticsModule,
     DocumentsModule,
+    FavoritesNotificationsBatchModule,
     require('./modules/database-performance/database-performance.module')
       .DatabasePerformanceModule,
     TransactionModule,
@@ -299,6 +320,11 @@ const appLogger = new Logger('AppModule');
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
+    DatabaseBackpressureService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DatabaseBackpressureInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseTimeInterceptor,
@@ -306,6 +332,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DatabaseTimeoutInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
