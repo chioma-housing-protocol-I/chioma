@@ -4,6 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { StellarService } from '../services/stellar.service';
 import { EncryptionService } from '../services/encryption.service';
+import { TransactionSubmissionPoolService } from '../services/transaction-submission-pool.service';
 import {
   StellarAccount,
   StellarAccountType,
@@ -198,6 +199,31 @@ describe('StellarService', () => {
         {
           provide: EncryptionService,
           useValue: mockEncryptionService,
+        },
+        {
+          provide: TransactionSubmissionPoolService,
+          useValue: {
+            enqueue: jest.fn(
+              async ({ submit, rebuildAndResign, sourceKeypair }: any) => {
+                // default: behave like direct submit (no pooled batching) in unit tests
+                const { Horizon, TransactionBuilder } = jest.requireMock('@stellar/stellar-sdk');
+                // build minimal tx via rebuildAndResign if provided else a dummy submit path
+                let tx: any;
+                if (rebuildAndResign) {
+                  const horizon = new Horizon.Server('x');
+                  const account = await horizon.loadAccount('G');
+                  tx = rebuildAndResign(account);
+                } else {
+                  const builder = new TransactionBuilder({} as any, { fee: '100', networkPassphrase: 'x' });
+                  builder.addOperation({}).setTimeout(180);
+                  tx = builder.build();
+                  tx.sign?.(sourceKeypair);
+                }
+                return submit(tx);
+              },
+            ),
+            onModuleDestroy: jest.fn(),
+          },
         },
       ],
     }).compile();
