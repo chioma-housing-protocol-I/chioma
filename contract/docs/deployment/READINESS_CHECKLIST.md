@@ -39,3 +39,4 @@ the contract PR checklist (`.github/PULL_REQUEST_TEMPLATE/contract.md`) refers t
 
 - Contract docs and ABI references updated.
 - Deployment notes added for testnet/mainnet ([TESTNET_DEPLOYMENT.md](TESTNET_DEPLOYMENT.md), [MAINNET_DEPLOYMENT.md](MAINNET_DEPLOYMENT.md)).
+- For a release build, the [pre-deployment security checklist](../security/PRE_DEPLOYMENT_SECURITY_CHECKLIST.md) is complete and linked from the release record.

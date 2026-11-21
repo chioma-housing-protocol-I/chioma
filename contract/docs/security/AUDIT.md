@@ -94,7 +94,10 @@ must be the one deployed to mainnet (see the
 
 ## 5. Pre-audit hardening checklist
 
-Complete before handing code to an auditor (reduces cost and noise):
+The release-level verification record is the
+[pre-deployment security checklist](PRE_DEPLOYMENT_SECURITY_CHECKLIST.md). Use
+it for every release, and use this shorter list before handing code to an
+auditor (it reduces cost and noise):
 
 - [ ] `cargo fmt --all -- --check` clean
 - [ ] `cargo clippy --all-targets --all-features -- -D warnings` clean
@@ -117,6 +120,7 @@ _No audit reports yet._ Once an audit is complete, record it here:
 
 ## 7. References
 
+- [PRE_DEPLOYMENT_SECURITY_CHECKLIST.md](PRE_DEPLOYMENT_SECURITY_CHECKLIST.md): release verification record
 - [MAINNET_DEPLOYMENT.md](../deployment/MAINNET_DEPLOYMENT.md) — launch gate
 - [EMERGENCY-PROCEDURES.md](./EMERGENCY-PROCEDURES.md) — pause & incident response
 - [../architecture/OVERVIEW.md](../architecture/OVERVIEW.md) — system architecture

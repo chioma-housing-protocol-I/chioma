@@ -62,6 +62,7 @@ export {
 // Network & Retry errors
 export {
   TimeoutError,
+  TimeoutException,
   NetworkError,
   MaxRetriesExceededError,
 } from './retry-errors';

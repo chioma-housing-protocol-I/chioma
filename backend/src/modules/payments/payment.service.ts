@@ -1,6 +1,5 @@
 import {
   Injectable,
-  NotFoundException,
   BadRequestException,
   InternalServerErrorException,
   UnauthorizedException,
@@ -34,6 +33,10 @@ import {
   ensureUserId,
   getIdempotencyKey,
   PAYMENT_STATUS_MAP,
+  requireEntity,
+  requireNonEmptyString,
+  requirePositiveAmount,
+  requireValue,
 } from './payment.helpers';
 import { PaymentProcessingService } from '../stellar/services/payment-processing.service';
 import { StellarService } from '../stellar/services/stellar.service';
@@ -98,26 +101,12 @@ export class PaymentService {
     dto: CreatePaymentRecordDto,
     userId: string,
   ): Promise<Payment> {
+    requireValue(dto, 'Payment record data is required');
     ensureUserId(userId);
 
-    // Validate payment amount with proper bounds checking
-    if (!Number.isFinite(dto.amount) || Number.isNaN(dto.amount)) {
-      throw new BadRequestException('Payment amount must be a valid number');
-    }
-    if (dto.amount <= 0) {
-      throw new BadRequestException('Payment amount must be greater than 0');
-    }
-    if (dto.amount > 999999999.99) {
-      throw new BadRequestException(
-        'Payment amount cannot exceed 999,999,999.99',
-      );
-    }
-    // Check for decimal precision (max 2 decimal places for currency)
-    if (!Number.isInteger(dto.amount * 100)) {
-      throw new BadRequestException(
-        'Payment amount can have at most 2 decimal places',
-      );
-    }
+    // Bounds checking lives in the shared helper so every entry point gets
+    // the same validation and messages.
+    requirePositiveAmount(dto.amount);
 
     const idempotencyKey = getIdempotencyKey(dto);
 
@@ -131,12 +120,12 @@ export class PaymentService {
     }
 
     // Validate payment method exists and belongs to user
-    const paymentMethod = await this.paymentMethodRepository.findOne({
-      where: { id: parseInt(dto.paymentMethodId), userId },
-    });
-    if (!paymentMethod) {
-      throw new NotFoundException('Payment method not found');
-    }
+    const paymentMethod = requireEntity(
+      await this.paymentMethodRepository.findOne({
+        where: { id: parseInt(dto.paymentMethodId), userId },
+      }),
+      'Payment method not found',
+    );
 
     // Perform fraud check before allowing payment to proceed
     await this.fraudHooksService.checkTransactionBeforeRecording({
@@ -150,7 +139,10 @@ export class PaymentService {
     const transactionFee = dto.amount * 0.02;
     const netAmount = dto.amount - transactionFee;
 
-    const payingUser = await this.usersService.getUserById(userId);
+    const payingUser = requireEntity(
+      await this.usersService.getUserById(userId),
+      'User not found',
+    );
     if (!payingUser.email) {
       this.logger.warn(
         `Payment blocked for user ${userId}: no verified email on file, so gateway charge receipts cannot be sent.`,
@@ -298,6 +290,11 @@ export class PaymentService {
     },
     manager?: EntityManager,
   ): Promise<Payment> {
+    requireValue(params, 'Payment parameters are required');
+    ensureUserId(params.userId);
+    requireValue(params.amount, 'Payment amount is required');
+    requireValue(params.currency, 'Payment currency is required');
+
     const repo = manager
       ? manager.getRepository(Payment)
       : this.paymentRepository;
@@ -328,6 +325,7 @@ export class PaymentService {
     bookingId: string,
     manager?: EntityManager,
   ): Promise<Payment | null> {
+    requireNonEmptyString(bookingId, 'Booking ID');
     const repo = manager
       ? manager.getRepository(Payment)
       : this.paymentRepository;
@@ -353,6 +351,7 @@ export class PaymentService {
     bookingId: string,
     manager?: EntityManager,
   ): Promise<Payment | null> {
+    requireNonEmptyString(bookingId, 'Booking ID');
     const repo = manager
       ? manager.getRepository(Payment)
       : this.paymentRepository;
@@ -378,6 +377,8 @@ export class PaymentService {
     newAmount: number,
     manager?: EntityManager,
   ): Promise<Payment | null> {
+    requireNonEmptyString(bookingId, 'Booking ID');
+    requireValue(newAmount, 'Payment amount is required');
     const repo = manager
       ? manager.getRepository(Payment)
       : this.paymentRepository;
@@ -393,15 +394,15 @@ export class PaymentService {
   }
 
   async generateReceipt(paymentId: string, userId: string): Promise<any> {
+    requireNonEmptyString(paymentId, 'Payment ID');
     ensureUserId(userId);
-    const payment = await this.paymentRepository.findOne({
-      where: { id: paymentId, userId },
-      relations: ['user', 'paymentMethodRelation'],
-    });
-
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
+    const payment = requireEntity(
+      await this.paymentRepository.findOne({
+        where: { id: paymentId, userId },
+        relations: ['user', 'paymentMethodRelation'],
+      }),
+      'Payment not found',
+    );
 
     const receipt = {
       paymentId: payment.id,
@@ -445,6 +446,7 @@ export class PaymentService {
   }
 
   async listPayments(filters: PaymentFiltersDto, userId: string) {
+    requireValue(filters, 'Payment filters are required');
     ensureUserId(userId);
     const query = this.paymentRepository
       .createQueryBuilder('payment')
@@ -497,15 +499,15 @@ export class PaymentService {
   }
 
   async getPaymentById(id: string, userId: string): Promise<Payment> {
+    requireNonEmptyString(id, 'Payment ID');
     ensureUserId(userId);
-    const payment = await this.paymentRepository.findOne({
-      where: { id, userId },
-      relations: ['user', 'paymentMethodRelation'],
-    });
-
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
+    const payment = requireEntity(
+      await this.paymentRepository.findOne({
+        where: { id, userId },
+        relations: ['user', 'paymentMethodRelation'],
+      }),
+      'Payment not found',
+    );
 
     return payment;
   }
@@ -514,6 +516,7 @@ export class PaymentService {
     dto: CreatePaymentMethodDto,
     userId: string,
   ): Promise<PaymentMethod> {
+    requireValue(dto, 'Payment method data is required');
     ensureUserId(userId);
 
     let lastFour = dto.lastFour;
@@ -601,14 +604,15 @@ export class PaymentService {
     dto: UpdatePaymentMethodDto,
     userId: string,
   ): Promise<PaymentMethod> {
+    requireValue(id, 'Payment method ID is required');
+    requireValue(dto, 'Payment method update data is required');
     ensureUserId(userId);
-    const paymentMethod = await this.paymentMethodRepository.findOne({
-      where: { id, userId },
-    });
-
-    if (!paymentMethod) {
-      throw new NotFoundException('Payment method not found');
-    }
+    const paymentMethod = requireEntity(
+      await this.paymentMethodRepository.findOne({
+        where: { id, userId },
+      }),
+      'Payment method not found',
+    );
 
     if (dto.isDefault) {
       await this.paymentMethodRepository.update(
@@ -635,6 +639,7 @@ export class PaymentService {
     filters: PaymentMethodFiltersDto,
     userId: string,
   ): Promise<PaymentMethod[]> {
+    requireValue(filters, 'Payment method filters are required');
     ensureUserId(userId);
     const query = this.paymentMethodRepository.createQueryBuilder('method');
 
@@ -650,14 +655,14 @@ export class PaymentService {
   }
 
   async removePaymentMethod(id: number, userId: string): Promise<void> {
+    requireValue(id, 'Payment method ID is required');
     ensureUserId(userId);
-    const paymentMethod = await this.paymentMethodRepository.findOne({
-      where: { id, userId },
-    });
-
-    if (!paymentMethod) {
-      throw new NotFoundException('Payment method not found');
-    }
+    const paymentMethod = requireEntity(
+      await this.paymentMethodRepository.findOne({
+        where: { id, userId },
+      }),
+      'Payment method not found',
+    );
 
     await this.paymentMethodRepository.softRemove(paymentMethod);
   }
@@ -681,6 +686,12 @@ export class PaymentService {
   ): Promise<Payment> {
     const tracer = this.tracer();
     const spanAttributes = { operation: 'stellar_rent' };
+    requireValue(dto, 'Stellar rent payment data is required');
+    ensureUserId(userId);
+    requireNonEmptyString(dto.userAddress, 'User address');
+    requireNonEmptyString(dto.userSecret, 'User secret');
+    requireNonEmptyString(dto.agreementId, 'Agreement ID');
+    requireNonEmptyString(dto.amount, 'Payment amount');
 
     // FX conversion (#1543): when the caller supplies a fiat amount/currency
     // instead of an already-converted XLM amount, resolve the settlement
@@ -817,7 +828,11 @@ export class PaymentService {
     dto: CreateEscrowGatewayDto,
     userId: string,
   ): Promise<Payment> {
+    requireValue(dto, 'Escrow deposit data is required');
     ensureUserId(userId);
+    requireNonEmptyString(dto.sourcePublicKey, 'Source public key');
+    requireNonEmptyString(dto.destinationPublicKey, 'Destination public key');
+    requireNonEmptyString(dto.amount, 'Payment amount');
 
     let escrow: StellarEscrow;
     try {
@@ -906,6 +921,8 @@ export class PaymentService {
     dto: ReleaseEscrowDto,
     userId: string,
   ): Promise<Payment | null> {
+    requireValue(escrowId, 'Escrow ID is required');
+    requireValue(dto, 'Escrow release data is required');
     ensureUserId(userId);
     const escrow = await this.stellarService.releaseEscrow({
       escrowId,
@@ -926,6 +943,8 @@ export class PaymentService {
     dto: RefundEscrowDto,
     userId: string,
   ): Promise<Payment | null> {
+    requireValue(escrowId, 'Escrow ID is required');
+    requireValue(dto, 'Escrow refund data is required');
     ensureUserId(userId);
     const escrow = await this.stellarService.refundEscrow({
       escrowId,
@@ -955,6 +974,7 @@ export class PaymentService {
 
   async reconcileStellarPayments(userId: string, limit = 50) {
     ensureUserId(userId);
+    requireValue(limit, 'Limit is required');
     const candidates = await this.paymentRepository.find({
       where: { userId },
       order: { updatedAt: 'DESC' },
@@ -1035,6 +1055,7 @@ export class PaymentService {
 
   async retryFailedPayments(userId: string, limit = 20) {
     ensureUserId(userId);
+    requireValue(limit, 'Limit is required');
     const failedPayments = await this.paymentRepository.find({
       where: { userId, status: PaymentStatus.FAILED },
       order: { updatedAt: 'DESC' },
@@ -1088,6 +1109,7 @@ export class PaymentService {
     dto: PaymentGatewayWebhookDto,
     secretHeader?: string,
   ) {
+    requireValue(dto, 'Webhook payload is required');
     const configuredSecret = process.env.PAYMENT_WEBHOOK_SECRET;
     if (!configuredSecret) {
       throw new UnauthorizedException(
@@ -1202,6 +1224,9 @@ export class PaymentService {
     metadata: Record<string, unknown> = {},
     overrides: { status?: PaymentStatus; refundAmount?: number } = {},
   ): Promise<Payment | null> {
+    requireValue(escrowId, 'Escrow ID is required');
+    requireNonEmptyString(status, 'Escrow status');
+    ensureUserId(userId);
     const referenceNumber = `escrow:${escrowId}`;
     const payment = await this.paymentRepository.findOne({
       where: { referenceNumber, userId },

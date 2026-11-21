@@ -84,6 +84,10 @@ export function createDatabaseConnectionOptions(
   const poolMax = parseNumber(env.DB_POOL_MAX, 20);
   const poolIdleTimeout = parseNumber(env.DB_POOL_IDLE_TIMEOUT, 30000);
   const poolConnTimeout = parseNumber(env.DB_POOL_CONNECTION_TIMEOUT, 2000);
+  // A hard server-side ceiling on every statement. The application-level
+  // interceptor only maps the resulting driver error to a clean 408; without
+  // this setting a runaway query would keep running after the HTTP timeout.
+  const queryTimeoutMs = parseNumber(env.DB_QUERY_TIMEOUT_MS, 30_000);
 
   // Validate pool configuration
   const validator = new PoolConfigValidator();
@@ -112,6 +116,10 @@ export function createDatabaseConnectionOptions(
       min: poolMin,
       idleTimeoutMillis: poolIdleTimeout,
       connectionTimeoutMillis: poolConnTimeout,
+      // `pg` forwards `options` verbatim to the server on connection, so
+      // this applies to every pooled and replicated connection.
+      options: `-c statement_timeout=${queryTimeoutMs}`,
+      query_timeout: queryTimeoutMs,
     },
   };
 
