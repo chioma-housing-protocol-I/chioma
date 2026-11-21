@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaymentInterval } from './entities/payment-schedule.entity';
 import { PaymentStatus } from './entities/payment.entity';
 import {
@@ -12,6 +12,71 @@ export function ensureUserId(userId: string): void {
   if (!userId) {
     throw new BadRequestException('User ID is required');
   }
+}
+
+/**
+ * Shared null/undefined assertion for payment service entry points. Keeping
+ * this in one place makes the guard message consistent across every method
+ * instead of repeating `if (!x) throw` throughout a large service.
+ */
+export function requireValue<T>(
+  value: T | null | undefined,
+  message: string,
+): T {
+  if (value === null || value === undefined) {
+    throw new BadRequestException(message);
+  }
+  return value;
+}
+
+/** Rejects null, undefined, empty and whitespace-only identifiers. */
+export function requireNonEmptyString(
+  value: string | null | undefined,
+  fieldName: string,
+): string {
+  const required = requireValue(value, `${fieldName} is required`);
+  if (required.trim().length === 0) {
+    throw new BadRequestException(`${fieldName} is required`);
+  }
+  return required;
+}
+
+/**
+ * Validates a currency amount and preserves the messages callers already
+ * rely on for recordPayment's bounds checks.
+ */
+export function requirePositiveAmount(
+  amount: number | null | undefined,
+): number {
+  const required = requireValue(amount, 'Payment amount is required');
+  if (!Number.isFinite(required) || Number.isNaN(required)) {
+    throw new BadRequestException('Payment amount must be a valid number');
+  }
+  if (required <= 0) {
+    throw new BadRequestException('Payment amount must be greater than 0');
+  }
+  if (required > 999999999.99) {
+    throw new BadRequestException(
+      'Payment amount cannot exceed 999,999,999.99',
+    );
+  }
+  if (!Number.isInteger(required * 100)) {
+    throw new BadRequestException(
+      'Payment amount can have at most 2 decimal places',
+    );
+  }
+  return required;
+}
+
+/** Converts a missing lookup result into a consistent domain error. */
+export function requireEntity<T>(
+  value: T | null | undefined,
+  message: string,
+): T {
+  if (value === null || value === undefined) {
+    throw new NotFoundException(message);
+  }
+  return value;
 }
 
 export function getIdempotencyKey(dto: {
