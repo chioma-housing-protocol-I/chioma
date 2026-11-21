@@ -136,9 +136,9 @@ export class WebhookSignatureService {
       throw new UnauthorizedException('Missing webhook signature');
     }
 
-    const secrets = Array.isArray(secret)
-      ? secret.filter((value): value is string => Boolean(value))
-      : this.resolveSecrets(secret as string | undefined);
+    const secrets = (Array.isArray(secret) ? secret : [secret])
+      .flatMap((value) => this.resolveSecrets(value))
+      .filter((value): value is string => Boolean(value));
     if (secrets.length === 0) {
       this.logRejection(
         WEBHOOK_SIGNATURE_REJECTION_REASONS.SECRET_NOT_CONFIGURED,

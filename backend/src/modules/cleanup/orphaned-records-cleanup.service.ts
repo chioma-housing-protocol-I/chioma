@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { AlertService } from '../monitoring/alert.service';
+import { errorDetails, runBackgroundTask } from './background-task.utils';
 
 interface OrphanCheck {
   label: string;
@@ -244,9 +245,18 @@ export class OrphanedRecordsCleanupService {
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async runScheduledCleanup(): Promise<void> {
-    const stats = await this.runCleanup();
-    this.logger.log(
-      `Orphaned records cleanup completed: totalOrphaned=${stats.totalOrphaned}, totalDeleted=${stats.totalDeleted}, deletionEnabled=${stats.deletionEnabled}, dryRun=${stats.dryRun}, aborted=${stats.aborted}`,
+    await runBackgroundTask(
+      this.logger,
+      { task: 'orphaned-records-cleanup' },
+      async () => {
+        const stats = await this.runCleanup();
+        this.logger.log(
+          `Orphaned records cleanup completed: totalOrphaned=${stats.totalOrphaned}, totalDeleted=${stats.totalDeleted}, deletionEnabled=${stats.deletionEnabled}, dryRun=${stats.dryRun}, aborted=${stats.aborted}`,
+          JSON.stringify({ task: 'orphaned-records-cleanup', ...stats }),
+        );
+        return stats;
+      },
+      this.alertService,
     );
   }
 
@@ -346,9 +356,38 @@ export class OrphanedRecordsCleanupService {
           `Deleted ${orphanedCount} orphaned row(s) from "${check.childTable}" (${check.label})`,
         );
       } catch (error) {
-        this.logger.warn(
-          `Orphan check "${check.label}" failed: ${(error as Error).message}`,
+        const details = errorDetails(error);
+        this.logger.error(
+          `Orphan check "${check.label}" failed`,
+          details.stack ?? details.message,
+          JSON.stringify({
+            task: 'orphaned-records-cleanup',
+            check: check.label,
+            childTable: check.childTable,
+            childColumn: check.childColumn,
+            error: details,
+          }),
         );
+        await this.alertService?.handleAlert({
+          alerts: [
+            {
+              status: 'firing',
+              labels: {
+                alertname: 'OrphanedRecordsCheckFailure',
+                severity: 'critical',
+                service: 'chioma-backend',
+                task: 'orphaned-records-cleanup',
+                check: check.label,
+              },
+              annotations: {
+                summary: `Orphaned records check failed: ${check.label}`,
+                description: details.message,
+              },
+              startsAt: new Date().toISOString(),
+              generatorURL: '',
+            },
+          ],
+        });
       }
     }
 

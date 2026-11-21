@@ -15,6 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { AuditRetentionService } from './audit-retention.service';
+import { BusinessEventService } from './business-event.service';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { AuditLog } from './entities/audit-log.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,6 +34,7 @@ export class AuditController {
   constructor(
     private readonly auditService: AuditService,
     private readonly auditRetentionService: AuditRetentionService,
+    private readonly businessEventService: BusinessEventService,
   ) {}
 
   @Get()
@@ -40,6 +42,15 @@ export class AuditController {
   @ApiPaginatedResponse(AuditLog)
   async queryAuditLogs(@Query() queryDto: QueryAuditLogsDto) {
     return this.auditService.query(queryDto);
+  }
+
+  @Get('business-events')
+  @ApiOperation({
+    summary: 'Query business state-change events by user, resource and date',
+  })
+  @ApiPaginatedResponse(AuditLog)
+  async queryBusinessEvents(@Query() queryDto: QueryAuditLogsDto) {
+    return this.businessEventService.query(queryDto);
   }
 
   @Get('trail/:entityType/:entityId')

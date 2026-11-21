@@ -512,10 +512,94 @@ export class DisputesService {
     dto?: AddEvidenceDto,
   ): Promise<DisputeEvidence> {
     const dispute = await this.findByDisputeId(disputeId);
-
-    // Check permissions
     await this.checkDisputePermission(dispute, userId, 'add_evidence');
+    return this.attachEvidenceToDispute(dispute, file, userId, dto);
+  }
 
+  /**
+   * Report a dispute and optionally attach evidence in the same request.
+   * Evidence is validated and malware-scanned before the dispute is created so
+   * invalid or quarantined attachments do not leave a partially reported
+   * dispute without the requested evidence.
+   */
+  async reportDispute(
+    createDisputeDto: CreateDisputeDto,
+    userId: string,
+    file?: any,
+    evidenceDescription?: string,
+  ): Promise<Dispute> {
+    if (file) {
+      const prepared = await this.prepareEvidenceUpload(file);
+      if (!prepared.scanResult.clean) {
+        await this.auditService.log({
+          action: AuditAction.SUSPICIOUS_ACTIVITY,
+          entityType: 'DisputeEvidence',
+          entityId: 'pre-create',
+          performedBy: userId,
+          level: AuditLevel.SECURITY,
+          metadata: {
+            agreementId: createDisputeDto.agreementId,
+            fileName: file.originalname,
+            reason: prepared.scanResult.reason ?? 'malware_detected',
+          },
+        });
+        throw new AuthorizationError(
+          'File failed malware scan and has been quarantined',
+        );
+      }
+
+      const dispute = await this.createDispute(createDisputeDto, userId);
+      await this.savePreparedEvidence(dispute, file, userId, prepared, {
+        description: evidenceDescription,
+      });
+      return this.findByDisputeId(dispute.disputeId);
+    }
+
+    return this.createDispute(createDisputeDto, userId);
+  }
+
+  private async attachEvidenceToDispute(
+    dispute: Dispute,
+    file: any,
+    userId: string,
+    dto?: Pick<AddEvidenceDto, 'description'>,
+  ): Promise<DisputeEvidence> {
+    const prepared = await this.prepareEvidenceUpload(file);
+    const saved = await this.savePreparedEvidence(
+      dispute,
+      file,
+      userId,
+      prepared,
+      dto,
+    );
+
+    if (!prepared.scanResult.clean) {
+      await this.auditService.log({
+        action: AuditAction.SUSPICIOUS_ACTIVITY,
+        entityType: 'DisputeEvidence',
+        entityId: saved.id.toString(),
+        performedBy: userId,
+        level: AuditLevel.SECURITY,
+        metadata: {
+          disputeId: dispute.disputeId,
+          fileName: file.originalname,
+          reason: prepared.scanResult.reason ?? 'malware_detected',
+        },
+      });
+      throw new AuthorizationError(
+        'File failed malware scan and has been quarantined',
+      );
+    }
+
+    return saved;
+  }
+
+  private async prepareEvidenceUpload(file: any): Promise<{
+    detectedType: string;
+    scanResult: { clean: boolean; reason?: string };
+    fileUrl: string;
+    processingStatus: EvidenceProcessingStatus;
+  }> {
     // Validate file content (magic bytes), never the declared MIME header
     const detectedType = this.validateFile(file);
 
@@ -542,45 +626,45 @@ export class DisputesService {
       processingStatus = EvidenceProcessingStatus.PENDING;
     }
 
+    return { detectedType, scanResult, fileUrl, processingStatus };
+  }
+
+  private async savePreparedEvidence(
+    dispute: Dispute,
+    file: any,
+    userId: string,
+    prepared: {
+      detectedType: string;
+      scanResult: { clean: boolean; reason?: string };
+      fileUrl: string;
+      processingStatus: EvidenceProcessingStatus;
+    },
+    dto?: Pick<AddEvidenceDto, 'description'>,
+  ): Promise<DisputeEvidence> {
     const evidence = this.evidenceRepository.create({
       dispute: dispute,
       uploadedBy: userId,
-      fileUrl, // This would be replaced with actual file storage URL
+      fileUrl: prepared.fileUrl, // This would be replaced with actual file storage URL
       fileName: file.originalname,
       // Store the sniffed content type, not the client-declared one.
-      fileType: detectedType,
+      fileType: prepared.detectedType,
       fileSize: file.size,
       description: dto?.description,
-      scanStatus: scanResult.clean ? ScanStatus.CLEAN : ScanStatus.QUARANTINED,
-      processingStatus,
+      scanStatus: prepared.scanResult.clean
+        ? ScanStatus.CLEAN
+        : ScanStatus.QUARANTINED,
+      processingStatus: prepared.processingStatus,
     });
     const saved = await this.evidenceRepository.save(evidence);
 
-    if (!scanResult.clean) {
-      await this.auditService.log({
-        action: AuditAction.SUSPICIOUS_ACTIVITY,
-        entityType: 'DisputeEvidence',
-        entityId: saved.id.toString(),
-        performedBy: userId,
-        level: AuditLevel.SECURITY,
-        metadata: {
-          disputeId,
-          fileName: file.originalname,
-          reason: scanResult.reason ?? 'malware_detected',
-        },
-      });
-      throw new AuthorizationError(
-        'File failed malware scan and has been quarantined',
-      );
-    }
-
-    if (isVideo) {
+    const isVideo = prepared.detectedType?.startsWith('video/') ?? false;
+    if (prepared.scanResult.clean && isVideo) {
       // Multi-quality transcoding runs off the request path so large video
       // uploads don't block the HTTP response; the evidence row is updated
       // with variants/thumbnail once the queued job completes.
       await this.queueManagementService.addVideoProcessingJob({
         evidenceId: saved.id,
-        sourcePath: fileUrl,
+        sourcePath: prepared.fileUrl,
         userId,
       });
     }

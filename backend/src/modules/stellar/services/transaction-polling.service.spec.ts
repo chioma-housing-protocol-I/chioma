@@ -18,7 +18,9 @@ describe('TransactionPollingService', () => {
     };
 
     // Mock SorobanRpc.Server
-    jest.spyOn(SorobanRpc, 'Server' as any).mockImplementation(() => mockServer);
+    jest
+      .spyOn(SorobanRpc, 'Server' as any)
+      .mockImplementation(() => mockServer);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -155,11 +157,13 @@ describe('TransactionPollingService', () => {
         const delays: number[] = [];
         const originalSetTimeout = global.setTimeout;
 
-        jest.spyOn(global, 'setTimeout').mockImplementation((callback, delay) => {
-          delays.push(delay as number);
-          originalSetTimeout(callback, 1);
-          return undefined as any;
-        });
+        jest
+          .spyOn(global, 'setTimeout')
+          .mockImplementation((callback, delay) => {
+            delays.push(delay as number);
+            originalSetTimeout(callback, 1);
+            return undefined as any;
+          });
 
         mockServer.getTransaction
           .mockResolvedValueOnce({
@@ -190,11 +194,13 @@ describe('TransactionPollingService', () => {
         const delays: number[] = [];
         const originalSetTimeout = global.setTimeout;
 
-        jest.spyOn(global, 'setTimeout').mockImplementation((callback, delay) => {
-          delays.push(delay as number);
-          originalSetTimeout(callback, 1);
-          return undefined as any;
-        });
+        jest
+          .spyOn(global, 'setTimeout')
+          .mockImplementation((callback, delay) => {
+            delays.push(delay as number);
+            originalSetTimeout(callback, 1);
+            return undefined as any;
+          });
 
         mockServer.getTransaction.mockResolvedValue({
           status: SorobanRpc.Api.GetTransactionStatus.PENDING,

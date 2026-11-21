@@ -9,6 +9,7 @@ Comprehensive form validation and feedback components for the Chioma frontend.
 Display validation feedback messages at the form level.
 
 **Features:**
+
 - Multiple status types: success, error, warning, info, validating
 - Support for single messages or multiple field errors
 - Optional icons with animations
@@ -66,6 +67,7 @@ import { FormValidationFeedback } from '@/components/forms';
 Display validation feedback for individual form fields.
 
 **Features:**
+
 - Compact size optimized for field-level use
 - Same status types as FormValidationFeedback
 - Animated loading state
@@ -110,6 +112,7 @@ import { FieldValidationFeedback } from '@/components/forms';
 All-in-one component that combines label, input, and validation feedback.
 
 **Features:**
+
 - Automatic label association with input
 - Required field indicator
 - Visual validation state (icons)
@@ -329,12 +332,8 @@ export default function RHFExample() {
 ## TypeScript Types
 
 ```typescript
-export type ValidationStatus = 
-  | 'success' 
-  | 'error' 
-  | 'warning' 
-  | 'info' 
-  | 'validating';
+export type ValidationStatus =
+  'success' | 'error' | 'warning' | 'info' | 'validating';
 
 export interface FieldError {
   field: string;
@@ -439,12 +438,15 @@ describe('FormValidationFeedback', () => {
         success="Success!"
         autoDismiss={1000}
         onDismiss={onDismiss}
-      />
+      />,
     );
-    
-    await waitFor(() => {
-      expect(onDismiss).toHaveBeenCalled();
-    }, { timeout: 1500 });
+
+    await waitFor(
+      () => {
+        expect(onDismiss).toHaveBeenCalled();
+      },
+      { timeout: 1500 },
+    );
   });
 });
 ```
@@ -481,11 +483,13 @@ describe('FormValidationFeedback', () => {
 If you're currently using `FormErrorAlert` or `FormErrorSummary`:
 
 **Before:**
+
 ```tsx
 <FormErrorAlert message="Invalid credentials" />
 ```
 
 **After:**
+
 ```tsx
 <FormValidationFeedback error="Invalid credentials" />
 ```
@@ -499,6 +503,7 @@ The new components are backward compatible and provide more features.
 See `FormValidationFeedbackExample.tsx` for a comprehensive demo of all features.
 
 Run the example:
+
 ```bash
 # In your Next.js app
 import FormValidationFeedbackExample from '@/components/forms/FormValidationFeedbackExample';
@@ -511,6 +516,7 @@ import FormValidationFeedbackExample from '@/components/forms/FormValidationFeed
 ## Support
 
 For issues or questions:
+
 - See the example file: `FormValidationFeedbackExample.tsx`
 - Check the main documentation: `/frontend/docs`
 - Open an issue on GitHub

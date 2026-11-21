@@ -9,8 +9,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash } from 'crypto';
 import { Payment, PaymentStatus } from './entities/payment.entity';
-import { PaymentGatewayWebhookDto } from './dto/payment-gateway.dto';
 import { IdempotencyService } from '../../common/idempotency';
+import {
+  PAYMENT_WEBHOOK_BACKOFF_BASE_MS,
+  computeWebhookBackoffDelayMs,
+  isRetryableWebhookProcessingError,
+  sleep,
+} from './payment-webhook-retry';
 
 const WEBHOOK_IDEMPOTENCY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const WEBHOOK_PROCESSING_CLAIM_TTL_MS = 5 * 60 * 1000;
@@ -45,7 +50,10 @@ export class PaymentWebhookService {
     return this.idempotencyService.process(
       idempotencyKey,
       WEBHOOK_IDEMPOTENCY_TTL_MS,
-      () => this.applyPaymentWebhook(dto),
+      () =>
+        this.withProcessingRetry('payment-gateway', idempotencyKey, () =>
+          this.applyPaymentWebhook(dto),
+        ),
     );
   }
 
@@ -66,7 +74,11 @@ export class PaymentWebhookService {
       payment?: Payment;
     };
     try {
-      result = await this.applyRefundWebhook(dto);
+      result = await this.withProcessingRetry(
+        'refund',
+        idempotencyKey,
+        () => this.applyRefundWebhook(dto),
+      );
     } catch (error) {
       await this.idempotencyService.releaseClaim(idempotencyKey, claimToken);
       throw error;
@@ -77,6 +89,53 @@ export class PaymentWebhookService {
       WEBHOOK_IDEMPOTENCY_TTL_MS,
     );
     return result;
+  }
+
+  private async withProcessingRetry<T>(
+    webhookType: 'payment-gateway' | 'refund',
+    idempotencyKey: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const maxAttempts = PAYMENT_WEBHOOK_BACKOFF_BASE_MS.length + 1;
+    let attempt = 0;
+    let lastError: unknown;
+
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      try {
+        if (attempt > 1) {
+          this.logger.log(
+            `Retrying ${webhookType} webhook processing (attempt ${attempt}/${maxAttempts}, key=${idempotencyKey})`,
+          );
+        }
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        const retryable = isRetryableWebhookProcessingError(error);
+        const hasNextAttempt = attempt < maxAttempts;
+        const message =
+          error instanceof Error ? error.message : String(error);
+
+        this.logger.warn(
+          `Webhook processing attempt failed (type=${webhookType}, attempt=${attempt}/${maxAttempts}, retryable=${retryable}, key=${idempotencyKey}): ${message}`,
+        );
+
+        if (!retryable || !hasNextAttempt) {
+          break;
+        }
+
+        const delayMs = computeWebhookBackoffDelayMs(attempt - 1);
+        this.logger.warn(
+          `Scheduling webhook retry with backoff (type=${webhookType}, nextAttempt=${attempt + 1}/${maxAttempts}, delayMs=${delayMs}, key=${idempotencyKey})`,
+        );
+        await sleep(delayMs);
+      }
+    }
+
+    this.logger.error(
+      `Webhook processing exhausted retries (type=${webhookType}, attempts=${attempt}/${maxAttempts}, key=${idempotencyKey})`,
+    );
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   private assertWebhookSecret(secretHeader?: string) {

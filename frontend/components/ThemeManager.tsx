@@ -8,16 +8,10 @@ export default function ThemeManager() {
 
   useEffect(() => {
     const root = document.documentElement;
-    const systemPreference = window.matchMedia(
-      '(prefers-color-scheme: dark)',
-    );
+    const systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
     const applyPreference = (systemPrefersDark = systemPreference.matches) => {
       const resolvedTheme =
-        theme === 'system'
-          ? systemPrefersDark
-            ? 'dark'
-            : 'light'
-          : theme;
+        theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : theme;
 
       root.classList.toggle('dark', resolvedTheme === 'dark');
       root.style.colorScheme = resolvedTheme;

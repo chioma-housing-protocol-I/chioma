@@ -4,13 +4,14 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useConflicts } from '@/lib/offline/hooks';
 import {
   resolveConflictWithStrategy,
   type ConflictResolutionStrategy,
 } from '@/lib/offline/conflict-resolver';
 import { FiX, FiAlertTriangle } from 'react-icons/fi';
+import { useModalKeyboardNavigation } from '@/hooks/useModalKeyboardNavigation';
 
 interface ConflictResolutionModalProps {
   isOpen: boolean;
@@ -25,6 +26,9 @@ export function ConflictResolutionModal({
   const [resolving, setResolving] = useState(false);
   const [selectedStrategy, setSelectedStrategy] =
     useState<ConflictResolutionStrategy>('server-wins');
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalKeyboardNavigation(modalRef, onClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -61,8 +65,15 @@ export function ConflictResolutionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+      >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">

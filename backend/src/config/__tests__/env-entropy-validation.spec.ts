@@ -5,7 +5,7 @@
 describe('JWT Entropy Validation', () => {
   // Mock the validation functions by importing them dynamically
   // Note: These functions need to be exported from env.validation.ts for testing
-  
+
   /**
    * Simulates the entropy calculation from env.validation.ts
    */
@@ -202,8 +202,7 @@ describe('JWT Entropy Validation', () => {
     });
 
     it('should accept 48-character random alphanumeric', () => {
-      const strongSecret =
-        'jB2kL4mN6pQ8rS0tU2vW4xY6zA8bC0dE2fG4hI6jK8lM0';
+      const strongSecret = 'jB2kL4mN6pQ8rS0tU2vW4xY6zA8bC0dE2fG4hI6jK8lM0';
       const entropy = calculateShannonEntropyBitsPerChar(strongSecret);
       expect(entropy).toBeGreaterThan(4.5);
     });

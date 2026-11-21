@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, FindOptionsWhere } from 'typeorm';
 import { AuditLog, AuditLevel } from './entities/audit-log.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +14,20 @@ export class AuditRetentionService {
     private auditLogRepository: Repository<AuditLog>,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Retention is the only sanctioned way to remove an audit row. The DB
+   * trigger blocks all other deletes; the local flag is scoped to this
+   * transaction so it cannot leak into a request handling path.
+   */
+  private async deleteRetained(
+    criteria: FindOptionsWhere<AuditLog>,
+  ): Promise<{ affected?: number }> {
+    return this.auditLogRepository.manager.transaction(async (manager) => {
+      await manager.query(`SET LOCAL audit.allow_mutation = 'on'`);
+      return manager.getRepository(AuditLog).delete(criteria);
+    });
+  }
 
   private getRetentionDays(level: AuditLevel): number {
     const envKey = {
@@ -53,11 +67,11 @@ export class AuditRetentionService {
       const warnCutoff = new Date(
         now.getTime() - warnDays * 24 * 60 * 60 * 1000,
       );
-      const infoWarnDeleted = await this.auditLogRepository.delete({
+      const infoWarnDeleted = await this.deleteRetained({
         level: AuditLevel.INFO,
         performed_at: LessThan(infoCutoff),
       });
-      const warnDeleted = await this.auditLogRepository.delete({
+      const warnDeleted = await this.deleteRetained({
         level: AuditLevel.WARN,
         performed_at: LessThan(warnCutoff),
       });
@@ -67,7 +81,7 @@ export class AuditRetentionService {
       const errorCutoff = new Date(
         now.getTime() - errorDays * 24 * 60 * 60 * 1000,
       );
-      const errorDeleted = await this.auditLogRepository.delete({
+      const errorDeleted = await this.deleteRetained({
         level: AuditLevel.ERROR,
         performed_at: LessThan(errorCutoff),
       });
@@ -77,7 +91,7 @@ export class AuditRetentionService {
       const securityCutoff = new Date(
         now.getTime() - securityDays * 24 * 60 * 60 * 1000,
       );
-      const securityDeleted = await this.auditLogRepository.delete({
+      const securityDeleted = await this.deleteRetained({
         level: AuditLevel.SECURITY,
         performed_at: LessThan(securityCutoff),
       });
@@ -97,7 +111,7 @@ export class AuditRetentionService {
         Date.now() - daysToKeep * 24 * 60 * 60 * 1000,
       );
 
-      const result = await this.auditLogRepository.delete({
+      const result = await this.deleteRetained({
         performed_at: LessThan(cutoffDate),
         level: AuditLevel.INFO, // Only delete INFO logs manually
       });

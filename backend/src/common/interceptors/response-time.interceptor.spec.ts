@@ -149,6 +149,32 @@ describe('ResponseTimeInterceptor', () => {
     expect(endpoints).toEqual(['/users/:id', '/users/:id']);
   });
 
+  it('unmatched_route_bounded_bucket — requests with no req.route collapse into one key (#2036)', async () => {
+    const endpoints: string[] = [];
+    mockPerformanceMonitor.recordRequestMetrics.mockImplementation(
+      (m: PerformanceMetrics) => endpoints.push(m.endpoint),
+    );
+
+    // Distinct raw paths that never matched any route (404s, scanning/probe
+    // traffic). Before the fix these each became their own unbounded,
+    // never-evicted key in PerformanceMonitorService's in-memory maps.
+    await Promise.all(
+      ['/wp-admin.php', '/.env', '/does-not-exist/42'].map(
+        (rawPath) =>
+          new Promise<void>((resolve) => {
+            interceptor
+              .intercept(makeContext({ path: rawPath }), {
+                handle: () => of({}),
+              })
+              .subscribe({ complete: resolve });
+          }),
+      ),
+    );
+    await flushImmediate();
+
+    expect(endpoints).toEqual(['unmatched', 'unmatched', 'unmatched']);
+  });
+
   it('slow_request_warning_logged — warn with endpoint and responseTime > threshold', async () => {
     const ctx = makeContext({
       routePath: '/api/slow',

@@ -20,7 +20,10 @@ function makeContext(
     getClass: () => ({}),
   } as unknown as ExecutionContext;
 
-  return { _ctx: ctx, _reflector: mockReflector } as unknown as ExecutionContext;
+  return {
+    _ctx: ctx,
+    _reflector: mockReflector,
+  } as unknown as ExecutionContext;
 }
 
 // Helper that wires reflector + context together properly for the guard.

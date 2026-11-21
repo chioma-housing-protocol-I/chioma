@@ -14,6 +14,7 @@ pub enum PropertyError {
     InvalidMetadata = 8,
     RateLimitExceeded = 9,
     CooldownNotMet = 10,
+    InvalidWasmHash = 11,
 }
 
 /// Pins every `PropertyError` discriminant so off-chain code that maps
@@ -36,5 +37,6 @@ mod pin_tests {
         assert_eq!(PropertyError::InvalidMetadata as u32, 8);
         assert_eq!(PropertyError::RateLimitExceeded as u32, 9);
         assert_eq!(PropertyError::CooldownNotMet as u32, 10);
+        assert_eq!(PropertyError::InvalidWasmHash as u32, 11);
     }
 }

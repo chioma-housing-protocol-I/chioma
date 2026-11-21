@@ -72,6 +72,7 @@ describe('UsersService', () => {
     dataProcessingAgreementVersion: null,
     dataProcessingAgreementAcceptedAt: null,
     dataProcessingAgreementUpdatedAt: null,
+    emailCollectedAt: null,
   };
 
   const mockUserRepository = {
@@ -81,6 +82,7 @@ describe('UsersService', () => {
     update: jest.fn(),
     softDelete: jest.fn(),
     delete: jest.fn(),
+    remove: jest.fn(),
     restore: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
@@ -498,6 +500,22 @@ describe('UsersService', () => {
     });
   });
 
+  describe('hardDeleteAccount', () => {
+    it('actually removes the row rather than soft-deleting it (#2064)', async () => {
+      // Regression test: this previously called repository.softRemove,
+      // TypeORM's soft-delete method, so no admin action in this
+      // codebase ever permanently erased a user row despite this
+      // method's name and its "Admin only, permanent" API docs.
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.remove.mockResolvedValue(mockUser);
+
+      const result = await service.hardDeleteAccount('1');
+
+      expect(mockUserRepository.remove).toHaveBeenCalledWith(mockUser);
+      expect(result).toHaveProperty('message');
+    });
+  });
+
   describe('exportUserData', () => {
     beforeEach(() => {
       mockUserRepository.findOne.mockResolvedValue({ ...mockUser });
@@ -530,7 +548,7 @@ describe('UsersService', () => {
       );
     });
 
-    it('attributes the audit entry to the acting admin when requested on a user\'s behalf', async () => {
+    it("attributes the audit entry to the acting admin when requested on a user's behalf", async () => {
       await service.exportUserData('1', 'admin-1');
 
       expect(mockAuditService.log).toHaveBeenCalledWith(

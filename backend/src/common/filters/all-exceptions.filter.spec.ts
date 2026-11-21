@@ -1,4 +1,8 @@
-import { BadRequestException, HttpException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ArgumentsHost } from '@nestjs/common/interfaces';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { ErrorCode } from '../errors/error-codes';
@@ -35,7 +39,7 @@ describe('AllExceptionsFilter', () => {
     };
   });
 
-  it('formats validation errors consistently for ValidationPipe bad requests', () => {
+  it('formats validation errors consistently for a plain 400 with an array message', () => {
     const exception = new BadRequestException([
       'email must be an email',
       'password must be longer than or equal to 8 characters',
@@ -61,6 +65,32 @@ describe('AllExceptionsFilter', () => {
       { message: 'email must be an email' },
       { message: 'password must be longer than or equal to 8 characters' },
     ]);
+  });
+
+  it('formats validation errors from the global ValidationPipe as 422, not 400 (#2062)', () => {
+    // The global ValidationPipe (main.ts) is configured with
+    // errorHttpStatusCode: UNPROCESSABLE_ENTITY, so this is the actual
+    // exception shape ValidationPipe throws today, not BadRequestException.
+    const exception = new UnprocessableEntityException([
+      'email must be an email',
+      'password must be longer than or equal to 8 characters',
+    ]);
+
+    filter.catch(exception, buildArgumentsHost(request, response));
+
+    expect(response.status).toHaveBeenCalledWith(422);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 422,
+        message: [
+          'email must be an email',
+          'password must be longer than or equal to 8 characters',
+        ],
+        error: 'Unprocessable Entity',
+        code: ErrorCode.VALIDATION_FAILED,
+        path: '/api/test',
+      }),
+    );
   });
 
   it('returns generic internal server error shape for unexpected exceptions', () => {

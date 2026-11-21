@@ -49,7 +49,9 @@ describe('Frontend Logger Service', () => {
     Logger.warn('Warning condition encountered');
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[WARN] Warning condition encountered');
+    expect(warnSpy.mock.calls[0][0]).toContain(
+      '[WARN] Warning condition encountered',
+    );
   });
 
   it('logs errors and notifies error reporter if present', () => {
@@ -82,7 +84,9 @@ describe('Frontend Logger Service', () => {
     childLogger.log('Child logger message');
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
-    expect(consoleSpy.mock.calls[0][0]).toContain('[BackgroundSync] Child logger message');
+    expect(consoleSpy.mock.calls[0][0]).toContain(
+      '[BackgroundSync] Child logger message',
+    );
   });
 
   it('supports instantiated loggers with context', () => {
@@ -93,6 +97,8 @@ describe('Frontend Logger Service', () => {
     customLogger.log('Custom message');
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
-    expect(consoleSpy.mock.calls[0][0]).toContain('[CustomContext] Custom message');
+    expect(consoleSpy.mock.calls[0][0]).toContain(
+      '[CustomContext] Custom message',
+    );
   });
 });

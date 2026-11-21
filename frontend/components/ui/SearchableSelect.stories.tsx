@@ -16,14 +16,11 @@ const cities: SelectOption[] = [
   'Nairobi',
 ].map((city) => ({ value: city.toLowerCase(), label: city }));
 
-const manyOptions: SelectOption[] = Array.from(
-  { length: 10000 },
-  (_, idx) => ({
-    value: `unit-${idx + 1}`,
-    label: `Unit ${idx + 1}`,
-    disabled: idx % 25 === 24,
-  }),
-);
+const manyOptions: SelectOption[] = Array.from({ length: 10000 }, (_, idx) => ({
+  value: `unit-${idx + 1}`,
+  label: `Unit ${idx + 1}`,
+  disabled: idx % 25 === 24,
+}));
 
 const properties: SelectOption<{ price: number; beds: number }>[] = [
   { value: 'p1', label: 'Lekki Loft', data: { price: 1200, beds: 2 } },

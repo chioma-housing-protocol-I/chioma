@@ -94,9 +94,7 @@ export function SearchableSelect<T = unknown>({
 
   const open = () => {
     if (disabled) return;
-    const selectedIndex = options.findIndex(
-      (option) => option.value === value,
-    );
+    const selectedIndex = options.findIndex((option) => option.value === value);
     setQuery('');
     setIsOpen(true);
     setActiveIndex(
@@ -217,10 +215,7 @@ export function SearchableSelect<T = unknown>({
   };
 
   const handleTriggerKeyDown = (event: React.KeyboardEvent) => {
-    if (
-      !isOpen &&
-      ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)
-    ) {
+    if (!isOpen && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
       event.preventDefault();
       open();
     }
@@ -244,9 +239,7 @@ export function SearchableSelect<T = unknown>({
         onKeyDown={handleTriggerKeyDown}
         className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span
-          className={cn('truncate', !selectedOption && 'text-neutral-500')}
-        >
+        <span className={cn('truncate', !selectedOption && 'text-neutral-500')}>
           {selectedOption
             ? renderValue
               ? renderValue(selectedOption)

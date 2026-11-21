@@ -11,5 +11,6 @@ export interface HttpLog {
   requestHeaders?: Record<string, any>;
   requestBody?: any;
   responseHeaders?: Record<string, any>;
+  responseBody?: any;
   responseSize?: number | string;
 }

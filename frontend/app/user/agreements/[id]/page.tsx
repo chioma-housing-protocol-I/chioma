@@ -83,6 +83,7 @@ export default function AgreementDetailsPage() {
             src={imageUrl}
             alt={`${agreement.displayTitle ?? id} agreement preview`}
             className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
             referrerPolicy="no-referrer"
             onError={(e) => {
               e.currentTarget.src = AGREEMENT_PREVIEW_FALLBACK;

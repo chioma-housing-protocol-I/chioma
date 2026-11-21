@@ -14,6 +14,7 @@ import {
   CACHE_PREFIX_FX_RATE,
   TTL_FX_RATE_MS,
 } from '../../common/cache/cache.constants';
+import { err, ok, Result } from '../../common/utils/result';
 
 export interface FxRateResult {
   fromCurrency: string;
@@ -97,8 +98,14 @@ export class FxRateService {
       };
     }
 
-    await this.validateCurrency(fromCurrency);
-    await this.validateCurrency(toCurrency);
+    const fromValidation = await this.validateCurrency(fromCurrency);
+    if (!fromValidation.ok) {
+      throw fromValidation.error;
+    }
+    const toValidation = await this.validateCurrency(toCurrency);
+    if (!toValidation.ok) {
+      throw toValidation.error;
+    }
 
     if (this.provider === 'mock') {
       return this.getMockRate(fromCurrency, toCurrency);
@@ -131,16 +138,26 @@ export class FxRateService {
     };
   }
 
-  private async validateCurrency(currency: string): Promise<void> {
+  /**
+   * Internal helper: failure is returned as an Err so callers must decide how
+   * to surface it. `getRate` still throws BadRequestException, preserving the
+   * public contract.
+   */
+  private async validateCurrency(
+    currency: string,
+  ): Promise<Result<string, BadRequestException>> {
     const supportedCurrency = await this.supportedCurrencyRepo.findOne({
       where: { code: currency, isActive: true },
     });
 
     if (!supportedCurrency) {
-      throw new BadRequestException(
-        `Currency ${currency} is not supported or not active`,
+      return err(
+        new BadRequestException(
+          `Currency ${currency} is not supported or not active`,
+        ),
       );
     }
+    return ok(currency);
   }
 
   /**

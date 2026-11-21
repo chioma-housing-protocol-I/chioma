@@ -10,12 +10,14 @@ import { UserKycStatusService } from '../users/user-kyc-status.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/entities/user.entity';
+import { KycManualReviewService } from './kyc-manual-review.service';
 
 describe('KycService', () => {
   let service: KycService;
   let _kycRepository: Repository<Kyc>;
   let userKycStatusService: UserKycStatusService;
   let encryptionService: EncryptionService;
+  let manualReviewService: { queueForManualReview: jest.Mock };
 
   const mockKycRepository = {
     create: jest.fn(),
@@ -83,6 +85,10 @@ describe('KycService', () => {
           provide: NotificationsService,
           useValue: { notify: jest.fn().mockResolvedValue(undefined) },
         },
+        {
+          provide: KycManualReviewService,
+          useValue: { queueForManualReview: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -91,6 +97,9 @@ describe('KycService', () => {
     userKycStatusService =
       module.get<UserKycStatusService>(UserKycStatusService);
     encryptionService = module.get<EncryptionService>(EncryptionService);
+    manualReviewService = module.get<KycManualReviewService>(
+      KycManualReviewService,
+    ) as unknown as { queueForManualReview: jest.Mock };
   });
 
   afterEach(() => {
@@ -337,6 +346,10 @@ describe('KycService', () => {
           { provide: EncryptionService, useValue: mockEncryptionService },
           { provide: AuditService, useValue: mockAuditService },
           { provide: NotificationsService, useValue: { notify } },
+          {
+            provide: KycManualReviewService,
+            useValue: { queueForManualReview: jest.fn() },
+          },
         ],
       }).compile();
       const svc = module.get(KycService);
@@ -384,6 +397,10 @@ describe('KycService', () => {
           { provide: EncryptionService, useValue: mockEncryptionService },
           { provide: AuditService, useValue: mockAuditService },
           { provide: NotificationsService, useValue: { notify } },
+          {
+            provide: KycManualReviewService,
+            useValue: { queueForManualReview: jest.fn() },
+          },
         ],
       }).compile();
       const svc = module.get(KycService);
@@ -455,6 +472,10 @@ describe('KycService', () => {
           {
             provide: NotificationsService,
             useValue: { notify: jest.fn().mockResolvedValue(undefined) },
+          },
+          {
+            provide: KycManualReviewService,
+            useValue: { queueForManualReview: jest.fn() },
           },
         ],
       }).compile();
@@ -608,6 +629,44 @@ describe('KycService', () => {
       expect(mockAuditService.log).not.toHaveBeenCalledWith(
         expect.objectContaining({ action: 'KYC_REJECTED' }),
       );
+    });
+  });
+
+  describe('provider timeout fallback', () => {
+    it('queues the user for manual review instead of failing submission', async () => {
+      const queued = { id: 'kyc-queued', status: KycStatus.MANUAL_REVIEW };
+      manualReviewService.queueForManualReview.mockResolvedValue(queued);
+      (service as any).submitToProvider = jest
+        .fn()
+        .mockRejectedValue(new Error('provider request timed out'));
+
+      const result = await service.submitKyc(mockUserId, {
+        kycData: mockKycData,
+      });
+
+      expect(result).toEqual(queued);
+      expect(manualReviewService.queueForManualReview).toHaveBeenCalledWith(
+        mockUserId,
+        mockKycData,
+        expect.any(String),
+        expect.stringContaining('timed out'),
+      );
+      expect(mockKycRepository.save).not.toHaveBeenCalled();
+      expect(userKycStatusService.setStatus).not.toHaveBeenCalledWith(
+        mockUserId,
+        KycStatus.PENDING,
+      );
+    });
+
+    it('still propagates a non-timeout provider error', async () => {
+      (service as any).submitToProvider = jest
+        .fn()
+        .mockRejectedValue(new Error('invalid document format'));
+
+      await expect(
+        service.submitKyc(mockUserId, { kycData: mockKycData }),
+      ).rejects.toThrow('invalid document format');
+      expect(manualReviewService.queueForManualReview).not.toHaveBeenCalled();
     });
   });
 });

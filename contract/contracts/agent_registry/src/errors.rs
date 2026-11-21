@@ -19,6 +19,7 @@ pub enum AgentError {
     TransactionNotCompleted = 13,
     RateLimitExceeded = 14,
     CooldownNotMet = 15,
+    InvalidWasmHash = 16,
 }
 
 /// Pins every `AgentError` discriminant so off-chain code that maps error
@@ -46,5 +47,6 @@ mod pin_tests {
         assert_eq!(AgentError::TransactionNotCompleted as u32, 13);
         assert_eq!(AgentError::RateLimitExceeded as u32, 14);
         assert_eq!(AgentError::CooldownNotMet as u32, 15);
+        assert_eq!(AgentError::InvalidWasmHash as u32, 16);
     }
 }

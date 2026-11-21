@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { execFile } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
+import { AlertService } from '../monitoring/alert.service';
+import { runBackgroundTask } from './background-task.utils';
 
 const execFileAsync = promisify(execFile);
 
@@ -25,25 +27,40 @@ export interface SecurityPatchSummary {
 export class SecurityPatchManagementService {
   private readonly logger = new Logger(SecurityPatchManagementService.name);
 
+  constructor(@Optional() private readonly alertService?: AlertService) {}
+
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async runScheduledSecurityPatchCheck(): Promise<void> {
-    const summary = await this.checkForSecurityPatches();
+    await runBackgroundTask(
+      this.logger,
+      { task: 'security-patch-check' },
+      async () => {
+        const summary = await this.checkForSecurityPatches();
 
-    if (summary.recommendedAction === 'urgent_patch') {
-      this.logger.warn(
-        `Security audit found ${summary.vulnerabilities.high + summary.vulnerabilities.critical} high/critical issue(s)`,
-      );
-      return;
-    }
+        if (summary.recommendedAction === 'urgent_patch') {
+          this.logger.warn(
+            `Security audit found ${summary.vulnerabilities.high + summary.vulnerabilities.critical} high/critical issue(s)`,
+            JSON.stringify({ task: 'security-patch-check', ...summary }),
+          );
+          return summary;
+        }
 
-    if (summary.recommendedAction === 'scheduled_patch') {
-      this.logger.warn(
-        `Security audit found ${summary.vulnerabilities.moderate} moderate issue(s)`,
-      );
-      return;
-    }
+        if (summary.recommendedAction === 'scheduled_patch') {
+          this.logger.warn(
+            `Security audit found ${summary.vulnerabilities.moderate} moderate issue(s)`,
+            JSON.stringify({ task: 'security-patch-check', ...summary }),
+          );
+          return summary;
+        }
 
-    this.logger.log('Security audit completed without vulnerable packages');
+        this.logger.log(
+          'Security audit completed without vulnerable packages',
+          JSON.stringify({ task: 'security-patch-check', ...summary }),
+        );
+        return summary;
+      },
+      this.alertService,
+    );
   }
 
   async checkForSecurityPatches(

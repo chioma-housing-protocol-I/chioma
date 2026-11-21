@@ -163,12 +163,12 @@ export function ReviewForm({
       <FormErrorSummary errors={errors} submitCount={submitCount} />
 
       <div className="relative z-10">
-        <label
+        <p
           id="rating-label"
           className="mb-3 block text-[10px] font-bold uppercase tracking-widest text-blue-200/60"
         >
           Rate your experience
-        </label>
+        </p>
         <div
           role="group"
           aria-labelledby="rating-label"

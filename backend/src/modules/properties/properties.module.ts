@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PropertiesController } from './properties.controller';
 import { PropertyWizardController } from './property-wizard.controller';
 import { PropertiesService } from './properties.service';
+import { PropertyImportService } from './property-import.service';
 import { PropertyWizardService } from './property-wizard.service';
 import { PropertyCacheWarmingService } from './property-cache-warming.service';
 import { PropertyModesService } from './services/property-modes.service';
@@ -21,6 +22,7 @@ import { AvailabilityController } from './availability.controller';
 import { FraudModule } from '../fraud/fraud.module';
 import { SearchModule } from '../search/search.module';
 import { ReviewsModule } from '../reviews/reviews.module';
+import { PropertiesResolver } from './graphql/properties.resolver';
 
 @Module({
   imports: [
@@ -45,15 +47,18 @@ import { ReviewsModule } from '../reviews/reviews.module';
   ],
   providers: [
     PropertiesService,
+    PropertyImportService,
     PropertyWizardService,
     PropertyCacheWarmingService,
     CacheService,
     PropertyModesService,
     AvailabilityService,
     ICalService,
+    PropertiesResolver,
   ],
   exports: [
     PropertiesService,
+    PropertyImportService,
     PropertyWizardService,
     PropertyModesService,
     AvailabilityService,

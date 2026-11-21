@@ -234,7 +234,10 @@ describe('ReviewForm', () => {
 
   describe('edit mode (reviewId provided) (#1556)', () => {
     beforeEach(() => {
-      mockUseTenantReview.mockReturnValue({ data: mockReview, isLoading: false });
+      mockUseTenantReview.mockReturnValue({
+        data: mockReview,
+        isLoading: false,
+      });
     });
 
     it('shows a loading state while the review is being fetched', () => {
@@ -260,7 +263,10 @@ describe('ReviewForm', () => {
     });
 
     it('does not show the delete button when there is no review yet', () => {
-      mockUseTenantReview.mockReturnValue({ data: undefined, isLoading: false });
+      mockUseTenantReview.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
 
       render(React.createElement(ReviewForm, { reviewId: 'rev-1' }));
       expect(screen.queryByText('Delete')).not.toBeInTheDocument();
@@ -298,7 +304,9 @@ describe('ReviewForm', () => {
         },
         { timeout: 3000 },
       );
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/user/reviews'));
+      await waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/user/reviews'),
+      );
     });
 
     it('navigates back when Cancel is clicked', () => {
@@ -321,7 +329,9 @@ describe('ReviewForm', () => {
       await waitFor(() => {
         expect(mockMutateAsyncDelete).toHaveBeenCalledWith('rev-1');
       });
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/user/reviews'));
+      await waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/user/reviews'),
+      );
 
       vi.unstubAllGlobals();
     });

@@ -209,6 +209,10 @@ export class AuditService {
     queryBuilder.orderBy(sortColumn, queryDto.sortOrder ?? 'DESC');
 
     // Apply filters
+    if (queryDto.businessEventsOnly) {
+      queryBuilder.andWhere("audit_log.metadata ->> 'businessEvent' = 'true'");
+    }
+
     if (queryDto.startDate) {
       queryBuilder.andWhere('audit_log.performed_at >= :startDate', {
         startDate: DateUtils.parseDate(queryDto.startDate),

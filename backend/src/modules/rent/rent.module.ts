@@ -27,8 +27,18 @@ import { Dispute } from '../disputes/entities/dispute.entity';
     NotificationsModule,
     StellarModule,
   ],
-  providers: [RentService, RentReminderService, RentReconciliationService, RentAgreementService],
+  providers: [
+    RentService,
+    RentReminderService,
+    RentReconciliationService,
+    RentAgreementService,
+  ],
   controllers: [RentController],
-  exports: [RentService, RentReminderService, RentReconciliationService, RentAgreementService],
+  exports: [
+    RentService,
+    RentReminderService,
+    RentReconciliationService,
+    RentAgreementService,
+  ],
 })
 export class RentModule {}

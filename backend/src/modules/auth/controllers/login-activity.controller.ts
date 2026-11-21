@@ -109,7 +109,10 @@ export class LoginActivityController {
     status: 200,
     description: 'Suspicious activities retrieved successfully',
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,
@@ -140,7 +143,10 @@ export class LoginActivityController {
     status: 200,
     description: 'User login history retrieved successfully',
   })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,

@@ -198,9 +198,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.DATA_INTEGRITY_ERROR]: 'Data integrity check failed',
   [ErrorCode.DATABASE_ERROR]: 'Database operation failed',
   [ErrorCode.CACHE_ERROR]: 'Cache operation failed',
-  [ErrorCode.DECRYPTION_INVALID_KEY]: 'Decryption failed: key mismatch or misconfiguration',
-  [ErrorCode.DECRYPTION_CORRUPTED_DATA]: 'Decryption failed: ciphertext is malformed or truncated',
-  [ErrorCode.DECRYPTION_TAMPERED]: 'Decryption failed: data integrity check indicates tampering',
+  [ErrorCode.DECRYPTION_INVALID_KEY]:
+    'Decryption failed: key mismatch or misconfiguration',
+  [ErrorCode.DECRYPTION_CORRUPTED_DATA]:
+    'Decryption failed: ciphertext is malformed or truncated',
+  [ErrorCode.DECRYPTION_TAMPERED]:
+    'Decryption failed: data integrity check indicates tampering',
 
   // Concurrency & Locking
   [ErrorCode.LOCK_NOT_ACQUIRED]: 'Could not acquire lock. Please try again',

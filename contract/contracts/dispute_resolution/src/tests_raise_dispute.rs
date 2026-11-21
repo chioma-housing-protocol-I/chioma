@@ -397,3 +397,184 @@ fn resolve_dispute_insufficient_votes_after_raise_dispute() {
     let resolved = client.try_resolve_dispute(&agreement_id);
     assert_eq!(resolved, Err(Ok(DisputeError::InsufficientVotes)));
 }
+
+#[test]
+fn raise_dispute_fails_with_terminated_agreement() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let chioma = deploy_mock_chioma(&env);
+
+    let landlord = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agr-terminated");
+    let agreement = sample_agreement(
+        &env,
+        &agreement_id,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Terminated,
+    );
+    put_agreement(&env, &chioma, &agreement);
+
+    client.initialize(&admin, &3, &chioma);
+
+    let details_hash = String::from_str(&env, "QmDetails");
+    let result = client.try_raise_dispute(&tenant, &agreement_id, &details_hash);
+    assert_eq!(result, Err(Ok(DisputeError::InvalidAgreementState)));
+}
+
+#[test]
+fn raise_dispute_success_with_expired_agreement() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let chioma = deploy_mock_chioma(&env);
+
+    let landlord = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agr-expired");
+    let agreement = sample_agreement(
+        &env,
+        &agreement_id,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Expired,
+    );
+    put_agreement(&env, &chioma, &agreement);
+
+    client.initialize(&admin, &3, &chioma);
+
+    let details_hash = String::from_str(&env, "QmDetails");
+    let result = client.try_raise_dispute(&tenant, &agreement_id, &details_hash);
+    assert_eq!(result, Ok(Ok(())));
+
+    let dispute = client.get_dispute(&agreement_id).unwrap();
+    assert_eq!(dispute.agreement_id, agreement_id);
+    assert_eq!(dispute.raised_by, tenant);
+}
+
+#[test]
+fn raise_dispute_with_long_details_hash() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let chioma = deploy_mock_chioma(&env);
+
+    let landlord = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agr-long-hash");
+    let agreement = sample_agreement(
+        &env,
+        &agreement_id,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Active,
+    );
+    put_agreement(&env, &chioma, &agreement);
+
+    client.initialize(&admin, &3, &chioma);
+
+    let long_hash = String::from_str(
+        &env,
+        "QmVeryLongDetailsHashWithLotsOfCharactersToTestEdgeCases123456789ABCDEF",
+    );
+    let result = client.try_raise_dispute(&landlord, &agreement_id, &long_hash);
+    assert_eq!(result, Ok(Ok(())));
+
+    let dispute = client.get_dispute(&agreement_id).unwrap();
+    assert_eq!(dispute.details_hash, long_hash);
+}
+
+#[test]
+fn raise_dispute_both_parties_cannot_raise_twice() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let chioma = deploy_mock_chioma(&env);
+
+    let landlord = Address::generate(&env);
+    let tenant = Address::generate(&env);
+    let agreement_id = String::from_str(&env, "agr-both-parties");
+    let agreement = sample_agreement(
+        &env,
+        &agreement_id,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Active,
+    );
+    put_agreement(&env, &chioma, &agreement);
+
+    client.initialize(&admin, &3, &chioma);
+
+    let details_hash_1 = String::from_str(&env, "QmTenantDetails");
+    let first = client.try_raise_dispute(&tenant, &agreement_id, &details_hash_1);
+    assert_eq!(first, Ok(Ok(())));
+
+    let details_hash_2 = String::from_str(&env, "QmLandlordDetails");
+    let second = client.try_raise_dispute(&landlord, &agreement_id, &details_hash_2);
+    assert_eq!(second, Err(Ok(DisputeError::DisputeAlreadyExists)));
+
+    let dispute = client.get_dispute(&agreement_id).unwrap();
+    assert_eq!(dispute.raised_by, tenant);
+    assert_eq!(dispute.details_hash, details_hash_1);
+}
+
+#[test]
+fn raise_dispute_multiple_different_agreements() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let client = create_contract(&env);
+    let admin = Address::generate(&env);
+    let chioma = deploy_mock_chioma(&env);
+
+    let landlord = Address::generate(&env);
+    let tenant = Address::generate(&env);
+
+    let agreement_id_1 = String::from_str(&env, "agr-multi-1");
+    let agreement_1 = sample_agreement(
+        &env,
+        &agreement_id_1,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Active,
+    );
+    put_agreement(&env, &chioma, &agreement_1);
+
+    let agreement_id_2 = String::from_str(&env, "agr-multi-2");
+    let agreement_2 = sample_agreement(
+        &env,
+        &agreement_id_2,
+        &landlord,
+        &tenant,
+        ChiomaAgreementStatus::Active,
+    );
+    put_agreement(&env, &chioma, &agreement_2);
+
+    client.initialize(&admin, &3, &chioma);
+
+    let details_hash_1 = String::from_str(&env, "QmDetails1");
+    let result_1 = client.try_raise_dispute(&tenant, &agreement_id_1, &details_hash_1);
+    assert_eq!(result_1, Ok(Ok(())));
+
+    let details_hash_2 = String::from_str(&env, "QmDetails2");
+    let result_2 = client.try_raise_dispute(&tenant, &agreement_id_2, &details_hash_2);
+    assert_eq!(result_2, Ok(Ok(())));
+
+    let dispute_1 = client.get_dispute(&agreement_id_1).unwrap();
+    assert_eq!(dispute_1.agreement_id, agreement_id_1);
+    assert_eq!(dispute_1.details_hash, details_hash_1);
+
+    let dispute_2 = client.get_dispute(&agreement_id_2).unwrap();
+    assert_eq!(dispute_2.agreement_id, agreement_id_2);
+    assert_eq!(dispute_2.details_hash, details_hash_2);
+}

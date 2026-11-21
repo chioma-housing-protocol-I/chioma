@@ -90,7 +90,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const method = request.method ?? 'GET';
     const allowedPaths = EMAIL_ONBOARDING_ALLOWED_PATHS.get(method);
     const routePath = normalizePath(request.route?.path ?? '');
-    const requestPath = normalizePath(request.path ?? request.originalUrl ?? '');
+    const requestPath = normalizePath(
+      request.path ?? request.originalUrl ?? '',
+    );
     if (allowedPaths?.has(routePath) || allowedPaths?.has(requestPath)) {
       return;
     }

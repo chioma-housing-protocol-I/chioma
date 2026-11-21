@@ -155,7 +155,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
 
         {/* Agreement ID */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="agreementId" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Agreement ID *
           </label>
           <input
@@ -177,10 +177,11 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
         {/* Type + Amount */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+            <label htmlFor="disputeType" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
               Dispute Type *
             </label>
             <select
+              id="disputeType"
               {...register('disputeType')}
               className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             >
@@ -193,7 +194,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+            <label htmlFor="requestedAmount" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
               Requested Amount (optional)
             </label>
             <input
@@ -216,7 +217,7 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+          <label htmlFor="description" className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
             Description *
           </label>
           <textarea
@@ -245,11 +246,8 @@ export const DisputeFilingModal: React.FC<DisputeFilingModalProps> = ({
 
         {/* Evidence Upload */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-            Supporting Evidence (optional)
-          </label>
           <Uploader
-            label=""
+            label="Supporting Evidence (optional)"
             accept="image/*,application/pdf,.doc,.docx"
             multiple
             onFilesSelected={setEvidence}

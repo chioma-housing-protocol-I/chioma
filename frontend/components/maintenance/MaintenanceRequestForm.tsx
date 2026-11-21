@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import {
   DEFAULT_PROPERTIES,
   ISSUE_CATEGORIES,
@@ -198,8 +199,11 @@ export default function MaintenanceRequestForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-4.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.25em] rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.2)] hover:bg-blue-500 hover:shadow-[0_0_40px_rgba(37,99,235,0.4)] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-500 transform hover:-translate-y-1"
+          className="w-full py-4.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.25em] rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.2)] hover:bg-blue-500 hover:shadow-[0_0_40px_rgba(37,99,235,0.4)] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-500 transform hover:-translate-y-1 flex items-center justify-center gap-3"
         >
+          {isSubmitting && (
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+          )}
           {isSubmitting ? 'Processing Request...' : 'Finalize and Submit'}
         </button>
       </form>
