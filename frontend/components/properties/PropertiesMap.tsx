@@ -16,7 +16,8 @@ const createCustomIcon = (price: string) => {
   const isPremium = numericPrice > 3000;
 
   return L.divIcon({
-    className: 'custom-leaflet-icon bg-transparent border-none outline-none',
+    // #2195: keep the browser's focus ring on keyboard-focused markers.
+    className: 'custom-leaflet-icon bg-transparent border-none',
     html: `<div class="${isPremium ? 'bg-brand-blue text-white' : 'bg-white text-brand-blue border border-brand-blue/20'} px-3 py-1.5 rounded-full font-bold text-sm shadow-xl flex items-center justify-center whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110 cursor-pointer isolate">
             ${price}
            </div>`,
@@ -87,6 +88,11 @@ export default function PropertiesMap({ properties }: PropertiesMapProps) {
             key={property.id}
             position={[property.lat!, property.lng!]}
             icon={createCustomIcon(property.price)}
+            // #2195: markers are tabbable and have a name; Enter activates the
+            // marker (Leaflet forwards it as a click) and Escape closes its popup.
+            keyboard
+            title={property.title}
+            alt={`${property.title}, ${property.price} per month`}
           >
             <Popup className="rounded-xl overflow-hidden shadow-2xl border-none">
               <div className="p-1">

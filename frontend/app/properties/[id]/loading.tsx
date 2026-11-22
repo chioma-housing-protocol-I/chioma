@@ -10,7 +10,11 @@ export default function PropertyDetailLoading() {
   return (
     <>
       <Navbar theme="dark" />
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 pb-20">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 pb-20"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-pulse">
           {/* Breadcrumbs */}
           <div className="mb-8 h-5 w-56 rounded-full bg-white/10" />
@@ -63,10 +67,7 @@ export default function PropertyDetailLoading() {
                 <div className="h-7 w-36 rounded-lg bg-white/15" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {Array.from({ length: 7 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-10 rounded-xl bg-white/10"
-                    />
+                    <div key={i} className="h-10 rounded-xl bg-white/10" />
                   ))}
                 </div>
               </div>

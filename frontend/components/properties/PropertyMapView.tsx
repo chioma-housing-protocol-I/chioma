@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -140,6 +140,17 @@ function PropertyMapViewInner({
     null,
   );
 
+  // #2195: Escape closes the property popup from anywhere on the map, matching
+  // the keyboard contract even when focus has moved off the marker.
+  useEffect(() => {
+    if (!selectedProperty) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedProperty(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [selectedProperty]);
+
   // Convert initialViewState to Leaflet format
   const center: [number, number] = [
     initialViewState.latitude,
@@ -207,9 +218,22 @@ function PropertyMapViewInner({
             <Marker
               key={property.id}
               position={coords}
+              // #2195: Leaflet renders markers as focusable elements when
+              // keyboard is enabled. A descriptive name makes each marker
+              // distinguishable when tabbing through the map.
+              keyboard
+              title={property.title}
+              alt={`${property.title}, ${property.price} per month`}
               eventHandlers={{
                 click: () => {
                   setSelectedProperty(property);
+                },
+                keypress: (event) => {
+                  const key = (event as { originalEvent?: KeyboardEvent })
+                    .originalEvent?.key;
+                  if (key === 'Enter' || key === ' ') {
+                    setSelectedProperty(property);
+                  }
                 },
               }}
             >

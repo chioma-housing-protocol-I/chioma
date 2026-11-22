@@ -30,15 +30,19 @@ export default function AuthLayout({
         </div>
       </div>
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center px-4 py-12 sm:px-8">
+      {/* Form panel, also the skip-link target for the auth routes (#2196). */}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex items-center justify-center px-4 py-12 sm:px-8"
+      >
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 lg:hidden">
             <Logo size="lg" textClassName="text-2xl font-bold text-cream" />
           </div>
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -10,7 +10,11 @@ export const metadata = {
 
 export default function WebVitalsPage() {
   return (
-    <main className="relative min-h-screen bg-ink-900 text-cream">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="relative min-h-screen bg-ink-900 text-cream"
+    >
       <div
         className="pointer-events-none absolute inset-0 bg-grain opacity-60"
         aria-hidden

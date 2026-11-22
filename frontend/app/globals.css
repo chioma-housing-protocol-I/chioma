@@ -314,6 +314,13 @@ body {
   outline-offset: 3px;
 }
 
+/* #2195: Leaflet's markers are keyboard-focusable; make that focus visible. */
+.leaflet-marker-icon:focus-visible {
+  outline: 3px solid #e0a84a;
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
 .skip-link {
   position: absolute;
   left: 1rem;

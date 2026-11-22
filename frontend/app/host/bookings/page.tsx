@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import BookingStatusBadge from '@/components/booking/BookingStatusBadge';
 import toast from 'react-hot-toast';
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -135,7 +136,7 @@ export default function HostBookingsPage() {
                     {b.propertyTitle ?? b.property?.title}
                   </p>
                 </div>
-                <StatusBadge status={b.status} />
+                <BookingStatusBadge status={b.status} />
               </div>
               <div className="flex gap-6 text-sm text-blue-200/60 mb-4">
                 <span className="flex items-center gap-1">
@@ -174,21 +175,5 @@ export default function HostBookingsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const map: Record<string, string> = {
-    confirmed: 'bg-emerald-500/20 text-emerald-400',
-    pending: 'bg-amber-500/20 text-amber-400',
-    cancelled: 'bg-red-500/20 text-red-400',
-    completed: 'bg-blue-500/20 text-blue-400',
-  };
-  return (
-    <span
-      className={`text-xs px-3 py-1 rounded-full capitalize ${map[status ?? ''] ?? 'bg-white/10 text-blue-300/60'}`}
-    >
-      {status}
-    </span>
   );
 }

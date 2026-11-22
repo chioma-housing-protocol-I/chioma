@@ -3,7 +3,11 @@ import Link from 'next/link';
 export default function NotFound() {
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6 py-16">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6 py-16"
+      >
         <section className="w-full max-w-2xl rounded-2xl backdrop-blur-xl bg-slate-800/50 border border-white/10 p-8 md:p-12 text-center text-white shadow-2xl">
           <p className="text-sm uppercase tracking-[0.25em] text-blue-300/80">
             Error 404

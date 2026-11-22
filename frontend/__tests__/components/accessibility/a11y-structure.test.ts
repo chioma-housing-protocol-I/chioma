@@ -50,6 +50,42 @@ describe('Skip-to-content link', () => {
   });
 });
 
+// ─── Skip-link targets on standalone pages (#2196) ──────────────────────────
+
+describe('Skip-link target on every page (#2196)', () => {
+  // Route-group layouts and the landing page already expose #main-content.
+  // These standalone pages render their own <main> outside those layouts, so
+  // without an explicit id the root skip link has nowhere to jump.
+  const standaloneMainPages = [
+    'app/(auth)/layout.tsx',
+    'app/vitals/page.tsx',
+    'app/offline/page.tsx',
+    'app/not-found.tsx',
+    'app/properties/[id]/page.tsx',
+    'app/properties/[id]/loading.tsx',
+    'app/dev/visual-gallery/VisualGalleryClient.tsx',
+  ];
+
+  for (const file of standaloneMainPages) {
+    it(`${file} exposes a focusable #main-content skip target`, () => {
+      const source = readSource(file);
+      expect(source, `${file} should have id="main-content"`).toContain(
+        'id="main-content"',
+      );
+      expect(source, `${file} should have tabIndex={-1} on main`).toContain(
+        'tabIndex={-1}',
+      );
+      expect(source).toMatch(/<main[\s>]/);
+    });
+  }
+
+  it('does not duplicate the skip target inside RootLayoutClient', () => {
+    // A root-level target would collide with the per-layout targets above.
+    const source = readSource('app/RootLayoutClient.tsx');
+    expect(source).not.toContain('id="main-content"');
+  });
+});
+
 // ─── Landmark regions — Navbar ───────────────────────────────────────────────
 
 describe('Navbar landmark regions', () => {
@@ -346,6 +382,12 @@ describe('Focus management', () => {
     const css = readSource('app/globals.css');
     expect(css).toMatch(/:focus-visible\s*\{/);
     expect(css).toContain('outline');
+  });
+
+  it('map markers get a visible focus ring (#2195)', () => {
+    const css = readSource('app/globals.css');
+    expect(css).toMatch(/\.leaflet-marker-icon:focus-visible\s*\{/);
+    expect(css).toContain('outline: 3px solid #e0a84a');
   });
 
   it('main landmark elements have tabIndex={-1} for programmatic focus', () => {
