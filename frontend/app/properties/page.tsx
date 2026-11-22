@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
 import { PropertyListingHeader } from '@/components/properties/PropertyListingHeader';
+import { PropertyListEmptyState } from '@/components/properties/PropertyListEmptyState';
 import LazyPropertyMapView from '@/components/properties/LazyPropertyMapView';
 import { VirtualGrid } from '@/components/ui/VirtualGrid';
 import { useGridColumns } from '@/hooks/use-grid-columns';
@@ -125,6 +126,18 @@ export default function PropertyListing() {
     },
     [searchQuery, selectedType, minPrice, maxPrice],
   );
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() || selectedType || minPrice || maxPrice,
+  );
+
+  const resetFilters = useCallback(() => {
+    setSearchQuery('');
+    setSelectedType('');
+    setMinPrice('');
+    setMaxPrice('');
+    router.replace('/properties');
+  }, [router]);
 
   const applySearchToUrl = useCallback(
     (raw: string) => {
@@ -423,14 +436,11 @@ export default function PropertyListing() {
                           <PropertyCardSkeleton key={i} />
                         ))
                       : !isError && (
-                          <div
-                            className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed"
-                            data-testid="empty-state"
-                          >
-                            <div className="text-blue-200/30 text-lg font-medium">
-                              No properties match your current filters
-                            </div>
-                          </div>
+                          <PropertyListEmptyState
+                            hasFilters={hasActiveFilters}
+                            onClearFilters={resetFilters}
+                            onBrowseAll={resetFilters}
+                          />
                         )}
                   </div>
                 </div>
