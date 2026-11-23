@@ -3,6 +3,7 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 const PropertyListingWizard = dynamic(
   () =>
@@ -24,7 +25,19 @@ export default function WizardPage() {
   const id = params?.id as string | undefined;
 
   return (
-    <div className="bg-neutral-50 dark:bg-neutral-950 min-h-screen">
+    <div className="bg-neutral-50 dark:bg-neutral-950 min-h-screen px-4 sm:px-6 pt-4">
+      <div className="max-w-4xl mx-auto">
+        <Breadcrumb
+          backHref="/user/properties"
+          backLabel="Back to properties"
+          homeHref="/user"
+          homeLabel="Dashboard"
+          customLabels={{
+            wizard: 'Listing Wizard',
+            ...(id ? { [id]: 'Edit Draft' } : {}),
+          }}
+        />
+      </div>
       <PropertyListingWizard draftId={id} />
     </div>
   );

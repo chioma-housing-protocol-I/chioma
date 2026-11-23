@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { Suspense } from 'react';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -48,19 +48,16 @@ export default function TenantReviewDetailPage({ params }: Params) {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-12 flex items-center text-sm text-neutral-400 space-x-2">
-        <Link
-          href="/user/reviews"
-          className="hover:text-white transition-colors flex items-center gap-1"
-        >
-          <ArrowLeft size={16} />
-          All Reviews
-        </Link>
-        <span>→</span>
-        <span className="font-semibold text-white">
-          #{id.slice(-8).toUpperCase()}
-        </span>
-      </div>
+      <Breadcrumb
+        backHref="/user/reviews"
+        backLabel="All Reviews"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [id]: id ? `#${id.slice(-8).toUpperCase()}` : 'Review Details',
+        }}
+        className="mb-8"
+      />
 
       <Suspense
         key={id}

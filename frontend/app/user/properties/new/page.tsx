@@ -27,6 +27,7 @@ import {
   type WizardDraft,
 } from '@/lib/property-wizard';
 import { propertyWizardService } from '@/lib/services/property-wizard.service';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 const UTILITIES = ['Water', 'Electricity', 'Internet', 'Gas', 'Trash'];
 const BASIC_INFO_NUMERIC_KEYS = [
@@ -725,6 +726,15 @@ export default function NewPropertyListingWizardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <Breadcrumb
+        backHref="/user/properties"
+        backLabel="Back to properties"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          new: 'New Listing',
+        }}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">

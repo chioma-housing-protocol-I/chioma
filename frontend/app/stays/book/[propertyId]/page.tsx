@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { BookingStep1 } from '@/components/booking/BookingStep1';
 import { BookingStep2 } from '@/components/booking/BookingStep2';
@@ -10,6 +9,7 @@ import { BookingStep3 } from '@/components/booking/BookingStep3';
 import { BookingStep4 } from '@/components/booking/BookingStep4';
 import { useProperty } from '@/lib/query/hooks';
 import toast from 'react-hot-toast';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 interface BookingData {
   checkIn: string;
@@ -69,12 +69,17 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white px-4 py-8">
       <div className="max-w-lg mx-auto">
-        <Link
-          href={`/stays/${propertyId}`}
-          className="inline-flex items-center gap-2 text-blue-300/60 hover:text-white mb-8 transition-colors"
-        >
-          <ArrowLeft size={18} /> Back to property
-        </Link>
+        <Breadcrumb
+          backHref={`/stays/${propertyId}`}
+          backLabel="Back to property"
+          homeHref="/"
+          homeLabel="Home"
+          customLabels={{
+            book: 'Book Stay',
+            [propertyId]: property?.title || 'Property',
+          }}
+          className="mb-8"
+        />
 
         {/* Step indicator */}
         <div className="mb-8">

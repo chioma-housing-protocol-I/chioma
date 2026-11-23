@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Bed, Bath, ArrowLeft, Car, PawPrint } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, PawPrint } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 async function fetchProperty(id: string) {
   const res = await fetch(`/api/properties/${id}`);
@@ -38,12 +39,16 @@ export default function StayDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <Link
-          href="/stays"
-          className="inline-flex items-center gap-2 text-blue-300/60 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft size={18} /> Back to stays
-        </Link>
+        <Breadcrumb
+          backHref="/stays"
+          backLabel="Back to stays"
+          homeHref="/"
+          homeLabel="Home"
+          customLabels={{
+            [id]: property.title || 'Stay Details',
+          }}
+          className="mb-6"
+        />
 
         {/* Image */}
         <div className="relative aspect-video bg-slate-700 rounded-2xl overflow-hidden mb-8">

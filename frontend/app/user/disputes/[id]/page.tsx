@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Flag } from 'lucide-react';
+import { Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { Suspense } from 'react';
 import { DisputeDetail } from '@/components/user/DisputeDetail';
 import { useParams } from 'next/navigation';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 export default function TenantDisputeDetailPage() {
   const params = useParams();
@@ -42,20 +43,16 @@ export default function TenantDisputeDetailPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-12 flex items-center text-sm text-neutral-400 space-x-2">
-        <Link
-          href="/user/disputes"
-          className="hover:text-white transition-colors flex items-center gap-1"
-        >
-          <ArrowLeft size={16} />
-          All Disputes
-        </Link>
-        <span>→</span>
-        <span className="font-semibold text-white">
-          #{id.slice(-8).toUpperCase()}
-        </span>
-      </div>
+      <Breadcrumb
+        backHref="/user/disputes"
+        backLabel="All Disputes"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [id]: `#${id.slice(-8).toUpperCase()}`,
+        }}
+        className="mb-8"
+      />
 
       <Suspense
         key={id}

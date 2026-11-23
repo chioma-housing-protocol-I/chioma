@@ -4,7 +4,7 @@ import ImageGallery from '@/components/properties/ImageGallery';
 import { MapPin, User, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/landing/Footer';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 import AmenitiesList, {
   type Amenity,
 } from '@/components/properties/AmenitiesList';
@@ -325,7 +325,16 @@ export default async function PropertyDetailsPage({
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
           {/* Breadcrumbs */}
-          <Breadcrumbs className="mb-8" />
+          <Breadcrumb
+            backHref="/properties"
+            backLabel="Back to properties"
+            homeHref="/"
+            homeLabel="Home"
+            customLabels={{
+              [id]: property.title,
+            }}
+            className="mb-8"
+          />
 
           {/* Header section with title, location, gallery */}
           <div className="mb-8">

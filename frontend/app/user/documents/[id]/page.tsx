@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useDocument } from '@/lib/query/hooks/use-landlord-documents';
 import type { Document, DocumentType } from '@/components/documents';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 function mapFileType(mime: string): DocumentType {
   if (mime.includes('pdf')) return 'pdf';
@@ -68,14 +69,15 @@ export default function UserDocumentDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      <button
-        type="button"
-        onClick={() => router.push('/user/documents')}
-        className="inline-flex items-center gap-2 text-sm text-blue-200/60 hover:text-white"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        All documents
-      </button>
+      <Breadcrumb
+        backHref="/user/documents"
+        backLabel="All documents"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [documentId]: document.name || 'Document Details',
+        }}
+      />
 
       <DocumentViewerModal
         onClose={() => router.push('/user/documents')}
