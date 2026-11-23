@@ -38,6 +38,8 @@ pub enum DisputeError {
     /// `AgreementNotFound`, which means the call succeeded but the
     /// agreement id simply does not exist there.
     AgreementLookupFailed = 29,
+    /// The stored upgrade proposal's wasm hash is not a valid 32-byte hash.
+    InvalidWasmHash = 30,
 }
 
 /// Pins every `DisputeError` discriminant so off-chain code that maps error
@@ -79,5 +81,6 @@ mod pin_tests {
         assert_eq!(DisputeError::RateLimitExceeded as u32, 27);
         assert_eq!(DisputeError::CooldownNotMet as u32, 28);
         assert_eq!(DisputeError::AgreementLookupFailed as u32, 29);
+        assert_eq!(DisputeError::InvalidWasmHash as u32, 30);
     }
 }

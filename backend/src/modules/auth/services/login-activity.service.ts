@@ -10,22 +10,22 @@ import { User } from '../../users/entities/user.entity';
 import * as UAParser from 'ua-parser-js';
 
 export interface LoginContext {
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
-  city?: string;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
+  country?: string | undefined;
+  city?: string | undefined;
 }
 
 export interface LoginActivityLog {
-  userId?: string;
-  email?: string;
+  userId?: string | undefined;
+  email?: string | undefined;
   loginMethod: LoginMethod;
   status: LoginStatus;
-  context?: LoginContext;
-  failureReason?: string;
-  isSuspicious?: boolean;
-  anomalyFlags?: string[];
-  metadata?: Record<string, any>;
+  context?: LoginContext | undefined;
+  failureReason?: string | undefined;
+  isSuspicious?: boolean | undefined;
+  anomalyFlags?: string[] | undefined;
+  metadata?: Record<string, any> | undefined;
 }
 
 @Injectable()

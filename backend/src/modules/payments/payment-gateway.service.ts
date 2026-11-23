@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Optional,
+} from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { PaymentMethod } from './entities/payment-method.entity';
 import { RetryService } from '../../common/services/retry.service';
@@ -8,6 +13,8 @@ import {
   CircuitBreakerService,
 } from '../../common/resilience/circuit-breaker.service';
 import { CertificatePinningService } from '../../common/security/certificate-pinning.service';
+import { MetricsService } from '../monitoring/metrics.service';
+import { parseGatewayContext } from './payment-gateway.metrics';
 
 const GATEWAY_BREAKER_OPTIONS = {
   failureThreshold: 0.5,
@@ -60,11 +67,69 @@ export class PaymentGatewayService {
     private readonly retryService: RetryService,
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly certificatePinningService: CertificatePinningService,
+    @Optional() private readonly metricsService?: MetricsService,
   ) {
     this.gateway = (process.env.PAYMENT_GATEWAY || 'mock').toLowerCase();
     this.http = axios.create({
       timeout: parseInt(process.env.PAYMENT_GATEWAY_TIMEOUT_MS || '10000'),
     });
+  }
+
+  /**
+   * Records gateway outcome metrics. Optional injection keeps this service
+   * usable in isolated unit tests where the monitoring module is absent.
+   */
+  private recordGatewayOutcome(
+    context: string,
+    success: boolean,
+    retries: number,
+    error?: unknown,
+    errorClass?: string,
+  ): void {
+    if (!this.metricsService) {
+      return;
+    }
+    const { gateway, operation } = parseGatewayContext(context);
+    this.metricsService.recordPaymentGatewayOperation({
+      gateway,
+      operation,
+      success,
+      retries,
+      errorClass:
+        errorClass ??
+        (error instanceof Error ? error.constructor.name : undefined),
+    });
+  }
+
+  /**
+   * Thin wrapper around RetryService that counts per-call retries via the
+   * onRetry hook, so the retry distribution is accurate under concurrency.
+   */
+  private async executeGatewayRetry<
+    T extends { success: boolean; error?: string },
+  >(
+    fn: () => Promise<T>,
+    options: { retryableErrors: Array<new (...args: any[]) => Error> },
+    context: string,
+  ): Promise<T> {
+    let retries = 0;
+    try {
+      const result = await this.retryService.execute(
+        fn,
+        {
+          ...options,
+          onRetry: () => {
+            retries += 1;
+          },
+        },
+        context,
+      );
+      this.recordGatewayOutcome(context, result.success, retries);
+      return result;
+    } catch (error) {
+      this.recordGatewayOutcome(context, false, retries, error);
+      throw error;
+    }
   }
 
   async chargePayment(
@@ -96,6 +161,7 @@ export class PaymentGatewayService {
       );
     }
 
+    this.recordGatewayOutcome('PaymentGateway.chargeMock', true, 0);
     return { success: true, chargeId: `charge_${Date.now()}` };
   }
 
@@ -121,6 +187,7 @@ export class PaymentGatewayService {
       return this.refundFlutterwave(chargeId, amount);
     }
 
+    this.recordGatewayOutcome('PaymentGateway.refundMock', true, 0);
     return { success: true, refundId: `refund_${Date.now()}` };
   }
 
@@ -155,6 +222,7 @@ export class PaymentGatewayService {
       return this.verifyAndTokenizeFlutterwave(gatewayReference, userEmail);
     }
 
+    this.recordGatewayOutcome('PaymentGateway.tokenizeMock', true, 0);
     return { success: true, token: `mock_token_${Date.now()}` };
   }
 
@@ -175,6 +243,13 @@ export class PaymentGatewayService {
       );
     } catch (error) {
       if (error instanceof CircuitBreakerOpenError) {
+        this.recordGatewayOutcome(
+          breakerName,
+          false,
+          0,
+          undefined,
+          'circuit_open',
+        );
         this.logger.warn(
           `Circuit breaker open for ${breakerName}; failing fast`,
         );
@@ -209,7 +284,7 @@ export class PaymentGatewayService {
     }
 
     return this.executeGatewayCall('payment-gateway:paystack:charge', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.post(
             'https://api.paystack.co/transaction/charge_authorization',
@@ -270,7 +345,7 @@ export class PaymentGatewayService {
 
     const txRef = `flw-${Date.now()}`;
     return this.executeGatewayCall('payment-gateway:flutterwave:charge', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.post(
             'https://api.flutterwave.com/v3/tokenized-charges',
@@ -327,7 +402,7 @@ export class PaymentGatewayService {
     }
 
     return this.executeGatewayCall('payment-gateway:paystack:tokenize', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.get(
             `https://api.paystack.co/transaction/verify/${encodeURIComponent(gatewayReference)}`,
@@ -410,7 +485,7 @@ export class PaymentGatewayService {
     }
 
     return this.executeGatewayCall('payment-gateway:flutterwave:tokenize', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.get(
             `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(gatewayReference)}`,
@@ -487,7 +562,7 @@ export class PaymentGatewayService {
     }
 
     return this.executeGatewayCall('payment-gateway:paystack:refund', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.post(
             'https://api.paystack.co/refund',
@@ -533,7 +608,7 @@ export class PaymentGatewayService {
     }
 
     return this.executeGatewayCall('payment-gateway:flutterwave:refund', () =>
-      this.retryService.execute(
+      this.executeGatewayRetry(
         async () => {
           const response = await this.http.post(
             'https://api.flutterwave.com/v3/refunds',

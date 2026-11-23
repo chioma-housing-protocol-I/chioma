@@ -32,7 +32,8 @@ describe('OAuth state validation (issue #1861)', () => {
       defaultRedirectUri: redirectUri,
     })),
     buildAuthorizationUrl: jest.fn(
-      (_provider, state) => `https://discord.test/oauth/authorize?state=${state}`,
+      (_provider, state) =>
+        `https://discord.test/oauth/authorize?state=${state}`,
     ),
     exchangeAuthorizationCode: jest.fn(),
     fetchUserProfile: jest.fn(),
@@ -57,7 +58,11 @@ describe('OAuth state validation (issue #1861)', () => {
 
   const mockOAuthAccountRepository = {
     findOne: jest.fn(async () => null),
-    create: jest.fn((data) => ({ id: 'link-1', linkedAt: new Date(), ...data })),
+    create: jest.fn((data) => ({
+      id: 'link-1',
+      linkedAt: new Date(),
+      ...data,
+    })),
     save: jest.fn(async (link) => link),
   };
 
@@ -171,7 +176,11 @@ describe('OAuth state validation (issue #1861)', () => {
         OAuth2Provider.DISCORD,
       );
 
-      await service.completeAuthorization(OAuth2Provider.DISCORD, 'code', state);
+      await service.completeAuthorization(
+        OAuth2Provider.DISCORD,
+        'code',
+        state,
+      );
 
       expect(states.has(state)).toBe(false);
     });
@@ -181,7 +190,11 @@ describe('OAuth state validation (issue #1861)', () => {
       const { state } = await service.initiateAuthorization(
         OAuth2Provider.DISCORD,
       );
-      await service.completeAuthorization(OAuth2Provider.DISCORD, 'code', state);
+      await service.completeAuthorization(
+        OAuth2Provider.DISCORD,
+        'code',
+        state,
+      );
 
       await expect(
         service.completeAuthorization(OAuth2Provider.DISCORD, 'code', state),
@@ -284,7 +297,12 @@ describe('OAuth state validation (issue #1861)', () => {
       );
 
       await expect(
-        service.linkAccount('attacker-user', OAuth2Provider.DISCORD, 'code', state),
+        service.linkAccount(
+          'attacker-user',
+          OAuth2Provider.DISCORD,
+          'code',
+          state,
+        ),
       ).rejects.toThrow('OAuth state does not match the current user');
     });
 

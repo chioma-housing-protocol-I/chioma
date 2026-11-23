@@ -32,6 +32,8 @@ import { TerminateAgreementDto } from './dto/terminate-agreement.dto';
 import { QueryAgreementsDto } from './dto/query-agreements.dto';
 import { RenewAgreementDto } from './dto/renew-agreement.dto';
 import { SignAgreementDto } from './dto/sign-agreement.dto';
+import { ActivateAgreementDto } from './dto/activate-agreement.dto';
+import { TransitionAgreementDto } from './dto/transition-agreement.dto';
 import { QueryAgreementFeesDto } from './dto/query-agreement-fees.dto';
 import { AuditLogInterceptor } from '../audit/interceptors/audit-log.interceptor';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -182,6 +184,45 @@ export class AgreementsController {
   @HttpCode(HttpStatus.OK)
   async sign(@Param('id') id: string, @Body() dto: SignAgreementDto) {
     return await this.agreementsService.sign(id, dto);
+  }
+
+  @ApiResponse({ status: 200, description: 'Activated' })
+  @ApiOperation({
+    summary: 'Activate agreement',
+    description:
+      'Transitions a SIGNED agreement to ACTIVE when activation preconditions are satisfied.',
+  })
+  @Post(':id/activate')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  @HttpCode(HttpStatus.OK)
+  async activate(@Param('id') id: string, @Body() dto: ActivateAgreementDto) {
+    return await this.agreementsService.activate(id, dto);
+  }
+
+  @ApiResponse({ status: 200, description: 'Transitioned' })
+  @ApiOperation({
+    summary: 'Transition agreement state',
+    description:
+      'Explicitly transitions an agreement to a target status when the state machine allows it.',
+  })
+  @Post(':id/transition')
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    entityType: 'RentAgreement',
+    level: AuditLevel.INFO,
+    includeNewValues: true,
+  })
+  @HttpCode(HttpStatus.OK)
+  async transition(
+    @Param('id') id: string,
+    @Body() dto: TransitionAgreementDto,
+  ) {
+    return await this.agreementsService.transition(id, dto);
   }
 
   @ApiResponse({ status: 201, description: 'Created' })

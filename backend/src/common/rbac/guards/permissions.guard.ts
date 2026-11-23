@@ -6,15 +6,20 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Permission, ROLE_PERMISSIONS } from '../permissions.enum';
+import { Permission } from '../permissions.enum';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { UserRole } from '../../../modules/users/entities/user.entity';
+import { KycStatus } from '../../../modules/kyc/kyc-status.enum';
+import { RbacService } from '../services/rbac.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   private readonly logger = new Logger(PermissionsGuard.name);
 
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private readonly rbacService: RbacService,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     // Get required permissions from decorator
@@ -43,8 +48,12 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User has no role assigned');
     }
 
-    // Get user's permissions based on their role
-    const userPermissions = this.getUserPermissions(user.role);
+    // Get user's permissions based on their role and KYC state. A user
+    // queued for manual review keeps read/resubmit rights only.
+    const userPermissions = this.getUserPermissions(
+      user.role,
+      user.kycStatus as KycStatus | undefined,
+    );
 
     // Check if user has all required permissions
     const hasAllPermissions = requiredPermissions.every((permission) =>
@@ -75,8 +84,11 @@ export class PermissionsGuard implements CanActivate {
   /**
    * Get all permissions for a given role
    */
-  private getUserPermissions(role: UserRole): Permission[] {
-    const permissions = ROLE_PERMISSIONS[role] || [];
+  private getUserPermissions(
+    role: UserRole,
+    kycStatus?: KycStatus,
+  ): Permission[] {
+    const permissions = this.rbacService.getPermissionsForRole(role, kycStatus);
 
     if (permissions.length === 0) {
       this.logger.warn(`No permissions defined for role: ${role}`);

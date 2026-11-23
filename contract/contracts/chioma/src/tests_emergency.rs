@@ -268,3 +268,170 @@ fn test_execute_emergency_withdrawal_requires_admin() {
     let result = client.try_execute_emergency_withdrawal(&stranger, &proposal_id);
     assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
 }
+
+#[test]
+fn test_approve_emergency_withdrawal_requires_admin() {
+    let (env, client, _admin) = create_contract();
+    let (token, admin1, _admin2, _admin3) = setup_multisig_and_fund_contract(&env, &client, 10_000);
+
+    let recipient = Address::generate(&env);
+    let proposal_id = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &5000, &recipient)
+        .unwrap()
+        .unwrap();
+
+    let stranger = Address::generate(&env);
+    let result = client.try_approve_emergency_withdrawal(&stranger, &proposal_id);
+    assert_eq!(result, Err(Ok(RentalError::Unauthorized)));
+}
+
+#[test]
+fn test_emergency_withdrawal_with_all_three_admins_approving() {
+    let (env, client, _admin) = create_contract();
+    let (token, admin1, admin2, admin3) = setup_multisig_and_fund_contract(&env, &client, 10_000);
+
+    let recipient = Address::generate(&env);
+    let proposal_id = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &5000, &recipient)
+        .unwrap()
+        .unwrap();
+
+    // Second admin approves
+    client
+        .try_approve_emergency_withdrawal(&admin2, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    let proposal = client.try_get_proposal(&proposal_id).unwrap().unwrap();
+    assert_eq!(proposal.approval_count, 2);
+
+    // Third admin also approves (even though only 2 required)
+    client
+        .try_approve_emergency_withdrawal(&admin3, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    let proposal = client.try_get_proposal(&proposal_id).unwrap().unwrap();
+    assert_eq!(proposal.approval_count, 3);
+
+    // Execution should still succeed
+    let token_client = soroban_sdk::token::Client::new(&env, &token);
+    assert_eq!(token_client.balance(&client.address), 10_000);
+
+    client
+        .try_execute_emergency_withdrawal(&admin1, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(token_client.balance(&client.address), 5000);
+    assert_eq!(token_client.balance(&recipient), 5000);
+}
+
+#[test]
+fn test_emergency_withdrawal_full_contract_balance() {
+    let (env, client, _admin) = create_contract();
+    let (token, admin1, admin2, _admin3) = setup_multisig_and_fund_contract(&env, &client, 10_000);
+
+    let recipient = Address::generate(&env);
+    // Withdraw the entire contract balance
+    let proposal_id = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &10_000, &recipient)
+        .unwrap()
+        .unwrap();
+    client
+        .try_approve_emergency_withdrawal(&admin2, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    let token_client = soroban_sdk::token::Client::new(&env, &token);
+    assert_eq!(token_client.balance(&client.address), 10_000);
+
+    client
+        .try_execute_emergency_withdrawal(&admin1, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(token_client.balance(&client.address), 0);
+    assert_eq!(token_client.balance(&recipient), 10_000);
+}
+
+#[test]
+fn test_multiple_emergency_withdrawal_proposals_sequential() {
+    let (env, client, _admin) = create_contract();
+    let (token, admin1, admin2, _admin3) = setup_multisig_and_fund_contract(&env, &client, 10_000);
+
+    let recipient1 = Address::generate(&env);
+    let recipient2 = Address::generate(&env);
+
+    // First proposal: withdraw 3000
+    let proposal_id1 = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &3000, &recipient1)
+        .unwrap()
+        .unwrap();
+    client
+        .try_approve_emergency_withdrawal(&admin2, &proposal_id1)
+        .unwrap()
+        .unwrap();
+    client
+        .try_execute_emergency_withdrawal(&admin1, &proposal_id1)
+        .unwrap()
+        .unwrap();
+
+    let token_client = soroban_sdk::token::Client::new(&env, &token);
+    assert_eq!(token_client.balance(&client.address), 7000);
+    assert_eq!(token_client.balance(&recipient1), 3000);
+
+    // Second proposal: withdraw another 2000
+    let proposal_id2 = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &2000, &recipient2)
+        .unwrap()
+        .unwrap();
+    client
+        .try_approve_emergency_withdrawal(&admin2, &proposal_id2)
+        .unwrap()
+        .unwrap();
+    client
+        .try_execute_emergency_withdrawal(&admin1, &proposal_id2)
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(token_client.balance(&client.address), 5000);
+    assert_eq!(token_client.balance(&recipient2), 2000);
+
+    // Verify both proposals are marked as executed
+    let request1 = client
+        .try_get_emergency_withdrawal(&proposal_id1)
+        .unwrap()
+        .unwrap();
+    assert!(request1.executed);
+
+    let request2 = client
+        .try_get_emergency_withdrawal(&proposal_id2)
+        .unwrap()
+        .unwrap();
+    assert!(request2.executed);
+}
+
+#[test]
+fn test_emergency_withdrawal_cannot_approve_after_execution() {
+    let (env, client, _admin) = create_contract();
+    let (token, admin1, admin2, admin3) = setup_multisig_and_fund_contract(&env, &client, 10_000);
+
+    let recipient = Address::generate(&env);
+    let proposal_id = client
+        .try_propose_emergency_withdrawal(&admin1, &token, &5000, &recipient)
+        .unwrap()
+        .unwrap();
+    client
+        .try_approve_emergency_withdrawal(&admin2, &proposal_id)
+        .unwrap()
+        .unwrap();
+    client
+        .try_execute_emergency_withdrawal(&admin1, &proposal_id)
+        .unwrap()
+        .unwrap();
+
+    // Try to approve after execution - should fail
+    let result = client.try_approve_emergency_withdrawal(&admin3, &proposal_id);
+    assert_eq!(result, Err(Ok(RentalError::ProposalAlreadyExecuted)));
+}

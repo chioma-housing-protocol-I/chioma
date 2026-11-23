@@ -81,11 +81,11 @@ export class PaymentResponseDto {
   destinationAccount: string;
   amount: string;
   assetType: AssetType;
-  assetCode?: string;
+  assetCode?: string | undefined;
   status: TransactionStatus;
   feePaid: number;
-  ledger?: number;
-  memo?: string;
+  ledger?: number | undefined;
+  memo?: string | undefined;
   createdAt: Date;
 }
 
@@ -126,14 +126,14 @@ export class TransactionResponseDto {
   destinationAccount: string;
   amount: string;
   assetType: AssetType;
-  assetCode?: string;
-  assetIssuer?: string;
+  assetCode?: string | undefined;
+  assetIssuer?: string | undefined;
   feePaid: number;
-  memo?: string;
-  memoType?: MemoType;
+  memo?: string | undefined;
+  memoType?: MemoType | undefined;
   status: TransactionStatus;
-  ledger?: number;
-  errorMessage?: string;
+  ledger?: number | undefined;
+  errorMessage?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
 }

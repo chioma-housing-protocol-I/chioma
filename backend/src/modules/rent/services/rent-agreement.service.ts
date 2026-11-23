@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RentAgreement, AgreementStatus } from '../entities/rent-contract.entity';
+import {
+  RentAgreement,
+  AgreementStatus,
+} from '../entities/rent-contract.entity';
 import { AgreementNotFoundError } from '../../../common/errors/domain-errors';
 import { InvalidStateTransitionError } from '../../../common/errors/domain-errors';
 
@@ -13,14 +16,23 @@ export const AGREEMENT_STATE_TRANSITIONS: Readonly<
   Record<AgreementStatus, ReadonlyArray<AgreementStatus>>
 > = {
   [AgreementStatus.DRAFT]: [AgreementStatus.PENDING_DEPOSIT],
-  [AgreementStatus.PENDING_DEPOSIT]: [AgreementStatus.SIGNED, AgreementStatus.TERMINATED],
-  [AgreementStatus.SIGNED]: [AgreementStatus.ACTIVE, AgreementStatus.TERMINATED],
+  [AgreementStatus.PENDING_DEPOSIT]: [
+    AgreementStatus.SIGNED,
+    AgreementStatus.TERMINATED,
+  ],
+  [AgreementStatus.SIGNED]: [
+    AgreementStatus.ACTIVE,
+    AgreementStatus.TERMINATED,
+  ],
   [AgreementStatus.ACTIVE]: [
     AgreementStatus.EXPIRED,
     AgreementStatus.TERMINATED,
     AgreementStatus.DISPUTED,
   ],
-  [AgreementStatus.DISPUTED]: [AgreementStatus.ACTIVE, AgreementStatus.TERMINATED],
+  [AgreementStatus.DISPUTED]: [
+    AgreementStatus.ACTIVE,
+    AgreementStatus.TERMINATED,
+  ],
   [AgreementStatus.EXPIRED]: [],
   [AgreementStatus.TERMINATED]: [],
 };
@@ -101,7 +113,11 @@ export class RentAgreementService {
     agreementId: string,
     options: TransitionOptions,
   ): Promise<RentAgreement> {
-    return this.transitionStatus(agreementId, AgreementStatus.PENDING_DEPOSIT, options);
+    return this.transitionStatus(
+      agreementId,
+      AgreementStatus.PENDING_DEPOSIT,
+      options,
+    );
   }
 
   /** PENDING_DEPOSIT → SIGNED */
@@ -133,7 +149,11 @@ export class RentAgreementService {
     agreementId: string,
     options: TransitionOptions,
   ): Promise<RentAgreement> {
-    return this.transitionStatus(agreementId, AgreementStatus.TERMINATED, options);
+    return this.transitionStatus(
+      agreementId,
+      AgreementStatus.TERMINATED,
+      options,
+    );
   }
 
   /** ACTIVE → DISPUTED */
@@ -141,7 +161,11 @@ export class RentAgreementService {
     agreementId: string,
     options: TransitionOptions,
   ): Promise<RentAgreement> {
-    return this.transitionStatus(agreementId, AgreementStatus.DISPUTED, options);
+    return this.transitionStatus(
+      agreementId,
+      AgreementStatus.DISPUTED,
+      options,
+    );
   }
 
   /** DISPUTED → ACTIVE */

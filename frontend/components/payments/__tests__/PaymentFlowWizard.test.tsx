@@ -29,9 +29,7 @@ vi.mock('@/components/blockchain/TransactionSigningModal', () => ({
     isOpen ? (
       <div data-testid="signing-modal">
         <span data-testid="signing-modal-xdr">{transactionXdr}</span>
-        <button onClick={() => onSigned?.(transactionXdr)}>
-          Confirm sign
-        </button>
+        <button onClick={() => onSigned?.(transactionXdr)}>Confirm sign</button>
         <button onClick={onClose}>Close modal</button>
       </div>
     ) : null,
@@ -202,9 +200,7 @@ describe('PaymentFlowWizard', () => {
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith(expect.any(Error));
       });
-      expect(onError.mock.calls[0][0].message).toBe(
-        'Could not build payment',
-      );
+      expect(onError.mock.calls[0][0].message).toBe('Could not build payment');
     });
 
     it('re-enables the Prepare & sign button after a failure so the user can retry', async () => {

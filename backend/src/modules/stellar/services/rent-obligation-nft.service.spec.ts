@@ -355,25 +355,36 @@ describe('RentObligationNftService — extended transaction response checks', ()
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    const module = await require('@nestjs/testing').Test.createTestingModule({
-      providers: [
-        RentObligationNftService,
-        { provide: require('@nestjs/config').ConfigService, useValue: mockConfigService },
-      ],
-    }).compile();
+    const module = await require('@nestjs/testing')
+      .Test.createTestingModule({
+        providers: [
+          RentObligationNftService,
+          {
+            provide: require('@nestjs/config').ConfigService,
+            useValue: mockConfigService,
+          },
+        ],
+      })
+      .compile();
     service = module.get(RentObligationNftService);
     // Standard build-transaction setup
     mockGetAccount.mockResolvedValue({ sequenceNumber: () => '1' });
     mockSimulateTransaction.mockResolvedValue({ result: { retval: {} } });
     jest
-      .spyOn(require('@stellar/stellar-sdk').SorobanRpc.Api, 'isSimulationError')
+      .spyOn(
+        require('@stellar/stellar-sdk').SorobanRpc.Api,
+        'isSimulationError',
+      )
       .mockReturnValue(false);
   });
 
   // --- mintObligation ---
   describe('mintObligation', () => {
     it('returns txHash and obligationId on success', async () => {
-      mockSendTransaction.mockResolvedValue({ hash: 'mint-hash', status: 'PENDING' });
+      mockSendTransaction.mockResolvedValue({
+        hash: 'mint-hash',
+        status: 'PENDING',
+      });
       const result = await service.mintObligation({
         agreementId: 'AGR-EXT-001',
         adminAddress: ADMIN_ADDRESS,
@@ -385,28 +396,40 @@ describe('RentObligationNftService — extended transaction response checks', ()
     it('throws BlockchainTransactionError when hash is null', async () => {
       mockSendTransaction.mockResolvedValue({ hash: null, status: 'PENDING' });
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-002', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-002',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('throws BlockchainTransactionError when entire response is null', async () => {
       mockSendTransaction.mockResolvedValue(null);
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-003', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-003',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('throws BlockchainTransactionError when entire response is undefined', async () => {
       mockSendTransaction.mockResolvedValue(undefined);
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-004', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-004',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('error message includes the operation name', async () => {
       mockSendTransaction.mockResolvedValue({ status: 'ERROR' });
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-005', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-005',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toThrow(/mint_obligation/);
     });
 
@@ -422,21 +445,33 @@ describe('RentObligationNftService — extended transaction response checks', ()
     it('throws on response that is an empty object {}', async () => {
       mockSendTransaction.mockResolvedValue({});
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-007', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-007',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('throws on response that contains only errorResult', async () => {
-      mockSendTransaction.mockResolvedValue({ errorResult: { code: 'tx_failed' }, status: 'ERROR' });
+      mockSendTransaction.mockResolvedValue({
+        errorResult: { code: 'tx_failed' },
+        status: 'ERROR',
+      });
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-008', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-008',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('throws when sendTransaction rejects (network error)', async () => {
       mockSendTransaction.mockRejectedValue(new Error('network timeout'));
       await expect(
-        service.mintObligation({ agreementId: 'AGR-EXT-009', adminAddress: ADMIN_ADDRESS }),
+        service.mintObligation({
+          agreementId: 'AGR-EXT-009',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toThrow('network timeout');
     });
 
@@ -463,23 +498,26 @@ describe('RentObligationNftService — extended transaction response checks', ()
     };
 
     it('returns txHash on success', async () => {
-      mockSendTransaction.mockResolvedValue({ hash: 'xfer-hash', status: 'PENDING' });
+      mockSendTransaction.mockResolvedValue({
+        hash: 'xfer-hash',
+        status: 'PENDING',
+      });
       const result = await service.transferObligation(TRANSFER_PARAMS);
       expect(result.txHash).toBe('xfer-hash');
     });
 
     it('throws BlockchainTransactionError when hash is missing', async () => {
       mockSendTransaction.mockResolvedValue({ status: 'PENDING' });
-      await expect(service.transferObligation(TRANSFER_PARAMS)).rejects.toBeInstanceOf(
-        BlockchainTransactionError,
-      );
+      await expect(
+        service.transferObligation(TRANSFER_PARAMS),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('throws BlockchainTransactionError when hash is null', async () => {
       mockSendTransaction.mockResolvedValue({ hash: null });
-      await expect(service.transferObligation(TRANSFER_PARAMS)).rejects.toBeInstanceOf(
-        BlockchainTransactionError,
-      );
+      await expect(
+        service.transferObligation(TRANSFER_PARAMS),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('error message identifies transfer_obligation operation', async () => {
@@ -500,7 +538,9 @@ describe('RentObligationNftService — extended transaction response checks', ()
 
     it('error message identifies burn_nft operation', async () => {
       mockSendTransaction.mockResolvedValue({});
-      await expect(service.burnObligation(BURN_PARAMS)).rejects.toThrow(/burn_nft/);
+      await expect(service.burnObligation(BURN_PARAMS)).rejects.toThrow(
+        /burn_nft/,
+      );
     });
   });
 
@@ -514,16 +554,16 @@ describe('RentObligationNftService — extended transaction response checks', ()
 
     it('throws BlockchainTransactionError when hash is empty string', async () => {
       mockSendTransaction.mockResolvedValue({ hash: '' });
-      await expect(service.adminReassignObligation(REASSIGN_PARAMS)).rejects.toBeInstanceOf(
-        BlockchainTransactionError,
-      );
+      await expect(
+        service.adminReassignObligation(REASSIGN_PARAMS),
+      ).rejects.toBeInstanceOf(BlockchainTransactionError);
     });
 
     it('error message identifies admin_reassign_obligation operation', async () => {
       mockSendTransaction.mockResolvedValue({ hash: '' });
-      await expect(service.adminReassignObligation(REASSIGN_PARAMS)).rejects.toThrow(
-        /admin_reassign_obligation/,
-      );
+      await expect(
+        service.adminReassignObligation(REASSIGN_PARAMS),
+      ).rejects.toThrow(/admin_reassign_obligation/);
     });
   });
 
@@ -532,18 +572,26 @@ describe('RentObligationNftService — extended transaction response checks', ()
     let unconfiguredService: RentObligationNftService;
 
     beforeEach(async () => {
-      const unconfiguredModule = await require('@nestjs/testing').Test.createTestingModule({
-        providers: [
-          RentObligationNftService,
-          { provide: require('@nestjs/config').ConfigService, useValue: { get: jest.fn(() => '') } },
-        ],
-      }).compile();
+      const unconfiguredModule = await require('@nestjs/testing')
+        .Test.createTestingModule({
+          providers: [
+            RentObligationNftService,
+            {
+              provide: require('@nestjs/config').ConfigService,
+              useValue: { get: jest.fn(() => '') },
+            },
+          ],
+        })
+        .compile();
       unconfiguredService = unconfiguredModule.get(RentObligationNftService);
     });
 
     it('mintObligation throws when contract not configured', async () => {
       await expect(
-        unconfiguredService.mintObligation({ agreementId: 'X', adminAddress: ADMIN_ADDRESS }),
+        unconfiguredService.mintObligation({
+          agreementId: 'X',
+          adminAddress: ADMIN_ADDRESS,
+        }),
       ).rejects.toThrow('Contract not configured');
     });
 
@@ -568,13 +616,17 @@ describe('RentObligationNftService — extended transaction response checks', ()
     });
 
     it('read-only queries return safe defaults when contract not configured', async () => {
-      await expect(unconfiguredService.getObligationOwner('X')).resolves.toBeNull();
+      await expect(
+        unconfiguredService.getObligationOwner('X'),
+      ).resolves.toBeNull();
       await expect(unconfiguredService.getObligation('X')).resolves.toBeNull();
       await expect(unconfiguredService.hasObligation('X')).resolves.toBe(false);
       await expect(unconfiguredService.getObligationCount()).resolves.toBe(0);
       await expect(unconfiguredService.canBurn('T')).resolves.toBe(false);
       await expect(unconfiguredService.getBurnRecord('T')).resolves.toBeNull();
-      await expect(unconfiguredService.getBurnedNfts(OWNER_ADDRESS)).resolves.toEqual([]);
+      await expect(
+        unconfiguredService.getBurnedNfts(OWNER_ADDRESS),
+      ).resolves.toEqual([]);
     });
   });
 });

@@ -2,11 +2,13 @@
 
 import Image from 'next/image';
 import { Heart, MapPin, Bed, Bath, Ruler, ChevronLeft } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFavoriteStatus, useToggleFavorite } from '@/lib/query/hooks';
 import { useModal } from '@/contexts/ModalContext';
 import { shimmerBlurDataURL } from '@/lib/utils/image-placeholder';
 import type { PropertyDetailData } from '@/components/modals/types';
+
+export type PropertyCardStatus = 'active' | 'sold' | 'pending';
 
 interface PropertyCardProps {
   property: {
@@ -26,12 +28,13 @@ interface PropertyCardProps {
     latitude?: number;
     longitude?: number;
     images?: string[];
+    status?: PropertyCardStatus;
   };
   variant?: 'grid' | 'list';
   priority?: boolean;
 }
 
-export default function PropertyCard({
+function PropertyCard({
   property,
   variant = 'grid',
   priority = false,
@@ -40,52 +43,65 @@ export default function PropertyCard({
   const [imageError, setImageError] = useState(false);
   const { openModal } = useModal();
   const propertyId = String(property.id);
+  const status = property.status ?? 'active';
+  const isSold = status === 'sold';
+  const isPending = status === 'pending';
   const { data: favoriteStatus } = useFavoriteStatus(propertyId);
   const { isPending: isFavoritePending, toggleFavorite } =
     useToggleFavorite(propertyId);
   const isFavorited = favoriteStatus?.isFavorited ?? false;
 
-  const handlePropertyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
+  // useCallback so this card's identity stays stable across re-renders of
+  // a list that re-renders often (e.g. app/properties/page.tsx tracks
+  // scroll position and map width in state); without it, every card in
+  // the list gets a brand-new onClick prop on every such re-render, which
+  // on its own doesn't break React.memo's bailout below but does mean any
+  // child that depended on referential equality downstream would miss it.
+  const handlePropertyClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
 
-    // Transform property data to PropertyDetailData format
-    const propertyDetail: PropertyDetailData = {
-      id: String(property.id),
-      title: property.title,
-      description:
-        property.description ||
-        `Beautiful ${property.category || 'property'} in ${property.location}`,
-      price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
-      address: property.location,
-      bedrooms: property.beds,
-      bathrooms: property.baths,
-      areaSqft: property.sqft,
-      landlordName: property.manager,
-      images: property.images || [property.image],
-      amenities: property.amenities || [],
-      verificationStatus: property.verified ? 'Verified' : undefined,
-      viewCount: 0,
-      favoriteCount: 0,
-    };
+      // Transform property data to PropertyDetailData format
+      const propertyDetail: PropertyDetailData = {
+        id: String(property.id),
+        title: property.title,
+        description:
+          property.description ||
+          `Beautiful ${property.category || 'property'} in ${property.location}`,
+        price: parseFloat(property.price.replace(/[^0-9.]/g, '')),
+        address: property.location,
+        bedrooms: property.beds,
+        bathrooms: property.baths,
+        areaSqft: property.sqft,
+        landlordName: property.manager,
+        images: property.images || [property.image],
+        amenities: property.amenities || [],
+        verificationStatus: property.verified ? 'Verified' : undefined,
+        viewCount: 0,
+        favoriteCount: 0,
+      };
 
-    openModal('propertyDetail', {
-      property: propertyDetail,
-      onInquiryClick: (prop: PropertyDetailData) => {
-        openModal('propertyInquiry', {
-          propertyId: prop.id,
-          propertyTitle: prop.title,
-          landlordName: prop.landlordName,
-        });
-      },
-    });
-  };
+      openModal('propertyDetail', {
+        property: propertyDetail,
+        onInquiryClick: (prop: PropertyDetailData) => {
+          openModal('propertyInquiry', {
+            propertyId: prop.id,
+            propertyTitle: prop.title,
+            landlordName: prop.landlordName,
+          });
+        },
+      });
+    },
+    [property, openModal],
+  );
 
   return (
     <div
       onClick={handlePropertyClick}
-      className="block group cursor-pointer"
+      className={`block group cursor-pointer ${isSold ? 'opacity-75 pointer-events-auto' : ''}`}
       data-testid="property-card"
       data-property-id={String(property.id)}
+      data-status={status}
     >
       <div
         className={`glass-card rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
@@ -121,7 +137,7 @@ export default function PropertyCard({
           )}
 
           {/* Status Badge */}
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
             {property.verified ? (
               <div className="bg-emerald-500/20 backdrop-blur-xl text-emerald-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-emerald-400/30 shadow-2xl">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -132,16 +148,56 @@ export default function PropertyCard({
                 New Listing
               </div>
             )}
+
+            {/* Property Status Badge */}
+            {isSold && (
+              <div
+                data-testid="status-badge-sold"
+                className="bg-red-500/20 backdrop-blur-xl text-red-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-red-400/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Sold
+              </div>
+            )}
+            {isPending && (
+              <div
+                data-testid="status-badge-pending"
+                className="bg-amber-500/20 backdrop-blur-xl text-amber-400 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-amber-400/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Pending
+              </div>
+            )}
+            {status === 'active' && (
+              <div
+                data-testid="status-badge-active"
+                className="bg-emerald-500/20 backdrop-blur-xl text-emerald-300 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-emerald-300/30 shadow-2xl"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                Active
+              </div>
+            )}
           </div>
+
+          {/* Sold overlay */}
+          {isSold && (
+            <div className="absolute inset-0 bg-black/40 z-[5] flex items-center justify-center">
+              <span className="text-white/80 text-2xl font-black uppercase tracking-widest rotate-[-15deg]">
+                Sold
+              </span>
+            </div>
+          )}
 
           {/* Wishlist Heart */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              void toggleFavorite(isFavorited);
+              if (!isSold) {
+                void toggleFavorite(isFavorited);
+              }
             }}
-            disabled={isFavoritePending}
+            disabled={isFavoritePending || isSold}
             aria-pressed={isFavorited}
             aria-label={
               isFavorited ? 'Remove from favorites' : 'Add to favorites'
@@ -238,6 +294,7 @@ export default function PropertyCard({
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${property.manager}`}
                 alt={property.manager}
                 className="w-10 h-10 rounded-2xl shrink-0 shadow-lg border border-white/10 group-hover/manager:scale-110 transition-transform"
+                loading="lazy"
               />
               <div>
                 <p className="text-[10px] text-blue-200/30 font-black uppercase tracking-[0.2em]">
@@ -257,3 +314,34 @@ export default function PropertyCard({
     </div>
   );
 }
+
+// Callers (e.g. app/properties/page.tsx) build `property` via
+// `toPropertyCardShape(...)` inline in JSX, which allocates a new object
+// every render regardless of whether the underlying data changed, so a
+// plain React.memo (reference equality) would never bail out. Compares
+// by the fields PropertyCard actually renders instead, so a list
+// re-rendering because of unrelated state (scroll position, map width,
+// etc. in the properties page) doesn't re-render every card in it.
+function arePropsEqual(prev: PropertyCardProps, next: PropertyCardProps) {
+  if (prev.variant !== next.variant || prev.priority !== next.priority) {
+    return false;
+  }
+  const a = prev.property;
+  const b = next.property;
+  return (
+    a.id === b.id &&
+    a.price === b.price &&
+    a.title === b.title &&
+    a.location === b.location &&
+    a.category === b.category &&
+    a.beds === b.beds &&
+    a.baths === b.baths &&
+    a.sqft === b.sqft &&
+    a.manager === b.manager &&
+    a.image === b.image &&
+    a.verified === b.verified &&
+    a.description === b.description
+  );
+}
+
+export default memo(PropertyCard, arePropsEqual);

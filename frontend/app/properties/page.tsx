@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import PropertyCardSkeleton from '@/components/properties/PropertyCardSkeleton';
 import PropertyCard from '@/components/properties/PropertyCard';
 import { PropertyListingHeader } from '@/components/properties/PropertyListingHeader';
+import { PropertyListEmptyState } from '@/components/properties/PropertyListEmptyState';
 import LazyPropertyMapView from '@/components/properties/LazyPropertyMapView';
 import { VirtualGrid } from '@/components/ui/VirtualGrid';
 import { useGridColumns } from '@/hooks/use-grid-columns';
@@ -18,6 +19,7 @@ import {
   type PropertyListParams,
 } from '@/lib/query/hooks/use-properties';
 import { toPropertyCardShape } from '@/lib/utils/property-adapter';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import type { Property } from '@/types';
 
 // The footer sits below an infinitely-scrolling grid and is never part of the
@@ -37,6 +39,7 @@ type ViewMode = 'split' | 'list' | 'map';
 export default function PropertyListing() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  useScrollRestoration();
   const [searchAsIMove, setSearchAsIMove] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [mapWidth, setMapWidth] = useState<number>(50);
@@ -123,6 +126,18 @@ export default function PropertyListing() {
     },
     [searchQuery, selectedType, minPrice, maxPrice],
   );
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() || selectedType || minPrice || maxPrice,
+  );
+
+  const resetFilters = useCallback(() => {
+    setSearchQuery('');
+    setSelectedType('');
+    setMinPrice('');
+    setMaxPrice('');
+    router.replace('/properties');
+  }, [router]);
 
   const applySearchToUrl = useCallback(
     (raw: string) => {
@@ -421,14 +436,11 @@ export default function PropertyListing() {
                           <PropertyCardSkeleton key={i} />
                         ))
                       : !isError && (
-                          <div
-                            className="col-span-full text-center py-24 glass-card rounded-3xl border-dashed"
-                            data-testid="empty-state"
-                          >
-                            <div className="text-blue-200/30 text-lg font-medium">
-                              No properties match your current filters
-                            </div>
-                          </div>
+                          <PropertyListEmptyState
+                            hasFilters={hasActiveFilters}
+                            onClearFilters={resetFilters}
+                            onBrowseAll={resetFilters}
+                          />
                         )}
                   </div>
                 </div>

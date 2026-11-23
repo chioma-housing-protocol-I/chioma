@@ -15,7 +15,8 @@ import {
 // Types
 // ============================================================================
 
-export type ValidationStatus = 'success' | 'error' | 'warning' | 'info' | 'validating';
+export type ValidationStatus =
+  'success' | 'error' | 'warning' | 'info' | 'validating';
 
 export interface FieldError {
   field: string;
@@ -169,9 +170,16 @@ export function FormValidationFeedback({
     return (
       <div className={cn('space-y-1', className)}>
         {message && (
-          <div className={cn('flex items-start gap-2', getTextColorClass(status))}>
+          <div
+            className={cn('flex items-start gap-2', getTextColorClass(status))}
+          >
             {showIcon && Icon && (
-              <Icon className={cn('mt-0.5 h-4 w-4 flex-shrink-0', status === 'validating' && 'animate-spin')} />
+              <Icon
+                className={cn(
+                  'mt-0.5 h-4 w-4 flex-shrink-0',
+                  status === 'validating' && 'animate-spin',
+                )}
+              />
             )}
             <p className="text-sm">{message}</p>
           </div>
@@ -179,8 +187,12 @@ export function FormValidationFeedback({
         {errors.length > 0 && (
           <ul className="ml-6 space-y-1">
             {errors.map((fieldError, index) => (
-              <li key={`${fieldError.field}-${index}`} className="text-sm text-destructive">
-                <span className="font-medium">{fieldError.field}:</span> {fieldError.message}
+              <li
+                key={`${fieldError.field}-${index}`}
+                className="text-sm text-destructive"
+              >
+                <span className="font-medium">{fieldError.field}:</span>{' '}
+                {fieldError.message}
               </li>
             ))}
           </ul>
@@ -212,7 +224,9 @@ export function FormValidationFeedback({
         )}
         <div className="flex-1 space-y-2">
           {message && (
-            <AlertDescription className={cn('font-medium', getTextColorClass(status))}>
+            <AlertDescription
+              className={cn('font-medium', getTextColorClass(status))}
+            >
               {message}
             </AlertDescription>
           )}

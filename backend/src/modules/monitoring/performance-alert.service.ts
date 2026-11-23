@@ -15,10 +15,10 @@ export interface ThresholdBreach {
 }
 
 export interface AlertQuery {
-  severity?: AlertSeverity;
-  resolved?: boolean;
-  since?: Date;
-  limit?: number;
+  severity?: AlertSeverity | undefined;
+  resolved?: boolean | undefined;
+  since?: Date | undefined;
+  limit?: number | undefined;
 }
 
 @Injectable()

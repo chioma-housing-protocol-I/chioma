@@ -10,7 +10,7 @@ import {
 export class CreatePaymentRecordDto {
   @IsOptional()
   @IsString()
-  agreementId?: string;
+  agreementId?: string | undefined;
 
   @IsNumber()
   @Min(0.01)
@@ -22,7 +22,7 @@ export class CreatePaymentRecordDto {
 
   @IsString()
   @IsOptional()
-  referenceNumber?: string;
+  referenceNumber?: string | undefined;
 
   @IsDateString()
   @IsOptional()
@@ -30,7 +30,7 @@ export class CreatePaymentRecordDto {
 
   @IsString()
   @IsOptional()
-  notes?: string;
+  notes?: string | undefined;
 
   @IsString()
   @IsOptional()

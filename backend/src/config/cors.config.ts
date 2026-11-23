@@ -3,14 +3,63 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('CorsConfig');
 
+const WILDCARD_DOMAIN_PATTERN = /^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(?::\d+)?$/;
+
+/**
+ * Single source of truth for the CORS whitelist. Invalid configuration is
+ * rejected here so startup fails instead of silently running with a broken
+ * policy. An explicit `*` remains valid as the "allow any origin" token and
+ * is separately warned about in production by validateCorsConfig().
+ */
+export function parseCorsOrigins(): string[] {
+  const configured = process.env.CORS_ORIGINS;
+  const origins = configured
+    ? configured.split(',').map((origin) => origin.trim())
+    : [process.env.FRONTEND_URL || 'http://localhost:3000'];
+
+  if (origins.length === 0) {
+    throw new Error('Invalid CORS origin: no origins configured');
+  }
+
+  for (const origin of origins) {
+    if (origin === '*') {
+      continue;
+    }
+
+    if (origin.startsWith('*.')) {
+      const domain = origin.slice(2);
+      if (!WILDCARD_DOMAIN_PATTERN.test(domain)) {
+        throw new Error(`Invalid CORS origin: ${origin}`);
+      }
+      continue;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(origin);
+    } catch {
+      throw new Error(`Invalid CORS origin: ${origin}`);
+    }
+    if (
+      (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+      !parsed.hostname ||
+      parsed.pathname !== '/' ||
+      parsed.search ||
+      parsed.hash
+    ) {
+      throw new Error(`Invalid CORS origin: ${origin}`);
+    }
+  }
+
+  return origins;
+}
+
 /**
  * Dynamic CORS configuration based on environment
  */
 export function getCorsConfig(): CorsOptions {
   const nodeEnv = process.env.NODE_ENV || 'development';
-  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((origin) =>
-    origin.trim(),
-  ) || [process.env.FRONTEND_URL || 'http://localhost:3000'];
+  const corsOrigins = parseCorsOrigins();
 
   const corsConfig: CorsOptions = {
     origin: (origin, callback) => {
@@ -90,13 +139,7 @@ export function getCorsConfig(): CorsOptions {
  * Validates CORS configuration on startup
  */
 export function validateCorsConfig(): void {
-  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((origin) =>
-    origin.trim(),
-  ) || [process.env.FRONTEND_URL || 'http://localhost:3000'];
-
-  if (corsOrigins.length === 0) {
-    logger.warn('No CORS origins configured. All origins will be blocked.');
-  }
+  const corsOrigins = parseCorsOrigins();
 
   // Warn about insecure configurations in production
   if (process.env.NODE_ENV === 'production') {

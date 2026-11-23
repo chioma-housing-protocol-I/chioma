@@ -152,7 +152,9 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     fireEvent.click(screen.getByLabelText('Toggle menu'));
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Switch to dark mode' }),
+    );
 
     expect(useUIStore.getState().theme).toBe('dark');
     expect(

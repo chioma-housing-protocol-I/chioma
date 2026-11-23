@@ -24,7 +24,7 @@ export class CheckTransactionFraudDto {
   })
   @IsOptional()
   @IsString()
-  currency?: string;
+  currency?: string | undefined;
 
   @ApiPropertyOptional({
     example: 'stellar_usdc',
@@ -32,7 +32,7 @@ export class CheckTransactionFraudDto {
   })
   @IsOptional()
   @IsString()
-  paymentMethod?: string;
+  paymentMethod?: string | undefined;
 
   @ApiPropertyOptional({
     example: '192.168.1.100',

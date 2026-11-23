@@ -300,4 +300,108 @@ describe('PaymentWebhookService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+
+
+  describe('retry behavior', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it('retries transient processing failures with exponential backoff and jitter and logs attempts', async () => {
+      jest.useFakeTimers();
+      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+      const logSpy = jest.spyOn((service as any).logger, 'log');
+      const warnSpy = jest.spyOn((service as any).logger, 'warn');
+
+      paymentRepository.findOne
+        .mockRejectedValueOnce(
+          Object.assign(new Error('temporary db outage'), { code: 'ETIMEDOUT' }),
+        )
+        .mockRejectedValueOnce(
+          Object.assign(new Error('temporary db outage'), { code: 'ETIMEDOUT' }),
+        )
+        .mockResolvedValueOnce({
+          id: 'pay_retry',
+          status: PaymentStatus.PENDING,
+          metadata: {},
+        });
+      paymentRepository.save.mockImplementation((p) => Promise.resolve(p));
+
+      const promise = service.handlePaymentGatewayWebhook({
+        eventType: 'payment.completed',
+        paymentId: 'pay_retry',
+        status: 'completed',
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(1000);
+      await jest.advanceTimersByTimeAsync(2000);
+
+      const result = await promise;
+      expect(result.processed).toBe(true);
+      expect(paymentRepository.findOne).toHaveBeenCalledTimes(3);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('attempt failed'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Scheduling webhook retry with backoff'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('delayMs=0'),
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Retrying payment-gateway webhook processing'),
+      );
+
+      randomSpy.mockRestore();
+    });
+
+    it('does not retry non-retryable processing failures', async () => {
+      paymentRepository.findOne.mockResolvedValue({
+        id: 'pay_bad',
+        status: PaymentStatus.PENDING,
+        metadata: {},
+      });
+      paymentRepository.save.mockRejectedValue(
+        Object.assign(new Error('validation violation'), { status: 400 }),
+      );
+
+      await expect(
+        service.handlePaymentGatewayWebhook({
+          eventType: 'payment.completed',
+          paymentId: 'pay_bad',
+          status: 'completed',
+        }),
+      ).rejects.toThrow('validation violation');
+      expect(paymentRepository.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops after 1s,2s,4s,8s backoff attempts are exhausted for transient failures', async () => {
+      jest.useFakeTimers();
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      const transient = Object.assign(new Error('connection reset'), {
+        code: 'ECONNRESET',
+      });
+      paymentRepository.findOne.mockRejectedValue(transient);
+
+      const promise = service.handlePaymentGatewayWebhook({
+        eventType: 'payment.completed',
+        paymentId: 'pay_flaky',
+        status: 'completed',
+      });
+      const rejection = expect(promise).rejects.toThrow('connection reset');
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(1000);
+      await jest.advanceTimersByTimeAsync(2000);
+      await jest.advanceTimersByTimeAsync(4000);
+      await jest.advanceTimersByTimeAsync(8000);
+
+      await rejection;
+      expect(paymentRepository.findOne).toHaveBeenCalledTimes(5);
+    });
+  });
 });

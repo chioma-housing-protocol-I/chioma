@@ -1,0 +1,139 @@
+name: Backend Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to roll back"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+      image_tag:
+        description: "Existing ghcr.io backend image tag to deploy (for example sha-abc1234 or v1.2.3)"
+        required: true
+        type: string
+      reason:
+        description: "Incident or change reference for the audit trail"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: backend-rollback-${{ inputs.environment }}
+  # Never cancel a rollback halfway through: a half-applied deploy is worse
+  # than two queued ones.
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Roll back ${{ inputs.environment }} backend
+    runs-on: ubuntu-latest
+    # Environment protection rules (required reviewers) are the approval gate.
+    # Configure `production` and `staging` with at least one required reviewer.
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Validate inputs and resolve the image
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          # Only characters that are valid in an OCI tag. Passing the value
+          # through the environment keeps it out of the generated shell script.
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+            echo "::error::image_tag must be 1-128 characters of letters, digits, '.', '_' or '-', and must not start with a separator"
+            exit 1
+          fi
+          if [[ -z "${REASON// /}" ]]; then
+            echo "::error::reason is required for the audit trail"
+            exit 1
+          fi
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the image exists
+        run: docker manifest inspect "$IMAGE"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure cluster credentials
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KUBE_CONFIG" ]]; then
+            echo "::error::KUBE_CONFIG secret is not configured for this environment"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          install -m 600 /dev/null "$HOME/.kube/config"
+          printf '%s' "$KUBE_CONFIG" > "$HOME/.kube/config"
+
+      - name: Resolve namespace and record the current image
+        id: target
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          case "$TARGET_ENVIRONMENT" in
+            production) namespace="production" ;;
+            staging) namespace="staging" ;;
+            *) echo "::error::unsupported environment"; exit 1 ;;
+          esac
+          echo "namespace=$namespace" >> "$GITHUB_OUTPUT"
+          previous=$(kubectl -n "$namespace" get deployment chioma-backend \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="backend")].image}')
+          echo "previous_image=$previous" >> "$GITHUB_OUTPUT"
+          echo "Rolling back $namespace from $previous to $IMAGE"
+
+      - name: Apply the rollback
+        env:
+          NAMESPACE: ${{ steps.target.outputs.namespace }}
+        run: |
+          set -euo pipefail
+          kubectl -n "$NAMESPACE" set image deployment/chioma-backend "backend=$IMAGE"
+          kubectl -n "$NAMESPACE" rollout status deployment/chioma-backend --timeout=5m
+
+      - name: Verify the rollout
+        if: always() && steps.target.outcome == 'success'
+        env:
+          NAMESPACE: ${{ steps.target.outputs.namespace }}
+        run: |
+          set -euo pipefail
+          kubectl -n "$NAMESPACE" get pods -l app=chioma-backend
+          kubectl -n "$NAMESPACE" get deployment chioma-backend \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="backend")].image}'
+          echo
+
+      - name: Write the audit summary
+        if: always()
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+          REASON: ${{ inputs.reason }}
+          PREVIOUS_IMAGE: ${{ steps.target.outputs.previous_image }}
+          OUTCOME: ${{ job.status }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          {
+            echo "## Backend rollback"
+            echo
+            echo "- Environment: $TARGET_ENVIRONMENT"
+            echo "- Requested by: $ACTOR"
+            echo "- Previous image: $PREVIOUS_IMAGE"
+            echo "- Target image: $IMAGE"
+            echo "- Reason: $REASON"
+            echo "- Result: $OUTCOME"
+          } >> "$GITHUB_STEP_SUMMARY"

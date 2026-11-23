@@ -12,6 +12,15 @@ import {
 } from './performance-alert.service';
 import { AlertSeverity } from './entities/performance-alert.entity';
 import { registerCacheLookupObserver } from '../../common/cache/cache-metrics';
+import {
+  emptyGatewayStats,
+  normalizeErrorClass,
+  normalizeGateway,
+  normalizeOperation,
+  PaymentGatewayMetricsSnapshot,
+  PaymentGatewayOperation,
+  PaymentGatewayStats,
+} from '../payments/payment-gateway.metrics';
 
 export const PERFORMANCE_THRESHOLDS = {
   httpDurationMs: 2000,
@@ -209,6 +218,30 @@ export class MetricsService implements OnModuleInit {
     labelNames: ['queue'] as const,
     registers: [this.registry],
   });
+
+  private readonly paymentGatewayOperations = new Counter({
+    name: 'payment_gateway_operations_total',
+    help: 'Total payment gateway operations by gateway, operation and result',
+    labelNames: ['gateway', 'operation', 'status'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly paymentGatewayRetries = new Histogram({
+    name: 'payment_gateway_retry_count',
+    help: 'Retry attempts per payment gateway operation',
+    labelNames: ['gateway', 'operation'] as const,
+    buckets: [0, 1, 2, 3, 5, 10],
+    registers: [this.registry],
+  });
+
+  private readonly paymentGatewayErrors = new Counter({
+    name: 'payment_gateway_errors_total',
+    help: 'Payment gateway failures by bounded error class',
+    labelNames: ['gateway', 'error_class'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly paymentGatewayStats = new Map<string, PaymentGatewayStats>();
 
   private readonly rentPayments = new Counter({
     name: 'rent_payments_total',
@@ -426,6 +459,53 @@ export class MetricsService implements OnModuleInit {
     this.queueFailedJobs.set({ queue }, metrics.failed);
     this.queuePaused.set({ queue }, metrics.paused ? 1 : 0);
     this.queueStalledState.set({ queue }, metrics.stalled ? 1 : 0);
+  }
+
+  /**
+   * Records one gateway outcome. Label values are normalised to bounded
+   * vocabularies so an operator-supplied gateway name cannot create an
+   * unbounded Prometheus series.
+   */
+  recordPaymentGatewayOperation(event: PaymentGatewayOperation): void {
+    const gateway = normalizeGateway(event.gateway);
+    const operation = normalizeOperation(event.operation);
+    const status = event.success ? 'success' : 'failure';
+    const retries = Math.max(0, Math.floor(event.retries ?? 0));
+
+    this.paymentGatewayOperations.inc({ gateway, operation, status });
+    this.paymentGatewayRetries.observe({ gateway, operation }, retries);
+
+    let stats = this.paymentGatewayStats.get(gateway);
+    if (!stats) {
+      stats = emptyGatewayStats();
+      this.paymentGatewayStats.set(gateway, stats);
+    }
+    stats.total += 1;
+    stats.retries += retries;
+    if (event.success) {
+      stats.successes += 1;
+    } else {
+      stats.failures += 1;
+      const errorClass = normalizeErrorClass(event.errorClass);
+      this.paymentGatewayErrors.inc({ gateway, error_class: errorClass });
+      stats.errors[errorClass] = (stats.errors[errorClass] ?? 0) + 1;
+    }
+    stats.operations[operation] = (stats.operations[operation] ?? 0) + 1;
+    stats.successRate = stats.total > 0 ? stats.successes / stats.total : 0;
+    stats.errorRate = stats.total > 0 ? stats.failures / stats.total : 0;
+  }
+
+  /** Snapshot of success rate, retry totals and error rate per gateway. */
+  getPaymentGatewayMetrics(): PaymentGatewayMetricsSnapshot {
+    const snapshot: PaymentGatewayMetricsSnapshot = {};
+    for (const [gateway, stats] of this.paymentGatewayStats) {
+      snapshot[gateway] = {
+        ...stats,
+        operations: { ...stats.operations },
+        errors: { ...stats.errors },
+      };
+    }
+    return snapshot;
   }
 
   recordRentPayment(status: 'success' | 'failed'): void {

@@ -21,25 +21,36 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/entities/user.entity';
 import { PaginationUtils } from '../../common/utils';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { TimeoutError } from '../../common/errors/retry-errors';
+import {
+  isKycTimeoutError,
+  KycManualReviewService,
+} from './kyc-manual-review.service';
+
+/** Default deadline for the external verification submission. */
+export const KYC_VERIFICATION_TIMEOUT_MS = Number.parseInt(
+  process.env.KYC_VERIFICATION_TIMEOUT_MS ?? '5000',
+  10,
+);
 
 export interface AdminKycUserView {
   id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
+  name?: string | undefined;
+  email?: string | undefined;
+  phone?: string | undefined;
+  role?: string | undefined;
 }
 
 export interface AdminKycView {
   id: string;
   userId: string;
   status: KycStatus;
-  reason?: string;
-  providerReference?: string;
+  reason?: string | undefined;
+  providerReference?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
-  user?: AdminKycUserView;
-  kycData?: Record<string, unknown>;
+  user?: AdminKycUserView | undefined;
+  kycData?: Record<string, unknown> | undefined;
   documents: [];
 }
 
@@ -58,6 +69,7 @@ export class KycService {
     private readonly encryptionService: EncryptionService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly manualReviewService: KycManualReviewService,
   ) {}
 
   async submitKyc(userId: string, dto: SubmitKycDto): Promise<Kyc> {
@@ -67,10 +79,30 @@ export class KycService {
       const encryptedKycData = this.encryptKycData(userId, dto.kycData);
       const documentHash = hashKycPayload(dto.kycData);
 
+      let providerReference: string | null = null;
+      try {
+        const submission = await this.submitToProvider(userId, dto.kycData);
+        providerReference = submission.providerReference;
+      } catch (error) {
+        if (isKycTimeoutError(error)) {
+          this.logger.warn(
+            `KYC provider timed out for user ${userId}; queueing manual review`,
+          );
+          return this.manualReviewService.queueForManualReview(
+            userId,
+            dto.kycData,
+            documentHash,
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+        throw error;
+      }
+
       const kyc = this.kycRepository.create({
         userId,
         encryptedKycData,
         documentHash,
+        providerReference,
         status: KycStatus.PENDING,
       });
 
@@ -99,6 +131,42 @@ export class KycService {
     } catch (error) {
       this.logger.error(`Failed to submit KYC for user ${userId}`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Submits to the configured verification provider under a hard deadline.
+   * The default implementation mirrors the existing mock integration; a real
+   * client can replace it without changing the degradation path. The timer
+   * is always cleared so a late provider response cannot keep the process
+   * alive.
+   */
+  protected async submitToProvider(
+    userId: string,
+    _kycData: Record<string, unknown>,
+  ): Promise<{ providerReference: string }> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new TimeoutError(
+            `KYC verification provider timed out after ${KYC_VERIFICATION_TIMEOUT_MS}ms`,
+          ),
+        );
+      }, KYC_VERIFICATION_TIMEOUT_MS);
+    });
+
+    try {
+      return await Promise.race([
+        Promise.resolve({
+          providerReference: `mock-ref-${userId}-${Date.now()}`,
+        }),
+        timeout,
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 

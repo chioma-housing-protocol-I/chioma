@@ -43,7 +43,7 @@ export function ForgotPasswordForm({
 
   const validateEmail = (value: string): boolean => {
     setEmailError('');
-    
+
     if (!value) {
       setEmailError('Email address is required');
       return false;
@@ -74,7 +74,7 @@ export function ForgotPasswordForm({
         { email: email.toLowerCase() },
         { retries: 1 },
       );
-      
+
       setStatus('sent');
       onSuccess?.(email);
     } catch (err: unknown) {
@@ -103,7 +103,8 @@ export function ForgotPasswordForm({
               <span className="font-semibold text-foreground">{email}</span>
             </p>
             <p>
-              If you don&apos;t see the email within a few minutes, check your spam folder.
+              If you don&apos;t see the email within a few minutes, check your
+              spam folder.
             </p>
           </div>
         </div>
@@ -151,7 +152,8 @@ export function ForgotPasswordForm({
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Reset your password</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your account email and we&apos;ll send you a password reset link.
+          Enter your account email and we&apos;ll send you a password reset
+          link.
         </p>
       </div>
 
@@ -213,9 +215,9 @@ export function ForgotPasswordForm({
 
       <div className="mt-6 p-4 rounded-lg bg-muted/50">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          <strong>Security note:</strong> For your security, we won&apos;t reveal whether
-          this email address is registered. If the email exists in our system, you&apos;ll
-          receive reset instructions.
+          <strong>Security note:</strong> For your security, we won&apos;t
+          reveal whether this email address is registered. If the email exists
+          in our system, you&apos;ll receive reset instructions.
         </p>
       </div>
     </div>

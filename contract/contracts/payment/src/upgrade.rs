@@ -1,7 +1,7 @@
 use crate::errors::PaymentError;
 use crate::events;
 use crate::storage::DataKey;
-use soroban_sdk::{Address, Bytes, Env, String, Vec};
+use soroban_sdk::{Address, Bytes, BytesN, Env, String, Vec};
 
 /// Contract upgrade proposal
 #[derive(Clone)]
@@ -28,6 +28,10 @@ pub fn propose_upgrade(
     delay_seconds: u64,
 ) -> Result<(), PaymentError> {
     proposer.require_auth();
+
+    if wasm_hash.len() != 32 {
+        return Err(PaymentError::InvalidWasmHash);
+    }
 
     if env
         .storage()
@@ -118,10 +122,19 @@ pub fn execute_upgrade(
         return Err(PaymentError::PaymentFailed);
     }
 
+    let new_wasm_hash: BytesN<32> = proposal
+        .wasm_hash
+        .clone()
+        .try_into()
+        .map_err(|_| PaymentError::InvalidWasmHash)?;
+
     proposal.executed = true;
     env.storage()
         .persistent()
         .set(&DataKey::UpgradeProposal(proposal_id.clone()), &proposal);
+
+    // Actually swap this contract's executable code (#2084 parity fix).
+    env.deployer().update_current_contract_wasm(new_wasm_hash);
 
     events::upgrade_executed(env, proposal_id, executor);
 

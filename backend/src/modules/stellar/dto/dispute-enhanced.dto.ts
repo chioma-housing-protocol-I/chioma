@@ -190,7 +190,7 @@ export class VoteResultsDto {
     favorLandlord: boolean;
     votedAt: Date;
     voteWeight: number;
-    comment?: string;
+    comment?: string | undefined;
   }[];
 }
 
@@ -201,8 +201,8 @@ export class DisputeTimelineDto {
     eventType: string;
     eventData: Record<string, any>;
     timestamp: Date;
-    triggeredBy?: string;
-    transactionHash?: string;
+    triggeredBy?: string | undefined;
+    transactionHash?: string | undefined;
   }[];
 }
 

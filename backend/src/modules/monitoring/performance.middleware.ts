@@ -38,7 +38,11 @@ export class PerformanceMiddleware implements NestMiddleware {
       try {
         const performanceMetrics = {
           timestamp: new Date(startTime),
-          endpoint: req.route?.path || req.path,
+          // req.route is unset for requests that never matched a route
+          // (404s, scanning/probe traffic); falling back to the raw path
+          // there would create an unbounded, never-evicted key per
+          // distinct path in PerformanceMonitorService's in-memory maps.
+          endpoint: req.route?.path || 'unmatched',
           method: req.method,
           responseTime,
           statusCode: res.statusCode,
@@ -78,7 +82,7 @@ export class PerformanceMiddleware implements NestMiddleware {
       try {
         const performanceMetrics = {
           timestamp: new Date(startTime),
-          endpoint: req.route?.path || req.path,
+          endpoint: req.route?.path || 'unmatched',
           method: req.method,
           responseTime,
           statusCode: res.statusCode,

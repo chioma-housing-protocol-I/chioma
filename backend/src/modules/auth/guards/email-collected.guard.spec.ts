@@ -5,7 +5,9 @@ import { REQUIRE_EMAIL_KEY } from '../decorators/require-email.decorator';
 import { User } from '../../users/entities/user.entity';
 
 function buildContext(user: Partial<User> | undefined, required: boolean) {
-  const reflector = { getAllAndOverride: jest.fn().mockReturnValue(required) } as unknown as Reflector;
+  const reflector = {
+    getAllAndOverride: jest.fn().mockReturnValue(required),
+  } as unknown as Reflector;
   const request = { user };
   const ctx = {
     getHandler: jest.fn(),
@@ -27,7 +29,10 @@ describe('EmailCollectedGuard', () => {
   });
 
   it('throws 403 when emailCollectedAt is null', () => {
-    const { guard, ctx } = buildContext({ emailCollectedAt: null } as User, true);
+    const { guard, ctx } = buildContext(
+      { emailCollectedAt: null } as User,
+      true,
+    );
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
   });
 

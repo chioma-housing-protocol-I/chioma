@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   FormValidationFeedback,
@@ -19,6 +20,7 @@ export default function FormValidationFeedbackExample() {
   const [emailError, setEmailError] = React.useState('');
   const [formErrors, setFormErrors] = React.useState<FieldError[]>([]);
   const [formSuccess, setFormSuccess] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Simulate async email validation
   const validateEmail = React.useCallback(async (value: string) => {
@@ -50,14 +52,14 @@ export default function FormValidationFeedbackExample() {
     }
   }, [email, validateEmail]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Clear previous feedback
     setFormErrors([]);
     setFormSuccess('');
 
-    // Validate form
+    // Validate form before going async
     const errors: FieldError[] = [];
 
     if (!email) {
@@ -80,16 +82,28 @@ export default function FormValidationFeedbackExample() {
       return;
     }
 
-    // Success
-    setFormSuccess('Account created successfully! Redirecting...');
-    setEmail('');
-    setPassword('');
+    // Disable the form for the duration of the async submission
+    setIsSubmitting(true);
+    try {
+      // Simulate network request
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      setFormSuccess('Account created successfully! Redirecting...');
+      setEmail('');
+      setPassword('');
+    } catch {
+      setFormErrors([{ field: 'Form', message: 'Submission failed. Please try again.' }]);
+    } finally {
+      // Always re-enable the form whether the request succeeded or failed
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="mx-auto max-w-4xl space-y-12 p-8">
       <div>
-        <h1 className="mb-2 text-3xl font-bold">Form Validation Feedback Examples</h1>
+        <h1 className="mb-2 text-3xl font-bold">
+          Form Validation Feedback Examples
+        </h1>
         <p className="text-muted-foreground">
           Comprehensive examples of validation feedback components
         </p>
@@ -105,15 +119,19 @@ export default function FormValidationFeedbackExample() {
         </p>
 
         <div className="space-y-4">
-          <FormValidationFeedback
-            error="Invalid email or password. Please try again."
-          />
+          <FormValidationFeedback error="Invalid email or password. Please try again." />
 
           <FormValidationFeedback
             errors={[
               { field: 'Email', message: 'Email is required' },
-              { field: 'Password', message: 'Password must be at least 8 characters' },
-              { field: 'Terms', message: 'You must accept the terms and conditions' },
+              {
+                field: 'Password',
+                message: 'Password must be at least 8 characters',
+              },
+              {
+                field: 'Terms',
+                message: 'You must accept the terms and conditions',
+              },
             ]}
           />
 
@@ -128,9 +146,7 @@ export default function FormValidationFeedbackExample() {
             onDismiss={() => console.log('Warning dismissed')}
           />
 
-          <FormValidationFeedback
-            info="Make sure to use a strong password with at least 8 characters."
-          />
+          <FormValidationFeedback info="Make sure to use a strong password with at least 8 characters." />
 
           <FormValidationFeedback
             isValidating
@@ -156,14 +172,22 @@ export default function FormValidationFeedbackExample() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Username (with success)</label>
+            <label className="text-sm font-medium">
+              Username (with success)
+            </label>
             <Input placeholder="johndoe" defaultValue="johndoe" />
             <FieldValidationFeedback success="Username is available" />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Password (with warning)</label>
-            <Input type="password" placeholder="••••••••" defaultValue="password" />
+            <label className="text-sm font-medium">
+              Password (with warning)
+            </label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              defaultValue="password"
+            />
             <FieldValidationFeedback warning="This password is commonly used. Consider a stronger password." />
           </div>
 
@@ -282,7 +306,10 @@ export default function FormValidationFeedbackExample() {
           Complete registration form with real-time validation
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 rounded-lg border p-6"
+        >
           <FormValidationFeedback
             errors={formErrors}
             success={formSuccess}
@@ -294,7 +321,11 @@ export default function FormValidationFeedbackExample() {
             id="email-working"
             required
             error={emailError}
-            success={email && !emailError && !isValidatingEmail ? 'Email is valid' : undefined}
+            success={
+              email && !emailError && !isValidatingEmail
+                ? 'Email is valid'
+                : undefined
+            }
             isValidating={isValidatingEmail}
             hint="Try: taken@example.com to see error"
           >
@@ -305,6 +336,7 @@ export default function FormValidationFeedbackExample() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={emailError ? 'border-destructive' : ''}
+              disabled={isSubmitting}
             />
           </ValidatedInputWrapper>
 
@@ -320,14 +352,23 @@ export default function FormValidationFeedbackExample() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
             />
           </ValidatedInputWrapper>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+            disabled={isSubmitting}
+            className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Create Account
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Creating account...
+              </>
+            ) : (
+              'Create Account'
+            )}
           </button>
         </form>
       </section>
@@ -370,11 +411,21 @@ export default function FormValidationFeedbackExample() {
 
         <div className="space-y-4 rounded-lg border p-6">
           <ul className="list-inside list-disc space-y-2 text-sm">
-            <li>Error messages use <code>role="alert"</code> and <code>aria-live="assertive"</code></li>
-            <li>Success/info messages use <code>aria-live="polite"</code></li>
+            <li>
+              Error messages use <code>role="alert"</code> and{' '}
+              <code>aria-live="assertive"</code>
+            </li>
+            <li>
+              Success/info messages use <code>aria-live="polite"</code>
+            </li>
             <li>Validation icons provide visual feedback for screen readers</li>
-            <li>Form fields are properly labeled with <code>htmlFor</code> attributes</li>
-            <li>Required fields are marked with asterisk and ARIA attributes</li>
+            <li>
+              Form fields are properly labeled with <code>htmlFor</code>{' '}
+              attributes
+            </li>
+            <li>
+              Required fields are marked with asterisk and ARIA attributes
+            </li>
             <li>Error messages are associated with their fields via ARIA</li>
           </ul>
         </div>
@@ -388,7 +439,9 @@ export default function FormValidationFeedbackExample() {
 
         <div className="space-y-4 rounded-lg border p-6">
           <div>
-            <h3 className="mb-2 font-semibold">When to use form-level feedback:</h3>
+            <h3 className="mb-2 font-semibold">
+              When to use form-level feedback:
+            </h3>
             <ul className="ml-6 list-disc space-y-1 text-sm">
               <li>Multiple validation errors across different fields</li>
               <li>Form submission success/failure messages</li>
@@ -397,7 +450,9 @@ export default function FormValidationFeedbackExample() {
           </div>
 
           <div>
-            <h3 className="mb-2 font-semibold">When to use field-level feedback:</h3>
+            <h3 className="mb-2 font-semibold">
+              When to use field-level feedback:
+            </h3>
             <ul className="ml-6 list-disc space-y-1 text-sm">
               <li>Real-time validation as user types</li>
               <li>Field-specific hints or instructions</li>

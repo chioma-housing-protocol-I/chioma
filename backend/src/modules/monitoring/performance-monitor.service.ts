@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { MetricsService } from './metrics.service';
 import { AlertService } from './alert.service';
 import { AlertPayload } from './alert.types';
+import { QueryPlanSummary } from './query-plan.analyzer';
 
 export interface PerformanceMetrics {
   timestamp: Date;
@@ -84,6 +85,13 @@ export class PerformanceMonitorService {
     10,
   );
 
+  // Hard cap on distinct keys tracked by performanceData/databaseQueryData,
+  // independent of each per-key array's own MAX_HISTORY_SIZE cap. Protects
+  // against any future caller that (like the response-time interceptor and
+  // PerformanceMiddleware once did) accidentally keys by an unbounded value
+  // such as a raw, unmatched request path.
+  private static readonly MAX_TRACKED_KEYS = 500;
+
   // Database query performance tracking (per operation)
   private readonly databaseQueryData: Map<string, number[]> = new Map();
   private readonly slowQueries: Array<{
@@ -93,6 +101,11 @@ export class PerformanceMonitorService {
   }> = [];
   private readonly SLOW_QUERY_THRESHOLD_MS = 500;
   private readonly MAX_SLOW_QUERY_HISTORY = 100;
+
+  // Redacted query plans reported by DatabaseMonitorService. Bounded so the
+  // dashboard can show recent plans without growing without limit.
+  private readonly queryPlans: QueryPlanSummary[] = [];
+  private readonly MAX_QUERY_PLAN_HISTORY = 20;
 
   constructor(
     private readonly metricsService: MetricsService,
@@ -108,6 +121,7 @@ export class PerformanceMonitorService {
     const key = `${metrics.method}:${metrics.endpoint}`;
 
     if (!this.performanceData.has(key)) {
+      this.evictOldestKeyIfAtCapacity(this.performanceData);
       this.performanceData.set(key, []);
     }
 
@@ -143,12 +157,16 @@ export class PerformanceMonitorService {
    * bottleneck detection.
    */
   recordDatabaseQuery(operation: string, duration: number): void {
-    const durations = this.databaseQueryData.get(operation) ?? [];
-    durations.push(duration);
-    if (durations.length > this.MAX_HISTORY_SIZE) {
-      durations.shift();
+    const durations = this.databaseQueryData.get(operation);
+    if (!durations) {
+      this.evictOldestKeyIfAtCapacity(this.databaseQueryData);
+      this.databaseQueryData.set(operation, [duration]);
+    } else {
+      durations.push(duration);
+      if (durations.length > this.MAX_HISTORY_SIZE) {
+        durations.shift();
+      }
     }
-    this.databaseQueryData.set(operation, durations);
 
     this.metricsService.recordDatabaseQuery(operation, duration);
 
@@ -161,6 +179,19 @@ export class PerformanceMonitorService {
         `Slow database query: ${operation} took ${duration}ms (threshold: ${this.SLOW_QUERY_THRESHOLD_MS}ms)`,
       );
     }
+  }
+
+  /** Stores a redacted query plan so the dashboard can display recent plans. */
+  recordQueryPlan(summary: QueryPlanSummary): void {
+    this.queryPlans.push(summary);
+    if (this.queryPlans.length > this.MAX_QUERY_PLAN_HISTORY) {
+      this.queryPlans.shift();
+    }
+  }
+
+  /** Recent redacted plans, newest first. */
+  getRecentQueryPlans(): QueryPlanSummary[] {
+    return this.queryPlans.slice().reverse();
   }
 
   /**
@@ -186,6 +217,7 @@ export class PerformanceMonitorService {
       duration: number;
       timestamp: Date;
     }>;
+    queryPlans: QueryPlanSummary[];
   } {
     const operations = Array.from(this.databaseQueryData.entries()).map(
       ([operation, durations]) => ({
@@ -213,6 +245,7 @@ export class PerformanceMonitorService {
       operations,
       slowestOperations,
       recentSlowQueries: this.slowQueries.slice(-20),
+      queryPlans: this.getRecentQueryPlans(),
     };
   }
 
@@ -434,6 +467,23 @@ export class PerformanceMonitorService {
       endpointStats,
       uptime: process.uptime(),
     };
+  }
+
+  /**
+   * Evicts the oldest-inserted key once a tracking Map is at
+   * MAX_TRACKED_KEYS, so a caller that mistakenly keys by an unbounded
+   * value can only ever displace old entries rather than grow the Map
+   * without limit. Map iteration order is insertion order, so the first
+   * key yielded is the oldest.
+   */
+  private evictOldestKeyIfAtCapacity<T>(map: Map<string, T>): void {
+    if (map.size < PerformanceMonitorService.MAX_TRACKED_KEYS) {
+      return;
+    }
+    const oldestKey = map.keys().next().value;
+    if (oldestKey !== undefined) {
+      map.delete(oldestKey);
+    }
   }
 
   /**

@@ -5,7 +5,10 @@ import {
   RentAgreementService,
   AGREEMENT_STATE_TRANSITIONS,
 } from './rent-agreement.service';
-import { RentAgreement, AgreementStatus } from '../entities/rent-contract.entity';
+import {
+  RentAgreement,
+  AgreementStatus,
+} from '../entities/rent-contract.entity';
 import { AgreementNotFoundError } from '../../../common/errors/domain-errors';
 import { InvalidStateTransitionError } from '../../../common/errors/domain-errors';
 
@@ -84,27 +87,37 @@ describe('RentAgreementService', () => {
         [AgreementStatus.DISPUTED, AgreementStatus.DRAFT],
       ];
 
-      it.each(cases)('%s → %s throws InvalidStateTransitionError', (from, to) => {
-        expect(() => service.validateTransition(from, to)).toThrow(
-          InvalidStateTransitionError,
-        );
-      });
+      it.each(cases)(
+        '%s → %s throws InvalidStateTransitionError',
+        (from, to) => {
+          expect(() => service.validateTransition(from, to)).toThrow(
+            InvalidStateTransitionError,
+          );
+        },
+      );
 
       it('error message contains from/to states', () => {
         expect(() =>
-          service.validateTransition(AgreementStatus.EXPIRED, AgreementStatus.ACTIVE),
+          service.validateTransition(
+            AgreementStatus.EXPIRED,
+            AgreementStatus.ACTIVE,
+          ),
         ).toThrow(/expired.*active/i);
       });
 
       it('error context includes allowedTransitions', () => {
         try {
-          service.validateTransition(AgreementStatus.TERMINATED, AgreementStatus.ACTIVE);
+          service.validateTransition(
+            AgreementStatus.TERMINATED,
+            AgreementStatus.ACTIVE,
+          );
         } catch (err) {
           expect(err).toBeInstanceOf(InvalidStateTransitionError);
           expect((err as InvalidStateTransitionError).context).toMatchObject({
             from: AgreementStatus.TERMINATED,
             to: AgreementStatus.ACTIVE,
-            allowedTransitions: AGREEMENT_STATE_TRANSITIONS[AgreementStatus.TERMINATED],
+            allowedTransitions:
+              AGREEMENT_STATE_TRANSITIONS[AgreementStatus.TERMINATED],
           });
         }
       });
@@ -135,7 +148,10 @@ describe('RentAgreementService', () => {
     it('saves the agreement with the new status', async () => {
       const agreement = makeAgreement(AgreementStatus.SIGNED);
       repo.findOne.mockResolvedValue(agreement);
-      repo.save.mockResolvedValue({ ...agreement, status: AgreementStatus.ACTIVE });
+      repo.save.mockResolvedValue({
+        ...agreement,
+        status: AgreementStatus.ACTIVE,
+      });
 
       const result = await service.transitionStatus(
         'agr-1',

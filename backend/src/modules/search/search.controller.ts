@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UseReplica } from '../../common/decorators/use-replica.decorator';
+import { CacheControl } from '../../common/decorators/cache-control.decorator';
 import {
   SearchService,
   SearchFilters,
@@ -25,6 +26,7 @@ export class SearchController {
     maxStaleness: '30s',
     reason: 'Property search results tolerate brief replication lag',
   })
+  @CacheControl.public(30)
   @ApiOperation({ summary: 'Full-text property search with faceted filtering' })
   async searchProperties(@Query() query: SearchPropertiesDto) {
     const filters: SearchFilters = {
@@ -102,6 +104,7 @@ export class SearchController {
     maxStaleness: '5m',
     reason: 'Autocomplete suggestions tolerate staleness',
   })
+  @CacheControl.public(120)
   @ApiOperation({ summary: 'Autocomplete suggestions for search' })
   async suggest(@Query() query: SuggestDto) {
     return this.searchService.suggest(query.q);

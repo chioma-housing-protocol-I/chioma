@@ -44,6 +44,9 @@ describe('matchWalletNetwork', () => {
         network: '',
         networkPassphrase: 'Some other passphrase',
       }),
-    ).toEqual({ status: 'mismatch', walletNetworkLabel: 'a different network' });
+    ).toEqual({
+      status: 'mismatch',
+      walletNetworkLabel: 'a different network',
+    });
   });
 });

@@ -9,6 +9,17 @@ export interface PoolConfig {
   max: number;
   idleTimeoutMillis: number;
   connectionTimeoutMillis: number;
+  /**
+   * Application-level DB backpressure queue size (not pg pool). When the app
+   * reaches max concurrent DB work, additional requests wait here before being
+   * rejected with 503 on timeout/full queue.
+   */
+  backpressureQueueSize?: number;
+  /**
+   * Maximum time (ms) a request may wait in the app backpressure queue before
+   * being rejected with 503.
+   */
+  backpressureQueueTimeoutMs?: number;
 }
 
 export interface PoolValidationResult {
@@ -158,6 +169,34 @@ export class PoolConfigValidator {
       );
     }
 
+    if (config.backpressureQueueSize !== undefined) {
+      if (config.backpressureQueueSize < 0) {
+        errors.push(
+          `Backpressure queue size must be >= 0 (got ${config.backpressureQueueSize}).`,
+        );
+      } else if (config.backpressureQueueSize > 10000) {
+        warnings.push(
+          `Backpressure queue size is very high (${config.backpressureQueueSize}). Large queues increase latency and memory pressure; prefer failing fast with 503.`,
+        );
+      } else if (config.backpressureQueueSize === 0) {
+        warnings.push(
+          'Backpressure queue size is 0. Requests will be rejected immediately when the pool is exhausted (no queuing).',
+        );
+      }
+    }
+
+    if (config.backpressureQueueTimeoutMs !== undefined) {
+      if (config.backpressureQueueTimeoutMs < 100) {
+        warnings.push(
+          `Backpressure queue timeout is very short (${config.backpressureQueueTimeoutMs}ms). Requests may be rejected before transient pool contention clears.`,
+        );
+      } else if (config.backpressureQueueTimeoutMs > 30000) {
+        warnings.push(
+          `Backpressure queue timeout is very long (${config.backpressureQueueTimeoutMs}ms). Requests may hold worker capacity while waiting for DB connections.`,
+        );
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -212,8 +251,13 @@ export class PoolConfigValidator {
     }
 
     if (result.isValid && result.warnings.length === 0) {
+      const queueInfo =
+        config.backpressureQueueSize !== undefined ||
+        config.backpressureQueueTimeoutMs !== undefined
+          ? `, queue=${config.backpressureQueueSize ?? 'default'}, queueTimeout=${config.backpressureQueueTimeoutMs ?? 'default'}ms`
+          : '';
       this.logger.log(
-        `[Pool Config] Validated: min=${config.min}, max=${config.max}, idle=${config.idleTimeoutMillis}ms, connect=${config.connectionTimeoutMillis}ms`,
+        `[Pool Config] Validated: min=${config.min}, max=${config.max}, idle=${config.idleTimeoutMillis}ms, connect=${config.connectionTimeoutMillis}ms${queueInfo}`,
       );
     }
   }

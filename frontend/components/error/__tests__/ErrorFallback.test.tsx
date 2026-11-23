@@ -44,7 +44,6 @@ describe('ClientErrorBoundary XSS prevention', () => {
   it('does not execute or render markup from a thrown error message', () => {
     delete (window as unknown as { __xss?: boolean }).__xss;
 
-    // eslint-disable-next-line no-console
     const originalError = console.error;
     console.error = () => {};
 

@@ -170,16 +170,16 @@ export class EscrowResponseDto {
   destinationPublicKey: string;
   amount: string;
   assetType: AssetType;
-  assetCode?: string;
-  assetIssuer?: string;
+  assetCode?: string | undefined;
+  assetIssuer?: string | undefined;
   status: EscrowStatus;
-  releaseConditions?: ReleaseConditions;
-  expirationDate?: Date;
-  releasedAt?: Date;
-  refundedAt?: Date;
-  releaseTransactionHash?: string;
-  refundTransactionHash?: string;
-  rentAgreementId?: string;
+  releaseConditions?: ReleaseConditions | undefined;
+  expirationDate?: Date | undefined;
+  releasedAt?: Date | undefined;
+  refundedAt?: Date | undefined;
+  releaseTransactionHash?: string | undefined;
+  refundTransactionHash?: string | undefined;
+  rentAgreementId?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
 }

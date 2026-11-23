@@ -18,7 +18,12 @@ Sentry.init({
 
 import * as express from 'express';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  ValidationPipe,
+  VersioningType,
+  Logger,
+} from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
@@ -32,6 +37,8 @@ import { OpenApiDocumentRegistryService } from './common/validation/openapi-docu
 import { EnvironmentVariables } from './config/environment-variables';
 import { EncryptionService } from './modules/stellar/services/encryption.service';
 import { getCorsConfig, validateCorsConfig } from './config/cors.config';
+import { DataSource } from 'typeorm';
+import { dataSourceWarmUpQuery, startPoolWarmUp } from './database/pool-warmer';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -147,7 +154,17 @@ async function bootstrap() {
       transform: true,
       skipMissingProperties: false,
       disableErrorMessages: isProduction,
-      exceptionFactory: new ValidationPipe().createExceptionFactory(),
+      // 422 Unprocessable Entity (#2062): the request is syntactically
+      // valid (parses as JSON) but fails schema validation, which is
+      // what 422 means per RFC 4918, and matches this codebase's own
+      // existing convention of using 422 for "well-formed but semantically
+      // invalid" (see HttpStatus.UNPROCESSABLE_ENTITY usage in
+      // common/errors/domain-errors.ts). The Nest default here is 400,
+      // which this app otherwise reserves for malformed request syntax.
+      errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      exceptionFactory: new ValidationPipe({
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }).createExceptionFactory(),
     }),
   );
 
@@ -240,6 +257,22 @@ async function bootstrap() {
     process.exit(1);
   }
 
+  // Pre-warm half the connection pool while the listener is starting. This is
+  // deliberately fire-and-forget: bootstrap never waits on a warm-up query.
+  const dataSource = app.get(DataSource);
+  const poolMax = Number(
+    (dataSource.options as { extra?: { max?: number } }).extra?.max ?? 20,
+  );
+  const cancelPoolWarmUp = startPoolWarmUp(
+    dataSourceWarmUpQuery(dataSource),
+    { maxConnections: poolMax },
+    {
+      log: (message) => bootstrapLogger.log(`[STARTUP] ${message}`),
+      warn: (message, context) =>
+        bootstrapLogger.warn(`[STARTUP] ${message}`, context),
+    },
+  );
+
   const port = process.env.PORT ?? 5000;
   const server = await app.listen(port);
   bootstrapLogger.log(`Application started on port ${port}`);
@@ -261,6 +294,7 @@ async function bootstrap() {
     }
 
     isShuttingDown = true;
+    cancelPoolWarmUp();
     bootstrapLogger.log(`Received ${signal}, starting graceful shutdown...`);
 
     // Stop accepting new connections

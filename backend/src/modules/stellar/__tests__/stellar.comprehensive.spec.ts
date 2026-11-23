@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
 import { StellarService } from '../services/stellar.service';
 import { EncryptionService } from '../services/encryption.service';
+import { TransactionSubmissionPoolService } from '../services/transaction-submission-pool.service';
 import {
   StellarAccount,
   StellarAccountType,
@@ -269,6 +270,19 @@ describe('StellarService — comprehensive coverage', () => {
         },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: EncryptionService, useValue: mockEncryptionService },
+        {
+          provide: TransactionSubmissionPoolService,
+          useValue: {
+            enqueue: jest.fn(async ({ submit, rebuildAndResign }: any) => {
+              if (rebuildAndResign) {
+                const tx = rebuildAndResign({} as any);
+                return submit(tx);
+              }
+              return submit({} as any);
+            }),
+            onModuleDestroy: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

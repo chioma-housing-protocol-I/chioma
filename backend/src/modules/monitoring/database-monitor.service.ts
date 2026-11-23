@@ -6,6 +6,7 @@ import { MetricsService } from './metrics.service';
 import { AlertService } from './alert.service';
 import { AlertPayload } from './alert.types';
 import { PerformanceMonitorService } from './performance-monitor.service';
+import { parseQueryPlan, QueryPlanSummary } from './query-plan.analyzer';
 
 export interface DatabasePoolMetrics {
   totalConnections: number;
@@ -65,6 +66,17 @@ export class DatabaseMonitorService {
   private readonly MAX_HISTORY = 60;
   private lastQueryTime = 0;
   private lastQueryCount = 0;
+
+  // Query plan analysis. EXPLAIN (without ANALYZE) is the default because
+  // ANALYZE executes the statement again on already-slow paths. Plans are
+  // sampled per operation and cached so the monitor never adds unbounded
+  // database work.
+  private readonly QUERY_PLAN_THRESHOLD_MS = 1000;
+  private readonly PLAN_SAMPLE_INTERVAL_MS = 60_000;
+  private readonly MAX_QUERY_PLAN_HISTORY = 20;
+  private readonly recentQueryPlans: QueryPlanSummary[] = [];
+  private readonly planCache = new Map<string, QueryPlanSummary>();
+  private readonly planSampleTimes = new Map<string, number>();
 
   // Connection pool thresholds
   private readonly POOL_WARNING_PERCENT = 0.7;
@@ -518,6 +530,106 @@ export class DatabaseMonitorService {
   /**
    * Record a database query duration (called from decorators/interceptors).
    */
+  /**
+   * Records a redacted plan for a query slower than one second. Sampling is
+   * per operation: a repeated slow operation is explained once per interval
+   * and the cached summary is reused. EXPLAIN ANALYZE is opt-in via
+   * DB_QUERY_PLAN_ANALYZE=true because it re-executes the statement.
+   */
+  async analyzeQueryPlan(
+    operation: string,
+    sql: string,
+    durationMs: number,
+    parameters: unknown[] = [],
+  ): Promise<QueryPlanSummary | null> {
+    if (durationMs <= this.QUERY_PLAN_THRESHOLD_MS) {
+      return null;
+    }
+
+    // Refuse multi-statement input so monitoring can never execute an
+    // unrelated command while explaining a query.
+    if (!sql || /;/.test(sql)) {
+      this.logger.warn('Skipped query plan analysis for invalid SQL');
+      return null;
+    }
+
+    const now = Date.now();
+    const lastSampled = this.planSampleTimes.get(operation) ?? 0;
+    if (now - lastSampled < this.PLAN_SAMPLE_INTERVAL_MS) {
+      return this.planCache.get(operation) ?? null;
+    }
+
+    try {
+      const useAnalyze = process.env.DB_QUERY_PLAN_ANALYZE === 'true';
+      const statement = `${useAnalyze ? 'EXPLAIN ANALYZE' : 'EXPLAIN'} ${sql}`;
+      const rows = await this.dataSource.query(statement, parameters);
+      const summary = parseQueryPlan(operation, rows);
+
+      this.planCache.set(operation, summary);
+      this.planSampleTimes.set(operation, now);
+      this.recentQueryPlans.push(summary);
+      if (this.recentQueryPlans.length > this.MAX_QUERY_PLAN_HISTORY) {
+        this.recentQueryPlans.shift();
+      }
+      this.performanceMonitor.recordQueryPlan(summary);
+
+      this.logger.warn(
+        `Query plan for ${operation} (${durationMs}ms): ${summary.redactedLines.join(' | ')}`,
+      );
+      if (summary.hasSequentialScan) {
+        this.logger.warn(
+          `Sequential scan detected in ${operation} query plan (${summary.sequentialScanCount} node(s))`,
+        );
+      }
+      return summary;
+    } catch (error) {
+      this.logger.error(
+        `Failed to analyze query plan for ${operation}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    }
+  }
+
+  /** Recent redacted plans, newest first. */
+  getRecentQueryPlans(): QueryPlanSummary[] {
+    return this.recentQueryPlans.slice().reverse();
+  }
+
+  /**
+   * Periodically explains the slowest statements already recorded by
+   * pg_stat_statements. This gives the dashboard real plans without requiring
+   * every query path to pass SQL through the monitor.
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async analyzeRecordedSlowQueries(): Promise<void> {
+    try {
+      const rows = await this.dataSource.query(`
+        SELECT query, mean_exec_time
+        FROM pg_stat_statements
+        WHERE mean_exec_time > 1000
+        ORDER BY mean_exec_time DESC
+        LIMIT 5
+      `);
+
+      for (const row of rows as Array<{
+        query: string;
+        mean_exec_time: number;
+      }>) {
+        if (row?.query) {
+          await this.analyzeQueryPlan(
+            'pg_stat_statements',
+            row.query,
+            Number(row.mean_exec_time ?? 0),
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to load slow statements for plan analysis: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   recordQueryDuration(operation: string, durationMs: number): void {
     this.metricsService.recordDatabaseQuery(operation, durationMs);
   }

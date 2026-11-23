@@ -8,9 +8,7 @@ import Stats from '@/components/landing/Stats';
 // route's initial JS stays small; sections are still server-rendered, so
 // content and SEO are unchanged.
 const Features = nextDynamic(() => import('@/components/landing/Features'));
-const HowItWorks = nextDynamic(
-  () => import('@/components/landing/HowItWorks'),
-);
+const HowItWorks = nextDynamic(() => import('@/components/landing/HowItWorks'));
 const ForWho = nextDynamic(() => import('@/components/landing/ForWho'));
 const Testimonials = nextDynamic(
   () => import('@/components/landing/Testimonials'),

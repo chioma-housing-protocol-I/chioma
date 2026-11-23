@@ -658,8 +658,8 @@ describe('Rate Limiting Edge Cases', () => {
       // Counter key must be written with the new consumed total
       expect(mockCacheManager.set).toHaveBeenCalledWith(
         expect.stringContaining('cache-miss-test'),
-        1,           // 0 prior + 1 consumed
-        60 * 1000,   // duration * 1000 ms
+        1, // 0 prior + 1 consumed
+        60 * 1000, // duration * 1000 ms
       );
     });
 
@@ -704,7 +704,7 @@ describe('Rate Limiting Edge Cases', () => {
       expect(result.remainingPoints).toBe(59);
       expect(mockCacheManager.set).toHaveBeenCalledWith(
         expect.stringContaining('cache-hit-test'),
-        41,          // 40 prior + 1 consumed
+        41, // 40 prior + 1 consumed
         60 * 1000,
       );
     });

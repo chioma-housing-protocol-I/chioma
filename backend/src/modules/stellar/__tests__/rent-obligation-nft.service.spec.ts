@@ -48,7 +48,8 @@ jest.mock('@stellar/stellar-sdk', () => {
     },
     Keypair: {
       fromSecret: jest.fn(() => ({
-        publicKey: () => 'GADMIN_PUBLIC_KEY_PLACEHOLDER_AAAAAAAAAAAAAAAAAAAAAAAAA',
+        publicKey: () =>
+          'GADMIN_PUBLIC_KEY_PLACEHOLDER_AAAAAAAAAAAAAAAAAAAAAAAAA',
       })),
     },
     Networks: {
@@ -93,7 +94,8 @@ describe('RentObligationNftService – transaction response null checks', () => 
       const config: Record<string, string> = {
         SOROBAN_RPC_URL: 'https://soroban-testnet.stellar.org',
         RENT_OBLIGATION_CONTRACT_ID: 'CCONTRACT_ID_PLACEHOLDER',
-        STELLAR_ADMIN_SECRET_KEY: 'SADMIN_SECRET_PLACEHOLDER_AAAAAAAAAAAAAAAAAAAAAAAAA',
+        STELLAR_ADMIN_SECRET_KEY:
+          'SADMIN_SECRET_PLACEHOLDER_AAAAAAAAAAAAAAAAAAAAAAAAA',
         STELLAR_NETWORK: 'testnet',
       };
       return config[key] ?? fallback;
@@ -127,7 +129,9 @@ describe('RentObligationNftService – transaction response null checks', () => 
     };
 
     it('returns txHash when response contains a valid hash', async () => {
-      mockSendTransaction.mockResolvedValue(makeSendResponse({ hash: 'mint-tx-hash' }));
+      mockSendTransaction.mockResolvedValue(
+        makeSendResponse({ hash: 'mint-tx-hash' }),
+      );
 
       const result = await service.mintObligation(params);
 
@@ -147,7 +151,10 @@ describe('RentObligationNftService – transaction response null checks', () => 
 
     it('includes the operation label and response status in the error message', async () => {
       mockSendTransaction.mockResolvedValue(
-        makeSendResponse({ hash: undefined as unknown as string, status: 'ERROR' }),
+        makeSendResponse({
+          hash: undefined as unknown as string,
+          status: 'ERROR',
+        }),
       );
 
       await expect(service.mintObligation(params)).rejects.toThrow(
@@ -165,7 +172,9 @@ describe('RentObligationNftService – transaction response null checks', () => 
 
     it('throws BlockchainTransactionError when sendTransaction returns null', async () => {
       // Soroban returning a completely null body is the most extreme edge case
-      mockSendTransaction.mockResolvedValue(null as unknown as SorobanRpc.Api.SendTransactionResponse);
+      mockSendTransaction.mockResolvedValue(
+        null as unknown as SorobanRpc.Api.SendTransactionResponse,
+      );
 
       await expect(service.mintObligation(params)).rejects.toThrow();
     });
@@ -181,7 +190,9 @@ describe('RentObligationNftService – transaction response null checks', () => 
     };
 
     it('returns txHash when response contains a valid hash', async () => {
-      mockSendTransaction.mockResolvedValue(makeSendResponse({ hash: 'transfer-tx-hash' }));
+      mockSendTransaction.mockResolvedValue(
+        makeSendResponse({ hash: 'transfer-tx-hash' }),
+      );
 
       const result = await service.transferObligation(params);
 
@@ -219,7 +230,9 @@ describe('RentObligationNftService – transaction response null checks', () => 
     };
 
     it('returns txHash when response contains a valid hash', async () => {
-      mockSendTransaction.mockResolvedValue(makeSendResponse({ hash: 'burn-tx-hash' }));
+      mockSendTransaction.mockResolvedValue(
+        makeSendResponse({ hash: 'burn-tx-hash' }),
+      );
 
       const result = await service.burnObligation(params);
 
@@ -265,7 +278,9 @@ describe('RentObligationNftService – transaction response null checks', () => 
     };
 
     it('returns txHash when response contains a valid hash', async () => {
-      mockSendTransaction.mockResolvedValue(makeSendResponse({ hash: 'reassign-tx-hash' }));
+      mockSendTransaction.mockResolvedValue(
+        makeSendResponse({ hash: 'reassign-tx-hash' }),
+      );
 
       const result = await service.adminReassignObligation(params);
 

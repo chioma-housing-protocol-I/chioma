@@ -1,6 +1,7 @@
 import {
   LoggerMiddleware,
   sanitizeBody,
+  sanitizeResponseBody,
 } from '../middleware/logger.middleware';
 import { Request, Response } from 'express';
 
@@ -209,6 +210,89 @@ describe('LoggerMiddleware', () => {
         }),
       }),
       'HTTP',
+    );
+  });
+
+  it('redacts credentials in a response body', () => {
+    const result = sanitizeResponseBody({
+      email: 'test@example.com',
+      accessToken: 'jwt-value',
+      refreshToken: 'refresh-value',
+      apiKey: 'api-value',
+      profile: { passwordHash: 'hash', name: 'john' },
+    });
+
+    expect(result).toEqual({
+      email: 'test@example.com',
+      accessToken: '[REDACTED]',
+      refreshToken: '[REDACTED]',
+      apiKey: '[REDACTED]',
+      profile: { passwordHash: '[REDACTED]', name: 'john' },
+    });
+  });
+
+  it('logs the sanitized response body written with res.json', () => {
+    const req = {
+      method: 'POST',
+      originalUrl: '/auth/login',
+      path: '/auth/login',
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as Request;
+
+    let finish: (() => void) | undefined;
+    const written: unknown[] = [];
+    const res = {
+      statusCode: 200,
+      getHeader: jest.fn().mockReturnValue('10'),
+      getHeaders: jest.fn().mockReturnValue({}),
+      setHeader: jest.fn(),
+      on: (event: string, cb: () => void) => {
+        if (event === 'finish') finish = cb;
+      },
+      json: (body: unknown) => {
+        written.push(body);
+        return res;
+      },
+      send: (body: unknown) => {
+        written.push(body);
+        return res;
+      },
+      locals: {},
+    } as unknown as Response;
+
+    middleware.use(req, res, jest.fn());
+    const body = {
+      accessToken: 'jwt-value',
+      user: { email: 'test@example.com', password: 'plain' },
+    };
+    res.json(body);
+    finish?.();
+
+    // The original response writer still receives the untouched payload.
+    expect(written).toEqual([body]);
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      'POST /auth/login',
+      expect.objectContaining({
+        http: expect.objectContaining({
+          responseBody: {
+            accessToken: '[REDACTED]',
+            user: { email: 'test@example.com', password: '[REDACTED]' },
+          },
+        }),
+      }),
+      'HTTP',
+    );
+  });
+
+  it('bounds and summarises large or binary response bodies', () => {
+    const large = sanitizeResponseBody({ data: 'x'.repeat(5000) });
+    expect(typeof large).toBe('string');
+    expect(large).toContain('...[truncated]');
+    expect((large as string).length).toBeLessThanOrEqual(4110);
+
+    expect(sanitizeResponseBody(Buffer.from('binary'))).toBe(
+      '[buffer 6 bytes]',
     );
   });
 });

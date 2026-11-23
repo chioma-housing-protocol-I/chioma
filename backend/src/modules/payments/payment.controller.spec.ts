@@ -299,7 +299,8 @@ describe('Payment Controllers', () => {
   it('requires HMAC signature validation on all payment webhook endpoints', () => {
     const gatewayHandler =
       PaymentWebhookController.prototype.handleGatewayWebhook;
-    const refundHandler = PaymentWebhookController.prototype.handleRefundWebhook;
+    const refundHandler =
+      PaymentWebhookController.prototype.handleRefundWebhook;
 
     expect(Reflect.getMetadata(GUARDS_METADATA, gatewayHandler)).toContain(
       WebhookSignatureGuard,

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddUserConsentManagement1931300000000
-  implements MigrationInterface
-{
+export class AddUserConsentManagement1931300000000 implements MigrationInterface {
   name = 'AddUserConsentManagement1931300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -53,8 +51,6 @@ export class AddUserConsentManagement1931300000000
     await queryRunner.query(
       `ALTER TABLE "users" DROP COLUMN "cookie_consent_updated_at"`,
     );
-    await queryRunner.query(
-      `ALTER TABLE "users" DROP COLUMN "cookie_consent"`,
-    );
+    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "cookie_consent"`);
   }
 }

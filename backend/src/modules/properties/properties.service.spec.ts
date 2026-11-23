@@ -50,6 +50,7 @@ describe('PropertiesService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
+    emailCollectedAt: null,
     kycStatus: KycStatus.PENDING,
     loginCount: 0,
     preferredLanguage: 'en',

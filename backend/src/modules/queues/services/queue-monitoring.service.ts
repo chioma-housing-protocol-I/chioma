@@ -261,7 +261,9 @@ export class QueueMonitoringService {
       void this.fireFailureAlert(metric, 'firing');
     } else if (!failing && wasFailing) {
       this.failingQueues.delete(metric.queueName);
-      this.logger.log(`Queue ${metric.queueName} recovered from repeated failures`);
+      this.logger.log(
+        `Queue ${metric.queueName} recovered from repeated failures`,
+      );
       void this.fireFailureAlert(metric, 'resolved');
     }
   }
