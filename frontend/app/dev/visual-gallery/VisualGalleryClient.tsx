@@ -100,7 +100,11 @@ function Section({
 
 export default function VisualGalleryClient() {
   return (
-    <main className="min-h-screen space-y-10 bg-background p-10">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen space-y-10 bg-background p-10"
+    >
       <h1 className="text-2xl font-black text-foreground">
         Visual regression gallery
       </h1>

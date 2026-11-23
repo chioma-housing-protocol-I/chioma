@@ -267,6 +267,13 @@ export function FormValidationFeedback({
 
 export interface FieldValidationFeedbackProps {
   /**
+   * DOM id for the feedback region. Pass the same value to the input's
+   * `aria-describedby` (ValidatedInputWrapper does this automatically) so
+   * assistive technology can associate the message with its field.
+   */
+  id?: string;
+
+  /**
    * Error message for this field
    */
   error?: string;
@@ -303,6 +310,7 @@ export interface FieldValidationFeedbackProps {
 }
 
 export function FieldValidationFeedback({
+  id,
   error,
   success,
   warning,
@@ -330,6 +338,7 @@ export function FieldValidationFeedback({
 
   return (
     <div
+      id={id}
       className={cn('mt-1.5 flex items-start gap-1.5', className)}
       role={error ? 'alert' : 'status'}
       aria-live={error ? 'assertive' : 'polite'}
@@ -422,6 +431,33 @@ export function ValidatedInputWrapper({
   const hasSuccess = Boolean(success);
   const hasWarning = Boolean(warning);
 
+  // #2194: the wrapper owns the label and the feedback region, so it also owns
+  // the aria wiring that ties them to the field. The id is only referenced when
+  // feedback is actually rendered, avoiding a dangling aria-describedby.
+  const feedbackId = `${id}-feedback`;
+  const hasFeedback = Boolean(
+    error || success || warning || hint || isValidating,
+  );
+
+  let field = children;
+  if (React.isValidElement(children)) {
+    const childProps = children.props as {
+      'aria-describedby'?: string;
+      'aria-invalid'?: boolean;
+    };
+    const describedBy = hasFeedback
+      ? [childProps['aria-describedby'], feedbackId].filter(Boolean).join(' ')
+      : childProps['aria-describedby'];
+
+    field = React.cloneElement(
+      children as React.ReactElement<Record<string, unknown>>,
+      {
+        'aria-describedby': describedBy,
+        'aria-invalid': hasError ? true : childProps['aria-invalid'],
+      },
+    );
+  }
+
   return (
     <div className={cn('space-y-2', className)}>
       <label
@@ -436,7 +472,7 @@ export function ValidatedInputWrapper({
       </label>
 
       <div className="relative">
-        {children}
+        {field}
         {isValidating && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -450,6 +486,7 @@ export function ValidatedInputWrapper({
       </div>
 
       <FieldValidationFeedback
+        id={feedbackId}
         error={error}
         success={success}
         warning={warning}
