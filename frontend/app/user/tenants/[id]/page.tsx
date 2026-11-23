@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Mail, User } from 'lucide-react';
+import { Loader2, Mail, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useAgreement } from '@/lib/query/hooks/use-agreements';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 export default function TenantProfilePage() {
   const params = useParams();
@@ -38,13 +39,15 @@ export default function TenantProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <Link
-        href="/user/tenants"
-        className="inline-flex items-center gap-2 text-sm text-blue-200/60 hover:text-white"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        All tenants
-      </Link>
+      <Breadcrumb
+        backHref="/user/tenants"
+        backLabel="All tenants"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [tenantId]: agreement.tenantName || 'Tenant Profile',
+        }}
+      />
 
       <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
         <div className="flex items-start gap-4 mb-6">

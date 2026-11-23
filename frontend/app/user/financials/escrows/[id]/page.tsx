@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  ArrowLeft,
   Calendar,
   FileText,
   ShieldCheck,
@@ -15,6 +14,7 @@ import {
   Loader2,
   ListFilter,
 } from 'lucide-react';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 import {
   useDepositStatus,
   useDepositDeductions,
@@ -150,13 +150,16 @@ export default function EscrowDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/user/financials"
-        className="inline-flex items-center gap-2 text-sm font-bold text-blue-300 hover:text-white transition-colors"
-      >
-        <ArrowLeft size={16} />
-        Back to financials
-      </Link>
+      <Breadcrumb
+        backHref="/user/financials"
+        backLabel="All financials"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          escrows: 'Escrows',
+          [id]: propertyName || 'Deposit Details',
+        }}
+      />
 
       <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl">
         <div className="relative min-h-[320px]">

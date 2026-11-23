@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { MaintenanceDetail } from '@/components/user/MaintenanceDetail';
 import { Suspense } from 'react';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 interface MaintenanceDetailPageProps {
   params: {
@@ -47,21 +48,16 @@ export default function MaintenanceDetailPage({
 
   return (
     <>
-      {/* Breadcrumb */}
-      <div className="mb-8 flex items-center text-sm text-neutral-400 space-x-2">
-        <Link href="/user" className="hover:text-white transition-colors">
-          Overview
-        </Link>
-        <span>→</span>
-        <Link
-          href="/user/maintenance"
-          className="hover:text-white transition-colors"
-        >
-          Maintenance
-        </Link>
-        <span>→</span>
-        <span className="font-semibold text-white">Request Details</span>
-      </div>
+      <Breadcrumb
+        backHref="/user/maintenance"
+        backLabel="Back to List"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [params.id]: 'Request Details',
+        }}
+        className="mb-8"
+      />
 
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

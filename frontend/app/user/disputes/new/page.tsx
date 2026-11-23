@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +20,7 @@ import toast from 'react-hot-toast';
 import { useUserAgreements } from '@/lib/query/hooks/use-agreements';
 import type { DisputeType } from '@/lib/dashboard-data';
 import { createDispute } from '@/lib/disputes/api';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 export default function NewDisputePage() {
   const router = useRouter();
@@ -94,17 +94,13 @@ export default function NewDisputePage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8 flex items-center text-sm text-neutral-400 space-x-2">
-        <Link
-          href="/user/disputes"
-          className="hover:text-white transition-colors flex items-center gap-1"
-        >
-          <ArrowLeft size={16} />
-          All Disputes
-        </Link>
-        <span>→</span>
-        <span className="font-semibold text-white">New Dispute</span>
-      </div>
+      <Breadcrumb
+        backHref="/user/disputes"
+        backLabel="All Disputes"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        className="mb-8"
+      />
 
       <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
         <div className="text-center mb-12">

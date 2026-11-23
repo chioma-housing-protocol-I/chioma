@@ -3,7 +3,6 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   Calendar,
   FileText,
   Home,
@@ -11,6 +10,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAgreement } from '@/lib/query/hooks/use-agreements';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 const AGREEMENT_PREVIEW_FALLBACK =
   'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80';
@@ -68,13 +68,15 @@ export default function AgreementDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/user"
-        className="inline-flex items-center gap-2 text-sm font-bold text-blue-300 hover:text-white transition-colors"
-      >
-        <ArrowLeft size={16} />
-        Back to dashboard
-      </Link>
+      <Breadcrumb
+        backHref="/user/agreements"
+        backLabel="All agreements"
+        homeHref="/user"
+        homeLabel="Dashboard"
+        customLabels={{
+          [id]: agreement.displayTitle ?? 'Agreement Details',
+        }}
+      />
 
       <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl">
         <div className="relative min-h-[300px]">
