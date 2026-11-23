@@ -13,7 +13,19 @@ const meta: Meta<typeof SkeletonLoader> = {
     },
     lines: {
       control: 'number',
-      description: 'Number of text lines (text variant only)',
+      description: 'Number of text lines (text and card variants)',
+    },
+    columns: {
+      control: 'number',
+      description: 'Number of cells (table-row variant only)',
+    },
+    count: {
+      control: 'number',
+      description: 'How many copies of the variant to render',
+    },
+    animate: {
+      control: 'boolean',
+      description: 'Toggle the pulse animation',
     },
   },
 };
@@ -43,6 +55,21 @@ export const Avatar: Story = {
 export const TableRow: Story = {
   args: {
     variant: 'table-row',
+  },
+};
+
+export const TableRows: Story = {
+  args: {
+    variant: 'table-row',
+    columns: 5,
+    count: 4,
+  },
+};
+
+export const NotAnimated: Story = {
+  args: {
+    variant: 'card',
+    animate: false,
   },
 };
 
