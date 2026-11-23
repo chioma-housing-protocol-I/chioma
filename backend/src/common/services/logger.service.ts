@@ -7,7 +7,9 @@ import * as winston from 'winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { trace } from '@opentelemetry/api';
 import { requestContext } from '../request-context/request-context';
 
 type AnyRecord = Record<string, any>;
@@ -53,6 +55,46 @@ function parseRetentionDays(
   if (!match) return fallback;
   return Math.max(1, Number(match[1]));
 }
+
+/**
+ * Error instances have non-enumerable `message`/`stack` properties, so
+ * `JSON.stringify(err)` yields `{}`. Convert any Error found in log metadata
+ * into a plain, JSON-serialisable object so stack traces are never lost.
+ */
+export function serializeErrors(value: unknown, depth = 0): unknown {
+  if (value instanceof Error) {
+    const { name, message, stack } = value;
+    const extra: AnyRecord = { ...(value as unknown as AnyRecord) };
+    return { ...extra, name, message, stack };
+  }
+  if (depth > 3 || value == null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    if (!value.some((v) => v != null && typeof v === 'object')) return value;
+    return value.map((v) => serializeErrors(v, depth + 1));
+  }
+  // Only walk plain objects; leave Dates, Buffers, class instances etc. as-is.
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return value;
+  const out: AnyRecord = {};
+  for (const [k, v] of Object.entries(value as AnyRecord)) {
+    out[k] = serializeErrors(v, depth + 1);
+  }
+  return out;
+}
+
+/**
+ * Winston format that serialises Error values in the entry's metadata in
+ * place. The info object itself is mutated rather than copied so winston's
+ * internal Symbol keys (level / message / splat) are preserved.
+ */
+const serializeErrorsFormat = winston.format((info) => {
+  for (const [key, value] of Object.entries(info)) {
+    if (value != null && typeof value === 'object') {
+      (info as AnyRecord)[key] = serializeErrors(value);
+    }
+  }
+  return info;
+});
 
 function createRedactor(options: {
   redactKeys: string[];
@@ -106,7 +148,10 @@ function createRedactor(options: {
  * Features:
  * - Environment-based log levels
  * - Log rotation with daily files
- * - JSON formatting for production
+ * - Structured JSON output by default (set LOG_FORMAT=simple for
+ *   human-readable dev output)
+ * - Every JSON entry carries ISO-8601 timestamp, level, message, context,
+ *   service, environment, hostname, pid and (when present) request / trace ids
  * - Multiple transports (console, file, error file)
  * - Structured logging with metadata
  */
@@ -138,7 +183,12 @@ export class LoggerService implements NestLoggerService {
     const logFormat =
       this.configService?.get('LOG_FORMAT') ||
       process.env.LOG_FORMAT ||
-      (env === 'production' ? 'json' : 'simple');
+      'json';
+    const serviceName =
+      this.configService?.get('SERVICE_NAME') ||
+      process.env.SERVICE_NAME ||
+      process.env.OTEL_SERVICE_NAME ||
+      'chioma-backend';
     const logDir =
       this.configService?.get('LOG_DIR') || process.env.LOG_DIR || 'logs';
     const logMaxSize =
@@ -181,10 +231,26 @@ export class LoggerService implements NestLoggerService {
       maxDepth: redactMaxDepth,
     });
 
+    const useJson = logFormat !== 'simple' || env === 'production';
+
+    // Fields attached to every entry so logs can be filtered by service /
+    // instance once they are shipped to the central log store.
+    const baseFields = {
+      service: serviceName,
+      environment: env,
+      hostname: os.hostname(),
+      pid: process.pid,
+    };
+
     // Define log format
     const formats: winston.Logform.Format[] = [
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+      // ISO-8601 for JSON so log aggregators (Loki, ELK, Datadog) can parse
+      // the timestamp without a custom pattern.
+      winston.format.timestamp(
+        useJson ? undefined : { format: 'YYYY-MM-DD HH:mm:ss' },
+      ),
       winston.format.errors({ stack: true }),
+      serializeErrorsFormat(),
       winston.format((info) => {
         // Redact sensitive keys anywhere in the info object, including metadata.
         // Winston expects us to return the (possibly modified) info object.
@@ -192,8 +258,9 @@ export class LoggerService implements NestLoggerService {
       })(),
     ];
 
-    // Add JSON format for production, pretty print for development
-    if (logFormat === 'json' || env === 'production' || env === 'test') {
+    // Structured JSON everywhere unless LOG_FORMAT=simple is set explicitly
+    // (production always emits JSON).
+    if (useJson) {
       formats.push(winston.format.json());
     } else {
       formats.push(
@@ -237,6 +304,8 @@ export class LoggerService implements NestLoggerService {
           level: logLevel,
           format: winston.format.combine(
             winston.format.timestamp(),
+            winston.format.errors({ stack: true }),
+            serializeErrorsFormat(),
             winston.format.json(),
           ),
         }),
@@ -252,6 +321,8 @@ export class LoggerService implements NestLoggerService {
           level: 'error',
           format: winston.format.combine(
             winston.format.timestamp(),
+            winston.format.errors({ stack: true }),
+            serializeErrorsFormat(),
             winston.format.json(),
           ),
         }),
@@ -260,6 +331,7 @@ export class LoggerService implements NestLoggerService {
 
     return winston.createLogger({
       level: logLevel,
+      defaultMeta: useJson ? baseFields : undefined,
       transports,
       exitOnError: false,
     });
@@ -381,10 +453,14 @@ export class LoggerService implements NestLoggerService {
     meta: Record<string, any> = {},
   ): Record<string, any> {
     const ctx = requestContext.get();
+    const spanContext = trace.getActiveSpan()?.spanContext();
 
     return {
       context,
       ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
+      ...(spanContext?.traceId
+        ? { traceId: spanContext.traceId, spanId: spanContext.spanId }
+        : {}),
       ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
       ...(ctx?.userId ? { userId: ctx.userId } : {}),
       ...meta,

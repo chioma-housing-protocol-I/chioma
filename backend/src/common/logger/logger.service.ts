@@ -36,13 +36,19 @@ export class ConsoleTransport implements LogTransport {
   ) {}
 
   write(entry: LogEntry): void {
-    const logStr = JSON.stringify(entry);
-    if (entry.level === 'ERROR' || entry.level === 'FATAL') {
-      this.nestLogger.error(logStr);
-    } else if (entry.level === 'WARN') {
-      this.nestLogger.warn(logStr);
+    // Pass the entry as structured metadata rather than a pre-stringified
+    // message: the application logger already emits JSON, so stringifying
+    // here would double-encode the entry into one escaped `message` string.
+    const { message, level, ...meta } = entry;
+    const payload = { ...meta, logLevel: level };
+    if (level === 'ERROR' || level === 'FATAL') {
+      this.nestLogger.error(message, payload);
+    } else if (level === 'WARN') {
+      this.nestLogger.warn(message, payload);
+    } else if (level === 'DEBUG') {
+      this.nestLogger.debug(message, payload);
     } else {
-      this.nestLogger.log(logStr);
+      this.nestLogger.log(message, payload);
     }
   }
 }

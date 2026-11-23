@@ -1,0 +1,30 @@
+/*
+ * Non-critical Leaflet overrides. Imported by the dynamically-loaded map
+ * components only, so this CSS ships in the map chunk and is fetched after
+ * the main content renders instead of blocking first paint (#2156).
+ */
+
+/* #2195: Leaflet's markers are keyboard-focusable; make that focus visible. */
+.leaflet-marker-icon:focus-visible {
+  outline: 3px solid #e0a84a;
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
+/* Leaflet Popup Styling */
+.property-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 1rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.property-popup .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+
+.property-popup .leaflet-popup-tip {
+  background: white;
+}
