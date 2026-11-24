@@ -14,6 +14,7 @@ import { BaseAppError } from '../errors/base.error';
 import { ErrorCode } from '../errors/error-codes';
 import { RateLimitError } from '../errors/domain-errors';
 import { ErrorResponseDto } from '../dto/error-response.dto';
+import { sanitizeForResponse } from '../utils/escape-html';
 
 /** Express Request extended with fields added by NestJS/Passport middleware. */
 interface AuthenticatedRequest extends Request {
@@ -99,6 +100,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const path = request.url;
     const timestamp = new Date().toISOString();
 
+    // Exception messages, validation details and echoed request metadata can
+    // all originate from the caller. Escape them here so every error branch
+    // returns the same safe envelope (#2190).
     const envelope = (
       status: number,
       code: ErrorCode | string,
@@ -106,12 +110,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       details?: unknown,
     ): ErrorResponseDto => ({
       error: {
-        code: code as ErrorCode,
-        message,
-        ...(details !== undefined ? { details } : {}),
+        code: sanitizeForResponse(code) as ErrorCode,
+        message: sanitizeForResponse(message),
+        ...(details !== undefined
+          ? { details: sanitizeForResponse(details) }
+          : {}),
         timestamp,
-        requestId,
-        path,
+        requestId: sanitizeForResponse(requestId),
+        path: sanitizeForResponse(path),
       },
     });
 

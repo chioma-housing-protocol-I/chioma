@@ -19,6 +19,13 @@ import type { SupportedLocale } from './locales';
 import { loadLocale, clearLocaleCache } from './translation-loader';
 import type { TranslationDict } from './translation-loader';
 import { translate } from './translate';
+import englishLocale from '../../public/locales/en.json';
+
+/**
+ * English ships with the bundle so the first render has real text instead of
+ * flashing raw translation keys while the async locale fetch completes.
+ */
+const ENGLISH_DICT = englishLocale as TranslationDict;
 
 interface UseTranslationResult {
   /** Translate a dot-separated key with optional interpolation vars. */
@@ -33,8 +40,9 @@ interface UseTranslationResult {
 
 export function useTranslation(): UseTranslationResult {
   const [locale, setLocaleState] = useState<SupportedLocale>(FALLBACK_LOCALE);
-  const [activeDict, setActiveDict] = useState<TranslationDict>({});
-  const [fallbackDict, setFallbackDict] = useState<TranslationDict>({});
+  const [activeDict, setActiveDict] = useState<TranslationDict>(ENGLISH_DICT);
+  const [fallbackDict, setFallbackDict] =
+    useState<TranslationDict>(ENGLISH_DICT);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
