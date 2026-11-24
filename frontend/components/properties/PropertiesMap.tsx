@@ -2,6 +2,7 @@
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import './leaflet-overrides.css';
 import { useEffect } from 'react';
 import L from 'leaflet';
 

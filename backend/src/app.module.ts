@@ -71,6 +71,7 @@ import { TransactionModule } from './modules/transactions/transaction.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { ApiVersionModule } from './common/api-versioning/api-version.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { MetricsInterceptor } from './common/metrics.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { DatabaseTimeoutInterceptor } from './common/database.interceptor';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
@@ -328,6 +329,10 @@ const appLogger = new Logger('AppModule');
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseTimeInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
