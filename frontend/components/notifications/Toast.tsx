@@ -47,6 +47,18 @@ export interface ToastProps {
   className?: string;
 }
 
+/** Options accepted by the imperative `toast.*` helpers. */
+export interface ToastOptions {
+  /** Auto-dismiss delay in ms. Use `0` or `Infinity` to keep the toast open. */
+  duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+export const DEFAULT_TOAST_DURATION = 4000;
+
 export interface ToastContainerProps {
   toasts?: ToastItemData[];
   onDismiss?: (id: string) => void;
@@ -153,8 +165,10 @@ export function ToastItem({
     };
   }, [duration, remainingTime, isPaused, handleDismiss]);
 
-  const handleMouseEnter = () => {
-    if (!pauseOnHover || duration <= 0) return;
+  const isPersistent = duration <= 0 || duration === Infinity;
+
+  const pauseTimer = () => {
+    if (!pauseOnHover || isPersistent || isPaused) return;
     setIsPaused(true);
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -163,9 +177,18 @@ export function ToastItem({
     setRemainingTime((prev) => Math.max(prev - elapsed, 500));
   };
 
-  const handleMouseLeave = () => {
-    if (!pauseOnHover || duration <= 0) return;
+  const resumeTimer = () => {
+    if (!pauseOnHover || isPersistent) return;
     setIsPaused(false);
+  };
+
+  // Resume only when focus leaves the toast entirely (not when it moves
+  // between the action and dismiss buttons).
+  const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    resumeTimer();
   };
 
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.info;
@@ -177,8 +200,10 @@ export function ToastItem({
       role={isError ? 'alert' : 'status'}
       aria-live={isError ? 'assertive' : 'polite'}
       aria-atomic="true"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={pauseTimer}
+      onMouseLeave={resumeTimer}
+      onFocus={pauseTimer}
+      onBlur={handleBlur}
       className={`pointer-events-auto flex items-start gap-3 w-full max-w-sm rounded-2xl border p-4 shadow-2xl backdrop-blur-xl transition-all duration-200 ${
         config.borderColor
       } ${config.bgColor} bg-slate-900/95 text-white ${
@@ -256,6 +281,7 @@ export function ToastContainer({
       title: t.title,
       message: t.message,
       duration: t.duration ?? duration,
+      action: t.action,
     }),
   );
 
@@ -265,8 +291,10 @@ export function ToastContainer({
     return null;
   }
 
-  // Display newest toasts up to maxToasts
+  // Display the newest toasts up to maxToasts. Older toasts stay queued and
+  // are shown again (with a fresh timer) once a visible toast is dismissed.
   const displayedToasts = activeToasts.slice(-maxToasts);
+  const queuedCount = activeToasts.length - displayedToasts.length;
   const positionClass = POSITION_STYLES[position] || POSITION_STYLES['bottom-right'];
 
   return (
@@ -289,6 +317,9 @@ export function ToastContainer({
           pauseOnHover={pauseOnHover}
         />
       ))}
+      {queuedCount > 0 && (
+        <span className="sr-only">{`${queuedCount} more queued`}</span>
+      )}
     </div>
   );
 }
@@ -314,42 +345,50 @@ export function Toast(props: Partial<ToastProps> & { toasts?: ToastItemData[] })
   );
 }
 
+function resolveOptions(options?: number | ToastOptions): ToastOptions {
+  if (typeof options === 'number') {
+    return { duration: options };
+  }
+  return options ?? {};
+}
+
+function pushToast(
+  type: ToastType,
+  title: string,
+  message?: string,
+  options?: number | ToastOptions,
+) {
+  const { duration = DEFAULT_TOAST_DURATION, action } = resolveOptions(options);
+  useUIStore.getState().addToast({ type, title, message, duration, action });
+}
+
 /**
  * Imperative toast triggers that integrate with useUIStore.
+ * Toasts are queued in the store; pass a number (duration in ms) or a
+ * `ToastOptions` object as the third argument to configure auto-dismiss
+ * and an optional action.
  */
 export const toast = {
-  success: (title: string, message?: string, duration = 4000) => {
-    useUIStore.getState().addToast({
-      type: 'success',
-      title,
-      message,
-      duration,
-    });
-  },
-  error: (title: string, message?: string, duration = 4000) => {
-    useUIStore.getState().addToast({
-      type: 'error',
-      title,
-      message,
-      duration,
-    });
-  },
-  warning: (title: string, message?: string, duration = 4000) => {
-    useUIStore.getState().addToast({
-      type: 'warning',
-      title,
-      message,
-      duration,
-    });
-  },
-  info: (title: string, message?: string, duration = 4000) => {
-    useUIStore.getState().addToast({
-      type: 'info',
-      title,
-      message,
-      duration,
-    });
-  },
+  success: (
+    title: string,
+    message?: string,
+    options?: number | ToastOptions,
+  ) => pushToast('success', title, message, options),
+  error: (
+    title: string,
+    message?: string,
+    options?: number | ToastOptions,
+  ) => pushToast('error', title, message, options),
+  warning: (
+    title: string,
+    message?: string,
+    options?: number | ToastOptions,
+  ) => pushToast('warning', title, message, options),
+  info: (
+    title: string,
+    message?: string,
+    options?: number | ToastOptions,
+  ) => pushToast('info', title, message, options),
   dismiss: (id: string) => {
     useUIStore.getState().removeToast(id);
   },

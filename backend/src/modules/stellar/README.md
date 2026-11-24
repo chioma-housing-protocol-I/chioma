@@ -249,6 +249,38 @@ GET /api/stellar/escrows?publicKey=GABCDEF...&status=ACTIVE&limit=20&offset=0
 4. **Input Validation**: All inputs are validated using class-validator
 5. **Audit Logging**: All operations are logged for audit purposes
 6. **Rate Limiting**: API endpoints are protected by rate limiting
+7. **Request Signing**: State-changing `stellar/payment-processing` endpoints require a Stellar ed25519 request signature (see below)
+
+### Request Signing (contract interactions)
+
+`StellarRequestSignatureMiddleware` verifies every non-GET request to
+`/stellar/payment-processing/*`. Clients send three headers:
+
+| Header                 | Value                                         |
+| ---------------------- | --------------------------------------------- |
+| `X-Stellar-Public-Key` | Signer's Stellar public key (`G...`)          |
+| `X-Stellar-Timestamp`  | Signing time, Unix epoch **milliseconds**     |
+| `X-Stellar-Signature`  | Base64 ed25519 signature of the payload below |
+
+The signed payload is the UTF-8 string:
+
+```text
+chioma-stellar-request-v1
+<HTTP METHOD>
+<request path incl. query, e.g. /api/v1/stellar/payment-processing/rent>
+<timestamp>
+<hex sha256 of the raw JSON body>
+```
+
+`signStellarRequest(keypair, method, path, timestamp, rawBody)` in
+`middleware/stellar-request-signature.middleware.ts` builds it for you.
+
+Requests are rejected with `401` when headers are missing, the timestamp is
+outside the window (`STELLAR_REQUEST_SIGNATURE_TOLERANCE_SECONDS`, default
+300), the signature is forged or the body was tampered with, the signature is
+replayed, or the signer is not the account the operation acts on
+(`userAddress` for rent payments; the `STELLAR_ADMIN_SECRET_KEY` account for
+fee-collector changes). Every accepted and rejected validation is logged.
 
 ## Error Handling
 

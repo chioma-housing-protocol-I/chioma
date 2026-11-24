@@ -71,8 +71,23 @@ export function Tabs({
     event: React.KeyboardEvent<HTMLButtonElement>,
     index: number,
   ) => {
-    const nextKey = orientation === 'horizontal' ? 'ArrowRight' : 'ArrowDown';
-    const prevKey = orientation === 'horizontal' ? 'ArrowLeft' : 'ArrowUp';
+    // In right-to-left layouts the visual order of horizontal tabs is
+    // mirrored, so ArrowLeft moves forward and ArrowRight moves back.
+    const isRtl =
+      typeof window !== 'undefined' &&
+      window.getComputedStyle(event.currentTarget).direction === 'rtl';
+    const nextKey =
+      orientation === 'horizontal'
+        ? isRtl
+          ? 'ArrowLeft'
+          : 'ArrowRight'
+        : 'ArrowDown';
+    const prevKey =
+      orientation === 'horizontal'
+        ? isRtl
+          ? 'ArrowRight'
+          : 'ArrowLeft'
+        : 'ArrowUp';
 
     switch (event.key) {
       case nextKey:
@@ -138,7 +153,7 @@ export function Tabs({
               className={cn(
                 'whitespace-nowrap px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50',
                 isVertical
-                  ? '-mr-px border-r-2 text-left'
+                  ? '-me-px border-e-2 text-start'
                   : '-mb-px border-b-2',
                 selected
                   ? 'border-blue-600 text-blue-600'

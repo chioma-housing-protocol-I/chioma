@@ -1,0 +1,90 @@
+# Real-user Core Web Vitals (frontend -> POST /api/v1/monitoring/web-vitals).
+# Google assesses Core Web Vitals at the 75th percentile, so p75 is recorded
+# here and alerted on both against absolute thresholds and as a regression
+# versus the same time last week.
+groups:
+  - name: chioma_web_vitals_recording
+    interval: 1m
+    rules:
+      - record: web_vitals:timing_ms:p75_15m
+        expr: |
+          histogram_quantile(0.75,
+            sum by (le, name) (rate(web_vitals_timing_ms_bucket[15m])))
+      - record: web_vitals:timing_ms_by_route:p75_15m
+        expr: |
+          histogram_quantile(0.75,
+            sum by (le, name, route) (rate(web_vitals_timing_ms_bucket[15m])))
+      - record: web_vitals:cls:p75_15m
+        expr: |
+          histogram_quantile(0.75, sum by (le) (rate(web_vitals_cls_bucket[15m])))
+      - record: web_vitals:cls_by_route:p75_15m
+        expr: |
+          histogram_quantile(0.75,
+            sum by (le, route) (rate(web_vitals_cls_bucket[15m])))
+      - record: web_vitals:reports:rate15m
+        expr: sum by (name) (rate(web_vitals_reports_total[15m]))
+
+  - name: chioma_web_vitals_alerts
+    rules:
+      - alert: WebVitalsLCPPoor
+        expr: |
+          web_vitals:timing_ms:p75_15m{name="LCP"} > 2500
+            and on (name) web_vitals:reports:rate15m > 0.05
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p75 LCP above 2.5s'
+          description: 'Real-user p75 Largest Contentful Paint is {{ $value | humanize }}ms (good <= 2500ms).'
+      - alert: WebVitalsINPPoor
+        expr: |
+          web_vitals:timing_ms:p75_15m{name="INP"} > 200
+            and on (name) web_vitals:reports:rate15m > 0.05
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p75 INP above 200ms'
+          description: 'Real-user p75 Interaction to Next Paint is {{ $value | humanize }}ms (good <= 200ms).'
+      - alert: WebVitalsFIDPoor
+        expr: |
+          web_vitals:timing_ms:p75_15m{name="FID"} > 100
+            and on (name) web_vitals:reports:rate15m > 0.05
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p75 FID above 100ms'
+          description: 'Real-user p75 First Input Delay is {{ $value | humanize }}ms (good <= 100ms).'
+      - alert: WebVitalsCLSPoor
+        expr: |
+          web_vitals:cls:p75_15m > 0.1
+            and on () sum(web_vitals:reports:rate15m{name="CLS"}) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p75 CLS above 0.1'
+          description: 'Real-user p75 Cumulative Layout Shift is {{ $value | humanize }} (good <= 0.1).'
+      - alert: WebVitalsTimingRegression
+        # >20% worse than the same window one week ago (e.g. after a deploy).
+        expr: |
+          web_vitals:timing_ms:p75_15m{name=~"LCP|INP|FID"}
+            > 1.2 * (web_vitals:timing_ms:p75_15m{name=~"LCP|INP|FID"} offset 7d)
+            and on (name) web_vitals:reports:rate15m > 0.05
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.name }} p75 regressed >20% week-over-week'
+          description: 'Real-user p75 {{ $labels.name }} is {{ $value | humanize }}ms, more than 20% above last week.'
+      - alert: WebVitalsCLSRegression
+        expr: |
+          web_vitals:cls:p75_15m > 1.2 * (web_vitals:cls:p75_15m offset 7d)
+            and web_vitals:cls:p75_15m > 0.05
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: 'CLS p75 regressed >20% week-over-week'
+          description: 'Real-user p75 CLS is {{ $value | humanize }}, more than 20% above last week.'

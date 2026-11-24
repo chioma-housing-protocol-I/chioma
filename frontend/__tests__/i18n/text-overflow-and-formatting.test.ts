@@ -128,9 +128,10 @@ describe('[I18N] Date/time formatting per locale (#2038)', () => {
     es: '15 de marzo de 2026',
     fr: '15 mars 2026',
     ar: '15 مارس 2026',
+    he: '15 במרץ 2026',
   };
 
-  for (const locale of ['en', 'es', 'fr', 'ar'] as SupportedLocale[]) {
+  for (const locale of ['en', 'es', 'fr', 'ar', 'he'] as SupportedLocale[]) {
     it(`formats a long-form date correctly for locale "${locale}"`, () => {
       const dateFnsLocale = getDateFnsLocale(locale);
       const formatted = formatWithDateFns(FIXED_DATE, 'PPP', {
@@ -151,10 +152,10 @@ describe('[I18N] Date/time formatting per locale (#2038)', () => {
   });
 
   it('each supported locale maps to a distinct date-fns Locale object', () => {
-    const locales = (['en', 'es', 'fr', 'ar'] as SupportedLocale[]).map(
+    const locales = (['en', 'es', 'fr', 'ar', 'he'] as SupportedLocale[]).map(
       getDateFnsLocale,
     );
     const uniqueCodes = new Set(locales.map((l) => l.code));
-    expect(uniqueCodes.size).toBe(4);
+    expect(uniqueCodes.size).toBe(5);
   });
 });

@@ -13,6 +13,9 @@ This document provides comprehensive guidelines for contributing to the Chioma f
 5. [Creating Components](#creating-components)
 6. [Editing & Maintaining Code](#editing--maintaining-code)
 7. [Internationalization (i18n)](#internationalization-i18n)
+5. [Component API Conventions](#component-api-conventions)
+6. [Creating Components](#creating-components)
+7. [Editing & Maintaining Code](#editing--maintaining-code)
 8. [PR Requirements & CI/CD Pipeline](#pr-requirements--cicd-pipeline)
 9. [Development Workflow](#development-workflow)
 10. [Best Practices](#best-practices)
@@ -299,6 +302,216 @@ export default function MyComponent({
   )}
 />
 ```
+
+---
+
+## Component API Conventions
+
+These conventions keep component APIs predictable across `components/ui/` and feature folders. When you add or change a component, follow them unless there is a documented reason not to. Existing examples: [`ui/badge.tsx`](./components/ui/badge.tsx), [`ui/tag.tsx`](./components/ui/tag.tsx), [`ui/Skeleton.tsx`](./components/ui/Skeleton.tsx), [`notifications/Toast.tsx`](./components/notifications/Toast.tsx).
+
+### Prop Naming
+
+| Kind of prop         | Convention                                        | Examples                                    |
+| -------------------- | ------------------------------------------------- | ------------------------------------------- |
+| Visual style         | `variant` (one string union per component)        | `variant="success"`, `variant="outline"`    |
+| Dimensions           | `size` with `sm` / `md` / `lg`                    | `size="sm"`                                 |
+| Boolean state        | Plain adjective, or `is*` / `has*` when ambiguous | `disabled`, `open`, `isLoading`, `hasError` |
+| Boolean feature flag | Name the feature; default it to the common case   | `animate`, `pauseOnHover`, `media`          |
+| Content              | `children` for main content; nouns for slots      | `title`, `message`, `icon`, `action`        |
+| Callbacks            | `on` + past/present-tense event                   | `onRemove`, `onDismiss`, `onChange`         |
+| Styling escape hatch | `className`, merged last with `cn()`              | `className="w-1/2"`                         |
+| Accessible text      | `*Label` for text read only by assistive tech     | `removeLabel`, `label` (`SkeletonGroup`)    |
+| Controlled value     | `value` + `onChange`; uncontrolled `default*`     | `value`, `defaultValue`, `defaultOpen`      |
+
+**Rules**
+
+- Prefer the native attribute name when one exists (`disabled`, not `isDisabled`; `placeholder`, not `hint`).
+- Booleans should default to `false` _or_ to the behaviour most callers want — never require `prop={true}` for normal use.
+- Use units in names when a number is not obvious: `duration` is always milliseconds and documented as such.
+- Don't abbreviate (`message`, not `msg`; `columns`, not `cols`).
+
+```tsx
+// ✅ Good
+<Tag
+  variant="info"
+  onRemove={() => removeFilter(id)}
+  removeLabel="Remove Lagos filter"
+>
+  Lagos
+</Tag>
+<SkeletonText lines={3} animate={false} />
+
+// ❌ Avoid
+<Tag color="blue" deletable onDelete={handleDelete} txt="Lagos" />
+<SkeletonText numLines={3} noAnimation />
+```
+
+### Variants and Defaults
+
+Define variants with `class-variance-authority` and export the variants function so other components can share the same color schemes (as `Tag` reuses `badgeVariants`):
+
+```tsx
+const badgeVariants = cva('inline-flex items-center rounded-full border ...', {
+  variants: {
+    variant: {
+      default: 'bg-primary text-primary-foreground',
+      success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+      warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    },
+  },
+  defaultVariants: { variant: 'default' },
+});
+
+export { Badge, badgeVariants };
+```
+
+Set defaults in the parameter list, not inside the body:
+
+```tsx
+export function SkeletonText({
+  lines = 3,
+  animate = true,
+  className,
+}: SkeletonTextProps) {
+  // ...
+}
+```
+
+### Event Handling
+
+- **Props** that accept callbacks are named `on<Event>`; the **internal functions** that implement them are named `handle<Event>`.
+- Callbacks are optional (`onRemove?: () => void`) unless the component is useless without them. Hide the related UI when the callback is missing (e.g. `Tag` hides its remove button without `onRemove`).
+- Pass the most useful value first, not the raw DOM event, for component-level events: `onChange(value)`, `onDismiss(id)`, `onPageChange(page)`.
+- When you wrap a native event prop, **call the consumer's handler first** and respect `event.defaultPrevented`, so callers can opt out of the default behaviour.
+- Always set `type="button"` on buttons that are not form submits.
+
+```tsx
+interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
+  onRemove?: () => void; // component-level event: no DOM event payload
+}
+
+function Tag({ onRemove, onKeyDown, ...props }: TagProps) {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>) => {
+    onKeyDown?.(event); // 1. consumer handler first
+    if (event.defaultPrevented || !onRemove) return; // 2. allow opt-out
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      onRemove(); // 3. component behaviour
+    }
+  };
+
+  return (
+    <span onKeyDown={handleKeyDown} {...props}>
+      ...
+      {onRemove && (
+        <button type="button" onClick={onRemove} aria-label="Remove tag">
+          <X aria-hidden="true" />
+        </button>
+      )}
+    </span>
+  );
+}
+```
+
+For imperative APIs (toasts, dialogs), expose a small object of verbs and keep the signature consistent across methods:
+
+```tsx
+toast.success('Payment received', '200 USDC credited');
+toast.warning('Rent due soon', 'Due in 3 days', { duration: 8000 });
+toast.error('Upload failed', undefined, {
+  duration: Infinity, // stays until dismissed
+  action: { label: 'Retry', onClick: retryUpload },
+});
+```
+
+### TypeScript Patterns
+
+**1. Name props `<Component>Props` and export them.**
+
+```tsx
+export interface SkeletonAvatarProps {
+  size?: 'sm' | 'md' | 'lg';
+  shape?: 'circle' | 'square';
+}
+```
+
+**2. Extend native element attributes** for components that render a single DOM element, then spread `...props` onto it so `id`, `data-*`, `aria-*` and handlers work. Use `Omit` to replace attributes whose type you change.
+
+```tsx
+export interface TagProps
+  extends
+    Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'>,
+    VariantProps<typeof badgeVariants> {
+  children: React.ReactNode;
+  onRemove?: () => void;
+}
+```
+
+**3. Derive variant types from `cva`** with `VariantProps<typeof xVariants>` instead of repeating string unions.
+
+**4. Use string unions or `as const` objects, not enums.**
+
+```tsx
+const AVATAR_SIZES = {
+  sm: 'h-8 w-8',
+  md: 'h-10 w-10',
+  lg: 'h-14 w-14',
+} as const;
+
+interface SkeletonAvatarProps {
+  size?: keyof typeof AVATAR_SIZES;
+}
+```
+
+**5. Use discriminated unions when props depend on each other.**
+
+```tsx
+type StatusMessageProps =
+  | { kind: 'empty'; title: string }
+  | { kind: 'error'; title: string; onRetry: () => void };
+```
+
+**6. Use generics for data-driven components** so callers keep their item types.
+
+```tsx
+interface VirtualListProps<T> {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  getKey: (item: T) => string;
+}
+```
+
+**7. Forward refs for primitives** that wrap focusable elements (inputs, buttons) using `React.forwardRef`, as in `ui/button.tsx`, and set `displayName`.
+
+**8. No `any`.** Use `unknown` and narrow, or a precise type. Type event handlers with React's types (`React.ChangeEvent<HTMLInputElement>`).
+
+### Composition and Accessibility
+
+- Prefer small composable primitives over large configurable components. `SkeletonLoader` offers ready-made layouts, but custom loading states compose `Skeleton`, `SkeletonText` and `SkeletonAvatar`:
+
+  ```tsx
+  <SkeletonGroup label="Loading tenants">
+    <div className="flex items-center gap-3">
+      <SkeletonAvatar />
+      <Skeleton className="h-4 w-1/2" />
+    </div>
+  </SkeletonGroup>
+  ```
+
+- Decorative elements (icons, skeleton blocks) get `aria-hidden="true"`.
+- Icon-only buttons need an `aria-label`; let callers override it via a `*Label` prop.
+- Live updates use `role="status"` / `aria-live="polite"`; errors use `role="alert"` / `aria-live="assertive"` (see `ToastItem`).
+- Respect reduced motion for animations (`motion-reduce:animate-none`).
+
+### Checklist for a New Component API
+
+- [ ] Props interface named `<Component>Props` and exported
+- [ ] Native attributes extended and spread when rendering a single element
+- [ ] `className` accepted and merged last with `cn()`
+- [ ] Callbacks named `on*`, internal handlers named `handle*`
+- [ ] Sensible defaults set in the parameter list
+- [ ] Accessible names for icon-only controls; decorative elements hidden
+- [ ] Storybook story covering each variant
 
 ---
 

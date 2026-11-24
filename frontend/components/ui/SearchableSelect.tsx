@@ -237,7 +237,7 @@ export function SearchableSelect<T = unknown>({
         disabled={disabled}
         onClick={() => (isOpen ? close() : open())}
         onKeyDown={handleTriggerKeyDown}
-        className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-start text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className={cn('truncate', !selectedOption && 'text-neutral-500')}>
           {selectedOption
@@ -248,7 +248,7 @@ export function SearchableSelect<T = unknown>({
         </span>
         <ChevronDown
           className={cn(
-            'ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform',
+            'ms-2 h-4 w-4 shrink-0 opacity-50 transition-transform',
             isOpen && 'rotate-180',
           )}
         />
@@ -328,7 +328,7 @@ export function SearchableSelect<T = unknown>({
                       <>
                         <span className="flex-1 truncate">{option.label}</span>
                         {selected && (
-                          <Check className="ml-2 h-4 w-4 text-blue-600" />
+                          <Check className="ms-2 h-4 w-4 text-blue-600" />
                         )}
                       </>
                     )}

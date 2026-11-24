@@ -11,6 +11,7 @@ import RateLimitNotifier from '@/components/error/RateLimitNotifier';
 import { ErrorProvider } from '@/components/error/ErrorProvider';
 import { ModalProvider } from '@/contexts/ModalContext';
 import { ToastProvider } from '@/components/ui/toast';
+import { ToastContainer } from '@/components/notifications/Toast';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals/WebVitalsReporter';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
@@ -86,6 +87,7 @@ export function RootLayoutClient({
             <ModalManager />
             <OfflineIndicator />
             <ToastProvider />
+            <ToastContainer position="top-right" />
           </ErrorProvider>
         </ModalProvider>
       </QueryProvider>

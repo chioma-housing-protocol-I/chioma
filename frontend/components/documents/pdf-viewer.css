@@ -1,0 +1,23 @@
+/*
+ * Non-critical React PDF viewer styles. Imported by the dynamically-loaded
+ * PdfDocumentViewer only, so they are fetched with that chunk instead of
+ * blocking first paint (#2156).
+ */
+
+/* React PDF Styles */
+.react-pdf__Page {
+  max-width: 100%;
+}
+
+.react-pdf__Page__canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+.react-pdf__Page__textContent {
+  border: 1px solid transparent;
+}
+
+.react-pdf__Page__annotations {
+  border: 1px solid transparent;
+}
