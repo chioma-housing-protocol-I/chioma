@@ -1357,6 +1357,8 @@ pnpm run storybook
 
 ### Testing
 
+See [Component Testing Best Practices](#component-testing-best-practices) for the full guide with examples.
+
 1. **Unit Tests**
    - Test component rendering
    - Test user interactions
@@ -1426,6 +1428,185 @@ When reviewing PRs, check:
 - [ ] Documentation is updated
 - [ ] No breaking changes
 - [ ] Commit messages are clear
+
+---
+
+## Component Testing Best Practices
+
+Component tests use **Vitest** + **React Testing Library** (jsdom) and **axe-core** for automated accessibility checks. Interactive components also get **Storybook** stories whose `play` functions exercise the same behaviour in a real browser.
+
+### Where tests live
+
+| What | Location | Picked up by |
+| ---- | -------- | ------------ |
+| Component unit / a11y tests | `components/<area>/__tests__/<Component>.test.tsx` | `pnpm test` (`**/__tests__/**/*.test.{ts,tsx}`) |
+| Cross-component / page flows | `__tests__/integration/`, `__tests__/e2e/` | `pnpm test` |
+| Visual regression | `__tests__/visual/` | `pnpm test:visual` (Playwright) |
+| Stories + interaction tests | `components/<area>/<Component>.stories.tsx` | `pnpm storybook` |
+
+Reference example: [`components/ui/__tests__/Dialog.test.tsx`](components/ui/__tests__/Dialog.test.tsx) and [`components/ui/Dialog.stories.tsx`](components/ui/Dialog.stories.tsx) cover every pattern below.
+
+### Guiding principles
+
+1. **Test behaviour, not implementation.** Assert what a user sees and can do (text, roles, focus, callbacks), not internal state, class names or hook calls.
+2. **Query by role and accessible name first.** Prefer `getByRole('button', { name: 'Save' })` → `getByLabelText` → `getByText`. Reach for `data-testid` only when nothing semantic exists. Role queries double as accessibility checks.
+3. **One behaviour per test.** Name tests after the behaviour (`'disables actions while loading'`), not the method.
+4. **Keep tests isolated.** Reset mocks in `beforeEach(() => vi.clearAllMocks())`; never rely on test order. `test/test-isolation.setup.ts` already clears storage between tests.
+5. **Mock at the boundary.** Mock the network layer (`vi.mock` the API client, reuse fixtures from `mocks/`), Next.js modules (`next/navigation`, `next/link`, `next/dynamic`) and stores you don't own — not the component under test.
+
+### Unit tests
+
+Render the component with minimal props and assert one behaviour:
+
+```tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ConfirmDialog } from '@/components/ui/Dialog';
+
+it('calls onConfirm when the confirm button is pressed', () => {
+  const onConfirm = vi.fn();
+  render(
+    <ConfirmDialog isOpen title="Archive" onCancel={vi.fn()} onConfirm={onConfirm} />,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  expect(onConfirm).toHaveBeenCalledTimes(1);
+});
+```
+
+Cover the states that matter: default, empty, loading, error, disabled, and edge-case props.
+
+### Accessibility tests
+
+Every interactive component should have at least one axe check, plus explicit assertions for focus management and keyboard support:
+
+```tsx
+import axe from 'axe-core';
+
+async function expectNoAxeViolations(node: Element = document.body) {
+  const results = await axe.run(node, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+    rules: { 'color-contrast': { enabled: false } }, // jsdom has no layout
+  });
+  expect(results.violations, results.violations.map((v) => v.id).join(', ')).toHaveLength(0);
+}
+
+it('moves focus to the action button', async () => {
+  render(<AlertDialog isOpen onClose={vi.fn()} title="Saved" />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'OK' })).toHaveFocus());
+});
+```
+
+Use `document.body` (not `container`) for components that render into a portal (dialogs, toasts, tooltips).
+
+### Integration tests
+
+Exercise several components together through a real stateful parent instead of mocking the glue between them:
+
+```tsx
+function Harness() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open</button>
+      <Modal isOpen={open} onClose={() => setOpen(false)} title="Harness" />
+    </>
+  );
+}
+
+it('restores focus to the trigger after closing', async () => {
+  render(<Harness />);
+  const trigger = screen.getByRole('button', { name: 'Open' });
+  trigger.focus();
+  fireEvent.click(trigger);
+  fireEvent.click(await screen.findByRole('button', { name: 'Close dialog' }));
+  await waitFor(() => expect(trigger).toHaveFocus());
+});
+```
+
+For components that fetch data, wrap them in a fresh `QueryClientProvider` per test and mock the API client with fixtures from `mocks/` rather than stubbing the query hooks themselves.
+
+### Snapshot tests
+
+Use snapshots sparingly — they catch unintended markup changes but say nothing about behaviour and are easy to rubber-stamp.
+
+- ✅ Small, stable, presentational output (an icon set, a formatted badge).
+- ✅ Prefer `toMatchInlineSnapshot()` so the expected output is reviewed in the diff.
+- ❌ Large trees, anything with dates, random ids or Radix-generated ids.
+- ❌ As a replacement for behavioural assertions.
+
+```tsx
+it('renders the formatted status badge', () => {
+  const { container } = render(<Badge variant="success">Paid</Badge>);
+  expect(container.firstChild).toMatchInlineSnapshot();
+});
+```
+
+Commit generated snapshots and review them like code. Update intentionally with `pnpm vitest run -u`. For pixel-level regressions use the Playwright visual suite instead (`pnpm test:visual`).
+
+### Storybook interaction tests
+
+Add a story per meaningful state and a `play` function for interactive behaviour. Query through `within(canvasElement.ownerDocument.body)` for portal content:
+
+```tsx
+export const Confirm: StoryObj<typeof ConfirmDialog> = {
+  args: { isOpen: true, title: 'Delete property', onCancel: fn(), onConfirm: fn() },
+  play: async ({ canvasElement, args }) => {
+    const screen = within(canvasElement.ownerDocument.body);
+    const dialog = await screen.findByRole('dialog', { name: 'Delete property' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await expect(args.onConfirm).toHaveBeenCalled();
+  },
+};
+```
+
+### Translated components
+
+Components using `useTranslation()` render English in tests (the default locale), so assert against the English strings in `lib/i18n/translations/en.ts`. To test another locale, set it explicitly: `useI18nStore.getState().setLocale('es')` inside `act()`.
+
+### Checklist
+
+- [ ] Renders in default, loading, empty and error states
+- [ ] User interactions call the right callbacks
+- [ ] Queries use roles / labels
+- [ ] axe check passes; focus and keyboard behaviour asserted
+- [ ] Story added (with `play` for interactive components)
+- [ ] `pnpm test` passes locally
+
+---
+
+## Internationalization (i18n)
+
+The app uses a lightweight, type-safe i18n layer in `lib/i18n` (zustand store + typed translation dictionaries). `I18nProvider` wraps the whole app in `app/RootLayoutClient.tsx`.
+
+- **Locales:** English (`en`, source of truth), Spanish (`es`), French (`fr`) and Arabic (`ar`, RTL).
+- **Translation files:** `lib/i18n/translations/<locale>.ts`. Every locale is typed as `TranslationKeys`, so a missing key is a TypeScript error.
+- **Switching:** `<LanguageSwitcher />` (rendered in the Navbar) calls `setLocale()`. The choice is persisted to `localStorage` under `chioma-locale`, synced across tabs, and sets `<html lang dir>`.
+
+### Using translations
+
+```tsx
+'use client';
+import { useTranslation } from '@/lib/i18n';
+
+export function SaveButton() {
+  const { t } = useTranslation();
+  return <button>{t('common.save')}</button>;
+}
+
+// Interpolation: '© {{year}} Chioma. All rights reserved.'
+t('footer.copyright', { year: new Date().getFullYear() });
+```
+
+For constants rendered in the UI, store a `labelKey: TranslationPath` instead of the English text and call `t(link.labelKey)` when rendering (see `constants/navigation.ts`).
+
+### Adding strings
+
+1. Add the key to the `TranslationKeys` interface and the `en` object in `translations/en.ts`.
+2. Add the translated value to `es.ts`, `fr.ts` and `ar.ts` (the compiler will flag any you miss).
+3. Replace the hardcoded string with `t('namespace.key')`.
+
+Don't translate brand names (Chioma, Stellar, Twitter) or user-generated content.
 
 ---
 

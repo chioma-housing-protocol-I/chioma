@@ -15,7 +15,7 @@ import { ToastContainer } from '@/components/notifications/Toast';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals/WebVitalsReporter';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
-import { HtmlAttributesSync } from '@/components/i18n/HtmlAttributesSync';
+import { I18nProvider } from '@/components/i18n/I18nProvider';
 import NetworkIndicator from '@/components/shared/NetworkIndicator';
 import ThemeManager from '@/components/ThemeManager';
 
@@ -64,6 +64,21 @@ export function RootLayoutClient({
 }) {
   return (
     <InitialAuthProvider value={authHint}>
+      <I18nProvider>
+        <QueryProvider>
+          <ModalProvider>
+            <ErrorProvider>
+              <StoreHydrator />
+              <ThemeManager />
+              <ErrorMonitoringProvider />
+              <WebVitalsReporter />
+              <PwaController />
+              <OrientationHandler />
+              <NetworkIndicator />
+              <NetworkStatusBanner />
+              <ConnectionStatusBanner />
+              <RateLimitNotifier />
+              <RouteAnnouncer />
       <QueryProvider>
         <ModalProvider>
           <ErrorProvider>
@@ -81,9 +96,16 @@ export function RootLayoutClient({
             <RateLimitNotifier />
             <RouteAnnouncer />
 
-            {/* Page content - individual pages provide their own #main-content landmark */}
-            {children}
+              {/* Page content - individual pages provide their own #main-content landmark */}
+              {children}
 
+              <ModalManager />
+              <OfflineIndicator />
+              <ToastProvider />
+            </ErrorProvider>
+          </ModalProvider>
+        </QueryProvider>
+      </I18nProvider>
             <ModalManager />
             <OfflineIndicator />
             <ToastProvider />

@@ -14,7 +14,7 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
-  const { locale, setLocale, isHydrated } = useTranslation();
+  const { t, locale, setLocale, isHydrated } = useTranslation();
   const updatePreferences = useAuthStore((s) => s.updatePreferences);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [open, setOpen] = useState(false);
@@ -26,15 +26,22 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   // html[lang]/[dir] sync lives in <HtmlAttributesSync>, mounted once at the
   // app root so it applies even on pages without this switcher.
 
-  // Close on outside click
+  // Close on outside click or Escape
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   function handleSelect(code: SupportedLocale) {
@@ -63,10 +70,11 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Select language"
+        aria-label={t('language.select')}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/10 transition-colors"
       >
         <Globe size={15} />
@@ -80,7 +88,7 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
       {open && (
         <ul
           role="listbox"
-          aria-label="Language options"
+          aria-label={t('language.options')}
           className="absolute end-0 mt-1 w-40 bg-slate-800 border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
         >
           {LOCALE_OPTIONS.map((option) => (
@@ -90,6 +98,8 @@ export function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
               aria-selected={locale === option.code}
             >
               <button
+                type="button"
+                lang={option.code}
                 onClick={() => handleSelect(option.code)}
                 className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
                   locale === option.code

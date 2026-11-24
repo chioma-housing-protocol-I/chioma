@@ -54,6 +54,13 @@ const logoutMock = vi.fn().mockResolvedValue(undefined);
 const useAuthMock = vi.fn();
 vi.mock('@/store/authStore', () => ({
   useAuth: () => useAuthMock(),
+  // Consumed by the LanguageSwitcher rendered inside the Navbar.
+  useAuthStore: (
+    selector: (state: {
+      isAuthenticated: boolean;
+      updatePreferences: () => void;
+    }) => unknown,
+  ) => selector({ isAuthenticated: false, updatePreferences: vi.fn() }),
 }));
 
 const useAuthDisplayMock = vi.fn();

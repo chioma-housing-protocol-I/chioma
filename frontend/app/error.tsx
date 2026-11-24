@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import ErrorFallback from '@/components/error/ErrorFallback';
 import { classifyUnknownError, logError } from '@/lib/errors';
+import { useTranslation } from '@/lib/i18n';
 
 /**
  * Global Error Boundary UI — app/error.tsx
@@ -22,6 +23,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslation();
   const appError = classifyUnknownError(error, {
     source: 'app/error.tsx',
     action: 'render-global-error',
@@ -36,7 +38,7 @@ export default function Error({
 
   return (
     <ErrorFallback
-      title="Something went wrong"
+      title={t('errorPage.title')}
       description={appError.userMessage}
       error={error}
       retry={reset}

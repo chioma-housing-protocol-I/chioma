@@ -103,6 +103,70 @@ export interface TranslationKeys {
     failed: string;
     initiated: string;
   };
+  dialog: {
+    close: string;
+    ok: string;
+    confirm: string;
+    cancel: string;
+    pleaseWait: string;
+    closeDialog: string;
+    closeDrawer: string;
+    loading: string;
+  };
+  theme: {
+    switchToLight: string;
+    switchToDark: string;
+    lightMode: string;
+    darkMode: string;
+  };
+  language: {
+    select: string;
+    options: string;
+  };
+  navbar: {
+    mainNavigation: string;
+    mobileNavigation: string;
+    toggleMenu: string;
+    findHome: string;
+    resources: string;
+    dashboard: string;
+    signIn: string;
+    signOut: string;
+    getStarted: string;
+    connectWallet: string;
+    signedOut: string;
+  };
+  footer: {
+    tagline: string;
+    description: string;
+    platform: string;
+    developers: string;
+    legal: string;
+    findHome: string;
+    shortStays: string;
+    subletting: string;
+    resources: string;
+    documentation: string;
+    apiKeys: string;
+    sdks: string;
+    systemStatus: string;
+    privacyPolicy: string;
+    termsOfService: string;
+    email: string;
+    copyright: string;
+    allSystemsOperational: string;
+  };
+  notFound: {
+    code: string;
+    title: string;
+    description: string;
+    goHome: string;
+    browseProperties: string;
+    userDashboard: string;
+  };
+  errorPage: {
+    title: string;
+  };
 }
 
 export const en: TranslationKeys = {
@@ -209,5 +273,71 @@ export const en: TranslationKeys = {
     completed: 'Completed',
     failed: 'Failed',
     initiated: 'Payment initiated',
+  },
+  dialog: {
+    close: 'Close',
+    ok: 'OK',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    pleaseWait: 'Please wait...',
+    closeDialog: 'Close dialog',
+    closeDrawer: 'Close drawer',
+    loading: 'Loading',
+  },
+  theme: {
+    switchToLight: 'Switch to light mode',
+    switchToDark: 'Switch to dark mode',
+    lightMode: 'Light mode',
+    darkMode: 'Dark mode',
+  },
+  language: {
+    select: 'Select language',
+    options: 'Language options',
+  },
+  navbar: {
+    mainNavigation: 'Main navigation',
+    mobileNavigation: 'Mobile navigation',
+    toggleMenu: 'Toggle menu',
+    findHome: 'Find a Home',
+    resources: 'Resources',
+    dashboard: 'Dashboard',
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    getStarted: 'Get started',
+    connectWallet: 'Connect Wallet',
+    signedOut: 'Signed out successfully.',
+  },
+  footer: {
+    tagline: 'Open financial rails for housing.',
+    description:
+      'Leases, rent, and commissions — settled transparently on the Stellar network.',
+    platform: 'Platform',
+    developers: 'Developers',
+    legal: 'Legal',
+    findHome: 'Find a home',
+    shortStays: 'Short stays',
+    subletting: 'Subletting',
+    resources: 'Resources',
+    documentation: 'Documentation',
+    apiKeys: 'API keys',
+    sdks: 'SDKs',
+    systemStatus: 'System status',
+    privacyPolicy: 'Privacy policy',
+    termsOfService: 'Terms of service',
+    email: 'Email',
+    copyright: '© {{year}} Chioma. All rights reserved.',
+    allSystemsOperational: 'All systems operational',
+  },
+  notFound: {
+    code: 'Error 404',
+    title: 'Page Not Found',
+    description:
+      'The page you are looking for does not exist or may have been moved.',
+    goHome: 'Go Home',
+    browseProperties: 'Browse Properties',
+    userDashboard: 'User Dashboard',
+  },
+  errorPage: {
+    title: 'Something went wrong',
   },
 };

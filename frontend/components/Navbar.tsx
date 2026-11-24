@@ -20,6 +20,8 @@ import { useAuth } from '@/store/authStore';
 import { useAuthDisplay } from '@/store/useAuthDisplay';
 import { useUIStore } from '@/store/ui-store';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 const WalletConnectButton = dynamic(
   () => import('@/components/auth/WalletConnectButton'),
@@ -47,6 +49,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     role: displayRole,
   } = useAuthDisplay();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   void theme;
 
@@ -94,7 +97,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
   const handleLogout = async () => {
     setIsUserMenuOpen(false);
     await logout();
-    toast.success('Signed out successfully.');
+    toast.success(t('navbar.signedOut'));
     router.push('/');
   };
 
@@ -104,7 +107,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     <button
       type="button"
       onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
-      aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+      aria-label={t(isDarkMode ? 'theme.switchToLight' : 'theme.switchToDark')}
       aria-pressed={isDarkMode}
       className={className}
     >
@@ -113,7 +116,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
       ) : (
         <Moon size={16} aria-hidden="true" />
       )}
-      <span>{isDarkMode ? 'Light mode' : 'Dark mode'}</span>
+      <span>{t(isDarkMode ? 'theme.lightMode' : 'theme.darkMode')}</span>
     </button>
   );
 
@@ -128,7 +131,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
     >
       <nav
         className="container mx-auto px-4 sm:px-6 flex items-center justify-between"
-        aria-label="Main navigation"
+        aria-label={t('navbar.mainNavigation')}
       >
         <Logo
           size="md"
@@ -146,7 +149,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                   active ? 'text-white' : 'text-blue-200/80 hover:text-white'
                 }`}
               >
-                {link.name}
+                {t(link.labelKey)}
                 {active && (
                   <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-400 rounded-full" />
                 )}
@@ -156,6 +159,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         </div>
 
         <div className="hidden md:flex items-center space-x-3">
+          <LanguageSwitcher />
           {isAuthenticated ? (
             <>
               {walletAddress && (
@@ -206,7 +210,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                         className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-200 hover:bg-white/5 hover:text-white transition-colors"
                       >
                         <LayoutDashboard size={15} />
-                        Dashboard
+                        {t('navbar.dashboard')}
                       </Link>
                       {renderThemeToggle(
                         'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-200 hover:bg-white/5 hover:text-white transition-colors',
@@ -216,7 +220,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
                       >
                         <LogOut size={15} />
-                        Sign out
+                        {t('navbar.signOut')}
                       </button>
                     </div>
                   </div>
@@ -232,18 +236,18 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                 href="/login"
                 className="px-4 py-2 text-sm font-medium text-blue-200 hover:text-white transition-colors"
               >
-                Sign in
+                {t('navbar.signIn')}
               </Link>
               <Link
                 href="/signup"
                 className="px-5 py-2 text-sm font-semibold bg-brass-500 hover:bg-brass-400 text-ink-950 rounded-xl transition-colors"
               >
-                Get started
+                {t('navbar.getStarted')}
               </Link>
               {!walletAddress && (
                 <WalletConnectButton
                   className="px-4 py-2 text-sm"
-                  buttonText="Connect Wallet"
+                  buttonText={t('navbar.connectWallet')}
                 />
               )}
             </>
@@ -254,7 +258,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         <button
           className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1 rounded-lg hover:bg-white/10 transition-colors text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle menu"
+          aria-label={t('navbar.toggleMenu')}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"
         >
@@ -267,7 +271,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
         <nav
           id="mobile-menu"
           className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-slate-950/98 border-b border-white/20 shadow-xl shadow-black/20"
-          aria-label="Mobile navigation"
+          aria-label={t('navbar.mobileNavigation')}
         >
           <div className="flex flex-col p-6 space-y-4">
             {NAV_LINKS.map((link) => {
@@ -281,7 +285,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                     active ? 'text-white' : 'text-blue-200/80 hover:text-white'
                   }`}
                 >
-                  {link.name}
+                  {t(link.labelKey)}
                 </Link>
               );
             })}
@@ -289,6 +293,8 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
             {renderThemeToggle(
               'flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-white',
             )}
+
+            <LanguageSwitcher />
 
             <div className="pt-4 flex flex-col space-y-3 border-t border-white/10">
               {isAuthenticated ? (
@@ -299,7 +305,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                     className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium"
                   >
                     <LayoutDashboard size={16} />
-                    Dashboard
+                    {t('navbar.dashboard')}
                   </Link>
                   <button
                     onClick={() => {
@@ -309,7 +315,7 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                     className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-medium"
                   >
                     <LogOut size={16} />
-                    Sign out
+                    {t('navbar.signOut')}
                   </button>
                 </>
               ) : (
@@ -319,19 +325,19 @@ const Navbar = ({ theme = 'dark' }: NavbarProps) => {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium text-center"
                   >
-                    Sign in
+                    {t('navbar.signIn')}
                   </Link>
                   <Link
                     href="/signup"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="px-4 py-3 rounded-xl bg-brass-500 text-ink-950 text-sm font-semibold text-center"
                   >
-                    Get started
+                    {t('navbar.getStarted')}
                   </Link>
                   <div onClick={() => setIsMobileMenuOpen(false)}>
                     <WalletConnectButton
                       className="w-full px-6 py-3"
-                      buttonText="Connect Wallet"
+                      buttonText={t('navbar.connectWallet')}
                     />
                   </div>
                 </>
