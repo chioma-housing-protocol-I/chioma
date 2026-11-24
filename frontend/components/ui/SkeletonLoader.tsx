@@ -1,69 +1,79 @@
 import React from 'react';
 
+import {
+  Skeleton,
+  SkeletonAvatar,
+  SkeletonCardBlock,
+  SkeletonTableRow,
+  SkeletonText,
+} from './Skeleton';
+
 type SkeletonVariant = 'text' | 'card' | 'avatar' | 'table-row';
 
 export interface SkeletonLoaderProps {
   variant?: SkeletonVariant;
+  /** Number of text lines (text and card variants). */
   lines?: number;
+  /** Number of cells (table-row variant only). */
+  columns?: number;
+  /** How many copies of the variant to render (e.g. table rows). */
+  count?: number;
+  /** Pulse animation. Defaults to `true`. */
+  animate?: boolean;
   className?: string;
 }
 
-function TextSkeleton({ lines = 3 }: { lines: number }) {
+function AvatarSkeleton({ animate }: { animate: boolean }) {
   return (
-    <div className="animate-pulse space-y-2">
-      {Array.from({ length: lines }).map((_, index) => (
-        <div
-          key={`line-${index}`}
-          className={`h-3 rounded bg-neutral-200 ${
-            index === lines - 1 ? 'w-2/3' : 'w-full'
-          }`}
-        />
-      ))}
+    <div className="space-y-3">
+      <SkeletonAvatar size="lg" animate={animate} />
+      <Skeleton animate={animate} className="h-3 w-24" />
     </div>
   );
 }
 
-function CardSkeleton() {
-  return (
-    <div className="animate-pulse space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
-      <div className="h-40 rounded-lg bg-neutral-200" />
-      <div className="h-5 w-2/3 rounded bg-neutral-200" />
-      <TextSkeleton lines={2} />
-    </div>
-  );
-}
-
-function AvatarSkeleton() {
-  return (
-    <div className="animate-pulse space-y-3">
-      <div className="h-14 w-14 rounded-full bg-neutral-200" />
-      <div className="h-3 w-24 rounded bg-neutral-200" />
-    </div>
-  );
-}
-
-function TableRowSkeleton() {
-  return (
-    <div className="grid animate-pulse grid-cols-4 gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-      <div className="h-4 rounded bg-neutral-200" />
-      <div className="h-4 rounded bg-neutral-200" />
-      <div className="h-4 rounded bg-neutral-200" />
-      <div className="h-4 rounded bg-neutral-200" />
-    </div>
-  );
-}
-
+/**
+ * Ready-made skeleton layouts. For custom layouts compose the primitives in
+ * `./Skeleton` (`Skeleton`, `SkeletonText`, `SkeletonAvatar`, ...).
+ */
 export function SkeletonLoader({
   variant = 'text',
-  lines = 3,
+  lines,
+  columns = 4,
+  count = 1,
+  animate = true,
   className = '',
 }: SkeletonLoaderProps) {
+  const renderOne = (key: number) => {
+    switch (variant) {
+      case 'card':
+        return (
+          <SkeletonCardBlock
+            key={key}
+            lines={lines ?? 2}
+            animate={animate}
+          />
+        );
+      case 'avatar':
+        return <AvatarSkeleton key={key} animate={animate} />;
+      case 'table-row':
+        return (
+          <SkeletonTableRow key={key} columns={columns} animate={animate} />
+        );
+      case 'text':
+      default:
+        return <SkeletonText key={key} lines={lines ?? 3} animate={animate} />;
+    }
+  };
+
+  const total = Math.max(1, count);
+
   return (
-    <div className={className} aria-hidden="true">
-      {variant === 'card' && <CardSkeleton />}
-      {variant === 'avatar' && <AvatarSkeleton />}
-      {variant === 'table-row' && <TableRowSkeleton />}
-      {variant === 'text' && <TextSkeleton lines={lines} />}
+    <div
+      className={total > 1 ? `space-y-3 ${className}` : className}
+      aria-hidden="true"
+    >
+      {Array.from({ length: total }).map((_, index) => renderOne(index))}
     </div>
   );
 }

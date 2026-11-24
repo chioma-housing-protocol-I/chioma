@@ -8,7 +8,18 @@ const meta: Meta<typeof Badge> = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['default', 'secondary', 'destructive', 'outline'],
+      options: [
+        'default',
+        'secondary',
+        'destructive',
+        'outline',
+        'success',
+        'warning',
+        'info',
+        'error',
+        'neutral',
+        'purple',
+      ],
       description: 'Visual style variant of the badge',
     },
     children: {
@@ -56,6 +67,46 @@ export const AllVariants: Story = {
       <Badge variant="secondary">Secondary</Badge>
       <Badge variant="destructive">Destructive</Badge>
       <Badge variant="outline">Outline</Badge>
+      <Badge variant="success">Success</Badge>
+      <Badge variant="warning">Warning</Badge>
+      <Badge variant="info">Info</Badge>
+      <Badge variant="error">Error</Badge>
+      <Badge variant="neutral">Neutral</Badge>
+      <Badge variant="purple">Purple</Badge>
+    </div>
+  ),
+};
+
+export const Success: Story = {
+  args: {
+    children: 'Paid',
+    variant: 'success',
+  },
+};
+
+export const Warning: Story = {
+  args: {
+    children: 'Pending',
+    variant: 'warning',
+  },
+};
+
+export const Info: Story = {
+  args: {
+    children: 'New',
+    variant: 'info',
+  },
+};
+
+export const StatusExamples: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="success">Lease active</Badge>
+      <Badge variant="warning">Rent due soon</Badge>
+      <Badge variant="error">Payment failed</Badge>
+      <Badge variant="info">Under review</Badge>
+      <Badge variant="neutral">Draft</Badge>
+      <Badge variant="purple">Verified agent</Badge>
     </div>
   ),
 };

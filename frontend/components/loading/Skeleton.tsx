@@ -8,3 +8,11 @@ export {
   SkeletonLoader,
   type SkeletonLoaderProps,
 } from '@/components/ui/SkeletonLoader';
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonAvatar,
+  SkeletonTableRow,
+  SkeletonCardBlock,
+  SkeletonGroup,
+} from '@/components/ui/Skeleton';

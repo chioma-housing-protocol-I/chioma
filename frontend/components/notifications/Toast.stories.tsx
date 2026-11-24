@@ -81,3 +81,31 @@ export const StackedInCorner = () => {
 
   return <ToastContainer toasts={sampleToasts} position="bottom-right" />;
 };
+
+export const Persistent: Story = {
+  args: {
+    id: 't-persistent',
+    type: 'error',
+    title: 'Upload Failed',
+    message: 'This toast stays open until it is dismissed.',
+    duration: Infinity,
+  },
+};
+
+export const QueuedOverflow = () => {
+  const sampleToasts = Array.from({ length: 6 }).map((_, index) => ({
+    id: `q-${index + 1}`,
+    type: 'info' as const,
+    title: `Notification ${index + 1}`,
+    message: 'Only the newest 3 are visible; the rest wait in the queue.',
+    duration: 0,
+  }));
+
+  return (
+    <ToastContainer
+      toasts={sampleToasts}
+      maxToasts={3}
+      position="bottom-right"
+    />
+  );
+};
