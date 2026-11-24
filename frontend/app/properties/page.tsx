@@ -12,13 +12,23 @@ import LazyPropertyMapView from '@/components/properties/LazyPropertyMapView';
 import { VirtualGrid } from '@/components/ui/VirtualGrid';
 import { useGridColumns } from '@/hooks/use-grid-columns';
 import { Filter, Bell, List, Map, ChevronLeft } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+} from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   useInfiniteProperties,
   type PropertyListParams,
 } from '@/lib/query/hooks/use-properties';
-import { toPropertyCardShape } from '@/lib/utils/property-adapter';
+import {
+  toPropertyCardShape,
+  type PropertyCardShape,
+} from '@/lib/utils/property-adapter';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import type { Property } from '@/types';
 
@@ -64,14 +74,19 @@ export default function PropertyListing() {
   const observerTarget = useRef<HTMLDivElement>(null);
   const gridColumns = useGridColumns();
 
-  // Build API filter params from local state
-  const filterParams: Omit<PropertyListParams, 'page'> = {
-    search: searchQuery.trim() || undefined,
-    type: (selectedType || undefined) as PropertyListParams['type'],
-    minPrice: minPrice ? Number(minPrice) : undefined,
-    maxPrice: maxPrice ? Number(maxPrice) : undefined,
-    limit: 12,
-  };
+  // Keep the query-key input referentially stable while unrelated state
+  // (scroll position, map width) changes. useInfiniteProperties puts params
+  // directly in its query key, so a fresh object here is a fresh query key.
+  const filterParams: Omit<PropertyListParams, 'page'> = useMemo(
+    () => ({
+      search: searchQuery.trim() || undefined,
+      type: (selectedType || undefined) as PropertyListParams['type'],
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      limit: 12,
+    }),
+    [searchQuery, selectedType, minPrice, maxPrice],
+  );
 
   const {
     data,
@@ -83,8 +98,14 @@ export default function PropertyListing() {
     error,
   } = useInfiniteProperties(filterParams);
 
-  // Flatten all pages into a single array
-  const allProperties: Property[] = data?.pages.flatMap((p) => p.data) ?? [];
+  const propertyPages = data?.pages;
+
+  // Flatten only when the query data changes. This keeps PropertyCard props
+  // referentially stable across the frequent scroll/map-width re-renders.
+  const allProperties: Property[] = useMemo(
+    () => propertyPages?.flatMap((p) => p.data) ?? [],
+    [propertyPages],
+  );
 
   // Keep local filter state in sync with the URL — covers initial load,
   // reload, and back/forward navigation (Next.js re-renders with fresh
@@ -199,32 +220,122 @@ export default function PropertyListing() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  const handleBoundsChange = (bounds: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  }) => {
-    if (!searchAsIMove) return;
-    // Map bounds filtering is handled server-side via lat/lng/radiusKm params;
-    // client-side fallback for already-loaded data:
-    allProperties.filter((p) => {
-      if (!p.latitude || !p.longitude) return false;
-      return (
-        p.latitude >= bounds.south &&
-        p.latitude <= bounds.north &&
-        p.longitude >= bounds.west &&
-        p.longitude <= bounds.east
-      );
-    });
-  };
+  const handleBoundsChange = useCallback(
+    (bounds: { north: number; south: number; east: number; west: number }) => {
+      if (!searchAsIMove) return;
+      // Map bounds filtering is handled server-side via lat/lng/radiusKm params;
+      // client-side fallback for already-loaded data:
+      allProperties.filter((p) => {
+        if (!p.latitude || !p.longitude) return false;
+        return (
+          p.latitude >= bounds.south &&
+          p.latitude <= bounds.north &&
+          p.longitude >= bounds.west &&
+          p.longitude <= bounds.east
+        );
+      });
+    },
+    [allProperties, searchAsIMove],
+  );
 
-  const toggleMapCollapse = () => setIsMapCollapsed((v) => !v);
-  const adjustMapWidth = (delta: number) =>
-    setMapWidth((prev) => Math.min(Math.max(prev + delta, 20), 80));
+  const toggleMapCollapse = useCallback(() => setIsMapCollapsed((v) => !v), []);
+  const adjustMapWidth = useCallback(
+    (delta: number) =>
+      setMapWidth((prev) => Math.min(Math.max(prev + delta, 20), 80)),
+    [],
+  );
 
   // Total count: use first page metadata if available
   const totalCount = data?.pages[0]?.total ?? allProperties.length;
+
+  // Route-level memoization: scroll/map state changes re-render this page, but
+  // these values only change when their real inputs change. Keeping them
+  // stable lets memoized children skip work downstream.
+  const mappedProperties = useMemo(
+    () => allProperties.map(toPropertyCardShape),
+    [allProperties],
+  );
+
+  const initialMapViewState = useMemo(
+    () => ({ longitude: 0, latitude: 20, zoom: 2 }),
+    [],
+  );
+
+  const listPanelStyle = useMemo<CSSProperties>(
+    () => ({
+      width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
+      display: viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
+    }),
+    [isMapCollapsed, mapWidth, viewMode],
+  );
+
+  const mapPanelStyle = useMemo<CSSProperties>(
+    () => ({
+      width: isMapCollapsed ? '0%' : `${mapWidth}%`,
+      opacity: isMapCollapsed ? 0 : 1,
+      pointerEvents: isMapCollapsed ? 'none' : 'auto',
+    }),
+    [isMapCollapsed, mapWidth],
+  );
+
+  const headerContent = useMemo(
+    () => (
+      <>
+        <PropertyListingHeader count={totalCount} />
+        {isError && (
+          <div
+            className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
+            data-testid="error-state"
+          >
+            <p className="text-red-400 font-medium">
+              Failed to load listings.{' '}
+              {error instanceof Error ? error.message : 'Please try again.'}
+            </p>
+          </div>
+        )}
+      </>
+    ),
+    [error, isError, totalCount],
+  );
+
+  // Grid items are the same pre-shaped objects the map uses, so scrolling
+  // never re-runs the adapter or hands PropertyCard a fresh prop object.
+  const renderPropertyCard = useCallback(
+    (property: PropertyCardShape, index: number) => (
+      <PropertyCard
+        key={property.id}
+        property={property}
+        priority={index < gridColumns}
+      />
+    ),
+    [gridColumns],
+  );
+
+  const gridFooter = useMemo(
+    () => (
+      <div className="pt-12">
+        {/* Skeleton rows while fetching next page */}
+        {isFetchingNextPage && (
+          <div className="grid gap-6 mb-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <PropertyCardSkeleton key={`next-${i}`} />
+            ))}
+          </div>
+        )}
+
+        {/* Infinite scroll trigger */}
+        <div ref={observerTarget} className="h-4" />
+
+        {/* End of results indicator */}
+        {!hasNextPage && (
+          <p className="text-center text-blue-200/30 text-sm pb-8">
+            Showing all {totalCount} listings
+          </p>
+        )}
+      </div>
+    ),
+    [hasNextPage, isFetchingNextPage, totalCount],
+  );
 
   return (
     <>
@@ -401,30 +512,11 @@ export default function PropertyListing() {
           {isLoading || allProperties.length === 0 ? (
             <div
               className="overflow-y-auto transition-all duration-500 ease-in-out bg-slate-900/50"
-              style={{
-                width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
-                display:
-                  viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
-              }}
+              style={listPanelStyle}
             >
               <div className="mx-auto px-2 sm:px-3 lg:px-4 py-8">
                 <div className="max-w-[1600px] mx-auto">
-                  <PropertyListingHeader count={totalCount} />
-
-                  {/* Error state */}
-                  {isError && (
-                    <div
-                      className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
-                      data-testid="error-state"
-                    >
-                      <p className="text-red-400 font-medium">
-                        Failed to load listings.{' '}
-                        {error instanceof Error
-                          ? error.message
-                          : 'Please try again.'}
-                      </p>
-                    </div>
-                  )}
+                  {headerContent}
 
                   {/* Property Cards Grid */}
                   <div
@@ -448,7 +540,7 @@ export default function PropertyListing() {
             </div>
           ) : (
             <VirtualGrid
-              items={allProperties}
+              items={mappedProperties}
               columns={gridColumns}
               rowHeight={ROW_HEIGHT_BY_COLUMNS[gridColumns] ?? 600}
               gap={24}
@@ -456,69 +548,17 @@ export default function PropertyListing() {
               className="transition-all duration-500 ease-in-out bg-slate-900/50 px-2 sm:px-3 lg:px-4 py-8"
               innerClassName="max-w-[1600px] mx-auto"
               data-testid="property-grid"
-              style={{
-                width: isMapCollapsed ? '100%' : `${100 - mapWidth}%`,
-                display:
-                  viewMode === 'map' && !isMapCollapsed ? 'none' : 'block',
-              }}
-              header={
-                <>
-                  <PropertyListingHeader count={totalCount} />
-                  {isError && (
-                    <div
-                      className="col-span-full text-center py-12 glass-card rounded-3xl border border-red-500/20 mb-8"
-                      data-testid="error-state"
-                    >
-                      <p className="text-red-400 font-medium">
-                        Failed to load listings.{' '}
-                        {error instanceof Error
-                          ? error.message
-                          : 'Please try again.'}
-                      </p>
-                    </div>
-                  )}
-                </>
-              }
-              renderItem={(property, index) => (
-                <PropertyCard
-                  key={property.id}
-                  property={toPropertyCardShape(property)}
-                  priority={index < gridColumns}
-                />
-              )}
-              footer={
-                <div className="pt-12">
-                  {/* Skeleton rows while fetching next page */}
-                  {isFetchingNextPage && (
-                    <div className="grid gap-6 mb-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <PropertyCardSkeleton key={`next-${i}`} />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Infinite scroll trigger */}
-                  <div ref={observerTarget} className="h-4" />
-
-                  {/* End of results indicator */}
-                  {!hasNextPage && (
-                    <p className="text-center text-blue-200/30 text-sm pb-8">
-                      Showing all {totalCount} listings
-                    </p>
-                  )}
-                </div>
-              }
+              style={listPanelStyle}
+              header={headerContent}
+              renderItem={renderPropertyCard}
+              footer={gridFooter}
             />
           )}
 
           {/* Map Panel */}
           <div
             className="relative transition-all duration-500 ease-in-out border-l border-white/5 bg-[#0f172a]"
-            style={{
-              width: isMapCollapsed ? '0%' : `${mapWidth}%`,
-              opacity: isMapCollapsed ? 0 : 1,
-              pointerEvents: isMapCollapsed ? 'none' : 'auto',
-            }}
+            style={mapPanelStyle}
           >
             {!isMapCollapsed && (
               <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
@@ -576,14 +616,10 @@ export default function PropertyListing() {
             <div className="h-full w-full">
               {!isMapCollapsed && (
                 <LazyPropertyMapView
-                  properties={allProperties.map(toPropertyCardShape)}
+                  properties={mappedProperties}
                   onBoundsChange={handleBoundsChange}
                   searchAsIMove={searchAsIMove}
-                  initialViewState={{
-                    longitude: 0,
-                    latitude: 20,
-                    zoom: 2,
-                  }}
+                  initialViewState={initialMapViewState}
                 />
               )}
             </div>
