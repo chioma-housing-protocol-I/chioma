@@ -8,12 +8,15 @@
  *   node scripts/i18n-audit.mjs --fix         # scaffold missing keys with TODO values
  *
  * Exit codes:
- *   0  — all locales are complete (no missing or orphan keys)
- *   1  — one or more locales have missing keys (CI fails here)
+ *   0  — all locales are valid and complete (orphan keys only warn)
+ *   1  — a locale file is not valid JSON, has a non-string / empty value,
+ *        or is missing keys (CI fails here)
  *
  * Concepts:
- *   missing key  — present in English (source of truth) but absent in locale
- *   orphan key   — present in locale but absent in English (stale translation)
+ *   invalid file  — the file cannot be parsed as JSON, or its root is not an object
+ *   invalid value — a leaf that is not a non-empty string (e.g. number, array, "")
+ *   missing key   — present in English (source of truth) but absent in locale
+ *   orphan key    — present in locale but absent in English (stale translation)
  */
 
 import fs from 'fs';
@@ -79,7 +82,30 @@ function loadLocale(locale) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Locale file not found: ${filePath}`);
   }
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch (err) {
+    throw new Error(`Invalid JSON in ${locale}.json: ${err.message}`);
+  }
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(`Invalid locale file ${locale}.json: root must be a JSON object`);
+  }
+  return data;
+}
+
+/** Return the dot-separated keys whose value is not a non-empty string. */
+function findInvalidValues(obj, prefix = '') {
+  const result = [];
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result.push(...findInvalidValues(value, fullKey));
+    } else if (typeof value !== 'string' || value.trim() === '') {
+      result.push(fullKey);
+    }
+  }
+  return result;
 }
 
 /** Write a locale JSON file (preserving 2-space indent). */
@@ -146,6 +172,15 @@ function main() {
   const sourceKeys = flattenKeys(sourceDict);
   console.log(col(c.cyan, `\n📖 Source (${SOURCE_LOCALE}): ${sourceKeys.length} keys`));
 
+  const sourceInvalid = findInvalidValues(sourceDict);
+  if (sourceInvalid.length > 0) {
+    console.error(col(c.red, `\n❌ Source locale "${SOURCE_LOCALE}" has ${sourceInvalid.length} invalid value(s) (must be non-empty strings):`));
+    for (const key of sourceInvalid) {
+      console.error(col(c.red, `      • ${key}`));
+    }
+    process.exit(1);
+  }
+
   // Determine which locales to audit
   const allLocales = discoverLocales();
   const localesToAudit = localeFilter
@@ -163,6 +198,7 @@ function main() {
   // Run audit per locale
   let totalMissing = 0;
   let totalOrphan = 0;
+  let totalInvalid = 0;
   const report = [];
 
   for (const locale of localesToAudit) {
@@ -171,16 +207,18 @@ function main() {
       targetDict = loadLocale(locale);
     } catch (err) {
       console.error(col(c.red, `\n❌ Could not load locale "${locale}": ${err.message}`));
-      totalMissing += sourceKeys.length; // treat whole locale as missing
-      report.push({ locale, missing: sourceKeys, orphan: [] });
+      totalInvalid += 1; // an unreadable file always fails CI
+      report.push({ locale, missing: sourceKeys, orphan: [], invalid: [], loadError: err.message });
       continue;
     }
 
     const targetKeys = flattenKeys(targetDict);
     const { missing, orphan } = auditLocale(sourceKeys, targetKeys);
+    const invalid = findInvalidValues(targetDict);
     totalMissing += missing.length;
     totalOrphan += orphan.length;
-    report.push({ locale, missing, orphan });
+    totalInvalid += invalid.length;
+    report.push({ locale, missing, orphan, invalid });
 
     // Optional: fix mode — scaffold missing keys
     if (fixMode && missing.length > 0) {
@@ -199,20 +237,33 @@ function main() {
   console.log(col(c.gray, '\n' + '─'.repeat(50)));
   console.log(col(c.bold, '📊 Results per locale\n'));
 
-  for (const { locale, missing, orphan } of report) {
-    const status = missing.length === 0
+  for (const { locale, missing, orphan, invalid, loadError } of report) {
+    if (loadError) {
+      console.log(`  ${col(c.red, '❌ FAIL')}  ${col(c.bold, locale.toUpperCase().padEnd(6))} ` +
+        col(c.red, `invalid file — ${loadError}`));
+      continue;
+    }
+
+    const status = missing.length === 0 && invalid.length === 0
       ? col(c.green, '✅ PASS')
       : col(c.red,   '❌ FAIL');
 
     console.log(`  ${status}  ${col(c.bold, locale.toUpperCase().padEnd(6))} ` +
       col(c.green,  `${(sourceKeys.length - missing.length).toString().padStart(3)}/${sourceKeys.length} keys`) +
       (missing.length ? col(c.red,    `  ${missing.length} missing`) : '') +
+      (invalid.length ? col(c.red,    `  ${invalid.length} invalid`) : '') +
       (orphan.length  ? col(c.yellow, `  ${orphan.length} orphan`)   : '')
     );
 
     if (missing.length > 0) {
       console.log(col(c.red, `\n    Missing keys in "${locale}":`));
       for (const key of missing) {
+        console.log(col(c.red, `      • ${key}`));
+      }
+    }
+    if (invalid.length > 0) {
+      console.log(col(c.red, `\n    Invalid values in "${locale}" (must be non-empty strings):`));
+      for (const key of invalid) {
         console.log(col(c.red, `      • ${key}`));
       }
     }
@@ -226,11 +277,15 @@ function main() {
 
   console.log(col(c.gray, '\n' + '─'.repeat(50)));
 
-  if (totalMissing === 0 && totalOrphan === 0) {
+  if (totalMissing === 0 && totalOrphan === 0 && totalInvalid === 0) {
     console.log(col(c.green, '\n✅ All locales are complete. No missing or orphan keys.\n'));
     process.exit(0);
   }
 
+  if (totalInvalid > 0) {
+    console.error(col(c.red, `\n❌ ${totalInvalid} invalid translation file(s)/value(s) found.`));
+    console.error(col(c.red, '   Locale files must be valid JSON objects whose leaves are non-empty strings.\n'));
+  }
   if (totalMissing > 0) {
     console.error(col(c.red, `\n❌ ${totalMissing} missing key(s) found across ${localesToAudit.length} locale(s).`));
     console.error(col(c.red, '   Add translations or run with --fix to scaffold TODO placeholders.\n'));
@@ -240,8 +295,8 @@ function main() {
     console.warn(col(c.yellow, '   Remove stale keys from your locale files.\n'));
   }
 
-  // Only fail CI on missing keys (orphans are a warning)
-  if (totalMissing > 0) {
+  // Fail CI on invalid files/values and missing keys (orphans are a warning)
+  if (totalInvalid > 0 || totalMissing > 0) {
     process.exit(1);
   }
 

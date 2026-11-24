@@ -3,12 +3,15 @@
 import React from 'react';
 import { Shield, Wallet } from 'lucide-react';
 import type { SecurityDepositsSectionProps } from './types';
+import { useTranslation } from '@/lib/i18n';
 
 const SecurityDepositsSection = ({
   deposits,
   onDepositClick,
   className = '',
 }: SecurityDepositsSectionProps) => {
+  const { formatNumber } = useTranslation();
+
   if (deposits.length === 0) {
     return null;
   }
@@ -46,7 +49,7 @@ const SecurityDepositsSection = ({
             <div className="text-right">
               <p className="font-bold text-white text-lg">
                 {deposit.currency}{' '}
-                {deposit.amount.toLocaleString('en-US', {
+                {formatNumber(deposit.amount, {
                   minimumFractionDigits: 2,
                 })}
               </p>

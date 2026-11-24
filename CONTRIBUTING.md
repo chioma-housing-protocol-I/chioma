@@ -33,6 +33,10 @@ Pull requests touching `contract/` must complete the [contract review checklist]
 
 Before adding or moving a component under `frontend/components/`, read the [Component Authoring Conventions](frontend/README.md#component-authoring-conventions) in the frontend README (placement, naming, prop typing, server/client boundary). The full guide, with examples, lives in [frontend/CONTRIBUTING.md](frontend/CONTRIBUTING.md#component-architecture).
 
+## Translations (i18n)
+
+User-facing frontend strings live in translation files, and CI checks that every locale has the same keys as `en.json`. Before adding or changing a string, read [Internationalization (i18n)](frontend/CONTRIBUTING.md#internationalization-i18n) in the frontend guide. It covers the file structure, key naming conventions, the translation process, and locale-aware number, currency and date formatting.
+
 ## Conduct
 
 Be respectful and constructive in reviews and discussions.

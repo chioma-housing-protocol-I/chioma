@@ -43,6 +43,10 @@ const ModalManager = dynamic(
   () => import('@/components/modals/ModalManager').then((m) => m.ModalManager),
   { ssr: false },
 );
+const RealtimeBridge = dynamic(
+  () => import('@/components/realtime/RealtimeBridge'),
+  { ssr: false },
+);
 const OfflineIndicator = dynamic(
   () =>
     import('@/components/offline/OfflineIndicator').then(
@@ -64,6 +68,7 @@ export function RootLayoutClient({
         <ModalProvider>
           <ErrorProvider>
             <StoreHydrator />
+            <RealtimeBridge />
             <ThemeManager />
             <HtmlAttributesSync />
             <ErrorMonitoringProvider />
