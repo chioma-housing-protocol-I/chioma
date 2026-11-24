@@ -8,7 +8,16 @@ export { Pagination } from './Pagination';
 export { Tabs } from './Tabs';
 export { SearchableSelect } from './SearchableSelect';
 export { Tooltip } from './Tooltip';
-export { ConfirmDialog } from './ConfirmDialog';
+export { Modal, AlertDialog, ConfirmDialog, Drawer } from './Dialog';
+export type {
+  DialogBaseProps,
+  DialogSize,
+  DialogTone,
+  ModalProps,
+  AlertDialogProps,
+  ConfirmDialogProps,
+  DrawerProps,
+} from './Dialog';
 export { ToastProvider, notify } from './toast';
 export { PreviewImage } from './PreviewImage';
 export { Accordion, AccordionItem } from './Accordion';

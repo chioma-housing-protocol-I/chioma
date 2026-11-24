@@ -30,6 +30,21 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl' },
 ];
 
+const SUPPORTED_LOCALE_CODES: SupportedLocale[] = LOCALE_OPTIONS.map(
+  (o) => o.code,
+);
+
+/** Type guard for values read from storage / the browser. */
+export function isSupportedLocale(value: unknown): value is SupportedLocale {
+  return (
+    typeof value === 'string' &&
+    (SUPPORTED_LOCALE_CODES as string[]).includes(value)
+  );
+}
+
+/** localStorage key the selected locale is persisted under. */
+export const I18N_STORAGE_KEY = 'chioma-locale';
+
 const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
   en,
   es,
@@ -63,14 +78,14 @@ export const useI18nStore = create<I18nStore>()(
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     createVersionedPersistConfig<I18nStore, Pick<I18nStore, 'locale'>>({
-      name: 'chioma-locale',
+      name: I18N_STORAGE_KEY,
       version: I18N_STORE_VERSION,
       partialize: (state: I18nStore) => ({ locale: state.locale }),
       migrations: {
         1: (state) => {
           const legacy = state as Record<string, unknown>;
-          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
-            ? (legacy.locale as SupportedLocale)
+          const locale = isSupportedLocale(legacy.locale)
+            ? legacy.locale
             : 'en';
           return { locale };
         },
@@ -88,11 +103,11 @@ export const useI18nStore = create<I18nStore>()(
           // if they genuinely chose 'en', but checking localStorage is safer.
           if (
             typeof window !== 'undefined' &&
-            !localStorage.getItem('chioma-locale')
+            !localStorage.getItem(I18N_STORAGE_KEY)
           ) {
             const browserLang = navigator.language.split('-')[0];
-            if (['en', 'es', 'fr'].includes(browserLang)) {
-              state.setLocale(browserLang as SupportedLocale);
+            if (isSupportedLocale(browserLang)) {
+              state.setLocale(browserLang);
             }
           }
         }
@@ -113,16 +128,46 @@ type NestedKeyOf<T> = T extends object
     }[keyof T]
   : never;
 
-type TranslationPath = NestedKeyOf<TranslationKeys>;
+/** Every valid dot-separated translation key, e.g. `'common.save'`. */
+export type TranslationPath = NestedKeyOf<TranslationKeys>;
 
-function getNestedValue(obj: Record<string, unknown>, path: string): string {
+/** Interpolation values for `{{name}}` placeholders. */
+export type TranslationVars = Record<string, string | number>;
+
+function getNestedValue(
+  obj: Record<string, unknown>,
+  path: string,
+): string | undefined {
   const parts = path.split('.');
   let current: unknown = obj;
   for (const part of parts) {
-    if (current == null || typeof current !== 'object') return path;
+    if (current == null || typeof current !== 'object') return undefined;
     current = (current as Record<string, unknown>)[part];
   }
-  return typeof current === 'string' ? current : path;
+  return typeof current === 'string' ? current : undefined;
+}
+
+function interpolate(template: string, vars?: TranslationVars): string {
+  if (!vars) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    vars[name] !== undefined ? String(vars[name]) : match,
+  );
+}
+
+/**
+ * Resolve a key for a locale without React. Falls back to English, then to
+ * the key itself, so the UI never renders `undefined`.
+ */
+export function translate(
+  locale: SupportedLocale,
+  key: TranslationPath,
+  vars?: TranslationVars,
+): string {
+  const dict = TRANSLATIONS[locale] as unknown as Record<string, unknown>;
+  const value =
+    getNestedValue(dict, key) ??
+    getNestedValue(TRANSLATIONS.en as unknown as Record<string, unknown>, key);
+  return interpolate(value ?? key, vars);
 }
 
 /**
@@ -130,6 +175,8 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
  *
  * @example
  * const { t, locale, setLocale, formatDate, formatNumber, formatCurrency, formatCrypto } = useTranslation();
+ * <p>{t('common.save')}</p>
+ * <p>{t('footer.copyright', { year: 2026 })}</p>
  * <p>{formatDate(new Date())}</p>
  */
 export function useTranslation() {
@@ -139,10 +186,8 @@ export function useTranslation() {
   // to avoid hydration mismatch with server-rendered text.
   const activeLocale = _hasHydrated ? locale : 'en';
 
-  const dict = TRANSLATIONS[activeLocale] as unknown as Record<string, unknown>;
-
-  function t(key: TranslationPath): string {
-    return getNestedValue(dict, key);
+  function t(key: TranslationPath, vars?: TranslationVars): string {
+    return translate(activeLocale, key, vars);
   }
 
   return {
