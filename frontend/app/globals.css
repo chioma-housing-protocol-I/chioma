@@ -316,7 +316,7 @@ body {
 
 .skip-link {
   position: absolute;
-  left: 1rem;
+  inset-inline-start: 1rem;
   top: -100%;
   z-index: 999;
   border-radius: 0.5rem;
@@ -328,6 +328,53 @@ body {
 
 .skip-link:focus-visible {
   top: 1rem;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   RTL (right-to-left) support — #2161
+   <html dir> is set from the active locale (see components/i18n). Flexbox,
+   grid and Tailwind's logical utilities (ms-/me-, ps-/pe-, start-/end-,
+   text-start/text-end, border-s/border-e) follow it automatically; prefer
+   them over physical left/right utilities. Use `rtl:` / `ltr:` variants for
+   anything that must differ per direction.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Mirror directional icons (arrows, chevrons) in RTL layouts. */
+[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Keep inherently left-to-right content (Stellar keys, hashes, amounts, code)
+   readable inside RTL text without reordering neighbouring characters. */
+.ltr-content {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir='rtl'] .ltr-content {
+  text-align: end;
+}
+
+/* Arabic-script letters join cursively; letter-spacing (tracking-*) breaks
+   those joins, so neutralise it for Arabic-script languages. */
+:lang(ar),
+:lang(fa),
+:lang(ur),
+:lang(ps),
+:lang(ckb),
+:lang(sd),
+:lang(ug) {
+  letter-spacing: normal !important;
+}
+
+:lang(ar) *,
+:lang(fa) *,
+:lang(ur) *,
+:lang(ps) *,
+:lang(ckb) *,
+:lang(sd) *,
+:lang(ug) * {
+  letter-spacing: normal !important;
 }
 
 /* Mobile-first UX helpers */

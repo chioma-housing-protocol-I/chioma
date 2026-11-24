@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { IndexedTransaction } from '../../transactions/entities/indexed-transaction.entity';
@@ -11,6 +11,7 @@ import { IndexedTransactionsController } from '../controllers/indexed-transactio
 import { PaymentProcessingController } from '../controllers/payment-processing.controller';
 import { StellarAccountsModule } from './stellar-accounts.module';
 import { WebhooksModule } from '../../webhooks/webhooks.module';
+import { StellarRequestSignatureMiddleware } from '../middleware/stellar-request-signature.middleware';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { WebhooksModule } from '../../webhooks/webhooks.module';
     IndexedTransactionsService,
     PaymentProcessingService,
     BlockchainEventService,
+    StellarRequestSignatureMiddleware,
   ],
   exports: [
     IndexedTransactionsService,
@@ -35,4 +37,15 @@ import { WebhooksModule } from '../../webhooks/webhooks.module';
     BlockchainEventService,
   ],
 })
-export class StellarTransactionsModule {}
+export class StellarTransactionsModule implements NestModule {
+  /**
+   * State-changing payment-processing endpoints invoke Soroban contracts, so
+   * they require a Stellar request signature (#2191). GET routes are skipped
+   * inside the middleware.
+   */
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(StellarRequestSignatureMiddleware)
+      .forRoutes(PaymentProcessingController);
+  }
+}

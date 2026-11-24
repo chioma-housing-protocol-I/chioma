@@ -65,7 +65,7 @@ export default function PropertyDetailView({
           {/* Units Status */}
           <div className="backdrop-blur-xl bg-blue-500/10 border border-blue-400/30 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
             <div>
-              <h3 className="text-xl font-bold text-white">Rental Units</h3>
+              <h2 className="text-xl font-bold text-white">Rental Units</h2>
               <p className="text-blue-200/70 mt-1">
                 Smart Contract execution enabled for transparent leasing.
               </p>
@@ -94,9 +94,9 @@ export default function PropertyDetailView({
 
           {/* Description */}
           <div>
-            <h3 className="text-2xl font-bold text-white mb-4">
+            <h2 className="text-2xl font-bold text-white mb-4">
               About this property
-            </h3>
+            </h2>
             <p className="text-blue-200/80 leading-relaxed text-lg">
               {property.description}
             </p>
@@ -123,9 +123,9 @@ export default function PropertyDetailView({
               )}
             </div>
             <div>
-              <h4 className="text-xl font-bold text-white mb-1">
+              <h2 className="text-xl font-bold text-white mb-1">
                 Managed by {property.owner.name}
-              </h4>
+              </h2>
               <div className="flex items-center text-sm font-medium text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-full w-fit">
                 <ShieldCheck className="w-4 h-4 mr-1.5" />
                 {property.owner.contactInfo || 'Verified Source'}

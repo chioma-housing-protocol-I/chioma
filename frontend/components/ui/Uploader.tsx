@@ -156,9 +156,10 @@ export const Uploader = React.forwardRef<HTMLDivElement, UploaderProps>(
                       e.stopPropagation();
                       removeFile(idx);
                     }}
+                    aria-label={`Remove ${file.name}`}
                     className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-400 hover:text-red-500 transition-colors"
                   >
-                    <X size={16} />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 </div>
               </div>

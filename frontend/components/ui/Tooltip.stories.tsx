@@ -49,7 +49,10 @@ export const Bottom: Story = {
 export const WithIcon: Story = {
   render: () => (
     <Tooltip content="More information">
-      <button className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-sm font-bold">
+      <button
+        aria-label="Help"
+        className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-sm font-bold"
+      >
         ?
       </button>
     </Tooltip>
