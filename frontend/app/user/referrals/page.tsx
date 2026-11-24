@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useReferrals } from '@/lib/query/hooks/use-referrals';
+import { useTranslation } from '@/lib/i18n';
 
 interface Referral {
   id: string;
@@ -27,6 +28,7 @@ interface Referral {
 }
 
 export default function TenantReferralsPage() {
+  const { formatDate } = useTranslation();
   const { referralCode, stats, isLoading, isError } = useReferrals();
   const [isCopying, setIsCopying] = useState(false);
 
@@ -281,7 +283,7 @@ export default function TenantReferralsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-5 text-blue-200/50 font-medium text-sm">
-                    {new Date(referral.createdAt).toLocaleDateString('en-US', {
+                    {formatDate(referral.createdAt, {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',

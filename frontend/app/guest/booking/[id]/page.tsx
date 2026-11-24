@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ClientErrorBoundary } from '@/components/error/ClientErrorBoundary';
+import { useTranslation } from '@/lib/i18n';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,14 +62,12 @@ const STATUS_STYLES: Record<
   },
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+const BOOKING_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+};
 
 function nightsBetween(checkIn: string, checkOut: string) {
   const diff =
@@ -166,6 +165,9 @@ function BookingErrorState({
 
 function BookingContent({ id }: { id: string }) {
   const { data: booking, isLoading, isError, error, refetch } = useBookingDetail(id);
+  const { formatDate: formatLocaleDate } = useTranslation();
+  const formatDate = (iso: string) =>
+    formatLocaleDate(iso, BOOKING_DATE_FORMAT);
 
   if (isLoading) return <BookingSkeleton />;
 

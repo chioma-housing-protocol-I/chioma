@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { StellarLogo } from '@/components/icons/StellarLogo';
+import { useTranslation } from '@/lib/i18n';
 
 interface WalletCardProps {
   balance?: number;
@@ -16,13 +17,11 @@ const WalletCard = ({
   onCurrencyToggle,
   onWithdraw,
 }: WalletCardProps = {}) => {
-  const formattedBalance = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(balance);
+  const { formatCurrency, formatNumber } = useTranslation();
+  const formattedBalance = formatCurrency(balance, 'USD');
 
   const displayBalance =
-    currency === 'USDC' ? formattedBalance : `${balance.toLocaleString()} XLM`;
+    currency === 'USDC' ? formattedBalance : `${formatNumber(balance)} XLM`;
 
   return (
     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">

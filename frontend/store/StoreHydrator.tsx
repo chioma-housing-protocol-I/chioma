@@ -3,9 +3,6 @@
 import { useEffect } from 'react';
 import { useAuthStore } from './authStore';
 import { useUIStore } from './ui-store';
-import { useRealtime } from '@/lib/websocket/use-realtime';
-import { registerServiceWorker } from '@/lib/offline/register-sw';
-import { setupAutoSync } from '@/lib/offline/background-sync';
 import { useI18nStore, LOCALE_OPTIONS, type SupportedLocale } from '@/lib/i18n';
 
 /**
@@ -13,10 +10,13 @@ import { useI18nStore, LOCALE_OPTIONS, type SupportedLocale } from '@/lib/i18n';
  *
  * Responsibilities:
  * 1. Track online/offline status in the UI store.
- * 2. Establish real-time WebSocket connection when authenticated.
- * 3. Register service worker for offline support.
- * 4. Setup automatic background sync.
- * 5. Sync user's locale preference from their profile when authenticated.
+ * 2. Register service worker for offline support.
+ * 3. Setup automatic background sync.
+ * 4. Sync user's locale preference from their profile when authenticated.
+ *
+ * The real-time WebSocket bridge lives in `components/realtime/RealtimeBridge`
+ * and the offline modules are imported on demand, so neither socket.io nor
+ * the IndexedDB sync layer ends up in the shared first-load bundle.
  *
  * Auth hydration itself lives in `AuthHydrator` -- render both once inside
  * the root layout's <body>, wrapped by QueryProvider.
@@ -52,15 +52,26 @@ export function StoreHydrator() {
     };
   }, [setOnlineStatus]);
 
-  // Register service worker and setup offline support
+  // Register service worker and setup offline support. Loaded on demand so
+  // the offline sync layer is split into its own chunk.
   useEffect(() => {
-    registerServiceWorker();
-    const cleanup = setupAutoSync();
-    return cleanup;
-  }, []);
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
 
-  // Bridge WebSocket events to stores and React Query caches
-  useRealtime();
+    void import('@/lib/offline/register-sw').then(
+      ({ registerServiceWorker }) => {
+        if (!cancelled) void registerServiceWorker();
+      },
+    );
+    void import('@/lib/offline/background-sync').then(({ setupAutoSync }) => {
+      if (!cancelled) cleanup = setupAutoSync();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, []);
 
   return null;
 }

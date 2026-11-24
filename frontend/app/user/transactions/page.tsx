@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import {
   ArrowUpRight,
   Search,
@@ -59,6 +60,7 @@ const generateMockTransactions = (count = 10): StellarTransaction[] => {
 };
 
 export default function TenantTransactionsPage() {
+  const { formatDate } = useTranslation();
   const [transactions, setTransactions] = useState<StellarTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -321,14 +323,14 @@ export default function TenantTransactionsPage() {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="text-white font-bold text-sm">
-                          {new Date(tx.createdAt).toLocaleDateString('en-US', {
+                          {formatDate(tx.createdAt, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
                         </div>
                         <div className="text-blue-300/30 text-xs mt-0.5">
-                          {new Date(tx.createdAt).toLocaleTimeString([], {
+                          {formatDate(tx.createdAt, {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}

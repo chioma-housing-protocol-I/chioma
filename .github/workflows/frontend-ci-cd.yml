@@ -51,6 +51,11 @@ jobs:
       - name: Verify generated API types freshness
         run: pnpm run types:check
 
+      # Fails if any public/locales/*.json file is not valid JSON, has a
+      # non-string/empty value, or is missing keys present in en.json.
+      - name: Check translation files
+        run: pnpm run i18n:audit
+
       - name: Run ESLint
         run: pnpm run lint
 

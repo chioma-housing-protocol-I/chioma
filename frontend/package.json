@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "analyze": "cross-env ANALYZE=true next build",
+    "analyze": "cross-env ANALYZE=true next build --webpack",
     "size:check": "node scripts/check-bundle-size.js",
     "perf:budget": "lhci autorun",
     "start": "next start",

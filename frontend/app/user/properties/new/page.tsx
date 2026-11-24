@@ -28,6 +28,7 @@ import {
 } from '@/lib/property-wizard';
 import { propertyWizardService } from '@/lib/services/property-wizard.service';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
+import { useTranslation } from '@/lib/i18n';
 
 const UTILITIES = ['Water', 'Electricity', 'Internet', 'Gas', 'Trash'];
 const BASIC_INFO_NUMERIC_KEYS = [
@@ -36,14 +37,6 @@ const BASIC_INFO_NUMERIC_KEYS = [
   'squareFootage',
   'yearBuilt',
 ] as const;
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 async function inspectPhoto(file: File): Promise<{
   width: number;
@@ -74,6 +67,9 @@ async function inspectPhoto(file: File): Promise<{
 }
 
 export default function NewPropertyListingWizardPage() {
+  const { formatCurrency: formatLocaleCurrency } = useTranslation();
+  const formatCurrency = (value: number) =>
+    formatLocaleCurrency(value, 'USD', { maximumFractionDigits: 0 });
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [data, setData] = useState<PropertyData>(defaultPropertyData);

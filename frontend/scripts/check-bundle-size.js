@@ -18,6 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -114,12 +115,25 @@ function chunkSizeBytes(chunkPath) {
   }
 }
 
+function chunkGzipSizeBytes(chunkPath) {
+  try {
+    return zlib.gzipSync(fs.readFileSync(path.join(ROOT, chunkPath))).length;
+  } catch {
+    return 0;
+  }
+}
+
 function collectRouteChunks(routeStats, sharedChunks) {
   let totalStaticBytes = 0;
+  let totalStaticGzipBytes = 0;
   for (const chunk of sharedChunks) {
     totalStaticBytes += chunkSizeBytes(chunk);
+    // Only JS counts towards the initial bundle budget.
+    if (chunk.endsWith('.js')) {
+      totalStaticGzipBytes += chunkGzipSizeBytes(chunk);
+    }
   }
-  return { totalStaticBytes };
+  return { totalStaticBytes, totalStaticGzipBytes };
 }
 
 function getRouteSizeBytes(routeKey, routeStats, sharedChunks) {
@@ -174,7 +188,10 @@ function main() {
   }
 
   const sharedChunks = classifyChunks(routeStats);
-  const { totalStaticBytes } = collectRouteChunks(routeStats, sharedChunks);
+  const { totalStaticBytes, totalStaticGzipBytes } = collectRouteChunks(
+    routeStats,
+    sharedChunks,
+  );
 
   const COL = {
     route: 22,
@@ -207,6 +224,9 @@ function main() {
     let sizeKB = 0;
     if (routeKey === 'shared-chunks') {
       sizeKB = toKB(totalStaticBytes);
+    } else if (routeKey === 'initial-bundle-gzip') {
+      // Gzipped JS every route downloads on first load (the initial bundle).
+      sizeKB = toKB(totalStaticGzipBytes);
     } else {
       const bytes = getRouteSizeBytes(routeKey, routeStats, sharedChunks);
       if (bytes > 0) {
@@ -298,6 +318,7 @@ if (require.main === module) {
 
 module.exports = {
   classifyChunks,
+  collectRouteChunks,
   getRouteSizeBytes,
   statusLabel,
 };

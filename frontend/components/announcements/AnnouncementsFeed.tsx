@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import {
   Bell,
   Calendar,
@@ -108,6 +109,7 @@ export default function AnnouncementsFeed({
 }: {
   className?: string;
 }) {
+  const { formatDate: formatLocaleDate } = useTranslation();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Announcement['type']>('all');
@@ -129,7 +131,7 @@ export default function AnnouncementsFeed({
   const isExpired = (exp?: string) => !!exp && new Date(exp) < new Date();
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', {
+    formatLocaleDate(d, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

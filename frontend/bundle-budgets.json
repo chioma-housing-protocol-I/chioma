@@ -4,7 +4,8 @@
     "Budgets apply to the total first-load JS for a given route segment prefix.",
     "Tighten these values gradually as you optimize splits and lazy-load heavy components.",
     "Run 'pnpm run size:check' locally after any build to see current sizes.",
-    "Route code-splitting targets: each route's own chunks <50KB (warnKB) and the shared main bundle <100KB gzipped. 'shared-chunks' is measured in raw (uncompressed) bytes and includes the React/Next.js runtime, so its limits are not directly comparable to the gzipped target."
+    "Route code-splitting targets: each route's own chunks <50KB (warnKB) and the shared main bundle <100KB gzipped. 'shared-chunks' is measured in raw (uncompressed) bytes and includes the React/Next.js runtime, so its limits are not directly comparable to the gzipped target.",
+    "'initial-bundle-gzip' is the gzipped size of the chunks every route loads on first paint (the shared chunks), i.e. the initial bundle a visitor downloads before any route-specific code. Route-specific code must stay in that route's own chunks (App Router splits per route automatically; heavy widgets use next/dynamic)."
   ],
   "routes": {
     "/": { "maxKB": 100, "warnKB": 50 },
@@ -14,7 +15,8 @@
     "/login": { "maxKB": 100, "warnKB": 50 },
     "/signup": { "maxKB": 100, "warnKB": 50 },
     "/messages": { "maxKB": 100, "warnKB": 50 },
-    "shared-chunks": { "maxKB": 7000, "warnKB": 5500 }
+    "shared-chunks": { "maxKB": 7000, "warnKB": 5500 },
+    "initial-bundle-gzip": { "maxKB": 200, "warnKB": 170 }
   },
   "baseline": {
     "_comment": "Reference sizes (KB) for PR delta reporting. Update after intentional bundle changes. Recalibrated 2026-09-18 for the route-bundle-stats.json-based measurement (see check-bundle-size.js) — the prior values were calibrated against a webpack-era measurement check-bundle-size.js could no longer produce under Turbopack (Next.js 16's default `next build`), so every route reported as MISSING before this fix.",
