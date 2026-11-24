@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useTranslation, LOCALE_OPTIONS } from '@/lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 
 /**
  * Keeps <html lang> and <html dir> in sync with the active locale, app-wide.
- * Mounted once in RootLayoutClient so RTL locales (see translations/ar.ts)
- * flip the document direction regardless of which page is active.
+ * Mounted once in RootLayoutClient so RTL locales (Arabic, Hebrew, …) flip
+ * the document direction regardless of which page is active. Flexbox, grid
+ * and Tailwind's logical utilities (`ms-*`, `ps-*`, `start-*`, `text-start`,
+ * `rtl:*`) all follow `dir`, so layouts mirror automatically.
  */
 export function HtmlAttributesSync() {
-  const { locale, isHydrated } = useTranslation();
+  const { locale, dir, isHydrated } = useTranslation();
 
   useEffect(() => {
     if (!isHydrated) return;
-    const option = LOCALE_OPTIONS.find((o) => o.code === locale);
     document.documentElement.lang = locale;
-    document.documentElement.dir = option?.dir ?? 'ltr';
-  }, [locale, isHydrated]);
+    document.documentElement.dir = dir;
+  }, [locale, dir, isHydrated]);
 
   return null;
 }

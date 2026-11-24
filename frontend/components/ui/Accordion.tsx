@@ -111,7 +111,7 @@ export function AccordionItem({
           aria-controls={panelId}
           disabled={disabled}
           onClick={() => toggle(value)}
-          className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold text-neutral-900 transition hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-between gap-4 px-4 py-3 text-start text-sm font-semibold text-neutral-900 transition hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span>{title}</span>
           <ChevronDown

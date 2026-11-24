@@ -1,4 +1,4 @@
-import { enUS, es, fr, ar, type Locale } from 'date-fns/locale';
+import { enUS, es, fr, ar, he, type Locale } from 'date-fns/locale';
 import { useI18nStore, type SupportedLocale } from '../i18n';
 
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
@@ -6,6 +6,7 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   es,
   fr,
   ar,
+  he,
 };
 
 /** Maps the app's locale code to the matching date-fns locale object. */

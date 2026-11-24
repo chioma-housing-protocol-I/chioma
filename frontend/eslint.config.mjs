@@ -35,6 +35,42 @@ export default [
     },
   },
   {
+    // Shared UI primitives (#2192): every interactive control — notably
+    // icon-only buttons — must expose an accessible name via visible text,
+    // aria-label or aria-labelledby so screen readers can announce it.
+    files: ['components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          labelAttributes: ['aria-label', 'aria-labelledby'],
+          depth: 3,
+          ignoreElements: [
+            'audio',
+            'canvas',
+            'embed',
+            'input',
+            'textarea',
+            'tr',
+            'video',
+          ],
+          ignoreRoles: [
+            'grid',
+            'listbox',
+            'menu',
+            'menubar',
+            'radiogroup',
+            'row',
+            'tablist',
+            'toolbar',
+            'tree',
+            'treegrid',
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Test utilities, mocks, scripts, and demo code may use console output
     files: [
       '**/__tests__/**',

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { en, es, fr, ar, type TranslationKeys } from './translations';
+import { en, es, fr, ar, he, type TranslationKeys } from './translations';
 import {
   formatDate,
   formatNumber,
@@ -10,16 +10,24 @@ import {
   formatCrypto,
 } from '../utils/format';
 import { createVersionedPersistConfig } from '@/store/persistence';
+import { getLocaleDirection, type TextDirection } from './direction';
+
+export {
+  RTL_LANGUAGES,
+  isRtlLocale,
+  getLocaleDirection,
+  type TextDirection,
+} from './direction';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SupportedLocale = 'en' | 'es' | 'fr' | 'ar';
+export type SupportedLocale = 'en' | 'es' | 'fr' | 'ar' | 'he';
 
 export interface LocaleOption {
   code: SupportedLocale;
   label: string;
   nativeLabel: string;
-  dir: 'ltr' | 'rtl';
+  dir: TextDirection;
 }
 
 export const LOCALE_OPTIONS: LocaleOption[] = [
@@ -28,13 +36,35 @@ export const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'fr', label: 'French', nativeLabel: 'Français', dir: 'ltr' },
   // RTL verification locale — see translations/ar.ts.
   { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl' },
+  { code: 'he', label: 'Hebrew', nativeLabel: 'עברית', dir: 'rtl' },
 ];
+
+/** All locale codes the app ships translations for. */
+export const SUPPORTED_LOCALE_CODES: SupportedLocale[] = LOCALE_OPTIONS.map(
+  (option) => option.code,
+);
+
+function isSupportedLocaleCode(value: unknown): value is SupportedLocale {
+  return (
+    typeof value === 'string' &&
+    (SUPPORTED_LOCALE_CODES as string[]).includes(value)
+  );
+}
+
+/** Text direction for a supported locale (falls back to script detection). */
+export function getDirectionForLocale(locale: SupportedLocale): TextDirection {
+  return (
+    LOCALE_OPTIONS.find((option) => option.code === locale)?.dir ??
+    getLocaleDirection(locale)
+  );
+}
 
 const TRANSLATIONS: Record<SupportedLocale, TranslationKeys> = {
   en,
   es,
   fr,
   ar,
+  he,
 };
 
 /** Bump when persisted locale state shape changes. */
@@ -69,8 +99,8 @@ export const useI18nStore = create<I18nStore>()(
       migrations: {
         1: (state) => {
           const legacy = state as Record<string, unknown>;
-          const locale = ['en', 'es', 'fr'].includes(legacy.locale as string)
-            ? (legacy.locale as SupportedLocale)
+          const locale = isSupportedLocaleCode(legacy.locale)
+            ? legacy.locale
             : 'en';
           return { locale };
         },
@@ -91,8 +121,8 @@ export const useI18nStore = create<I18nStore>()(
             !localStorage.getItem('chioma-locale')
           ) {
             const browserLang = navigator.language.split('-')[0];
-            if (['en', 'es', 'fr'].includes(browserLang)) {
-              state.setLocale(browserLang as SupportedLocale);
+            if (isSupportedLocaleCode(browserLang)) {
+              state.setLocale(browserLang);
             }
           }
         }
@@ -140,6 +170,7 @@ export function useTranslation() {
   const activeLocale = _hasHydrated ? locale : 'en';
 
   const dict = TRANSLATIONS[activeLocale] as unknown as Record<string, unknown>;
+  const dir = getDirectionForLocale(activeLocale);
 
   function t(key: TranslationPath): string {
     return getNestedValue(dict, key);
@@ -148,6 +179,8 @@ export function useTranslation() {
   return {
     t,
     locale: activeLocale,
+    dir,
+    isRtl: dir === 'rtl',
     setLocale,
     localeOptions: LOCALE_OPTIONS,
     formatDate: (
