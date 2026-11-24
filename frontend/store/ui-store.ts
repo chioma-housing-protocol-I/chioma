@@ -22,7 +22,12 @@ export interface Toast {
   type: 'success' | 'error' | 'info' | 'warning';
   title: string;
   message?: string;
+  /** Auto-dismiss delay in ms. Use `0` or `Infinity` to keep the toast open. */
   duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 interface UIState {

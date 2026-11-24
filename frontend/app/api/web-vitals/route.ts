@@ -21,6 +21,48 @@ const VALID_WEB_VITAL_NAMES = new Set([
 /** Hard cap on items accepted from a single batched request. */
 const MAX_BATCH_ITEMS = 25;
 
+/** Upper bound on how long forwarding to the monitoring backend may take. */
+const FORWARD_TIMEOUT_MS = 2_000;
+
+/**
+ * Monitoring ingest endpoint (Nest backend → Prometheus histograms feeding
+ * the Grafana "Core Web Vitals" dashboard and regression alerts).
+ * Enabled in production by default; set WEB_VITALS_FORWARD=true to enable
+ * elsewhere or WEB_VITALS_FORWARD=false to disable. WEB_VITALS_INGEST_URL
+ * overrides the target.
+ */
+function forwardTarget(): string | null {
+  const flag = process.env.WEB_VITALS_FORWARD;
+  if (flag === 'false') return null;
+  if (flag !== 'true' && process.env.NODE_ENV !== 'production') return null;
+
+  if (process.env.WEB_VITALS_INGEST_URL) {
+    return process.env.WEB_VITALS_INGEST_URL;
+  }
+  const base =
+    process.env.BACKEND_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ??
+    'http://localhost:5000/api/v1';
+  return `${base.replace(/\/+$/, '')}/monitoring/web-vitals`;
+}
+
+/** Fire-and-forget: monitoring outages must never fail the beacon. */
+async function forwardToMonitoring(metrics: WebVitalPayload[]) {
+  const target = forwardTarget();
+  if (!target || metrics.length === 0) return;
+
+  try {
+    await fetch(target, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metrics }),
+      signal: AbortSignal.timeout(FORWARD_TIMEOUT_MS),
+    });
+  } catch {
+    // Swallow — vitals are best-effort telemetry.
+  }
+}
+
 /** In-process ring buffer for local aggregation / GET dashboard. */
 const buffer: WebVitalPayload[] = [];
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
@@ -146,9 +188,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
+  const payloads: WebVitalPayload[] = [];
   for (const item of validItems) {
     const payload = buildPayload(item);
     push(payload);
+    payloads.push(payload);
 
     // Structured log for terminal / log aggregation
     console.info(
@@ -158,6 +202,8 @@ export async function POST(request: NextRequest) {
       }),
     );
   }
+
+  void forwardToMonitoring(payloads);
 
   return NextResponse.json(
     { ok: true, received: validItems.length },

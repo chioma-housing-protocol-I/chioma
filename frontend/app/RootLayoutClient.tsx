@@ -11,6 +11,7 @@ import RateLimitNotifier from '@/components/error/RateLimitNotifier';
 import { ErrorProvider } from '@/components/error/ErrorProvider';
 import { ModalProvider } from '@/contexts/ModalContext';
 import { ToastProvider } from '@/components/ui/toast';
+import { ToastContainer } from '@/components/notifications/Toast';
 import { RouteAnnouncer } from '@/components/accessibility/RouteAnnouncer';
 import { WebVitalsReporter } from '@/components/web-vitals/WebVitalsReporter';
 import { OrientationHandler } from '@/components/orientation/OrientationHandler';
@@ -40,6 +41,10 @@ const ConnectionStatusBanner = dynamic(
 );
 const ModalManager = dynamic(
   () => import('@/components/modals/ModalManager').then((m) => m.ModalManager),
+  { ssr: false },
+);
+const RealtimeBridge = dynamic(
+  () => import('@/components/realtime/RealtimeBridge'),
   { ssr: false },
 );
 const OfflineIndicator = dynamic(
@@ -74,6 +79,22 @@ export function RootLayoutClient({
               <ConnectionStatusBanner />
               <RateLimitNotifier />
               <RouteAnnouncer />
+      <QueryProvider>
+        <ModalProvider>
+          <ErrorProvider>
+            <StoreHydrator />
+            <RealtimeBridge />
+            <ThemeManager />
+            <HtmlAttributesSync />
+            <ErrorMonitoringProvider />
+            <WebVitalsReporter />
+            <PwaController />
+            <OrientationHandler />
+            <NetworkIndicator />
+            <NetworkStatusBanner />
+            <ConnectionStatusBanner />
+            <RateLimitNotifier />
+            <RouteAnnouncer />
 
               {/* Page content - individual pages provide their own #main-content landmark */}
               {children}
@@ -85,6 +106,13 @@ export function RootLayoutClient({
           </ModalProvider>
         </QueryProvider>
       </I18nProvider>
+            <ModalManager />
+            <OfflineIndicator />
+            <ToastProvider />
+            <ToastContainer position="top-right" />
+          </ErrorProvider>
+        </ModalProvider>
+      </QueryProvider>
     </InitialAuthProvider>
   );
 }

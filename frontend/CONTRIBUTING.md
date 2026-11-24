@@ -12,11 +12,13 @@ This document provides comprehensive guidelines for contributing to the Chioma f
 4. [Component Architecture](#component-architecture)
 5. [Creating Components](#creating-components)
 6. [Editing & Maintaining Code](#editing--maintaining-code)
-7. [PR Requirements & CI/CD Pipeline](#pr-requirements--cicd-pipeline)
-8. [Development Workflow](#development-workflow)
-9. [Best Practices](#best-practices)
-10. [Component Testing Best Practices](#component-testing-best-practices)
-11. [Internationalization (i18n)](#internationalization-i18n)
+7. [Internationalization (i18n)](#internationalization-i18n)
+5. [Component API Conventions](#component-api-conventions)
+6. [Creating Components](#creating-components)
+7. [Editing & Maintaining Code](#editing--maintaining-code)
+8. [PR Requirements & CI/CD Pipeline](#pr-requirements--cicd-pipeline)
+9. [Development Workflow](#development-workflow)
+10. [Best Practices](#best-practices)
 
 ---
 
@@ -300,6 +302,216 @@ export default function MyComponent({
   )}
 />
 ```
+
+---
+
+## Component API Conventions
+
+These conventions keep component APIs predictable across `components/ui/` and feature folders. When you add or change a component, follow them unless there is a documented reason not to. Existing examples: [`ui/badge.tsx`](./components/ui/badge.tsx), [`ui/tag.tsx`](./components/ui/tag.tsx), [`ui/Skeleton.tsx`](./components/ui/Skeleton.tsx), [`notifications/Toast.tsx`](./components/notifications/Toast.tsx).
+
+### Prop Naming
+
+| Kind of prop         | Convention                                        | Examples                                    |
+| -------------------- | ------------------------------------------------- | ------------------------------------------- |
+| Visual style         | `variant` (one string union per component)        | `variant="success"`, `variant="outline"`    |
+| Dimensions           | `size` with `sm` / `md` / `lg`                    | `size="sm"`                                 |
+| Boolean state        | Plain adjective, or `is*` / `has*` when ambiguous | `disabled`, `open`, `isLoading`, `hasError` |
+| Boolean feature flag | Name the feature; default it to the common case   | `animate`, `pauseOnHover`, `media`          |
+| Content              | `children` for main content; nouns for slots      | `title`, `message`, `icon`, `action`        |
+| Callbacks            | `on` + past/present-tense event                   | `onRemove`, `onDismiss`, `onChange`         |
+| Styling escape hatch | `className`, merged last with `cn()`              | `className="w-1/2"`                         |
+| Accessible text      | `*Label` for text read only by assistive tech     | `removeLabel`, `label` (`SkeletonGroup`)    |
+| Controlled value     | `value` + `onChange`; uncontrolled `default*`     | `value`, `defaultValue`, `defaultOpen`      |
+
+**Rules**
+
+- Prefer the native attribute name when one exists (`disabled`, not `isDisabled`; `placeholder`, not `hint`).
+- Booleans should default to `false` _or_ to the behaviour most callers want — never require `prop={true}` for normal use.
+- Use units in names when a number is not obvious: `duration` is always milliseconds and documented as such.
+- Don't abbreviate (`message`, not `msg`; `columns`, not `cols`).
+
+```tsx
+// ✅ Good
+<Tag
+  variant="info"
+  onRemove={() => removeFilter(id)}
+  removeLabel="Remove Lagos filter"
+>
+  Lagos
+</Tag>
+<SkeletonText lines={3} animate={false} />
+
+// ❌ Avoid
+<Tag color="blue" deletable onDelete={handleDelete} txt="Lagos" />
+<SkeletonText numLines={3} noAnimation />
+```
+
+### Variants and Defaults
+
+Define variants with `class-variance-authority` and export the variants function so other components can share the same color schemes (as `Tag` reuses `badgeVariants`):
+
+```tsx
+const badgeVariants = cva('inline-flex items-center rounded-full border ...', {
+  variants: {
+    variant: {
+      default: 'bg-primary text-primary-foreground',
+      success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+      warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    },
+  },
+  defaultVariants: { variant: 'default' },
+});
+
+export { Badge, badgeVariants };
+```
+
+Set defaults in the parameter list, not inside the body:
+
+```tsx
+export function SkeletonText({
+  lines = 3,
+  animate = true,
+  className,
+}: SkeletonTextProps) {
+  // ...
+}
+```
+
+### Event Handling
+
+- **Props** that accept callbacks are named `on<Event>`; the **internal functions** that implement them are named `handle<Event>`.
+- Callbacks are optional (`onRemove?: () => void`) unless the component is useless without them. Hide the related UI when the callback is missing (e.g. `Tag` hides its remove button without `onRemove`).
+- Pass the most useful value first, not the raw DOM event, for component-level events: `onChange(value)`, `onDismiss(id)`, `onPageChange(page)`.
+- When you wrap a native event prop, **call the consumer's handler first** and respect `event.defaultPrevented`, so callers can opt out of the default behaviour.
+- Always set `type="button"` on buttons that are not form submits.
+
+```tsx
+interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
+  onRemove?: () => void; // component-level event: no DOM event payload
+}
+
+function Tag({ onRemove, onKeyDown, ...props }: TagProps) {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>) => {
+    onKeyDown?.(event); // 1. consumer handler first
+    if (event.defaultPrevented || !onRemove) return; // 2. allow opt-out
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      onRemove(); // 3. component behaviour
+    }
+  };
+
+  return (
+    <span onKeyDown={handleKeyDown} {...props}>
+      ...
+      {onRemove && (
+        <button type="button" onClick={onRemove} aria-label="Remove tag">
+          <X aria-hidden="true" />
+        </button>
+      )}
+    </span>
+  );
+}
+```
+
+For imperative APIs (toasts, dialogs), expose a small object of verbs and keep the signature consistent across methods:
+
+```tsx
+toast.success('Payment received', '200 USDC credited');
+toast.warning('Rent due soon', 'Due in 3 days', { duration: 8000 });
+toast.error('Upload failed', undefined, {
+  duration: Infinity, // stays until dismissed
+  action: { label: 'Retry', onClick: retryUpload },
+});
+```
+
+### TypeScript Patterns
+
+**1. Name props `<Component>Props` and export them.**
+
+```tsx
+export interface SkeletonAvatarProps {
+  size?: 'sm' | 'md' | 'lg';
+  shape?: 'circle' | 'square';
+}
+```
+
+**2. Extend native element attributes** for components that render a single DOM element, then spread `...props` onto it so `id`, `data-*`, `aria-*` and handlers work. Use `Omit` to replace attributes whose type you change.
+
+```tsx
+export interface TagProps
+  extends
+    Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'>,
+    VariantProps<typeof badgeVariants> {
+  children: React.ReactNode;
+  onRemove?: () => void;
+}
+```
+
+**3. Derive variant types from `cva`** with `VariantProps<typeof xVariants>` instead of repeating string unions.
+
+**4. Use string unions or `as const` objects, not enums.**
+
+```tsx
+const AVATAR_SIZES = {
+  sm: 'h-8 w-8',
+  md: 'h-10 w-10',
+  lg: 'h-14 w-14',
+} as const;
+
+interface SkeletonAvatarProps {
+  size?: keyof typeof AVATAR_SIZES;
+}
+```
+
+**5. Use discriminated unions when props depend on each other.**
+
+```tsx
+type StatusMessageProps =
+  | { kind: 'empty'; title: string }
+  | { kind: 'error'; title: string; onRetry: () => void };
+```
+
+**6. Use generics for data-driven components** so callers keep their item types.
+
+```tsx
+interface VirtualListProps<T> {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  getKey: (item: T) => string;
+}
+```
+
+**7. Forward refs for primitives** that wrap focusable elements (inputs, buttons) using `React.forwardRef`, as in `ui/button.tsx`, and set `displayName`.
+
+**8. No `any`.** Use `unknown` and narrow, or a precise type. Type event handlers with React's types (`React.ChangeEvent<HTMLInputElement>`).
+
+### Composition and Accessibility
+
+- Prefer small composable primitives over large configurable components. `SkeletonLoader` offers ready-made layouts, but custom loading states compose `Skeleton`, `SkeletonText` and `SkeletonAvatar`:
+
+  ```tsx
+  <SkeletonGroup label="Loading tenants">
+    <div className="flex items-center gap-3">
+      <SkeletonAvatar />
+      <Skeleton className="h-4 w-1/2" />
+    </div>
+  </SkeletonGroup>
+  ```
+
+- Decorative elements (icons, skeleton blocks) get `aria-hidden="true"`.
+- Icon-only buttons need an `aria-label`; let callers override it via a `*Label` prop.
+- Live updates use `role="status"` / `aria-live="polite"`; errors use `role="alert"` / `aria-live="assertive"` (see `ToastItem`).
+- Respect reduced motion for animations (`motion-reduce:animate-none`).
+
+### Checklist for a New Component API
+
+- [ ] Props interface named `<Component>Props` and exported
+- [ ] Native attributes extended and spread when rendering a single element
+- [ ] `className` accepted and merged last with `cn()`
+- [ ] Callbacks named `on*`, internal handlers named `handle*`
+- [ ] Sensible defaults set in the parameter list
+- [ ] Accessible names for icon-only controls; decorative elements hidden
+- [ ] Storybook story covering each variant
 
 ---
 
@@ -651,6 +863,131 @@ export default function LoginForm() {
 
 ---
 
+## Internationalization (i18n)
+
+English (`en`) is the source of truth. Every other locale must have exactly the same keys as English. CI enforces this (see [What the Pipeline Checks](#what-the-pipeline-checks)).
+
+### Translation File Structure
+
+```text
+frontend/
+├── public/locales/               # JSON bundles, loaded at runtime
+│   ├── en.json                   # Source of truth: add new keys here first
+│   ├── es.json                   # Spanish
+│   └── fr.json                   # French
+├── lib/i18n/
+│   ├── index.ts                  # Zustand locale store + useTranslation() hook (typed keys, formatters)
+│   ├── translations/             # Typed TS dictionaries used by index.ts
+│   │   ├── en.ts                 # Exports the `TranslationKeys` interface + English strings
+│   │   ├── es.ts, fr.ts, ar.ts   # Typed as `TranslationKeys`; a missing key is a type error
+│   │   └── index.ts
+│   ├── locales.ts                # SUPPORTED_LOCALES / FALLBACK_LOCALE for the JSON bundles
+│   ├── translation-loader.ts     # Fetches /locales/<locale>.json (reads from disk in Node)
+│   ├── translate.ts              # Key resolution, English fallback, {{var}} interpolation
+│   └── useTranslation.ts         # Hook for the JSON bundles
+├── lib/utils/format.ts           # Locale-aware number, currency, crypto and date formatting
+└── scripts/i18n-audit.mjs        # Validates the JSON bundles (used in CI)
+```
+
+There are two sets of dictionaries:
+
+- **Typed dictionaries** (`lib/i18n/translations/*.ts`) are used through `useTranslation()` from `@/lib/i18n`. TypeScript checks keys and values, so a key missing from a locale fails `pnpm run build`.
+- **JSON bundles** (`public/locales/*.json`) are fetched at runtime through `useTranslation()` from `@/lib/i18n/useTranslation`. They are checked by `pnpm run i18n:audit` and by `__tests__/i18n/translation-coverage.test.ts`.
+
+### Example: `en.json` and a Translation
+
+Group keys by feature, and nest them at most two levels deep.
+
+`public/locales/en.json`:
+
+```json
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "booking": {
+    "nights": "{{count}} nights",
+    "confirmBooking": "Confirm Booking"
+  }
+}
+```
+
+`public/locales/es.json` has the same keys with translated values:
+
+```json
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  },
+  "booking": {
+    "nights": "{{count}} noches",
+    "confirmBooking": "Confirmar reserva"
+  }
+}
+```
+
+```tsx
+const { t } = useTranslation();
+
+t('common.save'); // "Guardar"
+t('booking.nights', { count: 3 }); // "3 noches"
+```
+
+The full files are in [`public/locales/`](./public/locales/).
+
+### Key Naming Conventions
+
+- **Namespace by feature.** The first segment is the feature or area (`common`, `nav`, `auth`, `properties`, `booking`, `stellar`, ...). Only put strings shared across features in `common`.
+- **camelCase segments**, separated by dots: `properties.searchPlaceholder`, not `properties.search_placeholder` or `Properties.SearchPlaceholder`.
+- **Name the meaning, not the text.** Use `auth.invalidCredentials`, not `auth.wrongEmailOrPasswordPleaseTryAgain`, so the key stays valid when the copy changes.
+- **Common suffixes:** `title`, `subtitle`, `label`, `placeholder`, `description`, `error`, `success`, `empty`.
+- **Interpolation** uses `{{camelCaseName}}` placeholders. Keep the placeholder names identical in every locale and never translate them.
+- **Values are always non-empty strings.** Do not use numbers, arrays, `null` or `""`. Do not join translated fragments in code; put the whole sentence in one key with placeholders.
+- **Do not put formatted numbers, prices or dates in a string.** Pass the raw value through a formatter (see below) and interpolate the result.
+
+### Translation Process
+
+1. **Add the key to English first.** Add it to `public/locales/en.json`, or, for the typed dictionaries, to the `TranslationKeys` interface and the `en` object in `lib/i18n/translations/en.ts`.
+2. **Add the key to every other locale.** If you can't translate it yet, run `pnpm run i18n:audit:fix`. It adds `[TODO: <English text>]` placeholders for missing JSON keys so the files stay complete. List the TODOs in your PR description.
+3. **Remove keys from every locale at once.** The audit reports keys that exist in a locale but not in English as orphan keys.
+4. **Run the audit** before you open a PR:
+
+   ```bash
+   cd frontend
+   pnpm run i18n:audit                  # all locales
+   pnpm run i18n:audit -- --locale es   # one locale
+   ```
+
+5. **Review translations.** A native or fluent speaker should review new or changed strings before release. Replace `[TODO: ...]` placeholders as soon as a translation is available.
+
+#### Adding a New Locale
+
+1. Copy `public/locales/en.json` to `public/locales/<code>.json` and translate every value.
+2. Add the code to `SUPPORTED_LOCALES` and `LOCALE_NAMES` in `lib/i18n/locales.ts`.
+3. For the typed dictionaries, create `lib/i18n/translations/<code>.ts` typed as `TranslationKeys` and export it from `translations/index.ts`. Then register it in `SupportedLocale`, `LOCALE_OPTIONS` and `TRANSLATIONS` in `lib/i18n/index.ts`. Set `dir: 'rtl'` for right-to-left languages.
+4. Add the matching `date-fns` locale to `lib/utils/date-fns-locale.ts`.
+
+### Number, Currency and Date Formatting
+
+Never hardcode a locale (`toLocaleString('en-US')`, `new Intl.NumberFormat('en-US')`) or build values by hand like `` `$${amount}` ``. Use the formatters returned by `useTranslation()` from `@/lib/i18n`. They wrap `Intl` and follow the active locale:
+
+```tsx
+const { formatNumber, formatCurrency, formatCrypto, formatDate } =
+  useTranslation();
+
+formatNumber(1000); // en: "1,000"   fr: "1 000"   es: "1000"
+formatCurrency(1250, 'USD'); // en: "$1,250.00"   fr: "1 250,00 $US"
+formatCrypto(12.5, 'XLM'); // up to 7 decimals: "12.5 XLM"
+formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
+formatDate(date, { hour: '2-digit', minute: '2-digit' }); // time only
+```
+
+Outside React components, import the same functions from `@/lib/utils/format`. They read the active locale from the store, or take an explicit locale argument. For `date-fns` helpers such as `formatDistanceToNow`, pass `{ locale: useDateFnsLocale() }` from `@/lib/utils/date-fns-locale`.
+
+---
+
 ## PR Requirements & CI/CD Pipeline
 
 ### Before Creating a PR
@@ -721,6 +1058,23 @@ cd frontend
 pnpm run build
 ```
 
+#### 5. Translations (i18n)
+
+The `Check translation files` step runs `pnpm run i18n:audit`. It fails the pipeline if any `public/locales/*.json` file:
+
+- is not valid JSON, or its root is not an object
+- has a value that is not a non-empty string
+- is missing a key that exists in `en.json`
+
+Orphan keys (present in a locale but not in `en.json`) are reported as warnings. See [Internationalization (i18n)](#internationalization-i18n).
+
+**Check translations locally:**
+
+```bash
+cd frontend
+pnpm run i18n:audit
+```
+
 ### PR Checklist
 
 Before submitting a PR:
@@ -732,6 +1086,7 @@ Before submitting a PR:
 - [ ] Components are responsive (mobile/tablet/desktop)
 - [ ] Accessibility is considered (ARIA labels, semantic HTML)
 - [ ] Documentation is updated if needed
+- [ ] New user-facing strings are added to every locale (`pnpm run i18n:audit`)
 - [ ] Storybook stories are added for new UI components
 - [ ] No breaking changes to existing components
 - [ ] Commit messages are clear and descriptive

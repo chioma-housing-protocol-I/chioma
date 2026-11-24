@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import './pdf-viewer.css';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
 // Bundle the PDF.js worker from our own build output instead of fetching it

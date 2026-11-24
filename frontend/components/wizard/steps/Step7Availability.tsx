@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { PropertyData } from '@/store/wizard-store';
+import { useTranslation } from '@/lib/i18n';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -21,6 +22,7 @@ export const Step7Availability: React.FC<StepProps> = ({
   onChange,
   errors,
 }) => {
+  const { formatDate } = useTranslation();
   const [newBlockedDate, setNewBlockedDate] = useState('');
 
   const handleChange = (field: keyof PropertyData, value: unknown) => {
@@ -119,7 +121,7 @@ export const Step7Availability: React.FC<StepProps> = ({
                     className="flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 shadow-sm group animate-slide-in"
                   >
                     <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                      {new Date(date).toLocaleDateString('en-US', {
+                      {formatDate(date, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',

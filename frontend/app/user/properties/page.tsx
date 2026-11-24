@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import {
   Building2,
   MapPin,
@@ -125,6 +126,7 @@ const seedProperties = (): Property[] =>
       ];
 
 const AgentPropertiesPage = () => {
+  const { formatDate: formatLocaleDate } = useTranslation();
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -180,8 +182,7 @@ const AgentPropertiesPage = () => {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return formatLocaleDate(dateString, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

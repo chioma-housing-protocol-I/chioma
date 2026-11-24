@@ -68,7 +68,10 @@ export function Breadcrumbs({
               key={`${item.label}-${index}`}
               className="flex items-center space-x-2"
             >
-              <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+              <ChevronRight
+                className="w-4 h-4 text-gray-300 shrink-0 rtl:-scale-x-100"
+                aria-hidden="true"
+              />
               {isLast || !item.href ? (
                 <span
                   className="font-semibold text-gray-900 truncate max-w-[200px]"

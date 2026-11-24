@@ -175,6 +175,7 @@ export interface EnvironmentVariables {
 
   // Logging
   LOG_LEVEL?: string;
+  /** `json` (default, structured) or `simple` (human-readable dev output). */
   LOG_FORMAT?: string;
   LOG_SLOW_REQUEST_THRESHOLD?: string;
   LOG_SKIP_PATHS?: string;

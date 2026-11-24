@@ -28,6 +28,49 @@ export const PERFORMANCE_THRESHOLDS = {
   blockchainDurationMs: 30000,
 };
 
+/**
+ * Bucket boundaries (seconds) for per-endpoint latency. Dense below 1s where
+ * most API traffic lands so `histogram_quantile` can resolve p50/p95/p99
+ * accurately, with a sparse tail up to 10s to capture slow outliers without
+ * bloating series count.
+ */
+export const ENDPOINT_LATENCY_BUCKETS_SECONDS = [
+  0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2,
+  3, 5, 10,
+];
+
+/** Core Web Vitals reported in milliseconds (CLS is unitless). */
+export const WEB_VITAL_TIMING_NAMES = ['LCP', 'FID', 'INP', 'FCP', 'TTFB'];
+export const WEB_VITAL_NAMES = [...WEB_VITAL_TIMING_NAMES, 'CLS'];
+const WEB_VITAL_RATINGS = ['good', 'needs-improvement', 'poor'];
+/** Upper bound on distinct `route` label values for web vitals. */
+const MAX_WEB_VITAL_ROUTES = 200;
+
+/**
+ * Collapse dynamic path segments (numeric ids, UUIDs, Stellar keys, long
+ * slugs/hashes) into `:id` so real-user page routes stay low-cardinality.
+ */
+export function normalizeWebVitalRoute(route: string | undefined): string {
+  if (!route || typeof route !== 'string' || !route.startsWith('/')) {
+    return '/';
+  }
+  const path = route.split(/[?#]/)[0];
+  const segments = path
+    .split('/')
+    .filter(Boolean)
+    .slice(0, 6)
+    .map((segment) =>
+      /^\d+$/.test(segment) ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        segment,
+      ) ||
+      /^[A-Za-z0-9_-]{20,}$/.test(segment)
+        ? ':id'
+        : segment.slice(0, 40),
+    );
+  return `/${segments.join('/')}`;
+}
+
 function statusClass(status: number): string {
   if (status >= 200 && status < 300) return '2xx';
   if (status >= 300 && status < 400) return '3xx';
@@ -46,6 +89,19 @@ export class MetricsService implements OnModuleInit {
     help: 'HTTP request latency in milliseconds',
     labelNames: ['route', 'method', 'status_class'] as const,
     buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
+    registers: [this.registry],
+  });
+
+  /**
+   * Per-endpoint latency histogram used for p50/p95/p99 tracking. `endpoint`
+   * is always the matched route template (e.g. `/api/properties/:id`), never
+   * the raw URL, so cardinality stays bounded by the number of routes.
+   */
+  private readonly endpointLatency = new Histogram({
+    name: 'http_endpoint_latency_seconds',
+    help: 'Per-endpoint HTTP request latency in seconds (use histogram_quantile for p50/p95/p99)',
+    labelNames: ['endpoint', 'method', 'status_class'] as const,
+    buckets: ENDPOINT_LATENCY_BUCKETS_SECONDS,
     registers: [this.registry],
   });
 
@@ -306,6 +362,40 @@ export class MetricsService implements OnModuleInit {
     registers: [this.registry],
   });
 
+  /**
+   * Real-user Core Web Vitals (LCP, FID, INP, FCP, TTFB) in milliseconds.
+   * Buckets bracket Google's good / needs-improvement / poor thresholds
+   * (e.g. LCP 2500/4000ms, INP 200/500ms, FID 100/300ms) so p75 can be
+   * resolved around the boundaries that matter.
+   */
+  private readonly webVitalTiming = new Histogram({
+    name: 'web_vitals_timing_ms',
+    help: 'Real-user Core Web Vitals timing metrics (LCP, FID, INP, FCP, TTFB) in milliseconds',
+    labelNames: ['name', 'route'] as const,
+    buckets: [
+      50, 100, 200, 300, 500, 800, 1000, 1800, 2500, 3000, 4000, 6000, 10000,
+    ],
+    registers: [this.registry],
+  });
+
+  /** Real-user Cumulative Layout Shift (unitless; good <= 0.1, poor > 0.25). */
+  private readonly webVitalCls = new Histogram({
+    name: 'web_vitals_cls',
+    help: 'Real-user Cumulative Layout Shift score',
+    labelNames: ['route'] as const,
+    buckets: [0.01, 0.025, 0.05, 0.1, 0.15, 0.25, 0.5, 1],
+    registers: [this.registry],
+  });
+
+  private readonly webVitalReports = new Counter({
+    name: 'web_vitals_reports_total',
+    help: 'Real-user Core Web Vitals reports by metric and rating',
+    labelNames: ['name', 'rating'] as const,
+    registers: [this.registry],
+  });
+
+  private readonly webVitalRoutes = new Set<string>();
+
   constructor(
     @Optional() private readonly alertService?: PerformanceAlertService,
   ) {}
@@ -352,6 +442,58 @@ export class MetricsService implements OnModuleInit {
       PERFORMANCE_THRESHOLDS.httpDurationMs,
       `Slow HTTP request ${method} ${route}`,
     );
+  }
+
+  /**
+   * Record one request's latency against the per-endpoint histogram.
+   * `endpoint` must be a route template, not a concrete path.
+   */
+  recordEndpointLatency(
+    method: string,
+    endpoint: string,
+    status: number,
+    durationMs: number,
+  ): void {
+    this.endpointLatency.observe(
+      { endpoint, method, status_class: statusClass(status) },
+      durationMs / 1000,
+    );
+  }
+
+  /**
+   * Record one real-user Core Web Vital reported by the frontend. Unknown
+   * metric names are ignored and routes are normalised + capped so client
+   * input cannot create unbounded Prometheus series.
+   */
+  recordWebVital(
+    name: string,
+    value: number,
+    rating?: string,
+    route?: string,
+  ): void {
+    if (!WEB_VITAL_NAMES.includes(name)) return;
+    if (!Number.isFinite(value) || value < 0) return;
+
+    let routeLabel = normalizeWebVitalRoute(route);
+    if (!this.webVitalRoutes.has(routeLabel)) {
+      if (this.webVitalRoutes.size >= MAX_WEB_VITAL_ROUTES) {
+        routeLabel = 'other';
+      } else {
+        this.webVitalRoutes.add(routeLabel);
+      }
+    }
+
+    if (name === 'CLS') {
+      this.webVitalCls.observe({ route: routeLabel }, value);
+    } else {
+      this.webVitalTiming.observe({ name, route: routeLabel }, value);
+    }
+
+    this.webVitalReports.inc({
+      name,
+      rating:
+        rating && WEB_VITAL_RATINGS.includes(rating) ? rating : 'unknown',
+    });
   }
 
   // Blockchain Metrics Methods

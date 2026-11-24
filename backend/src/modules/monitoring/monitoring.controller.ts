@@ -16,6 +16,8 @@ import { CompressionService } from '../../common/middleware/compression.service'
 import { WebhookSignatureGuard } from '../webhooks/guards/webhook-signature.guard';
 import { WebhookSecret } from '../webhooks/decorators/webhook-secret.decorator';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { WebVitalsBatchDto } from './dto/web-vitals.dto';
 
 @ApiTags('Monitoring')
 @Controller()
@@ -101,6 +103,30 @@ export class MonitoringController {
   @ApiOperation({ summary: 'Get database query performance metrics' })
   async getDatabaseQueryMetrics() {
     return this.databaseMonitorService.getQueryMetrics();
+  }
+
+  /**
+   * Ingest anonymised real-user Core Web Vitals (LCP, FID, INP, CLS, FCP,
+   * TTFB) forwarded by the frontend and expose them as Prometheus histograms
+   * (`web_vitals_timing_ms`, `web_vitals_cls`) for dashboards and alerts.
+   * The frontend server forwards on behalf of many browsers from one IP,
+   * so this route gets a higher throttle limit than the default.
+   */
+  @ApiResponse({ status: 202, description: 'Accepted' })
+  @ApiOperation({ summary: 'Ingest real-user Core Web Vitals' })
+  @Post('monitoring/web-vitals')
+  @HttpCode(202)
+  @Throttle({ default: { limit: 1200, ttl: 60000 } })
+  recordWebVitals(@Body() batch: WebVitalsBatchDto) {
+    for (const metric of batch.metrics) {
+      this.metricsService.recordWebVital(
+        metric.name,
+        metric.value,
+        metric.rating,
+        metric.route,
+      );
+    }
+    return { received: batch.metrics.length };
   }
 
   @ApiResponse({ status: 201, description: 'Created' })

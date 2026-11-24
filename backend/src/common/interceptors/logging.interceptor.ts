@@ -70,12 +70,18 @@ export class LoggingInterceptor implements NestInterceptor {
       Sentry.setUser({ id: req.user.id, email: req.user.email });
     }
 
-    this.logger.log(
-      `Incoming ${method} ${url} [${correlationId}] ` +
-        `ip=${ip} userId=${req.user?.id ?? 'anonymous'} ` +
-        `body=${JSON.stringify(sanitizedBody)} ` +
-        `headers=${JSON.stringify(sanitizedHeaders)}`,
-    );
+    // Structured fields (not string interpolation) so the JSON logger emits
+    // queryable keys instead of one opaque message string.
+    this.logger.log(`Incoming ${method} ${url}`, {
+      event: 'http_request_incoming',
+      method,
+      url,
+      correlationId,
+      ip,
+      userId: req.user?.id ?? 'anonymous',
+      body: sanitizedBody,
+      headers: sanitizedHeaders,
+    });
 
     return next.handle().pipe(
       tap({
@@ -83,10 +89,15 @@ export class LoggingInterceptor implements NestInterceptor {
           const duration = Date.now() - startTime;
           const statusCode: number = res.statusCode;
 
-          this.logger.log(
-            `Outgoing ${method} ${url} ${statusCode} ${duration}ms [${correlationId}] ` +
-              `response=${JSON.stringify(sanitizeBody(responseBody))}`,
-          );
+          this.logger.log(`Outgoing ${method} ${url} ${statusCode}`, {
+            event: 'http_request_outgoing',
+            method,
+            url,
+            statusCode,
+            durationMs: duration,
+            correlationId,
+            response: sanitizeBody(responseBody),
+          });
         },
         error: (error: unknown) => {
           const duration = Date.now() - startTime;
@@ -95,10 +106,16 @@ export class LoggingInterceptor implements NestInterceptor {
             error instanceof Error ? error.message : String(error);
           const stack = error instanceof Error ? error.stack : undefined;
 
-          this.logger.error(
-            `Error ${method} ${url} ${statusCode} ${duration}ms [${correlationId}] ${message}`,
+          this.logger.error(`Error ${method} ${url} ${statusCode}`, {
+            event: 'http_request_error',
+            method,
+            url,
+            statusCode,
+            durationMs: duration,
+            correlationId,
+            errorMessage: message,
             stack,
-          );
+          });
 
           Sentry.addBreadcrumb({
             category: 'http',

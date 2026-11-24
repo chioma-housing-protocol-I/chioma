@@ -8,6 +8,7 @@ import '@fontsource-variable/fraunces';
 import { RootLayoutClient } from './RootLayoutClient';
 import { env } from '@/lib/env';
 import type { AuthHint } from '@/store/authStore';
+import { RTL_LANGUAGES } from '@/lib/i18n/direction';
 
 const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
 
@@ -22,6 +23,15 @@ async function readAuthHint(): Promise<AuthHint | null> {
     return null;
   }
 }
+
+/**
+ * Applies the persisted locale's `lang`/`dir` to <html> before first paint,
+ * so right-to-left users (Arabic, Hebrew, …) never see a flash of the LTR
+ * layout while the i18n store hydrates. <HtmlAttributesSync> keeps the
+ * attributes in sync after that.
+ */
+const RTL_LANGUAGES_JSON = JSON.stringify(RTL_LANGUAGES);
+const LOCALE_DIRECTION_SCRIPT = `(function(){try{var raw=localStorage.getItem('chioma-locale');if(!raw)return;var locale=JSON.parse(raw).state.locale;if(typeof locale!=='string')return;var rtl=${RTL_LANGUAGES_JSON};var el=document.documentElement;el.lang=locale;el.dir=rtl.indexOf(locale.split('-')[0])!==-1?'rtl':'ltr';}catch(e){}})();`;
 
 export const viewport: Viewport = {
   themeColor: '#0d0e12',
@@ -86,8 +96,11 @@ export default async function RootLayout({
   const authHint = await readAuthHint();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: LOCALE_DIRECTION_SCRIPT }}
+        />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
 

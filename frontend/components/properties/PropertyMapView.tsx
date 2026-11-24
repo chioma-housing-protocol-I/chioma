@@ -9,6 +9,7 @@ import {
   useMapEvents,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import './leaflet-overrides.css';
 import PropertySummaryCard from './PropertySummaryCard';
 import { FeatureBoundary } from '@/components/error/FeatureBoundary';
 

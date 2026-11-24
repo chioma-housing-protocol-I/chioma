@@ -1,0 +1,36 @@
+# Per-endpoint latency percentiles derived from the
+# `http_endpoint_latency_seconds` histogram (MetricsInterceptor).
+# Pre-computing them keeps the Grafana "Endpoint Latency" dashboard cheap.
+groups:
+  - name: chioma_endpoint_latency
+    interval: 30s
+    rules:
+      - record: endpoint:http_latency_seconds:p50_5m
+        expr: |
+          histogram_quantile(0.50,
+            sum by (le, endpoint, method) (rate(http_endpoint_latency_seconds_bucket[5m])))
+      - record: endpoint:http_latency_seconds:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, endpoint, method) (rate(http_endpoint_latency_seconds_bucket[5m])))
+      - record: endpoint:http_latency_seconds:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le, endpoint, method) (rate(http_endpoint_latency_seconds_bucket[5m])))
+      - record: endpoint:http_requests:rate5m
+        expr: |
+          sum by (endpoint, method) (rate(http_endpoint_latency_seconds_count[5m]))
+
+  - name: chioma_endpoint_latency_alerts
+    rules:
+      - alert: EndpointP99LatencyHigh
+        # Ignore near-idle endpoints so a single slow request can't page.
+        expr: |
+          endpoint:http_latency_seconds:p99_5m > 2
+            and on (endpoint, method) endpoint:http_requests:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High p99 latency on {{ $labels.method }} {{ $labels.endpoint }}'
+          description: 'p99 latency is {{ $value | humanizeDuration }} (threshold 2s) over the last 10 minutes.'
