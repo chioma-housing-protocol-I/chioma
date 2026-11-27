@@ -130,5 +130,32 @@
     "forbidden": "Forbidden",
     "forbiddenDescription": "You do not have permission to view this page.",
     "goHome": "Go back home"
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "Rentals on the Stellar network",
+      "titleLine1": "Come home",
+      "titleConnector": "to",
+      "titleEmphasis": "certainty.",
+      "description": "Chioma puts leases, rent, and agent commissions on rails. Payments settle in seconds on Stellar, contracts stay transparent, and nobody has to chase anybody for money.",
+      "searchPlaceholder": "City, neighborhood, or property type…",
+      "searchAriaLabel": "Search properties",
+      "browseHomes": "Browse homes",
+      "trust1": "Settles in seconds",
+      "trust2": "Fees under a cent",
+      "trust3": "Contracts you can read",
+      "imageAlt": "A warmly lit family home at dusk",
+      "receiptLabel": "Rent settled",
+      "receiptConfirmed": "· confirmed in 2.8s"
+    },
+    "cta": {
+      "titleLine1": "The lease of the future",
+      "titleConnector": "is",
+      "titleEmphasis": "ready to sign.",
+      "description": "Join the landlords, renters, and agents already settling on Chioma. Free to start — bring an email address or a Stellar wallet.",
+      "createAccount": "Create your account",
+      "connectWallet": "Connect a wallet",
+      "footnote": "No credit card required · Non-custodial · Cancel anytime"
+    }
   }
 }

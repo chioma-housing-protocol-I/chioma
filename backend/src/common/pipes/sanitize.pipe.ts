@@ -4,6 +4,7 @@ import {
   ArgumentMetadata,
   BadRequestException,
 } from '@nestjs/common';
+import { escapeHtml } from '../utils/escape-html';
 
 /**
  * Input sanitization pipe to prevent XSS attacks
@@ -36,26 +37,12 @@ export class SanitizePipe implements PipeTransform {
     return value;
   }
 
-  /**
-   * Escape HTML entities
-   */
-  private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m] || m);
-  }
-
   private sanitizeString(value: string): string {
     // Remove null bytes
     let sanitized = value.replace(/\0/g, '');
 
     // Escape HTML entities
-    sanitized = this.escapeHtml(sanitized);
+    sanitized = escapeHtml(sanitized);
 
     // Remove script-like patterns
     sanitized = sanitized.replace(

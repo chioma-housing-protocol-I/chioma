@@ -1,14 +1,33 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
+import localFont from 'next/font/local';
 import './globals.css';
-
-import '@fontsource-variable/inter';
-import '@fontsource-variable/fraunces';
 
 import { RootLayoutClient } from './RootLayoutClient';
 import { env } from '@/lib/env';
 import type { AuthHint } from '@/store/authStore';
 import { RTL_LANGUAGES } from '@/lib/i18n/direction';
+
+// Self-hosted variable latin subsets. Next emits preload links and writes
+// font-display: swap into the generated @font-face rules. The fallback metric
+// adjustment keeps the system-font swap from shifting layout (#2157).
+const interFont = localFont({
+  src: './fonts/inter-latin-wght-normal.woff2',
+  weight: '100 900',
+  display: 'swap',
+  preload: true,
+  adjustFontFallback: 'Arial',
+  variable: '--font-inter',
+});
+
+const frauncesFont = localFont({
+  src: './fonts/fraunces-latin-wght-normal.woff2',
+  weight: '100 900',
+  display: 'swap',
+  preload: true,
+  adjustFontFallback: 'Times New Roman',
+  variable: '--font-fraunces',
+});
 
 const AUTH_HINT_COOKIE_NAME = 'chioma_auth_hint';
 
@@ -96,11 +115,14 @@ export default async function RootLayout({
   const authHint = await readAuthHint();
 
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html
+      lang="en"
+      dir="ltr"
+      suppressHydrationWarning
+      className={`${interFont.variable} ${frauncesFont.variable}`}
+    >
       <head>
-        <script
-          dangerouslySetInnerHTML={{ __html: LOCALE_DIRECTION_SCRIPT }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_DIRECTION_SCRIPT }} />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
 

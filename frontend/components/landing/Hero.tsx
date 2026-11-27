@@ -7,14 +7,15 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Search } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-
-const trustPoints = [
-  'Settles in seconds',
-  'Fees under a cent',
-  'Contracts you can read',
-];
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 export default function Hero() {
+  const { t } = useTranslation();
+  const trustPoints = [
+    t('landing.hero.trust1'),
+    t('landing.hero.trust2'),
+    t('landing.hero.trust3'),
+  ];
   const { walletAddress } = useAuth();
   // Already-authenticated visitors (e.g. a persisted session revisiting `/`)
   // belong on their dashboard, not the marketing page.
@@ -43,7 +44,7 @@ export default function Hero() {
               className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brass-400 mb-6"
             >
               <span className="w-8 rule-glint" aria-hidden />
-              Rentals on the Stellar network
+              {t('landing.hero.eyebrow')}
             </motion.p>
 
             <motion.h1
@@ -52,11 +53,11 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="font-display text-5xl md:text-6xl xl:text-7xl text-cream leading-[1.05]"
             >
-              Come home
+              {t('landing.hero.titleLine1')}
               <br />
-              to{' '}
+              {t('landing.hero.titleConnector')}{' '}
               <em className="text-brass-300 not-italic border-b-4 border-brass-500/40">
-                certainty.
+                {t('landing.hero.titleEmphasis')}
               </em>
             </motion.h1>
 
@@ -66,9 +67,7 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.16 }}
               className="mt-6 text-lg md:text-xl text-cream-dim max-w-xl mx-auto lg:mx-0 leading-relaxed"
             >
-              Chioma puts leases, rent, and agent commissions on rails. Payments
-              settle in seconds on Stellar, contracts stay transparent, and
-              nobody has to chase anybody for money.
+              {t('landing.hero.description')}
             </motion.p>
 
             {walletAddress && (
@@ -99,8 +98,8 @@ export default function Hero() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="City, neighborhood, or property type…"
-                  aria-label="Search properties"
+                  placeholder={t('landing.hero.searchPlaceholder')}
+                  aria-label={t('landing.hero.searchAriaLabel')}
                   className="w-full h-full pl-12 pr-4 py-3 bg-transparent text-cream placeholder:text-cream-dim/50 focus:outline-none text-sm"
                 />
               </div>
@@ -108,7 +107,7 @@ export default function Hero() {
                 type="submit"
                 className="group flex items-center gap-2 px-5 py-3 rounded-xl bg-brass-500 hover:bg-brass-400 text-ink-950 font-semibold text-sm transition-colors whitespace-nowrap"
               >
-                Browse homes
+                {t('landing.hero.browseHomes')}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </button>
             </motion.form>
@@ -138,7 +137,7 @@ export default function Hero() {
             <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border border-cream/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
               <Image
                 src="/hero-home.webp"
-                alt="A warmly lit family home at dusk"
+                alt={t('landing.hero.imageAlt')}
                 fill
                 priority
                 sizes="(min-width: 1024px) 32rem, 100vw"
@@ -158,12 +157,12 @@ export default function Hero() {
               className="absolute -bottom-6 -left-4 sm:-left-10 bg-ink-800 border border-cream/10 rounded-2xl px-5 py-4 shadow-2xl"
             >
               <p className="text-[11px] uppercase tracking-widest text-cream-dim mb-1">
-                Rent settled
+                {t('landing.hero.receiptLabel')}
               </p>
               <p className="text-cream font-semibold">
                 1,250 XLM{' '}
                 <span className="text-brand-green text-sm font-normal">
-                  · confirmed in 2.8s
+                  {t('landing.hero.receiptConfirmed')}
                 </span>
               </p>
             </motion.div>

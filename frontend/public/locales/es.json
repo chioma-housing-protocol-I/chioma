@@ -130,5 +130,32 @@
     "forbidden": "Prohibido",
     "forbiddenDescription": "No tienes permiso para ver esta página.",
     "goHome": "Volver al inicio"
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "Alquileres en la red Stellar",
+      "titleLine1": "Ven a casa",
+      "titleConnector": "a la",
+      "titleEmphasis": "certeza.",
+      "description": "Chioma pone en rieles los contratos de arrendamiento, la renta y las comisiones de los agentes. Los pagos se liquidan en segundos en Stellar, los contratos son transparentes y nadie tiene que perseguir a nadie por el dinero.",
+      "searchPlaceholder": "Ciudad, barrio o tipo de propiedad…",
+      "searchAriaLabel": "Buscar propiedades",
+      "browseHomes": "Ver viviendas",
+      "trust1": "Se liquida en segundos",
+      "trust2": "Comisiones menores a un centavo",
+      "trust3": "Contratos que puedes leer",
+      "imageAlt": "Una casa familiar iluminada al atardecer",
+      "receiptLabel": "Renta liquidada",
+      "receiptConfirmed": "· confirmado en 2,8 s"
+    },
+    "cta": {
+      "titleLine1": "El contrato de arrendamiento del futuro",
+      "titleConnector": "está",
+      "titleEmphasis": "listo para firmar.",
+      "description": "Únete a los propietarios, inquilinos y agentes que ya liquidan en Chioma. Empieza gratis: trae un correo electrónico o una billetera Stellar.",
+      "createAccount": "Crea tu cuenta",
+      "connectWallet": "Conectar billetera",
+      "footnote": "Sin tarjeta de crédito · No custodial · Cancela cuando quieras"
+    }
   }
 }

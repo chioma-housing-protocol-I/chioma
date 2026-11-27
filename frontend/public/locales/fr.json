@@ -130,5 +130,32 @@
     "forbidden": "Accès refusé",
     "forbiddenDescription": "Vous n'avez pas la permission d'accéder à cette page.",
     "goHome": "Retourner à l'accueil"
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "Locations sur le réseau Stellar",
+      "titleLine1": "Venez chez vous",
+      "titleConnector": "en toute",
+      "titleEmphasis": "certitude.",
+      "description": "Chioma place les baux, les loyers et les commissions des agents sur des rails. Les paiements se règlent en quelques secondes sur Stellar, les contrats restent transparents et personne n'a à courir après l'argent.",
+      "searchPlaceholder": "Ville, quartier ou type de bien…",
+      "searchAriaLabel": "Rechercher des biens",
+      "browseHomes": "Voir les logements",
+      "trust1": "Règlement en quelques secondes",
+      "trust2": "Frais inférieurs à un centime",
+      "trust3": "Des contrats lisibles",
+      "imageAlt": "Une maison familiale chaleureusement éclairée au crépuscule",
+      "receiptLabel": "Loyer réglé",
+      "receiptConfirmed": "· confirmé en 2,8 s"
+    },
+    "cta": {
+      "titleLine1": "Le bail de l'avenir",
+      "titleConnector": "est",
+      "titleEmphasis": "prêt à signer.",
+      "description": "Rejoignez les propriétaires, locataires et agents qui règlent déjà sur Chioma. Gratuit pour commencer : apportez une adresse e-mail ou un portefeuille Stellar.",
+      "createAccount": "Créer votre compte",
+      "connectWallet": "Connecter un portefeuille",
+      "footnote": "Aucune carte bancaire · Non custodial · Annulez à tout moment"
+    }
   }
 }

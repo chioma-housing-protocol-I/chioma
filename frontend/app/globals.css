@@ -118,9 +118,13 @@
   --color-neutral-950: #0a0a0c;
 
   /* Typography */
-  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  /* Variables are emitted by next/font/local in app/layout.tsx (#2157). */
+  --font-sans:
+    var(--font-inter), 'Inter Variable', Inter, ui-sans-serif, system-ui,
+    sans-serif;
   --font-display:
-    'Fraunces Variable', Fraunces, Georgia, 'Times New Roman', serif;
+    var(--font-fraunces), 'Fraunces Variable', Fraunces, Georgia,
+    'Times New Roman', serif;
   --font-mono: var(--font-geist-mono);
 
   /* Border Radius */
